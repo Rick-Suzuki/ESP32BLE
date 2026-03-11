@@ -1,5 +1,15 @@
+In settings, in keyboard settings, underneath the two buttons
+add some text that says custom keyboard delay.
 
+
+Then on the left underneath that have a "key down" label,
+on the right add a picker box
+
+
+, then the key up and then a picker box.
 separate into 2 screens
+
+
 
 screen 1 main
 top right  = goto settings
@@ -37,7 +47,7 @@ text font should bigger.
 there should be no gap between the btns.
 btn corner radius should be zero
 
-
+** hello from iOS
 
 the text for buttons F1-F20 is contained in a file in the app home directory called fnkeys.txt
 
@@ -45,7 +55,17 @@ when the app starts, load the btn txt from this file.
 
 if the file doesn't exist create it first
 
+
+add a table to the right in settings
+the table shows the contents of doc dir
+press an item in table loads it into the f1-f20 buttons
+if there are not enough items, still create the btns, just leave the text blank
+if there are too many items, ignore the overlfow
+the table items should have black backgrounds
+
 ask me any questions if anything is unclear
+
+
 
 
 

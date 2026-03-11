@@ -2,21 +2,36 @@ import SwiftUI
 
 struct SettingsScreen: View {
     @ObservedObject var ble: BLEKeyboardManager
+    let documentFiles: [URL]
+    let selectedDocumentName: String
+    let refreshDocumentFiles: () -> Void
+    let loadFunctionKeys: (URL) -> Void
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 20) {
-                availableDevicesSection
-                ConnectionStatusSection(ble: ble)
-                keyboardSettingsSection
+        GeometryReader { geometry in
+            HStack(alignment: .top, spacing: 20) {
+                ScrollView {
+                    VStack(spacing: 20) {
+                        availableDevicesSection
+                        ConnectionStatusSection(ble: ble)
+                        keyboardSettingsSection
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                }
+
+                documentTableSection
+                    .frame(width: max(220, geometry.size.width * 0.28))
             }
-            .padding()
         }
         .navigationTitle("Settings")
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
                 BackButton()
             }
+        }
+        .task {
+            refreshDocumentFiles()
         }
     }
 
@@ -100,6 +115,46 @@ struct SettingsScreen: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .padding()
+        .background(.thinMaterial)
+        .clipShape(.rect(cornerRadius: 16))
+    }
+
+    private var documentTableSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Documents")
+                .font(.headline)
+
+            ScrollView {
+                LazyVStack(spacing: 8) {
+                    ForEach(documentFiles, id: \.path) { fileURL in
+                        let isSelected = selectedDocumentName == fileURL.lastPathComponent
+
+                        Button {
+                            loadFunctionKeys(fileURL)
+                        } label: {
+                            HStack {
+                                Text(fileURL.lastPathComponent)
+                                    .foregroundStyle(.white)
+                                    .lineLimit(1)
+
+                                Spacer()
+                            }
+                            .padding(.horizontal, 12)
+                            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                            .background(Color.black)
+                            .overlay {
+                                Rectangle()
+                                    .stroke(isSelected ? Color.white : Color.gray, lineWidth: 1)
+                            }
+                            .contentShape(.rect)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+        }
+        .frame(maxHeight: .infinity, alignment: .top)
         .padding()
         .background(.thinMaterial)
         .clipShape(.rect(cornerRadius: 16))
