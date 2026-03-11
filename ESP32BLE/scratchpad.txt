@@ -31,7 +31,11 @@ take most of the avaible code and use for connect, code stays the same
 
 move "MacOS ks" and "PS ks" buttons onto this screen
 
-
+make the twenty btns F1-F20 fill the available area.
+btns should be: white texst, black background, white border, size 1 px.
+text font should bigger.
+there should be no gap between the btns.
+btn corner radius should be zero
 
 
 

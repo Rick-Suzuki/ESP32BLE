@@ -29,24 +29,34 @@ struct MainScreen: View {
     @ObservedObject var ble: BLEKeyboardManager
     @State private var activeModifiers: Set<ModifierCommand> = []
 
-    private let gridColumns = Array(repeating: GridItem(.flexible(), spacing: 12), count: 5)
+    private let gridColumns = Array(repeating: GridItem(.flexible(), spacing: 0), count: 5)
 
     var body: some View {
         VStack(spacing: 20) {
-            LazyVGrid(columns: gridColumns, spacing: 12) {
-                ForEach(1...20, id: \.self) { number in
-                    Button {
-                        ble.sendLine("f\(number)")
-                    } label: {
-                        Text("F\(number)")
-                            .frame(maxWidth: .infinity, minHeight: 56)
-                            .contentShape(.rect)
+            GeometryReader { geometry in
+                let buttonHeight = geometry.size.height / 4
+
+                LazyVGrid(columns: gridColumns, spacing: 0) {
+                    ForEach(1...20, id: \.self) { number in
+                        Button {
+                            ble.sendLine("f\(number)")
+                        } label: {
+                            Text("F\(number)")
+                                .font(.system(size: 28, weight: .semibold))
+                                .foregroundStyle(.white)
+                                .frame(maxWidth: .infinity, minHeight: buttonHeight, maxHeight: buttonHeight)
+                                .background(Color.black)
+                                .overlay {
+                                    Rectangle()
+                                        .stroke(Color.white, lineWidth: 1)
+                                }
+                                .contentShape(.rect)
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.borderedProminent)
                 }
             }
-
-            Spacer(minLength: 0)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             modifierButtons
         }
