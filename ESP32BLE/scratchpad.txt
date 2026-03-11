@@ -1,46 +1,41 @@
 
-//
-//  scratchpad.swift
-//  ESP32_ble
-//
-//  Created by Eric Beresford on 2026/03/08.
-//
+separate into 2 screens
 
-good WUNTRACED
+screen 1 main
+top right  = goto settings
 
 
-that was some clean drivingyou're a very dirty driverthat was very coolhello world
-
-hello WorldReferenceCoordinateSpace
-that was very cool
-you're a very dirty driver
-
-
-that was some clean driving
-
-hello world
+function keys
+contains a 20 button grid
+labelled F1 to F20
+when f1 btn is pressed, send text f1
 
 
-that was very cool
+modifier toggle buttons at the bottom
+cmd, option, shift, control, off
 
-you're a very dirty driver'
-that was some clean driving
-you're a very dirty driver'
-you're a very dirty driver
+when toggled on
+ if cmd toggle is on, send cm
+ option = op
+shift = sh
+control = ct
+off send off
 
 
-hello world
 
-that was some clean driving
-you're a very dirty driver
-that was very cool
-that was some clean driving
+settings screen
+tod left = goto main screen
 
-that was some clean driving
-hello world
-well, we" all\learned
-something	out there
-"
+be able to connect to esp32
+take most of the avaible code and use for connect, code stays the same
+
+move "MacOS ks" and "PS ks" buttons onto this screen
+
+
+
+
+
+
 
 
 

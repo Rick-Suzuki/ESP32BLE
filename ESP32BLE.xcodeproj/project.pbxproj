@@ -16,6 +16,8 @@
 		1D590E5D2F61206100E430E0 /* PhraseButtonsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D590E522F61206100E430E0 /* PhraseButtonsSection.swift */; };
 		1D590E5E2F61206100E430E0 /* TestArea.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D590E542F61206100E430E0 /* TestArea.swift */; };
 		1D590E5F2F61206100E430E0 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 1D590E4A2F61206100E430E0 /* Assets.xcassets */; };
+		1D590E642F61350E00E430E0 /* MainScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D590E632F61350E00E430E0 /* MainScreen.swift */; };
+		1D590E662F61350F00E430E0 /* SettingsScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D590E652F61350F00E430E0 /* SettingsScreen.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -30,6 +32,8 @@
 		1D590E522F61206100E430E0 /* PhraseButtonsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhraseButtonsSection.swift; sourceTree = "<group>"; };
 		1D590E532F61206100E430E0 /* scratchpad.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = scratchpad.txt; sourceTree = "<group>"; };
 		1D590E542F61206100E430E0 /* TestArea.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestArea.swift; sourceTree = "<group>"; };
+		1D590E632F61350E00E430E0 /* MainScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainScreen.swift; sourceTree = "<group>"; };
+		1D590E652F61350F00E430E0 /* SettingsScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsScreen.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -72,6 +76,8 @@
 				1D590E522F61206100E430E0 /* PhraseButtonsSection.swift */,
 				1D590E532F61206100E430E0 /* scratchpad.txt */,
 				1D590E542F61206100E430E0 /* TestArea.swift */,
+				1D590E632F61350E00E430E0 /* MainScreen.swift */,
+				1D590E652F61350F00E430E0 /* SettingsScreen.swift */,
 			);
 			path = ESP32BLE;
 			sourceTree = "<group>";
@@ -154,7 +160,9 @@
 				1D590E592F61206100E430E0 /* ConnectionStatusSection.swift in Sources */,
 				1D590E5A2F61206100E430E0 /* ContentView.swift in Sources */,
 				1D590E5C2F61206100E430E0 /* ESP32BLEApp.swift in Sources */,
+				1D590E642F61350E00E430E0 /* MainScreen.swift in Sources */,
 				1D590E5D2F61206100E430E0 /* PhraseButtonsSection.swift in Sources */,
+				1D590E662F61350F00E430E0 /* SettingsScreen.swift in Sources */,
 				1D590E5E2F61206100E430E0 /* TestArea.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

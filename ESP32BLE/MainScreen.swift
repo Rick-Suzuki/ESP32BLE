@@ -27,7 +27,7 @@ private enum ModifierCommand: String, CaseIterable, Identifiable {
 
 struct MainScreen: View {
     @ObservedObject var ble: BLEKeyboardManager
-    @State private var selectedModifier: ModifierCommand = .off
+    @State private var activeModifiers: Set<ModifierCommand> = []
 
     private let gridColumns = Array(repeating: GridItem(.flexible(), spacing: 12), count: 5)
 
@@ -35,11 +35,14 @@ struct MainScreen: View {
         VStack(spacing: 20) {
             LazyVGrid(columns: gridColumns, spacing: 12) {
                 ForEach(1...20, id: \.self) { number in
-                    Button("F\(number)") {
+                    Button {
                         ble.sendLine("f\(number)")
+                    } label: {
+                        Text("F\(number)")
+                            .frame(maxWidth: .infinity, minHeight: 56)
+                            .contentShape(.rect)
                     }
                     .buttonStyle(.borderedProminent)
-                    .frame(maxWidth: .infinity, minHeight: 56)
                 }
             }
 
@@ -48,7 +51,8 @@ struct MainScreen: View {
             modifierButtons
         }
         .padding()
-        .navigationTitle("Main")
+        .navigationTitle("")
+        .toolbarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 NavigationLink("Settings") {
@@ -65,13 +69,23 @@ struct MainScreen: View {
 
             HStack(spacing: 10) {
                 ForEach(ModifierCommand.allCases) { modifier in
-                    Button(modifier.title) {
-                        selectedModifier = modifier
-                        ble.sendLine(modifier.rawValue)
+                    let isSelected = modifier == .off ? activeModifiers.isEmpty : activeModifiers.contains(modifier)
+
+                    Button {
+                        toggleModifier(modifier)
+                    } label: {
+                        Text(modifier.title)
+                            .frame(maxWidth: .infinity, minHeight: 50)
+                            .contentShape(.rect)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(selectedModifier == modifier ? .blue : .gray)
-                    .frame(maxWidth: .infinity, minHeight: 50)
+                    .buttonStyle(.plain)
+                    .foregroundStyle(isSelected ? .white : .primary)
+                    .background(isSelected ? Color.blue : Color.gray.opacity(0.18))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(isSelected ? Color.blue : Color.gray.opacity(0.4), lineWidth: 2)
+                    }
+                    .clipShape(.rect(cornerRadius: 12))
                 }
             }
         }
@@ -79,5 +93,20 @@ struct MainScreen: View {
         .padding()
         .background(.thinMaterial)
         .clipShape(.rect(cornerRadius: 16))
+    }
+
+    private func toggleModifier(_ modifier: ModifierCommand) {
+        if modifier == .off {
+            activeModifiers.removeAll()
+            ble.sendLine(modifier.rawValue)
+            return
+        }
+
+        if activeModifiers.contains(modifier) {
+            activeModifiers.remove(modifier)
+        } else {
+            activeModifiers.insert(modifier)
+            ble.sendLine(modifier.rawValue)
+        }
     }
 }
