@@ -150,11 +150,7 @@ final class BLEKeyboardManager: NSObject, ObservableObject {
 	}
 	
 	func sendString(_ text: String) {
-<<<<<<< HEAD
-		sendLine("a")
-=======
 		sendLine("sa")
->>>>>>> exp_01
 		sendLine("\(text)")
 	}
 	
@@ -163,11 +159,7 @@ final class BLEKeyboardManager: NSObject, ObservableObject {
 	}
 	
 	func pressEnter() {
-<<<<<<< HEAD
-		sendLine("enter")
-=======
 		sendLine("ret")
->>>>>>> exp_01
 	}
 }
 

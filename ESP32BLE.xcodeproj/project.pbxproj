@@ -6,30 +6,31 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		1D590E562F61206100E430E0 /* BLEDiscoveredDevice.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D590E4B2F61206100E430E0 /* BLEDiscoveredDevice.swift */; };
+		1D590E572F61206100E430E0 /* BLEKeyboardManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D590E4C2F61206100E430E0 /* BLEKeyboardManager.swift */; };
+		1D590E582F61206100E430E0 /* CommandButtonsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D590E4D2F61206100E430E0 /* CommandButtonsSection.swift */; };
+		1D590E592F61206100E430E0 /* ConnectionStatusSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D590E4E2F61206100E430E0 /* ConnectionStatusSection.swift */; };
+		1D590E5A2F61206100E430E0 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D590E4F2F61206100E430E0 /* ContentView.swift */; };
+		1D590E5C2F61206100E430E0 /* ESP32BLEApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D590E512F61206100E430E0 /* ESP32BLEApp.swift */; };
+		1D590E5D2F61206100E430E0 /* PhraseButtonsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D590E522F61206100E430E0 /* PhraseButtonsSection.swift */; };
+		1D590E5E2F61206100E430E0 /* TestArea.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D590E542F61206100E430E0 /* TestArea.swift */; };
+		1D590E5F2F61206100E430E0 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 1D590E4A2F61206100E430E0 /* Assets.xcassets */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		1D590E292F611FB700E430E0 /* ESP32BLE.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ESP32BLE.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		1D590E4A2F61206100E430E0 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		1D590E4B2F61206100E430E0 /* BLEDiscoveredDevice.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BLEDiscoveredDevice.swift; sourceTree = "<group>"; };
+		1D590E4C2F61206100E430E0 /* BLEKeyboardManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BLEKeyboardManager.swift; sourceTree = "<group>"; };
+		1D590E4D2F61206100E430E0 /* CommandButtonsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandButtonsSection.swift; sourceTree = "<group>"; };
+		1D590E4E2F61206100E430E0 /* ConnectionStatusSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionStatusSection.swift; sourceTree = "<group>"; };
+		1D590E4F2F61206100E430E0 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		1D590E512F61206100E430E0 /* ESP32BLEApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ESP32BLEApp.swift; sourceTree = "<group>"; };
+		1D590E522F61206100E430E0 /* PhraseButtonsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhraseButtonsSection.swift; sourceTree = "<group>"; };
+		1D590E532F61206100E430E0 /* scratchpad.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = scratchpad.txt; sourceTree = "<group>"; };
+		1D590E542F61206100E430E0 /* TestArea.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestArea.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
-
-/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		1D590E492F611FEB00E430E0 /* Exceptions for "ESP32BLE" folder in "ESP32BLE" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				scratchpad.txt,
-			);
-			target = 1D590E282F611FB700E430E0 /* ESP32BLE */;
-		};
-/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
-
-/* Begin PBXFileSystemSynchronizedRootGroup section */
-		1D590E2B2F611FB700E430E0 /* ESP32BLE */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				1D590E492F611FEB00E430E0 /* Exceptions for "ESP32BLE" folder in "ESP32BLE" target */,
-			);
-			path = ESP32BLE;
-			sourceTree = "<group>";
-		};
-/* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		1D590E262F611FB700E430E0 /* Frameworks */ = {
@@ -45,7 +46,7 @@
 		1D590E202F611FB700E430E0 = {
 			isa = PBXGroup;
 			children = (
-				1D590E2B2F611FB700E430E0 /* ESP32BLE */,
+				1D590E552F61206100E430E0 /* ESP32BLE */,
 				1D590E2A2F611FB700E430E0 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -56,6 +57,23 @@
 				1D590E292F611FB700E430E0 /* ESP32BLE.app */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		1D590E552F61206100E430E0 /* ESP32BLE */ = {
+			isa = PBXGroup;
+			children = (
+				1D590E4A2F61206100E430E0 /* Assets.xcassets */,
+				1D590E512F61206100E430E0 /* ESP32BLEApp.swift */,
+				1D590E4F2F61206100E430E0 /* ContentView.swift */,
+				1D590E4B2F61206100E430E0 /* BLEDiscoveredDevice.swift */,
+				1D590E4C2F61206100E430E0 /* BLEKeyboardManager.swift */,
+				1D590E4D2F61206100E430E0 /* CommandButtonsSection.swift */,
+				1D590E4E2F61206100E430E0 /* ConnectionStatusSection.swift */,
+				1D590E522F61206100E430E0 /* PhraseButtonsSection.swift */,
+				1D590E532F61206100E430E0 /* scratchpad.txt */,
+				1D590E542F61206100E430E0 /* TestArea.swift */,
+			);
+			path = ESP32BLE;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -72,9 +90,6 @@
 			buildRules = (
 			);
 			dependencies = (
-			);
-			fileSystemSynchronizedGroups = (
-				1D590E2B2F611FB700E430E0 /* ESP32BLE */,
 			);
 			name = ESP32BLE;
 			packageProductDependencies = (
@@ -122,6 +137,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1D590E5F2F61206100E430E0 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -132,6 +148,14 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1D590E562F61206100E430E0 /* BLEDiscoveredDevice.swift in Sources */,
+				1D590E572F61206100E430E0 /* BLEKeyboardManager.swift in Sources */,
+				1D590E582F61206100E430E0 /* CommandButtonsSection.swift in Sources */,
+				1D590E592F61206100E430E0 /* ConnectionStatusSection.swift in Sources */,
+				1D590E5A2F61206100E430E0 /* ContentView.swift in Sources */,
+				1D590E5C2F61206100E430E0 /* ESP32BLEApp.swift in Sources */,
+				1D590E5D2F61206100E430E0 /* PhraseButtonsSection.swift in Sources */,
+				1D590E5E2F61206100E430E0 /* TestArea.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -269,6 +293,7 @@
 				DEVELOPMENT_TEAM = JH6L6AXE42;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "This app uses BT to connect to ESP32";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -301,6 +326,7 @@
 				DEVELOPMENT_TEAM = JH6L6AXE42;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "This app uses BT to connect to ESP32";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

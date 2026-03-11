@@ -1,5 +1,4 @@
 
-<<<<<<< HEAD
 //
 //  scratchpad.swift
 //  ESP32_ble
@@ -39,33 +38,9 @@ that was some clean driving
 
 that was some clean driving
 hello world
-=======
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 well, we" all\learned
 something	out there
 "
-
->>>>>>> exp_01
-
 
 
 
