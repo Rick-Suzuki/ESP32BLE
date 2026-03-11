@@ -10,19 +10,56 @@ struct ContentView: View {
 				VStack(spacing: 20) {
 					
 					VStack(alignment: .leading, spacing: 12) {
-						Text("Target Device")
+						Text("Available ESP32 Devices")
 							.font(.headline)
 						
-						Picker("ESP32", selection: $ble.selectedDeviceID) {
-							Text("A").tag("A")
-							Text("B").tag("B")
+						if ble.discoveredDevices.isEmpty {
+							Text("No ESP32 devices found yet")
+								.foregroundStyle(.secondary)
 						}
-						.pickerStyle(.segmented)
 						
-						Button("Scan and Connect") {
-							ble.startScan()
+						ForEach(ble.discoveredDevices) { device in
+							Button {
+								ble.selectedPeripheralID = device.id
+							} label: {
+								HStack {
+									VStack(alignment: .leading, spacing: 4) {
+										Text(device.displayName)
+											.font(.body)
+										
+										Text("RSSI: \(device.rssi)   UUID: \(device.id.uuidString)")
+											.font(.caption)
+											.foregroundStyle(.secondary)
+									}
+									
+									Spacer()
+									
+									if ble.selectedPeripheralID == device.id {
+										Image(systemName: "checkmark.circle.fill")
+									}
+								}
+								.padding(10)
+								.frame(maxWidth: .infinity, alignment: .leading)
+								.background(
+									RoundedRectangle(cornerRadius: 12)
+										.fill(ble.selectedPeripheralID == device.id ? .blue.opacity(0.15) : .clear)
+								)
+							}
+							.buttonStyle(.plain)
 						}
-						.buttonStyle(.borderedProminent)
+						
+						HStack(spacing: 12) {
+							Button("Scan") {
+								ble.startScan()
+							}
+							.buttonStyle(.borderedProminent)
+							
+							Button("Connect Selected") {
+								ble.connectToSelectedDevice()
+							}
+							.buttonStyle(.borderedProminent)
+							.disabled(ble.selectedPeripheralID == nil)
+						}
 						
 						Text("Connected Device ID: \(ble.connectedDeviceID)")
 						Text("Status: \(ble.connectionText)")
