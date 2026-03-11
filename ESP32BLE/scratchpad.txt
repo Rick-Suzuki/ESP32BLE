@@ -39,6 +39,15 @@ btn corner radius should be zero
 
 
 
+the text for buttons F1-F20 is contained in a file in the app home directory called fnkeys.txt
+
+when the app starts, load the btn txt from this file.
+
+if the file doesn't exist create it first
+
+ask me any questions if anything is unclear
+
+
 
 
 

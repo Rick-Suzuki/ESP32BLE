@@ -28,6 +28,7 @@ private enum ModifierCommand: String, CaseIterable, Identifiable {
 struct MainScreen: View {
     @ObservedObject var ble: BLEKeyboardManager
     @State private var activeModifiers: Set<ModifierCommand> = []
+    @State private var functionKeyTitles = (1...20).map { "F\($0)" }
 
     private let gridColumns = Array(repeating: GridItem(.flexible(), spacing: 0), count: 5)
 
@@ -37,11 +38,11 @@ struct MainScreen: View {
                 let buttonHeight = geometry.size.height / 4
 
                 LazyVGrid(columns: gridColumns, spacing: 0) {
-                    ForEach(1...20, id: \.self) { number in
+                    ForEach(Array(functionKeyTitles.enumerated()), id: \.offset) { index, title in
                         Button {
-                            ble.sendLine("f\(number)")
+                            ble.sendLine("f\(index + 1)")
                         } label: {
-                            Text("F\(number)")
+                            Text(title)
                                 .font(.system(size: 28, weight: .semibold))
                                 .foregroundStyle(.white)
                                 .frame(maxWidth: .infinity, minHeight: buttonHeight, maxHeight: buttonHeight)
@@ -69,6 +70,9 @@ struct MainScreen: View {
                     SettingsScreen(ble: ble)
                 }
             }
+        }
+        .task {
+            loadFunctionKeyTitles()
         }
     }
 
@@ -117,6 +121,50 @@ struct MainScreen: View {
         } else {
             activeModifiers.insert(modifier)
             ble.sendLine(modifier.rawValue)
+        }
+    }
+
+    private func loadFunctionKeyTitles() {
+        let defaultTitles = (1...20).map { "F\($0)" }
+        let fileURL = functionKeysFileURL()
+
+        guard FileManager.default.fileExists(atPath: fileURL.path) else {
+            let defaultContents = defaultTitles.joined(separator: "\n")
+
+            do {
+                try defaultContents.write(to: fileURL, atomically: true, encoding: .utf8)
+                functionKeyTitles = defaultTitles
+            } catch {
+                functionKeyTitles = defaultTitles
+            }
+
+            return
+        }
+
+        do {
+            let contents = try String(contentsOf: fileURL, encoding: .utf8)
+            let loadedTitles = contents.components(separatedBy: .newlines)
+            functionKeyTitles = normalizedFunctionKeyTitles(from: loadedTitles, defaults: defaultTitles)
+        } catch {
+            functionKeyTitles = defaultTitles
+        }
+    }
+
+    private func functionKeysFileURL() -> URL {
+        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("fnkeys.txt")
+    }
+
+    private func normalizedFunctionKeyTitles(from loadedTitles: [String], defaults: [String]) -> [String] {
+        let firstTwenty = Array(loadedTitles.prefix(20))
+
+        return defaults.enumerated().map { index, fallback in
+            guard index < firstTwenty.count else {
+                return fallback
+            }
+
+            let title = firstTwenty[index].trimmingCharacters(in: .whitespacesAndNewlines)
+            return title.isEmpty ? fallback : title
         }
     }
 }
