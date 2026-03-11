@@ -1,0 +1,74 @@
+
+<<<<<<< HEAD
+//
+//  scratchpad.swift
+//  ESP32_ble
+//
+//  Created by Eric Beresford on 2026/03/08.
+//
+
+good WUNTRACED
+
+
+that was some clean drivingyou're a very dirty driverthat was very coolhello world
+
+hello WorldReferenceCoordinateSpace
+that was very cool
+you're a very dirty driver
+
+
+that was some clean driving
+
+hello world
+
+
+that was very cool
+
+you're a very dirty driver'
+that was some clean driving
+you're a very dirty driver'
+you're a very dirty driver
+
+
+hello world
+
+that was some clean driving
+you're a very dirty driver
+that was very cool
+that was some clean driving
+
+that was some clean driving
+hello world
+=======
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+well, we" all\learned
+something	out there
+"
+
+>>>>>>> exp_01
+
+
+
+
+
+
+

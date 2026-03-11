@@ -10,9 +10,22 @@
 		1D590E292F611FB700E430E0 /* ESP32BLE.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ESP32BLE.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		1D590E492F611FEB00E430E0 /* Exceptions for "ESP32BLE" folder in "ESP32BLE" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				scratchpad.txt,
+			);
+			target = 1D590E282F611FB700E430E0 /* ESP32BLE */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		1D590E2B2F611FB700E430E0 /* ESP32BLE */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				1D590E492F611FEB00E430E0 /* Exceptions for "ESP32BLE" folder in "ESP32BLE" target */,
+			);
 			path = ESP32BLE;
 			sourceTree = "<group>";
 		};
