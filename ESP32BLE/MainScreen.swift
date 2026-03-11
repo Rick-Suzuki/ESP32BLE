@@ -55,7 +55,7 @@ struct MainScreen: View {
         .toolbarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                NavigationLink("Settings") {
+                NavigationLink("settings >") {
                     SettingsScreen(ble: ble)
                 }
             }

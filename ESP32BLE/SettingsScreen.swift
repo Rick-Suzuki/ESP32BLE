@@ -110,7 +110,7 @@ private struct BackButton: View {
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        Button("Main") {
+        Button("main") {
             dismiss()
         }
     }
