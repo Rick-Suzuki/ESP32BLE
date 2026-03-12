@@ -169,7 +169,7 @@ struct SettingsScreen: View {
     }
 
     private var customKeyboardTimingSection: some View {
-        VStack(alignment: .leading, spacing:5) {
+        VStack(alignment: .leading, spacing: 5) {
             Text("custom kb timing")
                 .font(.headline)
 
@@ -187,13 +187,15 @@ struct SettingsScreen: View {
                         range: 0...3000
                     )
                 }
+                .frame(maxWidth: 520, alignment: .leading)
 
                 Button("set & test") {
                     ble.sendLine("set:\(Int(keyboardSliderOneValue)):\(Int(keyboardSliderTwoValue))")
-					ble.sendLine("ca")
-                    ble.sendLine("Hello World!!! 1234567")
+                    ble.sendString("Hello World!")
                 }
-				.buttonStyle(.borderedProminent)
+                .buttonStyle(.borderedProminent)
+
+                Spacer(minLength: 0)
             }
         }
     }
@@ -204,6 +206,18 @@ struct SettingsScreen: View {
                 .font(.headline)
                 .foregroundStyle(.primary)
                 .frame(width: 28, alignment: .leading)
+
+            Button {
+                value.wrappedValue = max(range.lowerBound, value.wrappedValue - 1)
+            } label: {
+                Image(systemName: "triangle.fill")
+					.font(.system(size: 30))
+					.rotationEffect(.degrees(-90))
+                    .frame(width: 30, height: 30)
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.white)
+            .disabled(value.wrappedValue <= range.lowerBound)
 
             VStack(spacing: -5) {
                 Text("\(Int(value.wrappedValue)) ms")
@@ -216,6 +230,18 @@ struct SettingsScreen: View {
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 10)
+
+            Button {
+                value.wrappedValue = min(range.upperBound, value.wrappedValue + 1)
+            } label: {
+                Image(systemName: "triangle.fill")
+					.font(.system(size: 30))
+					.rotationEffect(.degrees(90))
+                    .frame(width: 30, height: 30)
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.white)
+            .disabled(value.wrappedValue >= range.upperBound)
         }
     }
 }

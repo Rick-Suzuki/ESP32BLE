@@ -78,6 +78,17 @@ ble.sendString("Hello World!")
 
 
 
+add a btn to the left of each slider
+this decreases the slider value by one
+
+repeat for btns on the right
+
+the btne should use triangle SF symbols
+
+the triangle btns should keep within the limits
+
+theseares fine-adjustments for the sliders
+
 
 
 
