@@ -6,6 +6,8 @@ struct SettingsScreen: View {
     let selectedDocumentName: String
     let refreshDocumentFiles: () -> Void
     let loadFunctionKeys: (URL) -> Void
+    @State private var keyboardSliderOneValue = 0.0
+    @State private var keyboardSliderTwoValue = 0.0
 
     var body: some View {
         GeometryReader { geometry in
@@ -104,15 +106,21 @@ struct SettingsScreen: View {
 
             HStack(spacing: 12) {
                 Button("MacOS ks") {
-                    ble.sendLine("set:0:0")
+                    keyboardSliderOneValue = 0
+                    keyboardSliderTwoValue = 0
                 }
                 .buttonStyle(.borderedProminent)
 
                 Button("PS5 ks") {
-                    ble.sendLine("set:20:70")
+                    keyboardSliderOneValue = 20
+                    keyboardSliderTwoValue = 70
                 }
                 .buttonStyle(.borderedProminent)
+				
             }
+
+			Spacer().frame(height:10)
+            customKeyboardTimingSection
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding()
@@ -158,6 +166,57 @@ struct SettingsScreen: View {
         .padding()
         .background(.thinMaterial)
         .clipShape(.rect(cornerRadius: 16))
+    }
+
+    private var customKeyboardTimingSection: some View {
+        VStack(alignment: .leading, spacing:5) {
+            Text("custom kb timing")
+                .font(.headline)
+
+            HStack(alignment: .center, spacing: 12) {
+                VStack(spacing: 10) {
+                    sliderRow(
+                        title: "on",
+                        value: $keyboardSliderOneValue,
+                        range: 0...1000
+                    )
+
+                    sliderRow(
+                        title: "off",
+                        value: $keyboardSliderTwoValue,
+                        range: 0...3000
+                    )
+                }
+
+                Button("set & test") {
+                    ble.sendLine("set:\(Int(keyboardSliderOneValue)):\(Int(keyboardSliderTwoValue))")
+					ble.sendLine("ca")
+                    ble.sendLine("Hello World!!! 1234567")
+                }
+				.buttonStyle(.borderedProminent)
+            }
+        }
+    }
+
+    private func sliderRow(title: String, value: Binding<Double>, range: ClosedRange<Double>) -> some View {
+        HStack(spacing: 12) {
+            Text(title)
+                .font(.headline)
+                .foregroundStyle(.primary)
+                .frame(width: 28, alignment: .leading)
+
+            VStack(spacing: -5) {
+                Text("\(Int(value.wrappedValue)) ms")
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+
+                Slider(value: value, in: range, step: 10)
+                    .tint(.white)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+        }
     }
 }
 

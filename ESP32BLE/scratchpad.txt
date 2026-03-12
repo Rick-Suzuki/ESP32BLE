@@ -48,7 +48,7 @@ there should be no gap between the btns.
 btn corner radius should be zero
 
 ** hello from iOS
-
+saHello World!
 the text for buttons F1-F20 is contained in a file in the app home directory called fnkeys.txt
 
 when the app starts, load the btn txt from this file.
@@ -64,6 +64,17 @@ if there are too many items, ignore the overlfow
 the table items should have black backgrounds
 
 ask me any questions if anything is unclear
+
+
+add in settings, under keyboard settings btns
+
+pressing "macos Ks", sets both sliders to zero
+pressing "PS5 ks", set sl1 = 20, set sl2 = 70
+
+btn "set & test" does:
+ble.sendLine("set:slider 1 value:slider 2 value")
+ble.sendString("Hello World!")
+
 
 
 

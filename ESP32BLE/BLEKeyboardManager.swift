@@ -161,7 +161,7 @@ final class BLEKeyboardManager: NSObject, ObservableObject {
 	}
 	
 	func sendString(_ text: String) {
-		sendLine("sa")
+		sendLine("ca")
 		sendLine("\(text)")
 	}
 	
