@@ -89,14 +89,23 @@ struct ContentView: View {
     }
 
     private func normalizedFunctionKeyTitles(from loadedTitles: [String]) -> [String] {
-        let firstTwenty = Array(loadedTitles.prefix(20))
+        let filteredTitles = loadedTitles.compactMap { line -> String? in
+            let trimmedLine = line.trimmingCharacters(in: .whitespacesAndNewlines)
+
+            guard !trimmedLine.isEmpty, !trimmedLine.hasPrefix("//") else {
+                return nil
+            }
+
+            return trimmedLine
+        }
+        let firstTwenty = Array(filteredTitles.prefix(20))
 
         return (0..<20).map { index in
             guard index < firstTwenty.count else {
                 return ""
             }
 
-            return firstTwenty[index].trimmingCharacters(in: .newlines)
+            return firstTwenty[index]
         }
     }
 
