@@ -55,6 +55,7 @@ struct MainScreen: View {
                             Text(title)
                                 .font(.system(size: 28, weight: .semibold))
                                 .foregroundStyle(.white)
+                                .multilineTextAlignment(.center)
                                 .frame(maxWidth: .infinity, minHeight: buttonHeight, maxHeight: buttonHeight)
                                 .background(Color.black)
                                 .overlay {
