@@ -25,14 +25,43 @@ private enum ModifierCommand: String, CaseIterable, Identifiable {
     }
 }
 
+private enum FunctionKeyDisplayMode: CaseIterable {
+    case left
+    case right
+    case both
+
+    func next() -> Self {
+        switch self {
+        case .left:
+            return .right
+        case .right:
+            return .both
+        case .both:
+            return .left
+        }
+    }
+
+    var title: String {
+        switch self {
+        case .left:
+            return "Left"
+        case .right:
+            return "Right"
+        case .both:
+            return "Both"
+        }
+    }
+}
+
 struct MainScreen: View {
     @ObservedObject var ble: BLEKeyboardManager
     @State private var activeModifiers: Set<ModifierCommand> = []
+    @State private var displayMode: FunctionKeyDisplayMode = .left
     @State private var isEditingDocumentName = false
     @State private var documentNameDraft = ""
     @State private var renameAlertMessage: String?
     @FocusState private var isDocumentNameFieldFocused: Bool
-    let functionKeyTitles: [String]
+    let functionKeys: [FunctionKeyEntry]
     let documentFiles: [URL]
     let selectedDocumentName: String
     let selectedDocumentDisplayName: String
@@ -51,17 +80,17 @@ struct MainScreen: View {
                 let buttonHeight = geometry.size.height / 4
 
                 LazyVGrid(columns: gridColumns, spacing: 0) {
-                    ForEach(Array(functionKeyTitles.enumerated()), id: \.offset) { _, title in
+                    ForEach(Array(functionKeys.enumerated()), id: \.offset) { _, entry in
                         Button {
-                            let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+                            let sendText = entry.sendText.trimmingCharacters(in: .whitespacesAndNewlines)
 
-                            guard !trimmedTitle.isEmpty else {
+                            guard !sendText.isEmpty else {
                                 return
                             }
 
-                            ble.sendLine(trimmedTitle)
+                            ble.sendLine(sendText)
                         } label: {
-                            Text(title)
+                            Text(buttonTitle(for: entry))
                                 .font(.system(size: 28, weight: .semibold))
                                 .foregroundStyle(.white)
                                 .multilineTextAlignment(.center)
@@ -146,8 +175,8 @@ struct MainScreen: View {
         VStack(alignment: .leading, spacing: 2) {
 
             HStack(spacing: 10) {
-				Text("Modifiers")
-					.font(.headline)
+                Text("Modifiers")
+                    .font(.headline)
                 ForEach(ModifierCommand.allCases) { modifier in
                     let isSelected = modifier == .off ? activeModifiers.isEmpty : activeModifiers.contains(modifier)
 
@@ -167,6 +196,22 @@ struct MainScreen: View {
                     }
                     .clipShape(.rect(cornerRadius: 12))
                 }
+
+                Button {
+                    displayMode = displayMode.next()
+                } label: {
+                    displayModeLabel
+                        .frame(maxWidth: .infinity, minHeight: 50)
+                        .contentShape(.rect)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.white)
+                .background(Color.blue)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.blue, lineWidth: 2)
+                }
+                .clipShape(.rect(cornerRadius: 12))
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -186,6 +231,32 @@ struct MainScreen: View {
         } else {
             activeModifiers.insert(modifier)
             ble.sendLine(modifier.rawValue)
+        }
+    }
+
+    private var displayModeLabel: some View {
+        VStack(spacing: 2) {
+            Text(displayMode.title)
+
+            if displayMode == .both {
+                Text("L / R")
+                    .font(.caption)
+            }
+        }
+    }
+
+    private func buttonTitle(for entry: FunctionKeyEntry) -> String {
+        guard entry.displayUsesAlternateText else {
+            return entry.rawLine
+        }
+
+        switch displayMode {
+        case .left:
+            return entry.sendText
+        case .right:
+            return entry.alternateDisplayText ?? entry.rawLine
+        case .both:
+            return "\(entry.sendText)\n\(entry.alternateDisplayText ?? entry.rawLine)"
         }
     }
 

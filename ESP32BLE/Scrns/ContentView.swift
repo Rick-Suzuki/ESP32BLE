@@ -1,8 +1,20 @@
 import SwiftUI
 
+struct FunctionKeyEntry {
+    let rawLine: String
+    let sendText: String
+    let alternateDisplayText: String?
+
+    var displayUsesAlternateText: Bool {
+        alternateDisplayText != nil
+    }
+}
+
 struct ContentView: View {
     @StateObject private var ble = BLEKeyboardManager()
-    @State private var functionKeyTitles = (1...20).map { "F\($0)" }
+    @State private var functionKeys = (1...20).map {
+        FunctionKeyEntry(rawLine: "F\($0)", sendText: "F\($0)", alternateDisplayText: nil)
+    }
     @State private var documentFiles: [URL] = []
     @State private var selectedDocumentName = "fnkeys.txt"
 
@@ -10,7 +22,7 @@ struct ContentView: View {
         NavigationStack {
             MainScreen(
                 ble: ble,
-                functionKeyTitles: functionKeyTitles,
+                functionKeys: functionKeys,
                 documentFiles: documentFiles,
                 selectedDocumentName: selectedDocumentName,
                 selectedDocumentDisplayName: displayName(for: selectedDocumentName),
@@ -33,13 +45,19 @@ struct ContentView: View {
         (1...20).map { "F\($0)" }
     }
 
+    private func defaultFunctionKeys() -> [FunctionKeyEntry] {
+        defaultFunctionKeyTitles().map { title in
+            FunctionKeyEntry(rawLine: title, sendText: title, alternateDisplayText: nil)
+        }
+    }
+
     private func documentsDirectoryURL() -> URL? {
         FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
     }
 
     private func ensureDefaultFunctionKeysFile() {
         guard let documentsDirectoryURL = documentsDirectoryURL() else {
-            functionKeyTitles = defaultFunctionKeyTitles()
+            functionKeys = defaultFunctionKeys()
             return
         }
 
@@ -51,7 +69,7 @@ struct ContentView: View {
             do {
                 try defaultContents.write(to: fileURL, atomically: true, encoding: .utf8)
             } catch {
-                functionKeyTitles = defaultFunctionKeyTitles()
+                functionKeys = defaultFunctionKeys()
                 return
             }
         }
@@ -86,7 +104,7 @@ struct ContentView: View {
 
     private func selectInitialDocument() {
         guard let firstFileURL = documentFiles.first else {
-            functionKeyTitles = defaultFunctionKeyTitles()
+            functionKeys = defaultFunctionKeys()
             selectedDocumentName = "fnkeys.txt"
             return
         }
@@ -98,14 +116,14 @@ struct ContentView: View {
         do {
             let contents = try String(contentsOf: fileURL, encoding: .utf8)
             let loadedTitles = contents.components(separatedBy: .newlines)
-            functionKeyTitles = normalizedFunctionKeyTitles(from: loadedTitles)
+            functionKeys = normalizedFunctionKeys(from: loadedTitles)
             selectedDocumentName = fileURL.lastPathComponent
         } catch {
-            functionKeyTitles = Array(repeating: "", count: 20)
+            functionKeys = Array(repeating: FunctionKeyEntry(rawLine: "", sendText: "", alternateDisplayText: nil), count: 20)
         }
     }
 
-    private func normalizedFunctionKeyTitles(from loadedTitles: [String]) -> [String] {
+    private func normalizedFunctionKeys(from loadedTitles: [String]) -> [FunctionKeyEntry] {
         let filteredTitles = loadedTitles.compactMap { line -> String? in
             let trimmedLine = line.trimmingCharacters(in: .whitespacesAndNewlines)
 
@@ -119,11 +137,28 @@ struct ContentView: View {
 
         return (0..<20).map { index in
             guard index < firstTwenty.count else {
-                return ""
+                return FunctionKeyEntry(rawLine: "", sendText: "", alternateDisplayText: nil)
             }
 
-            return firstTwenty[index]
+            return functionKeyEntry(from: firstTwenty[index])
         }
+    }
+
+    private func functionKeyEntry(from line: String) -> FunctionKeyEntry {
+        let components = line.components(separatedBy: "::")
+
+        guard components.count >= 2 else {
+            return FunctionKeyEntry(rawLine: line, sendText: line, alternateDisplayText: nil)
+        }
+
+        let leftText = components[0].trimmingCharacters(in: .whitespacesAndNewlines)
+        let rightText = components.dropFirst().joined(separator: "::").trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard !leftText.isEmpty, !rightText.isEmpty else {
+            return FunctionKeyEntry(rawLine: line, sendText: line, alternateDisplayText: nil)
+        }
+
+        return FunctionKeyEntry(rawLine: line, sendText: leftText, alternateDisplayText: rightText)
     }
 
     private func selectDocument(_ fileURL: URL) {
