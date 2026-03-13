@@ -274,6 +274,14 @@ struct SettingsScreen: View {
         .listRowSeparator(.hidden)
         .listRowBackground(Color.clear)
         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+            Button {
+                duplicateDocument(fileURL)
+            } label: {
+                Label("Duplicate", systemImage: "plus.square.on.square")
+            }
+            .tint(.blue)
+        }
+        .swipeActions(edge: .leading, allowsFullSwipe: false) {
             if canDeleteDocuments {
                 Button(role: .destructive) {
                     pendingDeleteFile = fileURL
@@ -281,14 +289,6 @@ struct SettingsScreen: View {
                     Label("Delete", systemImage: "trash")
                 }
             }
-        }
-        .swipeActions(edge: .leading, allowsFullSwipe: false) {
-            Button {
-                duplicateDocument(fileURL)
-            } label: {
-                Label("Duplicate", systemImage: "plus.square.on.square")
-            }
-            .tint(.blue)
         }
     }
 
