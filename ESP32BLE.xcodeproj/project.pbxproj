@@ -48,6 +48,36 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		1D1B29CB2F63ABE7004733D7 /* btns */ = {
+			isa = PBXGroup;
+			children = (
+				1D590E4D2F61206100E430E0 /* CommandButtonsSection.swift */,
+				1D590E522F61206100E430E0 /* PhraseButtonsSection.swift */,
+			);
+			path = btns;
+			sourceTree = "<group>";
+		};
+		1D1B29CC2F63ABF8004733D7 /* BLE */ = {
+			isa = PBXGroup;
+			children = (
+				1D590E4B2F61206100E430E0 /* BLEDiscoveredDevice.swift */,
+				1D590E4C2F61206100E430E0 /* BLEKeyboardManager.swift */,
+				1D590E4E2F61206100E430E0 /* ConnectionStatusSection.swift */,
+			);
+			path = BLE;
+			sourceTree = "<group>";
+		};
+		1D1B29CD2F63AC3D004733D7 /* Scrns */ = {
+			isa = PBXGroup;
+			children = (
+				1D590E4F2F61206100E430E0 /* ContentView.swift */,
+				1D590E632F61350E00E430E0 /* MainScreen.swift */,
+				1D590E652F61350F00E430E0 /* SettingsScreen.swift */,
+				1D590E542F61206100E430E0 /* TestArea.swift */,
+			);
+			path = Scrns;
+			sourceTree = "<group>";
+		};
 		1D590E202F611FB700E430E0 = {
 			isa = PBXGroup;
 			children = (
@@ -70,16 +100,10 @@
 				1D33C2D12F6145DC0098FD5C /* Info.plist */,
 				1D590E4A2F61206100E430E0 /* Assets.xcassets */,
 				1D590E512F61206100E430E0 /* ESP32BLEApp.swift */,
-				1D590E4F2F61206100E430E0 /* ContentView.swift */,
-				1D590E4B2F61206100E430E0 /* BLEDiscoveredDevice.swift */,
-				1D590E4C2F61206100E430E0 /* BLEKeyboardManager.swift */,
-				1D590E4D2F61206100E430E0 /* CommandButtonsSection.swift */,
-				1D590E4E2F61206100E430E0 /* ConnectionStatusSection.swift */,
-				1D590E522F61206100E430E0 /* PhraseButtonsSection.swift */,
 				1D590E532F61206100E430E0 /* scratchpad.txt */,
-				1D590E542F61206100E430E0 /* TestArea.swift */,
-				1D590E632F61350E00E430E0 /* MainScreen.swift */,
-				1D590E652F61350F00E430E0 /* SettingsScreen.swift */,
+				1D1B29CD2F63AC3D004733D7 /* Scrns */,
+				1D1B29CC2F63ABF8004733D7 /* BLE */,
+				1D1B29CB2F63ABE7004733D7 /* btns */,
 			);
 			path = ESP32BLE;
 			sourceTree = "<group>";
