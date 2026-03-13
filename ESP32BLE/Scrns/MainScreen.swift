@@ -72,8 +72,8 @@ struct MainScreen: View {
 
             modifierButtons
         }
-        .padding()
-        .navigationTitle("")
+		.padding(.horizontal, 2)
+		.navigationTitle("")
         .toolbarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -91,11 +91,11 @@ struct MainScreen: View {
     }
 
     private var modifierButtons: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Modifiers")
-                .font(.headline)
+        VStack(alignment: .leading, spacing: 2) {
 
             HStack(spacing: 10) {
+				Text("Modifiers")
+					.font(.headline)
                 ForEach(ModifierCommand.allCases) { modifier in
                     let isSelected = modifier == .off ? activeModifiers.isEmpty : activeModifiers.contains(modifier)
 
@@ -118,7 +118,6 @@ struct MainScreen: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding()
         .background(.thinMaterial)
         .clipShape(.rect(cornerRadius: 16))
     }

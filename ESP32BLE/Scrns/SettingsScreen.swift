@@ -113,7 +113,7 @@ struct SettingsScreen: View {
 
                 Button("PS5 ks") {
                     keyboardSliderOneValue = 20
-                    keyboardSliderTwoValue = 70
+                    keyboardSliderTwoValue = 20
                 }
                 .buttonStyle(.borderedProminent)
 				
