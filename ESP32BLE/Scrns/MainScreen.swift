@@ -28,16 +28,24 @@ private enum ModifierCommand: String, CaseIterable, Identifiable {
 struct MainScreen: View {
     @ObservedObject var ble: BLEKeyboardManager
     @State private var activeModifiers: Set<ModifierCommand> = []
+    @State private var isEditingDocumentName = false
+    @State private var documentNameDraft = ""
+    @State private var renameAlertMessage: String?
+    @FocusState private var isDocumentNameFieldFocused: Bool
     let functionKeyTitles: [String]
     let documentFiles: [URL]
     let selectedDocumentName: String
+    let selectedDocumentDisplayName: String
     let refreshDocumentFiles: () -> Void
     let loadFunctionKeys: (URL) -> Void
+    let renameDocument: (String) -> String?
 
     private let gridColumns = Array(repeating: GridItem(.flexible(), spacing: 0), count: 5)
 
     var body: some View {
         VStack(spacing: 20) {
+            documentTitle
+
             GeometryReader { geometry in
                 let buttonHeight = geometry.size.height / 4
 
@@ -72,8 +80,8 @@ struct MainScreen: View {
 
             modifierButtons
         }
-		.padding(.horizontal, 2)
-		.navigationTitle("")
+        .padding(.horizontal, 2)
+        .navigationTitle("")
         .toolbarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -88,6 +96,43 @@ struct MainScreen: View {
                 }
             }
         }
+        .task(id: isEditingDocumentName) {
+            guard isEditingDocumentName else { return }
+            isDocumentNameFieldFocused = true
+        }
+        .alert("Rename File", isPresented: renameAlertIsPresented) {
+            Button("OK", role: .cancel) {
+                renameAlertMessage = nil
+            }
+        } message: {
+            Text(renameAlertMessage ?? "")
+        }
+    }
+
+    private var documentTitle: some View {
+        Group {
+            if isEditingDocumentName {
+                TextField("Filename", text: $documentNameDraft)
+                    .font(.title2.weight(.semibold))
+                    .multilineTextAlignment(.center)
+                    .textFieldStyle(.roundedBorder)
+                    .submitLabel(.done)
+                    .focused($isDocumentNameFieldFocused)
+                    .onSubmit(commitDocumentRename)
+            } else {
+                Button {
+                    documentNameDraft = selectedDocumentDisplayName
+                    isEditingDocumentName = true
+                } label: {
+                    Text(selectedDocumentDisplayName)
+                        .font(.title2.weight(.semibold))
+                        .foregroundStyle(.primary)
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.top, 8)
     }
 
     private var modifierButtons: some View {
@@ -135,5 +180,28 @@ struct MainScreen: View {
             activeModifiers.insert(modifier)
             ble.sendLine(modifier.rawValue)
         }
+    }
+
+    private var renameAlertIsPresented: Binding<Bool> {
+        Binding(
+            get: { renameAlertMessage != nil },
+            set: { newValue in
+                if !newValue {
+                    renameAlertMessage = nil
+                }
+            }
+        )
+    }
+
+    private func commitDocumentRename() {
+        let proposedName = documentNameDraft
+
+        if let alertMessage = renameDocument(proposedName) {
+            renameAlertMessage = alertMessage
+            return
+        }
+
+        documentNameDraft = selectedDocumentDisplayName
+        isEditingDocumentName = false
     }
 }

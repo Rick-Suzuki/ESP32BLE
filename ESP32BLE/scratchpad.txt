@@ -100,6 +100,18 @@ move bluetooth to be below status in 1st box
 finally, remove 2nd box
 
 
+add title at the top on the main screen
+the title is the filename (not including .txt)
+presing on this allows it to be edited with keyboard
+after edit, the real filename is changed (.txt is added)
+
+alerts
+it can't be blank
+it can't be the same name as another file
+
+
+if file line contains ::
+
 
 
 

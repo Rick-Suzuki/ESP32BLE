@@ -13,8 +13,10 @@ struct ContentView: View {
                 functionKeyTitles: functionKeyTitles,
                 documentFiles: documentFiles,
                 selectedDocumentName: selectedDocumentName,
+                selectedDocumentDisplayName: displayName(for: selectedDocumentName),
                 refreshDocumentFiles: refreshDocumentFiles,
-                loadFunctionKeys: selectDocument
+                loadFunctionKeys: selectDocument,
+                renameDocument: renameSelectedDocument
             )
         }
         .task {
@@ -112,5 +114,43 @@ struct ContentView: View {
     private func selectDocument(_ fileURL: URL) {
         loadFunctionKeys(from: fileURL)
         refreshDocumentFiles()
+    }
+
+    private func displayName(for fileName: String) -> String {
+        URL(fileURLWithPath: fileName).deletingPathExtension().lastPathComponent
+    }
+
+    private func renameSelectedDocument(to proposedName: String) -> String? {
+        let trimmedName = proposedName.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard !trimmedName.isEmpty else {
+            return "Filename can't be blank."
+        }
+
+        let targetFileName = "\(trimmedName).txt"
+
+        if targetFileName.caseInsensitiveCompare(selectedDocumentName) == .orderedSame {
+            return nil
+        }
+
+        guard let documentsDirectoryURL = documentsDirectoryURL() else {
+            return "Couldn't access the documents folder."
+        }
+
+        if documentFiles.contains(where: { $0.lastPathComponent.caseInsensitiveCompare(targetFileName) == .orderedSame }) {
+            return "A file with that name already exists."
+        }
+
+        let sourceURL = documentsDirectoryURL.appendingPathComponent(selectedDocumentName)
+        let targetURL = documentsDirectoryURL.appendingPathComponent(targetFileName)
+
+        do {
+            try FileManager.default.moveItem(at: sourceURL, to: targetURL)
+            loadFunctionKeys(from: targetURL)
+            refreshDocumentFiles()
+            return nil
+        } catch {
+            return "Couldn't rename the file."
+        }
     }
 }
