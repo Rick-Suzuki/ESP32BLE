@@ -110,7 +110,56 @@ it can't be blank
 it can't be the same name as another file
 
 
-if file line contains ::
+on the main screen
+the filename title should be level with the settings btn
+at the momment, this is huge waste of space
+the filename should still be in center at the top
+setting should be on the right of the filename
+
+//
+//----------------------------------------
+//
+if we chg a filename on the main screen
+save the file with a name, delete the old named file
+
+When the app starts, always choose the first file in the docdir
+//
+//----------------------------------------
+//
+
+in the table, if we slide an item to the right, a delete btn is displayed
+if delete btn is pressed, an alert confirmation btn allows us to delte or cancel
+
+if we slide to the right a duplicate btn is shown, pressing this duplcates the file
+with an underscore and a number is added to the file name
+if the new filename exists go to the next number and so on
+//
+//----------------------------------------
+//
+
+if a file line contains ::
+for example:
+F1::take a picture
+
+in this case
+left = F1
+right = take a picture
+
+there is a toggle button on the right of the modifier btns
+if true, display left, false, display right
+BLE always sends left
+if line doesn't contains :: toggle btn does nothing
+BLE always sends line text
+
+
+
+
+
+
+
+
+
+
 
 
 

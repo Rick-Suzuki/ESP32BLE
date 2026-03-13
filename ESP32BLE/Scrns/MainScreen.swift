@@ -44,8 +44,6 @@ struct MainScreen: View {
 
     var body: some View {
         VStack(spacing: 20) {
-            documentTitle
-
             GeometryReader { geometry in
                 let buttonHeight = geometry.size.height / 4
 
@@ -84,6 +82,10 @@ struct MainScreen: View {
         .navigationTitle("")
         .toolbarTitleDisplayMode(.inline)
         .toolbar {
+            ToolbarItem(placement: .principal) {
+                documentTitle
+            }
+
             ToolbarItem(placement: .topBarTrailing) {
                 NavigationLink("settings >") {
                     SettingsScreen(
@@ -132,7 +134,6 @@ struct MainScreen: View {
                 .buttonStyle(.plain)
             }
         }
-        .padding(.top, 8)
     }
 
     private var modifierButtons: some View {

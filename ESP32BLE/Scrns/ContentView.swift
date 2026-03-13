@@ -22,6 +22,7 @@ struct ContentView: View {
         .task {
             ensureDefaultFunctionKeysFile()
             refreshDocumentFiles()
+            selectInitialDocument()
         }
     }
 
@@ -52,7 +53,8 @@ struct ContentView: View {
             }
         }
 
-        loadFunctionKeys(from: fileURL)
+        refreshDocumentFiles()
+        selectInitialDocument()
     }
 
     private func refreshDocumentFiles() {
@@ -77,6 +79,16 @@ struct ContentView: View {
         } catch {
             documentFiles = []
         }
+    }
+
+    private func selectInitialDocument() {
+        guard let firstFileURL = documentFiles.first else {
+            functionKeyTitles = defaultFunctionKeyTitles()
+            selectedDocumentName = "fnkeys.txt"
+            return
+        }
+
+        loadFunctionKeys(from: firstFileURL)
     }
 
     private func loadFunctionKeys(from fileURL: URL) {
