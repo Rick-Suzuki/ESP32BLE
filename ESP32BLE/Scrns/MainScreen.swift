@@ -66,12 +66,16 @@ struct MainScreen: View {
     let documentFiles: [URL]
     let selectedDocumentName: String
     let selectedDocumentDisplayName: String
+    let currentFileNumber: Int
+    let totalFileCount: Int
     let refreshDocumentFiles: () -> Void
     let loadFunctionKeys: (URL) -> Void
     let renameDocument: (String) -> String?
     let deleteDocument: (URL) -> Void
     let duplicateDocument: (URL) -> Void
     let canDeleteDocuments: Bool
+    let selectPreviousDocument: () -> Void
+    let selectNextDocument: () -> Void
 
     private let gridColumns = Array(repeating: GridItem(.flexible(), spacing: 0), count: 5)
 
@@ -148,27 +152,58 @@ struct MainScreen: View {
     }
 
     private var documentTitle: some View {
-        Group {
-            if isEditingDocumentName {
-                TextField("Filename", text: $documentNameDraft)
-                    .font(.title2.weight(.semibold))
-                    .multilineTextAlignment(.center)
-                    .textFieldStyle(.roundedBorder)
-                    .submitLabel(.done)
-                    .focused($isDocumentNameFieldFocused)
-                    .onSubmit(commitDocumentRename)
-            } else {
-                Button {
-                    documentNameDraft = selectedDocumentDisplayName
-                    isEditingDocumentName = true
-                } label: {
-                    Text(selectedDocumentDisplayName)
-                        .font(.title2.weight(.semibold))
-                        .foregroundStyle(.primary)
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.plain)
+        HStack(spacing: 20) {
+            Button {
+                selectPreviousDocument()
+            } label: {
+                Image(systemName: "triangle.fill")
+                    .font(.system(size: 20))
+                    .rotationEffect(.degrees(-90))
+                    .frame(width: 20, height: 20)
             }
+            .buttonStyle(.plain)
+            .foregroundStyle(.white)
+            .disabled(currentFileNumber <= 1)
+
+            Text("\(currentFileNumber)")
+                .font(.headline)
+                .frame(minWidth: 20, alignment: .leading)
+
+            Group {
+                if isEditingDocumentName {
+                    TextField("Filename", text: $documentNameDraft)
+                        .font(.title2.weight(.semibold))
+                        .multilineTextAlignment(.center)
+                        .textFieldStyle(.roundedBorder)
+                        .submitLabel(.done)
+                        .focused($isDocumentNameFieldFocused)
+                        .onSubmit(commitDocumentRename)
+                } else {
+                    Button {
+                        documentNameDraft = selectedDocumentDisplayName
+                        isEditingDocumentName = true
+                    } label: {
+                        Text(selectedDocumentDisplayName)
+                            .font(.title2.weight(.semibold))
+                            .foregroundStyle(.primary)
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .frame(maxWidth: .infinity)
+
+            Button {
+                selectNextDocument()
+            } label: {
+                Image(systemName: "triangle.fill")
+                    .font(.system(size: 20))
+                    .rotationEffect(.degrees(90))
+                    .frame(width: 20, height: 20)
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.white)
+            .disabled(currentFileNumber >= totalFileCount)
         }
     }
 

@@ -26,12 +26,16 @@ struct ContentView: View {
                 documentFiles: documentFiles,
                 selectedDocumentName: selectedDocumentName,
                 selectedDocumentDisplayName: displayName(for: selectedDocumentName),
+                currentFileNumber: currentFileNumber,
+                totalFileCount: documentFiles.count,
                 refreshDocumentFiles: refreshDocumentFiles,
                 loadFunctionKeys: selectDocument,
                 renameDocument: renameSelectedDocument,
                 deleteDocument: deleteDocument,
                 duplicateDocument: duplicateDocument,
-                canDeleteDocuments: documentFiles.count > 1
+                canDeleteDocuments: documentFiles.count > 1,
+                selectPreviousDocument: selectPreviousDocument,
+                selectNextDocument: selectNextDocument
             )
         }
         .task {
@@ -170,6 +174,14 @@ struct ContentView: View {
         URL(fileURLWithPath: fileName).deletingPathExtension().lastPathComponent
     }
 
+    private var currentFileNumber: Int {
+        guard let index = documentFiles.firstIndex(where: { $0.lastPathComponent == selectedDocumentName }) else {
+            return 1
+        }
+
+        return index + 1
+    }
+
     private func renameSelectedDocument(to proposedName: String) -> String? {
         let trimmedName = proposedName.trimmingCharacters(in: .whitespacesAndNewlines)
 
@@ -259,5 +271,23 @@ struct ContentView: View {
         } catch {
             refreshDocumentFiles()
         }
+    }
+
+    private func selectPreviousDocument() {
+        guard let currentIndex = documentFiles.firstIndex(where: { $0.lastPathComponent == selectedDocumentName }),
+              currentIndex > 0 else {
+            return
+        }
+
+        loadFunctionKeys(from: documentFiles[currentIndex - 1])
+    }
+
+    private func selectNextDocument() {
+        guard let currentIndex = documentFiles.firstIndex(where: { $0.lastPathComponent == selectedDocumentName }),
+              currentIndex < documentFiles.count - 1 else {
+            return
+        }
+
+        loadFunctionKeys(from: documentFiles[currentIndex + 1])
     }
 }

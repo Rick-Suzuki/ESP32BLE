@@ -154,9 +154,17 @@ BLE always sends line text
 
 
 
+add triangle buttons left and right of the filename
+use the sliderRow code for the buttons style
 
+left btn goes to previous file
+right btn goes to next file
 
+add a number after the left btn
+the number starts at 1, for first file and so on
 
+left btn - minimum value is file 1
+right btn - max value number of files
 
 
 
