@@ -44,16 +44,17 @@ private enum FunctionKeyDisplayMode: CaseIterable {
     var title: String {
         switch self {
         case .left:
-            return "Left"
+            return "Left cmd"
         case .right:
-            return "Right"
+            return "Right text"
         case .both:
-            return "Both"
+            return "Both texts"
         }
     }
 }
 
 struct MainScreen: View {
+    private let displayModeButtonColor = Color(red: 0.0, green: 0.24, blue: 0.55)
     @ObservedObject var ble: BLEKeyboardManager
     @State private var activeModifiers: Set<ModifierCommand> = []
     @State private var displayMode: FunctionKeyDisplayMode = .left
@@ -206,10 +207,10 @@ struct MainScreen: View {
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(.white)
-                .background(Color.blue)
+                .background(displayModeButtonColor)
                 .overlay {
                     RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.blue, lineWidth: 2)
+                        .stroke(displayModeButtonColor, lineWidth: 2)
                 }
                 .clipShape(.rect(cornerRadius: 12))
             }
@@ -238,10 +239,10 @@ struct MainScreen: View {
         VStack(spacing: 2) {
             Text(displayMode.title)
 
-            if displayMode == .both {
-                Text("L / R")
-                    .font(.caption)
-            }
+//            if displayMode == .both {
+//                Text("L / R")
+//                    .font(.caption)
+//            }
         }
     }
 
