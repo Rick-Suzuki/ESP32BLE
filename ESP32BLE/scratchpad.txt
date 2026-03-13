@@ -90,8 +90,14 @@ the triangle btns should keep within the limits
 theseares fine-adjustments for the sliders
 
 
+in settings
+there are 2 connection boxes
+2nd box
+move disconnect btn to the right of connectselected btn
+delete last message and conent
+move bluetooth to be below status in 1st box
 
-
+finally, remove 2nd box
 
 
 

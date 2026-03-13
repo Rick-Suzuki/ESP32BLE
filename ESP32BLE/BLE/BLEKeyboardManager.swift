@@ -181,20 +181,20 @@ extension BLEKeyboardManager: CBCentralManagerDelegate {
 	func centralManagerDidUpdateState(_ central: CBCentralManager) {
 		switch central.state {
 			case .unknown:
-				bluetoothStateText = "Bluetooth state: unknown"
+				bluetoothStateText = "unknown"
 			case .resetting:
-				bluetoothStateText = "Bluetooth state: resetting"
+				bluetoothStateText = "resetting"
 			case .unsupported:
-				bluetoothStateText = "Bluetooth not supported on this device"
+				bluetoothStateText = "not supported on this device"
 			case .unauthorized:
-				bluetoothStateText = "Bluetooth not authorized"
+				bluetoothStateText = "not authorized"
 			case .poweredOff:
-				bluetoothStateText = "Bluetooth is off"
+				bluetoothStateText = "off"
 			case .poweredOn:
-				bluetoothStateText = "Bluetooth is on"
+				bluetoothStateText = "on"
 				startScan()
 			@unknown default:
-				bluetoothStateText = "Bluetooth state: unknown future case"
+				bluetoothStateText = "unknown future case"
 		}
 	}
 	

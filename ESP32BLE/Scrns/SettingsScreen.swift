@@ -15,7 +15,6 @@ struct SettingsScreen: View {
                 ScrollView {
                     VStack(spacing: 20) {
                         availableDevicesSection
-                        ConnectionStatusSection(ble: ble)
                         keyboardSettingsSection
                     }
                     .frame(maxWidth: .infinity)
@@ -88,10 +87,17 @@ struct SettingsScreen: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(ble.selectedPeripheralID == nil)
+
+                Button("Disconnect") {
+                    ble.disconnect()
+                }
+                .buttonStyle(.bordered)
+                .disabled(!ble.isConnected)
             }
 
             Text("Connected Device ID: \(ble.connectedDeviceID)")
             Text("Status: \(ble.connectionText)")
+            Text("BT State: \(ble.bluetoothStateText)")
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding()
