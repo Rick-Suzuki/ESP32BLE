@@ -6,8 +6,12 @@ struct SettingsScreen: View {
     let selectedDocumentName: String
     let refreshDocumentFiles: () -> Void
     let loadFunctionKeys: (URL) -> Void
+    let deleteDocument: (URL) -> Void
+    let duplicateDocument: (URL) -> Void
+    let canDeleteDocuments: Bool
     @State private var keyboardSliderOneValue = 0.0
     @State private var keyboardSliderTwoValue = 0.0
+    @State private var pendingDeleteFile: URL?
 
     var body: some View {
         GeometryReader { geometry in
@@ -139,39 +143,31 @@ struct SettingsScreen: View {
             Text("Documents")
                 .font(.headline)
 
-            ScrollView {
-                LazyVStack(spacing: 8) {
-                    ForEach(documentFiles, id: \.path) { fileURL in
-                        let isSelected = selectedDocumentName == fileURL.lastPathComponent
-
-                        Button {
-                            loadFunctionKeys(fileURL)
-                        } label: {
-                            HStack {
-                                Text(fileURL.lastPathComponent)
-                                    .foregroundStyle(.white)
-                                    .lineLimit(1)
-
-                                Spacer()
-                            }
-                            .padding(.horizontal, 12)
-                            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-                            .background(Color.black)
-                            .overlay {
-                                Rectangle()
-                                    .stroke(isSelected ? Color.white : Color.gray, lineWidth: 1)
-                            }
-                            .contentShape(.rect)
-                        }
-                        .buttonStyle(.plain)
-                    }
+            List {
+                ForEach(documentFiles, id: \.path) { fileURL in
+                    documentRow(for: fileURL)
                 }
             }
+            .listStyle(.plain)
+            .scrollContentBackground(.hidden)
+            .background(.clear)
         }
         .frame(maxHeight: .infinity, alignment: .top)
         .padding()
         .background(.thinMaterial)
         .clipShape(.rect(cornerRadius: 16))
+        .alert("Delete File?", isPresented: pendingDeleteAlertIsPresented, presenting: pendingDeleteFile) { fileURL in
+            Button("Delete", role: .destructive) {
+                deleteDocument(fileURL)
+                pendingDeleteFile = nil
+            }
+
+            Button("Cancel", role: .cancel) {
+                pendingDeleteFile = nil
+            }
+        } message: { fileURL in
+            Text("Delete \(fileURL.lastPathComponent)?")
+        }
     }
 
     private var customKeyboardTimingSection: some View {
@@ -249,6 +245,62 @@ struct SettingsScreen: View {
             .foregroundStyle(.white)
             .disabled(value.wrappedValue >= range.upperBound)
         }
+    }
+
+    private func documentRow(for fileURL: URL) -> some View {
+        let isSelected = selectedDocumentName == fileURL.lastPathComponent
+
+        return Button {
+            loadFunctionKeys(fileURL)
+        } label: {
+            HStack {
+                Text(fileURL.lastPathComponent)
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+
+                Spacer()
+            }
+            .padding(.horizontal, 12)
+            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            .background(Color.black)
+            .overlay {
+                Rectangle()
+                    .stroke(isSelected ? Color.white : Color.gray, lineWidth: 1)
+            }
+            .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .listRowInsets(EdgeInsets())
+        .listRowSeparator(.hidden)
+        .listRowBackground(Color.clear)
+        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+            if canDeleteDocuments {
+                Button(role: .destructive) {
+                    pendingDeleteFile = fileURL
+                } label: {
+                    Label("Delete", systemImage: "trash")
+                }
+            }
+        }
+        .swipeActions(edge: .leading, allowsFullSwipe: false) {
+            Button {
+                duplicateDocument(fileURL)
+            } label: {
+                Label("Duplicate", systemImage: "plus.square.on.square")
+            }
+            .tint(.blue)
+        }
+    }
+
+    private var pendingDeleteAlertIsPresented: Binding<Bool> {
+        Binding(
+            get: { pendingDeleteFile != nil },
+            set: { newValue in
+                if !newValue {
+                    pendingDeleteFile = nil
+                }
+            }
+        )
     }
 }
 

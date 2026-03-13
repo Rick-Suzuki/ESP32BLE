@@ -16,7 +16,10 @@ struct ContentView: View {
                 selectedDocumentDisplayName: displayName(for: selectedDocumentName),
                 refreshDocumentFiles: refreshDocumentFiles,
                 loadFunctionKeys: selectDocument,
-                renameDocument: renameSelectedDocument
+                renameDocument: renameSelectedDocument,
+                deleteDocument: deleteDocument,
+                duplicateDocument: duplicateDocument,
+                canDeleteDocuments: documentFiles.count > 1
             )
         }
         .task {
@@ -163,6 +166,63 @@ struct ContentView: View {
             return nil
         } catch {
             return "Couldn't rename the file."
+        }
+    }
+
+    private func deleteDocument(_ fileURL: URL) {
+        guard documentFiles.count > 1 else {
+            return
+        }
+
+        let fallbackFileURL: URL?
+
+        if selectedDocumentName == fileURL.lastPathComponent,
+           let currentIndex = documentFiles.firstIndex(where: { $0.lastPathComponent == fileURL.lastPathComponent }) {
+            let remainingFiles = documentFiles.enumerated()
+                .filter { $0.offset != currentIndex }
+                .map(\.element)
+
+            if currentIndex > 0 {
+                fallbackFileURL = remainingFiles[currentIndex - 1]
+            } else {
+                fallbackFileURL = remainingFiles.first
+            }
+        } else {
+            fallbackFileURL = nil
+        }
+
+        do {
+            try FileManager.default.removeItem(at: fileURL)
+            refreshDocumentFiles()
+
+            if let fallbackFileURL {
+                loadFunctionKeys(from: fallbackFileURL)
+            }
+        } catch {
+            refreshDocumentFiles()
+        }
+    }
+
+    private func duplicateDocument(_ fileURL: URL) {
+        let directoryURL = fileURL.deletingLastPathComponent()
+        let fileExtension = fileURL.pathExtension
+        let baseName = fileURL.deletingPathExtension().lastPathComponent
+
+        var index = 1
+        var targetURL: URL
+
+        repeat {
+            let candidateName = "\(baseName)_\(index)"
+            targetURL = directoryURL.appendingPathComponent(candidateName).appendingPathExtension(fileExtension)
+            index += 1
+        } while FileManager.default.fileExists(atPath: targetURL.path)
+
+        do {
+            try FileManager.default.copyItem(at: fileURL, to: targetURL)
+            refreshDocumentFiles()
+            loadFunctionKeys(from: targetURL)
+        } catch {
+            refreshDocumentFiles()
         }
     }
 }

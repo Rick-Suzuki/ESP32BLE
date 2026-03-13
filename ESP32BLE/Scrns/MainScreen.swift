@@ -39,6 +39,9 @@ struct MainScreen: View {
     let refreshDocumentFiles: () -> Void
     let loadFunctionKeys: (URL) -> Void
     let renameDocument: (String) -> String?
+    let deleteDocument: (URL) -> Void
+    let duplicateDocument: (URL) -> Void
+    let canDeleteDocuments: Bool
 
     private let gridColumns = Array(repeating: GridItem(.flexible(), spacing: 0), count: 5)
 
@@ -93,7 +96,10 @@ struct MainScreen: View {
                         documentFiles: documentFiles,
                         selectedDocumentName: selectedDocumentName,
                         refreshDocumentFiles: refreshDocumentFiles,
-                        loadFunctionKeys: loadFunctionKeys
+                        loadFunctionKeys: loadFunctionKeys,
+                        deleteDocument: deleteDocument,
+                        duplicateDocument: duplicateDocument,
+                        canDeleteDocuments: canDeleteDocuments
                     )
                 }
             }
