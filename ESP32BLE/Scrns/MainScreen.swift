@@ -1,30 +1,5 @@
 import SwiftUI
 
-private enum ModifierCommand: String, CaseIterable, Identifiable {
-    case command = "cm"
-    case option = "op"
-    case shift = "sh"
-    case control = "ct"
-    case off = "off"
-
-    var id: Self { self }
-
-    var title: String {
-        switch self {
-        case .command:
-            return "cmd"
-        case .option:
-            return "option"
-        case .shift:
-            return "shift"
-        case .control:
-            return "control"
-        case .off:
-            return "off"
-        }
-    }
-}
-
 private enum FunctionKeyDisplayMode: CaseIterable {
     case left
     case right
@@ -56,7 +31,6 @@ private enum FunctionKeyDisplayMode: CaseIterable {
 struct MainScreen: View {
     private let displayModeButtonColor = Color(red: 0.0, green: 0.24, blue: 0.55)
     @ObservedObject var ble: BLEKeyboardManager
-    @State private var activeModifiers: Set<ModifierCommand> = []
     @State private var displayMode: FunctionKeyDisplayMode = .left
     @State private var isEditingDocumentName = false
     @State private var documentNameDraft = ""
@@ -87,13 +61,13 @@ struct MainScreen: View {
                 LazyVGrid(columns: gridColumns, spacing: 0) {
                     ForEach(Array(functionKeys.enumerated()), id: \.offset) { _, entry in
                         Button {
-                            let sendText = entry.sendText.trimmingCharacters(in: .whitespacesAndNewlines)
-
-                            guard !sendText.isEmpty else {
+                            guard !entry.sendTexts.isEmpty else {
                                 return
                             }
 
-                            ble.sendLine(sendText)
+                            for sendText in entry.sendTexts {
+                                ble.sendLine(sendText)
+                            }
                         } label: {
                             Text(buttonTitle(for: entry))
                                 .font(.system(size: 28, weight: .semibold))
@@ -113,7 +87,7 @@ struct MainScreen: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-            modifierButtons
+            displayModeButtonSection
         }
         .padding(.horizontal, 2)
         .navigationTitle("")
@@ -207,77 +181,37 @@ struct MainScreen: View {
         }
     }
 
-    private var modifierButtons: some View {
-        VStack(alignment: .leading, spacing: 2) {
+    private var displayModeButtonSection: some View {
+        HStack {
+            Spacer()
 
-            HStack(spacing: 10) {
-                Text("Modifiers")
-                    .font(.headline)
-                ForEach(ModifierCommand.allCases) { modifier in
-                    let isSelected = modifier == .off ? activeModifiers.isEmpty : activeModifiers.contains(modifier)
-
-                    Button {
-                        toggleModifier(modifier)
-                    } label: {
-                        Text(modifier.title)
-                            .frame(maxWidth: .infinity, minHeight: 50)
-                            .contentShape(.rect)
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(isSelected ? .white : .primary)
-                    .background(isSelected ? Color.blue : Color.gray.opacity(0.18))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(isSelected ? Color.blue : Color.gray.opacity(0.4), lineWidth: 2)
-                    }
-                    .clipShape(.rect(cornerRadius: 12))
-                }
-
-                Button {
-                    displayMode = displayMode.next()
-                } label: {
-                    displayModeLabel
-                        .frame(maxWidth: .infinity, minHeight: 50)
-                        .contentShape(.rect)
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle(.white)
-                .background(displayModeButtonColor)
-                .overlay {
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(displayModeButtonColor, lineWidth: 2)
-                }
-                .clipShape(.rect(cornerRadius: 12))
+            Button {
+                displayMode = displayMode.next()
+            } label: {
+                displayModeLabel
+                    .frame(maxWidth: .infinity, minHeight: 50)
+                    .contentShape(.rect)
             }
+            .buttonStyle(.plain)
+            .foregroundStyle(.white)
+            .background(displayModeButtonColor)
+            .overlay {
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(displayModeButtonColor, lineWidth: 2)
+            }
+            .clipShape(.rect(cornerRadius: 12))
+            .frame(maxWidth: 180)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, alignment: .trailing)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
         .background(.thinMaterial)
         .clipShape(.rect(cornerRadius: 16))
-    }
-
-    private func toggleModifier(_ modifier: ModifierCommand) {
-        if modifier == .off {
-            activeModifiers.removeAll()
-            ble.sendLine(modifier.rawValue)
-            return
-        }
-
-        if activeModifiers.contains(modifier) {
-            activeModifiers.remove(modifier)
-        } else {
-            activeModifiers.insert(modifier)
-            ble.sendLine(modifier.rawValue)
-        }
     }
 
     private var displayModeLabel: some View {
         VStack(spacing: 2) {
             Text(displayMode.title)
-
-//            if displayMode == .both {
-//                Text("L / R")
-//                    .font(.caption)
-//            }
         }
     }
 
@@ -288,14 +222,13 @@ struct MainScreen: View {
 
         switch displayMode {
         case .left:
-            return entry.sendText
+            return entry.primaryDisplayText
         case .right:
             return entry.alternateDisplayText ?? entry.rawLine
         case .both:
-            return "\(entry.sendText)\n\(entry.alternateDisplayText ?? entry.rawLine)"
+            return "\(entry.primaryDisplayText)\n\(entry.alternateDisplayText ?? entry.rawLine)"
         }
     }
-
     private var renameAlertIsPresented: Binding<Bool> {
         Binding(
             get: { renameAlertMessage != nil },

@@ -2,8 +2,12 @@ import SwiftUI
 
 struct FunctionKeyEntry {
     let rawLine: String
-    let sendText: String
+    let sendTexts: [String]
     let alternateDisplayText: String?
+
+    var primaryDisplayText: String {
+        sendTexts.joined(separator: ":")
+    }
 
     var displayUsesAlternateText: Bool {
         alternateDisplayText != nil
@@ -13,7 +17,7 @@ struct FunctionKeyEntry {
 struct ContentView: View {
     @StateObject private var ble = BLEKeyboardManager()
     @State private var functionKeys = (1...20).map {
-        FunctionKeyEntry(rawLine: "F\($0)", sendText: "F\($0)", alternateDisplayText: nil)
+        FunctionKeyEntry(rawLine: "F\($0)", sendTexts: ["F\($0)"], alternateDisplayText: nil)
     }
     @State private var documentFiles: [URL] = []
     @State private var selectedDocumentName = "fnkeys.txt"
@@ -51,7 +55,7 @@ struct ContentView: View {
 
     private func defaultFunctionKeys() -> [FunctionKeyEntry] {
         defaultFunctionKeyTitles().map { title in
-            FunctionKeyEntry(rawLine: title, sendText: title, alternateDisplayText: nil)
+            FunctionKeyEntry(rawLine: title, sendTexts: [title], alternateDisplayText: nil)
         }
     }
 
@@ -123,7 +127,7 @@ struct ContentView: View {
             functionKeys = normalizedFunctionKeys(from: loadedTitles)
             selectedDocumentName = fileURL.lastPathComponent
         } catch {
-            functionKeys = Array(repeating: FunctionKeyEntry(rawLine: "", sendText: "", alternateDisplayText: nil), count: 20)
+            functionKeys = Array(repeating: FunctionKeyEntry(rawLine: "", sendTexts: [], alternateDisplayText: nil), count: 20)
         }
     }
 
@@ -141,7 +145,7 @@ struct ContentView: View {
 
         return (0..<20).map { index in
             guard index < firstTwenty.count else {
-                return FunctionKeyEntry(rawLine: "", sendText: "", alternateDisplayText: nil)
+                return FunctionKeyEntry(rawLine: "", sendTexts: [], alternateDisplayText: nil)
             }
 
             return functionKeyEntry(from: firstTwenty[index])
@@ -152,17 +156,26 @@ struct ContentView: View {
         let components = line.components(separatedBy: "::")
 
         guard components.count >= 2 else {
-            return FunctionKeyEntry(rawLine: line, sendText: line, alternateDisplayText: nil)
+            return FunctionKeyEntry(rawLine: line, sendTexts: [line], alternateDisplayText: nil)
         }
 
         let leftText = components[0].trimmingCharacters(in: .whitespacesAndNewlines)
         let rightText = components.dropFirst().joined(separator: "::").trimmingCharacters(in: .whitespacesAndNewlines)
 
         guard !leftText.isEmpty, !rightText.isEmpty else {
-            return FunctionKeyEntry(rawLine: line, sendText: line, alternateDisplayText: nil)
+            return FunctionKeyEntry(rawLine: line, sendTexts: [line], alternateDisplayText: nil)
         }
 
-        return FunctionKeyEntry(rawLine: line, sendText: leftText, alternateDisplayText: rightText)
+        let sendTexts = leftText
+            .components(separatedBy: ":")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+
+        guard !sendTexts.isEmpty else {
+            return FunctionKeyEntry(rawLine: line, sendTexts: [line], alternateDisplayText: nil)
+        }
+
+        return FunctionKeyEntry(rawLine: line, sendTexts: sendTexts, alternateDisplayText: rightText)
     }
 
     private func selectDocument(_ fileURL: URL) {

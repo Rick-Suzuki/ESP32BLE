@@ -166,9 +166,36 @@ the number starts at 1, for first file and so on
 left btn - minimum value is file 1
 right btn - max value number of files
 
+d.db*@commented out'@('
+d.db*@todo'@('
+remove label modifiers
+
+
+d.db("todo:")
+d.db("commented out:")
+remove btns
+Cmd
+options
+shift
+control
+off
+
+remove any unneeded code
+
+
+we already have a seperator ::
+
+example:
+
+left::right
 
 
 
+now add in the left
+if there are words/phrases seperated by a single colon
+send them one at at time e.g.
+one:two:three::some text
+send one two three
 
 
 
