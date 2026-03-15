@@ -35,6 +35,8 @@ struct MainScreen: View {
     ]
     private let displayModeButtonColor = Color(red: 0.0, green: 0.24, blue: 0.55)
     @State private var visibleBoxCount = 20
+    @State private var boxFontSize = 28.0
+    @State private var isBLESendEnabled = true
     @ObservedObject var ble: BLEKeyboardManager
     @State private var displayMode: FunctionKeyDisplayMode = .left
     @State private var isEditingDocumentName = false
@@ -66,6 +68,10 @@ struct MainScreen: View {
                 LazyVGrid(columns: columns, spacing: 0) {
                     ForEach(Array(functionKeys.prefix(visibleBoxCount).enumerated()), id: \.offset) { _, entry in
                         Button {
+                            guard isBLESendEnabled else {
+                                return
+                            }
+
                             guard !entry.sendTexts.isEmpty else {
                                 return
                             }
@@ -75,7 +81,7 @@ struct MainScreen: View {
                             }
                         } label: {
                             Text(buttonTitle(for: entry))
-                                .font(.system(size: 28, weight: .semibold))
+                                .font(.system(size: boxFontSize, weight: .semibold))
                                 .foregroundStyle(.white)
                                 .multilineTextAlignment(.center)
                                 .frame(maxWidth: .infinity, minHeight: buttonHeight, maxHeight: buttonHeight)
@@ -219,7 +225,55 @@ struct MainScreen: View {
                 .disabled(visibleBoxCount == allowedVisibleBoxCounts.last)
             }
 
+            HStack(spacing: 12) {
+                Button {
+                    decreaseBoxFontSize()
+                } label: {
+                    Image(systemName: "triangle.fill")
+                        .font(.system(size: 30))
+                        .rotationEffect(.degrees(-90))
+                        .frame(width: 30, height: 30)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.white)
+                .disabled(boxFontSize <= minimumBoxFontSize)
+
+                Text("\(Int(boxFontSize))")
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                    .frame(minWidth: 32)
+
+                Button {
+                    increaseBoxFontSize()
+                } label: {
+                    Image(systemName: "triangle.fill")
+                        .font(.system(size: 30))
+                        .rotationEffect(.degrees(90))
+                        .frame(width: 30, height: 30)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.white)
+                .disabled(boxFontSize >= maximumBoxFontSize)
+            }
+
             Spacer(minLength: 12)
+
+            Button {
+                isBLESendEnabled.toggle()
+            } label: {
+                Text(isBLESendEnabled ? "Enabled" : "Disabled")
+                    .frame(maxWidth: .infinity, minHeight: 50)
+                    .contentShape(.rect)
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.white)
+            .background(isBLESendEnabled ? Color.blue : Color.gray.opacity(0.45))
+            .overlay {
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(isBLESendEnabled ? Color.blue : Color.gray.opacity(0.4), lineWidth: 2)
+            }
+            .clipShape(.rect(cornerRadius: 12))
+            .frame(maxWidth: 150)
 
             Button {
                 displayMode = displayMode.next()
@@ -276,6 +330,10 @@ struct MainScreen: View {
         )
     }
 
+    private var minimumBoxFontSize: Double { 12 }
+
+    private var maximumBoxFontSize: Double { 100 }
+
     private func decreaseVisibleBoxCount() {
         guard let currentIndex = allowedVisibleBoxCounts.firstIndex(of: visibleBoxCount),
               currentIndex > 0 else {
@@ -292,6 +350,14 @@ struct MainScreen: View {
         }
 
         visibleBoxCount = allowedVisibleBoxCounts[currentIndex + 1]
+    }
+
+    private func decreaseBoxFontSize() {
+        boxFontSize = max(minimumBoxFontSize, boxFontSize - 2)
+    }
+
+    private func increaseBoxFontSize() {
+        boxFontSize = min(maximumBoxFontSize, boxFontSize + 2)
     }
 
     private func gridDimensions(for itemCount: Int) -> (columns: Int, rows: Int) {

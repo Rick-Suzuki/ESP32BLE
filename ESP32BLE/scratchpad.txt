@@ -271,6 +271,18 @@ there is a btn on the right, this sends the text to the ble
 
 
 
+main screen
+1.
+btm left, right of boxes btns
+add triangle btns and number
+font-, font size, font+
+changes the size of the fonts in the the boxes
+
+2. on the right, but left of both texts btn
+add btn, two states:
+enabled/disabled
+this enables the ble sending to the esp32
+normallt enabled
 
 
 
