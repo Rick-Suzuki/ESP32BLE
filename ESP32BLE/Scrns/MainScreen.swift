@@ -29,7 +29,12 @@ private enum FunctionKeyDisplayMode: CaseIterable {
 }
 
 struct MainScreen: View {
+    private let allowedVisibleBoxCounts = [
+        1, 2, 4, 6, 9, 12, 15, 16, 18, 20, 24, 28, 32, 36, 42, 45, 48,
+        50, 54, 56, 60, 63, 64, 70, 72, 80, 81, 84, 88, 90, 96, 99, 100
+    ]
     private let displayModeButtonColor = Color(red: 0.0, green: 0.24, blue: 0.55)
+    @State private var visibleBoxCount = 20
     @ObservedObject var ble: BLEKeyboardManager
     @State private var displayMode: FunctionKeyDisplayMode = .left
     @State private var isEditingDocumentName = false
@@ -51,15 +56,15 @@ struct MainScreen: View {
     let selectPreviousDocument: () -> Void
     let selectNextDocument: () -> Void
 
-    private let gridColumns = Array(repeating: GridItem(.flexible(), spacing: 0), count: 5)
-
     var body: some View {
         VStack(spacing: 20) {
             GeometryReader { geometry in
-                let buttonHeight = geometry.size.height / 4
+                let gridDimensions = gridDimensions(for: visibleBoxCount)
+                let columns = Array(repeating: GridItem(.flexible(), spacing: 0), count: gridDimensions.columns)
+                let buttonHeight = geometry.size.height / CGFloat(max(gridDimensions.rows, 1))
 
-                LazyVGrid(columns: gridColumns, spacing: 0) {
-                    ForEach(Array(functionKeys.enumerated()), id: \.offset) { _, entry in
+                LazyVGrid(columns: columns, spacing: 0) {
+                    ForEach(Array(functionKeys.prefix(visibleBoxCount).enumerated()), id: \.offset) { _, entry in
                         Button {
                             guard !entry.sendTexts.isEmpty else {
                                 return
@@ -183,7 +188,38 @@ struct MainScreen: View {
 
     private var displayModeButtonSection: some View {
         HStack {
-            Spacer()
+            HStack(spacing: 12) {
+                Button {
+                    decreaseVisibleBoxCount()
+                } label: {
+                    Image(systemName: "triangle.fill")
+                        .font(.system(size: 30))
+                        .rotationEffect(.degrees(-90))
+                        .frame(width: 30, height: 30)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.white)
+                .disabled(visibleBoxCount == allowedVisibleBoxCounts.first)
+
+                Text("\(visibleBoxCount)")
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                    .frame(minWidth: 32)
+
+                Button {
+                    increaseVisibleBoxCount()
+                } label: {
+                    Image(systemName: "triangle.fill")
+                        .font(.system(size: 30))
+                        .rotationEffect(.degrees(90))
+                        .frame(width: 30, height: 30)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.white)
+                .disabled(visibleBoxCount == allowedVisibleBoxCounts.last)
+            }
+
+            Spacer(minLength: 12)
 
             Button {
                 displayMode = displayMode.next()
@@ -238,6 +274,64 @@ struct MainScreen: View {
                 }
             }
         )
+    }
+
+    private func decreaseVisibleBoxCount() {
+        guard let currentIndex = allowedVisibleBoxCounts.firstIndex(of: visibleBoxCount),
+              currentIndex > 0 else {
+            return
+        }
+
+        visibleBoxCount = allowedVisibleBoxCounts[currentIndex - 1]
+    }
+
+    private func increaseVisibleBoxCount() {
+        guard let currentIndex = allowedVisibleBoxCounts.firstIndex(of: visibleBoxCount),
+              currentIndex < allowedVisibleBoxCounts.count - 1 else {
+            return
+        }
+
+        visibleBoxCount = allowedVisibleBoxCounts[currentIndex + 1]
+    }
+
+    private func gridDimensions(for itemCount: Int) -> (columns: Int, rows: Int) {
+        let preferredDimensions: [Int: (columns: Int, rows: Int)] = [
+            15: (5, 3),
+            18: (6, 3),
+            24: (6, 4),
+            28: (7, 4),
+            32: (8, 4),
+            45: (9, 5),
+            48: (8, 6),
+            50: (10, 5),
+            54: (9, 6),
+            60: (10, 6),
+            63: (9, 7),
+            70: (10, 7),
+            80: (10, 8),
+            84: (12, 7),
+            88: (11, 8),
+            96: (12, 8),
+            99: (11, 9)
+        ]
+
+        if let preferred = preferredDimensions[itemCount] {
+            return preferred
+        }
+
+        guard itemCount > 0 else {
+            return (1, 1)
+        }
+
+        let baseColumns = Int(ceil(sqrt(Double(itemCount))))
+        var columns = max(baseColumns, Int(ceil(Double(itemCount) / Double(baseColumns))))
+        var rows = Int(ceil(Double(itemCount) / Double(columns)))
+
+        if rows > columns {
+            swap(&rows, &columns)
+        }
+
+        return (columns, rows)
     }
 
     private func commitDocumentRename() {

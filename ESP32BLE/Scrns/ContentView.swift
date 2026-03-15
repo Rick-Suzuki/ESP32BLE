@@ -1,5 +1,8 @@
 import SwiftUI
 
+private let maxFunctionKeyCount = 100
+private let defaultNamedFunctionKeyCount = 20
+
 struct FunctionKeyEntry {
     let rawLine: String
     let sendTexts: [String]
@@ -16,9 +19,7 @@ struct FunctionKeyEntry {
 
 struct ContentView: View {
     @StateObject private var ble = BLEKeyboardManager()
-    @State private var functionKeys = (1...20).map {
-        FunctionKeyEntry(rawLine: "F\($0)", sendTexts: ["F\($0)"], alternateDisplayText: nil)
-    }
+    @State private var functionKeys = ContentView.makeDefaultFunctionKeys()
     @State private var documentFiles: [URL] = []
     @State private var selectedDocumentName = "fnkeys.txt"
 
@@ -50,13 +51,23 @@ struct ContentView: View {
     }
 
     private func defaultFunctionKeyTitles() -> [String] {
-        (1...20).map { "F\($0)" }
+        (1...defaultNamedFunctionKeyCount).map { "F\($0)" }
+    }
+
+    private static func makeDefaultFunctionKeys() -> [FunctionKeyEntry] {
+        let namedEntries = (1...defaultNamedFunctionKeyCount).map { index in
+            FunctionKeyEntry(rawLine: "F\(index)", sendTexts: ["F\(index)"], alternateDisplayText: nil)
+        }
+        let emptyEntries = Array(
+            repeating: FunctionKeyEntry(rawLine: "", sendTexts: [], alternateDisplayText: nil),
+            count: maxFunctionKeyCount - defaultNamedFunctionKeyCount
+        )
+
+        return namedEntries + emptyEntries
     }
 
     private func defaultFunctionKeys() -> [FunctionKeyEntry] {
-        defaultFunctionKeyTitles().map { title in
-            FunctionKeyEntry(rawLine: title, sendTexts: [title], alternateDisplayText: nil)
-        }
+        Self.makeDefaultFunctionKeys()
     }
 
     private func documentsDirectoryURL() -> URL? {
@@ -127,7 +138,7 @@ struct ContentView: View {
             functionKeys = normalizedFunctionKeys(from: loadedTitles)
             selectedDocumentName = fileURL.lastPathComponent
         } catch {
-            functionKeys = Array(repeating: FunctionKeyEntry(rawLine: "", sendTexts: [], alternateDisplayText: nil), count: 20)
+            functionKeys = Array(repeating: FunctionKeyEntry(rawLine: "", sendTexts: [], alternateDisplayText: nil), count: maxFunctionKeyCount)
         }
     }
 
@@ -141,14 +152,14 @@ struct ContentView: View {
 
             return trimmedLine
         }
-        let firstTwenty = Array(filteredTitles.prefix(20))
+        let firstHundred = Array(filteredTitles.prefix(maxFunctionKeyCount))
 
-        return (0..<20).map { index in
-            guard index < firstTwenty.count else {
+        return (0..<maxFunctionKeyCount).map { index in
+            guard index < firstHundred.count else {
                 return FunctionKeyEntry(rawLine: "", sendTexts: [], alternateDisplayText: nil)
             }
 
-            return functionKeyEntry(from: firstTwenty[index])
+            return functionKeyEntry(from: firstHundred[index])
         }
     }
 
