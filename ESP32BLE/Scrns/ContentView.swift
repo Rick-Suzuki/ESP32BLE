@@ -224,7 +224,7 @@ struct ContentView: View {
         }
 
         if documentFiles.contains(where: { $0.lastPathComponent.caseInsensitiveCompare(targetFileName) == .orderedSame }) {
-            return "A file with that name already exists."
+            return "a file with that name already exists."
         }
 
         let sourceURL = documentsDirectoryURL.appendingPathComponent(selectedDocumentName)
