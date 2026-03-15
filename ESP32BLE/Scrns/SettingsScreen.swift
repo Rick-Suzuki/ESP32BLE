@@ -11,6 +11,7 @@ struct SettingsScreen: View {
     let canDeleteDocuments: Bool
     @State private var keyboardSliderOneValue = 0.0
     @State private var keyboardSliderTwoValue = 0.0
+    @State private var bleTextToSend = ""
     @State private var pendingDeleteFile: URL?
 
     var body: some View {
@@ -19,6 +20,7 @@ struct SettingsScreen: View {
                 ScrollView {
                     VStack(spacing: 20) {
                         availableDevicesSection
+                        sendTextSection
                         keyboardSettingsSection
                     }
                     .frame(maxWidth: .infinity)
@@ -33,6 +35,11 @@ struct SettingsScreen: View {
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
                 BackButton()
+            }
+        }
+        .onChange(of: ble.isConnected) {
+            if ble.isConnected {
+                sendKeyboardTimingCommand()
             }
         }
         .task {
@@ -138,6 +145,35 @@ struct SettingsScreen: View {
         .clipShape(.rect(cornerRadius: 16))
     }
 
+    private var sendTextSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 12) {
+                Button("del") {
+                    bleTextToSend = ""
+                }
+                .buttonStyle(.bordered)
+                .tint(.red)
+                .disabled(bleTextToSend.isEmpty)
+
+                TextField("Text to send", text: $bleTextToSend)
+                    .textFieldStyle(.roundedBorder)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .onSubmit(sendEnteredText)
+
+                Button("Send") {
+                    sendEnteredText()
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(bleTextToSend.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding()
+        .background(.thinMaterial)
+        .clipShape(.rect(cornerRadius: 16))
+    }
+
     private var documentTableSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Documents")
@@ -192,7 +228,7 @@ struct SettingsScreen: View {
                 .frame(maxWidth: 520, alignment: .leading)
 
                 Button("set & test") {
-                    ble.sendLine("set:\(Int(keyboardSliderOneValue)):\(Int(keyboardSliderTwoValue))")
+                    sendKeyboardTimingCommand()
                     ble.sendString("Hello World!")
                 }
                 .buttonStyle(.borderedProminent)
@@ -301,6 +337,19 @@ struct SettingsScreen: View {
                 }
             }
         )
+    }
+
+    private func sendEnteredText() {
+        let trimmedText = bleTextToSend.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard !trimmedText.isEmpty else {
+            return
+        }
+        ble.sendString(trimmedText)
+    }
+
+    private func sendKeyboardTimingCommand() {
+        ble.sendLine("set:\(Int(keyboardSliderOneValue)):\(Int(keyboardSliderTwoValue))")
     }
 }
 

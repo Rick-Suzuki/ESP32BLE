@@ -263,7 +263,11 @@ these always fill the screen
 
 
 
+in settings
 
+below connection box and above keyboard settings box
+There is a text box, where you can enter text
+there is a btn on the right, this sends the text to the ble
 
 
 
