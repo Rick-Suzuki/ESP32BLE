@@ -209,7 +209,7 @@ struct MainScreen: View {
                 .foregroundStyle(.white)
                 .disabled(visibleBoxCount == allowedVisibleBoxCounts.first)
 
-                Text("\(visibleBoxCount)")
+                Text("num:\(visibleBoxCount)")
                     .font(.headline)
                     .foregroundStyle(.white)
                     .frame(minWidth: 32)
@@ -240,7 +240,7 @@ struct MainScreen: View {
                 .foregroundStyle(.white)
                 .disabled(boxFontSize <= minimumBoxFontSize)
 
-                Text("\(Int(boxFontSize))")
+                Text("fnt:\(Int(boxFontSize))")
                     .font(.headline)
                     .foregroundStyle(.white)
                     .frame(minWidth: 32)
