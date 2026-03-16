@@ -22,6 +22,7 @@ struct ContentView: View {
     @State private var functionKeys = ContentView.makeDefaultFunctionKeys()
     @State private var documentFiles: [URL] = []
     @State private var selectedDocumentName = "fnkeys.txt"
+    @State private var settingsBLEText = ""
 
     var body: some View {
         NavigationStack {
@@ -40,7 +41,8 @@ struct ContentView: View {
                 duplicateDocument: duplicateDocument,
                 canDeleteDocuments: documentFiles.count > 1,
                 selectPreviousDocument: selectPreviousDocument,
-                selectNextDocument: selectNextDocument
+                selectNextDocument: selectNextDocument,
+                settingsBLEText: $settingsBLEText
             )
         }
         .task {

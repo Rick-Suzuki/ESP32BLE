@@ -288,3 +288,12 @@ normallt enabled
     
 
 
+hello
+
+
+
+1. if we exit the settings scrn, don't clr the text area
+2.
+
+
+if a textline contains \n or \t display them in main scrn btns as a tab and a newline

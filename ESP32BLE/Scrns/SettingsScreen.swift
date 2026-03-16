@@ -9,9 +9,9 @@ struct SettingsScreen: View {
     let deleteDocument: (URL) -> Void
     let duplicateDocument: (URL) -> Void
     let canDeleteDocuments: Bool
+    @Binding var bleTextToSend: String
     @State private var keyboardSliderOneValue = 0.0
     @State private var keyboardSliderTwoValue = 0.0
-    @State private var bleTextToSend = ""
     @State private var pendingDeleteFile: URL?
 
     var body: some View {

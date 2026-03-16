@@ -57,6 +57,7 @@ struct MainScreen: View {
     let canDeleteDocuments: Bool
     let selectPreviousDocument: () -> Void
     let selectNextDocument: () -> Void
+    @Binding var settingsBLEText: String
 
     var body: some View {
         VStack(spacing: 20) {
@@ -118,7 +119,8 @@ struct MainScreen: View {
                         loadFunctionKeys: loadFunctionKeys,
                         deleteDocument: deleteDocument,
                         duplicateDocument: duplicateDocument,
-                        canDeleteDocuments: canDeleteDocuments
+                        canDeleteDocuments: canDeleteDocuments,
+                        bleTextToSend: $settingsBLEText
                     )
                 }
             }
