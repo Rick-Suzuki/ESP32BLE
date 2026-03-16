@@ -309,18 +309,25 @@ struct MainScreen: View {
 
     private func buttonTitle(for entry: FunctionKeyEntry) -> String {
         guard entry.displayUsesAlternateText else {
-            return entry.rawLine
+            return displayText(from: entry.rawLine)
         }
 
         switch displayMode {
         case .left:
-            return entry.primaryDisplayText
+            return displayText(from: entry.primaryDisplayText)
         case .right:
-            return entry.alternateDisplayText ?? entry.rawLine
+            return displayText(from: entry.alternateDisplayText ?? entry.rawLine)
         case .both:
-            return "\(entry.primaryDisplayText)\n\(entry.alternateDisplayText ?? entry.rawLine)"
+            return "\(displayText(from: entry.primaryDisplayText))\n\(displayText(from: entry.alternateDisplayText ?? entry.rawLine))"
         }
     }
+
+    private func displayText(from text: String) -> String {
+        text
+            .replacingOccurrences(of: "\\n", with: "\n")
+            .replacingOccurrences(of: "\\t", with: "\t")
+    }
+
     private var renameAlertIsPresented: Binding<Bool> {
         Binding(
             get: { renameAlertMessage != nil },

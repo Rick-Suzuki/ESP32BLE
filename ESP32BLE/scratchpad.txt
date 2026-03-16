@@ -300,4 +300,4 @@ add tab and return btns. these insert \t and \n in the textbox
 at the place where the cursor is
 
 
-if a textline contains \n or \t display them in main scrn btns tabs or newlines
+if a textline contains \n or \t display them in main scrn btns as real tabs or newlines
