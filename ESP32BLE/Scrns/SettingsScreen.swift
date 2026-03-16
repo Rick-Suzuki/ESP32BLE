@@ -12,6 +12,7 @@ struct SettingsScreen: View {
     @Binding var bleTextToSend: String
     @State private var keyboardSliderOneValue = 0.0
     @State private var keyboardSliderTwoValue = 0.0
+    @State private var bleTextSelection: TextSelection?
     @State private var pendingDeleteFile: URL?
 
     var body: some View {
@@ -155,11 +156,21 @@ struct SettingsScreen: View {
                 .tint(.red)
                 .disabled(bleTextToSend.isEmpty)
 
-                TextField("Text to send", text: $bleTextToSend)
+                TextField("Text to send", text: $bleTextToSend, selection: $bleTextSelection)
                     .textFieldStyle(.roundedBorder)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     .onSubmit(sendEnteredText)
+
+                Button("tab") {
+                    insertTextAtCursor("\\t")
+                }
+                .buttonStyle(.bordered)
+
+                Button("return") {
+                    insertTextAtCursor("\\n")
+                }
+                .buttonStyle(.bordered)
 
                 Button("Send") {
                     sendEnteredText()
@@ -350,6 +361,34 @@ struct SettingsScreen: View {
 
     private func sendKeyboardTimingCommand() {
         ble.sendLine("set:\(Int(keyboardSliderOneValue)):\(Int(keyboardSliderTwoValue))")
+    }
+
+    private func insertTextAtCursor(_ insertedText: String) {
+        guard let selection = bleTextSelection else {
+            bleTextToSend.append(insertedText)
+            bleTextSelection = TextSelection(insertionPoint: bleTextToSend.endIndex)
+            return
+        }
+
+        switch selection.indices {
+        case .selection(let range):
+            let lowerOffset = bleTextToSend.distance(from: bleTextToSend.startIndex, to: range.lowerBound)
+            let upperOffset = bleTextToSend.distance(from: bleTextToSend.startIndex, to: range.upperBound)
+            let lowerBound = bleTextToSend.index(bleTextToSend.startIndex, offsetBy: lowerOffset)
+            let upperBound = bleTextToSend.index(bleTextToSend.startIndex, offsetBy: upperOffset)
+
+            bleTextToSend.replaceSubrange(lowerBound..<upperBound, with: insertedText)
+
+            let insertionOffset = lowerOffset + insertedText.count
+            let insertionPoint = bleTextToSend.index(bleTextToSend.startIndex, offsetBy: insertionOffset)
+            bleTextSelection = TextSelection(insertionPoint: insertionPoint)
+        case .multiSelection:
+            bleTextToSend.append(insertedText)
+            bleTextSelection = TextSelection(insertionPoint: bleTextToSend.endIndex)
+        @unknown default:
+            bleTextToSend.append(insertedText)
+            bleTextSelection = TextSelection(insertionPoint: bleTextToSend.endIndex)
+        }
     }
 }
 

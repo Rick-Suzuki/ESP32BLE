@@ -295,5 +295,9 @@ hello
 1. if we exit the settings scrn, don't clr the text area
 2.
 
+to the right of the text box, before the send
+add tab and return btns. these insert \t and \n in the textbox
+at the place where the cursor is
 
-if a textline contains \n or \t display them in main scrn btns as a tab and a newline
+
+if a textline contains \n or \t display them in main scrn btns tabs or newlines
