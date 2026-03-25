@@ -138,6 +138,16 @@ struct MainScreen: View {
         .task(id: isSpkRecEnabled) {
             speechRecognition.setListeningEnabled(isSpkRecEnabled)
         }
+        .onChange(of: selectedDocumentDisplayName) {
+            cancelDocumentRename()
+        }
+        .onChange(of: isDocumentNameFieldFocused) {
+            guard isEditingDocumentName, !isDocumentNameFieldFocused else {
+                return
+            }
+
+            cancelDocumentRename()
+        }
         .onChange(of: speechRecognition.latestRecognition) {
             guard let latestRecognition = speechRecognition.latestRecognition else {
                 return
@@ -496,6 +506,12 @@ struct MainScreen: View {
 
         documentNameDraft = selectedDocumentDisplayName
         isEditingDocumentName = false
+    }
+
+    private func cancelDocumentRename() {
+        documentNameDraft = selectedDocumentDisplayName
+        isEditingDocumentName = false
+        isDocumentNameFieldFocused = false
     }
 }
 private struct SpeechRecognitionEvent: Equatable {
