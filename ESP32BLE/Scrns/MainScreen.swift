@@ -37,6 +37,8 @@ struct MainScreen: View {
     @State private var visibleBoxCount = 20
     @State private var boxFontSize = 28.0
     @State private var isBLESendEnabled = true
+    @State private var isSpkRecEnabled = false
+    @State private var spkRecTxt = "speech rec"
     @ObservedObject var ble: BLEKeyboardManager
     @State private var displayMode: FunctionKeyDisplayMode = .left
     @State private var isEditingDocumentName = false
@@ -260,10 +262,33 @@ struct MainScreen: View {
 
             Spacer(minLength: 12)
 
+            TextField("speech rec", text: $spkRecTxt)
+                .textFieldStyle(.roundedBorder)
+                .frame(maxWidth: 360)
+
+            Spacer(minLength: 12)
+
+            Button {
+                isSpkRecEnabled.toggle()
+            } label: {
+                Text(isSpkRecEnabled ? "spk rec on" : "spk rec off")
+                    .frame(maxWidth: .infinity, minHeight: 50)
+                    .contentShape(.rect)
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.white)
+            .background(isSpkRecEnabled ? Color.green.opacity(0.5) : Color.gray.opacity(0.45))
+            .overlay {
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(isSpkRecEnabled ? Color.green.opacity(0.5) : Color.gray.opacity(0.4), lineWidth: 2)
+            }
+            .clipShape(.rect(cornerRadius: 12))
+            .frame(maxWidth: 150)
+
             Button {
                 isBLESendEnabled.toggle()
             } label: {
-                Text(isBLESendEnabled ? "Enabled" : "Disabled")
+                Text(isBLESendEnabled ? "btn active" : "disabled")
                     .frame(maxWidth: .infinity, minHeight: 50)
                     .contentShape(.rect)
             }
