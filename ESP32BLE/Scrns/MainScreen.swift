@@ -41,7 +41,7 @@ struct MainScreen: View {
     @State private var boxFontSize = 28.0
     @State private var isBLESendEnabled = true
     @State private var isSpkRecEnabled = false
-    @State private var spkRecTxt = "speech rec"
+    @State private var unmatchedSpeechText: String?
     @StateObject private var speechRecognition = SpeechRecognitionManager()
     @ObservedObject var ble: BLEKeyboardManager
     @State private var displayMode: FunctionKeyDisplayMode = .both
@@ -137,6 +137,10 @@ struct MainScreen: View {
         }
         .task(id: isSpkRecEnabled) {
             speechRecognition.setListeningEnabled(isSpkRecEnabled)
+
+            if !isSpkRecEnabled {
+                unmatchedSpeechText = nil
+            }
         }
         .onChange(of: selectedDocumentDisplayName) {
             cancelDocumentRename()
@@ -289,8 +293,14 @@ struct MainScreen: View {
 
             Spacer(minLength: 12)
 
-            TextField("speech rec", text: $spkRecTxt)
-                .textFieldStyle(.roundedBorder)
+            Text(speechRecognitionDisplayText)
+                .font(.body)
+                .foregroundStyle(speechRecognitionDisplayColor)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 12)
+                .frame(minHeight: 38)
+                .background(Color.black.opacity(0.8))
+                .clipShape(.rect(cornerRadius: 6))
                 .frame(maxWidth: 360)
 
             Spacer(minLength: 12)
@@ -385,16 +395,20 @@ struct MainScreen: View {
             return
         }
 
-        spkRecTxt = recognizedText
+        guard let matchingEntry = functionKeys.first(where: { entry in
+            guard let alternateDisplayText = entry.alternateDisplayText else {
+                return false
+            }
 
-        guard isBLESendEnabled,
-              let matchingEntry = functionKeys.first(where: { entry in
-                  guard let alternateDisplayText = entry.alternateDisplayText else {
-                      return false
-                  }
+            return normalizedSpeechMatchText(alternateDisplayText) == recognizedText
+        }) else {
+            unmatchedSpeechText = recognizedText
+            return
+        }
 
-                  return normalizedSpeechMatchText(alternateDisplayText) == recognizedText
-              }) else {
+        unmatchedSpeechText = nil
+
+        guard isBLESendEnabled else {
             return
         }
 
@@ -413,6 +427,34 @@ struct MainScreen: View {
             .components(separatedBy: CharacterSet.alphanumerics.inverted)
             .filter { !$0.isEmpty }
             .joined(separator: " ")
+    }
+
+    private var speechRecognitionDisplayText: String {
+        if let unmatchedSpeechText {
+            return unmatchedSpeechText
+        }
+
+        switch speechRecognition.displayState {
+        case .disabled:
+            return "disabled"
+        case .recognizing:
+            return "recognizing..."
+        case .recognized(let text):
+            return text
+        }
+    }
+
+    private var speechRecognitionDisplayColor: Color {
+        if unmatchedSpeechText != nil {
+            return .white
+        }
+
+        switch speechRecognition.displayState {
+        case .recognized:
+            return .white
+        case .disabled, .recognizing:
+            return .gray
+        }
     }
 
     private var renameAlertIsPresented: Binding<Bool> {
@@ -519,9 +561,16 @@ private struct SpeechRecognitionEvent: Equatable {
     let text: String
 }
 
+private enum SpeechRecognitionDisplayState: Equatable {
+    case disabled
+    case recognizing
+    case recognized(String)
+}
+
 @MainActor
 private final class SpeechRecognitionManager: NSObject, ObservableObject {
     @Published private(set) var latestRecognition: SpeechRecognitionEvent?
+    @Published private(set) var displayState: SpeechRecognitionDisplayState = .disabled
 
     private let audioEngine = AVAudioEngine()
     private let audioSession = AVAudioSession.sharedInstance()
@@ -567,6 +616,7 @@ private final class SpeechRecognitionManager: NSObject, ObservableObject {
         }
 
         guard let speechRecognizer, speechRecognizer.isAvailable else {
+            displayState = .recognizing
             return
         }
 
@@ -641,6 +691,7 @@ private final class SpeechRecognitionManager: NSObject, ObservableObject {
         let sessionID = UUID()
         activeSessionID = sessionID
         latestTranscript = ""
+        displayState = .recognizing
 
         let recognitionRequest = SFSpeechAudioBufferRecognitionRequest()
         recognitionRequest.shouldReportPartialResults = true
@@ -732,6 +783,7 @@ private final class SpeechRecognitionManager: NSObject, ObservableObject {
         }
 
         latestRecognition = SpeechRecognitionEvent(text: latestTranscript)
+        displayState = .recognized(latestTranscript)
     }
 
     private func finishRecognitionSession(shouldRestart: Bool) {
@@ -757,6 +809,10 @@ private final class SpeechRecognitionManager: NSObject, ObservableObject {
         activeSessionID = nil
 
         try? audioSession.setActive(false, options: .notifyOthersOnDeactivation)
+
+        if !wantsListening {
+            displayState = .disabled
+        }
 
         guard shouldRestart, wantsListening else {
             return
