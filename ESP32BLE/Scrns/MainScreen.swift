@@ -401,6 +401,8 @@ struct MainScreen: View {
             return
         }
 
+        scheduleSpeechRecognitionAutoOff()
+
         guard let matchingEntry = functionKeys.first(where: { entry in
             guard let alternateDisplayText = entry.alternateDisplayText else {
                 return false
