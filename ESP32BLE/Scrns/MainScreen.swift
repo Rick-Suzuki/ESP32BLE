@@ -32,6 +32,7 @@ private enum FunctionKeyDisplayMode: CaseIterable {
 }
 
 struct MainScreen: View {
+    @AppStorage("speechRecognitionAutoOffMinutes") private var speechRecognitionAutoOffMinutes = 5
     private let allowedVisibleBoxCounts = [
         1, 2, 4, 6, 9, 12, 15, 16, 18, 20, 24, 28, 32, 36, 42, 45, 48,
         50, 54, 56, 60, 63, 64, 70, 72, 80, 81, 84, 88, 90, 96, 99, 100
@@ -42,6 +43,7 @@ struct MainScreen: View {
     @State private var isBLESendEnabled = true
     @State private var isSpkRecEnabled = false
     @State private var unmatchedSpeechText: String?
+    @State private var speechRecognitionAutoOffTask: Task<Void, Never>?
     @StateObject private var speechRecognition = SpeechRecognitionManager()
     @ObservedObject var ble: BLEKeyboardManager
     @State private var displayMode: FunctionKeyDisplayMode = .both
@@ -135,13 +137,6 @@ struct MainScreen: View {
             guard isEditingDocumentName else { return }
             isDocumentNameFieldFocused = true
         }
-        .task(id: isSpkRecEnabled) {
-            speechRecognition.setListeningEnabled(isSpkRecEnabled)
-
-            if !isSpkRecEnabled {
-                unmatchedSpeechText = nil
-            }
-        }
         .onChange(of: selectedDocumentDisplayName) {
             cancelDocumentRename()
         }
@@ -152,6 +147,16 @@ struct MainScreen: View {
 
             cancelDocumentRename()
         }
+        .onChange(of: isSpkRecEnabled) {
+            handleSpeechRecognitionToggle()
+        }
+        .onChange(of: speechRecognitionAutoOffMinutes) {
+            guard isSpkRecEnabled else {
+                return
+            }
+
+            scheduleSpeechRecognitionAutoOff()
+        }
         .onChange(of: speechRecognition.latestRecognition) {
             guard let latestRecognition = speechRecognition.latestRecognition else {
                 return
@@ -160,6 +165,7 @@ struct MainScreen: View {
             applyRecognizedSpeech(latestRecognition.text)
         }
         .onDisappear {
+            speechRecognitionAutoOffTask?.cancel()
             speechRecognition.setListeningEnabled(false)
         }
         .alert("Rename File", isPresented: renameAlertIsPresented) {
@@ -427,6 +433,51 @@ struct MainScreen: View {
             .components(separatedBy: CharacterSet.alphanumerics.inverted)
             .filter { !$0.isEmpty }
             .joined(separator: " ")
+    }
+
+    private func handleSpeechRecognitionToggle() {
+        if isSpkRecEnabled {
+            unmatchedSpeechText = nil
+            sendModifierFunctionKey("f20")
+            speechRecognition.setListeningEnabled(true)
+            scheduleSpeechRecognitionAutoOff()
+            return
+        }
+
+        speechRecognitionAutoOffTask?.cancel()
+        speechRecognitionAutoOffTask = nil
+        unmatchedSpeechText = nil
+        speechRecognition.setListeningEnabled(false)
+        sendModifierFunctionKey("f19")
+    }
+
+    private func scheduleSpeechRecognitionAutoOff() {
+        speechRecognitionAutoOffTask?.cancel()
+
+        let autoOffMinutes = min(max(speechRecognitionAutoOffMinutes, 1), 30)
+        speechRecognitionAutoOffTask = Task {
+            do {
+                try await Task.sleep(for: .seconds(autoOffMinutes * 60))
+            } catch {
+                return
+            }
+
+            await MainActor.run {
+                guard isSpkRecEnabled else {
+                    return
+                }
+
+                isSpkRecEnabled = false
+            }
+        }
+    }
+
+    private func sendModifierFunctionKey(_ functionKey: String) {
+        ble.sendLine("ct")
+        ble.sendLine("sh")
+        ble.sendLine("op")
+        ble.sendLine("cm")
+        ble.sendLine(functionKey)
     }
 
     private var speechRecognitionDisplayText: String {

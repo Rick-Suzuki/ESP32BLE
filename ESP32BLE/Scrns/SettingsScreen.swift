@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct SettingsScreen: View {
+    @AppStorage("speechRecognitionAutoOffMinutes") private var speechRecognitionAutoOffMinutes = 5
     @ObservedObject var ble: BLEKeyboardManager
     let documentFiles: [URL]
     let selectedDocumentName: String
@@ -235,6 +236,8 @@ struct SettingsScreen: View {
                         value: $keyboardSliderTwoValue,
                         range: 0...3000
                     )
+
+                    speechRecognitionAutoOffRow
                 }
                 .frame(maxWidth: 520, alignment: .leading)
 
@@ -291,6 +294,58 @@ struct SettingsScreen: View {
             .buttonStyle(.plain)
             .foregroundStyle(.white)
             .disabled(value.wrappedValue >= range.upperBound)
+        }
+    }
+
+    private var speechRecognitionAutoOffRow: some View {
+        HStack(spacing: 12) {
+            Text("recog off")
+                .font(.headline)
+                .foregroundStyle(.primary)
+                .frame(width: 90, alignment: .leading)
+
+            Button {
+                speechRecognitionAutoOffMinutes = max(1, speechRecognitionAutoOffMinutes - 1)
+            } label: {
+                Image(systemName: "triangle.fill")
+                    .font(.system(size: 30))
+                    .rotationEffect(.degrees(-90))
+                    .frame(width: 30, height: 30)
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.white)
+            .disabled(speechRecognitionAutoOffMinutes <= 1)
+
+            VStack(spacing: -5) {
+                Text("\(speechRecognitionAutoOffMinutes) min")
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+
+                Slider(
+                    value: Binding(
+                        get: { Double(speechRecognitionAutoOffMinutes) },
+                        set: { speechRecognitionAutoOffMinutes = Int($0.rounded()) }
+                    ),
+                    in: 1...30,
+                    step: 1
+                )
+                .tint(.white)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+
+            Button {
+                speechRecognitionAutoOffMinutes = min(30, speechRecognitionAutoOffMinutes + 1)
+            } label: {
+                Image(systemName: "triangle.fill")
+                    .font(.system(size: 30))
+                    .rotationEffect(.degrees(90))
+                    .frame(width: 30, height: 30)
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.white)
+            .disabled(speechRecognitionAutoOffMinutes >= 30)
         }
     }
 

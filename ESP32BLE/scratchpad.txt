@@ -1,15 +1,7 @@
-In settings, in keyboard settings, underneath the two buttons
-add some text that says custom keyboard delay.
+In
 
-
-Then on the left underneath that have a "key down" label,
-on the right add a picker box
-
-
-, then the key up and then a picker box.
-separate into 2 screens
-
-
+ct:sh:op:cm:f19
+ct:sh:op:cm:f20
 
 
 screen 1 main
