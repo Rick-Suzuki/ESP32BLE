@@ -34,7 +34,7 @@ private enum FunctionKeyDisplayMode: CaseIterable {
 struct MainScreen: View {
     @AppStorage("speechRecognitionAutoOffMinutes") private var speechRecognitionAutoOffMinutes = 5
     private let allowedVisibleBoxCounts = [
-        1, 2, 4, 6, 9, 12, 15, 16, 18, 20, 24, 28, 32, 36, 42, 45, 48,
+        1, 2, 4, 6, 9, 12, 15, 16, 18, 20, 24, 28, 32, 36, 40, 42, 45, 48,
         50, 54, 56, 60, 63, 64, 70, 72, 80, 81, 84, 88, 90, 96, 99, 100
     ]
     private let displayModeButtonColor = Color(red: 0.0, green: 0.24, blue: 0.55)
@@ -556,6 +556,7 @@ struct MainScreen: View {
             24: (6, 4),
             28: (7, 4),
             32: (8, 4),
+            40: (8, 5),
             45: (9, 5),
             48: (8, 6),
             50: (10, 5),

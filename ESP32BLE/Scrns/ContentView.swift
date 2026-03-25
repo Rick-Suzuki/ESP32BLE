@@ -166,6 +166,10 @@ struct ContentView: View {
     }
 
     private func functionKeyEntry(from line: String) -> FunctionKeyEntry {
+        if line == "_" || line.isEmpty {
+            return FunctionKeyEntry(rawLine: "", sendTexts: [], alternateDisplayText: nil)
+        }
+
         let components = line.components(separatedBy: "::")
 
         guard components.count >= 2 else {
