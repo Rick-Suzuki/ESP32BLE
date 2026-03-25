@@ -11,6 +11,7 @@ separate into 2 screens
 
 
 
+
 screen 1 main
 top right  = goto settings
 
