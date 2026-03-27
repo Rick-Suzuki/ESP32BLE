@@ -161,8 +161,7 @@ final class BLEKeyboardManager: NSObject, ObservableObject {
 	}
 	
 	func sendString(_ text: String) {
-		sendLine("ca")
-		sendLine("\(text)")
+		sendLine(normalizedKeyboardText(text))
 	}
 	
 	func pressRightArrow() {
@@ -171,6 +170,24 @@ final class BLEKeyboardManager: NSObject, ObservableObject {
 	
 	func pressEnter() {
 		sendLine("ret")
+	}
+
+	private func normalizedKeyboardText(_ text: String) -> String {
+		var normalizedText = ""
+		normalizedText.reserveCapacity(text.count)
+
+		for character in text {
+			switch character {
+			case "‘", "’":
+				normalizedText.append("'")
+			case "“", "”":
+				normalizedText.append("\"")
+			default:
+				normalizedText.append(character)
+			}
+		}
+
+		return normalizedText
 	}
 }
 
