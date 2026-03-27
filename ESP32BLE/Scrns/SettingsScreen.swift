@@ -3,6 +3,7 @@ import SwiftUI
 struct SettingsScreen: View {
     @AppStorage("speechRecognitionAutoOffMinutes") private var speechRecognitionAutoOffMinutes = 5
     @AppStorage("sendControlABeforeText") private var sendControlABeforeText = false
+    private let timingLabelWidth = 90.0
     @ObservedObject var ble: BLEKeyboardManager
     let documentFiles: [URL]
     let selectedDocumentName: String
@@ -275,7 +276,7 @@ struct SettingsScreen: View {
             Text(title)
                 .font(.headline)
                 .foregroundStyle(.primary)
-                .frame(width: 28, alignment: .leading)
+                .frame(width: timingLabelWidth, alignment: .leading)
 
             Button {
                 value.wrappedValue = max(range.lowerBound, value.wrappedValue - 1)
@@ -317,10 +318,10 @@ struct SettingsScreen: View {
 
     private var speechRecognitionAutoOffRow: some View {
         HStack(spacing: 12) {
-            Text("recog off")
+            Text("rec off")
                 .font(.headline)
-                .foregroundStyle(.primary)
-                .frame(width: 90, alignment: .leading)
+                .foregroundStyle(.white)
+                .frame(width: timingLabelWidth, alignment: .leading)
 
             Button {
                 speechRecognitionAutoOffMinutes = max(1, speechRecognitionAutoOffMinutes - 1)
