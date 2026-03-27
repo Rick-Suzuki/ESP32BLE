@@ -103,10 +103,11 @@ struct MainScreen: View {
                         } label: {
                             Text(buttonTitle(for: entry))
                                 .font(.system(size: boxFontSize, weight: .semibold))
-                                .foregroundStyle(.white)
+                                .foregroundStyle(buttonTextColor(for: entry))
                                 .multilineTextAlignment(.center)
+                                .padding(.horizontal, 6)
                                 .frame(maxWidth: .infinity, minHeight: buttonHeight, maxHeight: buttonHeight)
-                                .background(Color.black)
+                                .background(buttonBackgroundColor(for: entry))
                                 .overlay {
                                     Rectangle()
                                         .stroke(Color.white, lineWidth: 1)
@@ -116,14 +117,19 @@ struct MainScreen: View {
                         .buttonStyle(.plain)
                     }
                 }
+                .background(Color.black)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             displayModeButtonSection
         }
+        .background(Color.black.ignoresSafeArea())
         .padding(.horizontal, 2)
         .navigationTitle("")
         .toolbarTitleDisplayMode(.inline)
+        .toolbarBackground(Color.black, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
+        .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .principal) {
                 documentTitle
@@ -459,6 +465,53 @@ struct MainScreen: View {
         let leftText = entry.sendTexts.joined(separator: ":")
         let rightText = entry.alternateDisplayText ?? ""
         print("Main button pressed. left: [\(leftText)] right: [\(rightText)]")
+    }
+
+    private func buttonBackgroundColor(for entry: FunctionKeyEntry) -> Color {
+        if entry.isBlankPlaceholder {
+            return .black
+        }
+
+        switch entry.buttonColorCode {
+        case "l":
+            return Color.black.opacity(0.4)
+        case "w":
+            return Color.white.opacity(0.4)
+        case "g":
+            return Color.green.opacity(0.4)
+        case "b":
+            return Color.blue.opacity(0.4)
+        case "o":
+            return Color.orange.opacity(0.4)
+        case "r", "dest":
+            return Color.red.opacity(entry.buttonColorCode == "r" ? 0.4 : 0.6)
+        case "y":
+            return Color.yellow.opacity(0.4)
+        case "p", "pos":
+            return Color.purple.opacity(entry.buttonColorCode == "p" ? 0.4 : 0.6)
+        case "k":
+            return Color.pink.opacity(0.6)
+        case "warning":
+            return Color.orange.opacity(0.6)
+        case "actions":
+            return Color.green.opacity(0.6)
+        case "info":
+            return Color.blue.opacity(0.6)
+        default:
+            return entry.alternateDisplayText == nil ? .black : Color(white: 0.12)
+        }
+    }
+
+    private func buttonTextColor(for entry: FunctionKeyEntry) -> Color {
+        if entry.buttonColorCode == "w" {
+            return .black
+        }
+
+        if entry.buttonColorCode == nil, entry.alternateDisplayText != nil {
+            return .yellow
+        }
+
+        return .white
     }
 
     private func handleSpeechRecognitionToggle() {

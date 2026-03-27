@@ -7,6 +7,8 @@ struct FunctionKeyEntry {
     let rawLine: String
     let sendTexts: [String]
     let alternateDisplayText: String?
+    let buttonColorCode: String?
+    let isBlankPlaceholder: Bool
 
     var primaryDisplayText: String {
         sendTexts.joined(separator: ":")
@@ -60,10 +62,10 @@ struct ContentView: View {
 
     private static func makeDefaultFunctionKeys() -> [FunctionKeyEntry] {
         let namedEntries = (1...defaultNamedFunctionKeyCount).map { index in
-            FunctionKeyEntry(rawLine: "F\(index)", sendTexts: ["F\(index)"], alternateDisplayText: nil)
+            FunctionKeyEntry(rawLine: "F\(index)", sendTexts: ["F\(index)"], alternateDisplayText: nil, buttonColorCode: nil, isBlankPlaceholder: false)
         }
         let emptyEntries = Array(
-            repeating: FunctionKeyEntry(rawLine: "", sendTexts: [], alternateDisplayText: nil),
+            repeating: FunctionKeyEntry(rawLine: "", sendTexts: [], alternateDisplayText: nil, buttonColorCode: nil, isBlankPlaceholder: false),
             count: maxFunctionKeyCount - defaultNamedFunctionKeyCount
         )
 
@@ -151,7 +153,7 @@ struct ContentView: View {
             loadedFunctionKeySlotCount = parsedFunctionKeys.definedSlotCount
             selectedDocumentName = fileURL.lastPathComponent
         } catch {
-            functionKeys = Array(repeating: FunctionKeyEntry(rawLine: "", sendTexts: [], alternateDisplayText: nil), count: maxFunctionKeyCount)
+            functionKeys = Array(repeating: FunctionKeyEntry(rawLine: "", sendTexts: [], alternateDisplayText: nil, buttonColorCode: nil, isBlankPlaceholder: false), count: maxFunctionKeyCount)
             loadedFunctionKeySlotCount = 0
         }
     }
@@ -170,7 +172,7 @@ struct ContentView: View {
 
         let entries = (0..<maxFunctionKeyCount).map { index in
             guard index < firstHundred.count else {
-                return FunctionKeyEntry(rawLine: "", sendTexts: [], alternateDisplayText: nil)
+                return FunctionKeyEntry(rawLine: "", sendTexts: [], alternateDisplayText: nil, buttonColorCode: nil, isBlankPlaceholder: false)
             }
 
             return functionKeyEntry(from: firstHundred[index])
@@ -181,20 +183,20 @@ struct ContentView: View {
 
     private func functionKeyEntry(from line: String) -> FunctionKeyEntry {
         if line == "_" || line.isEmpty {
-            return FunctionKeyEntry(rawLine: "", sendTexts: [], alternateDisplayText: nil)
+            return FunctionKeyEntry(rawLine: "", sendTexts: [], alternateDisplayText: nil, buttonColorCode: nil, isBlankPlaceholder: true)
         }
 
         let components = line.components(separatedBy: "::")
 
         guard components.count >= 2 else {
-            return FunctionKeyEntry(rawLine: line, sendTexts: [line], alternateDisplayText: nil)
+            return FunctionKeyEntry(rawLine: line, sendTexts: [line], alternateDisplayText: nil, buttonColorCode: nil, isBlankPlaceholder: false)
         }
 
         let leftText = components[0].trimmingCharacters(in: .whitespacesAndNewlines)
         let rightText = components.dropFirst().joined(separator: "::").trimmingCharacters(in: .whitespacesAndNewlines)
 
         guard !leftText.isEmpty, !rightText.isEmpty else {
-            return FunctionKeyEntry(rawLine: line, sendTexts: [line], alternateDisplayText: nil)
+            return FunctionKeyEntry(rawLine: line, sendTexts: [line], alternateDisplayText: nil, buttonColorCode: nil, isBlankPlaceholder: false)
         }
 
         let sendTexts = leftText
@@ -203,10 +205,57 @@ struct ContentView: View {
             .filter { !$0.isEmpty }
 
         guard !sendTexts.isEmpty else {
-            return FunctionKeyEntry(rawLine: line, sendTexts: [line], alternateDisplayText: nil)
+            return FunctionKeyEntry(rawLine: line, sendTexts: [line], alternateDisplayText: nil, buttonColorCode: nil, isBlankPlaceholder: false)
         }
 
-        return FunctionKeyEntry(rawLine: line, sendTexts: sendTexts, alternateDisplayText: rightText)
+        let parsedRightText = parsedRightTextAndColor(from: rightText)
+        return FunctionKeyEntry(
+            rawLine: line,
+            sendTexts: sendTexts,
+            alternateDisplayText: parsedRightText.text,
+            buttonColorCode: parsedRightText.colorCode,
+            isBlankPlaceholder: false
+        )
+    }
+
+    private func parsedRightTextAndColor(from rightText: String) -> (text: String, colorCode: String?) {
+        let components = rightText.components(separatedBy: ":")
+
+        if let firstComponent = components.first,
+           firstComponent.count == 1,
+           let manualColorCode = firstComponent.lowercased().first,
+           "lwgborypk".contains(manualColorCode) {
+            let remainingText = components.dropFirst().joined(separator: ":").trimmingCharacters(in: .whitespacesAndNewlines)
+            return (remainingText.isEmpty ? rightText : remainingText, String(manualColorCode))
+        }
+
+        let firstWord = rightText
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .components(separatedBy: .whitespacesAndNewlines)
+            .first?
+            .lowercased() ?? ""
+
+        if ["delete", "del", "rem", "remove", "clr", "clear", "erase", "destroy"].contains(firstWord) {
+            return (rightText, "dest")
+        }
+
+        if ["save", "start", "run", "apply", "ok", "confirm", "enable", "disable"].contains(firstWord) {
+            return (rightText, "pos")
+        }
+
+        if ["rst", "reset", "reload", "restart", "warning", "warn"].contains(firstWord) {
+            return (rightText, "warning")
+        }
+
+        if ["open", "close", "cls", "edit"].contains(firstWord) {
+            return (rightText, "actions")
+        }
+
+        if ["settings", "options", "details", "info"].contains(firstWord) {
+            return (rightText, "info")
+        }
+
+        return (rightText, nil)
     }
 
     private func selectDocument(_ fileURL: URL) {
