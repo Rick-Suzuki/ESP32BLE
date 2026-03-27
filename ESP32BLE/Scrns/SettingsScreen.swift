@@ -164,7 +164,7 @@ struct SettingsScreen: View {
                     .onSubmit(sendEnteredText)
 
                 Button("tab") {
-                    insertTextAtCursor("\\t")
+                    insertTextAtCursor("\\n")
                 }
                 .buttonStyle(.bordered)
 

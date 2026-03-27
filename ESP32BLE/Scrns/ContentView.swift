@@ -140,7 +140,7 @@ struct ContentView: View {
     private func loadFunctionKeys(from fileURL: URL) {
         do {
             let contents = try String(contentsOf: fileURL, encoding: .utf8)
-            let loadedTitles = contents.components(separatedBy: .newlines)
+            let loadedTitles = contents.components(separatedBy: CharacterSet.newlines.union(.init(charactersIn: "\t")))
             let parsedFunctionKeys = normalizedFunctionKeys(from: loadedTitles)
             functionKeys = parsedFunctionKeys.entries
             loadedFunctionKeySlotCount = parsedFunctionKeys.definedSlotCount
