@@ -109,8 +109,10 @@ struct MainScreen: View {
                                 .frame(maxWidth: .infinity, minHeight: buttonHeight, maxHeight: buttonHeight)
                                 .background(buttonBackgroundColor(for: entry))
                                 .overlay {
-                                    Rectangle()
-                                        .stroke(Color.white, lineWidth: 1)
+                                    if shouldShowBorder(for: entry) {
+                                        Rectangle()
+                                            .stroke(Color.white, lineWidth: 1)
+                                    }
                                 }
                                 .contentShape(.rect)
                         }
@@ -512,6 +514,14 @@ struct MainScreen: View {
         }
 
         return .white
+    }
+
+    private func shouldShowBorder(for entry: FunctionKeyEntry) -> Bool {
+        !(entry.isBlankPlaceholder || isEmptyButtonEntry(entry))
+    }
+
+    private func isEmptyButtonEntry(_ entry: FunctionKeyEntry) -> Bool {
+        entry.sendTexts.isEmpty && entry.alternateDisplayText == nil && entry.rawLine.isEmpty
     }
 
     private func handleSpeechRecognitionToggle() {
