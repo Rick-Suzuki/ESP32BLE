@@ -204,14 +204,12 @@ struct MainScreen: View {
                     .font(.system(size: 20))
                     .rotationEffect(.degrees(-90))
                     .frame(width: 20, height: 20)
+                    .frame(width: 44, height: 44)
+                    .contentShape(.rect)
             }
             .buttonStyle(.plain)
             .foregroundStyle(.white)
             .disabled(currentFileNumber <= 1)
-
-            Text("\(currentFileNumber)")
-                .font(.headline)
-                .frame(minWidth: 20, alignment: .leading)
 
             Group {
                 if isEditingDocumentName {
@@ -244,6 +242,8 @@ struct MainScreen: View {
                     .font(.system(size: 20))
                     .rotationEffect(.degrees(90))
                     .frame(width: 20, height: 20)
+                    .frame(width: 44, height: 44)
+                    .contentShape(.rect)
             }
             .buttonStyle(.plain)
             .foregroundStyle(.white)
