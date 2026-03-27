@@ -57,6 +57,7 @@ struct MainScreen: View {
     let selectedDocumentDisplayName: String
     let currentFileNumber: Int
     let totalFileCount: Int
+    let definedFunctionKeyCount: Int
     let refreshDocumentFiles: () -> Void
     let loadFunctionKeys: (URL) -> Void
     let renameDocument: (String) -> String?
@@ -140,6 +141,9 @@ struct MainScreen: View {
         .onChange(of: selectedDocumentDisplayName) {
             cancelDocumentRename()
         }
+        .onChange(of: definedFunctionKeyCount) {
+            updateVisibleBoxCountToFitDefinedButtons()
+        }
         .onChange(of: isDocumentNameFieldFocused) {
             guard isEditingDocumentName, !isDocumentNameFieldFocused else {
                 return
@@ -167,6 +171,9 @@ struct MainScreen: View {
         .onDisappear {
             speechRecognitionAutoOffTask?.cancel()
             speechRecognition.setListeningEnabled(false)
+        }
+        .task(id: definedFunctionKeyCount) {
+            updateVisibleBoxCountToFitDefinedButtons()
         }
         .alert("Rename File", isPresented: renameAlertIsPresented) {
             Button("OK", role: .cancel) {
@@ -480,6 +487,11 @@ struct MainScreen: View {
         ble.sendLine("op")
         ble.sendLine("cm")
         ble.sendLine(functionKey)
+    }
+
+    private func updateVisibleBoxCountToFitDefinedButtons() {
+        let requiredBoxCount = max(definedFunctionKeyCount, 1)
+        visibleBoxCount = allowedVisibleBoxCounts.first(where: { $0 >= requiredBoxCount }) ?? allowedVisibleBoxCounts.last ?? requiredBoxCount
     }
 
     private var speechRecognitionDisplayText: String {

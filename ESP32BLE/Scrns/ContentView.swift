@@ -20,6 +20,7 @@ struct FunctionKeyEntry {
 struct ContentView: View {
     @StateObject private var ble = BLEKeyboardManager()
     @State private var functionKeys = ContentView.makeDefaultFunctionKeys()
+    @State private var loadedFunctionKeySlotCount = defaultNamedFunctionKeyCount
     @State private var documentFiles: [URL] = []
     @State private var selectedDocumentName = "fnkeys.txt"
     @State private var settingsBLEText = ""
@@ -34,6 +35,7 @@ struct ContentView: View {
                 selectedDocumentDisplayName: displayName(for: selectedDocumentName),
                 currentFileNumber: currentFileNumber,
                 totalFileCount: documentFiles.count,
+                definedFunctionKeyCount: loadedFunctionKeySlotCount,
                 refreshDocumentFiles: refreshDocumentFiles,
                 loadFunctionKeys: selectDocument,
                 renameDocument: renameSelectedDocument,
@@ -79,6 +81,7 @@ struct ContentView: View {
     private func ensureDefaultFunctionKeysFile() {
         guard let documentsDirectoryURL = documentsDirectoryURL() else {
             functionKeys = defaultFunctionKeys()
+            loadedFunctionKeySlotCount = defaultNamedFunctionKeyCount
             return
         }
 
@@ -127,6 +130,7 @@ struct ContentView: View {
         guard let firstFileURL = documentFiles.first else {
             functionKeys = defaultFunctionKeys()
             selectedDocumentName = "fnkeys.txt"
+            loadedFunctionKeySlotCount = defaultNamedFunctionKeyCount
             return
         }
 
@@ -137,14 +141,17 @@ struct ContentView: View {
         do {
             let contents = try String(contentsOf: fileURL, encoding: .utf8)
             let loadedTitles = contents.components(separatedBy: .newlines)
-            functionKeys = normalizedFunctionKeys(from: loadedTitles)
+            let parsedFunctionKeys = normalizedFunctionKeys(from: loadedTitles)
+            functionKeys = parsedFunctionKeys.entries
+            loadedFunctionKeySlotCount = parsedFunctionKeys.definedSlotCount
             selectedDocumentName = fileURL.lastPathComponent
         } catch {
             functionKeys = Array(repeating: FunctionKeyEntry(rawLine: "", sendTexts: [], alternateDisplayText: nil), count: maxFunctionKeyCount)
+            loadedFunctionKeySlotCount = 0
         }
     }
 
-    private func normalizedFunctionKeys(from loadedTitles: [String]) -> [FunctionKeyEntry] {
+    private func normalizedFunctionKeys(from loadedTitles: [String]) -> (entries: [FunctionKeyEntry], definedSlotCount: Int) {
         let filteredTitles = loadedTitles.compactMap { line -> String? in
             let trimmedLine = line.trimmingCharacters(in: .whitespacesAndNewlines)
 
@@ -156,13 +163,15 @@ struct ContentView: View {
         }
         let firstHundred = Array(filteredTitles.prefix(maxFunctionKeyCount))
 
-        return (0..<maxFunctionKeyCount).map { index in
+        let entries = (0..<maxFunctionKeyCount).map { index in
             guard index < firstHundred.count else {
                 return FunctionKeyEntry(rawLine: "", sendTexts: [], alternateDisplayText: nil)
             }
 
             return functionKeyEntry(from: firstHundred[index])
         }
+
+        return (entries, firstHundred.count)
     }
 
     private func functionKeyEntry(from line: String) -> FunctionKeyEntry {
