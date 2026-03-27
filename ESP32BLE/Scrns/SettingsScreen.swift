@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SettingsScreen: View {
     @AppStorage("speechRecognitionAutoOffMinutes") private var speechRecognitionAutoOffMinutes = 5
+    @AppStorage("sendControlABeforeText") private var sendControlABeforeText = false
     @ObservedObject var ble: BLEKeyboardManager
     let documentFiles: [URL]
     let selectedDocumentName: String
@@ -135,10 +136,27 @@ struct SettingsScreen: View {
                     keyboardSliderTwoValue = 20
                 }
                 .buttonStyle(.borderedProminent)
-				
+
+                Button {
+                    sendControlABeforeText.toggle()
+                } label: {
+                    Text("Send Ctrl+A")
+                        .frame(minWidth: 110)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.white)
+                .padding(.horizontal, 14)
+                .frame(minHeight: 36)
+                .background(sendControlABeforeText ? Color.blue : Color.gray.opacity(0.45))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(sendControlABeforeText ? Color.blue : Color.gray.opacity(0.4), lineWidth: 2)
+                }
+                .clipShape(.rect(cornerRadius: 10))
+
             }
 
-			Spacer().frame(height:10)
+				Spacer().frame(height:10)
             customKeyboardTimingSection
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -415,6 +433,10 @@ struct SettingsScreen: View {
         guard ble.isConnected else {
             print("Bluetooth not connected.")
             return
+        }
+
+        if sendControlABeforeText {
+            ble.sendLine("ca")
         }
 
         print("Settings text sent: [\(trimmedText)]")
