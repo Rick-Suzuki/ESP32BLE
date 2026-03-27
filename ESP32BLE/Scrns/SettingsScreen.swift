@@ -1,5 +1,10 @@
 import SwiftUI
 
+private enum SettingsFocusField: Hashable {
+    case documentEditor
+    case sendText
+}
+
 struct SettingsScreen: View {
     @AppStorage("speechRecognitionAutoOffMinutes") private var speechRecognitionAutoOffMinutes = 5
     @AppStorage("sendControlABeforeText") private var sendControlABeforeText = false
@@ -19,19 +24,23 @@ struct SettingsScreen: View {
     @State private var pendingDeleteFile: URL?
     @State private var documentEditorText = ""
     @State private var isLoadingDocumentText = false
+    @FocusState private var focusedField: SettingsFocusField?
 
     var body: some View {
         GeometryReader { geometry in
             HStack(alignment: .top, spacing: 20) {
                 VStack(spacing: 20) {
                     editableDocumentSection
-                    sendTextSection
 
-                    HStack(alignment: .top, spacing: 20) {
-                        availableDevicesSection
-                        keyboardSettingsSection
+                    if !isDocumentEditorFocused {
+                        sendTextSection
+
+                        HStack(alignment: .top, spacing: 20) {
+                            availableDevicesSection
+                            keyboardSettingsSection
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                     }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 .padding()
@@ -70,6 +79,7 @@ struct SettingsScreen: View {
     private var editableDocumentSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             TextEditor(text: $documentEditorText)
+                .focused($focusedField, equals: .documentEditor)
                 .scrollContentBackground(.hidden)
                 .padding(8)
                 .background(Color.black.opacity(0.55))
@@ -214,6 +224,7 @@ struct SettingsScreen: View {
                 .disabled(bleTextToSend.isEmpty)
 
                 TextField("Text to send", text: $bleTextToSend, selection: $bleTextSelection)
+                    .focused($focusedField, equals: .sendText)
                     .textFieldStyle(.roundedBorder)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
@@ -502,6 +513,10 @@ struct SettingsScreen: View {
 
     private var selectedDocumentFileURL: URL? {
         documentFiles.first(where: { $0.lastPathComponent == selectedDocumentName })
+    }
+
+    private var isDocumentEditorFocused: Bool {
+        focusedField == .documentEditor
     }
 
     private func sendKeyboardTimingCommand() {
