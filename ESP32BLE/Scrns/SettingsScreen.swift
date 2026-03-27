@@ -17,22 +17,27 @@ struct SettingsScreen: View {
     @State private var keyboardSliderTwoValue = 0.0
     @State private var bleTextSelection: TextSelection?
     @State private var pendingDeleteFile: URL?
+    @State private var documentEditorText = ""
+    @State private var isLoadingDocumentText = false
 
     var body: some View {
         GeometryReader { geometry in
             HStack(alignment: .top, spacing: 20) {
-                ScrollView {
-                    VStack(spacing: 20) {
+                VStack(spacing: 20) {
+                    editableDocumentSection
+                    sendTextSection
+
+                    HStack(alignment: .top, spacing: 20) {
                         availableDevicesSection
-                        sendTextSection
                         keyboardSettingsSection
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                .padding()
 
                 documentTableSection
-                    .frame(width: max(220, geometry.size.width * 0.28))
+                    .frame(width: max(220, geometry.size.width * 0.22))
             }
         }
         .navigationTitle("Settings")
@@ -48,7 +53,32 @@ struct SettingsScreen: View {
         }
         .task {
             refreshDocumentFiles()
+            loadSelectedDocumentText()
         }
+        .onChange(of: selectedDocumentName) {
+            loadSelectedDocumentText()
+        }
+        .onChange(of: documentEditorText) {
+            guard !isLoadingDocumentText else {
+                return
+            }
+
+            saveSelectedDocumentText()
+        }
+    }
+
+    private var editableDocumentSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            TextEditor(text: $documentEditorText)
+                .scrollContentBackground(.hidden)
+                .padding(8)
+                .background(Color.black.opacity(0.55))
+                .clipShape(.rect(cornerRadius: 12))
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .padding()
+        .background(.thinMaterial)
+        .clipShape(.rect(cornerRadius: 16))
     }
 
     private var availableDevicesSection: some View {
@@ -114,7 +144,7 @@ struct SettingsScreen: View {
             Text("Status: \(ble.connectionText)")
             Text("BT State: \(ble.bluetoothStateText)")
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .padding()
         .background(.thinMaterial)
         .clipShape(.rect(cornerRadius: 16))
@@ -167,7 +197,7 @@ struct SettingsScreen: View {
 				Spacer().frame(height:10)
             customKeyboardTimingSection
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .padding()
         .background(.thinMaterial)
         .clipShape(.rect(cornerRadius: 16))
@@ -443,6 +473,35 @@ struct SettingsScreen: View {
 
         print("Settings text sent: [\(trimmedText)]")
         ble.sendString(trimmedText)
+    }
+
+    private func loadSelectedDocumentText() {
+        isLoadingDocumentText = true
+        defer { isLoadingDocumentText = false }
+
+        guard let fileURL = selectedDocumentFileURL else {
+            documentEditorText = ""
+            return
+        }
+
+        documentEditorText = (try? String(contentsOf: fileURL, encoding: .utf8)) ?? ""
+    }
+
+    private func saveSelectedDocumentText() {
+        guard let fileURL = selectedDocumentFileURL else {
+            return
+        }
+
+        do {
+            try documentEditorText.write(to: fileURL, atomically: true, encoding: .utf8)
+            loadFunctionKeys(fileURL)
+        } catch {
+            print("Failed to save document: \(fileURL.lastPathComponent)")
+        }
+    }
+
+    private var selectedDocumentFileURL: URL? {
+        documentFiles.first(where: { $0.lastPathComponent == selectedDocumentName })
     }
 
     private func sendKeyboardTimingCommand() {
