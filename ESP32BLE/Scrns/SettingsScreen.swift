@@ -141,7 +141,7 @@ struct SettingsScreen: View {
                 Button {
                     sendControlABeforeText.toggle()
                 } label: {
-                    Text("Send Ctrl+A")
+                    Text("send cmd+a")
                         .frame(minWidth: 110)
                 }
                 .buttonStyle(.plain)
@@ -150,10 +150,17 @@ struct SettingsScreen: View {
                 .frame(minHeight: 36)
                 .background(sendControlABeforeText ? Color.blue : Color.gray.opacity(0.45))
                 .overlay {
-                    RoundedRectangle(cornerRadius: 10)
+                    RoundedRectangle(cornerRadius: 16)
                         .stroke(sendControlABeforeText ? Color.blue : Color.gray.opacity(0.4), lineWidth: 2)
                 }
-                .clipShape(.rect(cornerRadius: 10))
+                .clipShape(.rect(cornerRadius: 16))
+
+                Button("set & test") {
+                    sendKeyboardTimingCommand()
+                    ble.sendString("Hello World!")
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.red)
 
             }
 
@@ -242,7 +249,7 @@ struct SettingsScreen: View {
             Text("custom kb timing")
                 .font(.headline)
 
-            HStack(alignment: .center, spacing: 12) {
+            HStack(alignment: .top, spacing: 12) {
                 VStack(spacing: 10) {
                     sliderRow(
                         title: "on",
@@ -259,12 +266,6 @@ struct SettingsScreen: View {
                     speechRecognitionAutoOffRow
                 }
                 .frame(maxWidth: 520, alignment: .leading)
-
-                Button("set & test") {
-                    sendKeyboardTimingCommand()
-                    ble.sendString("Hello World!")
-                }
-                .buttonStyle(.borderedProminent)
 
                 Spacer(minLength: 0)
             }
