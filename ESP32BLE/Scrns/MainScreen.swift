@@ -37,7 +37,11 @@ struct MainScreen: View {
         1, 2, 4, 6, 9, 12, 15, 16, 18, 20, 24, 28, 32, 36, 40, 42, 45, 48,
         50, 54, 56, 60, 63, 64, 70, 72, 80, 81, 84, 88, 90, 96, 99, 100
     ]
-    private let displayModeButtonColor = Color(red: 0.0, green: 0.24, blue: 0.55)
+    private let displayModeButtonColor = Color(red: 0.05, green: 0.33, blue: 0.18)
+    private let countControlColor = Color(red: 0.15, green: 0.72, blue: 0.22)
+    private let fontControlColor = Color(red: 0.78, green: 0.68, blue: 0.12)
+    private let speechRecognitionActiveColor = Color(red: 0.42, green: 0.12, blue: 0.12)
+    private let bleSendActiveColor = Color(red: 0.55, green: 0.45, blue: 0.08)
     @State private var visibleBoxCount = 20
     @State private var boxFontSize = 28.0
     @State private var isBLESendEnabled = true
@@ -82,9 +86,16 @@ struct MainScreen: View {
                                 return
                             }
 
+                            guard ble.isConnected else {
+                                print("Bluetooth not connected.")
+                                return
+                            }
+
                             guard !entry.sendTexts.isEmpty else {
                                 return
                             }
+
+                            logMainButtonPress(entry)
 
                             for sendText in entry.sendTexts {
                                 ble.sendLine(sendText)
@@ -252,12 +263,12 @@ struct MainScreen: View {
                         .frame(width: 30, height: 30)
                 }
                 .buttonStyle(.plain)
-                .foregroundStyle(.white)
+                .foregroundStyle(countControlColor)
                 .disabled(visibleBoxCount == allowedVisibleBoxCounts.first)
 
                 Text("num:\(visibleBoxCount)")
                     .font(.headline)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(countControlColor)
                     .frame(minWidth: 32)
 
                 Button {
@@ -269,7 +280,7 @@ struct MainScreen: View {
                         .frame(width: 30, height: 30)
                 }
                 .buttonStyle(.plain)
-                .foregroundStyle(.white)
+                .foregroundStyle(countControlColor)
                 .disabled(visibleBoxCount == allowedVisibleBoxCounts.last)
             }
 
@@ -283,12 +294,12 @@ struct MainScreen: View {
                         .frame(width: 30, height: 30)
                 }
                 .buttonStyle(.plain)
-                .foregroundStyle(.white)
+                .foregroundStyle(fontControlColor)
                 .disabled(boxFontSize <= minimumBoxFontSize)
 
                 Text("fnt:\(Int(boxFontSize))")
                     .font(.headline)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(fontControlColor)
                     .frame(minWidth: 32)
 
                 Button {
@@ -300,7 +311,7 @@ struct MainScreen: View {
                         .frame(width: 30, height: 30)
                 }
                 .buttonStyle(.plain)
-                .foregroundStyle(.white)
+                .foregroundStyle(fontControlColor)
                 .disabled(boxFontSize >= maximumBoxFontSize)
             }
 
@@ -327,10 +338,10 @@ struct MainScreen: View {
             }
             .buttonStyle(.plain)
             .foregroundStyle(.white)
-            .background(isSpkRecEnabled ? Color.green.opacity(0.5) : Color.gray.opacity(0.45))
+            .background(isSpkRecEnabled ? speechRecognitionActiveColor : Color.gray.opacity(0.45))
             .overlay {
                 RoundedRectangle(cornerRadius: 12)
-                    .stroke(isSpkRecEnabled ? Color.green.opacity(0.5) : Color.gray.opacity(0.4), lineWidth: 2)
+                    .stroke(isSpkRecEnabled ? speechRecognitionActiveColor : Color.gray.opacity(0.4), lineWidth: 2)
             }
             .clipShape(.rect(cornerRadius: 12))
             .frame(maxWidth: 150)
@@ -344,10 +355,10 @@ struct MainScreen: View {
             }
             .buttonStyle(.plain)
             .foregroundStyle(.white)
-            .background(isBLESendEnabled ? Color.blue : Color.gray.opacity(0.45))
+            .background(isBLESendEnabled ? bleSendActiveColor : Color.gray.opacity(0.45))
             .overlay {
                 RoundedRectangle(cornerRadius: 12)
-                    .stroke(isBLESendEnabled ? Color.blue : Color.gray.opacity(0.4), lineWidth: 2)
+                    .stroke(isBLESendEnabled ? bleSendActiveColor : Color.gray.opacity(0.4), lineWidth: 2)
             }
             .clipShape(.rect(cornerRadius: 12))
             .frame(maxWidth: 150)
@@ -442,6 +453,12 @@ struct MainScreen: View {
             .components(separatedBy: CharacterSet.alphanumerics.inverted)
             .filter { !$0.isEmpty }
             .joined(separator: " ")
+    }
+
+    private func logMainButtonPress(_ entry: FunctionKeyEntry) {
+        let leftText = entry.sendTexts.joined(separator: ":")
+        let rightText = entry.alternateDisplayText ?? ""
+        print("Main button pressed. left: [\(leftText)] right: [\(rightText)]")
     }
 
     private func handleSpeechRecognitionToggle() {

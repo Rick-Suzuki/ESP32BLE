@@ -411,6 +411,13 @@ struct SettingsScreen: View {
         guard !trimmedText.isEmpty else {
             return
         }
+
+        guard ble.isConnected else {
+            print("Bluetooth not connected.")
+            return
+        }
+
+        print("Settings text sent: [\(trimmedText)]")
         ble.sendString(trimmedText)
     }
 
