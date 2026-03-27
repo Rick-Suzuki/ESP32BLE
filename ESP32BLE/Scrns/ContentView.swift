@@ -22,7 +22,7 @@ struct ContentView: View {
     @State private var functionKeys = ContentView.makeDefaultFunctionKeys()
     @State private var loadedFunctionKeySlotCount = defaultNamedFunctionKeyCount
     @State private var documentFiles: [URL] = []
-    @State private var selectedDocumentName = "fnkeys.txt"
+    @AppStorage("selectedDocumentName") private var selectedDocumentName = "fnkeys.txt"
     @State private var settingsBLEText = ""
 
     var body: some View {
@@ -127,14 +127,19 @@ struct ContentView: View {
     }
 
     private func selectInitialDocument() {
-        guard let firstFileURL = documentFiles.first else {
+        guard !documentFiles.isEmpty else {
             functionKeys = defaultFunctionKeys()
             selectedDocumentName = "fnkeys.txt"
             loadedFunctionKeySlotCount = defaultNamedFunctionKeyCount
             return
         }
 
-        loadFunctionKeys(from: firstFileURL)
+        if let savedFileURL = documentFiles.first(where: { $0.lastPathComponent == selectedDocumentName }) {
+            loadFunctionKeys(from: savedFileURL)
+            return
+        }
+
+        loadFunctionKeys(from: documentFiles[0])
     }
 
     private func loadFunctionKeys(from fileURL: URL) {
