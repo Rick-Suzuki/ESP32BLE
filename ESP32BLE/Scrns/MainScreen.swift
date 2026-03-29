@@ -514,8 +514,21 @@ struct MainScreen: View {
                 SlotEditorTextField(text: $editingSlotText, placeholder: "edit button text") {
                     commitSlotEditing()
                 }
-                .frame(width: geometry.size.width * 0.25, height: 36)
+                .frame(width: geometry.size.width * 0.28, height: 36)
                 .focused($isSlotEditorFocused)
+
+                Button {
+                    editingSlotText = ""
+                    isSlotEditorFocused = true
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(.white)
+                        .frame(width: 30, height: 30)
+                        .background(Color.red)
+                        .clipShape(.rect(cornerRadius: 8))
+                }
+                .buttonStyle(.plain)
 
                 Button("save") {
                     commitSlotEditing()
@@ -974,6 +987,7 @@ private struct SlotEditorTextField: UIViewRepresentable {
         let textField = UITextField(frame: .zero)
         textField.borderStyle = .none
         textField.returnKeyType = .done
+        textField.autocapitalizationType = .none
         textField.delegate = context.coordinator
         textField.placeholder = placeholder
         textField.backgroundColor = UIColor.black.withAlphaComponent(0.7)
