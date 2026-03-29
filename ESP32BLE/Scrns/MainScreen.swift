@@ -54,6 +54,8 @@ struct MainScreen: View {
     @State private var isEditingDocumentName = false
     @State private var documentNameDraft = ""
     @State private var renameAlertMessage: String?
+    @State private var isGridEditModeEnabled = false
+    @State private var activeDragIndex: Int?
     @FocusState private var isDocumentNameFieldFocused: Bool
     let functionKeys: [FunctionKeyEntry]
     let documentFiles: [URL]
@@ -70,6 +72,8 @@ struct MainScreen: View {
     let canDeleteDocuments: Bool
     let selectPreviousDocument: () -> Void
     let selectNextDocument: () -> Void
+    let resizeVisibleBoxCount: (Int) -> Bool
+    let moveFunctionKeySlot: (Int, Int) -> Bool
     @Binding var settingsBLEText: String
 
     var body: some View {
@@ -78,10 +82,15 @@ struct MainScreen: View {
                 let gridDimensions = gridDimensions(for: visibleBoxCount)
                 let columns = Array(repeating: GridItem(.flexible(), spacing: 0), count: gridDimensions.columns)
                 let buttonHeight = geometry.size.height / CGFloat(max(gridDimensions.rows, 1))
+                let visibleEntries = Array(functionKeys.prefix(visibleBoxCount).enumerated())
 
                 LazyVGrid(columns: columns, spacing: 0) {
-                    ForEach(Array(functionKeys.prefix(visibleBoxCount).enumerated()), id: \.offset) { _, entry in
+                    ForEach(visibleEntries, id: \.offset) { index, entry in
                         Button {
+                            guard !isGridEditModeEnabled else {
+                                return
+                            }
+
                             guard isBLESendEnabled else {
                                 return
                             }
@@ -113,10 +122,32 @@ struct MainScreen: View {
                                         Rectangle()
                                             .stroke(Color.white, lineWidth: 1)
                                     }
+
+                                    if isGridEditModeEnabled, activeDragIndex == index, !entry.isBlankPlaceholder {
+                                        Rectangle()
+                                            .stroke(Color.blue, style: StrokeStyle(lineWidth: 3, dash: [8, 6]))
+                                    }
                                 }
                                 .contentShape(.rect)
                         }
                         .buttonStyle(.plain)
+                        .simultaneousGesture(
+                            DragGesture(minimumDistance: 20)
+                                .onChanged { _ in
+                                    guard isGridEditModeEnabled, !entry.isBlankPlaceholder else {
+                                        return
+                                    }
+
+                                    activeDragIndex = index
+                                }
+                                .onEnded { value in
+                                    handleEditDragEnded(
+                                        from: index,
+                                        translation: value.translation,
+                                        gridDimensions: gridDimensions
+                                    )
+                                }
+                        )
                     }
                 }
                 .background(Color.black)
@@ -138,18 +169,28 @@ struct MainScreen: View {
             }
 
             ToolbarItem(placement: .topBarTrailing) {
-                NavigationLink("settings >") {
-                    SettingsScreen(
-                        ble: ble,
-                        documentFiles: documentFiles,
-                        selectedDocumentName: selectedDocumentName,
-                        refreshDocumentFiles: refreshDocumentFiles,
-                        loadFunctionKeys: loadFunctionKeys,
-                        deleteDocument: deleteDocument,
-                        duplicateDocument: duplicateDocument,
-                        canDeleteDocuments: canDeleteDocuments,
-                        bleTextToSend: $settingsBLEText
-                    )
+                HStack(spacing: 12) {
+                    Button(isGridEditModeEnabled ? "done" : "edit") {
+                        isGridEditModeEnabled.toggle()
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(isGridEditModeEnabled ? .blue : .white)
+
+                    NavigationLink("settings >") {
+                        SettingsScreen(
+                            ble: ble,
+                            documentFiles: documentFiles,
+                            selectedDocumentName: selectedDocumentName,
+                            refreshDocumentFiles: refreshDocumentFiles,
+                            loadFunctionKeys: loadFunctionKeys,
+                            deleteDocument: deleteDocument,
+                            duplicateDocument: duplicateDocument,
+                            canDeleteDocuments: canDeleteDocuments,
+                            bleTextToSend: $settingsBLEText
+                        )
+                    }
+                    .disabled(isGridEditModeEnabled)
+                    .opacity(isGridEditModeEnabled ? 0.35 : 1)
                 }
             }
         }
@@ -159,6 +200,8 @@ struct MainScreen: View {
         }
         .onChange(of: selectedDocumentDisplayName) {
             cancelDocumentRename()
+            isGridEditModeEnabled = false
+            activeDragIndex = nil
         }
         .onChange(of: definedFunctionKeyCount) {
             updateVisibleBoxCountToFitDefinedButtons()
@@ -623,7 +666,11 @@ struct MainScreen: View {
             return
         }
 
-        visibleBoxCount = allowedVisibleBoxCounts[currentIndex - 1]
+        let nextCount = allowedVisibleBoxCounts[currentIndex - 1]
+
+        if resizeVisibleBoxCount(nextCount) {
+            visibleBoxCount = nextCount
+        }
     }
 
     private func increaseVisibleBoxCount() {
@@ -632,7 +679,11 @@ struct MainScreen: View {
             return
         }
 
-        visibleBoxCount = allowedVisibleBoxCounts[currentIndex + 1]
+        let nextCount = allowedVisibleBoxCounts[currentIndex + 1]
+
+        if resizeVisibleBoxCount(nextCount) {
+            visibleBoxCount = nextCount
+        }
     }
 
     private func decreaseBoxFontSize() {
@@ -700,6 +751,64 @@ struct MainScreen: View {
         documentNameDraft = selectedDocumentDisplayName
         isEditingDocumentName = false
         isDocumentNameFieldFocused = false
+    }
+
+    private func handleEditDragEnded(
+        from sourceIndex: Int,
+        translation: CGSize,
+        gridDimensions: (columns: Int, rows: Int)
+    ) {
+        defer {
+            activeDragIndex = nil
+        }
+
+        guard isGridEditModeEnabled,
+              let targetIndex = targetIndexForEditDrag(
+                from: sourceIndex,
+                translation: translation,
+                gridDimensions: gridDimensions
+              ) else {
+            return
+        }
+
+        _ = moveFunctionKeySlot(sourceIndex, targetIndex)
+    }
+
+    private func targetIndexForEditDrag(
+        from sourceIndex: Int,
+        translation: CGSize,
+        gridDimensions: (columns: Int, rows: Int)
+    ) -> Int? {
+        let horizontalDistance = translation.width
+        let verticalDistance = translation.height
+
+        guard max(abs(horizontalDistance), abs(verticalDistance)) >= 24 else {
+            return nil
+        }
+
+        if abs(horizontalDistance) > abs(verticalDistance) {
+            let step = horizontalDistance > 0 ? 1 : -1
+            let targetIndex = sourceIndex + step
+            let sourceRow = sourceIndex / gridDimensions.columns
+            let targetRow = targetIndex / gridDimensions.columns
+
+            guard targetIndex >= 0,
+                  targetIndex < visibleBoxCount,
+                  sourceRow == targetRow else {
+                return nil
+            }
+
+            return targetIndex
+        }
+
+        let step = verticalDistance > 0 ? gridDimensions.columns : -gridDimensions.columns
+        let targetIndex = sourceIndex + step
+
+        guard targetIndex >= 0, targetIndex < visibleBoxCount else {
+            return nil
+        }
+
+        return targetIndex
     }
 }
 private struct SpeechRecognitionEvent: Equatable {

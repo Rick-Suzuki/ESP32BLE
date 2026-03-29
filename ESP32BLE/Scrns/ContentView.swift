@@ -22,6 +22,7 @@ struct FunctionKeyEntry {
 struct ContentView: View {
     @StateObject private var ble = BLEKeyboardManager()
     @State private var functionKeys = ContentView.makeDefaultFunctionKeys()
+    @State private var functionKeySlotLines = ContentView.defaultFunctionKeyTitles()
     @State private var loadedFunctionKeySlotCount = defaultNamedFunctionKeyCount
     @State private var documentFiles: [URL] = []
     @AppStorage("selectedDocumentName") private var selectedDocumentName = "fnkeys.txt"
@@ -46,6 +47,8 @@ struct ContentView: View {
                 canDeleteDocuments: documentFiles.count > 1,
                 selectPreviousDocument: selectPreviousDocument,
                 selectNextDocument: selectNextDocument,
+                resizeVisibleBoxCount: resizeSelectedDocumentSlotCount,
+                moveFunctionKeySlot: moveSelectedDocumentSlot,
                 settingsBLEText: $settingsBLEText
             )
         }
@@ -56,7 +59,7 @@ struct ContentView: View {
         }
     }
 
-    private func defaultFunctionKeyTitles() -> [String] {
+    private static func defaultFunctionKeyTitles() -> [String] {
         (1...defaultNamedFunctionKeyCount).map { "F\($0)" }
     }
 
@@ -90,7 +93,7 @@ struct ContentView: View {
         let fileURL = documentsDirectoryURL.appendingPathComponent("fnkeys.txt")
 
         if !FileManager.default.fileExists(atPath: fileURL.path) {
-            let defaultContents = defaultFunctionKeyTitles().joined(separator: "\n")
+            let defaultContents = Self.defaultFunctionKeyTitles().joined(separator: "\n")
 
             do {
                 try defaultContents.write(to: fileURL, atomically: true, encoding: .utf8)
@@ -147,28 +150,39 @@ struct ContentView: View {
     private func loadFunctionKeys(from fileURL: URL) {
         do {
             let contents = try String(contentsOf: fileURL, encoding: .utf8)
-            let loadedTitles = contents.components(separatedBy: CharacterSet.newlines.union(.init(charactersIn: "\t")))
-            let parsedFunctionKeys = normalizedFunctionKeys(from: loadedTitles)
-            functionKeys = parsedFunctionKeys.entries
-            loadedFunctionKeySlotCount = parsedFunctionKeys.definedSlotCount
+            let loadedTitles = normalizedSlotLines(from: contents)
+            applySlotLines(loadedTitles)
             selectedDocumentName = fileURL.lastPathComponent
         } catch {
+            functionKeySlotLines = []
             functionKeys = Array(repeating: FunctionKeyEntry(rawLine: "", sendTexts: [], alternateDisplayText: nil, buttonColorCode: nil, isBlankPlaceholder: false), count: maxFunctionKeyCount)
             loadedFunctionKeySlotCount = 0
         }
     }
 
-    private func normalizedFunctionKeys(from loadedTitles: [String]) -> (entries: [FunctionKeyEntry], definedSlotCount: Int) {
-        let filteredTitles = loadedTitles.compactMap { line -> String? in
-            let trimmedLine = line.trimmingCharacters(in: .whitespacesAndNewlines)
+    private func normalizedSlotLines(from contents: String) -> [String] {
+        contents
+            .components(separatedBy: CharacterSet.newlines.union(.init(charactersIn: "\t")))
+            .compactMap { line -> String? in
+                let trimmedLine = line.trimmingCharacters(in: .whitespacesAndNewlines)
 
-            guard !trimmedLine.isEmpty, !trimmedLine.hasPrefix("//") else {
-                return nil
+                guard !trimmedLine.isEmpty, !trimmedLine.hasPrefix("//") else {
+                    return nil
+                }
+
+                return trimmedLine
             }
+    }
 
-            return trimmedLine
-        }
-        let firstHundred = Array(filteredTitles.prefix(maxFunctionKeyCount))
+    private func applySlotLines(_ slotLines: [String]) {
+        functionKeySlotLines = Array(slotLines.prefix(maxFunctionKeyCount))
+        let parsedFunctionKeys = normalizedFunctionKeys(from: functionKeySlotLines)
+        functionKeys = parsedFunctionKeys.entries
+        loadedFunctionKeySlotCount = parsedFunctionKeys.definedSlotCount
+    }
+
+    private func normalizedFunctionKeys(from loadedTitles: [String]) -> (entries: [FunctionKeyEntry], definedSlotCount: Int) {
+        let firstHundred = Array(loadedTitles.prefix(maxFunctionKeyCount))
 
         let entries = (0..<maxFunctionKeyCount).map { index in
             guard index < firstHundred.count else {
@@ -179,6 +193,81 @@ struct ContentView: View {
         }
 
         return (entries, firstHundred.count)
+    }
+
+    private func selectedDocumentURL() -> URL? {
+        if let matchingURL = documentFiles.first(where: { $0.lastPathComponent == selectedDocumentName }) {
+            return matchingURL
+        }
+
+        return documentsDirectoryURL()?.appendingPathComponent(selectedDocumentName)
+    }
+
+    private func persistSlotLines(_ slotLines: [String]) {
+        guard let selectedDocumentURL = selectedDocumentURL() else {
+            applySlotLines(slotLines)
+            return
+        }
+
+        let normalizedLines = Array(slotLines.prefix(maxFunctionKeyCount))
+        let contents = normalizedLines.joined(separator: "\n")
+
+        do {
+            try contents.write(to: selectedDocumentURL, atomically: true, encoding: .utf8)
+            applySlotLines(normalizedLines)
+        } catch {
+            loadFunctionKeys(from: selectedDocumentURL)
+        }
+    }
+
+    @discardableResult
+    private func resizeSelectedDocumentSlotCount(to newCount: Int) -> Bool {
+        let boundedCount = min(max(newCount, 1), maxFunctionKeyCount)
+
+        guard boundedCount != functionKeySlotLines.count else {
+            return true
+        }
+
+        if boundedCount > functionKeySlotLines.count {
+            let expandedLines = functionKeySlotLines + Array(repeating: "_", count: boundedCount - functionKeySlotLines.count)
+            persistSlotLines(expandedLines)
+            return true
+        }
+
+        let trailingLines = functionKeySlotLines[boundedCount...]
+        guard trailingLines.allSatisfy(isBlankPlaceholderLine(_:)) else {
+            print("Can't shrink grid because trailing buttons contain text.")
+            return false
+        }
+
+        persistSlotLines(Array(functionKeySlotLines.prefix(boundedCount)))
+        return true
+    }
+
+    @discardableResult
+    private func moveSelectedDocumentSlot(from sourceIndex: Int, to targetIndex: Int) -> Bool {
+        guard sourceIndex != targetIndex,
+              functionKeySlotLines.indices.contains(sourceIndex),
+              functionKeySlotLines.indices.contains(targetIndex) else {
+            return false
+        }
+
+        let sourceLine = functionKeySlotLines[sourceIndex]
+        let targetLine = functionKeySlotLines[targetIndex]
+
+        guard !isBlankPlaceholderLine(sourceLine), isBlankPlaceholderLine(targetLine) else {
+            return false
+        }
+
+        var updatedLines = functionKeySlotLines
+        updatedLines[targetIndex] = sourceLine
+        updatedLines[sourceIndex] = "_"
+        persistSlotLines(updatedLines)
+        return true
+    }
+
+    private func isBlankPlaceholderLine(_ line: String) -> Bool {
+        line.trimmingCharacters(in: .whitespacesAndNewlines) == "_"
     }
 
     private func functionKeyEntry(from line: String) -> FunctionKeyEntry {
