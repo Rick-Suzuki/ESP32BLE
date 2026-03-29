@@ -173,8 +173,18 @@ struct MainScreen: View {
                     Button(isGridEditModeEnabled ? "done" : "edit") {
                         isGridEditModeEnabled.toggle()
                     }
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 17)
+                    .frame(minWidth: 84, minHeight: 44)
+                    .background(isGridEditModeEnabled ? Color.blue : Color.gray.opacity(0.45))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(isGridEditModeEnabled ? Color.blue : Color.gray.opacity(0.5), lineWidth: 1.5)
+                    }
+                    .clipShape(.rect(cornerRadius: 12))
+                    .contentShape(.rect)
                     .buttonStyle(.plain)
-                    .foregroundStyle(isGridEditModeEnabled ? .blue : .white)
 
                     NavigationLink("settings >") {
                         SettingsScreen(
@@ -189,6 +199,17 @@ struct MainScreen: View {
                             bleTextToSend: $settingsBLEText
                         )
                     }
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 14)
+                    .frame(minWidth: 92, minHeight: 44)
+                    .background(isGridEditModeEnabled ? Color.gray.opacity(0.3) : Color.gray.opacity(0.45))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(isGridEditModeEnabled ? Color.gray.opacity(0.35) : Color.gray.opacity(0.5), lineWidth: 1.5)
+                    }
+                    .clipShape(.rect(cornerRadius: 12))
+                    .contentShape(.rect)
                     .disabled(isGridEditModeEnabled)
                     .opacity(isGridEditModeEnabled ? 0.35 : 1)
                 }
@@ -466,7 +487,7 @@ struct MainScreen: View {
     }
 
     private func applyRecognizedSpeech(_ recognizedText: String) {
-        guard isSpkRecEnabled else {
+        guard isSpkRecEnabled, !isGridEditModeEnabled else {
             return
         }
 
@@ -605,6 +626,10 @@ struct MainScreen: View {
     }
 
     private func sendModifierFunctionKey(_ functionKey: String) {
+        guard !isGridEditModeEnabled else {
+            return
+        }
+
         ble.sendLine("ct")
         ble.sendLine("sh")
         ble.sendLine("op")
