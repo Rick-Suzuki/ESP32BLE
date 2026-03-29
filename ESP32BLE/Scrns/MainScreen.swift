@@ -2,7 +2,7 @@ import SwiftUI
 import AVFAudio
 import Combine
 import Speech
-
+//
 private enum FunctionKeyDisplayMode: CaseIterable {
     case left
     case right
@@ -276,7 +276,7 @@ struct MainScreen: View {
 
                 Text("num:\(visibleBoxCount)")
                     .font(.headline)
-                    .foregroundStyle(countControlColor)
+					.foregroundStyle(.white)
                     .frame(minWidth: 32)
 
                 Button {
@@ -307,7 +307,7 @@ struct MainScreen: View {
 
                 Text("fnt:\(Int(boxFontSize))")
                     .font(.headline)
-                    .foregroundStyle(fontControlColor)
+					.foregroundStyle(.white)
                     .frame(minWidth: 32)
 
                 Button {
