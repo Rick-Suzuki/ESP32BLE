@@ -49,6 +49,7 @@ struct ContentView: View {
                 selectNextDocument: selectNextDocument,
                 resizeVisibleBoxCount: resizeSelectedDocumentSlotCount,
                 moveFunctionKeySlot: moveSelectedDocumentSlot,
+                updateFunctionKeySlot: updateSelectedDocumentSlot,
                 settingsBLEText: $settingsBLEText
             )
         }
@@ -262,6 +263,25 @@ struct ContentView: View {
         var updatedLines = functionKeySlotLines
         updatedLines[targetIndex] = sourceLine
         updatedLines[sourceIndex] = "_"
+        persistSlotLines(updatedLines)
+        return true
+    }
+
+    @discardableResult
+    private func updateSelectedDocumentSlot(at index: Int, with line: String) -> Bool {
+        guard index >= 0, index < maxFunctionKeyCount else {
+            return false
+        }
+
+        var updatedLines = functionKeySlotLines
+        let trimmedLine = line.trimmingCharacters(in: .whitespacesAndNewlines)
+        let persistedLine = trimmedLine.isEmpty ? "_" : trimmedLine
+
+        if index >= updatedLines.count {
+            updatedLines += Array(repeating: "_", count: index - updatedLines.count + 1)
+        }
+
+        updatedLines[index] = persistedLine
         persistSlotLines(updatedLines)
         return true
     }

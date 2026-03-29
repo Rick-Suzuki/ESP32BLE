@@ -2,6 +2,7 @@ import SwiftUI
 import AVFAudio
 import Combine
 import Speech
+import UIKit
 //
 private enum FunctionKeyDisplayMode: CaseIterable {
     case left
@@ -56,7 +57,10 @@ struct MainScreen: View {
     @State private var renameAlertMessage: String?
     @State private var isGridEditModeEnabled = false
     @State private var activeDragIndex: Int?
+    @State private var editingSlotIndex: Int?
+    @State private var editingSlotText = ""
     @FocusState private var isDocumentNameFieldFocused: Bool
+    @FocusState private var isSlotEditorFocused: Bool
     let functionKeys: [FunctionKeyEntry]
     let documentFiles: [URL]
     let selectedDocumentName: String
@@ -74,6 +78,7 @@ struct MainScreen: View {
     let selectNextDocument: () -> Void
     let resizeVisibleBoxCount: (Int) -> Bool
     let moveFunctionKeySlot: (Int, Int) -> Bool
+    let updateFunctionKeySlot: (Int, String) -> Bool
     @Binding var settingsBLEText: String
 
     var body: some View {
@@ -134,7 +139,9 @@ struct MainScreen: View {
                         .simultaneousGesture(
                             DragGesture(minimumDistance: 20)
                                 .onChanged { _ in
-                                    guard isGridEditModeEnabled, !entry.isBlankPlaceholder else {
+                                    guard isGridEditModeEnabled,
+                                          editingSlotIndex == nil,
+                                          !entry.isBlankPlaceholder else {
                                         return
                                     }
 
@@ -148,6 +155,16 @@ struct MainScreen: View {
                                     )
                                 }
                         )
+                        .simultaneousGesture(
+                            LongPressGesture(minimumDuration: 0.4)
+                                .onEnded { _ in
+                                    guard isGridEditModeEnabled else {
+                                        return
+                                    }
+
+                                    beginSlotEditing(at: index)
+                                }
+                        )
                     }
                 }
                 .background(Color.black)
@@ -157,6 +174,13 @@ struct MainScreen: View {
             displayModeButtonSection
         }
         .background(Color.black.ignoresSafeArea())
+        .ignoresSafeArea(.keyboard)
+        .overlay(alignment: .top) {
+            if isGridEditModeEnabled, editingSlotIndex != nil {
+                slotEditorSection
+                    .padding(.top, 8)
+            }
+        }
         .padding(.horizontal, 2)
         .navigationTitle("")
         .toolbarTitleDisplayMode(.inline)
@@ -223,6 +247,7 @@ struct MainScreen: View {
             cancelDocumentRename()
             isGridEditModeEnabled = false
             activeDragIndex = nil
+            cancelSlotEditing()
         }
         .onChange(of: definedFunctionKeyCount) {
             updateVisibleBoxCountToFitDefinedButtons()
@@ -463,6 +488,47 @@ struct MainScreen: View {
         VStack(spacing: 2) {
             Text(displayMode.title)
         }
+    }
+
+    private var slotEditorSection: some View {
+        HStack(spacing: 12) {
+            SlotEditorTextField(text: $editingSlotText, placeholder: "edit button text") {
+                commitSlotEditing()
+            }
+                .focused($isSlotEditorFocused)
+
+            Button("save") {
+                commitSlotEditing()
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.white)
+            .padding(.horizontal, 14)
+            .frame(minHeight: 44)
+            .background(Color.blue)
+            .overlay {
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(Color.blue, lineWidth: 1.5)
+            }
+            .clipShape(.rect(cornerRadius: 12))
+
+            Button("cancel") {
+                cancelSlotEditing()
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.white)
+            .padding(.horizontal, 14)
+            .frame(minHeight: 44)
+            .background(Color.gray.opacity(0.45))
+            .overlay {
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(Color.gray.opacity(0.5), lineWidth: 1.5)
+            }
+            .clipShape(.rect(cornerRadius: 12))
+        }
+        .padding(.horizontal, 12)
+        .frame(maxWidth: .infinity)
+        .frame(height: 44)
+        .background(Color.black)
     }
 
     private func buttonTitle(for entry: FunctionKeyEntry) -> String {
@@ -778,6 +844,40 @@ struct MainScreen: View {
         isDocumentNameFieldFocused = false
     }
 
+    private func beginSlotEditing(at index: Int) {
+        guard index >= 0, index < visibleBoxCount else {
+            return
+        }
+
+        activeDragIndex = nil
+        editingSlotIndex = index
+        editingSlotText = editableText(for: functionKeys[index])
+        isSlotEditorFocused = true
+    }
+
+    private func commitSlotEditing() {
+        guard let editingSlotIndex else {
+            return
+        }
+
+        _ = updateFunctionKeySlot(editingSlotIndex, editingSlotText)
+        cancelSlotEditing()
+    }
+
+    private func cancelSlotEditing() {
+        editingSlotIndex = nil
+        editingSlotText = ""
+        isSlotEditorFocused = false
+    }
+
+    private func editableText(for entry: FunctionKeyEntry) -> String {
+        if entry.isBlankPlaceholder || isEmptyButtonEntry(entry) {
+            return ""
+        }
+
+        return entry.rawLine
+    }
+
     private func handleEditDragEnded(
         from sourceIndex: Int,
         translation: CGSize,
@@ -788,6 +888,7 @@ struct MainScreen: View {
         }
 
         guard isGridEditModeEnabled,
+              editingSlotIndex == nil,
               let targetIndex = targetIndexForEditDrag(
                 from: sourceIndex,
                 translation: translation,
@@ -834,6 +935,61 @@ struct MainScreen: View {
         }
 
         return targetIndex
+    }
+}
+
+private struct SlotEditorTextField: UIViewRepresentable {
+    @Binding var text: String
+    let placeholder: String
+    let onSubmit: () -> Void
+
+    func makeUIView(context: Context) -> UITextField {
+        let textField = UITextField(frame: .zero)
+        textField.borderStyle = .roundedRect
+        textField.returnKeyType = .done
+        textField.delegate = context.coordinator
+        textField.placeholder = placeholder
+        return textField
+    }
+
+    func updateUIView(_ textField: UITextField, context: Context) {
+        if textField.text != text {
+            textField.text = text
+        }
+
+        textField.placeholder = placeholder
+
+        if textField.isFirstResponder, !context.coordinator.didPlaceCursorAtEnd {
+            let endOfDocument = textField.endOfDocument
+            textField.selectedTextRange = textField.textRange(from: endOfDocument, to: endOfDocument)
+            context.coordinator.didPlaceCursorAtEnd = true
+        } else if !textField.isFirstResponder {
+            context.coordinator.didPlaceCursorAtEnd = false
+        }
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(text: $text, onSubmit: onSubmit)
+    }
+
+    final class Coordinator: NSObject, UITextFieldDelegate {
+        @Binding var text: String
+        let onSubmit: () -> Void
+        var didPlaceCursorAtEnd = false
+
+        init(text: Binding<String>, onSubmit: @escaping () -> Void) {
+            _text = text
+            self.onSubmit = onSubmit
+        }
+
+        func textFieldDidChangeSelection(_ textField: UITextField) {
+            text = textField.text ?? ""
+        }
+
+        func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+            onSubmit()
+            return false
+        }
     }
 }
 private struct SpeechRecognitionEvent: Equatable {
