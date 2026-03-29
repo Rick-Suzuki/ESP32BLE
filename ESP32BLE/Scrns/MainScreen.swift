@@ -178,7 +178,7 @@ struct MainScreen: View {
         .overlay(alignment: .top) {
             if isGridEditModeEnabled, editingSlotIndex != nil {
                 slotEditorSection
-                    .padding(.top, 8)
+                    .offset(y: -2)
             }
         }
         .padding(.horizontal, 2)
@@ -201,14 +201,16 @@ struct MainScreen: View {
                     .foregroundStyle(.white)
                     .padding(.horizontal, 17)
                     .frame(minWidth: 84, minHeight: 44)
-                    .background(isGridEditModeEnabled ? Color.blue : Color.gray.opacity(0.45))
+                    .background(editModeButtonBackgroundColor)
                     .overlay {
                         RoundedRectangle(cornerRadius: 12)
-                            .stroke(isGridEditModeEnabled ? Color.blue : Color.gray.opacity(0.5), lineWidth: 1.5)
+                            .stroke(editModeButtonBorderColor, lineWidth: 1.5)
                     }
                     .clipShape(.rect(cornerRadius: 12))
                     .contentShape(.rect)
                     .buttonStyle(.plain)
+                    .disabled(editingSlotIndex != nil)
+                    .opacity(editingSlotIndex == nil ? 1 : 0.45)
 
                     NavigationLink("settings >") {
                         SettingsScreen(
@@ -490,45 +492,70 @@ struct MainScreen: View {
         }
     }
 
+    private var editModeButtonBackgroundColor: Color {
+        if editingSlotIndex != nil {
+            return Color.gray.opacity(0.3)
+        }
+
+        return isGridEditModeEnabled ? Color.blue : Color.gray.opacity(0.45)
+    }
+
+    private var editModeButtonBorderColor: Color {
+        if editingSlotIndex != nil {
+            return Color.gray.opacity(0.35)
+        }
+
+        return isGridEditModeEnabled ? Color.blue : Color.gray.opacity(0.5)
+    }
+
     private var slotEditorSection: some View {
-        HStack(spacing: 12) {
-            SlotEditorTextField(text: $editingSlotText, placeholder: "edit button text") {
-                commitSlotEditing()
-            }
+        GeometryReader { geometry in
+            HStack(spacing: 12) {
+                SlotEditorTextField(text: $editingSlotText, placeholder: "edit button text") {
+                    commitSlotEditing()
+                }
+                .frame(width: geometry.size.width * 0.25, height: 36)
                 .focused($isSlotEditorFocused)
 
-            Button("save") {
-                commitSlotEditing()
-            }
-            .buttonStyle(.plain)
-            .foregroundStyle(.white)
-            .padding(.horizontal, 14)
-            .frame(minHeight: 44)
-            .background(Color.blue)
-            .overlay {
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color.blue, lineWidth: 1.5)
-            }
-            .clipShape(.rect(cornerRadius: 12))
+                Button("save") {
+                    commitSlotEditing()
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.white)
+                .padding(.horizontal, 14)
+                .frame(minHeight: 44)
+                .background(Color.blue)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.blue, lineWidth: 1.5)
+                }
+                .clipShape(.rect(cornerRadius: 12))
 
-            Button("cancel") {
-                cancelSlotEditing()
+                Button("cancel") {
+                    cancelSlotEditing()
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.white)
+                .padding(.horizontal, 14)
+                .frame(minHeight: 44)
+                .background(Color.gray.opacity(0.45))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.gray.opacity(0.5), lineWidth: 1.5)
+                }
+                .clipShape(.rect(cornerRadius: 12))
             }
-            .buttonStyle(.plain)
-            .foregroundStyle(.white)
-            .padding(.horizontal, 14)
-            .frame(minHeight: 44)
-            .background(Color.gray.opacity(0.45))
+            .padding(.horizontal, 12)
+            .padding(.vertical, 4)
+            .background(Color.black.opacity(0.7))
             .overlay {
                 RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color.gray.opacity(0.5), lineWidth: 1.5)
+                    .stroke(Color.gray.opacity(0.35), lineWidth: 1)
             }
             .clipShape(.rect(cornerRadius: 12))
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         }
-        .padding(.horizontal, 12)
-        .frame(maxWidth: .infinity)
-        .frame(height: 44)
-        .background(Color.black)
+        .frame(height: 52)
     }
 
     private func buttonTitle(for entry: FunctionKeyEntry) -> String {
@@ -945,10 +972,23 @@ private struct SlotEditorTextField: UIViewRepresentable {
 
     func makeUIView(context: Context) -> UITextField {
         let textField = UITextField(frame: .zero)
-        textField.borderStyle = .roundedRect
+        textField.borderStyle = .none
         textField.returnKeyType = .done
         textField.delegate = context.coordinator
         textField.placeholder = placeholder
+        textField.backgroundColor = UIColor.black.withAlphaComponent(0.7)
+        textField.textColor = .white
+        textField.attributedPlaceholder = NSAttributedString(
+            string: placeholder,
+            attributes: [.foregroundColor: UIColor.lightGray]
+        )
+        textField.layer.cornerRadius = 8
+        textField.layer.borderWidth = 1
+        textField.layer.borderColor = UIColor.darkGray.cgColor
+        textField.leftView = UIView(frame: CGRect(x: 0, y: 0, width: 10, height: 1))
+        textField.leftViewMode = .always
+        textField.rightView = UIView(frame: CGRect(x: 0, y: 0, width: 10, height: 1))
+        textField.rightViewMode = .always
         return textField
     }
 
