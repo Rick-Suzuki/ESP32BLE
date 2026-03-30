@@ -165,7 +165,7 @@ final class BLEKeyboardManager: NSObject, ObservableObject {
 	}
 	
 	func sendString(_ text: String) {
-		sendLine(normalizedKeyboardText(text))
+		sendNormalizedKeyboardText(text)
 	}
 
 	func sendKeyboardTiming(onMs: Int, offMs: Int) {
@@ -178,6 +178,37 @@ final class BLEKeyboardManager: NSObject, ObservableObject {
 	
 	func pressEnter() {
 		sendLine("ret")
+	}
+
+	private func sendNormalizedKeyboardText(_ text: String) {
+		let normalizedText = normalizedKeyboardText(text)
+		var literalBuffer = ""
+		literalBuffer.reserveCapacity(normalizedText.count)
+
+		for character in normalizedText {
+			if let mapping = specialCharacterMapping(for: character) {
+				flushLiteralBuffer(&literalBuffer)
+
+				if mapping.requiresShift {
+					sendLine("sh")
+				}
+
+				sendLine(mapping.baseKey)
+			} else {
+				literalBuffer.append(character)
+			}
+		}
+
+		flushLiteralBuffer(&literalBuffer)
+	}
+
+	private func flushLiteralBuffer(_ literalBuffer: inout String) {
+		guard !literalBuffer.isEmpty else {
+			return
+		}
+
+		sendLine(literalBuffer)
+		literalBuffer.removeAll(keepingCapacity: true)
 	}
 
 	private func normalizedKeyboardText(_ text: String) -> String {
@@ -196,6 +227,55 @@ final class BLEKeyboardManager: NSObject, ObservableObject {
 		}
 
 		return normalizedText
+	}
+
+	private func specialCharacterMapping(for character: Character) -> (baseKey: String, requiresShift: Bool)? {
+		switch character {
+		case "!":
+			return ("1", true)
+		case "\"":
+			return ("2", true)
+		case "#":
+			return ("3", true)
+		case "$":
+			return ("4", true)
+		case "%":
+			return ("5", true)
+		case "&":
+			return ("6", true)
+		case "'":
+			return ("'", false)
+		case "(":
+			return ("8", true)
+		case ")":
+			return ("9", true)
+		case "=":
+			return ("-", true)
+		case "~":
+			return ("^", true)
+		case "|":
+			return ("\\", true)
+		case "`":
+			return ("@", true)
+		case "{":
+			return ("[", true)
+		case "+":
+			return (";", true)
+		case "*":
+			return (":", true)
+		case "}":
+			return ("]", true)
+		case "<":
+			return (",", true)
+		case ">":
+			return (".", true)
+		case "?":
+			return ("/", true)
+		case "_":
+			return ("\\", true)
+		default:
+			return nil
+		}
 	}
 }
 
