@@ -19,10 +19,15 @@ import Combine
 // 5. write text commands to the RX characteristic
 //
 final class BLEKeyboardManager: NSObject, ObservableObject {
-    private enum StoredTimingKey {
-        static let onMs = "keyboardTimingOnMs"
-        static let offMs = "keyboardTimingOffMs"
-    }
+	private enum StoredTimingKey {
+		static let onMs = "keyboardTimingOnMs"
+		static let offMs = "keyboardTimingOffMs"
+	}
+
+	private struct QueuedBLELine: Identifiable {
+		let id = UUID()
+		let line: String
+	}
 	//
 	// Published state for the SwiftUI interface.
 	//
@@ -51,6 +56,9 @@ final class BLEKeyboardManager: NSObject, ObservableObject {
 	//
 	private var rxCharacteristic: CBCharacteristic?
 	private var idCharacteristic: CBCharacteristic?
+	private var outgoingLines: [QueuedBLELine] = []
+	private var sendQueueTask: Task<Void, Never>?
+	private let sendInterval: Duration = .milliseconds(25)
 	
 	//
 	// Track peripherals that are temporarily connected just to read device ID.
@@ -124,6 +132,9 @@ final class BLEKeyboardManager: NSObject, ObservableObject {
 	}
 	
 	func disconnect() {
+		outgoingLines.removeAll()
+		sendQueueTask?.cancel()
+		sendQueueTask = nil
 		guard let esp32Peripheral else { return }
 		centralManager.cancelPeripheralConnection(esp32Peripheral)
 	}
@@ -133,24 +144,14 @@ final class BLEKeyboardManager: NSObject, ObservableObject {
 	// The ESP32 code expects a newline at the end.
 	//
 	func sendLine(_ line: String) {
-		guard let peripheral = esp32Peripheral,
-			  let rxCharacteristic else {
+		guard esp32Peripheral != nil,
+			  rxCharacteristic != nil else {
 			lastMessage = "Not connected / RX not ready"
 			return
 		}
-		
-		let fullLine = line + "\n"
-		guard let data = fullLine.data(using: .utf8) else {
-			lastMessage = "Failed to encode text"
-			return
-		}
-		
-		//
-		// The characteristic is intended for write / write without response.
-		// We use .withoutResponse for a simple fast command channel.
-		//
-		peripheral.writeValue(data, for: rxCharacteristic, type: .withoutResponse)
-		lastMessage = "Sent: \(line)"
+
+		outgoingLines.append(QueuedBLELine(line: normalizedKeyboardText(line)))
+		startSendQueueIfNeeded()
 	}
 	
 	//
@@ -181,29 +182,7 @@ final class BLEKeyboardManager: NSObject, ObservableObject {
 	}
 
 	private func sendNormalizedKeyboardText(_ text: String) {
-		let normalizedText = normalizedKeyboardText(text)
-		var literalBuffer = ""
-		literalBuffer.reserveCapacity(normalizedText.count)
-
-		for character in normalizedText {
-			if shouldSendAsStandaloneCharacter(character) {
-				flushLiteralBuffer(&literalBuffer)
-				sendLine(String(character))
-			} else {
-				literalBuffer.append(character)
-			}
-		}
-
-		flushLiteralBuffer(&literalBuffer)
-	}
-
-	private func flushLiteralBuffer(_ literalBuffer: inout String) {
-		guard !literalBuffer.isEmpty else {
-			return
-		}
-
-		sendLine(literalBuffer)
-		literalBuffer.removeAll(keepingCapacity: true)
+		sendLine(normalizedKeyboardText(text))
 	}
 
 	private func normalizedKeyboardText(_ text: String) -> String {
@@ -212,7 +191,7 @@ final class BLEKeyboardManager: NSObject, ObservableObject {
 
 		for character in text {
 			switch character {
-			case "‘", "’":
+			case "‘", "’", "‛", "ʼ", "ʻ", "＇":
 				normalizedText.append("'")
 			case "“", "”":
 				normalizedText.append("\"")
@@ -222,14 +201,6 @@ final class BLEKeyboardManager: NSObject, ObservableObject {
 		}
 
 		return normalizedText
-	}
-
-	private func shouldSendAsStandaloneCharacter(_ character: Character) -> Bool {
-		!(
-			character.isLetter ||
-			character.isNumber ||
-			character == " "
-		)
 	}
 }
 
@@ -317,6 +288,9 @@ extension BLEKeyboardManager: CBCentralManagerDelegate {
 			idCharacteristic = nil
 			connectedDeviceID = "Unknown"
 			esp32Peripheral = nil
+			outgoingLines.removeAll()
+			sendQueueTask?.cancel()
+			sendQueueTask = nil
 		}
 	}
 	
@@ -326,6 +300,9 @@ extension BLEKeyboardManager: CBCentralManagerDelegate {
 		if esp32Peripheral?.identifier == peripheral.identifier {
 			connectionText = "Failed to connect"
 			isConnected = false
+			outgoingLines.removeAll()
+			sendQueueTask?.cancel()
+			sendQueueTask = nil
 		}
 	}
 }
@@ -421,5 +398,60 @@ extension BLEKeyboardManager: CBPeripheralDelegate {
 		let onMs = Int(defaults.double(forKey: StoredTimingKey.onMs))
 		let offMs = Int(defaults.double(forKey: StoredTimingKey.offMs))
 		sendKeyboardTiming(onMs: onMs, offMs: offMs)
+	}
+
+	private func startSendQueueIfNeeded() {
+		guard sendQueueTask == nil else {
+			return
+		}
+
+		sendQueueTask = Task { [weak self] in
+			await self?.processSendQueue()
+		}
+	}
+
+	@MainActor
+	private func processSendQueue() async {
+		while !outgoingLines.isEmpty {
+			guard let nextLine = outgoingLines.first else {
+				break
+			}
+
+			guard writeQueuedLine(nextLine.line) else {
+				break
+			}
+
+			outgoingLines.removeFirst()
+
+			do {
+				try await Task.sleep(for: sendInterval)
+			} catch {
+				break
+			}
+		}
+
+		sendQueueTask = nil
+
+		if !outgoingLines.isEmpty, esp32Peripheral != nil, rxCharacteristic != nil {
+			startSendQueueIfNeeded()
+		}
+	}
+
+	private func writeQueuedLine(_ line: String) -> Bool {
+		guard let peripheral = esp32Peripheral,
+			  let rxCharacteristic else {
+			lastMessage = "Not connected / RX not ready"
+			return false
+		}
+
+		let fullLine = line + "\n"
+		guard let data = fullLine.data(using: .utf8) else {
+			lastMessage = "Failed to encode text"
+			return false
+		}
+
+		peripheral.writeValue(data, for: rxCharacteristic, type: .withoutResponse)
+		lastMessage = "Sent: \(line)"
+		return true
 	}
 }
