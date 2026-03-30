@@ -186,14 +186,9 @@ final class BLEKeyboardManager: NSObject, ObservableObject {
 		literalBuffer.reserveCapacity(normalizedText.count)
 
 		for character in normalizedText {
-			if let mapping = specialCharacterMapping(for: character) {
+			if shouldSendAsStandaloneCharacter(character) {
 				flushLiteralBuffer(&literalBuffer)
-
-				if mapping.requiresShift {
-					sendLine("sh")
-				}
-
-				sendLine(mapping.baseKey)
+				sendLine(String(character))
 			} else {
 				literalBuffer.append(character)
 			}
@@ -229,53 +224,12 @@ final class BLEKeyboardManager: NSObject, ObservableObject {
 		return normalizedText
 	}
 
-	private func specialCharacterMapping(for character: Character) -> (baseKey: String, requiresShift: Bool)? {
-		switch character {
-		case "!":
-			return ("1", true)
-		case "\"":
-			return ("2", true)
-		case "#":
-			return ("3", true)
-		case "$":
-			return ("4", true)
-		case "%":
-			return ("5", true)
-		case "&":
-			return ("6", true)
-		case "'":
-			return ("'", false)
-		case "(":
-			return ("8", true)
-		case ")":
-			return ("9", true)
-		case "=":
-			return ("-", true)
-		case "~":
-			return ("^", true)
-		case "|":
-			return ("\\", true)
-		case "`":
-			return ("@", true)
-		case "{":
-			return ("[", true)
-		case "+":
-			return (";", true)
-		case "*":
-			return (":", true)
-		case "}":
-			return ("]", true)
-		case "<":
-			return (",", true)
-		case ">":
-			return (".", true)
-		case "?":
-			return ("/", true)
-		case "_":
-			return ("\\", true)
-		default:
-			return nil
-		}
+	private func shouldSendAsStandaloneCharacter(_ character: Character) -> Bool {
+		!(
+			character.isLetter ||
+			character.isNumber ||
+			character == " "
+		)
 	}
 }
 

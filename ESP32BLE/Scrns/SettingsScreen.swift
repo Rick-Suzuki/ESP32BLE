@@ -197,7 +197,7 @@ struct SettingsScreen: View {
 
                 Button("set & test") {
                     sendKeyboardTimingCommand()
-                    ble.sendString("Hello World!")
+                    ble.sendString("Hello World! Let's go. (test) 1!2\"3#4$5%6&7'8(9)")
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(.red)
