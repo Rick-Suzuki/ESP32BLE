@@ -19,6 +19,10 @@ import Combine
 // 5. write text commands to the RX characteristic
 //
 final class BLEKeyboardManager: NSObject, ObservableObject {
+    private enum StoredTimingKey {
+        static let onMs = "keyboardTimingOnMs"
+        static let offMs = "keyboardTimingOffMs"
+    }
 	//
 	// Published state for the SwiftUI interface.
 	//
@@ -162,6 +166,10 @@ final class BLEKeyboardManager: NSObject, ObservableObject {
 	
 	func sendString(_ text: String) {
 		sendLine(normalizedKeyboardText(text))
+	}
+
+	func sendKeyboardTiming(onMs: Int, offMs: Int) {
+		sendLine("set:\(onMs):\(offMs)")
 	}
 	
 	func pressRightArrow() {
@@ -334,10 +342,11 @@ extension BLEKeyboardManager: CBPeripheralDelegate {
 			}
 		}
 		
-		if peripheral.identifier == esp32Peripheral?.identifier {
-			connectionText = "Connected"
+			if peripheral.identifier == esp32Peripheral?.identifier {
+				connectionText = "Connected"
+				sendStoredKeyboardTiming()
+			}
 		}
-	}
 	
 	func peripheral(
 		_ peripheral: CBPeripheral,
@@ -371,5 +380,12 @@ extension BLEKeyboardManager: CBPeripheralDelegate {
 				centralManager.cancelPeripheralConnection(peripheral)
 			}
 		}
+	}
+
+	private func sendStoredKeyboardTiming() {
+		let defaults = UserDefaults.standard
+		let onMs = Int(defaults.double(forKey: StoredTimingKey.onMs))
+		let offMs = Int(defaults.double(forKey: StoredTimingKey.offMs))
+		sendKeyboardTiming(onMs: onMs, offMs: offMs)
 	}
 }

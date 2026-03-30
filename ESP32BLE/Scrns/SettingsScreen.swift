@@ -8,6 +8,8 @@ private enum SettingsFocusField: Hashable {
 struct SettingsScreen: View {
     @AppStorage("speechRecognitionAutoOffMinutes") private var speechRecognitionAutoOffMinutes = 5
     @AppStorage("sendControlABeforeText") private var sendControlABeforeText = false
+    @AppStorage("keyboardTimingOnMs") private var keyboardTimingOnMs = 0.0
+    @AppStorage("keyboardTimingOffMs") private var keyboardTimingOffMs = 0.0
     private let timingLabelWidth = 90.0
     @ObservedObject var ble: BLEKeyboardManager
     let documentFiles: [URL]
@@ -18,8 +20,6 @@ struct SettingsScreen: View {
     let duplicateDocument: (URL) -> Void
     let canDeleteDocuments: Bool
     @Binding var bleTextToSend: String
-    @State private var keyboardSliderOneValue = 0.0
-    @State private var keyboardSliderTwoValue = 0.0
     @State private var bleTextSelection: TextSelection?
     @State private var pendingDeleteFile: URL?
     @State private var documentEditorText = ""
@@ -167,14 +167,14 @@ struct SettingsScreen: View {
 
             HStack(spacing: 12) {
                 Button("MacOS ks") {
-                    keyboardSliderOneValue = 0
-                    keyboardSliderTwoValue = 0
+                    keyboardTimingOnMs = 0
+                    keyboardTimingOffMs = 0
                 }
                 .buttonStyle(.borderedProminent)
 
                 Button("PS5 ks") {
-                    keyboardSliderOneValue = 20
-                    keyboardSliderTwoValue = 20
+                    keyboardTimingOnMs = 20
+                    keyboardTimingOffMs = 20
                 }
                 .buttonStyle(.borderedProminent)
 
@@ -294,13 +294,13 @@ struct SettingsScreen: View {
                 VStack(spacing: 10) {
                     sliderRow(
                         title: "on",
-                        value: $keyboardSliderOneValue,
+                        value: $keyboardTimingOnMs,
                         range: 0...1000
                     )
 
                     sliderRow(
                         title: "off",
-                        value: $keyboardSliderTwoValue,
+                        value: $keyboardTimingOffMs,
                         range: 0...3000
                     )
 
@@ -520,7 +520,7 @@ struct SettingsScreen: View {
     }
 
     private func sendKeyboardTimingCommand() {
-        ble.sendLine("set:\(Int(keyboardSliderOneValue)):\(Int(keyboardSliderTwoValue))")
+        ble.sendKeyboardTiming(onMs: Int(keyboardTimingOnMs), offMs: Int(keyboardTimingOffMs))
     }
 
     private func insertTextAtCursor(_ insertedText: String) {

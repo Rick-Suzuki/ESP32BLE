@@ -249,18 +249,24 @@ struct ContentView: View {
     private func moveSelectedDocumentSlot(from sourceIndex: Int, to targetIndex: Int) -> Bool {
         guard sourceIndex != targetIndex,
               functionKeySlotLines.indices.contains(sourceIndex),
-              functionKeySlotLines.indices.contains(targetIndex) else {
+              targetIndex >= 0,
+              targetIndex < maxFunctionKeyCount else {
             return false
         }
 
-        let sourceLine = functionKeySlotLines[sourceIndex]
-        let targetLine = functionKeySlotLines[targetIndex]
+        var updatedLines = functionKeySlotLines
+
+        if targetIndex >= updatedLines.count {
+            updatedLines += Array(repeating: "_", count: targetIndex - updatedLines.count + 1)
+        }
+
+        let sourceLine = updatedLines[sourceIndex]
+        let targetLine = updatedLines[targetIndex]
 
         guard !isBlankPlaceholderLine(sourceLine), isBlankPlaceholderLine(targetLine) else {
             return false
         }
 
-        var updatedLines = functionKeySlotLines
         updatedLines[targetIndex] = sourceLine
         updatedLines[sourceIndex] = "_"
         persistSlotLines(updatedLines)
