@@ -2,6 +2,11 @@ import SwiftUI
 import UIKit
 
 struct KeyboardScreen: View {
+    // Easy-to-find key label sizing for the custom keyboard grid.
+    private let gridKeyFontSize: CGFloat = 24
+    private let keypadKeyFontSize: CGFloat = 31
+    private let typingAreaFontSize: CGFloat = 34
+
     @ObservedObject var ble: BLEKeyboardManager
     let isPresented: Bool
     @AppStorage("keyboardSendImmediatelyEnabled") private var isSendImmediatelyEnabled = true
@@ -48,6 +53,7 @@ struct KeyboardScreen: View {
                 KeyboardInputField(
                     text: $typingText,
                     shouldBeFirstResponder: shouldFocusInput,
+                    fontSize: typingAreaFontSize,
                     autocapitalizationType: keyboardAutocapitalizationType,
                     autocorrectionEnabled: isSendOnReturnMode && isAutoCorrectEnabled,
                     cursorCommand: cursorCommand,
@@ -64,10 +70,16 @@ struct KeyboardScreen: View {
                     returnToMain()
                 }
                 .buttonStyle(.plain)
-                .frame(width: 46, height: 34)
+                .font(.headline)
                 .foregroundStyle(.white)
+                .padding(.horizontal, 14)
+                .frame(minHeight: 44)
                 .background(Color.gray.opacity(0.45))
-                .clipShape(.rect(cornerRadius: 6))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.gray.opacity(0.5), lineWidth: 1.5)
+                }
+                .clipShape(.rect(cornerRadius: 12))
             }
 
             HStack(spacing: 4) {
@@ -147,12 +159,12 @@ struct KeyboardScreen: View {
                     Group {
                         if let systemImageName = cell.systemImageName {
                             Image(systemName: systemImageName)
-                                .font(.system(size: 24, weight: .bold))
+                                .font(.system(size: gridKeyFontSize, weight: .bold))
                                 .rotationEffect(.degrees(cell.imageRotationDegrees))
                                 .foregroundStyle(cell.foreground)
                         } else {
                             Text(cell.title)
-                                .font(.system(size: 24, weight: .semibold))
+                                .font(.system(size: cell.fontSize ?? gridKeyFontSize, weight: .semibold))
                                 .multilineTextAlignment(.center)
                                 .lineLimit(2)
                                 .minimumScaleFactor(0.45)
@@ -257,7 +269,7 @@ struct KeyboardScreen: View {
 
     private var fifthRowCells: [KeyboardCell] {
         [
-            keyTokenCell(title: "ESC", keyToken: "ESC", background: keypadColor),
+            keyTokenCell(title: "ESC", keyToken: "ESC", background: standardFunctionColor),
             keyTokenCell(title: "0", keyToken: "kp0", background: keypadColor),
             keyTokenCell(title: ".", keyToken: "kp.", background: keypadColor),
             KeyboardCell(title: "clr all", background: modifierButtonColor(isOn: !activeModifiers.isEmpty), foreground: .white) {
@@ -394,6 +406,7 @@ struct KeyboardScreen: View {
         KeyboardCell(
             title: title,
             systemImageName: systemImageName,
+            fontSize: background == keypadColor ? keypadKeyFontSize : nil,
             imageRotationDegrees: triangleRotationDegrees(for: keyToken, preferredName: systemImageName),
             background: background,
             foreground: .white
@@ -522,7 +535,7 @@ struct KeyboardScreen: View {
     }
 
     private var shiftRowColor: Color {
-        Color(red: 0.56, green: 0.23, blue: 0.70)
+		Color(red: 0.0, green: 0.0, blue: 0.40)
     }
 
     private var optionRowColor: Color {
@@ -534,11 +547,11 @@ struct KeyboardScreen: View {
     }
 
     private var commandShiftColor: Color {
-        Color(red: 0.98, green: 0.34, blue: 0.16)
+        Color(red: 0.7, green: 0.1, blue: 0.16)
     }
 
     private var optionCommandColor: Color {
-        Color(red: 0.58, green: 0.34, blue: 0.95)
+        Color(red: 0.4, green: 0.2, blue: 0.5)
     }
 
     private var standardFunctionColor: Color {
@@ -546,7 +559,7 @@ struct KeyboardScreen: View {
     }
 
     private var arrowColor: Color {
-        Color(red: 0.26, green: 0.56, blue: 0.35)
+        Color(red: 0.1, green: 0.3, blue: 0.1)
     }
 
     private func triangleRotationDegrees(for keyToken: String, preferredName: String?) -> Double {
@@ -572,6 +585,7 @@ struct KeyboardScreen: View {
 private struct KeyboardCell {
     let title: String
     let systemImageName: String?
+    let fontSize: CGFloat?
     let imageRotationDegrees: Double
     let background: Color
     let foreground: Color
@@ -581,6 +595,7 @@ private struct KeyboardCell {
     init(
         title: String,
         systemImageName: String? = nil,
+        fontSize: CGFloat? = nil,
         imageRotationDegrees: Double = 0,
         background: Color,
         foreground: Color,
@@ -589,6 +604,7 @@ private struct KeyboardCell {
     ) {
         self.title = title
         self.systemImageName = systemImageName
+        self.fontSize = fontSize
         self.imageRotationDegrees = imageRotationDegrees
         self.background = background
         self.foreground = foreground
@@ -606,11 +622,11 @@ private enum KeyboardModifier: CaseIterable, Hashable {
     var title: String {
         switch self {
         case .control:
-            return "control"
+            return "ctl"
         case .shift:
-            return "shift"
+            return "sh"
         case .option:
-            return "option"
+            return "opt"
         case .command:
             return "cmd"
         }
@@ -638,6 +654,7 @@ private enum CursorMovement {
 private struct KeyboardInputField: UIViewRepresentable {
     @Binding var text: String
     let shouldBeFirstResponder: Bool
+    let fontSize: CGFloat
     let autocapitalizationType: UITextAutocapitalizationType
     let autocorrectionEnabled: Bool
     let cursorCommand: CursorMovement
@@ -662,9 +679,14 @@ private struct KeyboardInputField: UIViewRepresentable {
         textField.smartInsertDeleteType = .no
         textField.backgroundColor = UIColor.black.withAlphaComponent(0.7)
         textField.textColor = .white
+        textField.font = UIFont.systemFont(ofSize: fontSize, weight: .regular)
+        textField.textAlignment = .center
         textField.attributedPlaceholder = NSAttributedString(
             string: "typing area",
-            attributes: [.foregroundColor: UIColor.lightGray]
+            attributes: [
+                .foregroundColor: UIColor.lightGray,
+                .font: UIFont.systemFont(ofSize: fontSize, weight: .regular)
+            ]
         )
         textField.layer.cornerRadius = 4
         textField.layer.borderWidth = 1
@@ -695,6 +717,8 @@ private struct KeyboardInputField: UIViewRepresentable {
             textField.autocapitalizationType != autocapitalizationType ||
             textField.autocorrectionType != nextAutocorrectionType
 
+        textField.font = UIFont.systemFont(ofSize: fontSize, weight: .semibold)
+        textField.textAlignment = .center
         textField.autocapitalizationType = autocapitalizationType
         textField.autocorrectionType = nextAutocorrectionType
 
