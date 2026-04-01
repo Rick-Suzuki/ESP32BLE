@@ -95,10 +95,10 @@ struct KeyboardScreen: View {
                     isEnabled: isSendOnReturnMode
                 )
 
-                topControlButton(title: "<", background: .blue, width: 40) {
+                topControlButton(systemImageName: "triangle.fill", rotationDegrees: -90, background: .blue, width: 40) {
                     moveCursor(.left)
                 }
-                topControlButton(title: ">", background: .blue, width: 40) {
+                topControlButton(systemImageName: "triangle.fill", rotationDegrees: 90, background: .blue, width: 40) {
                     moveCursor(.right)
                 }
                 topControlButton(title: "clr all", background: .red, width: 64) {
@@ -144,15 +144,24 @@ struct KeyboardScreen: View {
                     cell.action()
                     requestKeyboardFocus()
                 } label: {
-                    Text(cell.title)
-                        .font(.system(size: 12, weight: .semibold))
-                        .multilineTextAlignment(.center)
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.6)
-                        .foregroundStyle(cell.foreground)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .padding(.horizontal, 4)
-                        .contentShape(Rectangle())
+                    Group {
+                        if let systemImageName = cell.systemImageName {
+                            Image(systemName: systemImageName)
+                                .font(.system(size: 24, weight: .bold))
+                                .rotationEffect(.degrees(cell.imageRotationDegrees))
+                                .foregroundStyle(cell.foreground)
+                        } else {
+                            Text(cell.title)
+                                .font(.system(size: 24, weight: .semibold))
+                                .multilineTextAlignment(.center)
+                                .lineLimit(2)
+                                .minimumScaleFactor(0.45)
+                                .foregroundStyle(cell.foreground)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .padding(.horizontal, 4)
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -251,7 +260,7 @@ struct KeyboardScreen: View {
             keyTokenCell(title: "ESC", keyToken: "ESC", background: keypadColor),
             keyTokenCell(title: "0", keyToken: "kp0", background: keypadColor),
             keyTokenCell(title: ".", keyToken: "kp.", background: keypadColor),
-            KeyboardCell(title: "clr all", background: modifierButtonColor(isOn: true), foreground: .white) {
+            KeyboardCell(title: "clr all", background: modifierButtonColor(isOn: !activeModifiers.isEmpty), foreground: .white) {
                 resetModifierToggles()
             },
             plainFunctionCell("F13"),
@@ -262,10 +271,10 @@ struct KeyboardScreen: View {
             plainFunctionCell("F18"),
             plainFunctionCell("F19"),
             plainFunctionCell("F20"),
-            keyTokenCell(title: "^", keyToken: "UP", background: arrowColor, applyStickyModifiers: true),
-            keyTokenCell(title: "v", keyToken: "DOWN", background: arrowColor, applyStickyModifiers: true),
-            keyTokenCell(title: "<", keyToken: "LEFT", background: arrowColor, applyStickyModifiers: true),
-            keyTokenCell(title: ">", keyToken: "RIGHT", background: arrowColor, applyStickyModifiers: true)
+            keyTokenCell(title: "", systemImageName: "triangle.fill", keyToken: "UP", background: arrowColor, applyStickyModifiers: true),
+            keyTokenCell(title: "", systemImageName: "triangle.fill", keyToken: "DOWN", background: arrowColor, applyStickyModifiers: true),
+            keyTokenCell(title: "", systemImageName: "triangle.fill", keyToken: "LEFT", background: arrowColor, applyStickyModifiers: true),
+            keyTokenCell(title: "", systemImageName: "triangle.fill", keyToken: "RIGHT", background: arrowColor, applyStickyModifiers: true)
         ]
     }
 
@@ -291,18 +300,30 @@ struct KeyboardScreen: View {
     }
 
     private func topControlButton(
-        title: String,
+        title: String? = nil,
+        systemImageName: String? = nil,
+        rotationDegrees: Double = 0,
         background: Color,
         width: CGFloat? = nil,
         action: @escaping () -> Void
     ) -> some View {
-        Button(title, action: action)
-            .buttonStyle(.plain)
+        Button(action: action) {
+            Group {
+                if let systemImageName {
+                    Image(systemName: systemImageName)
+                        .font(.system(size: 16, weight: .bold))
+                        .rotationEffect(.degrees(rotationDegrees))
+                } else {
+                    Text(title ?? "")
+                }
+            }
             .foregroundStyle(.white)
             .frame(width: width, height: 30)
             .padding(.horizontal, width == nil ? 10 : 0)
             .background(background)
             .clipShape(.rect(cornerRadius: 6))
+        }
+        .buttonStyle(.plain)
     }
 
     private func topOptionButton(title: String, isOn: Binding<Bool>, isEnabled: Bool) -> some View {
@@ -343,7 +364,7 @@ struct KeyboardScreen: View {
     }
 
     private func modifierButtonColor(isOn: Bool) -> Color {
-        isOn ? Color(red: 0.65, green: 0.55, blue: 0.15) : Color(red: 0.58, green: 0.55, blue: 0.15)
+        isOn ? Color(red: 0.65, green: 0.55, blue: 0.15) : Color(red: 0.20, green: 0.20, blue: 0.20)
     }
 
     private func plainFunctionCell(_ title: String) -> KeyboardCell {
@@ -365,11 +386,18 @@ struct KeyboardScreen: View {
 
     private func keyTokenCell(
         title: String,
+        systemImageName: String? = nil,
         keyToken: String,
         background: Color,
         applyStickyModifiers: Bool = true
     ) -> KeyboardCell {
-        KeyboardCell(title: title, background: background, foreground: .white) {
+        KeyboardCell(
+            title: title,
+            systemImageName: systemImageName,
+            imageRotationDegrees: triangleRotationDegrees(for: keyToken, preferredName: systemImageName),
+            background: background,
+            foreground: .white
+        ) {
             if applyStickyModifiers {
                 sendKeyWithStickyModifiers(keyToken)
             } else {
@@ -395,7 +423,17 @@ struct KeyboardScreen: View {
     }
 
     private func handleInsertedText(_ insertedText: String) {
-        guard isSendImmediatelyEnabled, !insertedText.isEmpty else {
+        guard !insertedText.isEmpty else {
+            return
+        }
+
+        if !activeModifiers.isEmpty {
+            sendModifiedTypedText(insertedText)
+            typingText = ""
+            return
+        }
+
+        guard isSendImmediatelyEnabled else {
             return
         }
 
@@ -456,6 +494,13 @@ struct KeyboardScreen: View {
         }
     }
 
+    private func sendModifiedTypedText(_ text: String) {
+        for character in text {
+            let token = String(character)
+            sendKeyWithStickyModifiers(token)
+        }
+    }
+
     private var activeModifierTokens: [String] {
         KeyboardModifier.allCases.compactMap { modifier in
             activeModifiers.contains(modifier) ? modifier.token : nil
@@ -503,10 +548,31 @@ struct KeyboardScreen: View {
     private var arrowColor: Color {
         Color(red: 0.26, green: 0.56, blue: 0.35)
     }
+
+    private func triangleRotationDegrees(for keyToken: String, preferredName: String?) -> Double {
+        guard preferredName == "triangle.fill" else {
+            return 0
+        }
+
+        switch keyToken {
+        case "UP":
+            return 0
+        case "DOWN":
+            return 180
+        case "LEFT":
+            return -90
+        case "RIGHT":
+            return 90
+        default:
+            return 0
+        }
+    }
 }
 
 private struct KeyboardCell {
     let title: String
+    let systemImageName: String?
+    let imageRotationDegrees: Double
     let background: Color
     let foreground: Color
     let isEnabled: Bool
@@ -514,12 +580,16 @@ private struct KeyboardCell {
 
     init(
         title: String,
+        systemImageName: String? = nil,
+        imageRotationDegrees: Double = 0,
         background: Color,
         foreground: Color,
         isEnabled: Bool = true,
         action: @escaping () -> Void
     ) {
         self.title = title
+        self.systemImageName = systemImageName
+        self.imageRotationDegrees = imageRotationDegrees
         self.background = background
         self.foreground = foreground
         self.isEnabled = isEnabled
@@ -603,6 +673,9 @@ private struct KeyboardInputField: UIViewRepresentable {
         textField.leftViewMode = .always
         textField.rightView = UIView(frame: CGRect(x: 0, y: 0, width: 8, height: 1))
         textField.rightViewMode = .always
+        textField.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        textField.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        textField.clipsToBounds = true
         return textField
     }
 
@@ -686,10 +759,12 @@ private struct KeyboardInputField: UIViewRepresentable {
             }
 
             let updatedText = currentText.replacingCharacters(in: stringRange, with: string)
-            text = updatedText
+            DispatchQueue.main.async {
+                self.text = updatedText
 
-            if !string.isEmpty {
-                onInsertedText(string)
+                if !string.isEmpty {
+                    self.onInsertedText(string)
+                }
             }
 
             return true
