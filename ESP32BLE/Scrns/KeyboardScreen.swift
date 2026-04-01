@@ -9,83 +9,27 @@ struct KeyboardScreen: View {
     @AppStorage("keyboardEachWordCapEnabled") private var isEachWordCapEnabled = false
     @AppStorage("keyboardAutoCorrectEnabled") private var isAutoCorrectEnabled = false
     let returnToMain: () -> Void
+
     @State private var typingText = ""
     @State private var shouldFocusInput = false
+    @State private var activeModifiers: Set<KeyboardModifier> = []
+    @State private var cursorCommand: CursorMovement = .right
+    @State private var cursorCommandID = 0
 
     var body: some View {
         VStack(spacing: 0) {
-            VStack(spacing: 12) {
-                HStack(spacing: 12) {
-                    KeyboardInputField(
-                        text: $typingText,
-                        shouldBeFirstResponder: shouldFocusInput,
-                        autocapitalizationType: keyboardAutocapitalizationType,
-                        autocorrectionEnabled: isSendOnReturnMode && isAutoCorrectEnabled,
-                        onInsertedText: handleInsertedText(_:),
-                        onBackspace: handleBackspace,
-                        onReturn: handleReturn
-                    )
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 42)
-
-                    Button("Main") {
-                        shouldFocusInput = false
-                        returnToMain()
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 14)
-                    .frame(minHeight: 42)
-                    .background(Color.gray.opacity(0.45))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(Color.gray.opacity(0.45), lineWidth: 1.5)
-                    }
-                    .clipShape(.rect(cornerRadius: 12))
-                }
-
-                HStack(spacing: 12) {
-                    Button(isSendImmediatelyEnabled ? "Send Immediately" : "Send on Return") {
-                        isSendImmediatelyEnabled.toggle()
-                        requestKeyboardFocus()
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 14)
-                    .frame(minHeight: 42)
-                    .background(isSendImmediatelyEnabled ? Color.blue : Color.gray.opacity(0.45))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(isSendImmediatelyEnabled ? Color.blue : Color.gray.opacity(0.45), lineWidth: 1.5)
-                    }
-                    .clipShape(.rect(cornerRadius: 12))
-
-                    keyboardOptionButton(
-                        "auto-cap",
-                        isOn: $isAutoCapEnabled,
-                        isEnabled: isSendOnReturnMode
-                    )
-                    keyboardOptionButton(
-                        "each word",
-                        isOn: $isEachWordCapEnabled,
-                        isEnabled: isSendOnReturnMode
-                    )
-                    keyboardOptionButton(
-                        "auto-correct",
-                        isOn: $isAutoCorrectEnabled,
-                        isEnabled: isSendOnReturnMode
-                    )
-
-                    Spacer(minLength: 0)
-                }
-            }
-            .padding(.horizontal, 12)
-            .padding(.top, 8)
-
-            Spacer()
+            topSection
+            Divider()
+                .overlay(Color.gray.opacity(0.45))
+            keyGrid
         }
         .background(Color.black.ignoresSafeArea())
         .preferredColorScheme(.dark)
+        .onAppear {
+            if isPresented {
+                requestKeyboardFocus()
+            }
+        }
         .onChange(of: isPresented) {
             if isPresented {
                 requestKeyboardFocus()
@@ -95,6 +39,342 @@ struct KeyboardScreen: View {
         }
         .onTapGesture {
             requestKeyboardFocus()
+        }
+    }
+
+    private var topSection: some View {
+        VStack(spacing: 8) {
+            HStack(spacing: 8) {
+                KeyboardInputField(
+                    text: $typingText,
+                    shouldBeFirstResponder: shouldFocusInput,
+                    autocapitalizationType: keyboardAutocapitalizationType,
+                    autocorrectionEnabled: isSendOnReturnMode && isAutoCorrectEnabled,
+                    cursorCommand: cursorCommand,
+                    cursorCommandID: cursorCommandID,
+                    onInsertedText: handleInsertedText(_:),
+                    onBackspace: handleBackspace,
+                    onReturn: handleReturn
+                )
+                .frame(maxWidth: .infinity)
+                .frame(height: 34)
+
+                Button("Main") {
+                    shouldFocusInput = false
+                    returnToMain()
+                }
+                .buttonStyle(.plain)
+                .frame(width: 46, height: 34)
+                .foregroundStyle(.white)
+                .background(Color.gray.opacity(0.45))
+                .clipShape(.rect(cornerRadius: 6))
+            }
+
+            HStack(spacing: 4) {
+                topControlButton(
+                    title: isSendImmediatelyEnabled ? "Send Immediately" : "Send on Return",
+                    background: isSendImmediatelyEnabled ? .blue : Color.gray.opacity(0.45)
+                ) {
+                    isSendImmediatelyEnabled.toggle()
+                    requestKeyboardFocus()
+                }
+
+                topOptionButton(
+                    title: "auto-cap",
+                    isOn: $isAutoCapEnabled,
+                    isEnabled: isSendOnReturnMode
+                )
+                topOptionButton(
+                    title: "each word",
+                    isOn: $isEachWordCapEnabled,
+                    isEnabled: isSendOnReturnMode
+                )
+                topOptionButton(
+                    title: "auto-correct",
+                    isOn: $isAutoCorrectEnabled,
+                    isEnabled: isSendOnReturnMode
+                )
+
+                topControlButton(title: "<", background: .blue, width: 40) {
+                    moveCursor(.left)
+                }
+                topControlButton(title: ">", background: .blue, width: 40) {
+                    moveCursor(.right)
+                }
+                topControlButton(title: "clr all", background: .red, width: 64) {
+                    typingText = ""
+                    requestKeyboardFocus()
+                }
+
+                Spacer(minLength: 0)
+            }
+        }
+        .padding(.horizontal, 8)
+        .padding(.top, 6)
+        .padding(.bottom, 6)
+    }
+
+    private var keyGrid: some View {
+        GeometryReader { geometry in
+            let rowCount = 6
+            let rowHeight = max(38, floor((geometry.size.height - CGFloat(rowCount - 1)) / CGFloat(rowCount)))
+
+            VStack(spacing: 1) {
+                keyRow(topRowCells)
+                    .frame(height: rowHeight)
+                keyRow(secondRowCells)
+                    .frame(height: rowHeight)
+                keyRow(thirdRowCells)
+                    .frame(height: rowHeight)
+                keyRow(fourthRowCells)
+                    .frame(height: rowHeight)
+                keyRow(fifthRowCells)
+                    .frame(height: rowHeight)
+                keyRow(bottomRowCells)
+                    .frame(height: rowHeight)
+            }
+            .background(Color.black)
+        }
+    }
+
+    private func keyRow(_ cells: [KeyboardCell]) -> some View {
+        HStack(spacing: 1) {
+            ForEach(Array(cells.enumerated()), id: \.offset) { _, cell in
+                Button {
+                    cell.action()
+                    requestKeyboardFocus()
+                } label: {
+                    Text(cell.title)
+                        .font(.system(size: 12, weight: .semibold))
+                        .multilineTextAlignment(.center)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.6)
+                        .foregroundStyle(cell.foreground)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .padding(.horizontal, 4)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(cell.background)
+                .disabled(!cell.isEnabled)
+            }
+        }
+    }
+
+    private var topRowCells: [KeyboardCell] {
+        [
+            comboFunctionCell(title: "ctl+cmd\nF13", tokens: ["ct", "cm"], functionKey: "f13", background: Color.blue.opacity(0.55)),
+            comboFunctionCell(title: "ctl+cmd\nF14", tokens: ["ct", "cm"], functionKey: "f14", background: Color.blue.opacity(0.55)),
+            comboFunctionCell(title: "ctl+cmd\nF15", tokens: ["ct", "cm"], functionKey: "f15", background: Color.blue.opacity(0.55)),
+            keyTokenCell(title: "/", keyToken: "kp/", background: keypadColor),
+            comboFunctionCell(title: "ctl\nF13", tokens: ["ct"], functionKey: "f13", background: modifierRowColor),
+            comboFunctionCell(title: "F14", tokens: ["ct"], functionKey: "f14", background: modifierRowColor),
+            comboFunctionCell(title: "F15", tokens: ["ct"], functionKey: "f15", background: modifierRowColor),
+            comboFunctionCell(title: "F16", tokens: ["ct"], functionKey: "f16", background: modifierRowColor),
+            comboFunctionCell(title: "F17", tokens: ["ct"], functionKey: "f17", background: modifierRowColor),
+            comboFunctionCell(title: "F18", tokens: ["ct"], functionKey: "f18", background: modifierRowColor),
+            comboFunctionCell(title: "F19", tokens: ["ct"], functionKey: "f19", background: modifierRowColor),
+            comboFunctionCell(title: "F20", tokens: ["ct"], functionKey: "f20", background: modifierRowColor),
+            comboFunctionCell(title: "sh+cmd\nF13", tokens: ["sh", "cm"], functionKey: "f13", background: commandShiftColor),
+            comboFunctionCell(title: "F14", tokens: ["sh", "cm"], functionKey: "f14", background: commandShiftColor),
+            comboFunctionCell(title: "F15", tokens: ["sh", "cm"], functionKey: "f15", background: commandShiftColor),
+            comboFunctionCell(title: "F16", tokens: ["sh", "cm"], functionKey: "f16", background: commandShiftColor)
+        ]
+    }
+
+    private var secondRowCells: [KeyboardCell] {
+        [
+            keyTokenCell(title: "7", keyToken: "kp7", background: keypadColor),
+            keyTokenCell(title: "8", keyToken: "kp8", background: keypadColor),
+            keyTokenCell(title: "9", keyToken: "kp9", background: keypadColor),
+            keyTokenCell(title: "*", keyToken: "kp*", background: keypadColor),
+            comboFunctionCell(title: "shift\nF13", tokens: ["sh"], functionKey: "f13", background: shiftRowColor),
+            comboFunctionCell(title: "F14", tokens: ["sh"], functionKey: "f14", background: shiftRowColor),
+            comboFunctionCell(title: "F15", tokens: ["sh"], functionKey: "f15", background: shiftRowColor),
+            comboFunctionCell(title: "F16", tokens: ["sh"], functionKey: "f16", background: shiftRowColor),
+            comboFunctionCell(title: "F17", tokens: ["sh"], functionKey: "f17", background: shiftRowColor),
+            comboFunctionCell(title: "F18", tokens: ["sh"], functionKey: "f18", background: shiftRowColor),
+            comboFunctionCell(title: "F19", tokens: ["sh"], functionKey: "f19", background: shiftRowColor),
+            comboFunctionCell(title: "F20", tokens: ["sh"], functionKey: "f20", background: shiftRowColor),
+            comboFunctionCell(title: "F17", tokens: ["sh", "cm"], functionKey: "f17", background: commandShiftColor),
+            comboFunctionCell(title: "F18", tokens: ["sh", "cm"], functionKey: "f18", background: commandShiftColor),
+            comboFunctionCell(title: "F19", tokens: ["sh", "cm"], functionKey: "f19", background: commandShiftColor),
+            comboFunctionCell(title: "F20", tokens: ["sh", "cm"], functionKey: "f20", background: commandShiftColor)
+        ]
+    }
+
+    private var thirdRowCells: [KeyboardCell] {
+        [
+            keyTokenCell(title: "4", keyToken: "kp4", background: keypadColor),
+            keyTokenCell(title: "5", keyToken: "kp5", background: keypadColor),
+            keyTokenCell(title: "6", keyToken: "kp6", background: keypadColor),
+            keyTokenCell(title: "-", keyToken: "kp-", background: keypadColor),
+            comboFunctionCell(title: "opt\nF13", tokens: ["op"], functionKey: "f13", background: optionRowColor),
+            comboFunctionCell(title: "F14", tokens: ["op"], functionKey: "f14", background: optionRowColor),
+            comboFunctionCell(title: "F15", tokens: ["op"], functionKey: "f15", background: optionRowColor),
+            comboFunctionCell(title: "F16", tokens: ["op"], functionKey: "f16", background: optionRowColor),
+            comboFunctionCell(title: "F17", tokens: ["op"], functionKey: "f17", background: optionRowColor),
+            comboFunctionCell(title: "F18", tokens: ["op"], functionKey: "f18", background: optionRowColor),
+            comboFunctionCell(title: "F19", tokens: ["op"], functionKey: "f19", background: optionRowColor),
+            comboFunctionCell(title: "F20", tokens: ["op"], functionKey: "f20", background: optionRowColor),
+            comboFunctionCell(title: "op+cmd\nF13", tokens: ["op", "cm"], functionKey: "f13", background: optionCommandColor),
+            comboFunctionCell(title: "F14", tokens: ["op", "cm"], functionKey: "f14", background: optionCommandColor),
+            comboFunctionCell(title: "F15", tokens: ["op", "cm"], functionKey: "f15", background: optionCommandColor),
+            comboFunctionCell(title: "F16", tokens: ["op", "cm"], functionKey: "f16", background: optionCommandColor)
+        ]
+    }
+
+    private var fourthRowCells: [KeyboardCell] {
+        [
+            keyTokenCell(title: "1", keyToken: "kp1", background: keypadColor),
+            keyTokenCell(title: "2", keyToken: "kp2", background: keypadColor),
+            keyTokenCell(title: "3", keyToken: "kp3", background: keypadColor),
+            keyTokenCell(title: "+", keyToken: "kp+", background: keypadColor),
+            comboFunctionCell(title: "cmd\nF13", tokens: ["cm"], functionKey: "f13", background: commandRowColor),
+            comboFunctionCell(title: "F14", tokens: ["cm"], functionKey: "f14", background: commandRowColor),
+            comboFunctionCell(title: "F15", tokens: ["cm"], functionKey: "f15", background: commandRowColor),
+            comboFunctionCell(title: "F16", tokens: ["cm"], functionKey: "f16", background: commandRowColor),
+            comboFunctionCell(title: "F17", tokens: ["cm"], functionKey: "f17", background: commandRowColor),
+            comboFunctionCell(title: "F18", tokens: ["cm"], functionKey: "f18", background: commandRowColor),
+            comboFunctionCell(title: "F19", tokens: ["cm"], functionKey: "f19", background: commandRowColor),
+            comboFunctionCell(title: "F20", tokens: ["cm"], functionKey: "f20", background: commandRowColor),
+            comboFunctionCell(title: "F17", tokens: ["op", "cm"], functionKey: "f17", background: optionCommandColor),
+            comboFunctionCell(title: "F18", tokens: ["op", "cm"], functionKey: "f18", background: optionCommandColor),
+            comboFunctionCell(title: "F19", tokens: ["op", "cm"], functionKey: "f19", background: optionCommandColor),
+            comboFunctionCell(title: "F20", tokens: ["op", "cm"], functionKey: "f20", background: optionCommandColor)
+        ]
+    }
+
+    private var fifthRowCells: [KeyboardCell] {
+        [
+            keyTokenCell(title: "ESC", keyToken: "ESC", background: keypadColor),
+            keyTokenCell(title: "0", keyToken: "kp0", background: keypadColor),
+            keyTokenCell(title: ".", keyToken: "kp.", background: keypadColor),
+            KeyboardCell(title: "clr all", background: modifierButtonColor(isOn: true), foreground: .white) {
+                resetModifierToggles()
+            },
+            plainFunctionCell("F13"),
+            plainFunctionCell("F14"),
+            plainFunctionCell("F15"),
+            plainFunctionCell("F16"),
+            plainFunctionCell("F17"),
+            plainFunctionCell("F18"),
+            plainFunctionCell("F19"),
+            plainFunctionCell("F20"),
+            keyTokenCell(title: "^", keyToken: "UP", background: arrowColor, applyStickyModifiers: true),
+            keyTokenCell(title: "v", keyToken: "DOWN", background: arrowColor, applyStickyModifiers: true),
+            keyTokenCell(title: "<", keyToken: "LEFT", background: arrowColor, applyStickyModifiers: true),
+            keyTokenCell(title: ">", keyToken: "RIGHT", background: arrowColor, applyStickyModifiers: true)
+        ]
+    }
+
+    private var bottomRowCells: [KeyboardCell] {
+        [
+            modifierCell(.control),
+            modifierCell(.shift),
+            modifierCell(.option),
+            modifierCell(.command),
+            plainFunctionCell("F1"),
+            plainFunctionCell("F2"),
+            plainFunctionCell("F3"),
+            plainFunctionCell("F4"),
+            plainFunctionCell("F5"),
+            plainFunctionCell("F6"),
+            plainFunctionCell("F7"),
+            plainFunctionCell("F8"),
+            plainFunctionCell("F9"),
+            plainFunctionCell("F10"),
+            plainFunctionCell("F11"),
+            plainFunctionCell("F12")
+        ]
+    }
+
+    private func topControlButton(
+        title: String,
+        background: Color,
+        width: CGFloat? = nil,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(title, action: action)
+            .buttonStyle(.plain)
+            .foregroundStyle(.white)
+            .frame(width: width, height: 30)
+            .padding(.horizontal, width == nil ? 10 : 0)
+            .background(background)
+            .clipShape(.rect(cornerRadius: 6))
+    }
+
+    private func topOptionButton(title: String, isOn: Binding<Bool>, isEnabled: Bool) -> some View {
+        Button(title) {
+            guard isEnabled else {
+                return
+            }
+
+            isOn.wrappedValue.toggle()
+            requestKeyboardFocus()
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(.white.opacity(isEnabled ? 1 : 0.7))
+        .frame(height: 30)
+        .padding(.horizontal, 10)
+        .background(optionButtonBackgroundColor(isEnabled: isEnabled, isOn: isOn.wrappedValue))
+        .clipShape(.rect(cornerRadius: 6))
+        .disabled(!isEnabled)
+    }
+
+    private func optionButtonBackgroundColor(isEnabled: Bool, isOn: Bool) -> Color {
+        guard isEnabled else {
+            return Color.gray.opacity(0.35)
+        }
+
+        return isOn ? .blue : Color.gray.opacity(0.45)
+    }
+
+    private func modifierCell(_ modifier: KeyboardModifier) -> KeyboardCell {
+        let isOn = activeModifiers.contains(modifier)
+        return KeyboardCell(
+            title: modifier.title,
+            background: modifierButtonColor(isOn: isOn),
+            foreground: .white
+        ) {
+            toggleModifier(modifier)
+        }
+    }
+
+    private func modifierButtonColor(isOn: Bool) -> Color {
+        isOn ? Color(red: 0.65, green: 0.55, blue: 0.15) : Color(red: 0.58, green: 0.55, blue: 0.15)
+    }
+
+    private func plainFunctionCell(_ title: String) -> KeyboardCell {
+        KeyboardCell(title: title, background: standardFunctionColor, foreground: .white) {
+            sendKeyWithStickyModifiers(title.lowercased())
+        }
+    }
+
+    private func comboFunctionCell(
+        title: String,
+        tokens: [String],
+        functionKey: String,
+        background: Color
+    ) -> KeyboardCell {
+        KeyboardCell(title: title, background: background, foreground: .white) {
+            sendTokens(tokens + [functionKey])
+        }
+    }
+
+    private func keyTokenCell(
+        title: String,
+        keyToken: String,
+        background: Color,
+        applyStickyModifiers: Bool = true
+    ) -> KeyboardCell {
+        KeyboardCell(title: title, background: background, foreground: .white) {
+            if applyStickyModifiers {
+                sendKeyWithStickyModifiers(keyToken)
+            } else {
+                sendTokens([keyToken])
+            }
         }
     }
 
@@ -112,44 +392,6 @@ struct KeyboardScreen: View {
         }
 
         return .none
-    }
-
-    private func keyboardOptionButton(_ title: String, isOn: Binding<Bool>, isEnabled: Bool) -> some View {
-        Button(title) {
-            guard isEnabled else {
-                return
-            }
-
-            isOn.wrappedValue.toggle()
-            requestKeyboardFocus()
-        }
-            .buttonStyle(.plain)
-            .foregroundStyle(.white.opacity(isEnabled ? 1 : 0.7))
-            .padding(.horizontal, 14)
-            .frame(minHeight: 42)
-            .background(optionButtonBackgroundColor(isEnabled: isEnabled, isOn: isOn.wrappedValue))
-            .overlay {
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(optionButtonBorderColor(isEnabled: isEnabled, isOn: isOn.wrappedValue), lineWidth: 1.5)
-            }
-            .clipShape(.rect(cornerRadius: 12))
-            .disabled(!isEnabled)
-    }
-
-    private func optionButtonBackgroundColor(isEnabled: Bool, isOn: Bool) -> Color {
-        guard isEnabled else {
-            return Color.gray.opacity(0.3)
-        }
-
-        return isOn ? Color.blue : Color.gray.opacity(0.45)
-    }
-
-    private func optionButtonBorderColor(isEnabled: Bool, isOn: Bool) -> Color {
-        guard isEnabled else {
-            return Color.gray.opacity(0.35)
-        }
-
-        return isOn ? Color.blue : Color.gray.opacity(0.45)
     }
 
     private func handleInsertedText(_ insertedText: String) {
@@ -186,11 +428,141 @@ struct KeyboardScreen: View {
         requestKeyboardFocus()
     }
 
+    private func moveCursor(_ movement: CursorMovement) {
+        cursorCommand = movement
+        cursorCommandID += 1
+        requestKeyboardFocus()
+    }
+
+    private func toggleModifier(_ modifier: KeyboardModifier) {
+        if activeModifiers.contains(modifier) {
+            activeModifiers.remove(modifier)
+        } else {
+            activeModifiers.insert(modifier)
+        }
+    }
+
+    private func resetModifierToggles() {
+        activeModifiers.removeAll()
+    }
+
+    private func sendKeyWithStickyModifiers(_ keyToken: String) {
+        sendTokens(activeModifierTokens + [keyToken])
+    }
+
+    private func sendTokens(_ tokens: [String]) {
+        for token in tokens {
+            ble.sendLine(token)
+        }
+    }
+
+    private var activeModifierTokens: [String] {
+        KeyboardModifier.allCases.compactMap { modifier in
+            activeModifiers.contains(modifier) ? modifier.token : nil
+        }
+    }
+
     private func requestKeyboardFocus() {
         DispatchQueue.main.async {
             shouldFocusInput = true
         }
     }
+
+    private var keypadColor: Color {
+        Color(red: 0.56, green: 0.16, blue: 0.10)
+    }
+
+    private var modifierRowColor: Color {
+        Color(red: 0.40, green: 0.18, blue: 0.30)
+    }
+
+    private var shiftRowColor: Color {
+        Color(red: 0.56, green: 0.23, blue: 0.70)
+    }
+
+    private var optionRowColor: Color {
+        Color(red: 0.33, green: 0.19, blue: 0.78)
+    }
+
+    private var commandRowColor: Color {
+        Color(red: 0.11, green: 0.20, blue: 0.88)
+    }
+
+    private var commandShiftColor: Color {
+        Color(red: 0.98, green: 0.34, blue: 0.16)
+    }
+
+    private var optionCommandColor: Color {
+        Color(red: 0.58, green: 0.34, blue: 0.95)
+    }
+
+    private var standardFunctionColor: Color {
+        Color(red: 0.22, green: 0.22, blue: 0.22)
+    }
+
+    private var arrowColor: Color {
+        Color(red: 0.26, green: 0.56, blue: 0.35)
+    }
+}
+
+private struct KeyboardCell {
+    let title: String
+    let background: Color
+    let foreground: Color
+    let isEnabled: Bool
+    let action: () -> Void
+
+    init(
+        title: String,
+        background: Color,
+        foreground: Color,
+        isEnabled: Bool = true,
+        action: @escaping () -> Void
+    ) {
+        self.title = title
+        self.background = background
+        self.foreground = foreground
+        self.isEnabled = isEnabled
+        self.action = action
+    }
+}
+
+private enum KeyboardModifier: CaseIterable, Hashable {
+    case control
+    case shift
+    case option
+    case command
+
+    var title: String {
+        switch self {
+        case .control:
+            return "control"
+        case .shift:
+            return "shift"
+        case .option:
+            return "option"
+        case .command:
+            return "cmd"
+        }
+    }
+
+    var token: String {
+        switch self {
+        case .control:
+            return "ct"
+        case .shift:
+            return "sh"
+        case .option:
+            return "op"
+        case .command:
+            return "cm"
+        }
+    }
+}
+
+private enum CursorMovement {
+    case left
+    case right
 }
 
 private struct KeyboardInputField: UIViewRepresentable {
@@ -198,6 +570,8 @@ private struct KeyboardInputField: UIViewRepresentable {
     let shouldBeFirstResponder: Bool
     let autocapitalizationType: UITextAutocapitalizationType
     let autocorrectionEnabled: Bool
+    let cursorCommand: CursorMovement
+    let cursorCommandID: Int
     let onInsertedText: (String) -> Void
     let onBackspace: () -> Void
     let onReturn: () -> Void
@@ -222,12 +596,12 @@ private struct KeyboardInputField: UIViewRepresentable {
             string: "typing area",
             attributes: [.foregroundColor: UIColor.lightGray]
         )
-        textField.layer.cornerRadius = 8
+        textField.layer.cornerRadius = 4
         textField.layer.borderWidth = 1
         textField.layer.borderColor = UIColor.darkGray.cgColor
-        textField.leftView = UIView(frame: CGRect(x: 0, y: 0, width: 10, height: 1))
+        textField.leftView = UIView(frame: CGRect(x: 0, y: 0, width: 8, height: 1))
         textField.leftViewMode = .always
-        textField.rightView = UIView(frame: CGRect(x: 0, y: 0, width: 10, height: 1))
+        textField.rightView = UIView(frame: CGRect(x: 0, y: 0, width: 8, height: 1))
         textField.rightViewMode = .always
         return textField
     }
@@ -250,10 +624,14 @@ private struct KeyboardInputField: UIViewRepresentable {
 
         textField.autocapitalizationType = autocapitalizationType
         textField.autocorrectionType = nextAutocorrectionType
-        textField.reloadInputViews()
 
         context.coordinator.onInsertedText = onInsertedText
         context.coordinator.onReturn = onReturn
+
+        if context.coordinator.lastCursorCommandID != cursorCommandID {
+            context.coordinator.lastCursorCommandID = cursorCommandID
+            context.coordinator.applyCursorMove(cursorCommand, in: textField)
+        }
 
         if shouldBeFirstResponder, !textField.isFirstResponder {
             textField.becomeFirstResponder()
@@ -278,6 +656,7 @@ private struct KeyboardInputField: UIViewRepresentable {
         var onInsertedText: (String) -> Void
         var onBackspace: () -> Void
         var onReturn: () -> Void
+        var lastCursorCommandID = 0
 
         init(
             text: Binding<String>,
@@ -314,6 +693,25 @@ private struct KeyboardInputField: UIViewRepresentable {
             }
 
             return true
+        }
+
+        func applyCursorMove(_ movement: CursorMovement, in textField: UITextField) {
+            guard let selectedRange = textField.selectedTextRange else {
+                return
+            }
+
+            switch movement {
+            case .left:
+                guard let nextPosition = textField.position(from: selectedRange.start, offset: -1) else {
+                    return
+                }
+                textField.selectedTextRange = textField.textRange(from: nextPosition, to: nextPosition)
+            case .right:
+                guard let nextPosition = textField.position(from: selectedRange.end, offset: 1) else {
+                    return
+                }
+                textField.selectedTextRange = textField.textRange(from: nextPosition, to: nextPosition)
+            }
         }
     }
 }
