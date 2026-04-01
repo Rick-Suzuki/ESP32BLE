@@ -6,6 +6,10 @@ struct KeyboardScreen: View {
     private let gridKeyFontSize: CGFloat = 24
     private let keypadKeyFontSize: CGFloat = 31
     private let typingAreaFontSize: CGFloat = 34
+    // Easy-to-find key shape tuning for the custom keyboard grid.
+    private let gridKeyCornerRadius: CGFloat = 12
+    private let gridKeySpacing: CGFloat = 6
+    private let gridRowHeightScale: CGFloat = 0.99
 
     @ObservedObject var ble: BLEKeyboardManager
     let isPresented: Bool
@@ -24,8 +28,8 @@ struct KeyboardScreen: View {
     var body: some View {
         VStack(spacing: 0) {
             topSection
-            Divider()
-                .overlay(Color.gray.opacity(0.45))
+       //     Divider()
+			//.overlay(Color.gray.opacity(0.45))
             keyGrid
         }
         .background(Color.black.ignoresSafeArea())
@@ -129,9 +133,11 @@ struct KeyboardScreen: View {
     private var keyGrid: some View {
         GeometryReader { geometry in
             let rowCount = 6
-            let rowHeight = max(38, floor((geometry.size.height - CGFloat(rowCount - 1)) / CGFloat(rowCount)))
+            let totalSpacing = gridKeySpacing * CGFloat(rowCount - 1)
+            let availableRowHeight = floor((geometry.size.height - totalSpacing) / CGFloat(rowCount))
+            let rowHeight = max(32, floor(availableRowHeight * gridRowHeightScale))
 
-            VStack(spacing: 1) {
+            VStack(spacing: gridKeySpacing) {
                 keyRow(topRowCells)
                     .frame(height: rowHeight)
                 keyRow(secondRowCells)
@@ -145,12 +151,13 @@ struct KeyboardScreen: View {
                 keyRow(bottomRowCells)
                     .frame(height: rowHeight)
             }
+            .padding(gridKeySpacing)
             .background(Color.black)
         }
     }
 
     private func keyRow(_ cells: [KeyboardCell]) -> some View {
-        HStack(spacing: 1) {
+        HStack(spacing: gridKeySpacing) {
             ForEach(Array(cells.enumerated()), id: \.offset) { _, cell in
                 Button {
                     cell.action()
@@ -177,7 +184,7 @@ struct KeyboardScreen: View {
                 }
                 .buttonStyle(.plain)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(cell.background)
+                .background(cell.background, in: RoundedRectangle(cornerRadius: gridKeyCornerRadius, style: .continuous))
                 .disabled(!cell.isEnabled)
             }
         }
