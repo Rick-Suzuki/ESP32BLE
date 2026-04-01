@@ -79,6 +79,7 @@ struct MainScreen: View {
     let resizeVisibleBoxCount: (Int) -> Bool
     let moveFunctionKeySlot: (Int, Int) -> Bool
     let updateFunctionKeySlot: (Int, String) -> Bool
+    let openKeyboardScreen: () -> Void
     @Binding var settingsBLEText: String
 
     var body: some View {
@@ -122,17 +123,7 @@ struct MainScreen: View {
                                 .padding(.horizontal, 6)
                                 .frame(maxWidth: .infinity, minHeight: buttonHeight, maxHeight: buttonHeight)
                                 .background(buttonBackgroundColor(for: entry))
-                                .overlay {
-                                    if shouldShowBorder(for: entry) {
-                                        Rectangle()
-                                            .stroke(Color.white, lineWidth: 1)
-                                    }
-
-                                    if isGridEditModeEnabled, activeDragIndex == index, !entry.isBlankPlaceholder {
-                                        Rectangle()
-                                            .stroke(Color.blue, style: StrokeStyle(lineWidth: 3, dash: [8, 6]))
-                                    }
-                                }
+                                .overlay(buttonOverlay(for: entry, index: index))
                                 .contentShape(.rect)
                         }
                         .buttonStyle(.plain)
@@ -188,6 +179,23 @@ struct MainScreen: View {
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button("Keyboard") {
+                    openKeyboardScreen()
+                }
+                .font(.headline)
+                .foregroundStyle(.white)
+                .padding(.horizontal, 14)
+                .frame(minHeight: 44)
+                .background(Color.gray.opacity(0.45))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.gray.opacity(0.5), lineWidth: 1.5)
+                }
+                .clipShape(.rect(cornerRadius: 12))
+                .contentShape(.rect)
+            }
+
             ToolbarItem(placement: .principal) {
                 documentTitle
             }
@@ -684,6 +692,19 @@ struct MainScreen: View {
         }
 
         return .white
+    }
+
+    @ViewBuilder
+    private func buttonOverlay(for entry: FunctionKeyEntry, index: Int) -> some View {
+        if shouldShowBorder(for: entry) {
+            Rectangle()
+                .stroke(Color.white, lineWidth: 1)
+        }
+
+        if isGridEditModeEnabled, activeDragIndex == index, !entry.isBlankPlaceholder {
+            Rectangle()
+                .stroke(Color.blue, style: StrokeStyle(lineWidth: 3, dash: [8, 6]))
+        }
     }
 
     private func shouldShowBorder(for entry: FunctionKeyEntry) -> Bool {

@@ -174,15 +174,19 @@ final class BLEKeyboardManager: NSObject, ObservableObject {
 	}
 	
 	func pressRightArrow() {
-		sendLine("r")
+		sendLine("RIGHT")
 	}
 	
-	func pressEnter() {
-		sendLine("ret")
-	}
+		func pressEnter() {
+			sendLine("RET")
+		}
 
-	private func sendNormalizedKeyboardText(_ text: String) {
-		sendLine(normalizedKeyboardText(text))
+		func pressBackspace() {
+			sendLine("BS")
+		}
+
+		private func sendNormalizedKeyboardText(_ text: String) {
+			sendLine(normalizedKeyboardText(text))
 	}
 
 	private func normalizedKeyboardText(_ text: String) -> String {

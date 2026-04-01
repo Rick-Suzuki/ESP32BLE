@@ -27,31 +27,54 @@ struct ContentView: View {
     @State private var documentFiles: [URL] = []
     @AppStorage("selectedDocumentName") private var selectedDocumentName = "fnkeys.txt"
     @State private var settingsBLEText = ""
+    @State private var isKeyboardScreenPresented = false
 
     var body: some View {
         NavigationStack {
-            MainScreen(
-                ble: ble,
-                functionKeys: functionKeys,
-                documentFiles: documentFiles,
-                selectedDocumentName: selectedDocumentName,
-                selectedDocumentDisplayName: displayName(for: selectedDocumentName),
-                currentFileNumber: currentFileNumber,
-                totalFileCount: documentFiles.count,
-                definedFunctionKeyCount: loadedFunctionKeySlotCount,
-                refreshDocumentFiles: refreshDocumentFiles,
-                loadFunctionKeys: selectDocument,
-                renameDocument: renameSelectedDocument,
-                deleteDocument: deleteDocument,
-                duplicateDocument: duplicateDocument,
-                canDeleteDocuments: documentFiles.count > 1,
-                selectPreviousDocument: selectPreviousDocument,
-                selectNextDocument: selectNextDocument,
-                resizeVisibleBoxCount: resizeSelectedDocumentSlotCount,
-                moveFunctionKeySlot: moveSelectedDocumentSlot,
-                updateFunctionKeySlot: updateSelectedDocumentSlot,
-                settingsBLEText: $settingsBLEText
-            )
+            GeometryReader { geometry in
+                ZStack {
+                    KeyboardScreen(ble: ble, isPresented: isKeyboardScreenPresented) {
+                        withAnimation(.easeInOut(duration: 0.25)) {
+                            isKeyboardScreenPresented = false
+                        }
+                    }
+                    .frame(width: geometry.size.width, height: geometry.size.height)
+                    .offset(x: isKeyboardScreenPresented ? 0 : -geometry.size.width)
+
+                    MainScreen(
+                        ble: ble,
+                        functionKeys: functionKeys,
+                        documentFiles: documentFiles,
+                        selectedDocumentName: selectedDocumentName,
+                        selectedDocumentDisplayName: displayName(for: selectedDocumentName),
+                        currentFileNumber: currentFileNumber,
+                        totalFileCount: documentFiles.count,
+                        definedFunctionKeyCount: loadedFunctionKeySlotCount,
+                        refreshDocumentFiles: refreshDocumentFiles,
+                        loadFunctionKeys: selectDocument,
+                        renameDocument: renameSelectedDocument,
+                        deleteDocument: deleteDocument,
+                        duplicateDocument: duplicateDocument,
+                        canDeleteDocuments: documentFiles.count > 1,
+                        selectPreviousDocument: selectPreviousDocument,
+                        selectNextDocument: selectNextDocument,
+                        resizeVisibleBoxCount: resizeSelectedDocumentSlotCount,
+                        moveFunctionKeySlot: moveSelectedDocumentSlot,
+                        updateFunctionKeySlot: updateSelectedDocumentSlot,
+                        openKeyboardScreen: {
+                            withAnimation(.easeInOut(duration: 0.25)) {
+                                isKeyboardScreenPresented = true
+                            }
+                        },
+                        settingsBLEText: $settingsBLEText
+                    )
+                    .frame(width: geometry.size.width, height: geometry.size.height)
+                    .offset(x: isKeyboardScreenPresented ? geometry.size.width : 0)
+                }
+                .frame(width: geometry.size.width, height: geometry.size.height)
+                .clipped()
+            }
+            .toolbarVisibility(isKeyboardScreenPresented ? .hidden : .visible, for: .navigationBar)
         }
         .task {
             ensureDefaultFunctionKeysFile()

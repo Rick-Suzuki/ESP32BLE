@@ -3,51 +3,81 @@ import UIKit
 
 struct KeyboardScreen: View {
     @ObservedObject var ble: BLEKeyboardManager
+    let isPresented: Bool
     @AppStorage("keyboardSendImmediatelyEnabled") private var isSendImmediatelyEnabled = true
-    @Environment(\.dismiss) private var dismiss
+    @AppStorage("keyboardAutoCapEnabled") private var isAutoCapEnabled = false
+    @AppStorage("keyboardEachWordCapEnabled") private var isEachWordCapEnabled = false
+    @AppStorage("keyboardAutoCorrectEnabled") private var isAutoCorrectEnabled = false
+    let returnToMain: () -> Void
     @State private var typingText = ""
-    @State private var isKeyboardFocused = true
+    @State private var shouldFocusInput = false
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack(spacing: 12) {
-                KeyboardInputField(
-                    text: $typingText,
-                    isFocused: $isKeyboardFocused,
-                    onInsertedText: handleInsertedText(_:),
-                    onReturn: handleReturn
-                )
-                .frame(maxWidth: .infinity)
-                .frame(height: 42)
+            VStack(spacing: 12) {
+                HStack(spacing: 12) {
+                    KeyboardInputField(
+                        text: $typingText,
+                        shouldBeFirstResponder: shouldFocusInput,
+                        autocapitalizationType: keyboardAutocapitalizationType,
+                        autocorrectionEnabled: isSendOnReturnMode && isAutoCorrectEnabled,
+                        onInsertedText: handleInsertedText(_:),
+                        onBackspace: handleBackspace,
+                        onReturn: handleReturn
+                    )
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 42)
 
-                Button(isSendImmediatelyEnabled ? "Send Immediately" : "Send on Return") {
-                    isSendImmediatelyEnabled.toggle()
-                    isKeyboardFocused = true
+                    Button("Main") {
+                        shouldFocusInput = false
+                        returnToMain()
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 14)
+                    .frame(minHeight: 42)
+                    .background(Color.gray.opacity(0.45))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color.gray.opacity(0.45), lineWidth: 1.5)
+                    }
+                    .clipShape(.rect(cornerRadius: 12))
                 }
-                .buttonStyle(.plain)
-                .foregroundStyle(.white)
-                .padding(.horizontal, 14)
-                .frame(minHeight: 42)
-                .background(isSendImmediatelyEnabled ? Color.blue : Color.gray.opacity(0.45))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(isSendImmediatelyEnabled ? Color.blue : Color.gray.opacity(0.45), lineWidth: 1.5)
-                }
-                .clipShape(.rect(cornerRadius: 12))
 
-                Button("Main") {
-                    dismiss()
+                HStack(spacing: 12) {
+                    Button(isSendImmediatelyEnabled ? "Send Immediately" : "Send on Return") {
+                        isSendImmediatelyEnabled.toggle()
+                        requestKeyboardFocus()
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 14)
+                    .frame(minHeight: 42)
+                    .background(isSendImmediatelyEnabled ? Color.blue : Color.gray.opacity(0.45))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(isSendImmediatelyEnabled ? Color.blue : Color.gray.opacity(0.45), lineWidth: 1.5)
+                    }
+                    .clipShape(.rect(cornerRadius: 12))
+
+                    keyboardOptionButton(
+                        "auto-cap",
+                        isOn: $isAutoCapEnabled,
+                        isEnabled: isSendOnReturnMode
+                    )
+                    keyboardOptionButton(
+                        "each word",
+                        isOn: $isEachWordCapEnabled,
+                        isEnabled: isSendOnReturnMode
+                    )
+                    keyboardOptionButton(
+                        "auto-correct",
+                        isOn: $isAutoCorrectEnabled,
+                        isEnabled: isSendOnReturnMode
+                    )
+
+                    Spacer(minLength: 0)
                 }
-                .buttonStyle(.plain)
-                .foregroundStyle(.white)
-                .padding(.horizontal, 14)
-                .frame(minHeight: 42)
-                .background(Color.gray.opacity(0.45))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.gray.opacity(0.45), lineWidth: 1.5)
-                }
-                .clipShape(.rect(cornerRadius: 12))
             }
             .padding(.horizontal, 12)
             .padding(.top, 8)
@@ -55,14 +85,71 @@ struct KeyboardScreen: View {
             Spacer()
         }
         .background(Color.black.ignoresSafeArea())
-        .toolbarVisibility(.hidden, for: .navigationBar)
         .preferredColorScheme(.dark)
-        .onAppear {
-            isKeyboardFocused = true
+        .onChange(of: isPresented) {
+            if isPresented {
+                requestKeyboardFocus()
+            } else {
+                shouldFocusInput = false
+            }
         }
         .onTapGesture {
-            isKeyboardFocused = true
+            requestKeyboardFocus()
         }
+    }
+
+    private var isSendOnReturnMode: Bool {
+        !isSendImmediatelyEnabled
+    }
+
+    private var keyboardAutocapitalizationType: UITextAutocapitalizationType {
+        if isSendOnReturnMode, isEachWordCapEnabled {
+            return .words
+        }
+
+        if isSendOnReturnMode, isAutoCapEnabled {
+            return .sentences
+        }
+
+        return .none
+    }
+
+    private func keyboardOptionButton(_ title: String, isOn: Binding<Bool>, isEnabled: Bool) -> some View {
+        Button(title) {
+            guard isEnabled else {
+                return
+            }
+
+            isOn.wrappedValue.toggle()
+            requestKeyboardFocus()
+        }
+            .buttonStyle(.plain)
+            .foregroundStyle(.white.opacity(isEnabled ? 1 : 0.7))
+            .padding(.horizontal, 14)
+            .frame(minHeight: 42)
+            .background(optionButtonBackgroundColor(isEnabled: isEnabled, isOn: isOn.wrappedValue))
+            .overlay {
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(optionButtonBorderColor(isEnabled: isEnabled, isOn: isOn.wrappedValue), lineWidth: 1.5)
+            }
+            .clipShape(.rect(cornerRadius: 12))
+            .disabled(!isEnabled)
+    }
+
+    private func optionButtonBackgroundColor(isEnabled: Bool, isOn: Bool) -> Color {
+        guard isEnabled else {
+            return Color.gray.opacity(0.3)
+        }
+
+        return isOn ? Color.blue : Color.gray.opacity(0.45)
+    }
+
+    private func optionButtonBorderColor(isEnabled: Bool, isOn: Bool) -> Color {
+        guard isEnabled else {
+            return Color.gray.opacity(0.35)
+        }
+
+        return isOn ? Color.blue : Color.gray.opacity(0.45)
     }
 
     private func handleInsertedText(_ insertedText: String) {
@@ -71,6 +158,16 @@ struct KeyboardScreen: View {
         }
 
         ble.sendString(insertedText)
+        typingText = ""
+    }
+
+    private func handleBackspace() {
+        guard isSendImmediatelyEnabled else {
+            return
+        }
+
+        ble.pressBackspace()
+        typingText = ""
     }
 
     private func handleReturn() {
@@ -86,23 +183,35 @@ struct KeyboardScreen: View {
             typingText = ""
         }
 
-        isKeyboardFocused = true
+        requestKeyboardFocus()
+    }
+
+    private func requestKeyboardFocus() {
+        DispatchQueue.main.async {
+            shouldFocusInput = true
+        }
     }
 }
 
 private struct KeyboardInputField: UIViewRepresentable {
     @Binding var text: String
-    @Binding var isFocused: Bool
+    let shouldBeFirstResponder: Bool
+    let autocapitalizationType: UITextAutocapitalizationType
+    let autocorrectionEnabled: Bool
     let onInsertedText: (String) -> Void
+    let onBackspace: () -> Void
     let onReturn: () -> Void
 
     func makeUIView(context: Context) -> UITextField {
-        let textField = UITextField(frame: .zero)
+        let textField = BackspaceAwareTextField(frame: .zero)
         textField.delegate = context.coordinator
+        textField.onDeleteBackward = {
+            context.coordinator.onBackspace()
+        }
         textField.borderStyle = .none
         textField.returnKeyType = .default
-        textField.autocapitalizationType = .none
-        textField.autocorrectionType = .no
+        textField.autocapitalizationType = autocapitalizationType
+        textField.autocorrectionType = autocorrectionEnabled ? .yes : .no
         textField.spellCheckingType = .no
         textField.smartQuotesType = .no
         textField.smartDashesType = .no
@@ -128,37 +237,57 @@ private struct KeyboardInputField: UIViewRepresentable {
             textField.text = text
         }
 
-        if isFocused, !textField.isFirstResponder {
+        if let textField = textField as? BackspaceAwareTextField {
+            textField.onDeleteBackward = {
+                context.coordinator.onBackspace()
+            }
+        }
+
+        let nextAutocorrectionType: UITextAutocorrectionType = autocorrectionEnabled ? .yes : .no
+        let traitsChanged =
+            textField.autocapitalizationType != autocapitalizationType ||
+            textField.autocorrectionType != nextAutocorrectionType
+
+        textField.autocapitalizationType = autocapitalizationType
+        textField.autocorrectionType = nextAutocorrectionType
+        textField.reloadInputViews()
+
+        context.coordinator.onInsertedText = onInsertedText
+        context.coordinator.onReturn = onReturn
+
+        if shouldBeFirstResponder, !textField.isFirstResponder {
             textField.becomeFirstResponder()
-        } else if !isFocused, textField.isFirstResponder {
+        } else if !shouldBeFirstResponder, textField.isFirstResponder {
             textField.resignFirstResponder()
+        } else if traitsChanged, textField.isFirstResponder {
+            textField.reloadInputViews()
         }
     }
 
     func makeCoordinator() -> Coordinator {
         Coordinator(
             text: $text,
-            isFocused: $isFocused,
             onInsertedText: onInsertedText,
+            onBackspace: onBackspace,
             onReturn: onReturn
         )
     }
 
     final class Coordinator: NSObject, UITextFieldDelegate {
         @Binding var text: String
-        @Binding var isFocused: Bool
-        let onInsertedText: (String) -> Void
-        let onReturn: () -> Void
+        var onInsertedText: (String) -> Void
+        var onBackspace: () -> Void
+        var onReturn: () -> Void
 
         init(
             text: Binding<String>,
-            isFocused: Binding<Bool>,
             onInsertedText: @escaping (String) -> Void,
+            onBackspace: @escaping () -> Void,
             onReturn: @escaping () -> Void
         ) {
             _text = text
-            _isFocused = isFocused
             self.onInsertedText = onInsertedText
+            self.onBackspace = onBackspace
             self.onReturn = onReturn
         }
 
@@ -186,13 +315,14 @@ private struct KeyboardInputField: UIViewRepresentable {
 
             return true
         }
+    }
+}
 
-        func textFieldDidBeginEditing(_ textField: UITextField) {
-            isFocused = true
-        }
+private final class BackspaceAwareTextField: UITextField {
+    var onDeleteBackward: (() -> Void)?
 
-        func textFieldDidEndEditing(_ textField: UITextField) {
-            isFocused = false
-        }
+    override func deleteBackward() {
+        onDeleteBackward?()
+        super.deleteBackward()
     }
 }
