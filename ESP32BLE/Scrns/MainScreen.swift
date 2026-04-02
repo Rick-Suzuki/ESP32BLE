@@ -215,25 +215,26 @@ struct MainScreen: View {
 
             ToolbarItem(placement: .topBarTrailing) {
                 HStack(spacing: 12) {
-                    Button(isGridEditModeEnabled ? "done" : "edit") {
+                    Button {
                         isGridEditModeEnabled.toggle()
+                    } label: {
+                        Text(isGridEditModeEnabled ? "done" : "edit")
+                            .font(.headline)
+                            .foregroundStyle(.white)
+                            .frame(minWidth: 84, minHeight: 44)
+                            .background(editModeButtonBackgroundColor)
+                            .overlay {
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(editModeButtonBorderColor, lineWidth: 1.5)
+                            }
+                            .clipShape(.rect(cornerRadius: 12))
+                            .contentShape(.rect)
                     }
-                    .font(.headline)
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 17)
-                    .frame(minWidth: 84, minHeight: 44)
-                    .background(editModeButtonBackgroundColor)
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(editModeButtonBorderColor, lineWidth: 1.5)
-                    }
-                    .clipShape(.rect(cornerRadius: 12))
-                    .contentShape(.rect)
                     .buttonStyle(.plain)
                     .disabled(editingSlotIndex != nil)
                     .opacity(editingSlotIndex == nil ? 1 : 0.45)
 
-                    NavigationLink("settings >") {
+                    NavigationLink {
                         SettingsScreen(
                             ble: ble,
                             documentFiles: documentFiles,
@@ -245,18 +246,19 @@ struct MainScreen: View {
                             canDeleteDocuments: canDeleteDocuments,
                             bleTextToSend: $settingsBLEText
                         )
+                    } label: {
+                        Text("settings >")
+                            .font(.headline)
+                            .foregroundStyle(.white)
+                            .frame(minWidth: 92, minHeight: 44)
+                            .background(isGridEditModeEnabled ? Color.gray.opacity(0.3) : Color.gray.opacity(0.45))
+                            .overlay {
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(isGridEditModeEnabled ? Color.gray.opacity(0.35) : Color.gray.opacity(0.5), lineWidth: 1.5)
+                            }
+                            .clipShape(.rect(cornerRadius: 12))
+                            .contentShape(.rect)
                     }
-                    .font(.headline)
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 14)
-                    .frame(minWidth: 92, minHeight: 44)
-                    .background(isGridEditModeEnabled ? Color.gray.opacity(0.3) : Color.gray.opacity(0.45))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(isGridEditModeEnabled ? Color.gray.opacity(0.35) : Color.gray.opacity(0.5), lineWidth: 1.5)
-                    }
-                    .clipShape(.rect(cornerRadius: 12))
-                    .contentShape(.rect)
                     .disabled(isGridEditModeEnabled)
                     .opacity(isGridEditModeEnabled ? 0.35 : 1)
                 }
