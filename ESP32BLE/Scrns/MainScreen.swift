@@ -33,6 +33,12 @@ private enum FunctionKeyDisplayMode: CaseIterable {
 }
 
 struct MainScreen: View {
+    // Easy-to-find styling controls for the main button grid.
+    private let mainGridButtonSpacing: CGFloat = 10
+    private let mainGridButtonCornerRadius: CGFloat = 30
+    private let mainGridButtonBorderWidth: CGFloat = 2
+    private let mainGridHeightFactor: CGFloat = 0.98
+
     @AppStorage("speechRecognitionAutoOffMinutes") private var speechRecognitionAutoOffMinutes = 5
     private let allowedVisibleBoxCounts = [
         1, 2, 4, 6, 9, 12, 15, 16, 18, 20, 24, 28, 32, 36, 40, 42, 45, 48,
@@ -86,11 +92,11 @@ struct MainScreen: View {
         VStack(spacing: 20) {
             GeometryReader { geometry in
                 let gridDimensions = gridDimensions(for: visibleBoxCount)
-                let columns = Array(repeating: GridItem(.flexible(), spacing: 0), count: gridDimensions.columns)
-                let buttonHeight = geometry.size.height / CGFloat(max(gridDimensions.rows, 1))
+                let columns = Array(repeating: GridItem(.flexible(), spacing: mainGridButtonSpacing), count: gridDimensions.columns)
+                let buttonHeight = (geometry.size.height * mainGridHeightFactor) / CGFloat(max(gridDimensions.rows, 1))
                 let visibleEntries = Array(functionKeys.prefix(visibleBoxCount).enumerated())
 
-                LazyVGrid(columns: columns, spacing: 0) {
+                LazyVGrid(columns: columns, spacing: mainGridButtonSpacing) {
                     ForEach(visibleEntries, id: \.offset) { index, entry in
                         Button {
                             guard !isGridEditModeEnabled else {
@@ -116,15 +122,22 @@ struct MainScreen: View {
                                 ble.sendLine(sendText)
                             }
                         } label: {
-                            Text(buttonTitle(for: entry))
-                                .font(.system(size: boxFontSize, weight: .semibold))
-                                .foregroundStyle(buttonTextColor(for: entry))
-                                .multilineTextAlignment(.center)
-                                .padding(.horizontal, 6)
-                                .frame(maxWidth: .infinity, minHeight: buttonHeight, maxHeight: buttonHeight)
-                                .background(buttonBackgroundColor(for: entry))
-                                .overlay(buttonOverlay(for: entry, index: index))
-                                .contentShape(.rect)
+                            ZStack {
+                                RoundedRectangle(cornerRadius: mainGridButtonCornerRadius, style: .continuous)
+                                    .fill(buttonBackgroundColor(for: entry))
+
+                                Text(buttonTitle(for: entry))
+                                    .font(.system(size: boxFontSize, weight: .semibold))
+                                    .foregroundStyle(buttonTextColor(for: entry))
+                                    .multilineTextAlignment(.center)
+                                    .padding(.horizontal, 6)
+                            }
+                            .frame(maxWidth: .infinity, minHeight: buttonHeight, maxHeight: buttonHeight)
+                            .background {
+                                Color.clear
+                            }
+                            .overlay(buttonOverlay(for: entry, index: index))
+                            .contentShape(.rect(cornerRadius: mainGridButtonCornerRadius))
                         }
                         .buttonStyle(.plain)
                         .simultaneousGesture(
@@ -697,12 +710,12 @@ struct MainScreen: View {
     @ViewBuilder
     private func buttonOverlay(for entry: FunctionKeyEntry, index: Int) -> some View {
         if shouldShowBorder(for: entry) {
-            Rectangle()
-                .stroke(Color.white, lineWidth: 1)
+            RoundedRectangle(cornerRadius: mainGridButtonCornerRadius, style: .continuous)
+                .stroke(Color.white, lineWidth: mainGridButtonBorderWidth)
         }
 
         if isGridEditModeEnabled, activeDragIndex == index, !entry.isBlankPlaceholder {
-            Rectangle()
+            RoundedRectangle(cornerRadius: mainGridButtonCornerRadius, style: .continuous)
                 .stroke(Color.blue, style: StrokeStyle(lineWidth: 3, dash: [8, 6]))
         }
     }
