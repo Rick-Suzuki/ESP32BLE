@@ -20,12 +20,14 @@ struct FunctionKeyEntry {
 }
 
 struct ContentView: View {
+    private let defaultDocumentFontSize: Double = 20
     @StateObject private var ble = BLEKeyboardManager()
     @State private var functionKeys = ContentView.makeDefaultFunctionKeys()
     @State private var functionKeySlotLines = ContentView.defaultFunctionKeyTitles()
     @State private var loadedFunctionKeySlotCount = defaultNamedFunctionKeyCount
     @State private var documentFiles: [URL] = []
     @AppStorage("selectedDocumentName") private var selectedDocumentName = "fnkeys.txt"
+    @AppStorage("documentFontSizesData") private var documentFontSizesData = ""
     @State private var settingsBLEText = ""
     @State private var isKeyboardScreenPresented = false
 
@@ -47,6 +49,7 @@ struct ContentView: View {
                         documentFiles: documentFiles,
                         selectedDocumentName: selectedDocumentName,
                         selectedDocumentDisplayName: displayName(for: selectedDocumentName),
+                        boxFontSize: fontSize(for: selectedDocumentName),
                         currentFileNumber: currentFileNumber,
                         totalFileCount: documentFiles.count,
                         definedFunctionKeyCount: loadedFunctionKeySlotCount,
@@ -61,6 +64,7 @@ struct ContentView: View {
                         resizeVisibleBoxCount: resizeSelectedDocumentSlotCount,
                         moveFunctionKeySlot: moveSelectedDocumentSlot,
                         updateFunctionKeySlot: updateSelectedDocumentSlot,
+                        updateDocumentFontSize: updateDocumentFontSize,
                         openKeyboardScreen: {
                             withAnimation(.easeInOut(duration: 0.25)) {
                                 isKeyboardScreenPresented = true
@@ -243,6 +247,34 @@ struct ContentView: View {
         } catch {
             loadFunctionKeys(from: selectedDocumentURL)
         }
+    }
+
+    private func fontSize(for fileName: String) -> Double {
+        loadDocumentFontSizes()[fileName] ?? defaultDocumentFontSize
+    }
+
+    private func updateDocumentFontSize(_ newFontSize: Double) {
+        var updatedFontSizes = loadDocumentFontSizes()
+        updatedFontSizes[selectedDocumentName] = newFontSize
+        saveDocumentFontSizes(updatedFontSizes)
+    }
+
+    private func loadDocumentFontSizes() -> [String: Double] {
+        guard let data = documentFontSizesData.data(using: .utf8),
+              let decoded = try? JSONDecoder().decode([String: Double].self, from: data) else {
+            return [:]
+        }
+
+        return decoded
+    }
+
+    private func saveDocumentFontSizes(_ fontSizes: [String: Double]) {
+        guard let data = try? JSONEncoder().encode(fontSizes),
+              let encoded = String(data: data, encoding: .utf8) else {
+            return
+        }
+
+        documentFontSizesData = encoded
     }
 
     @discardableResult
@@ -450,6 +482,11 @@ struct ContentView: View {
         let targetURL = documentsDirectoryURL.appendingPathComponent(targetFileName)
 
         do {
+            var updatedFontSizes = loadDocumentFontSizes()
+            if let existingFontSize = updatedFontSizes.removeValue(forKey: selectedDocumentName) {
+                updatedFontSizes[targetFileName] = existingFontSize
+                saveDocumentFontSizes(updatedFontSizes)
+            }
             try FileManager.default.moveItem(at: sourceURL, to: targetURL)
             loadFunctionKeys(from: targetURL)
             refreshDocumentFiles()
@@ -483,6 +520,9 @@ struct ContentView: View {
 
         do {
             try FileManager.default.removeItem(at: fileURL)
+            var updatedFontSizes = loadDocumentFontSizes()
+            updatedFontSizes.removeValue(forKey: fileURL.lastPathComponent)
+            saveDocumentFontSizes(updatedFontSizes)
             refreshDocumentFiles()
 
             if let fallbackFileURL {
@@ -509,6 +549,9 @@ struct ContentView: View {
 
         do {
             try FileManager.default.copyItem(at: fileURL, to: targetURL)
+            var updatedFontSizes = loadDocumentFontSizes()
+            updatedFontSizes[targetURL.lastPathComponent] = defaultDocumentFontSize
+            saveDocumentFontSizes(updatedFontSizes)
             refreshDocumentFiles()
             loadFunctionKeys(from: targetURL)
         } catch {

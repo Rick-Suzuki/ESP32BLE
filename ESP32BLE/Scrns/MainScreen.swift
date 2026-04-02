@@ -50,7 +50,6 @@ struct MainScreen: View {
     private let speechRecognitionActiveColor = Color(red: 0.42, green: 0.12, blue: 0.12)
     private let bleSendActiveColor = Color(red: 0.55, green: 0.45, blue: 0.08)
     @State private var visibleBoxCount = 20
-    @State private var boxFontSize = 28.0
     @State private var isBLESendEnabled = true
     @State private var isSpkRecEnabled = false
     @State private var unmatchedSpeechText: String?
@@ -71,6 +70,7 @@ struct MainScreen: View {
     let documentFiles: [URL]
     let selectedDocumentName: String
     let selectedDocumentDisplayName: String
+    let boxFontSize: Double
     let currentFileNumber: Int
     let totalFileCount: Int
     let definedFunctionKeyCount: Int
@@ -85,6 +85,7 @@ struct MainScreen: View {
     let resizeVisibleBoxCount: (Int) -> Bool
     let moveFunctionKeySlot: (Int, Int) -> Bool
     let updateFunctionKeySlot: (Int, String) -> Bool
+    let updateDocumentFontSize: (Double) -> Void
     let openKeyboardScreen: () -> Void
     @Binding var settingsBLEText: String
 
@@ -880,11 +881,11 @@ struct MainScreen: View {
     }
 
     private func decreaseBoxFontSize() {
-        boxFontSize = max(minimumBoxFontSize, boxFontSize - 2)
+        updateDocumentFontSize(max(minimumBoxFontSize, boxFontSize - 2))
     }
 
     private func increaseBoxFontSize() {
-        boxFontSize = min(maximumBoxFontSize, boxFontSize + 2)
+        updateDocumentFontSize(min(maximumBoxFontSize, boxFontSize + 2))
     }
 
     private func gridDimensions(for itemCount: Int) -> (columns: Int, rows: Int) {
