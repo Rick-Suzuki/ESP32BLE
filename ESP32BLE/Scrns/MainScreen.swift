@@ -37,7 +37,6 @@ struct MainScreen: View {
     private let mainGridButtonSpacing: CGFloat = 10
     private let mainGridButtonCornerRadius: CGFloat = 30
     private let mainGridButtonBorderWidth: CGFloat = 2
-    private let mainGridHeightFactor: CGFloat = 0.93
 
     @AppStorage("speechRecognitionAutoOffMinutes") private var speechRecognitionAutoOffMinutes = 5
     private let allowedVisibleBoxCounts = [
@@ -94,7 +93,8 @@ struct MainScreen: View {
             GeometryReader { geometry in
                 let gridDimensions = gridDimensions(for: visibleBoxCount)
                 let columns = Array(repeating: GridItem(.flexible(), spacing: mainGridButtonSpacing), count: gridDimensions.columns)
-                let buttonHeight = (geometry.size.height * mainGridHeightFactor) / CGFloat(max(gridDimensions.rows, 1))
+                let totalGridSpacing = mainGridButtonSpacing * CGFloat(max(gridDimensions.rows - 1, 0))
+                let buttonHeight = (geometry.size.height - totalGridSpacing) / CGFloat(max(gridDimensions.rows, 1))
                 let visibleEntries = Array(functionKeys.prefix(visibleBoxCount).enumerated())
 
                 LazyVGrid(columns: columns, spacing: mainGridButtonSpacing) {
