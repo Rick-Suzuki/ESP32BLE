@@ -177,9 +177,9 @@ final class BLEKeyboardManager: NSObject, ObservableObject {
 		sendLine("RIGHT")
 	}
 	
-		func pressEnter() {
-			sendLine("RET")
-		}
+	func pressEnter() {
+		sendLine("ENTER")
+	}
 
 		func pressBackspace() {
 			sendLine("BS")

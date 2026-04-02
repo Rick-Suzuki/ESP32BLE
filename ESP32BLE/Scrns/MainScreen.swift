@@ -37,7 +37,7 @@ struct MainScreen: View {
     private let mainGridButtonSpacing: CGFloat = 10
     private let mainGridButtonCornerRadius: CGFloat = 30
     private let mainGridButtonBorderWidth: CGFloat = 2
-    private let mainGridHeightFactor: CGFloat = 0.98
+    private let mainGridHeightFactor: CGFloat = 0.97
 
     @AppStorage("speechRecognitionAutoOffMinutes") private var speechRecognitionAutoOffMinutes = 5
     private let allowedVisibleBoxCounts = [
