@@ -10,6 +10,9 @@ struct KeyboardScreen: View {
     private let gridKeyCornerRadius: CGFloat = 12
     private let gridKeySpacing: CGFloat = 6
     private let gridRowHeightScale: CGFloat = 0.99
+    // Easy-to-find sizing for the top keyboard control row.
+    private let topControlSingleButtonWidth: CGFloat = 95
+    private let topControlDoubleButtonWidth: CGFloat = 193
 
     @ObservedObject var ble: BLEKeyboardManager
     let isPresented: Bool
@@ -89,35 +92,39 @@ struct KeyboardScreen: View {
             HStack(spacing: 4) {
                 topControlButton(
                     title: isSendImmediatelyEnabled ? "Send Immediately" : "Send on Return",
-                    background: isSendImmediatelyEnabled ? .blue : Color.gray.opacity(0.45)
+                    background: isSendImmediatelyEnabled ? .blue : Color.gray.opacity(0.45),
+                    width: topControlDoubleButtonWidth
                 ) {
                     isSendImmediatelyEnabled.toggle()
                     requestKeyboardFocus()
                 }
 
                 topOptionButton(
-                    title: "auto-cap",
+                    title: "auto-capitalize",
                     isOn: $isAutoCapEnabled,
-                    isEnabled: isSendOnReturnMode
+                    isEnabled: isSendOnReturnMode,
+                    width: topControlDoubleButtonWidth
                 )
                 topOptionButton(
-                    title: "each word",
+                    title: "cap 1st letter",
                     isOn: $isEachWordCapEnabled,
-                    isEnabled: isSendOnReturnMode
+                    isEnabled: isSendOnReturnMode,
+                    width: topControlDoubleButtonWidth
                 )
                 topOptionButton(
                     title: "auto-correct",
                     isOn: $isAutoCorrectEnabled,
-                    isEnabled: isSendOnReturnMode
+                    isEnabled: isSendOnReturnMode,
+                    width: topControlDoubleButtonWidth
                 )
 
-                topControlButton(systemImageName: "triangle.fill", rotationDegrees: -90, background: .blue, width: 40) {
+                topControlButton(systemImageName: "triangle.fill", rotationDegrees: -90, background: .blue, width: topControlSingleButtonWidth) {
                     moveCursor(.left)
                 }
-                topControlButton(systemImageName: "triangle.fill", rotationDegrees: 90, background: .blue, width: 40) {
+                topControlButton(systemImageName: "triangle.fill", rotationDegrees: 90, background: .blue, width: topControlSingleButtonWidth) {
                     moveCursor(.right)
                 }
-                topControlButton(title: "clr all", background: .red, width: 64) {
+                topControlButton(title: "clr all", background: .red, width: topControlSingleButtonWidth) {
                     typingText = ""
                     requestKeyboardFocus()
                 }
@@ -345,7 +352,7 @@ struct KeyboardScreen: View {
         .buttonStyle(.plain)
     }
 
-    private func topOptionButton(title: String, isOn: Binding<Bool>, isEnabled: Bool) -> some View {
+    private func topOptionButton(title: String, isOn: Binding<Bool>, isEnabled: Bool, width: CGFloat? = nil) -> some View {
         Button(title) {
             guard isEnabled else {
                 return
@@ -356,8 +363,8 @@ struct KeyboardScreen: View {
         }
         .buttonStyle(.plain)
         .foregroundStyle(.white.opacity(isEnabled ? 1 : 0.7))
-        .frame(height: 30)
-        .padding(.horizontal, 10)
+        .frame(width: width, height: 30)
+        .padding(.horizontal, width == nil ? 10 : 0)
         .background(optionButtonBackgroundColor(isEnabled: isEnabled, isOn: isOn.wrappedValue))
         .clipShape(.rect(cornerRadius: 6))
         .disabled(!isEnabled)
