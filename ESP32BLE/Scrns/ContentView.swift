@@ -287,12 +287,12 @@ struct ContentView: View {
         let sourceLine = updatedLines[sourceIndex]
         let targetLine = updatedLines[targetIndex]
 
-        guard !isBlankPlaceholderLine(sourceLine), isBlankPlaceholderLine(targetLine) else {
+        guard !isBlankPlaceholderLine(sourceLine) else {
             return false
         }
 
         updatedLines[targetIndex] = sourceLine
-        updatedLines[sourceIndex] = "_"
+        updatedLines[sourceIndex] = targetLine
         persistSlotLines(updatedLines)
         return true
     }
