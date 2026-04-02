@@ -276,12 +276,10 @@ struct KeyboardScreen: View {
 
     private var fifthRowCells: [KeyboardCell] {
         [
-            keyTokenCell(title: "ESC", keyToken: "ESC", background: standardFunctionColor),
-            keyTokenCell(title: "0", keyToken: "kp0", background: keypadColor),
             keyTokenCell(title: ".", keyToken: "kp.", background: keypadColor),
-            KeyboardCell(title: "clr all", background: modifierButtonColor(isOn: !activeModifiers.isEmpty), foreground: .white) {
-                resetModifierToggles()
-            },
+            keyTokenCell(title: "0", keyToken: "kp0", background: keypadColor),
+            modifierCell(.control),
+            modifierCell(.option),
             plainFunctionCell("F13"),
             plainFunctionCell("F14"),
             plainFunctionCell("F15"),
@@ -299,9 +297,11 @@ struct KeyboardScreen: View {
 
     private var bottomRowCells: [KeyboardCell] {
         [
-            modifierCell(.control),
+            keyTokenCell(title: "ESC", keyToken: "ESC", background: standardFunctionColor),
+            KeyboardCell(title: "clr all", background: clearAllButtonColor, foreground: activeModifiers.isEmpty ? .white : .black) {
+                resetModifierToggles()
+            },
             modifierCell(.shift),
-            modifierCell(.option),
             modifierCell(.command),
             plainFunctionCell("F1"),
             plainFunctionCell("F2"),
@@ -383,7 +383,15 @@ struct KeyboardScreen: View {
     }
 
     private func modifierButtonColor(isOn: Bool) -> Color {
-        isOn ? Color(red: 0.65, green: 0.55, blue: 0.15) : Color(red: 0.20, green: 0.20, blue: 0.20)
+        isOn
+            ? Color(red: 0.7, green: 0.7, blue: 0.0)
+            : Color(red: 0.35, green: 0.35, blue: 0.0)
+    }
+
+    private var clearAllButtonColor: Color {
+        activeModifiers.isEmpty
+            ? Color(red: 0.35, green: 0.35, blue: 0.0)
+            : Color(red: 0.8, green: 0.8, blue: 0.0)
     }
 
     private func plainFunctionCell(_ title: String) -> KeyboardCell {
