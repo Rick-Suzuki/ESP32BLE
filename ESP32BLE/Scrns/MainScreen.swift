@@ -37,7 +37,7 @@ struct MainScreen: View {
     private let mainGridButtonSpacing: CGFloat = 10
     private let mainGridButtonCornerRadius: CGFloat = 30
     private let mainGridButtonBorderWidth: CGFloat = 2
-    private let mainGridHeightFactor: CGFloat = 0.97
+    private let mainGridHeightFactor: CGFloat = 0.93
 
     @AppStorage("speechRecognitionAutoOffMinutes") private var speechRecognitionAutoOffMinutes = 5
     private let allowedVisibleBoxCounts = [
@@ -597,13 +597,15 @@ struct MainScreen: View {
             return displayText(from: entry.rawLine)
         }
 
+        let alternateDisplayText = resolvedAlternateDisplayText(for: entry)
+
         switch displayMode {
         case .left:
             return displayText(from: entry.primaryDisplayText)
         case .right:
-            return displayText(from: entry.alternateDisplayText ?? entry.rawLine)
+            return displayText(from: alternateDisplayText)
         case .both:
-            return "\(displayText(from: entry.primaryDisplayText))\n\(displayText(from: entry.alternateDisplayText ?? entry.rawLine))"
+            return "\(displayText(from: entry.primaryDisplayText))\n\(displayText(from: alternateDisplayText))"
         }
     }
 
@@ -611,6 +613,30 @@ struct MainScreen: View {
         text
             .replacingOccurrences(of: "\\n", with: "\n")
             .replacingOccurrences(of: "\\t", with: "\t")
+    }
+
+    private func resolvedAlternateDisplayText(for entry: FunctionKeyEntry) -> String {
+        if let alternateDisplayText = entry.alternateDisplayText {
+            return alternateDisplayText
+        }
+
+        let components = entry.rawLine.components(separatedBy: "::")
+        guard components.count >= 2 else {
+            return entry.rawLine
+        }
+
+        let rawRightText = components.dropFirst().joined(separator: "::").trimmingCharacters(in: .whitespacesAndNewlines)
+        let rightComponents = rawRightText.components(separatedBy: ":")
+
+        if let firstComponent = rightComponents.first,
+           firstComponent.count == 1,
+           let manualColorCode = firstComponent.lowercased().first,
+           "lwgborypk".contains(manualColorCode) {
+            let remainingText = rightComponents.dropFirst().joined(separator: ":").trimmingCharacters(in: .whitespacesAndNewlines)
+            return remainingText.isEmpty ? rawRightText : remainingText
+        }
+
+        return rawRightText
     }
 
     private func applyRecognizedSpeech(_ recognizedText: String) {

@@ -188,13 +188,14 @@ struct ContentView: View {
         contents
             .components(separatedBy: CharacterSet.newlines.union(.init(charactersIn: "\t")))
             .compactMap { line -> String? in
-                let trimmedLine = line.trimmingCharacters(in: .whitespacesAndNewlines)
+                let normalizedLine = line.replacingOccurrences(of: "\r", with: "")
+                let trimmedLine = normalizedLine.trimmingCharacters(in: .whitespacesAndNewlines)
 
                 guard !trimmedLine.isEmpty, !trimmedLine.hasPrefix("//") else {
                     return nil
                 }
 
-                return trimmedLine
+                return normalizedLine
             }
     }
 
@@ -303,8 +304,8 @@ struct ContentView: View {
         }
 
         var updatedLines = functionKeySlotLines
-        let trimmedLine = line.trimmingCharacters(in: .whitespacesAndNewlines)
-        let persistedLine = trimmedLine.isEmpty ? "_" : trimmedLine
+        let normalizedLine = line.replacingOccurrences(of: "\r", with: "")
+        let persistedLine = normalizedLine.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "_" : normalizedLine
 
         if index >= updatedLines.count {
             updatedLines += Array(repeating: "_", count: index - updatedLines.count + 1)
@@ -330,17 +331,14 @@ struct ContentView: View {
             return FunctionKeyEntry(rawLine: line, sendTexts: [line], alternateDisplayText: nil, buttonColorCode: nil, isBlankPlaceholder: false)
         }
 
-        let leftText = components[0].trimmingCharacters(in: .whitespacesAndNewlines)
+        let leftText = components[0]
         let rightText = components.dropFirst().joined(separator: "::").trimmingCharacters(in: .whitespacesAndNewlines)
 
-        guard !leftText.isEmpty, !rightText.isEmpty else {
+        guard !rightText.isEmpty else {
             return FunctionKeyEntry(rawLine: line, sendTexts: [line], alternateDisplayText: nil, buttonColorCode: nil, isBlankPlaceholder: false)
         }
 
-        let sendTexts = leftText
-            .components(separatedBy: ":")
-            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .filter { !$0.isEmpty }
+        let sendTexts = parsedSendTexts(from: leftText)
 
         guard !sendTexts.isEmpty else {
             return FunctionKeyEntry(rawLine: line, sendTexts: [line], alternateDisplayText: nil, buttonColorCode: nil, isBlankPlaceholder: false)
@@ -354,6 +352,20 @@ struct ContentView: View {
             buttonColorCode: parsedRightText.colorCode,
             isBlankPlaceholder: false
         )
+    }
+
+    private func parsedSendTexts(from leftText: String) -> [String] {
+        leftText
+            .components(separatedBy: ":")
+            .compactMap { component in
+                if !component.isEmpty,
+                   component.allSatisfy({ $0.isWhitespace && !$0.isNewline }) {
+                    return " "
+                }
+
+                let trimmedComponent = component.trimmingCharacters(in: .whitespacesAndNewlines)
+                return trimmedComponent.isEmpty ? nil : trimmedComponent
+            }
     }
 
     private func parsedRightTextAndColor(from rightText: String) -> (text: String, colorCode: String?) {
