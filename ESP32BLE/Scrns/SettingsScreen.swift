@@ -33,8 +33,6 @@ struct SettingsScreen: View {
                     editableDocumentSection
 
                     if !isDocumentEditorFocused {
-                        sendTextSection
-
                         HStack(alignment: .top, spacing: 20) {
                             availableDevicesSection
                             keyboardSettingsSection
