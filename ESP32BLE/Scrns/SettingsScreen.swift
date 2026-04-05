@@ -146,9 +146,9 @@ struct SettingsScreen: View {
                 .disabled(!ble.isConnected)
             }
 
-            Text("Connected Device ID: \(ble.connectedDeviceID)")
+          //  Text("Connected Device ID: \(ble.connectedDeviceID)")
             Text("Status: \(ble.connectionText)")
-            Text("BT State: \(ble.bluetoothStateText)")
+          //  Text("BT State: \(ble.bluetoothStateText)")
         }
     }
 

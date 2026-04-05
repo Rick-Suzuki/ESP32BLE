@@ -537,6 +537,20 @@ struct MainScreen: View {
     private var slotEditorSection: some View {
         GeometryReader { geometry in
             HStack(spacing: 12) {
+                Button("cancel") {
+                    cancelSlotEditing()
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.white)
+                .padding(.horizontal, 14)
+                .frame(minHeight: 44)
+                .background(Color.gray.opacity(0.45))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.gray.opacity(0.5), lineWidth: 1.5)
+                }
+                .clipShape(.rect(cornerRadius: 12))
+
                 SlotEditorTextField(text: $editingSlotText, placeholder: "edit button text") {
                     commitSlotEditing()
                 }
@@ -556,6 +570,25 @@ struct MainScreen: View {
                 }
                 .buttonStyle(.plain)
 
+                Button("test") {
+                    guard ble.isConnected else {
+                        print("Bluetooth not connected.")
+                        return
+                    }
+
+                    ble.sendString(editingSlotText)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.white)
+                .padding(.horizontal, 14)
+                .frame(minHeight: 44)
+                .background(Color(red: 0.0, green: 0.5, blue: 0.0))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color(red: 0.0, green: 0.5, blue: 0.0), lineWidth: 1.5)
+                }
+                .clipShape(.rect(cornerRadius: 12))
+
                 Button("save") {
                     commitSlotEditing()
                 }
@@ -567,20 +600,6 @@ struct MainScreen: View {
                 .overlay {
                     RoundedRectangle(cornerRadius: 12)
                         .stroke(Color.blue, lineWidth: 1.5)
-                }
-                .clipShape(.rect(cornerRadius: 12))
-
-                Button("cancel") {
-                    cancelSlotEditing()
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle(.white)
-                .padding(.horizontal, 14)
-                .frame(minHeight: 44)
-                .background(Color.gray.opacity(0.45))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.gray.opacity(0.5), lineWidth: 1.5)
                 }
                 .clipShape(.rect(cornerRadius: 12))
             }
