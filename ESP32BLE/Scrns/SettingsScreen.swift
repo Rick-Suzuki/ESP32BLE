@@ -33,11 +33,7 @@ struct SettingsScreen: View {
                     editableDocumentSection
 
                     if !isDocumentEditorFocused {
-                        HStack(alignment: .top, spacing: 20) {
-                            availableDevicesSection
-                            keyboardSettingsSection
-                        }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                        combinedBottomPanelSection
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -83,13 +79,13 @@ struct SettingsScreen: View {
                 .background(Color.black.opacity(0.55))
                 .clipShape(.rect(cornerRadius: 12))
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .frame(maxWidth: .infinity, alignment: .topLeading)
         .padding()
         .background(.thinMaterial)
         .clipShape(.rect(cornerRadius: 16))
     }
 
-    private var availableDevicesSection: some View {
+    private var availableDevicesContent: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Available ESP32 Devices")
                 .font(.headline)
@@ -152,60 +148,22 @@ struct SettingsScreen: View {
             Text("Status: \(ble.connectionText)")
             Text("BT State: \(ble.bluetoothStateText)")
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .padding()
-        .background(.thinMaterial)
-        .clipShape(.rect(cornerRadius: 16))
     }
 
-    private var keyboardSettingsSection: some View {
+    private var keyboardSettingsContent: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Keyboard Settings")
-                .font(.headline)
-
-            HStack(spacing: 12) {
-                Button("MacOS ks") {
-                    keyboardTimingOnMs = 0
-                    keyboardTimingOffMs = 0
-                }
-                .buttonStyle(.borderedProminent)
-
-                Button("PS5 ks") {
-                    keyboardTimingOnMs = 20
-                    keyboardTimingOffMs = 20
-                }
-                .buttonStyle(.borderedProminent)
-
-                Button {
-                    sendControlABeforeText.toggle()
-                } label: {
-                    Text("send cmd+a")
-                        .frame(minWidth: 110)
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle(.white)
-                .padding(.horizontal, 14)
-                .frame(minHeight: 36)
-                .background(sendControlABeforeText ? Color.blue : Color.gray.opacity(0.45))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 16)
-                        .stroke(sendControlABeforeText ? Color.blue : Color.gray.opacity(0.4), lineWidth: 2)
-                }
-                .clipShape(.rect(cornerRadius: 16))
-
-                Button("set & test") {
-                    sendKeyboardTimingCommand()
-                    ble.sendString("Hello World! Let's go. (test) 1!2\"3#4$5%6&7'8(9)")
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(.red)
-
-            }
-
-				Spacer().frame(height:10)
             customKeyboardTimingSection
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    private var combinedBottomPanelSection: some View {
+        HStack(alignment: .top, spacing: 20) {
+            availableDevicesContent
+                .frame(maxWidth: .infinity, alignment: .topLeading)
+
+            keyboardSettingsContent
+                .frame(maxWidth: .infinity, alignment: .topLeading)
+        }
         .padding()
         .background(.thinMaterial)
         .clipShape(.rect(cornerRadius: 16))
@@ -285,8 +243,18 @@ struct SettingsScreen: View {
 
     private var customKeyboardTimingSection: some View {
         VStack(alignment: .leading, spacing: 5) {
-            Text("custom kb timing")
-                .font(.headline)
+            HStack(spacing: 12) {
+                Text("custom kb timing")
+                    .font(.headline)
+
+                Button("set & test") {
+                    sendKeyboardTimingCommand()
+                    ble.sendString("Hello World! Let's go. (test) 1!2\"3#4$5%6&7'8(9)")
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.red)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
 
             HStack(alignment: .top, spacing: 12) {
                 VStack(spacing: 10) {

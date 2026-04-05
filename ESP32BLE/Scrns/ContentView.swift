@@ -31,6 +31,7 @@ struct ContentView: View {
     @AppStorage("documentFontSizesData") private var documentFontSizesData = ""
     @State private var settingsBLEText = ""
     @State private var isKeyboardScreenPresented = false
+    @State private var isSettingsScreenPresented = true
 
     var body: some View {
         NavigationStack {
@@ -80,6 +81,19 @@ struct ContentView: View {
                 .clipped()
             }
             .toolbarVisibility(isKeyboardScreenPresented ? .hidden : .visible, for: .navigationBar)
+            .navigationDestination(isPresented: $isSettingsScreenPresented) {
+                SettingsScreen(
+                    ble: ble,
+                    documentFiles: documentFiles,
+                    selectedDocumentName: selectedDocumentName,
+                    refreshDocumentFiles: refreshDocumentFiles,
+                    loadFunctionKeys: selectDocument,
+                    deleteDocument: deleteDocument,
+                    duplicateDocument: duplicateDocument,
+                    canDeleteDocuments: documentFiles.count > 1,
+                    bleTextToSend: $settingsBLEText
+                )
+            }
         }
         .task {
             ensureDefaultFunctionKeysFile()
