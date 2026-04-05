@@ -201,13 +201,15 @@ struct MainScreen: View {
                 .foregroundStyle(.white)
                 .padding(.horizontal, 14)
                 .frame(minHeight: 44)
-                .background(Color.gray.opacity(0.45))
+                .background(isGridEditModeEnabled ? Color.gray.opacity(0.3) : Color.gray.opacity(0.45))
                 .overlay {
                     RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.gray.opacity(0.5), lineWidth: 1.5)
+                        .stroke(isGridEditModeEnabled ? Color.gray.opacity(0.35) : Color.gray.opacity(0.5), lineWidth: 1.5)
                 }
                 .clipShape(.rect(cornerRadius: 12))
                 .contentShape(.rect)
+                .disabled(isGridEditModeEnabled)
+                .opacity(isGridEditModeEnabled ? 0.35 : 1)
             }
 
             ToolbarItem(placement: .principal) {

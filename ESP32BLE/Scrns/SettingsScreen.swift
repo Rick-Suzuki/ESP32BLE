@@ -133,7 +133,7 @@ struct SettingsScreen: View {
                 }
                 .buttonStyle(.borderedProminent)
 
-                Button("Connect Selected") {
+                Button("Connect") {
                     ble.connectToSelectedDevice()
                 }
                 .buttonStyle(.borderedProminent)
