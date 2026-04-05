@@ -123,6 +123,8 @@ struct SettingsScreen: View {
                     )
                 }
                 .buttonStyle(.plain)
+                .disabled(ble.isConnected && ble.selectedPeripheralID != device.id)
+                .opacity(ble.isConnected && ble.selectedPeripheralID != device.id ? 0.45 : 1)
             }
 
             HStack(spacing: 12) {
