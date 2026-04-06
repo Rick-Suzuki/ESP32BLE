@@ -282,11 +282,11 @@ struct SettingsScreen: View {
     }
 
     private func sliderRow(title: String, value: Binding<Double>, range: ClosedRange<Double>) -> some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 4) {
             Text(title)
                 .font(.headline)
                 .foregroundStyle(.primary)
-                .frame(width: timingLabelWidth, alignment: .leading)
+                .frame(width: timingLabelWidth, alignment: .trailing)
 
             Button {
                 value.wrappedValue = max(range.lowerBound, value.wrappedValue - 1)
@@ -327,11 +327,11 @@ struct SettingsScreen: View {
     }
 
     private var speechRecognitionAutoOffRow: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 4) {
             Text("rec off")
                 .font(.headline)
                 .foregroundStyle(.white)
-                .frame(width: timingLabelWidth, alignment: .leading)
+                .frame(width: timingLabelWidth, alignment: .trailing)
 
             Button {
                 speechRecognitionAutoOffMinutes = max(1, speechRecognitionAutoOffMinutes - 1)
