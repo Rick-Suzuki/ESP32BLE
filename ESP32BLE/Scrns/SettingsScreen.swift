@@ -10,7 +10,7 @@ struct SettingsScreen: View {
     @AppStorage("sendControlABeforeText") private var sendControlABeforeText = false
     @AppStorage("keyboardTimingOnMs") private var keyboardTimingOnMs = 0.0
     @AppStorage("keyboardTimingOffMs") private var keyboardTimingOffMs = 0.0
-    private let documentTableWidth: CGFloat = 260
+    private let documentTableWidth: CGFloat = 208
     private let timingLabelWidth = 90.0
     @ObservedObject var ble: BLEKeyboardManager
     let documentFiles: [URL]
@@ -28,8 +28,8 @@ struct SettingsScreen: View {
     @FocusState private var focusedField: SettingsFocusField?
 
     var body: some View {
-        HStack(alignment: .top, spacing: 20) {
-            VStack(spacing: 20) {
+        HStack(alignment: .top, spacing: 0) {
+            VStack(spacing: 0) {
                 editableDocumentSection
 
                 if !isDocumentEditorFocused {
@@ -37,11 +37,13 @@ struct SettingsScreen: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-            .padding()
+            .padding(.leading)
+            .padding(.bottom)
 
             documentTableSection
                 .frame(width: documentTableWidth)
         }
+        .background(Color.black.ignoresSafeArea())
         .navigationTitle("Settings")
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
@@ -80,8 +82,12 @@ struct SettingsScreen: View {
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
         .padding()
-        .background(.thinMaterial)
-        .clipShape(.rect(cornerRadius: 16))
+        .background(Color.black)
+        .overlay {
+            Rectangle()
+                .stroke(Color.white, lineWidth: 1)
+        }
+        .clipShape(.rect(cornerRadius: 0))
     }
 
     private var availableDevicesContent: some View {
@@ -167,8 +173,12 @@ struct SettingsScreen: View {
                 .frame(maxWidth: .infinity, alignment: .topLeading)
         }
         .padding()
-        .background(.thinMaterial)
-        .clipShape(.rect(cornerRadius: 16))
+        .background(Color.black)
+        .overlay {
+            Rectangle()
+                .stroke(Color.white, lineWidth: 1)
+        }
+        .clipShape(.rect(cornerRadius: 0))
     }
 
     private var sendTextSection: some View {
@@ -213,9 +223,6 @@ struct SettingsScreen: View {
 
     private var documentTableSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Documents")
-                .font(.headline)
-
             List {
                 ForEach(documentFiles, id: \.path) { fileURL in
                     documentRow(for: fileURL)
@@ -226,9 +233,9 @@ struct SettingsScreen: View {
             .background(.clear)
         }
         .frame(maxHeight: .infinity, alignment: .top)
-        .padding()
-        .background(.thinMaterial)
-        .clipShape(.rect(cornerRadius: 16))
+        .padding(.vertical)
+        .background(Color.black)
+        .clipShape(.rect(cornerRadius: 0))
         .alert("Delete File?", isPresented: pendingDeleteAlertIsPresented, presenting: pendingDeleteFile) { fileURL in
             Button("Delete", role: .destructive) {
                 deleteDocument(fileURL)
@@ -386,17 +393,20 @@ struct SettingsScreen: View {
         } label: {
             HStack {
                 Text(fileURL.lastPathComponent)
+                    .fontWeight(isSelected ? .bold : .regular)
                     .foregroundStyle(.white)
                     .lineLimit(1)
 
                 Spacer()
             }
-            .padding(.horizontal, 12)
+            .padding(.leading, 10)
             .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
             .background(Color.black)
             .overlay {
                 Rectangle()
-                    .stroke(isSelected ? Color.white : Color.gray, lineWidth: 1)
+                    .fill(Color.gray.opacity(0.6))
+                    .frame(height: 1)
+                    .frame(maxHeight: .infinity, alignment: .bottom)
             }
             .contentShape(.rect)
         }
