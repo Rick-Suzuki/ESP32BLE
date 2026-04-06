@@ -25,6 +25,8 @@ struct SettingsScreen: View {
     @State private var pendingDeleteFile: URL?
     @State private var documentEditorText = ""
     @State private var isLoadingDocumentText = false
+    @State private var loadedDocumentName = ""
+    @State private var savedDocumentEditorText = ""
     @FocusState private var focusedField: SettingsFocusField?
 
     var body: some View {
@@ -37,17 +39,18 @@ struct SettingsScreen: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-            .padding(.leading)
-            .padding(.bottom)
 
             documentTableSection
                 .frame(width: documentTableWidth)
         }
+        .frame(maxHeight: .infinity, alignment: .top)
         .background(Color.black.ignoresSafeArea())
         .navigationTitle("Settings")
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
-                BackButton()
+                BackButton {
+                    saveCurrentDocumentText()
+                }
             }
         }
         .onChange(of: ble.isConnected) {
@@ -60,14 +63,8 @@ struct SettingsScreen: View {
             loadSelectedDocumentText()
         }
         .onChange(of: selectedDocumentName) {
+            saveCurrentDocumentText()
             loadSelectedDocumentText()
-        }
-        .onChange(of: documentEditorText) {
-            guard !isLoadingDocumentText else {
-                return
-            }
-
-            saveSelectedDocumentText()
         }
     }
 
@@ -80,12 +77,30 @@ struct SettingsScreen: View {
                 .background(Color.black.opacity(0.55))
                 .clipShape(.rect(cornerRadius: 12))
         }
-        .frame(maxWidth: .infinity, alignment: .topLeading)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .padding()
         .background(Color.black)
         .overlay {
             Rectangle()
                 .stroke(Color.white, lineWidth: 1)
+        }
+        .overlay(alignment: .bottomTrailing) {
+            Button("undo") {
+                documentEditorText = savedDocumentEditorText
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.white)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(Color.gray.opacity(0.45))
+            .overlay {
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(Color.gray.opacity(0.5), lineWidth: 1)
+            }
+            .clipShape(.rect(cornerRadius: 8))
+            .padding(8)
+            .disabled(documentEditorText == savedDocumentEditorText)
+            .opacity(documentEditorText == savedDocumentEditorText ? 0.35 : 1)
         }
         .clipShape(.rect(cornerRadius: 0))
     }
@@ -235,6 +250,10 @@ struct SettingsScreen: View {
         .frame(maxHeight: .infinity, alignment: .top)
         .padding(.bottom)
         .background(Color.black)
+        .overlay {
+            Rectangle()
+                .stroke(Color.white, lineWidth: 1)
+        }
         .clipShape(.rect(cornerRadius: 0))
         .alert("Delete File?", isPresented: pendingDeleteAlertIsPresented, presenting: pendingDeleteFile) { fileURL in
             Button("Delete", role: .destructive) {
@@ -470,10 +489,15 @@ struct SettingsScreen: View {
 
         guard let fileURL = selectedDocumentFileURL else {
             documentEditorText = ""
+            savedDocumentEditorText = ""
+            loadedDocumentName = ""
             return
         }
 
-        documentEditorText = (try? String(contentsOf: fileURL, encoding: .utf8)) ?? ""
+        let loadedText = (try? String(contentsOf: fileURL, encoding: .utf8)) ?? ""
+        documentEditorText = loadedText
+        savedDocumentEditorText = loadedText
+        loadedDocumentName = fileURL.lastPathComponent
     }
 
     private func saveSelectedDocumentText() {
@@ -481,9 +505,23 @@ struct SettingsScreen: View {
             return
         }
 
+        saveDocumentText(documentEditorText, to: fileURL)
+    }
+
+    private func saveCurrentDocumentText() {
+        guard !loadedDocumentName.isEmpty,
+              let fileURL = documentFiles.first(where: { $0.lastPathComponent == loadedDocumentName }) else {
+            return
+        }
+
+        saveDocumentText(documentEditorText, to: fileURL)
+    }
+
+    private func saveDocumentText(_ text: String, to fileURL: URL) {
         do {
-            try documentEditorText.write(to: fileURL, atomically: true, encoding: .utf8)
-            loadFunctionKeys(fileURL)
+            try text.write(to: fileURL, atomically: true, encoding: .utf8)
+            savedDocumentEditorText = text
+            loadedDocumentName = fileURL.lastPathComponent
         } catch {
             print("Failed to save document: \(fileURL.lastPathComponent)")
         }
@@ -532,9 +570,11 @@ struct SettingsScreen: View {
 
 private struct BackButton: View {
     @Environment(\.dismiss) private var dismiss
+    let action: () -> Void
 
     var body: some View {
         Button("main") {
+            action()
             dismiss()
         }
         .font(.headline)
