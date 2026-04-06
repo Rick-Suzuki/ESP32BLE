@@ -57,6 +57,9 @@ struct KeyboardScreen: View {
     private var topSection: some View {
         VStack(spacing: 8) {
             HStack(spacing: 8) {
+                topNavButton(title: "mode") {
+                }
+
                 KeyboardInputField(
                     text: $typingText,
                     shouldBeFirstResponder: shouldFocusInput,
@@ -72,21 +75,10 @@ struct KeyboardScreen: View {
                 .frame(maxWidth: .infinity)
                 .frame(height: 34)
 
-                Button("Main") {
+                topNavButton(title: "Main") {
                     shouldFocusInput = false
                     returnToMain()
                 }
-                .buttonStyle(.plain)
-                .font(.headline)
-                .foregroundStyle(.white)
-                .padding(.horizontal, 14)
-                .frame(minHeight: 44)
-                .background(Color.gray.opacity(0.45))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.gray.opacity(0.5), lineWidth: 1.5)
-                }
-                .clipShape(.rect(cornerRadius: 12))
             }
 
             HStack(spacing: 4) {
@@ -135,6 +127,23 @@ struct KeyboardScreen: View {
         .padding(.horizontal, 8)
         .padding(.top, 6)
         .padding(.bottom, 6)
+    }
+
+    private func topNavButton(title: String, action: @escaping () -> Void) -> some View {
+        Button(title) {
+            action()
+        }
+        .buttonStyle(.plain)
+        .font(.headline)
+        .foregroundStyle(.white)
+        .padding(.horizontal, 14)
+        .frame(minHeight: 44)
+        .background(Color.gray.opacity(0.45))
+        .overlay {
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.gray.opacity(0.5), lineWidth: 1.5)
+        }
+        .clipShape(.rect(cornerRadius: 12))
     }
 
     private var keyGrid: some View {
