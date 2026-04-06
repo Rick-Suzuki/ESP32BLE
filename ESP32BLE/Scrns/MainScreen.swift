@@ -94,7 +94,8 @@ struct MainScreen: View {
                 let gridDimensions = gridDimensions(for: visibleBoxCount)
                 let columns = Array(repeating: GridItem(.flexible(), spacing: mainGridButtonSpacing), count: gridDimensions.columns)
                 let totalGridSpacing = mainGridButtonSpacing * CGFloat(max(gridDimensions.rows - 1, 0))
-                let buttonHeight = (geometry.size.height - totalGridSpacing) / CGFloat(max(gridDimensions.rows, 1))
+                let availableGridHeight = geometry.size.height.isFinite ? max(0, geometry.size.height - totalGridSpacing) : 0
+                let buttonHeight = availableGridHeight / CGFloat(max(gridDimensions.rows, 1))
                 let visibleEntries = Array(functionKeys.prefix(visibleBoxCount).enumerated())
 
                 LazyVGrid(columns: columns, spacing: mainGridButtonSpacing) {
@@ -554,7 +555,7 @@ struct MainScreen: View {
                 SlotEditorTextField(text: $editingSlotText, placeholder: "edit button text") {
                     commitSlotEditing()
                 }
-                .frame(width: geometry.size.width * 0.28, height: 36)
+                .frame(width: geometry.size.width.isFinite ? max(0, geometry.size.width * 0.28) : 0, height: 36)
                 .focused($isSlotEditorFocused)
 
                 Button {

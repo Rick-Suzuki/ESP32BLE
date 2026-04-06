@@ -36,14 +36,17 @@ struct ContentView: View {
     var body: some View {
         NavigationStack {
             GeometryReader { geometry in
+                let containerWidth = geometry.size.width.isFinite ? max(0, geometry.size.width) : 0
+                let containerHeight = geometry.size.height.isFinite ? max(0, geometry.size.height) : 0
+
                 ZStack {
                     KeyboardScreen(ble: ble, isPresented: isKeyboardScreenPresented) {
                         withAnimation(.easeInOut(duration: 0.25)) {
                             isKeyboardScreenPresented = false
                         }
                     }
-                    .frame(width: geometry.size.width, height: geometry.size.height)
-                    .offset(x: isKeyboardScreenPresented ? 0 : -geometry.size.width)
+                    .frame(width: containerWidth, height: containerHeight)
+                    .offset(x: isKeyboardScreenPresented ? 0 : -containerWidth)
 
                     MainScreen(
                         ble: ble,
@@ -74,10 +77,10 @@ struct ContentView: View {
                         },
                         settingsBLEText: $settingsBLEText
                     )
-                    .frame(width: geometry.size.width, height: geometry.size.height)
-                    .offset(x: isKeyboardScreenPresented ? geometry.size.width : 0)
+                    .frame(width: containerWidth, height: containerHeight)
+                    .offset(x: isKeyboardScreenPresented ? containerWidth : 0)
                 }
-                .frame(width: geometry.size.width, height: geometry.size.height)
+                .frame(width: containerWidth, height: containerHeight)
                 .clipped()
             }
             .toolbarVisibility(isKeyboardScreenPresented ? .hidden : .visible, for: .navigationBar)

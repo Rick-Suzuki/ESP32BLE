@@ -141,7 +141,8 @@ struct KeyboardScreen: View {
         GeometryReader { geometry in
             let rowCount = 6
             let totalSpacing = gridKeySpacing * CGFloat(rowCount - 1)
-            let availableRowHeight = floor((geometry.size.height - totalSpacing) / CGFloat(rowCount))
+            let safeGridHeight = geometry.size.height.isFinite ? max(0, geometry.size.height - totalSpacing) : 0
+            let availableRowHeight = floor(safeGridHeight / CGFloat(rowCount))
             let rowHeight = max(32, floor(availableRowHeight * gridRowHeightScale))
 
             VStack(spacing: gridKeySpacing) {

@@ -10,6 +10,7 @@ struct SettingsScreen: View {
     @AppStorage("sendControlABeforeText") private var sendControlABeforeText = false
     @AppStorage("keyboardTimingOnMs") private var keyboardTimingOnMs = 0.0
     @AppStorage("keyboardTimingOffMs") private var keyboardTimingOffMs = 0.0
+    private let documentTableWidth: CGFloat = 260
     private let timingLabelWidth = 90.0
     @ObservedObject var ble: BLEKeyboardManager
     let documentFiles: [URL]
@@ -27,21 +28,19 @@ struct SettingsScreen: View {
     @FocusState private var focusedField: SettingsFocusField?
 
     var body: some View {
-        GeometryReader { geometry in
-            HStack(alignment: .top, spacing: 20) {
-                VStack(spacing: 20) {
-                    editableDocumentSection
+        HStack(alignment: .top, spacing: 20) {
+            VStack(spacing: 20) {
+                editableDocumentSection
 
-                    if !isDocumentEditorFocused {
-                        combinedBottomPanelSection
-                    }
+                if !isDocumentEditorFocused {
+                    combinedBottomPanelSection
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                .padding()
-
-                documentTableSection
-                    .frame(width: max(220, geometry.size.width * 0.22))
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .padding()
+
+            documentTableSection
+                .frame(width: documentTableWidth)
         }
         .navigationTitle("Settings")
         .toolbar {
@@ -87,7 +86,7 @@ struct SettingsScreen: View {
 
     private var availableDevicesContent: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Available ESP32 Devices")
+            Text("Available ESP32 Devices: \(ble.discoveredDevices.count)")
                 .font(.headline)
 
             if ble.discoveredDevices.isEmpty {
@@ -100,22 +99,23 @@ struct SettingsScreen: View {
                     ble.selectedPeripheralID = device.id
                 } label: {
                     HStack {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(device.displayName)
-                                .font(.body)
-
-                            Text("RSSI: \(device.rssi)   UUID: \(device.id.uuidString)")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-
+						VStack(alignment: .leading, spacing: 4) {
+							VStack {
+								Text(device.displayName)
+									.font(.body)
+								
+						//		Text("RSSI:\(device.rssi), UUID:\(device.id.uuidString)")
+						//			.font(.caption)
+						//			.foregroundStyle(.secondary)
+							}
+						}
                         Spacer()
 
                         if ble.selectedPeripheralID == device.id {
                             Image(systemName: "checkmark.circle.fill")
                         }
                     }
-                    .padding(10)
+                    .padding(2)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(
                         RoundedRectangle(cornerRadius: 12)
@@ -244,7 +244,7 @@ struct SettingsScreen: View {
     }
 
     private var customKeyboardTimingSection: some View {
-        VStack(alignment: .leading, spacing: 5) {
+        VStack(alignment: .center, spacing: 5) {
             HStack(spacing: 12) {
                 Text("custom kb timing")
                     .font(.headline)
@@ -256,7 +256,7 @@ struct SettingsScreen: View {
                 .buttonStyle(.borderedProminent)
                 .tint(.red)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(maxWidth: .infinity, alignment: .center)
 
             HStack(alignment: .top, spacing: 12) {
                 VStack(spacing: 10) {
