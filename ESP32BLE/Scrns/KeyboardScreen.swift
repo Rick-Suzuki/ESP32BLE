@@ -201,8 +201,8 @@ struct KeyboardScreen: View {
     private var topRowCells: [KeyboardCell] {
         [
             comboFunctionCell(title: "ctl+cmd\nF13", tokens: ["ct", "cm"], functionKey: "f13", background: Color.blue.opacity(0.55)),
-            comboFunctionCell(title: "ctl+cmd\nF14", tokens: ["ct", "cm"], functionKey: "f14", background: Color.blue.opacity(0.55)),
-            comboFunctionCell(title: "ctl+cmd\nF15", tokens: ["ct", "cm"], functionKey: "f15", background: Color.blue.opacity(0.55)),
+            comboFunctionCell(title: "F14", tokens: ["ct", "cm"], functionKey: "f14", background: Color.blue.opacity(0.55)),
+            comboFunctionCell(title: "F15", tokens: ["ct", "cm"], functionKey: "f15", background: Color.blue.opacity(0.55)),
             keyTokenCell(title: "/", keyToken: "kp/", background: keypadColor),
             comboFunctionCell(title: "ctl\nF13", tokens: ["ct"], functionKey: "f13", background: modifierRowColor),
             comboFunctionCell(title: "F14", tokens: ["ct"], functionKey: "f14", background: modifierRowColor),
