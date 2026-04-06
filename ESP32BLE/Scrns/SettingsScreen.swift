@@ -233,7 +233,7 @@ struct SettingsScreen: View {
             .background(.clear)
         }
         .frame(maxHeight: .infinity, alignment: .top)
-        .padding(.vertical)
+        .padding(.bottom)
         .background(Color.black)
         .clipShape(.rect(cornerRadius: 0))
         .alert("Delete File?", isPresented: pendingDeleteAlertIsPresented, presenting: pendingDeleteFile) { fileURL in
