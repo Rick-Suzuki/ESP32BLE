@@ -37,6 +37,11 @@ struct MainScreen: View {
     private let mainGridButtonSpacing: CGFloat = 10
     private let mainGridButtonCornerRadius: CGFloat = 30
     private let mainGridButtonBorderWidth: CGFloat = 2
+  
+	// Easy-to-find spacing for the slot editor controls row.
+    private let slotEditorButtonSpacing: CGFloat = 5
+    // Easy-to-find width for all slot editor helper buttons.
+    private let slotEditorHelperButtonWidth: CGFloat = 58
 
     @AppStorage("speechRecognitionAutoOffMinutes") private var speechRecognitionAutoOffMinutes = 5
     private let allowedVisibleBoxCounts = [
@@ -223,6 +228,7 @@ struct MainScreen: View {
             ToolbarItem(placement: .principal) {
                 documentTitle
                     .opacity(editingSlotIndex == nil ? 1 : 0.45)
+                    .allowsHitTesting(editingSlotIndex == nil)
             }
 
             ToolbarItem(placement: .topBarTrailing) {
@@ -553,13 +559,19 @@ struct MainScreen: View {
 
     private var slotEditorSection: some View {
         GeometryReader { geometry in
-            HStack(spacing: 12) {
+            HStack(spacing: slotEditorButtonSpacing) {
+                slotEditorInsertButton("ctl:")
+                slotEditorInsertButton("sh:")
+                slotEditorInsertButton("opt:")
+                slotEditorInsertButton("cmd:")
+
                 Button("cancel") {
                     cancelSlotEditing()
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(.white)
                 .padding(.horizontal, 14)
+                .frame(minWidth: 101)
                 .frame(minHeight: 44)
                 .background(Color.gray.opacity(0.45))
                 .overlay {
@@ -581,7 +593,7 @@ struct MainScreen: View {
                     Image(systemName: "xmark")
                         .font(.system(size: 12, weight: .bold))
                         .foregroundStyle(.white)
-                        .frame(width: 30, height: 30)
+                        .frame(width: 21, height: 30)
                         .background(Color.red)
                         .clipShape(.rect(cornerRadius: 8))
                 }
@@ -598,6 +610,7 @@ struct MainScreen: View {
                 .buttonStyle(.plain)
                 .foregroundStyle(.white)
                 .padding(.horizontal, 14)
+                .frame(minWidth: 71)
                 .frame(minHeight: 44)
                 .background(Color(red: 0.0, green: 0.5, blue: 0.0))
                 .overlay {
@@ -612,6 +625,7 @@ struct MainScreen: View {
                 .buttonStyle(.plain)
                 .foregroundStyle(.white)
                 .padding(.horizontal, 14)
+                .frame(minWidth: 71)
                 .frame(minHeight: 44)
                 .background(Color.blue)
                 .overlay {
@@ -619,6 +633,10 @@ struct MainScreen: View {
                         .stroke(Color.blue, lineWidth: 1.5)
                 }
                 .clipShape(.rect(cornerRadius: 12))
+
+                slotEditorInsertButton("F1::")
+                slotEditorInsertButton(":")
+                slotEditorInsertButton("::")
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 4)
@@ -631,6 +649,22 @@ struct MainScreen: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         }
         .frame(height: 52)
+    }
+
+    private func slotEditorInsertButton(_ text: String) -> some View {
+        Button(text) {
+            editingSlotText.append(text)
+            isSlotEditorFocused = true
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(.white)
+        .frame(width: slotEditorHelperButtonWidth, height: 44)
+        .background(Color(red: 0.35, green: 0.35, blue: 0.0))
+        .overlay {
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.gray.opacity(0.5), lineWidth: 1.5)
+        }
+        .clipShape(.rect(cornerRadius: 12))
     }
 
     private func buttonTitle(for entry: FunctionKeyEntry) -> String {
