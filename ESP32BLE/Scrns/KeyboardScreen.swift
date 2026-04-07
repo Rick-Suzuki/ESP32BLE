@@ -16,6 +16,7 @@ struct KeyboardScreen: View {
 
     @ObservedObject var ble: BLEKeyboardManager
     let isPresented: Bool
+    @AppStorage("keyboardModeNumber") private var keyboardModeNumber = 1
     @AppStorage("keyboardSendImmediatelyEnabled") private var isSendImmediatelyEnabled = true
     @AppStorage("keyboardAutoCapEnabled") private var isAutoCapEnabled = false
     @AppStorage("keyboardEachWordCapEnabled") private var isEachWordCapEnabled = false
@@ -57,7 +58,8 @@ struct KeyboardScreen: View {
     private var topSection: some View {
         VStack(spacing: 8) {
             HStack(spacing: 8) {
-                topNavButton(title: "mode") {
+                topNavButton(title: "mode \(currentKeyboardMode.rawValue)") {
+                    advanceKeyboardMode()
                 }
 
                 KeyboardInputField(
@@ -148,62 +150,85 @@ struct KeyboardScreen: View {
 
     private var keyGrid: some View {
         GeometryReader { geometry in
-            let rowCount = 6
+            let rows = currentLayoutRows
+            let rowCount = rows.count
+            let columnCount = currentColumnCount
             let totalSpacing = gridKeySpacing * CGFloat(rowCount - 1)
+            let totalHorizontalSpacing = gridKeySpacing * CGFloat(max(columnCount - 1, 0))
             let safeGridHeight = geometry.size.height.isFinite ? max(0, geometry.size.height - totalSpacing) : 0
             let availableRowHeight = floor(safeGridHeight / CGFloat(rowCount))
             let rowHeight = max(32, floor(availableRowHeight * gridRowHeightScale))
+            let availableGridWidth = geometry.size.width.isFinite
+                ? max(0, geometry.size.width - (gridKeySpacing * 2) - totalHorizontalSpacing)
+                : 0
+            let unitWidth = columnCount > 0 ? floor(availableGridWidth / CGFloat(columnCount)) : 0
 
             VStack(spacing: gridKeySpacing) {
-                keyRow(topRowCells)
-                    .frame(height: rowHeight)
-                keyRow(secondRowCells)
-                    .frame(height: rowHeight)
-                keyRow(thirdRowCells)
-                    .frame(height: rowHeight)
-                keyRow(fourthRowCells)
-                    .frame(height: rowHeight)
-                keyRow(fifthRowCells)
-                    .frame(height: rowHeight)
-                keyRow(bottomRowCells)
-                    .frame(height: rowHeight)
+                ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
+                    keyRow(row, unitWidth: unitWidth)
+                        .frame(height: rowHeight)
+                }
             }
             .padding(gridKeySpacing)
             .background(Color.black)
         }
     }
 
-    private func keyRow(_ cells: [KeyboardCell]) -> some View {
+    private func keyRow(_ cells: [KeyboardCell], unitWidth: CGFloat) -> some View {
         HStack(spacing: gridKeySpacing) {
             ForEach(Array(cells.enumerated()), id: \.offset) { _, cell in
-                Button {
+                let cellWidth = max(0, (unitWidth * CGFloat(cell.widthUnits)) + (gridKeySpacing * CGFloat(cell.widthUnits - 1)))
+
+                KeyboardGridCellView(
+                    cell: cell,
+                    gridKeyFontSize: gridKeyFontSize,
+                    gridKeyCornerRadius: gridKeyCornerRadius,
+                    cellWidth: cellWidth
+                ) {
                     cell.action()
                     requestKeyboardFocus()
-                } label: {
-                    Group {
-                        if let systemImageName = cell.systemImageName {
-                            Image(systemName: systemImageName)
-                                .font(.system(size: gridKeyFontSize, weight: .bold))
-                                .rotationEffect(.degrees(cell.imageRotationDegrees))
-                                .foregroundStyle(cell.foreground)
-                        } else {
-                            Text(cell.title)
-                                .font(.system(size: cell.fontSize ?? gridKeyFontSize, weight: .semibold))
-                                .multilineTextAlignment(.center)
-                                .lineLimit(2)
-                                .minimumScaleFactor(0.45)
-                                .foregroundStyle(cell.foreground)
-                        }
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .padding(.horizontal, 4)
-                    .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(cell.background, in: RoundedRectangle(cornerRadius: gridKeyCornerRadius, style: .continuous))
-                .disabled(!cell.isEnabled)
             }
+        }
+    }
+
+    private var currentLayoutRows: [[KeyboardCell]] {
+        switch currentKeyboardMode {
+        case .mode1:
+            return [
+                topRowCells,
+                secondRowCells,
+                thirdRowCells,
+                fourthRowCells,
+                fifthRowCells,
+                bottomRowCells
+            ]
+        case .mode2:
+            return [
+                mode2TopRowCells,
+                mode2SecondRowCells,
+                mode2ThirdRowCells,
+                mode2FourthRowCells,
+                mode2BottomRowCells
+            ]
+        case .mode3:
+            return [
+                mode3TopRowCells,
+                mode3SecondRowCells,
+                mode3ThirdRowCells,
+                mode3BottomRowCells
+            ]
+        }
+    }
+
+    private var currentColumnCount: Int {
+        switch currentKeyboardMode {
+        case .mode1:
+            return 16
+        case .mode2:
+            return 13
+        case .mode3:
+            return 10
         }
     }
 
@@ -332,6 +357,160 @@ struct KeyboardScreen: View {
             plainFunctionCell("F10"),
             plainFunctionCell("F11"),
             plainFunctionCell("F12")
+        ]
+    }
+
+    private var mode2TopRowCells: [KeyboardCell] {
+        [
+            keyTokenCell(title: "/", keyToken: "kp/", background: keypadColor),
+            keyTokenCell(title: "*", keyToken: "kp*", background: keypadColor),
+            comboFunctionCell(title: "shift\nF13", tokens: ["sh"], functionKey: "f13", background: shiftRowColor),
+            comboFunctionCell(title: "F14", tokens: ["sh"], functionKey: "f14", background: shiftRowColor),
+            comboFunctionCell(title: "F15", tokens: ["sh"], functionKey: "f15", background: shiftRowColor),
+            comboFunctionCell(title: "opt\nF13", tokens: ["op"], functionKey: "f13", background: optionRowColor),
+            comboFunctionCell(title: "F14", tokens: ["op"], functionKey: "f14", background: optionRowColor),
+            comboFunctionCell(title: "F15", tokens: ["op"], functionKey: "f15", background: optionRowColor),
+            comboFunctionCell(title: "F16", tokens: ["op"], functionKey: "f16", background: optionRowColor),
+            comboFunctionCell(title: "F17", tokens: ["op"], functionKey: "f17", background: optionRowColor),
+            comboFunctionCell(title: "F18", tokens: ["op"], functionKey: "f18", background: optionRowColor),
+            comboFunctionCell(title: "F19", tokens: ["op"], functionKey: "f19", background: optionRowColor),
+            comboFunctionCell(title: "F20", tokens: ["op"], functionKey: "f20", background: optionRowColor)
+        ]
+    }
+
+    private var mode2SecondRowCells: [KeyboardCell] {
+        [
+            keyTokenCell(title: "7", keyToken: "kp7", background: keypadColor),
+            keyTokenCell(title: "8", keyToken: "kp8", background: keypadColor),
+            keyTokenCell(title: "9", keyToken: "kp9", background: keypadColor),
+            keyTokenCell(title: "-", keyToken: "kp-", background: keypadColor),
+            comboFunctionCell(title: "F16", tokens: ["sh"], functionKey: "f16", background: shiftRowColor),
+            comboFunctionCell(title: "cmd F13", tokens: ["cm"], functionKey: "f13", background: commandRowColor),
+            comboFunctionCell(title: "F14", tokens: ["cm"], functionKey: "f14", background: commandRowColor),
+            comboFunctionCell(title: "F15", tokens: ["cm"], functionKey: "f15", background: commandRowColor),
+            comboFunctionCell(title: "F16", tokens: ["cm"], functionKey: "f16", background: commandRowColor),
+            comboFunctionCell(title: "F17", tokens: ["cm"], functionKey: "f17", background: commandRowColor),
+            comboFunctionCell(title: "F18", tokens: ["cm"], functionKey: "f18", background: commandRowColor),
+            comboFunctionCell(title: "F19", tokens: ["cm"], functionKey: "f19", background: commandRowColor),
+            comboFunctionCell(title: "F20", tokens: ["cm"], functionKey: "f20", background: commandRowColor)
+        ]
+    }
+
+    private var mode2ThirdRowCells: [KeyboardCell] {
+        [
+            keyTokenCell(title: "4", keyToken: "kp4", background: keypadColor),
+            keyTokenCell(title: "5", keyToken: "kp5", background: keypadColor),
+            keyTokenCell(title: "6", keyToken: "kp6", background: keypadColor),
+            keyTokenCell(title: "+", keyToken: "kp+", background: keypadColor),
+            KeyboardCell(title: "clr all", background: clearAllButtonColor, foreground: activeModifiers.isEmpty ? .white : .black) {
+                resetModifierToggles()
+            },
+            modifierCell(.control),
+            modifierCell(.shift),
+            modifierCell(.option),
+            modifierCell(.command),
+            keyTokenCell(title: "", systemImageName: "triangle.fill", keyToken: "UP", background: arrowColor, applyStickyModifiers: true),
+            keyTokenCell(title: "", systemImageName: "triangle.fill", keyToken: "DOWN", background: arrowColor, applyStickyModifiers: true),
+            keyTokenCell(title: "", systemImageName: "triangle.fill", keyToken: "LEFT", background: arrowColor, applyStickyModifiers: true),
+            keyTokenCell(title: "", systemImageName: "triangle.fill", keyToken: "RIGHT", background: arrowColor, applyStickyModifiers: true)
+        ]
+    }
+
+    private var mode2FourthRowCells: [KeyboardCell] {
+        [
+            keyTokenCell(title: "1", keyToken: "kp1", background: keypadColor),
+            keyTokenCell(title: "2", keyToken: "kp2", background: keypadColor),
+            keyTokenCell(title: "3", keyToken: "kp3", background: keypadColor),
+            plainFunctionCell("F11"),
+            plainFunctionCell("F12"),
+            plainFunctionCell("F13"),
+            plainFunctionCell("F14"),
+            plainFunctionCell("F15"),
+            plainFunctionCell("F16"),
+            plainFunctionCell("F17"),
+            plainFunctionCell("F18"),
+            plainFunctionCell("F19"),
+            plainFunctionCell("F20")
+        ]
+    }
+
+    private var mode2BottomRowCells: [KeyboardCell] {
+        [
+            keyTokenCell(title: "ESC", keyToken: "ESC", background: standardFunctionColor),
+            keyTokenCell(title: "0", keyToken: "kp0", background: keypadColor),
+            keyTokenCell(title: ".", keyToken: "kp.", background: keypadColor),
+            plainFunctionCell("F1"),
+            plainFunctionCell("F2"),
+            plainFunctionCell("F3"),
+            plainFunctionCell("F4"),
+            plainFunctionCell("F5"),
+            plainFunctionCell("F6"),
+            plainFunctionCell("F7"),
+            plainFunctionCell("F8"),
+            plainFunctionCell("F9"),
+            plainFunctionCell("F10")
+        ]
+    }
+
+    private var mode3TopRowCells: [KeyboardCell] {
+        [
+            keyTokenCell(title: "7", keyToken: "kp7", background: keypadColor),
+            keyTokenCell(title: "8", keyToken: "kp8", background: keypadColor),
+            keyTokenCell(title: "9", keyToken: "kp9", background: keypadColor),
+            keyTokenCell(title: "/", keyToken: "kp/", background: keypadColor),
+            KeyboardCell(title: "clr all", background: clearAllButtonColor, foreground: activeModifiers.isEmpty ? .white : .black) {
+                resetModifierToggles()
+            },
+            comboFunctionCell(title: "cmd F13", tokens: ["cm"], functionKey: "f13", background: commandRowColor),
+            comboFunctionCell(title: "F14", tokens: ["cm"], functionKey: "f14", background: commandRowColor),
+            comboFunctionCell(title: "F15", tokens: ["cm"], functionKey: "f15", background: commandRowColor),
+            keyTokenCell(title: "", systemImageName: "triangle.fill", keyToken: "UP", background: arrowColor, applyStickyModifiers: true),
+            keyTokenCell(title: "", systemImageName: "triangle.fill", keyToken: "DOWN", background: arrowColor, applyStickyModifiers: true)
+        ]
+    }
+
+    private var mode3SecondRowCells: [KeyboardCell] {
+        [
+            keyTokenCell(title: "4", keyToken: "kp4", background: keypadColor),
+            keyTokenCell(title: "5", keyToken: "kp5", background: keypadColor),
+            keyTokenCell(title: "6", keyToken: "kp6", background: keypadColor),
+            keyTokenCell(title: "*", keyToken: "kp*", background: keypadColor),
+            modifierCell(.control),
+            modifierCell(.option),
+            comboFunctionCell(title: "F16", tokens: ["cm"], functionKey: "f16", background: commandRowColor),
+            comboFunctionCell(title: "F17", tokens: ["cm"], functionKey: "f17", background: commandRowColor),
+            keyTokenCell(title: "", systemImageName: "triangle.fill", keyToken: "LEFT", background: arrowColor, applyStickyModifiers: true),
+            keyTokenCell(title: "", systemImageName: "triangle.fill", keyToken: "RIGHT", background: arrowColor, applyStickyModifiers: true)
+        ]
+    }
+
+    private var mode3ThirdRowCells: [KeyboardCell] {
+        [
+            keyTokenCell(title: "1", keyToken: "kp1", background: keypadColor),
+            keyTokenCell(title: "2", keyToken: "kp2", background: keypadColor),
+            keyTokenCell(title: "3", keyToken: "kp3", background: keypadColor),
+            keyTokenCell(title: "-", keyToken: "kp-", background: keypadColor),
+            modifierCell(.shift),
+            modifierCell(.command),
+            comboFunctionCell(title: "F18", tokens: ["cm"], functionKey: "f18", background: commandRowColor),
+            comboFunctionCell(title: "F19", tokens: ["cm"], functionKey: "f19", background: commandRowColor),
+            plainFunctionCell("F19"),
+            plainFunctionCell("F20")
+        ]
+    }
+
+    private var mode3BottomRowCells: [KeyboardCell] {
+        [
+            keyTokenCell(title: "ESC", keyToken: "ESC", background: standardFunctionColor),
+            keyTokenCell(title: "0", keyToken: "kp0", background: keypadColor),
+            keyTokenCell(title: ".", keyToken: "kp.", background: keypadColor),
+            keyTokenCell(title: "+", keyToken: "kp+", background: keypadColor),
+            plainFunctionCell("F13"),
+            plainFunctionCell("F14"),
+            plainFunctionCell("F15"),
+            plainFunctionCell("F16"),
+            plainFunctionCell("F17"),
+            plainFunctionCell("F18")
         ]
     }
 
@@ -558,6 +737,17 @@ struct KeyboardScreen: View {
         }
     }
 
+    private var currentKeyboardMode: KeyboardMode {
+        KeyboardMode(rawValue: keyboardModeNumber) ?? .mode1
+    }
+
+    private func advanceKeyboardMode() {
+        let allModes = KeyboardMode.allCases
+        let currentIndex = allModes.firstIndex(of: currentKeyboardMode) ?? 0
+        let nextIndex = (currentIndex + 1) % allModes.count
+        keyboardModeNumber = allModes[nextIndex].rawValue
+    }
+
     private var keypadColor: Color {
         Color(red: 0.56, green: 0.16, blue: 0.10)
     }
@@ -612,6 +802,18 @@ struct KeyboardScreen: View {
             return 0
         }
     }
+
+    private func hiddenCell(widthUnits: Int = 1) -> KeyboardCell {
+        KeyboardCell(
+            title: "",
+            background: .clear,
+            foreground: .clear,
+            isEnabled: false,
+            isVisible: false,
+            widthUnits: widthUnits
+        ) {
+        }
+    }
 }
 
 private struct KeyboardCell {
@@ -622,6 +824,8 @@ private struct KeyboardCell {
     let background: Color
     let foreground: Color
     let isEnabled: Bool
+    let isVisible: Bool
+    let widthUnits: Int
     let action: () -> Void
 
     init(
@@ -632,6 +836,8 @@ private struct KeyboardCell {
         background: Color,
         foreground: Color,
         isEnabled: Bool = true,
+        isVisible: Bool = true,
+        widthUnits: Int = 1,
         action: @escaping () -> Void
     ) {
         self.title = title
@@ -641,8 +847,54 @@ private struct KeyboardCell {
         self.background = background
         self.foreground = foreground
         self.isEnabled = isEnabled
+        self.isVisible = isVisible
+        self.widthUnits = widthUnits
         self.action = action
     }
+}
+
+private struct KeyboardGridCellView: View {
+    let cell: KeyboardCell
+    let gridKeyFontSize: CGFloat
+    let gridKeyCornerRadius: CGFloat
+    let cellWidth: CGFloat
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Group {
+                if let systemImageName = cell.systemImageName {
+                    Image(systemName: systemImageName)
+                        .font(.system(size: gridKeyFontSize, weight: .bold))
+                        .rotationEffect(.degrees(cell.imageRotationDegrees))
+                        .foregroundStyle(cell.foreground)
+                } else {
+                    Text(cell.title)
+                        .font(.system(size: cell.fontSize ?? gridKeyFontSize, weight: .semibold))
+                        .multilineTextAlignment(.center)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.45)
+                        .foregroundStyle(cell.foreground)
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .padding(.horizontal, 4)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .frame(width: cellWidth)
+        .frame(maxHeight: .infinity)
+        .background(cell.background, in: RoundedRectangle(cornerRadius: gridKeyCornerRadius, style: .continuous))
+        .disabled(!cell.isEnabled)
+        .opacity(cell.isVisible ? 1 : 0)
+        .allowsHitTesting(cell.isVisible && cell.isEnabled)
+    }
+}
+
+private enum KeyboardMode: Int, CaseIterable {
+    case mode1 = 1
+    case mode2 = 2
+    case mode3 = 3
 }
 
 private enum KeyboardModifier: CaseIterable, Hashable {
