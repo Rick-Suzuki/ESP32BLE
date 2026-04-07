@@ -5,7 +5,7 @@ struct KeyboardScreen: View {
     // Easy-to-find key label sizing for the custom keyboard grid.
     private let gridKeyFontSize: CGFloat = 24
     private let keypadKeyFontSize: CGFloat = 31
-    private let typingAreaFontSize: CGFloat = 34
+    private let typingAreaFontSize: CGFloat = 31
     // Easy-to-find key shape tuning for the custom keyboard grid.
     private let gridKeyCornerRadius: CGFloat = 12
     private let gridKeySpacing: CGFloat = 6
@@ -1077,7 +1077,7 @@ private struct KeyboardInputField: UIViewRepresentable {
             textField.autocapitalizationType != autocapitalizationType ||
             textField.autocorrectionType != nextAutocorrectionType
 
-        textField.font = UIFont.systemFont(ofSize: fontSize, weight: .semibold)
+        textField.font = UIFont.systemFont(ofSize: fontSize, weight: .regular)
         textField.textAlignment = .center
         textField.autocapitalizationType = autocapitalizationType
         textField.autocorrectionType = nextAutocorrectionType
