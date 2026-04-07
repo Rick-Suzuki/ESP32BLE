@@ -181,6 +181,13 @@ struct MainScreen: View {
         }
         .background(Color.black.ignoresSafeArea())
         .ignoresSafeArea(.keyboard)
+        .overlay {
+            if editingSlotIndex != nil {
+                Color.black.opacity(0.5)
+                    .ignoresSafeArea()
+                    .contentShape(Rectangle())
+            }
+        }
         .overlay(alignment: .top) {
             if isGridEditModeEnabled, editingSlotIndex != nil {
                 slotEditorSection
@@ -202,19 +209,20 @@ struct MainScreen: View {
                 .foregroundStyle(.white)
                 .padding(.horizontal, 14)
                 .frame(minHeight: 44)
-                .background(isGridEditModeEnabled ? Color.gray.opacity(0.3) : Color.gray.opacity(0.45))
+                .background(toolbarButtonBackgroundColor(isEditingSlotActive: editingSlotIndex != nil, normalBackground: isGridEditModeEnabled ? Color.gray.opacity(0.3) : Color.gray.opacity(0.45)))
                 .overlay {
                     RoundedRectangle(cornerRadius: 12)
-                        .stroke(isGridEditModeEnabled ? Color.gray.opacity(0.35) : Color.gray.opacity(0.5), lineWidth: 1.5)
+                        .stroke(toolbarButtonBorderColor(isEditingSlotActive: editingSlotIndex != nil), lineWidth: 1.5)
                 }
                 .clipShape(.rect(cornerRadius: 12))
                 .contentShape(.rect)
-                .disabled(isGridEditModeEnabled)
-                .opacity(isGridEditModeEnabled ? 0.35 : 1)
+                .disabled(editingSlotIndex != nil)
+                .opacity(editingSlotIndex == nil ? 1 : 0.45)
             }
 
             ToolbarItem(placement: .principal) {
                 documentTitle
+                    .opacity(editingSlotIndex == nil ? 1 : 0.45)
             }
 
             ToolbarItem(placement: .topBarTrailing) {
@@ -226,10 +234,10 @@ struct MainScreen: View {
                             .font(.headline)
                             .foregroundStyle(.white)
                             .frame(minWidth: 84, minHeight: 44)
-                            .background(editModeButtonBackgroundColor)
+                            .background(toolbarButtonBackgroundColor(isEditingSlotActive: editingSlotIndex != nil, normalBackground: editModeButtonBackgroundColor))
                             .overlay {
                                 RoundedRectangle(cornerRadius: 12)
-                                    .stroke(editModeButtonBorderColor, lineWidth: 1.5)
+                                    .stroke(toolbarButtonBorderColor(isEditingSlotActive: editingSlotIndex != nil), lineWidth: 1.5)
                             }
                             .clipShape(.rect(cornerRadius: 12))
                             .contentShape(.rect)
@@ -255,16 +263,16 @@ struct MainScreen: View {
                             .font(.headline)
                             .foregroundStyle(.white)
                             .frame(minWidth: 92, minHeight: 44)
-                            .background(isGridEditModeEnabled ? Color.gray.opacity(0.3) : Color.gray.opacity(0.45))
+                            .background(toolbarButtonBackgroundColor(isEditingSlotActive: editingSlotIndex != nil, normalBackground: Color.gray.opacity(0.45)))
                             .overlay {
                                 RoundedRectangle(cornerRadius: 12)
-                                    .stroke(isGridEditModeEnabled ? Color.gray.opacity(0.35) : Color.gray.opacity(0.5), lineWidth: 1.5)
+                                    .stroke(toolbarButtonBorderColor(isEditingSlotActive: editingSlotIndex != nil), lineWidth: 1.5)
                             }
                             .clipShape(.rect(cornerRadius: 12))
                             .contentShape(.rect)
                     }
-                    .disabled(isGridEditModeEnabled)
-                    .opacity(isGridEditModeEnabled ? 0.35 : 1)
+                    .disabled(editingSlotIndex != nil)
+                    .opacity(editingSlotIndex == nil ? 1 : 0.45)
                 }
             }
         }
@@ -533,6 +541,14 @@ struct MainScreen: View {
         }
 
         return isGridEditModeEnabled ? Color.blue : Color.gray.opacity(0.5)
+    }
+
+    private func toolbarButtonBackgroundColor(isEditingSlotActive: Bool, normalBackground: Color) -> Color {
+        isEditingSlotActive ? Color.gray.opacity(0.3) : normalBackground
+    }
+
+    private func toolbarButtonBorderColor(isEditingSlotActive: Bool) -> Color {
+        isEditingSlotActive ? Color.gray.opacity(0.35) : Color.gray.opacity(0.5)
     }
 
     private var slotEditorSection: some View {
