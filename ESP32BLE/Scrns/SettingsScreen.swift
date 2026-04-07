@@ -293,7 +293,8 @@ struct SettingsScreen: View {
             .frame(maxWidth: .infinity, alignment: .center)
 
             HStack(alignment: .top, spacing: 12) {
-                VStack(spacing: 10) {
+                VStack(spacing: 2)
+                {
                     sliderRow(
                         title: "on",
                         value: $keyboardTimingOnMs,
@@ -340,7 +341,7 @@ struct SettingsScreen: View {
                 dimensions[VerticalAlignment.center]
             }
 
-            VStack(spacing: -5) {
+            VStack(spacing: -10) {
                 Text("\(Int(value.wrappedValue)) ms")
                     .font(.headline)
                     .foregroundStyle(.white)
@@ -353,7 +354,7 @@ struct SettingsScreen: View {
                     }
             }
             .padding(.horizontal, 12)
-            .padding(.vertical, 10)
+            .padding(.vertical, 2)
 
             Button {
                 value.wrappedValue = min(range.upperBound, value.wrappedValue + 1)
@@ -397,7 +398,7 @@ struct SettingsScreen: View {
                 dimensions[VerticalAlignment.center]
             }
 
-            VStack(spacing: -5) {
+            VStack(spacing: -10) {
                 Text("\(speechRecognitionAutoOffMinutes) min")
                     .font(.headline)
                     .foregroundStyle(.white)
@@ -417,7 +418,7 @@ struct SettingsScreen: View {
                 }
             }
             .padding(.horizontal, 12)
-            .padding(.vertical, 10)
+            .padding(.vertical, 2)
 
             Button {
                 speechRecognitionAutoOffMinutes = min(30, speechRecognitionAutoOffMinutes + 1)
