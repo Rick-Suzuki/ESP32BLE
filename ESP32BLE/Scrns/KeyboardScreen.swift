@@ -33,25 +33,15 @@ struct KeyboardScreen: View {
         VStack(spacing: 0) {
             topSection
        //     Divider()
-			//.overlay(Color.gray.opacity(0.45))
+				//.overlay(Color.gray.opacity(0.45))
             keyGrid
         }
         .background(Color.black.ignoresSafeArea())
         .preferredColorScheme(.dark)
-        .onAppear {
-            if isPresented {
-                requestKeyboardFocus()
-            }
-        }
         .onChange(of: isPresented) {
-            if isPresented {
-                requestKeyboardFocus()
-            } else {
+            if !isPresented {
                 shouldFocusInput = false
             }
-        }
-        .onTapGesture {
-            requestKeyboardFocus()
         }
     }
 
@@ -64,6 +54,7 @@ struct KeyboardScreen: View {
 
                 KeyboardInputField(
                     text: $typingText,
+                    isFocused: $shouldFocusInput,
                     shouldBeFirstResponder: shouldFocusInput,
                     fontSize: typingAreaFontSize,
                     autocapitalizationType: keyboardAutocapitalizationType,
@@ -90,7 +81,6 @@ struct KeyboardScreen: View {
                     width: topControlDoubleButtonWidth
                 ) {
                     isSendImmediatelyEnabled.toggle()
-                    requestKeyboardFocus()
                 }
 
                 topOptionButton(
@@ -120,7 +110,6 @@ struct KeyboardScreen: View {
                 }
                 topControlButton(title: "clr all", background: .red, width: topControlSingleButtonWidth) {
                     typingText = ""
-                    requestKeyboardFocus()
                 }
 
                 Spacer(minLength: 0)
@@ -186,7 +175,6 @@ struct KeyboardScreen: View {
                     cellWidth: cellWidth
                 ) {
                     cell.action()
-                    requestKeyboardFocus()
                 }
             }
         }
@@ -598,7 +586,6 @@ struct KeyboardScreen: View {
             }
 
             isOn.wrappedValue.toggle()
-            requestKeyboardFocus()
         }
         .buttonStyle(.plain)
         .foregroundStyle(.white.opacity(isEnabled ? 1 : 0.7))
@@ -736,14 +723,11 @@ struct KeyboardScreen: View {
             ble.sendString(trimmedText)
             typingText = ""
         }
-
-        requestKeyboardFocus()
     }
 
     private func moveCursor(_ movement: CursorMovement) {
         cursorCommand = movement
         cursorCommandID += 1
-        requestKeyboardFocus()
     }
 
     private func toggleModifier(_ modifier: KeyboardModifier) {
@@ -1028,6 +1012,7 @@ private enum CursorMovement {
 
 private struct KeyboardInputField: UIViewRepresentable {
     @Binding var text: String
+    @Binding var isFocused: Bool
     let shouldBeFirstResponder: Bool
     let fontSize: CGFloat
     let autocapitalizationType: UITextAutocapitalizationType
@@ -1117,6 +1102,7 @@ private struct KeyboardInputField: UIViewRepresentable {
     func makeCoordinator() -> Coordinator {
         Coordinator(
             text: $text,
+            isFocused: $isFocused,
             onInsertedText: onInsertedText,
             onBackspace: onBackspace,
             onReturn: onReturn
@@ -1125,6 +1111,7 @@ private struct KeyboardInputField: UIViewRepresentable {
 
     final class Coordinator: NSObject, UITextFieldDelegate {
         @Binding var text: String
+        @Binding var isFocused: Bool
         var onInsertedText: (String) -> Void
         var onBackspace: () -> Void
         var onReturn: () -> Void
@@ -1132,14 +1119,28 @@ private struct KeyboardInputField: UIViewRepresentable {
 
         init(
             text: Binding<String>,
+            isFocused: Binding<Bool>,
             onInsertedText: @escaping (String) -> Void,
             onBackspace: @escaping () -> Void,
             onReturn: @escaping () -> Void
         ) {
             _text = text
+            _isFocused = isFocused
             self.onInsertedText = onInsertedText
             self.onBackspace = onBackspace
             self.onReturn = onReturn
+        }
+
+        func textFieldDidBeginEditing(_ textField: UITextField) {
+            DispatchQueue.main.async {
+                self.isFocused = true
+            }
+        }
+
+        func textFieldDidEndEditing(_ textField: UITextField) {
+            DispatchQueue.main.async {
+                self.isFocused = false
+            }
         }
 
         func textField(
