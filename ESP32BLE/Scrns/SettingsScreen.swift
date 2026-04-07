@@ -64,6 +64,9 @@ struct SettingsScreen: View {
             refreshDocumentFiles()
             loadSelectedDocumentText()
         }
+        .onChange(of: documentFiles.map(\.path)) {
+            loadSelectedDocumentText()
+        }
         .onChange(of: selectedDocumentName) {
             saveCurrentDocumentText()
             loadSelectedDocumentText()
@@ -110,7 +113,7 @@ struct SettingsScreen: View {
 
     private var availableDevicesContent: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Available ESP32 Devices: \(ble.discoveredDevices.count)")
+            Text("ESP32 Devices: \(ble.discoveredDevices.count)")
                 .font(.headline)
 
             if ble.discoveredDevices.isEmpty {
@@ -170,10 +173,21 @@ struct SettingsScreen: View {
                 .disabled(!ble.isConnected)
             }
 
-          //  Text("Connected Device ID: \(ble.connectedDeviceID)")
-            Text("Status: \(ble.connectionText)")
-          //  Text("BT State: \(ble.bluetoothStateText)")
+            Text(simplifiedConnectionStatus)
         }
+    }
+
+    private var simplifiedConnectionStatus: String {
+        if ble.isConnected {
+            return "connected"
+        }
+
+        let status = ble.connectionText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        if status.hasPrefix("connecting") || status.contains("discovering") {
+            return "connecting..."
+        }
+
+        return "disconnected"
     }
 
     private var keyboardSettingsContent: some View {
@@ -416,7 +430,7 @@ struct SettingsScreen: View {
             HStack {
                 Text(fileURL.lastPathComponent)
                     .fontWeight(isSelected ? .bold : .regular)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(isSelected ? Color.green : .white)
                     .lineLimit(1)
 
                 Spacer()
