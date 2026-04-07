@@ -68,6 +68,16 @@ struct KeyboardScreen: View {
                 .frame(maxWidth: .infinity)
                 .frame(height: 34)
 
+                Button("x") {
+                    typingText = ""
+                }
+                .buttonStyle(.plain)
+                .font(.headline)
+                .foregroundStyle(.white)
+                .frame(width: 34, height: 34)
+                .background(Color.red)
+                .clipShape(Circle())
+
                 topNavButton(title: "Main") {
                     shouldFocusInput = false
                     returnToMain()
@@ -108,9 +118,6 @@ struct KeyboardScreen: View {
                 topControlButton(systemImageName: "triangle.fill", rotationDegrees: 90, background: .blue, width: topControlSingleButtonWidth) {
                     moveCursor(.right)
                 }
-                topControlButton(title: "clr all", background: .red, width: topControlSingleButtonWidth) {
-                    typingText = ""
-                }
 
                 Spacer(minLength: 0)
             }
@@ -148,7 +155,7 @@ struct KeyboardScreen: View {
             let availableRowHeight = floor(safeGridHeight / CGFloat(rowCount))
             let rowHeight = max(32, floor(availableRowHeight * gridRowHeightScale))
             let availableGridWidth = geometry.size.width.isFinite
-                ? max(0, geometry.size.width - (gridKeySpacing * 2) - totalHorizontalSpacing)
+                ? max(0, geometry.size.width - totalHorizontalSpacing)
                 : 0
             let unitWidth = columnCount > 0 ? floor(availableGridWidth / CGFloat(columnCount)) : 0
 
@@ -158,7 +165,7 @@ struct KeyboardScreen: View {
                         .frame(height: rowHeight)
                 }
             }
-            .padding(gridKeySpacing)
+            .padding(.vertical, gridKeySpacing)
             .background(Color.black)
         }
     }
@@ -515,7 +522,7 @@ struct KeyboardScreen: View {
             .init(title: "sh op\ncm F1", modifierTokens: ["sh", "op", "cm"], background: mode4TripleRowColors[3], foreground: .black),
             .init(title: "sh ct\nF1", modifierTokens: ["sh", "ct"], background: mode4DoubleRowColors[0], foreground: .white),
             .init(title: "ct op\nF1", modifierTokens: ["ct", "op"], background: mode4DoubleRowColors[1], foreground: .black),
-            .init(title: "sh op\nF1", modifierTokens: ["sh", "op"], background: mode4DoubleRowColors[2], foreground: .white),
+            .init(title: "op cm\nF1", modifierTokens: ["op", "cm"], background: mode4DoubleRowColors[2], foreground: .white),
             .init(title: "ct cm\nF1", modifierTokens: ["ct", "cm"], background: mode4DoubleRowColors[3], foreground: .black),
             .init(title: "sh cm\nF1", modifierTokens: ["sh", "cm"], background: mode4DoubleRowColors[4], foreground: .white),
             .init(title: "op cm\nF1", modifierTokens: ["op", "cm"], background: mode4DoubleRowColors[5], foreground: .black),
