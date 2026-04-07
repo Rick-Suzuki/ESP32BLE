@@ -131,13 +131,14 @@ final class BLEKeyboardManager: NSObject, ObservableObject {
 		centralManager.connect(match.peripheral, options: nil)
 	}
 	
-	func disconnect() {
-		outgoingLines.removeAll()
-		sendQueueTask?.cancel()
-		sendQueueTask = nil
-		guard let esp32Peripheral else { return }
-		centralManager.cancelPeripheralConnection(esp32Peripheral)
-	}
+		func disconnect() {
+			outgoingLines.removeAll()
+			sendQueueTask?.cancel()
+			sendQueueTask = nil
+			selectedPeripheralID = nil
+			guard let esp32Peripheral else { return }
+			centralManager.cancelPeripheralConnection(esp32Peripheral)
+		}
 	
 	//
 	// Send one full line to the ESP32.
@@ -255,13 +256,9 @@ extension BLEKeyboardManager: CBCentralManagerDelegate {
 			)
 			discoveredDevices.append(item)
 			
-			if selectedPeripheralID == nil {
-				selectedPeripheralID = peripheral.identifier
-			}
-			
-			//
-			// Connect briefly to read its device ID.
-			//
+				//
+				// Connect briefly to read its device ID.
+				//
 			probePeripheralIDs.insert(peripheral.identifier)
 			peripheral.delegate = self
 			centralManager.connect(peripheral, options: nil)

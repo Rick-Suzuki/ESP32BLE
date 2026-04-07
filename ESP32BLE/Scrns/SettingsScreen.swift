@@ -113,8 +113,16 @@ struct SettingsScreen: View {
 
     private var availableDevicesContent: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("ESP32 Devices: \(ble.discoveredDevices.count)")
-                .font(.headline)
+            HStack(spacing: 12) {
+                Text("ESP32 Devices:\(ble.discoveredDevices.count), \(simplifiedConnectionStatus)")
+                    .font(.headline)
+
+                Button("Disconnect") {
+                    ble.disconnect()
+                }
+                .buttonStyle(.bordered)
+                .disabled(!ble.isConnected)
+            }
 
             if ble.discoveredDevices.isEmpty {
                 Text("No ESP32 devices found yet")
@@ -124,6 +132,9 @@ struct SettingsScreen: View {
             ForEach(ble.discoveredDevices) { device in
                 Button {
                     ble.selectedPeripheralID = device.id
+                    if !ble.isConnected {
+                        ble.connectToSelectedDevice()
+                    }
                 } label: {
                     HStack {
 						VStack(alignment: .leading, spacing: 4) {
@@ -154,26 +165,6 @@ struct SettingsScreen: View {
                 .opacity(ble.isConnected && ble.selectedPeripheralID != device.id ? 0.45 : 1)
             }
 
-            HStack(spacing: 12) {
-                Button("Scan") {
-                    ble.startScan()
-                }
-                .buttonStyle(.borderedProminent)
-
-                Button("Connect") {
-                    ble.connectToSelectedDevice()
-                }
-                .buttonStyle(.borderedProminent)
-                .disabled(ble.selectedPeripheralID == nil)
-
-                Button("Disconnect") {
-                    ble.disconnect()
-                }
-                .buttonStyle(.bordered)
-                .disabled(!ble.isConnected)
-            }
-
-            Text(simplifiedConnectionStatus)
         }
     }
 
