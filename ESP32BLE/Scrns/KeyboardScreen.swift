@@ -55,7 +55,7 @@ struct KeyboardScreen: View {
                 KeyboardInputField(
                     text: $typingText,
                     isFocused: $shouldFocusInput,
-                    shouldBeFirstResponder: shouldFocusInput,
+                    shouldBeFirstResponder: shouldFocusInput && isPresented,
                     fontSize: typingAreaFontSize,
                     autocapitalizationType: keyboardAutocapitalizationType,
                     autocorrectionEnabled: isSendOnReturnMode && isAutoCorrectEnabled,

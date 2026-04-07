@@ -587,7 +587,7 @@ private struct PinchZoomDocumentEditor: UIViewRepresentable {
         editorView.onFocusChange = { focused in
             context.coordinator.updateFocus(focused)
         }
-        editorView.update(text: text, fontSize: fontSize, isFocused: true)
+        editorView.update(text: text, fontSize: fontSize, isFocused: isFocused)
         return editorView
     }
 
