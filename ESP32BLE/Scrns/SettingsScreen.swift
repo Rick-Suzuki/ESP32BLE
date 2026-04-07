@@ -316,23 +316,29 @@ struct SettingsScreen: View {
     }
 
     private func sliderRow(title: String, value: Binding<Double>, range: ClosedRange<Double>) -> some View {
-        HStack(spacing: 4) {
+        HStack(alignment: .sliderTrackCenter, spacing: 4) {
             Text(title)
                 .font(.headline)
                 .foregroundStyle(.primary)
                 .frame(width: timingLabelWidth, alignment: .trailing)
+                .alignmentGuide(.sliderTrackCenter) { dimensions in
+                    dimensions[VerticalAlignment.center]
+                }
 
             Button {
                 value.wrappedValue = max(range.lowerBound, value.wrappedValue - 1)
             } label: {
                 Image(systemName: "triangle.fill")
-					.font(.system(size: 30))
-					.rotationEffect(.degrees(-90))
-                    .frame(width: 30, height: 30)
+						.font(.system(size: 26))
+						.rotationEffect(.degrees(-90))
+                    .frame(width: 26, height: 26)
             }
             .buttonStyle(.plain)
             .foregroundStyle(.white)
             .disabled(value.wrappedValue <= range.lowerBound)
+            .alignmentGuide(.sliderTrackCenter) { dimensions in
+                dimensions[VerticalAlignment.center]
+            }
 
             VStack(spacing: -5) {
                 Text("\(Int(value.wrappedValue)) ms")
@@ -342,6 +348,9 @@ struct SettingsScreen: View {
 
                 Slider(value: value, in: range, step: 10)
                     .tint(.white)
+                    .alignmentGuide(.sliderTrackCenter) { dimensions in
+                        dimensions[VerticalAlignment.center]
+                    }
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 10)
@@ -350,34 +359,43 @@ struct SettingsScreen: View {
                 value.wrappedValue = min(range.upperBound, value.wrappedValue + 1)
             } label: {
                 Image(systemName: "triangle.fill")
-					.font(.system(size: 30))
-					.rotationEffect(.degrees(90))
-                    .frame(width: 30, height: 30)
+						.font(.system(size: 26))
+						.rotationEffect(.degrees(90))
+                    .frame(width: 26, height: 26)
             }
             .buttonStyle(.plain)
             .foregroundStyle(.white)
             .disabled(value.wrappedValue >= range.upperBound)
+            .alignmentGuide(.sliderTrackCenter) { dimensions in
+                dimensions[VerticalAlignment.center]
+            }
         }
     }
 
     private var speechRecognitionAutoOffRow: some View {
-        HStack(spacing: 4) {
+        HStack(alignment: .sliderTrackCenter, spacing: 4) {
             Text("rec off")
                 .font(.headline)
                 .foregroundStyle(.white)
                 .frame(width: timingLabelWidth, alignment: .trailing)
+                .alignmentGuide(.sliderTrackCenter) { dimensions in
+                    dimensions[VerticalAlignment.center]
+                }
 
             Button {
                 speechRecognitionAutoOffMinutes = max(1, speechRecognitionAutoOffMinutes - 1)
             } label: {
                 Image(systemName: "triangle.fill")
-                    .font(.system(size: 30))
+                    .font(.system(size: 26))
                     .rotationEffect(.degrees(-90))
-                    .frame(width: 30, height: 30)
+                    .frame(width: 26, height: 26)
             }
             .buttonStyle(.plain)
             .foregroundStyle(.white)
             .disabled(speechRecognitionAutoOffMinutes <= 1)
+            .alignmentGuide(.sliderTrackCenter) { dimensions in
+                dimensions[VerticalAlignment.center]
+            }
 
             VStack(spacing: -5) {
                 Text("\(speechRecognitionAutoOffMinutes) min")
@@ -394,6 +412,9 @@ struct SettingsScreen: View {
                     step: 1
                 )
                 .tint(.white)
+                .alignmentGuide(.sliderTrackCenter) { dimensions in
+                    dimensions[VerticalAlignment.center]
+                }
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 10)
@@ -402,13 +423,16 @@ struct SettingsScreen: View {
                 speechRecognitionAutoOffMinutes = min(30, speechRecognitionAutoOffMinutes + 1)
             } label: {
                 Image(systemName: "triangle.fill")
-                    .font(.system(size: 30))
+                    .font(.system(size: 26))
                     .rotationEffect(.degrees(90))
-                    .frame(width: 30, height: 30)
+                    .frame(width: 26, height: 26)
             }
             .buttonStyle(.plain)
             .foregroundStyle(.white)
             .disabled(speechRecognitionAutoOffMinutes >= 30)
+            .alignmentGuide(.sliderTrackCenter) { dimensions in
+                dimensions[VerticalAlignment.center]
+            }
         }
     }
 
@@ -570,6 +594,16 @@ struct SettingsScreen: View {
             bleTextSelection = TextSelection(insertionPoint: bleTextToSend.endIndex)
         }
     }
+}
+
+private extension VerticalAlignment {
+    private enum SliderTrackCenterAlignment: AlignmentID {
+        static func defaultValue(in dimensions: ViewDimensions) -> CGFloat {
+            dimensions[VerticalAlignment.center]
+        }
+    }
+
+    static let sliderTrackCenter = VerticalAlignment(SliderTrackCenterAlignment.self)
 }
 
 private struct PinchZoomDocumentEditor: UIViewRepresentable {
