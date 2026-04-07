@@ -22,7 +22,6 @@ struct SettingsScreen: View {
     let canDeleteDocuments: Bool
     @Binding var bleTextToSend: String
     @State private var bleTextSelection: TextSelection?
-    @State private var pendingDeleteFile: URL?
     @State private var documentEditorText = ""
     @State private var documentEditorFontSize: CGFloat = 18
     @State private var isLoadingDocumentText = false
@@ -53,6 +52,22 @@ struct SettingsScreen: View {
                 BackButton {
                     saveCurrentDocumentText()
                 }
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                Button("new") {
+                    createNewDocument()
+                }
+                .font(.headline)
+                .foregroundStyle(.white)
+                .padding(.horizontal, 14)
+                .frame(minWidth: 92, minHeight: 44)
+                .background(Color.green.opacity(0.7))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.gray.opacity(0.5), lineWidth: 1.5)
+                }
+                .clipShape(.rect(cornerRadius: 12))
+                .contentShape(.rect)
             }
         }
         .onChange(of: ble.isConnected) {
@@ -263,18 +278,6 @@ struct SettingsScreen: View {
                 .stroke(Color.white, lineWidth: 1)
         }
         .clipShape(.rect(cornerRadius: 0))
-        .alert("Delete File?", isPresented: pendingDeleteAlertIsPresented, presenting: pendingDeleteFile) { fileURL in
-            Button("Delete", role: .destructive) {
-                deleteDocument(fileURL)
-                pendingDeleteFile = nil
-            }
-
-            Button("Cancel", role: .cancel) {
-                pendingDeleteFile = nil
-            }
-        } message: { fileURL in
-            Text("Delete \(fileURL.lastPathComponent)?")
-        }
     }
 
     private var customKeyboardTimingSection: some View {
@@ -477,23 +480,12 @@ struct SettingsScreen: View {
         .swipeActions(edge: .leading, allowsFullSwipe: false) {
             if canDeleteDocuments {
                 Button(role: .destructive) {
-                    pendingDeleteFile = fileURL
+                    deleteDocument(fileURL)
                 } label: {
                     Label("Delete", systemImage: "trash")
                 }
             }
         }
-    }
-
-    private var pendingDeleteAlertIsPresented: Binding<Bool> {
-        Binding(
-            get: { pendingDeleteFile != nil },
-            set: { newValue in
-                if !newValue {
-                    pendingDeleteFile = nil
-                }
-            }
-        )
     }
 
     private func sendEnteredText() {
@@ -562,6 +554,52 @@ struct SettingsScreen: View {
 
     private var selectedDocumentFileURL: URL? {
         documentFiles.first(where: { $0.lastPathComponent == selectedDocumentName })
+    }
+
+    private func createNewDocument() {
+        saveCurrentDocumentText()
+
+        guard let fileURL = nextAvailableNewDocumentURL() else {
+            return
+        }
+
+        let newDocumentContents = Array(repeating: "_", count: 16).joined(separator: "\n")
+
+        do {
+            try newDocumentContents.write(to: fileURL, atomically: true, encoding: .utf8)
+            refreshDocumentFiles()
+            loadFunctionKeys(fileURL)
+        } catch {
+            print("Failed to create document: \(fileURL.lastPathComponent)")
+        }
+    }
+
+    private func nextAvailableNewDocumentURL() -> URL? {
+        let directoryURL: URL
+        if let existingDocumentURL = documentFiles.first {
+            directoryURL = existingDocumentURL.deletingLastPathComponent()
+        } else if let selectedDocumentFileURL {
+            directoryURL = selectedDocumentFileURL.deletingLastPathComponent()
+        } else {
+            guard let defaultDirectoryURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
+                return nil
+            }
+            directoryURL = defaultDirectoryURL
+        }
+
+        let fileExtension = "txt"
+        var candidateName = "new.\(fileExtension)"
+        var suffix = 0
+
+        while true {
+            let candidateURL = directoryURL.appendingPathComponent(candidateName)
+            if !FileManager.default.fileExists(atPath: candidateURL.path) {
+                return candidateURL
+            }
+
+            suffix += 1
+            candidateName = "new_\(suffix).\(fileExtension)"
+        }
     }
 
     private func sendKeyboardTimingCommand() {

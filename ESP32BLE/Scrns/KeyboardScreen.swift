@@ -13,6 +13,7 @@ struct KeyboardScreen: View {
     // Easy-to-find sizing for the top keyboard control row.
     private let topControlSingleButtonWidth: CGFloat = 95
     private let topControlDoubleButtonWidth: CGFloat = 193
+    private let topMainButtonWidth: CGFloat = 64
 
     @ObservedObject var ble: BLEKeyboardManager
     let isPresented: Bool
@@ -28,6 +29,7 @@ struct KeyboardScreen: View {
     @State private var activeModifiers: Set<KeyboardModifier> = []
     @State private var cursorCommand: CursorMovement = .right
     @State private var cursorCommandID = 0
+    @State private var bufferedSoftKeyTokens: [String] = []
 
     var body: some View {
         VStack(spacing: 0) {
@@ -57,8 +59,8 @@ struct KeyboardScreen: View {
                     isFocused: $shouldFocusInput,
                     shouldBeFirstResponder: shouldFocusInput && isPresented,
                     fontSize: typingAreaFontSize,
-                    autocapitalizationType: keyboardAutocapitalizationType,
-                    autocorrectionEnabled: isSendOnReturnMode && isAutoCorrectEnabled,
+                    autocapitalizationType: effectiveKeyboardAutocapitalizationType,
+                    autocorrectionEnabled: effectiveAutocorrectionEnabled,
                     cursorCommand: cursorCommand,
                     cursorCommandID: cursorCommandID,
                     onInsertedText: handleInsertedText(_:),
@@ -69,7 +71,7 @@ struct KeyboardScreen: View {
                 .frame(height: 34)
 
                 Button("x") {
-                    typingText = ""
+                    clearTypingArea()
                 }
                 .buttonStyle(.plain)
                 .font(.headline)
@@ -94,22 +96,22 @@ struct KeyboardScreen: View {
                 }
 
                 topOptionButton(
-                    title: "auto-capitalize",
+                    title: "auto-caps",
                     isOn: $isAutoCapEnabled,
                     isEnabled: isSendOnReturnMode,
-                    width: topControlDoubleButtonWidth
+                    width: nil
                 )
                 topOptionButton(
                     title: "cap 1st letter",
                     isOn: $isEachWordCapEnabled,
                     isEnabled: isSendOnReturnMode,
-                    width: topControlDoubleButtonWidth
+                    width: nil
                 )
                 topOptionButton(
                     title: "auto-correct",
                     isOn: $isAutoCorrectEnabled,
                     isEnabled: isSendOnReturnMode,
-                    width: topControlDoubleButtonWidth
+                    width: nil
                 )
 
                 topControlButton(systemImageName: "triangle.fill", rotationDegrees: -90, background: .blue, width: topControlSingleButtonWidth) {
@@ -120,6 +122,15 @@ struct KeyboardScreen: View {
                 }
 
                 Spacer(minLength: 0)
+
+                topControlButton(
+                    title: "Send",
+                    background: Color.green.opacity(0.7),
+                    width: topMainButtonWidth + 5,
+                    isEnabled: isSendButtonEnabled
+                ) {
+                    sendBufferedKeyboardContent()
+                }
             }
         }
         .padding(.horizontal, 8)
@@ -127,7 +138,7 @@ struct KeyboardScreen: View {
         .padding(.bottom, 6)
     }
 
-    private func topNavButton(title: String, action: @escaping () -> Void) -> some View {
+    private func topNavButton(title: String, background: Color = Color.gray.opacity(0.45), action: @escaping () -> Void) -> some View {
         Button(title) {
             action()
         }
@@ -136,7 +147,7 @@ struct KeyboardScreen: View {
         .foregroundStyle(.white)
         .padding(.horizontal, 14)
         .frame(minHeight: 44)
-        .background(Color.gray.opacity(0.45))
+        .background(background)
         .overlay {
             RoundedRectangle(cornerRadius: 12)
                 .stroke(Color.gray.opacity(0.5), lineWidth: 1.5)
@@ -565,6 +576,7 @@ struct KeyboardScreen: View {
         rotationDegrees: Double = 0,
         background: Color,
         width: CGFloat? = nil,
+        isEnabled: Bool = true,
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
@@ -577,13 +589,14 @@ struct KeyboardScreen: View {
                     Text(title ?? "")
                 }
             }
-            .foregroundStyle(.white)
+            .foregroundStyle(.white.opacity(isEnabled ? 1 : 0.7))
             .frame(width: width, height: 30)
             .padding(.horizontal, width == nil ? 10 : 0)
-            .background(background)
+            .background(isEnabled ? background : Color.gray.opacity(0.35))
             .clipShape(.rect(cornerRadius: 6))
         }
         .buttonStyle(.plain)
+        .disabled(!isEnabled)
     }
 
     private func topOptionButton(title: String, isOn: Binding<Bool>, isEnabled: Bool, width: CGFloat? = nil) -> some View {
@@ -690,12 +703,29 @@ struct KeyboardScreen: View {
         return .none
     }
 
+    private var effectiveKeyboardAutocapitalizationType: UITextAutocapitalizationType {
+        keyboardAutocapitalizationType
+    }
+
+    private var effectiveAutocorrectionEnabled: Bool {
+        isSendOnReturnMode && isAutoCorrectEnabled
+    }
+
+    private var isSendButtonEnabled: Bool {
+        isSendOnReturnMode && !typingText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
     private func handleInsertedText(_ insertedText: String) {
         guard !insertedText.isEmpty else {
             return
         }
 
         if !activeModifiers.isEmpty {
+            if isSendOnReturnMode {
+                replaceSoftKeyTokensBuffer(with: activeModifierTokens + insertedText.map(String.init))
+                return
+            }
+
             sendModifiedTypedText(insertedText)
             typingText = ""
             return
@@ -710,6 +740,12 @@ struct KeyboardScreen: View {
     }
 
     private func handleBackspace() {
+        if isSendOnReturnMode, !bufferedSoftKeyTokens.isEmpty {
+            bufferedSoftKeyTokens.removeLast()
+            syncTypingTextWithBufferedTokens()
+            return
+        }
+
         guard isSendImmediatelyEnabled else {
             return
         }
@@ -722,6 +758,13 @@ struct KeyboardScreen: View {
         if isSendImmediatelyEnabled {
             ble.pressEnter()
         } else {
+            if !bufferedSoftKeyTokens.isEmpty {
+                sendTokensDirectlyToBLE(bufferedSoftKeyTokens)
+                bufferedSoftKeyTokens.removeAll()
+                typingText = ""
+                return
+            }
+
             let trimmedText = typingText.trimmingCharacters(in: .newlines)
             guard !trimmedText.isEmpty else {
                 return
@@ -754,6 +797,19 @@ struct KeyboardScreen: View {
     }
 
     private func sendTokens(_ tokens: [String]) {
+        guard !tokens.isEmpty else {
+            return
+        }
+
+        if isSendOnReturnMode {
+            replaceSoftKeyTokensBuffer(with: tokens)
+            return
+        }
+
+        sendTokensDirectlyToBLE(tokens)
+    }
+
+    private func sendTokensDirectlyToBLE(_ tokens: [String]) {
         for token in tokens {
             ble.sendLine(token)
         }
@@ -770,6 +826,36 @@ struct KeyboardScreen: View {
         KeyboardModifier.allCases.compactMap { modifier in
             activeModifiers.contains(modifier) ? modifier.token : nil
         }
+    }
+
+    private func replaceSoftKeyTokensBuffer(with tokens: [String]) {
+        bufferedSoftKeyTokens = tokens
+        syncTypingTextWithBufferedTokens()
+    }
+
+    private func syncTypingTextWithBufferedTokens() {
+        typingText = bufferedSoftKeyTokens.joined(separator: ":")
+    }
+
+    private func clearTypingArea() {
+        bufferedSoftKeyTokens.removeAll()
+        typingText = ""
+    }
+
+    private func sendBufferedKeyboardContent() {
+        if !bufferedSoftKeyTokens.isEmpty {
+            sendTokensDirectlyToBLE(bufferedSoftKeyTokens)
+            clearTypingArea()
+            return
+        }
+
+        let trimmedText = typingText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedText.isEmpty else {
+            return
+        }
+
+        ble.sendString(trimmedText)
+        clearTypingArea()
     }
 
     private func requestKeyboardFocus() {
