@@ -1250,6 +1250,7 @@ private struct KeyboardInputField: UIViewRepresentable {
             shouldChangeCharactersIn range: NSRange,
             replacementString string: String
         ) -> Bool {
+            ButtonClickFeedback.playIfEnabled()
             if string == "\n" {
                 onReturn()
                 return false

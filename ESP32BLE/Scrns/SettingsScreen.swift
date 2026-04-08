@@ -436,6 +436,7 @@ struct SettingsScreen: View {
                 }
 
             Button {
+                ButtonClickFeedback.playIfEnabled()
                 value.wrappedValue = max(range.lowerBound, value.wrappedValue - 1)
             } label: {
                 Image(systemName: "triangle.fill")
@@ -466,6 +467,7 @@ struct SettingsScreen: View {
             .padding(.vertical, 2)
 
             Button {
+                ButtonClickFeedback.playIfEnabled()
                 value.wrappedValue = min(range.upperBound, value.wrappedValue + 1)
             } label: {
                 Image(systemName: "triangle.fill")
@@ -493,6 +495,7 @@ struct SettingsScreen: View {
                 }
 
             Button {
+                ButtonClickFeedback.playIfEnabled()
                 speechRecognitionAutoOffMinutes = max(1, speechRecognitionAutoOffMinutes - 1)
             } label: {
                 Image(systemName: "triangle.fill")
@@ -530,6 +533,7 @@ struct SettingsScreen: View {
             .padding(.vertical, 2)
 
             Button {
+                ButtonClickFeedback.playIfEnabled()
                 speechRecognitionAutoOffMinutes = min(30, speechRecognitionAutoOffMinutes + 1)
             } label: {
                 Image(systemName: "triangle.fill")
@@ -962,6 +966,15 @@ private final class DocumentCanvasEditorView: UIView, UITextViewDelegate, UIGest
         layoutCanvas(preserveOffset: true)
     }
 
+    func textView(
+        _ textView: UITextView,
+        shouldChangeTextIn range: NSRange,
+        replacementText text: String
+    ) -> Bool {
+        ButtonClickFeedback.playIfEnabled()
+        return true
+    }
+
     func textViewDidBeginEditing(_ textView: UITextView) {
         onFocusChange?(true)
     }
@@ -1038,6 +1051,7 @@ private struct BackButton: View {
 
     var body: some View {
         Button("main") {
+            ButtonClickFeedback.playIfEnabled()
             action()
             dismiss()
         }

@@ -110,6 +110,8 @@ struct MainScreen: View {
                                 return
                             }
 
+                            ButtonClickFeedback.playIfEnabled()
+
                             guard isBLESendEnabled else {
                                 return
                             }
@@ -123,7 +125,6 @@ struct MainScreen: View {
                                 return
                             }
 
-                            ButtonClickFeedback.playIfEnabled()
                             logMainButtonPress(entry)
 
                             for sendText in entry.sendTexts {
@@ -280,6 +281,7 @@ struct MainScreen: View {
                             .clipShape(.rect(cornerRadius: 12))
                             .contentShape(.rect)
                     }
+                    .simultaneousGesture(TapGesture().onEnded { ButtonClickFeedback.playIfEnabled() })
                     .disabled(isGridEditModeEnabled || editingSlotIndex != nil)
                     .opacity(isGridEditModeEnabled || editingSlotIndex != nil ? 0.45 : 1)
                 }
@@ -1273,7 +1275,17 @@ private struct SlotEditorTextField: UIViewRepresentable {
             text = textField.text ?? ""
         }
 
+        func textField(
+            _ textField: UITextField,
+            shouldChangeCharactersIn range: NSRange,
+            replacementString string: String
+        ) -> Bool {
+            ButtonClickFeedback.playIfEnabled()
+            return true
+        }
+
         func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+            ButtonClickFeedback.playIfEnabled()
             onSubmit()
             return false
         }
