@@ -123,6 +123,7 @@ struct MainScreen: View {
                                 return
                             }
 
+                            ButtonClickFeedback.playIfEnabled()
                             logMainButtonPress(entry)
 
                             for sendText in entry.sendTexts {
@@ -208,6 +209,7 @@ struct MainScreen: View {
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
                 Button("Keyboard") {
+                    ButtonClickFeedback.playIfEnabled()
                     openKeyboardScreen()
                 }
                 .font(.headline)
@@ -234,6 +236,7 @@ struct MainScreen: View {
             ToolbarItem(placement: .topBarTrailing) {
                 HStack(spacing: 12) {
                     Button {
+                        ButtonClickFeedback.playIfEnabled()
                         isGridEditModeEnabled.toggle()
                     } label: {
                         Text(isGridEditModeEnabled ? "done" : "edit")
@@ -337,9 +340,10 @@ struct MainScreen: View {
 
     private var documentTitle: some View {
         HStack(spacing: 20) {
-            Button {
-                selectPreviousDocument()
-            } label: {
+                Button {
+                    ButtonClickFeedback.playIfEnabled()
+                    selectPreviousDocument()
+                } label: {
                 Image(systemName: "triangle.fill")
                     .font(.system(size: 20))
                     .rotationEffect(.degrees(-90))
@@ -361,10 +365,11 @@ struct MainScreen: View {
                         .focused($isDocumentNameFieldFocused)
                         .onSubmit(commitDocumentRename)
                 } else {
-                    Button {
-                        documentNameDraft = selectedDocumentDisplayName
-                        isEditingDocumentName = true
-                    } label: {
+                Button {
+                    ButtonClickFeedback.playIfEnabled()
+                    documentNameDraft = selectedDocumentDisplayName
+                    isEditingDocumentName = true
+                } label: {
                         Text(selectedDocumentDisplayName)
                             .font(.title2.weight(.semibold))
                             .foregroundStyle(.primary)
@@ -375,9 +380,10 @@ struct MainScreen: View {
             }
             .frame(maxWidth: .infinity)
 
-            Button {
-                selectNextDocument()
-            } label: {
+                Button {
+                    ButtonClickFeedback.playIfEnabled()
+                    selectNextDocument()
+                } label: {
                 Image(systemName: "triangle.fill")
                     .font(.system(size: 20))
                     .rotationEffect(.degrees(90))
@@ -395,6 +401,7 @@ struct MainScreen: View {
         HStack {
             HStack(spacing: 12) {
                 Button {
+                    ButtonClickFeedback.playIfEnabled()
                     decreaseVisibleBoxCount()
                 } label: {
                     Image(systemName: "triangle.fill")
@@ -412,6 +419,7 @@ struct MainScreen: View {
                     .frame(minWidth: 32)
 
                 Button {
+                    ButtonClickFeedback.playIfEnabled()
                     increaseVisibleBoxCount()
                 } label: {
                     Image(systemName: "triangle.fill")
@@ -426,6 +434,7 @@ struct MainScreen: View {
 
             HStack(spacing: 12) {
                 Button {
+                    ButtonClickFeedback.playIfEnabled()
                     decreaseBoxFontSize()
                 } label: {
                     Image(systemName: "triangle.fill")
@@ -443,6 +452,7 @@ struct MainScreen: View {
                     .frame(minWidth: 32)
 
                 Button {
+                    ButtonClickFeedback.playIfEnabled()
                     increaseBoxFontSize()
                 } label: {
                     Image(systemName: "triangle.fill")
@@ -562,6 +572,7 @@ struct MainScreen: View {
             VStack(spacing: slotEditorButtonSpacing) {
                 HStack(spacing: slotEditorButtonSpacing) {
                     Button("cancel") {
+                        ButtonClickFeedback.playIfEnabled()
                         cancelSlotEditing()
                     }
                     .buttonStyle(.plain)
@@ -583,6 +594,7 @@ struct MainScreen: View {
                     .focused($isSlotEditorFocused)
 
                     Button {
+                        ButtonClickFeedback.playIfEnabled()
                         editingSlotText = ""
                         isSlotEditorFocused = true
                     } label: {
@@ -596,6 +608,7 @@ struct MainScreen: View {
                     .buttonStyle(.plain)
 
                     Button("test") {
+                        ButtonClickFeedback.playIfEnabled()
                         guard ble.isConnected else {
                             print("Bluetooth not connected.")
                             return
@@ -616,6 +629,7 @@ struct MainScreen: View {
                     .clipShape(.rect(cornerRadius: 12))
 
                     Button("save") {
+                        ButtonClickFeedback.playIfEnabled()
                         commitSlotEditing()
                     }
                     .buttonStyle(.plain)
@@ -685,6 +699,7 @@ struct MainScreen: View {
 
     private func slotEditorInsertButton(_ text: String) -> some View {
         Button(text) {
+            ButtonClickFeedback.playIfEnabled()
             editingSlotText.append(text)
             isSlotEditorFocused = true
         }
@@ -701,6 +716,7 @@ struct MainScreen: View {
 
     private func slotEditorInsertButton(systemImage: String, rotationDegrees: Double, insertedText: String) -> some View {
         Button {
+            ButtonClickFeedback.playIfEnabled()
             editingSlotText.append(insertedText)
             isSlotEditorFocused = true
         } label: {
@@ -721,6 +737,7 @@ struct MainScreen: View {
 
     private func slotEditorBackspaceButton() -> some View {
         Button {
+            ButtonClickFeedback.playIfEnabled()
             guard !editingSlotText.isEmpty else {
                 isSlotEditorFocused = true
                 return

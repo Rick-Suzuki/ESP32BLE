@@ -1,8 +1,20 @@
 
 import SwiftUI
+import AudioToolbox
 
 private let maxFunctionKeyCount = 100
 private let defaultNamedFunctionKeyCount = 20
+
+enum ButtonClickFeedback {
+    static let preferenceKey = "isButtonClickEnabled"
+    private static let soundID: SystemSoundID = 1104
+
+    static func playIfEnabled() {
+        let isEnabled = UserDefaults.standard.object(forKey: preferenceKey) as? Bool ?? true
+        guard isEnabled else { return }
+        AudioServicesPlaySystemSound(soundID)
+    }
+}
 
 struct FunctionKeyEntry {
     let rawLine: String

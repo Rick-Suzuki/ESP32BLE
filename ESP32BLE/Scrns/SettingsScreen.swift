@@ -31,7 +31,7 @@ struct SettingsScreen: View {
     @State private var savedDocumentEditorText = ""
     @State private var imageNameSliderValue = 0.5
     @State private var opacitySliderValue = 0.5
-    @State private var isButtonClickEnabled = true
+    @AppStorage(ButtonClickFeedback.preferenceKey) private var isButtonClickEnabled = true
     @FocusState private var focusedField: SettingsFocusField?
 
     var body: some View {
@@ -59,6 +59,7 @@ struct SettingsScreen: View {
             }
             ToolbarItem(placement: .topBarTrailing) {
                 Button("new") {
+                    ButtonClickFeedback.playIfEnabled()
                     createNewDocument()
                 }
                 .font(.headline)
@@ -117,6 +118,7 @@ struct SettingsScreen: View {
         }
         .overlay(alignment: .bottomTrailing) {
             Button("undo") {
+                ButtonClickFeedback.playIfEnabled()
                 documentEditorText = savedDocumentEditorText
             }
             .buttonStyle(.plain)
@@ -144,6 +146,7 @@ struct SettingsScreen: View {
                         .font(.headline)
 
                     Button("Disconnect") {
+                        ButtonClickFeedback.playIfEnabled()
                         ble.disconnect()
                     }
                     .buttonStyle(.bordered)
@@ -157,6 +160,7 @@ struct SettingsScreen: View {
 
                 ForEach(ble.discoveredDevices) { device in
                     Button {
+                        ButtonClickFeedback.playIfEnabled()
                         ble.selectedPeripheralID = device.id
                         if !ble.isConnected {
                             ble.connectToSelectedDevice()
@@ -207,6 +211,7 @@ struct SettingsScreen: View {
     private var sleepWakeButton: some View {
         Button(ble.isConnected && keepScreenAwake ? "wake" : "sleep") {
             guard ble.isConnected else { return }
+            ButtonClickFeedback.playIfEnabled()
             keepScreenAwake.toggle()
         }
         .buttonStyle(.plain)
@@ -235,6 +240,7 @@ struct SettingsScreen: View {
 
     private var buttonClickToggleButton: some View {
         Button(isButtonClickEnabled ? "btn click" : "btn off") {
+            ButtonClickFeedback.playIfEnabled()
             isButtonClickEnabled.toggle()
         }
         .buttonStyle(.plain)
@@ -250,6 +256,7 @@ struct SettingsScreen: View {
 
     private func settingsBluePlaceholderButton(_ title: String) -> some View {
         Button(title) { }
+            .simultaneousGesture(TapGesture().onEnded { ButtonClickFeedback.playIfEnabled() })
             .buttonStyle(.plain)
             .font(.headline)
             .foregroundStyle(.white)
@@ -313,6 +320,7 @@ struct SettingsScreen: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 12) {
                 Button("del") {
+                    ButtonClickFeedback.playIfEnabled()
                     bleTextToSend = ""
                 }
                 .buttonStyle(.bordered)
@@ -327,16 +335,19 @@ struct SettingsScreen: View {
                     .onSubmit(sendEnteredText)
 
                 Button("tab") {
+                    ButtonClickFeedback.playIfEnabled()
                     insertTextAtCursor("\\n")
                 }
                 .buttonStyle(.bordered)
 
                 Button("return") {
+                    ButtonClickFeedback.playIfEnabled()
                     insertTextAtCursor("\\n")
                 }
                 .buttonStyle(.bordered)
 
                 Button("Send") {
+                    ButtonClickFeedback.playIfEnabled()
                     sendEnteredText()
                 }
                 .buttonStyle(.borderedProminent)
@@ -377,6 +388,7 @@ struct SettingsScreen: View {
                     .font(.headline)
 
                 Button("set & test") {
+                    ButtonClickFeedback.playIfEnabled()
                     sendKeyboardTimingCommand()
                     ble.sendString("Hello World! Let's go. (test) 1!2\"3#4$5%6&7'8(9)")
                 }
@@ -534,6 +546,7 @@ struct SettingsScreen: View {
         let isSelected = selectedDocumentName == fileURL.lastPathComponent
 
         return Button {
+            ButtonClickFeedback.playIfEnabled()
             loadFunctionKeys(fileURL)
         } label: {
             HStack {

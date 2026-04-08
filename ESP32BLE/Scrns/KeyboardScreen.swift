@@ -71,6 +71,7 @@ struct KeyboardScreen: View {
                 .frame(height: 34)
 
                 Button("x") {
+                    ButtonClickFeedback.playIfEnabled()
                     clearTypingArea()
                 }
                 .buttonStyle(.plain)
@@ -140,6 +141,7 @@ struct KeyboardScreen: View {
 
     private func topNavButton(title: String, background: Color = Color.gray.opacity(0.45), action: @escaping () -> Void) -> some View {
         Button(title) {
+            ButtonClickFeedback.playIfEnabled()
             action()
         }
         .buttonStyle(.plain)
@@ -579,7 +581,10 @@ struct KeyboardScreen: View {
         isEnabled: Bool = true,
         action: @escaping () -> Void
     ) -> some View {
-        Button(action: action) {
+        Button {
+            ButtonClickFeedback.playIfEnabled()
+            action()
+        } label: {
             Group {
                 if let systemImageName {
                     Image(systemName: systemImageName)
@@ -605,6 +610,7 @@ struct KeyboardScreen: View {
                 return
             }
 
+            ButtonClickFeedback.playIfEnabled()
             isOn.wrappedValue.toggle()
         }
         .buttonStyle(.plain)
@@ -1021,7 +1027,10 @@ private struct KeyboardGridCellView: View {
     let action: () -> Void
 
     var body: some View {
-        Button(action: action) {
+        Button {
+            ButtonClickFeedback.playIfEnabled()
+            action()
+        } label: {
             Group {
                 if let systemImageName = cell.systemImageName {
                     Image(systemName: systemImageName)
