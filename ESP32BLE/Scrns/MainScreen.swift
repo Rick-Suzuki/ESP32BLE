@@ -221,14 +221,14 @@ struct MainScreen: View {
                 }
                 .clipShape(.rect(cornerRadius: 12))
                 .contentShape(.rect)
-                .disabled(editingSlotIndex != nil)
-                .opacity(editingSlotIndex == nil ? 1 : 0.45)
+                .disabled(isGridEditModeEnabled || editingSlotIndex != nil)
+                .opacity(isGridEditModeEnabled || editingSlotIndex != nil ? 0.45 : 1)
             }
 
             ToolbarItem(placement: .principal) {
                 documentTitle
-                    .opacity(editingSlotIndex == nil ? 1 : 0.45)
-                    .allowsHitTesting(editingSlotIndex == nil)
+                    .opacity(isGridEditModeEnabled || editingSlotIndex != nil ? 0.45 : 1)
+                    .allowsHitTesting(!(isGridEditModeEnabled || editingSlotIndex != nil))
             }
 
             ToolbarItem(placement: .topBarTrailing) {
@@ -277,8 +277,8 @@ struct MainScreen: View {
                             .clipShape(.rect(cornerRadius: 12))
                             .contentShape(.rect)
                     }
-                    .disabled(editingSlotIndex != nil)
-                    .opacity(editingSlotIndex == nil ? 1 : 0.45)
+                    .disabled(isGridEditModeEnabled || editingSlotIndex != nil)
+                    .opacity(isGridEditModeEnabled || editingSlotIndex != nil ? 0.45 : 1)
                 }
             }
         }
@@ -559,84 +559,90 @@ struct MainScreen: View {
 
     private var slotEditorSection: some View {
         GeometryReader { geometry in
-            HStack(spacing: slotEditorButtonSpacing) {
-                slotEditorInsertButton("ctl:")
-                slotEditorInsertButton("sh:")
-                slotEditorInsertButton("opt:")
-                slotEditorInsertButton("cmd:")
-
-                Button("cancel") {
-                    cancelSlotEditing()
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle(.white)
-                .padding(.horizontal, 14)
-                .frame(minWidth: 101)
-                .frame(minHeight: 44)
-                .background(Color.gray.opacity(0.45))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.gray.opacity(0.5), lineWidth: 1.5)
-                }
-                .clipShape(.rect(cornerRadius: 12))
-
-                SlotEditorTextField(text: $editingSlotText, placeholder: "edit button text") {
-                    commitSlotEditing()
-                }
-                .frame(width: geometry.size.width.isFinite ? max(0, geometry.size.width * 0.28) : 0, height: 36)
-                .focused($isSlotEditorFocused)
-
-                Button {
-                    editingSlotText = ""
-                    isSlotEditorFocused = true
-                } label: {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(.white)
-                        .frame(width: 21, height: 30)
-                        .background(Color.red)
-                        .clipShape(.rect(cornerRadius: 8))
-                }
-                .buttonStyle(.plain)
-
-                Button("test") {
-                    guard ble.isConnected else {
-                        print("Bluetooth not connected.")
-                        return
+            VStack(spacing: slotEditorButtonSpacing) {
+                HStack(spacing: slotEditorButtonSpacing) {
+                    Button("cancel") {
+                        cancelSlotEditing()
                     }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 14)
+                    .frame(minWidth: 101)
+                    .frame(minHeight: 44)
+                    .background(Color.gray.opacity(0.45))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color.gray.opacity(0.5), lineWidth: 1.5)
+                    }
+                    .clipShape(.rect(cornerRadius: 12))
 
-                    ble.sendString(editingSlotText)
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle(.white)
-                .padding(.horizontal, 14)
-                .frame(minWidth: 71)
-                .frame(minHeight: 44)
-                .background(Color(red: 0.0, green: 0.5, blue: 0.0))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color(red: 0.0, green: 0.5, blue: 0.0), lineWidth: 1.5)
-                }
-                .clipShape(.rect(cornerRadius: 12))
+                    SlotEditorTextField(text: $editingSlotText, placeholder: "edit button text") {
+                        commitSlotEditing()
+                    }
+                    .frame(width: geometry.size.width.isFinite ? max(0, geometry.size.width * 0.36) : 0, height: 36)
+                    .focused($isSlotEditorFocused)
 
-                Button("save") {
-                    commitSlotEditing()
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle(.white)
-                .padding(.horizontal, 14)
-                .frame(minWidth: 71)
-                .frame(minHeight: 44)
-                .background(Color.blue)
-                .overlay {
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.blue, lineWidth: 1.5)
-                }
-                .clipShape(.rect(cornerRadius: 12))
+                    Button {
+                        editingSlotText = ""
+                        isSlotEditorFocused = true
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(.white)
+                            .frame(width: 30, height: 30)
+                            .background(Color.red)
+                            .clipShape(Circle())
+                    }
+                    .buttonStyle(.plain)
 
-                slotEditorInsertButton("F1::")
-                slotEditorInsertButton(":")
-                slotEditorInsertButton("::")
+                    Button("test") {
+                        guard ble.isConnected else {
+                            print("Bluetooth not connected.")
+                            return
+                        }
+
+                        ble.sendString(editingSlotText)
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 14)
+                    .frame(minWidth: 71)
+                    .frame(minHeight: 44)
+                    .background(Color(red: 0.0, green: 0.5, blue: 0.0))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color(red: 0.0, green: 0.5, blue: 0.0), lineWidth: 1.5)
+                    }
+                    .clipShape(.rect(cornerRadius: 12))
+
+                    Button("save") {
+                        commitSlotEditing()
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 14)
+                    .frame(minWidth: 71)
+                    .frame(minHeight: 44)
+                    .background(Color.blue)
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color.blue, lineWidth: 1.5)
+                    }
+                    .clipShape(.rect(cornerRadius: 12))
+                }
+
+                HStack(spacing: slotEditorButtonSpacing) {
+                    slotEditorInsertButton("ctl:")
+                    slotEditorInsertButton("sh:")
+                    slotEditorInsertButton("opt:")
+                    slotEditorInsertButton("cmd:")
+                    slotEditorInsertButton("F")
+                    slotEditorInsertButton("F1::")
+                    slotEditorInsertButton(":")
+                    slotEditorInsertButton("::")
+                    slotEditorInsertButton("kp")
+                    slotEditorInsertButton("_")
+                }
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 4)
@@ -659,10 +665,10 @@ struct MainScreen: View {
         .buttonStyle(.plain)
         .foregroundStyle(.white)
         .frame(width: slotEditorHelperButtonWidth, height: 44)
-        .background(Color(red: 0.35, green: 0.35, blue: 0.0))
+        .background(Color.black)
         .overlay {
             RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.gray.opacity(0.5), lineWidth: 1.5)
+                .stroke(Color.white, lineWidth: 2)
         }
         .clipShape(.rect(cornerRadius: 12))
     }
@@ -1121,8 +1127,13 @@ private struct SlotEditorTextField: UIViewRepresentable {
     func makeUIView(context: Context) -> UITextField {
         let textField = UITextField(frame: .zero)
         textField.borderStyle = .none
-        textField.returnKeyType = .done
+        textField.returnKeyType = .default
         textField.autocapitalizationType = .none
+        textField.autocorrectionType = .no
+        textField.spellCheckingType = .no
+        textField.smartQuotesType = .no
+        textField.smartDashesType = .no
+        textField.smartInsertDeleteType = .no
         textField.delegate = context.coordinator
         textField.placeholder = placeholder
         textField.backgroundColor = UIColor.black.withAlphaComponent(0.7)
