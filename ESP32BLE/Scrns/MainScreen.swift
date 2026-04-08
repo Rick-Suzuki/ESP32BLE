@@ -680,7 +680,7 @@ struct MainScreen: View {
             .clipShape(.rect(cornerRadius: 12))
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         }
-        .frame(height: 52)
+        .frame(height: 192)
     }
 
     private func slotEditorInsertButton(_ text: String) -> some View {

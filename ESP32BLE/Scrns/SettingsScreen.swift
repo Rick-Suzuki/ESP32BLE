@@ -28,6 +28,8 @@ struct SettingsScreen: View {
     @State private var isDocumentEditorFocused = false
     @State private var loadedDocumentName = ""
     @State private var savedDocumentEditorText = ""
+    @State private var imageNameSliderValue = 0.5
+    @State private var opacitySliderValue = 0.5
     @FocusState private var focusedField: SettingsFocusField?
 
     var body: some View {
@@ -127,60 +129,93 @@ struct SettingsScreen: View {
     }
 
     private var availableDevicesContent: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 12) {
-                Text("ESP32 Devices:\(ble.discoveredDevices.count), \(simplifiedConnectionStatus)")
-                    .font(.headline)
+        HStack(alignment: .bottom, spacing: 32) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 12) {
+                    Text("ESP32 Devices:\(ble.discoveredDevices.count), \(simplifiedConnectionStatus)")
+                        .font(.headline)
 
-                Button("Disconnect") {
-                    ble.disconnect()
-                }
-                .buttonStyle(.bordered)
-                .disabled(!ble.isConnected)
-            }
-
-            if ble.discoveredDevices.isEmpty {
-                Text("No ESP32 devices found yet")
-                    .foregroundStyle(.secondary)
-            }
-
-            ForEach(ble.discoveredDevices) { device in
-                Button {
-                    ble.selectedPeripheralID = device.id
-                    if !ble.isConnected {
-                        ble.connectToSelectedDevice()
+                    Button("Disconnect") {
+                        ble.disconnect()
                     }
-                } label: {
-                    HStack {
-						VStack(alignment: .leading, spacing: 4) {
-							VStack {
-								Text(device.displayName)
-									.font(.body)
-								
-						//		Text("RSSI:\(device.rssi), UUID:\(device.id.uuidString)")
-						//			.font(.caption)
-						//			.foregroundStyle(.secondary)
-							}
-						}
-                        Spacer()
+                    .buttonStyle(.bordered)
+                    .disabled(!ble.isConnected)
+                }
 
-                        if ble.selectedPeripheralID == device.id {
-                            Image(systemName: "checkmark.circle.fill")
+                if ble.discoveredDevices.isEmpty {
+                    Text("No ESP32 devices found yet")
+                        .foregroundStyle(.secondary)
+                }
+
+                ForEach(ble.discoveredDevices) { device in
+                    Button {
+                        ble.selectedPeripheralID = device.id
+                        if !ble.isConnected {
+                            ble.connectToSelectedDevice()
                         }
-                    }
-                    .padding(2)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(ble.selectedPeripheralID == device.id ? .blue.opacity(0.15) : .clear)
-                    )
-                }
-                .buttonStyle(.plain)
-                .disabled(ble.isConnected && ble.selectedPeripheralID != device.id)
-                .opacity(ble.isConnected && ble.selectedPeripheralID != device.id ? 0.45 : 1)
-            }
+                    } label: {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 4) {
+                                VStack {
+                                    Text(device.displayName)
+                                        .font(.body)
+                                }
+                            }
+                            Spacer()
 
+                            if ble.selectedPeripheralID == device.id {
+                                Image(systemName: "checkmark.circle.fill")
+                            }
+                        }
+                        .padding(2)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(ble.selectedPeripheralID == device.id ? .blue.opacity(0.15) : .clear)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(ble.isConnected && ble.selectedPeripheralID != device.id)
+                    .opacity(ble.isConnected && ble.selectedPeripheralID != device.id ? 0.45 : 1)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .topLeading)
+
+            VStack(spacing: 12) {
+                settingsPlaceholderSlider(title: "image name", value: $imageNameSliderValue)
+                settingsPlaceholderSlider(title: "opacity: 0.5", value: $opacitySliderValue)
+
+                HStack(spacing: 18) {
+                    settingsBluePlaceholderButton("sleep")
+                    settingsBluePlaceholderButton("btn clicks")
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
+    }
+
+    private func settingsBluePlaceholderButton(_ title: String) -> some View {
+        Button(title) { }
+            .buttonStyle(.plain)
+            .font(.headline)
+            .foregroundStyle(.white)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 12)
+            .background(Color.blue)
+            .clipShape(.rect(cornerRadius: 18))
+    }
+
+    private func settingsPlaceholderSlider(title: String, value: Binding<Double>) -> some View {
+        VStack(spacing: 8) {
+            Text(title)
+                .font(.headline)
+                .foregroundStyle(.white)
+
+            Slider(value: value, in: 0...1)
+                .tint(.white)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var simplifiedConnectionStatus: String {
