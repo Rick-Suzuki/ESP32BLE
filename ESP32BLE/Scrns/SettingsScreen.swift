@@ -10,6 +10,7 @@ struct SettingsScreen: View {
     @AppStorage("sendControlABeforeText") private var sendControlABeforeText = false
     @AppStorage("keyboardTimingOnMs") private var keyboardTimingOnMs = 0.0
     @AppStorage("keyboardTimingOffMs") private var keyboardTimingOffMs = 0.0
+    @AppStorage("keepScreenAwake") private var keepScreenAwake = false
     private let documentTableWidth: CGFloat = 166
     private let timingLabelWidth = 90.0
     @ObservedObject var ble: BLEKeyboardManager
@@ -87,6 +88,12 @@ struct SettingsScreen: View {
         .onChange(of: selectedDocumentName) {
             saveCurrentDocumentText()
             loadSelectedDocumentText()
+        }
+        .onAppear {
+            UIApplication.shared.isIdleTimerDisabled = keepScreenAwake
+        }
+        .onChange(of: keepScreenAwake) {
+            UIApplication.shared.isIdleTimerDisabled = keepScreenAwake
         }
     }
 
@@ -187,13 +194,42 @@ struct SettingsScreen: View {
                 settingsPlaceholderSlider(title: "opacity: 0.5", value: $opacitySliderValue)
 
                 HStack(spacing: 18) {
-                    settingsBluePlaceholderButton("sleep")
+                    sleepWakeButton
                     settingsBluePlaceholderButton("btn click")
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
+    }
+
+    private var sleepWakeButton: some View {
+        Button(ble.isConnected && keepScreenAwake ? "wake" : "sleep") {
+            guard ble.isConnected else { return }
+            keepScreenAwake.toggle()
+        }
+        .buttonStyle(.plain)
+        .font(.headline)
+        .foregroundStyle(.white)
+        .lineLimit(1)
+        .minimumScaleFactor(0.7)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background(sleepWakeButtonBackgroundColor)
+        .clipShape(.rect(cornerRadius: 18))
+        .disabled(!ble.isConnected)
+    }
+
+    private var sleepWakeButtonBackgroundColor: Color {
+        guard ble.isConnected else {
+            return Color.gray.opacity(0.5)
+        }
+
+        if keepScreenAwake {
+            return Color(red: 0.45, green: 0.0, blue: 0.0)
+        }
+
+        return Color(red: 0.0, green: 0.25, blue: 0.55)
     }
 
     private func settingsBluePlaceholderButton(_ title: String) -> some View {
