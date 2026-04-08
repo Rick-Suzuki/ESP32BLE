@@ -634,14 +634,14 @@ struct MainScreen: View {
                 HStack(spacing: slotEditorButtonSpacing) {
                     slotEditorInsertButton("ctl:")
                     slotEditorInsertButton("sh:")
-                    slotEditorInsertButton("opt:")
-                    slotEditorInsertButton("cmd:")
+                    slotEditorInsertButton("op:")
+                    slotEditorInsertButton("cm:")
                     slotEditorInsertButton("F")
                     slotEditorInsertButton("F1::")
                     slotEditorInsertButton(":")
                     slotEditorInsertButton("::")
                     slotEditorInsertButton("kp")
-                    slotEditorInsertButton("_")
+                    slotEditorBackspaceButton()
                 }
 
                 HStack(spacing: slotEditorButtonSpacing) {
@@ -663,11 +663,11 @@ struct MainScreen: View {
                     slotEditorInsertButton(systemImage: "triangle.fill", rotationDegrees: -90, insertedText: "LEFT::")
                     slotEditorInsertButton(systemImage: "triangle.fill", rotationDegrees: 90, insertedText: "RIGHT::")
                     slotEditorInsertButton("+")
-                    slotEditorInsertButton("-")
+                    slotEditorInsertButton("_")
                     slotEditorInsertButton("/")
                     slotEditorInsertButton("*")
-                    slotEditorInsertButton("ESC::")
-                    slotEditorInsertButton("RET::")
+                    slotEditorInsertButton("ESC:")
+                    slotEditorInsertButton("RET:")
                 }
             }
             .padding(.horizontal, 12)
@@ -712,6 +712,30 @@ struct MainScreen: View {
         }
         .buttonStyle(.plain)
         .background(Color.black)
+        .overlay {
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.white, lineWidth: 2)
+        }
+        .clipShape(.rect(cornerRadius: 12))
+    }
+
+    private func slotEditorBackspaceButton() -> some View {
+        Button {
+            guard !editingSlotText.isEmpty else {
+                isSlotEditorFocused = true
+                return
+            }
+
+            editingSlotText.removeLast()
+            isSlotEditorFocused = true
+        } label: {
+            Image(systemName: "delete.left")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(width: slotEditorHelperButtonWidth, height: 44)
+        }
+        .buttonStyle(.plain)
+        .background(Color(red: 0.0, green: 0.2, blue: 0.45))
         .overlay {
             RoundedRectangle(cornerRadius: 12)
                 .stroke(Color.white, lineWidth: 2)
