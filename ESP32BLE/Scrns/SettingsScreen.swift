@@ -240,8 +240,12 @@ struct SettingsScreen: View {
 
     private var buttonClickToggleButton: some View {
         Button(isButtonClickEnabled ? "btn click" : "btn off") {
-            ButtonClickFeedback.playIfEnabled()
-            isButtonClickEnabled.toggle()
+            let willEnableButtonClicks = !isButtonClickEnabled
+            isButtonClickEnabled = willEnableButtonClicks
+
+            if willEnableButtonClicks {
+                ButtonClickFeedback.playIfEnabled()
+            }
         }
         .buttonStyle(.plain)
         .font(.headline)
