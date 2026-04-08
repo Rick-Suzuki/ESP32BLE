@@ -31,6 +31,7 @@ struct SettingsScreen: View {
     @State private var savedDocumentEditorText = ""
     @State private var imageNameSliderValue = 0.5
     @State private var opacitySliderValue = 0.5
+    @State private var isButtonClickEnabled = true
     @FocusState private var focusedField: SettingsFocusField?
 
     var body: some View {
@@ -64,7 +65,7 @@ struct SettingsScreen: View {
                 .foregroundStyle(.white)
                 .padding(.horizontal, 14)
                 .frame(minWidth: 92, minHeight: 44)
-                .background(Color.green.opacity(0.7))
+                .background(Color.green.opacity(0.5))
                 .overlay {
                     RoundedRectangle(cornerRadius: 12)
                         .stroke(Color.gray.opacity(0.5), lineWidth: 1.5)
@@ -195,7 +196,7 @@ struct SettingsScreen: View {
 
                 HStack(spacing: 18) {
                     sleepWakeButton
-                    settingsBluePlaceholderButton("btn click")
+                    buttonClickToggleButton
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -230,6 +231,21 @@ struct SettingsScreen: View {
         }
 
         return Color(red: 0.0, green: 0.25, blue: 0.55)
+    }
+
+    private var buttonClickToggleButton: some View {
+        Button(isButtonClickEnabled ? "btn click" : "btn off") {
+            isButtonClickEnabled.toggle()
+        }
+        .buttonStyle(.plain)
+        .font(.headline)
+        .foregroundStyle(.white)
+        .lineLimit(1)
+        .minimumScaleFactor(0.7)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background(isButtonClickEnabled ? Color.blue.opacity(0.5) : Color.gray.opacity(0.5))
+        .clipShape(.rect(cornerRadius: 18))
     }
 
     private func settingsBluePlaceholderButton(_ title: String) -> some View {
@@ -365,7 +381,7 @@ struct SettingsScreen: View {
                     ble.sendString("Hello World! Let's go. (test) 1!2\"3#4$5%6&7'8(9)")
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(.red)
+                .tint(Color.red.opacity(0.5))
             }
             .frame(maxWidth: .infinity, alignment: .center)
 
