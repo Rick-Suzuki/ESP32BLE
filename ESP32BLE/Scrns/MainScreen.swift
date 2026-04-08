@@ -643,6 +643,32 @@ struct MainScreen: View {
                     slotEditorInsertButton("kp")
                     slotEditorInsertButton("_")
                 }
+
+                HStack(spacing: slotEditorButtonSpacing) {
+                    slotEditorInsertButton("0")
+                    slotEditorInsertButton("1")
+                    slotEditorInsertButton("2")
+                    slotEditorInsertButton("3")
+                    slotEditorInsertButton("4")
+                    slotEditorInsertButton("5")
+                    slotEditorInsertButton("6")
+                    slotEditorInsertButton("7")
+                    slotEditorInsertButton("8")
+                    slotEditorInsertButton("9")
+                }
+
+                HStack(spacing: slotEditorButtonSpacing) {
+                    slotEditorInsertButton(systemImage: "triangle.fill", rotationDegrees: 0, insertedText: "UP::")
+                    slotEditorInsertButton(systemImage: "triangle.fill", rotationDegrees: 180, insertedText: "DOWN::")
+                    slotEditorInsertButton(systemImage: "triangle.fill", rotationDegrees: -90, insertedText: "LEFT::")
+                    slotEditorInsertButton(systemImage: "triangle.fill", rotationDegrees: 90, insertedText: "RIGHT::")
+                    slotEditorInsertButton("+")
+                    slotEditorInsertButton("-")
+                    slotEditorInsertButton("/")
+                    slotEditorInsertButton("*")
+                    slotEditorInsertButton("ESC::")
+                    slotEditorInsertButton("RET::")
+                }
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 4)
@@ -665,6 +691,26 @@ struct MainScreen: View {
         .buttonStyle(.plain)
         .foregroundStyle(.white)
         .frame(width: slotEditorHelperButtonWidth, height: 44)
+        .background(Color.black)
+        .overlay {
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.white, lineWidth: 2)
+        }
+        .clipShape(.rect(cornerRadius: 12))
+    }
+
+    private func slotEditorInsertButton(systemImage: String, rotationDegrees: Double, insertedText: String) -> some View {
+        Button {
+            editingSlotText.append(insertedText)
+            isSlotEditorFocused = true
+        } label: {
+            Image(systemName: systemImage)
+                .font(.system(size: 16, weight: .semibold))
+                .rotationEffect(.degrees(rotationDegrees))
+                .foregroundStyle(.white)
+                .frame(width: slotEditorHelperButtonWidth, height: 44)
+        }
+        .buttonStyle(.plain)
         .background(Color.black)
         .overlay {
             RoundedRectangle(cornerRadius: 12)
