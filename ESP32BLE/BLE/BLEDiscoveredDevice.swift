@@ -14,6 +14,7 @@ struct BLEDiscoveredDevice: Identifiable, Equatable {
 	let name: String
 	let rssi: Int
 	var deviceID: String?
+	var lastSeenAt: Date
 	
 	var displayName: String {
 		let baseName = name.isEmpty ? "Unnamed ESP32" : name

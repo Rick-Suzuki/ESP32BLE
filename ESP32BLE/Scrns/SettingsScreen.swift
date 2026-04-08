@@ -10,7 +10,7 @@ struct SettingsScreen: View {
     @AppStorage("sendControlABeforeText") private var sendControlABeforeText = false
     @AppStorage("keyboardTimingOnMs") private var keyboardTimingOnMs = 0.0
     @AppStorage("keyboardTimingOffMs") private var keyboardTimingOffMs = 0.0
-    private let documentTableWidth: CGFloat = 208
+    private let documentTableWidth: CGFloat = 166
     private let timingLabelWidth = 90.0
     @ObservedObject var ble: BLEKeyboardManager
     let documentFiles: [URL]
@@ -129,10 +129,10 @@ struct SettingsScreen: View {
     }
 
     private var availableDevicesContent: some View {
-        HStack(alignment: .bottom, spacing: 32) {
+        HStack(alignment: .top, spacing: 32) {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(spacing: 12) {
-                    Text("ESP32 Devices:\(ble.discoveredDevices.count), \(simplifiedConnectionStatus)")
+                    Text("ESP32")
                         .font(.headline)
 
                     Button("Disconnect") {
@@ -178,6 +178,7 @@ struct SettingsScreen: View {
                     .disabled(ble.isConnected && ble.selectedPeripheralID != device.id)
                     .opacity(ble.isConnected && ble.selectedPeripheralID != device.id ? 0.45 : 1)
                 }
+
             }
             .frame(maxWidth: .infinity, alignment: .topLeading)
 
@@ -187,7 +188,7 @@ struct SettingsScreen: View {
 
                 HStack(spacing: 18) {
                     settingsBluePlaceholderButton("sleep")
-                    settingsBluePlaceholderButton("btn clicks")
+                    settingsBluePlaceholderButton("btn click")
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -200,8 +201,10 @@ struct SettingsScreen: View {
             .buttonStyle(.plain)
             .font(.headline)
             .foregroundStyle(.white)
-            .padding(.horizontal, 20)
-            .padding(.vertical, 12)
+            .lineLimit(1)
+            .minimumScaleFactor(0.7)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
             .background(Color.blue)
             .clipShape(.rect(cornerRadius: 18))
     }
@@ -485,7 +488,8 @@ struct SettingsScreen: View {
                 Text(fileURL.lastPathComponent)
                     .fontWeight(isSelected ? .bold : .regular)
                     .foregroundStyle(isSelected ? Color.green : .white)
-                    .lineLimit(1)
+                    .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
 
                 Spacer()
             }

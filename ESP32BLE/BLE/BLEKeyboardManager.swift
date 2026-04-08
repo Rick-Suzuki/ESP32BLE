@@ -56,9 +56,12 @@ final class BLEKeyboardManager: NSObject, ObservableObject {
 	//
 	private var rxCharacteristic: CBCharacteristic?
 	private var idCharacteristic: CBCharacteristic?
-	private var outgoingLines: [QueuedBLELine] = []
-	private var sendQueueTask: Task<Void, Never>?
-	private let sendInterval: Duration = .milliseconds(25)
+		private var outgoingLines: [QueuedBLELine] = []
+		private var sendQueueTask: Task<Void, Never>?
+		private let sendInterval: Duration = .milliseconds(25)
+		private var staleDeviceCleanupTimer: Timer?
+		private let discoveredDeviceTimeout: TimeInterval = 8
+		private let staleDeviceCleanupInterval: TimeInterval = 2
 	
 	//
 	// Track peripherals that are temporarily connected just to read device ID.
@@ -78,20 +81,45 @@ final class BLEKeyboardManager: NSObject, ObservableObject {
 	//
 //	private let targetName = "PS5 Keyboard Bridge"
 	
-	override init() {
-		super.init()
+		override init() {
+			super.init()
 		
 		//
 		// Create the central manager.
 		// Delegate callbacks will tell us when Bluetooth is ready.
 		//
-		centralManager = CBCentralManager(delegate: self, queue: .main)
-	}
+			centralManager = CBCentralManager(delegate: self, queue: .main)
+			startStaleDeviceCleanupTimer()
+		}
 	
-	func clearDiscoveredDevices() {
-		discoveredDevices.removeAll()
-		selectedPeripheralID = nil
-	}
+		func clearDiscoveredDevices() {
+			discoveredDevices.removeAll()
+			selectedPeripheralID = nil
+		}
+
+		private func startStaleDeviceCleanupTimer() {
+			staleDeviceCleanupTimer?.invalidate()
+			staleDeviceCleanupTimer = Timer.scheduledTimer(withTimeInterval: staleDeviceCleanupInterval, repeats: true) { [weak self] _ in
+				self?.removeStaleDiscoveredDevices()
+			}
+		}
+
+		private func removeStaleDiscoveredDevices() {
+			let cutoffDate = Date().addingTimeInterval(-discoveredDeviceTimeout)
+			discoveredDevices.removeAll { device in
+				if device.id == esp32Peripheral?.identifier {
+					return false
+				}
+
+				return device.lastSeenAt < cutoffDate
+			}
+
+			if let selectedPeripheralID,
+			   !discoveredDevices.contains(where: { $0.id == selectedPeripheralID }),
+			   selectedPeripheralID != esp32Peripheral?.identifier {
+				self.selectedPeripheralID = nil
+			}
+		}
 	
 	//-------------------------------------------------------------------------
 	// MARK: - Public actions
@@ -109,7 +137,7 @@ final class BLEKeyboardManager: NSObject, ObservableObject {
 		
 		centralManager.scanForPeripherals(
 			withServices: [serviceUUID],
-			options: [CBCentralManagerScanOptionAllowDuplicatesKey: false]
+			options: [CBCentralManagerScanOptionAllowDuplicatesKey: true]
 		)
 	}
 	
@@ -136,7 +164,10 @@ final class BLEKeyboardManager: NSObject, ObservableObject {
 			sendQueueTask?.cancel()
 			sendQueueTask = nil
 			selectedPeripheralID = nil
-			guard let esp32Peripheral else { return }
+			guard let esp32Peripheral else {
+				startScan()
+				return
+			}
 			centralManager.cancelPeripheralConnection(esp32Peripheral)
 		}
 	
@@ -238,23 +269,34 @@ extension BLEKeyboardManager: CBCentralManagerDelegate {
 		didDiscover peripheral: CBPeripheral,
 		advertisementData: [String : Any],
 		rssi RSSI: NSNumber
-	) {
-		let name = peripheral.name ?? "Unknown ESP32"
-		let advertisedName = advertisementData[CBAdvertisementDataLocalNameKey] as? String ?? "nil"
+		) {
+			let name = peripheral.name ?? "Unknown ESP32"
+			let advertisedName = advertisementData[CBAdvertisementDataLocalNameKey] as? String ?? "nil"
+			let now = Date()
 		
 		print("** Found peripheral: \(name)")
 		print("** Found advertised local name: \(advertisedName)")
 		print("** Peripheral identifier: \(peripheral.identifier.uuidString)")
 		
-		if !discoveredDevices.contains(where: { $0.id == peripheral.identifier }) {
-			let item = BLEDiscoveredDevice(
-				id: peripheral.identifier,
-				peripheral: peripheral,
-				name: name,
-				rssi: RSSI.intValue,
-				deviceID: nil
-			)
-			discoveredDevices.append(item)
+			if let index = discoveredDevices.firstIndex(where: { $0.id == peripheral.identifier }) {
+				discoveredDevices[index] = BLEDiscoveredDevice(
+					id: peripheral.identifier,
+					peripheral: peripheral,
+					name: name,
+					rssi: RSSI.intValue,
+					deviceID: discoveredDevices[index].deviceID,
+					lastSeenAt: now
+				)
+			} else {
+				let item = BLEDiscoveredDevice(
+					id: peripheral.identifier,
+					peripheral: peripheral,
+					name: name,
+					rssi: RSSI.intValue,
+					deviceID: nil,
+					lastSeenAt: now
+				)
+				discoveredDevices.append(item)
 			
 				//
 				// Connect briefly to read its device ID.
@@ -279,8 +321,8 @@ extension BLEKeyboardManager: CBCentralManagerDelegate {
 		peripheral.discoverServices([serviceUUID])
 	}
 	
-	func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral, error: Error?) {
-		probePeripheralIDs.remove(peripheral.identifier)
+		func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral, error: Error?) {
+			probePeripheralIDs.remove(peripheral.identifier)
 		
 		if esp32Peripheral?.identifier == peripheral.identifier {
 			connectionText = "Disconnected"
@@ -289,23 +331,25 @@ extension BLEKeyboardManager: CBCentralManagerDelegate {
 			idCharacteristic = nil
 			connectedDeviceID = "Unknown"
 			esp32Peripheral = nil
-			outgoingLines.removeAll()
-			sendQueueTask?.cancel()
-			sendQueueTask = nil
+				outgoingLines.removeAll()
+				sendQueueTask?.cancel()
+				sendQueueTask = nil
+				startScan()
+			}
 		}
-	}
 	
-	func centralManager(_ central: CBCentralManager, didFailToConnect peripheral: CBPeripheral, error: Error?) {
-		probePeripheralIDs.remove(peripheral.identifier)
+		func centralManager(_ central: CBCentralManager, didFailToConnect peripheral: CBPeripheral, error: Error?) {
+			probePeripheralIDs.remove(peripheral.identifier)
 		
 		if esp32Peripheral?.identifier == peripheral.identifier {
-			connectionText = "Failed to connect"
-			isConnected = false
-			outgoingLines.removeAll()
-			sendQueueTask?.cancel()
-			sendQueueTask = nil
+				connectionText = "Failed to connect"
+				isConnected = false
+				outgoingLines.removeAll()
+				sendQueueTask?.cancel()
+				sendQueueTask = nil
+				startScan()
+			}
 		}
-	}
 }
 
 //-----------------------------------------------------------------------------
