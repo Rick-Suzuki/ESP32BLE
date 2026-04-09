@@ -26,13 +26,9 @@ struct SettingsScreen: View {
     @Binding var bleTextToSend: String
     @State private var bleTextSelection: TextSelection?
     @State private var documentEditorText = ""
-    @State private var documentEditorFontSize: CGFloat = 18
-    @State private var documentEditorCommitRequest = 0
     @State private var isLoadingDocumentText = false
-    @State private var isDocumentEditorFocused = false
     @State private var loadedDocumentName = ""
     @State private var savedDocumentEditorText = ""
-    @State private var shouldDismissAfterSaving = false
     @State private var imageNameSliderValue = 0.5
     @State private var opacitySliderValue = 0.5
     @AppStorage(ButtonClickFeedback.preferenceKey) private var isButtonClickEnabled = true
@@ -42,10 +38,7 @@ struct SettingsScreen: View {
         HStack(alignment: .top, spacing: 0) {
             VStack(spacing: 0) {
                 editableDocumentSection
-
-                if !isDocumentEditorFocused {
-                    combinedBottomPanelSection
-                }
+                combinedBottomPanelSection
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
 
@@ -59,13 +52,7 @@ struct SettingsScreen: View {
             ToolbarItem(placement: .topBarLeading) {
                 Button("main") {
                     ButtonClickFeedback.playIfEnabled()
-                    if isDocumentEditorFocused {
-                        shouldDismissAfterSaving = true
-                        documentEditorCommitRequest += 1
-                        isDocumentEditorFocused = false
-                    } else {
-                        saveAndReturnToMain()
-                    }
+                    saveAndReturnToMain()
                 }
                 .font(.headline)
                 .foregroundStyle(.white)
@@ -127,15 +114,13 @@ struct SettingsScreen: View {
 
     private var editableDocumentSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            PinchZoomDocumentEditor(
-                text: $documentEditorText,
-                fontSize: $documentEditorFontSize,
-                isFocused: $isDocumentEditorFocused,
-                commitRequest: documentEditorCommitRequest,
-                onEditingEnded: handleDocumentEditorDidEndEditing
-            )
-            .background(Color.black.opacity(0.55))
-            .clipShape(.rect(cornerRadius: 12))
+            TextEditor(text: $documentEditorText)
+                .font(.system(size: 18))
+                .foregroundStyle(.white)
+                .scrollContentBackground(.hidden)
+                .padding(8)
+                .background(Color.black.opacity(0.55))
+                .clipShape(.rect(cornerRadius: 12))
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .padding()
@@ -706,14 +691,6 @@ struct SettingsScreen: View {
         dismiss()
     }
 
-    private func handleDocumentEditorDidEndEditing(finalText: String) {
-        documentEditorText = finalText
-        if shouldDismissAfterSaving {
-            shouldDismissAfterSaving = false
-            saveAndReturnToMain(using: finalText)
-        }
-    }
-
     private func saveDocumentText(_ text: String, to fileURL: URL) {
         do {
             try text.write(to: fileURL, atomically: true, encoding: .utf8)
@@ -815,330 +792,6 @@ private extension VerticalAlignment {
     }
 
     static let sliderTrackCenter = VerticalAlignment(SliderTrackCenterAlignment.self)
-}
-
-private struct PinchZoomDocumentEditor: UIViewRepresentable {
-    @Binding var text: String
-    @Binding var fontSize: CGFloat
-    @Binding var isFocused: Bool
-    let commitRequest: Int
-    let onEditingEnded: (String) -> Void
-
-    func makeCoordinator() -> Coordinator {
-        Coordinator(
-            text: $text,
-            fontSize: $fontSize,
-            isFocused: $isFocused,
-            onEditingEnded: onEditingEnded
-        )
-    }
-
-    func makeUIView(context: Context) -> DocumentCanvasEditorView {
-        let editorView = DocumentCanvasEditorView()
-        editorView.onTextChange = { updatedText in
-            context.coordinator.updateText(updatedText)
-        }
-        editorView.onFontSizeChange = { updatedFontSize in
-            context.coordinator.updateFontSize(updatedFontSize)
-        }
-        editorView.onFocusChange = { focused in
-            context.coordinator.updateFocus(focused)
-        }
-        editorView.onEditingEnded = { finalText in
-            context.coordinator.editingEnded(finalText: finalText)
-        }
-        editorView.update(text: text, fontSize: fontSize, isFocused: isFocused, commitRequest: commitRequest)
-        return editorView
-    }
-
-    func updateUIView(_ editorView: DocumentCanvasEditorView, context: Context) {
-        editorView.update(text: text, fontSize: fontSize, isFocused: isFocused, commitRequest: commitRequest)
-    }
-
-    final class Coordinator: NSObject {
-        @Binding var text: String
-        @Binding var fontSize: CGFloat
-        @Binding var isFocused: Bool
-        let onEditingEnded: (String) -> Void
-
-        init(
-            text: Binding<String>,
-            fontSize: Binding<CGFloat>,
-            isFocused: Binding<Bool>,
-            onEditingEnded: @escaping (String) -> Void
-        ) {
-            _text = text
-            _fontSize = fontSize
-            _isFocused = isFocused
-            self.onEditingEnded = onEditingEnded
-        }
-
-        func updateText(_ updatedText: String) {
-            guard text != updatedText else { return }
-            text = updatedText
-        }
-
-        func updateFontSize(_ updatedFontSize: CGFloat) {
-            guard abs(fontSize - updatedFontSize) > 0.25 else { return }
-            fontSize = updatedFontSize
-        }
-
-        func updateFocus(_ focused: Bool) {
-            guard isFocused != focused else { return }
-            DispatchQueue.main.async {
-                self.isFocused = focused
-            }
-        }
-
-        func editingEnded(finalText: String) {
-            DispatchQueue.main.async {
-                self.onEditingEnded(finalText)
-            }
-        }
-    }
-}
-
-private final class DocumentCanvasEditorView: UIView, UITextViewDelegate, UIGestureRecognizerDelegate {
-    var onTextChange: ((String) -> Void)?
-    var onFontSizeChange: ((CGFloat) -> Void)?
-    var onFocusChange: ((Bool) -> Void)?
-    var onEditingEnded: ((String) -> Void)?
-
-    private let scrollView = UIScrollView()
-    private let canvasView = UIView()
-    private let textView = UITextView()
-    private let pinchGesture = UIPinchGestureRecognizer()
-
-    private var currentFontSize: CGFloat = 18
-    private var didApplyInitialOffset = false
-    private var isUpdatingFromSwiftUI = false
-    private var pinchStartFontSize: CGFloat = 18
-    private var lastCommitRequest = 0
-
-    override init(frame: CGRect) {
-        super.init(frame: frame)
-        configure()
-    }
-
-    required init?(coder: NSCoder) {
-        super.init(coder: coder)
-        configure()
-    }
-
-    override func layoutSubviews() {
-        super.layoutSubviews()
-        scrollView.frame = bounds
-        layoutCanvas(preserveOffset: true)
-    }
-
-    func update(text: String, fontSize: CGFloat, isFocused: Bool, commitRequest: Int) {
-        isUpdatingFromSwiftUI = true
-
-        if textView.text != text {
-            textView.text = text
-        }
-
-        if abs(currentFontSize - fontSize) > 0.25 {
-            currentFontSize = fontSize
-            textView.font = .systemFont(ofSize: currentFontSize)
-        }
-
-        if commitRequest != lastCommitRequest {
-            lastCommitRequest = commitRequest
-            commitPendingText()
-        }
-
-        layoutCanvas(preserveOffset: true)
-
-        if isFocused, !textView.isFirstResponder {
-            DispatchQueue.main.async {
-                self.textView.becomeFirstResponder()
-            }
-        } else if !isFocused, textView.isFirstResponder {
-            DispatchQueue.main.async {
-                self.textView.resignFirstResponder()
-            }
-        }
-
-        isUpdatingFromSwiftUI = false
-    }
-
-    private func commitPendingText() {
-        onTextChange?(textView.text ?? "")
-    }
-
-    private func configure() {
-        backgroundColor = .clear
-
-        scrollView.backgroundColor = .clear
-        scrollView.alwaysBounceHorizontal = true
-        scrollView.alwaysBounceVertical = true
-        scrollView.showsHorizontalScrollIndicator = true
-        scrollView.showsVerticalScrollIndicator = true
-        scrollView.keyboardDismissMode = .interactive
-        scrollView.delaysContentTouches = false
-        scrollView.canCancelContentTouches = true
-
-        canvasView.backgroundColor = .clear
-
-        textView.delegate = self
-        textView.backgroundColor = .clear
-        textView.textColor = .white
-        textView.font = .systemFont(ofSize: currentFontSize)
-        textView.isScrollEnabled = false
-        textView.autocapitalizationType = .none
-        textView.autocorrectionType = .no
-        textView.smartQuotesType = .no
-        textView.smartDashesType = .no
-        textView.smartInsertDeleteType = .no
-        textView.keyboardDismissMode = .interactive
-        textView.textContainerInset = UIEdgeInsets(top: 8, left: 8, bottom: 8, right: 8)
-        textView.textContainer.lineFragmentPadding = 0
-        textView.textContainer.lineBreakMode = .byClipping
-        textView.textContainer.widthTracksTextView = false
-        textView.textContainer.size = CGSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
-        textView.panGestureRecognizer.isEnabled = false
-
-        pinchGesture.addTarget(self, action: #selector(handlePinch(_:)))
-        pinchGesture.delegate = self
-        scrollView.addGestureRecognizer(pinchGesture)
-
-        addSubview(scrollView)
-        scrollView.addSubview(canvasView)
-        canvasView.addSubview(textView)
-    }
-
-    private func layoutCanvas(preserveOffset: Bool) {
-        guard bounds.width > 0, bounds.height > 0 else { return }
-
-        let previousOffset = scrollView.contentOffset
-        let horizontalMargin = max(bounds.width, 300)
-        let verticalMargin = max(bounds.height, 200)
-        let measuredTextSize = measuredTextSize()
-        let textOrigin = CGPoint(x: horizontalMargin, y: verticalMargin)
-
-        canvasView.frame = CGRect(
-            x: 0,
-            y: 0,
-            width: measuredTextSize.width + (horizontalMargin * 2),
-            height: measuredTextSize.height + (verticalMargin * 2)
-        )
-        textView.frame = CGRect(origin: textOrigin, size: measuredTextSize)
-        scrollView.contentSize = canvasView.bounds.size
-
-        if !didApplyInitialOffset {
-            scrollView.setContentOffset(textOrigin, animated: false)
-            didApplyInitialOffset = true
-        } else if preserveOffset {
-            scrollView.setContentOffset(clampedOffset(previousOffset), animated: false)
-        }
-    }
-
-    private func measuredTextSize() -> CGSize {
-        let fittingSize = textView.sizeThatFits(
-            CGSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
-        )
-
-        return CGSize(
-            width: max(ceil(fittingSize.width), bounds.width - 16),
-            height: max(ceil(fittingSize.height), bounds.height - 16)
-        )
-    }
-
-    private func clampedOffset(_ proposedOffset: CGPoint) -> CGPoint {
-        let maxOffsetX = max(0, scrollView.contentSize.width - scrollView.bounds.width)
-        let maxOffsetY = max(0, scrollView.contentSize.height - scrollView.bounds.height)
-
-        return CGPoint(
-            x: min(max(0, proposedOffset.x), maxOffsetX),
-            y: min(max(0, proposedOffset.y), maxOffsetY)
-        )
-    }
-
-    func textViewDidChange(_ textView: UITextView) {
-        onTextChange?(textView.text ?? "")
-        layoutCanvas(preserveOffset: true)
-    }
-
-    func textView(
-        _ textView: UITextView,
-        shouldChangeTextIn range: NSRange,
-        replacementText text: String
-    ) -> Bool {
-        ButtonClickFeedback.playIfEnabled()
-        return true
-    }
-
-    func textViewDidBeginEditing(_ textView: UITextView) {
-        onFocusChange?(true)
-    }
-
-    func textViewDidEndEditing(_ textView: UITextView) {
-        onTextChange?(textView.text ?? "")
-        onFocusChange?(false)
-        onEditingEnded?(textView.text ?? "")
-    }
-
-    @objc private func handlePinch(_ gesture: UIPinchGestureRecognizer) {
-        switch gesture.state {
-        case .began:
-            pinchStartFontSize = currentFontSize
-        case .changed:
-            let updatedFontSize = min(max(pinchStartFontSize * gesture.scale, 10), 72)
-            guard abs(updatedFontSize - currentFontSize) > 0.25 else { return }
-            currentFontSize = updatedFontSize
-            textView.font = .systemFont(ofSize: currentFontSize)
-            onFontSizeChange?(updatedFontSize)
-            layoutCanvas(preserveOffset: true)
-        default:
-            break
-        }
-    }
-
-    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
-        true
-    }
-}
-
-private final class NonWrappingTextView: UITextView {
-    override func layoutSubviews() {
-        super.layoutSubviews()
-        setNonWrappingContainerSize()
-        updatePanningInsets()
-    }
-
-    func setNonWrappingContainerSize() {
-        let visibleHeight = max(bounds.height - textContainerInset.top - textContainerInset.bottom, 0)
-        textContainer.size = CGSize(
-            width: CGFloat.greatestFiniteMagnitude,
-            height: max(visibleHeight, CGFloat.greatestFiniteMagnitude / 4)
-        )
-    }
-
-    private func updatePanningInsets() {
-        let horizontalInset = max(bounds.width * 0.5, 80)
-        let verticalInset = max(bounds.height * 0.5, 80)
-        let newInset = UIEdgeInsets(
-            top: verticalInset,
-            left: horizontalInset,
-            bottom: verticalInset,
-            right: horizontalInset
-        )
-
-        guard contentInset != newInset else {
-            return
-        }
-
-        let previousInset = contentInset
-        let adjustedOffset = CGPoint(
-            x: previousInset == .zero ? contentOffset.x : contentOffset.x + previousInset.left - newInset.left,
-            y: previousInset == .zero ? contentOffset.y : contentOffset.y + previousInset.top - newInset.top
-        )
-
-        contentInset = newInset
-        scrollIndicatorInsets = newInset
-        setContentOffset(adjustedOffset, animated: false)
-    }
 }
 
 private struct BackButton: View {
