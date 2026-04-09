@@ -6,21 +6,28 @@ struct SettingsImagePreviewPanel: View {
     let opacitySliderValue: Double
 
     var body: some View {
-        ZStack {
-            Color.black
+        GeometryReader { geometry in
+            let previewWidth = geometry.size.width
+            let previewHeight = previewWidth / 1.3
 
-            if let previewImage {
-                Image(uiImage: previewImage)
-                    .resizable()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .opacity(opacitySliderValue)
+            ZStack {
+                Color.black
+
+                if let previewImage {
+                    Image(uiImage: previewImage)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: previewWidth, height: previewHeight)
+                        .opacity(opacitySliderValue)
+                }
+            }
+            .frame(width: previewWidth, height: previewHeight)
+            .clipped()
+            .overlay {
+                Rectangle()
+                    .stroke(Color.white, lineWidth: 2)
             }
         }
         .aspectRatio(1.3, contentMode: .fit)
-        .overlay {
-            Rectangle()
-                .stroke(Color.white, lineWidth: 2)
-        }
-        .clipped()
     }
 }

@@ -1,5 +1,7 @@
 import SwiftUI
 
+typealias GridDimensions = (columns: Int, rows: Int)
+
 struct MainScreenGridSection: View {
     let functionKeys: [FunctionKeyEntry]
     let visibleBoxCount: Int
@@ -10,7 +12,7 @@ struct MainScreenGridSection: View {
     let sendLine: (FunctionKeyEntry) -> Void
     let onBeginSlotEditing: (Int) -> Void
     let buttonLabel: (FunctionKeyEntry, Int, CGFloat) -> AnyView
-    let dragGesture: (FunctionKeyEntry, Int, GridDimensions) -> AnyGesture<Void>
+    let dragGesture: (FunctionKeyEntry, Int, GridDimensions) -> AnyGesture<DragGesture.Value>
 
     var body: some View {
         GeometryReader { geometry in

@@ -36,14 +36,11 @@ struct SettingsKeyboardTimingSection: View {
     }
 
     private func sliderRow(title: String, value: Binding<Double>, range: ClosedRange<Double>) -> some View {
-        HStack(alignment: .sliderTrackCenter, spacing: 4) {
+        HStack(spacing: 4) {
             Text(title)
                 .font(.headline)
                 .foregroundStyle(.primary)
                 .frame(width: timingLabelWidth, alignment: .trailing)
-                .alignmentGuide(.sliderTrackCenter) { dimensions in
-                    dimensions[VerticalAlignment.center]
-                }
 
             Button {
                 ButtonClickFeedback.playIfEnabled()
@@ -86,7 +83,7 @@ struct SettingsKeyboardTimingSection: View {
     }
 
     private var speechRecognitionAutoOffRow: some View {
-        HStack(alignment: .sliderTrackCenter, spacing: 4) {
+        HStack(spacing: 4) {
             Text("rec off")
                 .font(.headline)
                 .foregroundStyle(.white)

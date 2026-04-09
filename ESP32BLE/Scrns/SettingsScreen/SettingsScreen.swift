@@ -1,10 +1,6 @@
 import SwiftUI
 import UIKit
 
-private enum SettingsFocusField: Hashable {
-    case sendText
-}
-
 struct SettingsScreen: View {
     @Environment(\.dismiss) private var dismiss
     @AppStorage("speechRecognitionAutoOffMinutes") private var speechRecognitionAutoOffMinutes = 5
@@ -31,7 +27,7 @@ struct SettingsScreen: View {
     @State private var loadedDocumentName = ""
     @State private var savedDocumentEditorText = ""
     @State private var opacitySliderValue = 0.5
-    @State private var selectedImageIndex = 0
+    @State var selectedImageIndex = 0
     @AppStorage(ButtonClickFeedback.preferenceKey) private var isButtonClickEnabled = true
     @FocusState private var focusedField: SettingsFocusField?
 
@@ -56,38 +52,14 @@ struct SettingsScreen: View {
         .navigationTitle("Settings")
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
-                Button("main") {
-                    ButtonClickFeedback.playIfEnabled()
+                SettingsToolbarButton(title: "main", backgroundColor: Color.gray.opacity(0.45)) {
                     saveAndReturnToMain()
                 }
-                .font(.headline)
-                .foregroundStyle(.white)
-                .padding(.horizontal, 14)
-                .frame(minWidth: 92, minHeight: 44)
-                .background(Color.gray.opacity(0.45))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.gray.opacity(0.5), lineWidth: 1.5)
-                }
-                .clipShape(.rect(cornerRadius: 12))
-                .contentShape(.rect)
             }
             ToolbarItem(placement: .topBarTrailing) {
-                Button("new") {
-                    ButtonClickFeedback.playIfEnabled()
+                SettingsToolbarButton(title: "new", backgroundColor: Color.green.opacity(0.5)) {
                     createNewDocument()
                 }
-                .font(.headline)
-                .foregroundStyle(.white)
-                .padding(.horizontal, 14)
-                .frame(minWidth: 92, minHeight: 44)
-                .background(Color.green.opacity(0.5))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.gray.opacity(0.5), lineWidth: 1.5)
-                }
-                .clipShape(.rect(cornerRadius: 12))
-                .contentShape(.rect)
             }
         }
         .onChange(of: ble.isConnected) {
@@ -126,330 +98,53 @@ struct SettingsScreen: View {
     }
 
     private var editableDocumentSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            PlainDocumentEditor(
-                text: $documentEditorText,
-                fontSize: $documentEditorFontSize,
-                isFocused: $isDocumentEditorFocused
-            )
-                .background(Color.black.opacity(0.55))
-                .clipShape(.rect(cornerRadius: 12))
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .padding()
-        .background(Color.black)
-        .overlay {
-            Rectangle()
-                .stroke(Color.white, lineWidth: 1)
-        }
-        .overlay(alignment: .bottomTrailing) {
-            HStack(spacing: 8) {
-                fontSizeControls
-                undoButton
-            }
-            .padding(8)
-        }
-        .clipShape(.rect(cornerRadius: 0))
-    }
-
-    private var fontSizeControls: some View {
-        HStack(spacing: 8) {
-            Button {
-                documentEditorFontSize = max(10, documentEditorFontSize - 1)
-            } label: {
-                Image(systemName: "triangle.fill")
-                    .font(.system(size: 16))
-                    .rotationEffect(.degrees(-90))
-                    .frame(width: 18, height: 18)
-                    .padding(8)
-            }
-            .buttonStyle(.plain)
-            .foregroundStyle(.white)
-            .contentShape(.rect)
-
-            Text("font:\(Int(documentEditorFontSize))")
-                .font(.title3.weight(.semibold))
-                .foregroundStyle(.white)
-
-            Button {
-                documentEditorFontSize = min(40, documentEditorFontSize + 1)
-            } label: {
-                Image(systemName: "triangle.fill")
-                    .font(.system(size: 16))
-                    .rotationEffect(.degrees(90))
-                    .frame(width: 18, height: 18)
-                    .padding(8)
-            }
-            .buttonStyle(.plain)
-            .foregroundStyle(.white)
-            .contentShape(.rect)
-        }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 13)
-        .background(Color.black.opacity(0.5))
-        .clipShape(.rect(cornerRadius: 10))
-    }
-
-    private var undoButton: some View {
-        Button("undo") {
-            ButtonClickFeedback.playIfEnabled()
-            documentEditorText = savedDocumentEditorText
-        }
-        .buttonStyle(.plain)
-        .foregroundStyle(.white)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-        .background(Color.gray.opacity(0.45))
-        .overlay {
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(Color.gray.opacity(0.5), lineWidth: 1)
-        }
-        .clipShape(.rect(cornerRadius: 8))
-        .disabled(documentEditorText == savedDocumentEditorText)
-        .opacity(documentEditorText == savedDocumentEditorText ? 0.35 : 1)
+        SettingsEditorSectionView(
+            text: $documentEditorText,
+            fontSize: $documentEditorFontSize,
+            isFocused: $isDocumentEditorFocused,
+            savedText: savedDocumentEditorText,
+            onUndo: { documentEditorText = savedDocumentEditorText }
+        )
     }
 
     private var availableDevicesContent: some View {
-        HStack(alignment: .top, spacing: 32) {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(spacing: 12) {
-                    Text("ESP32")
-                        .font(.headline)
-
-                    Button("Disconnect") {
-                        ButtonClickFeedback.playIfEnabled()
-                        ble.disconnect()
-                    }
-                    .buttonStyle(.bordered)
-                    .disabled(!ble.isConnected)
-                }
-
-                if ble.discoveredDevices.isEmpty {
-                    Text("No ESP32 devices found yet")
-                        .foregroundStyle(.secondary)
-                }
-
-                ForEach(ble.discoveredDevices) { device in
-                    Button {
-                        ButtonClickFeedback.playIfEnabled()
-                        ble.selectedPeripheralID = device.id
-                        if !ble.isConnected {
-                            ble.connectToSelectedDevice()
-                        }
-                    } label: {
-                        HStack {
-                            VStack(alignment: .leading, spacing: 4) {
-                                VStack {
-                                    Text(device.displayName)
-                                        .font(.body)
-                                }
-                            }
-                            Spacer()
-
-                            if ble.selectedPeripheralID == device.id {
-                                Image(systemName: "checkmark.circle.fill")
-                            }
-                        }
-                        .padding(2)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(
-                            RoundedRectangle(cornerRadius: 12)
-                                .fill(ble.selectedPeripheralID == device.id ? .blue.opacity(0.15) : .clear)
-                        )
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(ble.isConnected && ble.selectedPeripheralID != device.id)
-                    .opacity(ble.isConnected && ble.selectedPeripheralID != device.id ? 0.45 : 1)
-                }
-
-            }
-            .frame(maxWidth: .infinity, alignment: .topLeading)
-            .fixedSize(horizontal: false, vertical: true)
-
-            VStack(spacing: 12) {
-                imageControlButtons
-                settingsPlaceholderSlider(title: "opacity: 0.5", value: $opacitySliderValue)
-
-                HStack(spacing: 18) {
-                    sleepWakeButton
-                    buttonClickToggleButton
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .fixedSize(horizontal: false, vertical: true)
-        }
-        .fixedSize(horizontal: false, vertical: true)
-    }
-
-    private var sleepWakeButton: some View {
-        Button(ble.isConnected && keepScreenAwake ? "wake" : "sleep") {
-            guard ble.isConnected else { return }
-            ButtonClickFeedback.playIfEnabled()
-            keepScreenAwake.toggle()
-        }
-        .buttonStyle(.plain)
-        .font(.headline)
-        .foregroundStyle(.white)
-        .lineLimit(1)
-        .minimumScaleFactor(0.7)
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-        .background(sleepWakeButtonBackgroundColor)
-        .clipShape(.rect(cornerRadius: 18))
-        .disabled(!ble.isConnected)
+        SettingsBottomControlsSection(
+            ble: ble,
+            keepScreenAwake: $keepScreenAwake,
+            isButtonClickEnabled: $isButtonClickEnabled,
+            opacitySliderValue: $opacitySliderValue,
+            imageControlButtons: AnyView(imageControlButtons)
+        )
     }
 
     private var imagePreviewSection: some View {
-        ZStack {
-            Color.black
-
-            if let previewImage {
-                Image(uiImage: previewImage)
-                    .resizable()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .opacity(opacitySliderValue)
-            }
-        }
-        .aspectRatio(1.3, contentMode: .fit)
-        .overlay {
-            Rectangle()
-                .stroke(Color.white, lineWidth: 2)
-        }
-        .clipped()
+        SettingsImagePreviewPanel(
+            previewImage: previewImage,
+            opacitySliderValue: opacitySliderValue
+        )
     }
 
     private var imageControlButtons: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(truncatedImageDisplayName)
-                .font(.headline)
-                .foregroundStyle(.white)
-                .lineLimit(1)
-
-            HStack(spacing: 18) {
-                imageControlButton(systemName: "arrow.counterclockwise.circle") {
-                    selectedImageIndex = 0
-                }
-
-                imageControlButton(systemName: "shuffle.circle") {
-                    guard maximumSelectableImageIndex > 0 else { return }
-                    selectedImageIndex = Int.random(in: 0...maximumSelectableImageIndex)
-                }
-
-                imageControlButton(systemName: "arrowshape.left.circle") {
-                    guard selectedImageIndex > 0 else { return }
-                    selectedImageIndex -= 1
-                }
-                .disabled(selectedImageIndex <= 0)
-                .opacity(selectedImageIndex <= 0 ? 0.35 : 1)
-
-                imageControlButton(systemName: "arrowshape.right.circle") {
-                    guard selectedImageIndex < maximumSelectableImageIndex else { return }
-                    selectedImageIndex += 1
-                }
-                .disabled(selectedImageIndex >= maximumSelectableImageIndex)
-                .opacity(selectedImageIndex >= maximumSelectableImageIndex ? 0.35 : 1)
+        SettingsImageControlsSection(
+            displayName: truncatedImageDisplayName,
+            canGoPrevious: selectedImageIndex > 0,
+            canGoNext: selectedImageIndex < maximumSelectableImageIndex,
+            onReset: {
+                selectedImageIndex = 0
+            },
+            onRandom: {
+                guard maximumSelectableImageIndex > 0 else { return }
+                selectedImageIndex = Int.random(in: 0...maximumSelectableImageIndex)
+            },
+            onPrevious: {
+                guard selectedImageIndex > 0 else { return }
+                selectedImageIndex -= 1
+            },
+            onNext: {
+                guard selectedImageIndex < maximumSelectableImageIndex else { return }
+                selectedImageIndex += 1
             }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private var availableImageURLs: [URL] {
-        let directoryURL: URL
-        if let existingDocumentURL = documentFiles.first {
-            directoryURL = existingDocumentURL.deletingLastPathComponent()
-        } else if let fallbackDirectoryURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
-            directoryURL = fallbackDirectoryURL
-        } else {
-            return []
-        }
-
-        let supportedExtensions = Set(["png", "jpg", "jpeg", "heic", "heif", "gif", "bmp", "tiff", "webp"])
-
-        let urls = (try? FileManager.default.contentsOfDirectory(
-            at: directoryURL,
-            includingPropertiesForKeys: [.isRegularFileKey],
-            options: [.skipsHiddenFiles]
-        )) ?? []
-
-        return urls
-            .filter { url in
-                let values = try? url.resourceValues(forKeys: [.isRegularFileKey])
-                return values?.isRegularFile == true && supportedExtensions.contains(url.pathExtension.lowercased())
-            }
-            .sorted { $0.lastPathComponent.localizedCaseInsensitiveCompare($1.lastPathComponent) == .orderedAscending }
-    }
-
-    private var maximumSelectableImageIndex: Int {
-        availableImageURLs.count
-    }
-
-    private var previewImage: UIImage? {
-        guard selectedImageIndex > 0 else { return nil }
-        let imageIndex = selectedImageIndex - 1
-        guard availableImageURLs.indices.contains(imageIndex) else { return nil }
-        return UIImage(contentsOfFile: availableImageURLs[imageIndex].path)
-    }
-
-    private var truncatedImageDisplayName: String {
-        if selectedImageIndex == 0 {
-            return "black bg"
-        }
-
-        let imageIndex = selectedImageIndex - 1
-        guard availableImageURLs.indices.contains(imageIndex) else { return "no image" }
-
-        let name = availableImageURLs[imageIndex].lastPathComponent
-        let maxCharacterCount = 20
-        if name.count <= maxCharacterCount {
-            return name
-        }
-
-        return String(name.prefix(maxCharacterCount)) + "..."
-    }
-
-    private func imageControlButton(systemName: String, action: @escaping () -> Void) -> some View {
-        Button {
-            ButtonClickFeedback.playIfEnabled()
-            action()
-        } label: {
-            Image(systemName: systemName)
-                .font(.system(size: 28))
-                .foregroundStyle(.white)
-        }
-        .buttonStyle(.plain)
-    }
-
-    private var sleepWakeButtonBackgroundColor: Color {
-        guard ble.isConnected else {
-            return Color.gray.opacity(0.5)
-        }
-
-        if keepScreenAwake {
-            return Color(red: 0.45, green: 0.0, blue: 0.0)
-        }
-
-        return Color(red: 0.0, green: 0.25, blue: 0.55)
-    }
-
-    private var buttonClickToggleButton: some View {
-        Button(isButtonClickEnabled ? "btn click" : "btn off") {
-            let willEnableButtonClicks = !isButtonClickEnabled
-            isButtonClickEnabled = willEnableButtonClicks
-
-            if willEnableButtonClicks {
-                ButtonClickFeedback.playIfEnabled()
-            }
-        }
-        .buttonStyle(.plain)
-        .font(.headline)
-        .foregroundStyle(.white)
-        .lineLimit(1)
-        .minimumScaleFactor(0.7)
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-        .background(isButtonClickEnabled ? Color.blue.opacity(0.5) : Color.gray.opacity(0.5))
-        .clipShape(.rect(cornerRadius: 18))
+        )
     }
 
     private func settingsBluePlaceholderButton(_ title: String) -> some View {
@@ -464,18 +159,6 @@ struct SettingsScreen: View {
             .padding(.vertical, 10)
             .background(Color.blue)
             .clipShape(.rect(cornerRadius: 18))
-    }
-
-    private func settingsPlaceholderSlider(title: String, value: Binding<Double>) -> some View {
-        VStack(spacing: 8) {
-            Text(title)
-                .font(.headline)
-                .foregroundStyle(.white)
-
-            Slider(value: value, in: 0...1)
-                .tint(.white)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var simplifiedConnectionStatus: String {
@@ -561,65 +244,28 @@ struct SettingsScreen: View {
     }
 
     private var documentTableSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            List {
-                ForEach(documentFiles, id: \.path) { fileURL in
-                    documentRow(for: fileURL)
-                }
-            }
-            .listStyle(.plain)
-            .scrollContentBackground(.hidden)
-            .background(.clear)
-
-            imagePreviewSection
-        }
-        .frame(maxHeight: .infinity, alignment: .top)
-        .background(Color.black)
-        .overlay {
-            Rectangle()
-                .stroke(Color.white, lineWidth: 1)
-        }
-        .clipShape(.rect(cornerRadius: 0))
+        SettingsDocumentTableSection(
+            documentFiles: documentFiles,
+            selectedDocumentName: selectedDocumentName,
+            canDeleteDocuments: canDeleteDocuments,
+            imagePreviewSection: AnyView(imagePreviewSection),
+            loadFunctionKeys: loadFunctionKeys,
+            deleteDocument: deleteDocument,
+            duplicateDocument: duplicateDocument
+        )
     }
 
     private var customKeyboardTimingSection: some View {
-        VStack(alignment: .center, spacing: 5) {
-            HStack(spacing: 12) {
-                Text("custom kb timing")
-                    .font(.headline)
-
-                Button("set & test") {
-                    ButtonClickFeedback.playIfEnabled()
-                    sendKeyboardTimingCommand()
-                    ble.sendString("Hello World! Let's go. (test) 1!2\"3#4$5%6&7'8(9)")
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(Color.red.opacity(0.5))
+        SettingsKeyboardTimingSection(
+            timingLabelWidth: timingLabelWidth,
+            keyboardTimingOnMs: $keyboardTimingOnMs,
+            keyboardTimingOffMs: $keyboardTimingOffMs,
+            speechRecognitionAutoOffMinutes: $speechRecognitionAutoOffMinutes,
+            onSetAndTest: {
+                sendKeyboardTimingCommand()
+                ble.sendString("Hello World! Let's go. (test) 1!2\"3#4$5%6&7'8(9)")
             }
-            .frame(maxWidth: .infinity, alignment: .center)
-
-            HStack(alignment: .top, spacing: 12) {
-                VStack(spacing: 2)
-                {
-                    sliderRow(
-                        title: "on",
-                        value: $keyboardTimingOnMs,
-                        range: 0...1000
-                    )
-
-                    sliderRow(
-                        title: "off",
-                        value: $keyboardTimingOffMs,
-                        range: 0...3000
-                    )
-
-                    speechRecognitionAutoOffRow
-                }
-                .frame(maxWidth: 520, alignment: .leading)
-
-                Spacer(minLength: 0)
-            }
-        }
+        )
     }
 
     private func sliderRow(title: String, value: Binding<Double>, range: ClosedRange<Double>) -> some View {
@@ -971,209 +617,4 @@ private extension VerticalAlignment {
     }
 
     static let sliderTrackCenter = VerticalAlignment(SliderTrackCenterAlignment.self)
-}
-
-private struct PlainDocumentEditor: UIViewRepresentable {
-    @Binding var text: String
-    @Binding var fontSize: CGFloat
-    @Binding var isFocused: Bool
-
-    func makeCoordinator() -> Coordinator {
-        Coordinator(text: $text, isFocused: $isFocused)
-    }
-
-    func makeUIView(context: Context) -> NoWrapDocumentTextView {
-        let textView = NoWrapDocumentTextView()
-        textView.delegate = context.coordinator
-        textView.backgroundColor = .clear
-        textView.textColor = .white
-        textView.tintColor = .white
-        textView.keyboardAppearance = .dark
-        textView.autocapitalizationType = .none
-        textView.autocorrectionType = .no
-        textView.smartQuotesType = .no
-        textView.smartDashesType = .no
-        textView.smartInsertDeleteType = .no
-        textView.isScrollEnabled = true
-        textView.alwaysBounceHorizontal = true
-        textView.alwaysBounceVertical = true
-        textView.showsHorizontalScrollIndicator = true
-        textView.showsVerticalScrollIndicator = true
-        textView.textContainerInset = UIEdgeInsets(top: 8, left: 8, bottom: 8, right: 8)
-        textView.textContainer.lineFragmentPadding = 0
-        textView.textContainer.lineBreakMode = .byClipping
-        textView.textContainer.widthTracksTextView = false
-        textView.textContainer.size = CGSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
-        textView.font = .systemFont(ofSize: fontSize)
-        textView.text = text
-        return textView
-    }
-
-    func updateUIView(_ textView: NoWrapDocumentTextView, context: Context) {
-        context.coordinator.parent = self
-        let previousOffset = textView.contentOffset
-        var shouldRestoreOffset = false
-        var didChangeContent = false
-
-        if textView.text != text {
-            textView.text = text
-            shouldRestoreOffset = true
-            didChangeContent = true
-        }
-
-        let currentSize = textView.font?.pointSize ?? fontSize
-        if abs(currentSize - fontSize) > 0.25 {
-            textView.font = .systemFont(ofSize: fontSize)
-            shouldRestoreOffset = true
-        }
-
-        if shouldRestoreOffset {
-            textView.layoutIfNeeded()
-            textView.refreshNoWrapContentSize()
-            let targetOffset: CGPoint
-            if didChangeContent, !textView.hasUserAdjustedHorizontalOffset {
-                targetOffset = .zero
-            } else {
-                targetOffset = textView.clampedContentOffset(for: previousOffset)
-            }
-            textView.setContentOffset(targetOffset, animated: false)
-        }
-    }
-
-    final class Coordinator: NSObject, UITextViewDelegate {
-        var parent: PlainDocumentEditor
-
-        init(text: Binding<String>, isFocused: Binding<Bool>) {
-            self.parent = PlainDocumentEditor(text: text, fontSize: .constant(18), isFocused: isFocused)
-        }
-
-        func textViewDidChange(_ textView: UITextView) {
-            let updatedText = textView.text ?? ""
-            guard parent.text != updatedText else { return }
-            parent.text = updatedText
-            (textView as? NoWrapDocumentTextView)?.ensureCaretVisible()
-        }
-
-        func textViewDidChangeSelection(_ textView: UITextView) {
-            (textView as? NoWrapDocumentTextView)?.ensureCaretVisible()
-        }
-
-        func textView(
-            _ textView: UITextView,
-            shouldChangeTextIn range: NSRange,
-            replacementText text: String
-        ) -> Bool {
-            ButtonClickFeedback.playIfEnabled()
-            return true
-        }
-
-        func textViewDidBeginEditing(_ textView: UITextView) {
-            guard !parent.isFocused else { return }
-            parent.isFocused = true
-        }
-
-        func textViewDidEndEditing(_ textView: UITextView) {
-            guard parent.isFocused else { return }
-            parent.isFocused = false
-        }
-    }
-}
-
-private final class NoWrapDocumentTextView: UITextView {
-    var hasUserAdjustedHorizontalOffset = false
-
-    override func layoutSubviews() {
-        super.layoutSubviews()
-        textContainer.size = CGSize(
-            width: CGFloat.greatestFiniteMagnitude,
-            height: CGFloat.greatestFiniteMagnitude
-        )
-        refreshNoWrapContentSize()
-    }
-
-    override var contentOffset: CGPoint {
-        didSet {
-            if abs(contentOffset.x) > 0.5 {
-                hasUserAdjustedHorizontalOffset = true
-            }
-        }
-    }
-
-    override func scrollRectToVisible(_ rect: CGRect, animated: Bool) {
-        // Keep the user's horizontal position instead of auto-jumping back to the caret.
-    }
-
-    override func scrollRangeToVisible(_ range: NSRange) {
-        // Keep the user's horizontal position instead of auto-jumping back to the caret.
-    }
-
-    func refreshNoWrapContentSize() {
-        let measuredSize = sizeThatFits(
-            CGSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
-        )
-        contentSize = CGSize(
-            width: max(bounds.width + 1, ceil(measuredSize.width)),
-            height: max(bounds.height + 1, ceil(measuredSize.height))
-        )
-    }
-
-	
-    func ensureCaretVisible() {
-        guard let selectedTextRange else { return }
-
-        let caretRect = self.caretRect(for: selectedTextRange.end).insetBy(dx: -16, dy: -12)
-        var targetOffset = contentOffset
-
-        let visibleMinX = contentOffset.x
-        let visibleMaxX = contentOffset.x + bounds.width
-        if caretRect.maxX > visibleMaxX {
-            targetOffset.x = caretRect.maxX - bounds.width
-        } else if caretRect.minX < visibleMinX {
-            targetOffset.x = caretRect.minX
-        }
-
-        let visibleMinY = contentOffset.y
-        let visibleMaxY = contentOffset.y + bounds.height
-        if caretRect.maxY > visibleMaxY {
-            targetOffset.y = caretRect.maxY - bounds.height
-        } else if caretRect.minY < visibleMinY {
-            targetOffset.y = caretRect.minY
-        }
-
-        setContentOffset(clampedContentOffset(for: targetOffset), animated: false)
-    }
-
-    func clampedContentOffset(for proposedOffset: CGPoint) -> CGPoint {
-        let maximumX = max(0, contentSize.width - bounds.width)
-        let maximumY = max(0, contentSize.height - bounds.height)
-
-        return CGPoint(
-            x: min(max(0, proposedOffset.x), maximumX),
-            y: min(max(0, proposedOffset.y), maximumY)
-        )
-    }
-}
-
-private struct BackButton: View {
-    @Environment(\.dismiss) private var dismiss
-    let action: () -> Void
-
-    var body: some View {
-        Button("main") {
-            ButtonClickFeedback.playIfEnabled()
-            action()
-            dismiss()
-        }
-        .font(.headline)
-        .foregroundStyle(.white)
-        .padding(.horizontal, 14)
-        .frame(minWidth: 92, minHeight: 44)
-        .background(Color.gray.opacity(0.45))
-        .overlay {
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.gray.opacity(0.5), lineWidth: 1.5)
-        }
-        .clipShape(.rect(cornerRadius: 12))
-        .contentShape(.rect)
-    }
 }

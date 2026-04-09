@@ -14,11 +14,18 @@ struct SettingsAvailableDevicesPanel: View {
                     Text("ESP32")
                         .font(.headline)
 
-                    Button("Disconnect") {
+                    Button {
                         ButtonClickFeedback.playIfEnabled()
                         ble.disconnect()
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 18, weight: .bold))
+                            .foregroundStyle(ble.isConnected ? .white : Color.gray)
+                            .frame(width: 38, height: 38)
+                            .background(ble.isConnected ? Color.red : Color.gray.opacity(0.45))
+                            .clipShape(Circle())
                     }
-                    .buttonStyle(.bordered)
+                    .buttonStyle(.plain)
                     .disabled(!ble.isConnected)
                 }
 

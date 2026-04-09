@@ -210,3 +210,105 @@ struct BackButton: View {
         .contentShape(.rect)
     }
 }
+
+struct SettingsToolbarButton: View {
+    let title: String
+    let backgroundColor: Color
+    let action: () -> Void
+
+    var body: some View {
+        Button(title) {
+            ButtonClickFeedback.playIfEnabled()
+            action()
+        }
+        .font(.headline)
+        .foregroundStyle(.white)
+        .padding(.horizontal, 14)
+        .frame(minWidth: 92, minHeight: 44)
+        .background(backgroundColor)
+        .overlay {
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.gray.opacity(0.5), lineWidth: 1.5)
+        }
+        .clipShape(.rect(cornerRadius: 12))
+        .contentShape(.rect)
+    }
+}
+
+struct SettingsEditorSectionView: View {
+    @Binding var text: String
+    @Binding var fontSize: CGFloat
+    @Binding var isFocused: Bool
+    let savedText: String
+    let onUndo: () -> Void
+
+    var body: some View {
+        ZStack(alignment: .bottomTrailing) {
+            PlainDocumentEditor(
+                text: $text,
+                fontSize: $fontSize,
+                isFocused: $isFocused
+            )
+
+            HStack(spacing: 10) {
+                fontSizeControls
+                undoButton
+            }
+            .padding(.trailing, 8)
+            .padding(.bottom, 8)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .overlay {
+            Rectangle()
+                .stroke(Color.white, lineWidth: 1)
+        }
+    }
+
+    private var fontSizeControls: some View {
+        HStack(spacing: 14) {
+            fontTriangleButton(rotationDegrees: -90) {
+                fontSize = max(10, fontSize - 2)
+            }
+
+            Text("font:\(Int(fontSize))")
+                .font(.system(size: 24, weight: .semibold))
+                .foregroundStyle(.white)
+
+            fontTriangleButton(rotationDegrees: 90) {
+                fontSize = min(72, fontSize + 2)
+            }
+        }
+        .padding(.horizontal, 18)
+        .padding(.vertical, 12)
+        .background(Color.black.opacity(0.5))
+        .clipShape(.rect(cornerRadius: 12))
+    }
+
+    private var undoButton: some View {
+        Button("undo") {
+            ButtonClickFeedback.playIfEnabled()
+            onUndo()
+        }
+        .buttonStyle(.plain)
+        .font(.headline)
+        .foregroundStyle(.white)
+        .padding(.horizontal, 12)
+        .frame(minHeight: 44)
+        .background(Color.gray.opacity(0.25))
+        .clipShape(.rect(cornerRadius: 12))
+        .disabled(text == savedText)
+        .opacity(text == savedText ? 0.5 : 1)
+    }
+
+    private func fontTriangleButton(rotationDegrees: Double, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: "triangle.fill")
+                .font(.system(size: 18, weight: .bold))
+                .rotationEffect(.degrees(rotationDegrees))
+                .foregroundStyle(.white)
+                .frame(width: 44, height: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+}
