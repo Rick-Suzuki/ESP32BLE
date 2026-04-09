@@ -12,7 +12,6 @@ struct SettingsScreen: View {
     @AppStorage("keyboardTimingOnMs") private var keyboardTimingOnMs = 0.0
     @AppStorage("keyboardTimingOffMs") private var keyboardTimingOffMs = 0.0
     @AppStorage("keepScreenAwake") private var keepScreenAwake = false
-    private let documentTableWidth: CGFloat = 166
     private let timingLabelWidth = 90.0
     @ObservedObject var ble: BLEKeyboardManager
     let documentFiles: [URL]
@@ -35,17 +34,19 @@ struct SettingsScreen: View {
     @FocusState private var focusedField: SettingsFocusField?
 
     var body: some View {
-        HStack(alignment: .top, spacing: 0) {
-            VStack(spacing: 0) {
-                editableDocumentSection
-                combinedBottomPanelSection
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        GeometryReader { geometry in
+            HStack(alignment: .top, spacing: 0) {
+                VStack(spacing: 0) {
+                    editableDocumentSection
+                    combinedBottomPanelSection
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
 
-            documentTableSection
-                .frame(width: documentTableWidth)
+                documentTableSection
+                    .frame(width: documentTableWidth(for: geometry.size.width))
+            }
+            .frame(maxHeight: .infinity, alignment: .top)
         }
-        .frame(maxHeight: .infinity, alignment: .top)
         .background(Color.black.ignoresSafeArea())
         .navigationTitle("Settings")
         .toolbar {
@@ -110,6 +111,13 @@ struct SettingsScreen: View {
         .onChange(of: keepScreenAwake) {
             UIApplication.shared.isIdleTimerDisabled = keepScreenAwake
         }
+    }
+
+    private func documentTableWidth(for availableWidth: CGFloat) -> CGFloat {
+        let safeWidth = availableWidth.isFinite ? max(0, availableWidth) : 0
+        let widthRatio = safeWidth > 900 ? 0.184 : 0.16
+        let maximumWidth: CGFloat = safeWidth > 900 ? 260 : 220
+        return min(max(safeWidth * widthRatio, 140), maximumWidth)
     }
 
     private var editableDocumentSection: some View {

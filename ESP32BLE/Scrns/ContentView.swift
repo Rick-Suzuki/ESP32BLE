@@ -183,7 +183,7 @@ struct ContentView: View {
             documentFiles = urls
                 .filter { url in
                     let values = try? url.resourceValues(forKeys: [URLResourceKey.isRegularFileKey])
-                    return values?.isRegularFile == true
+                    return values?.isRegularFile == true && url.pathExtension.lowercased() == "txt"
                 }
                 .sorted { $0.lastPathComponent.localizedCaseInsensitiveCompare($1.lastPathComponent) == .orderedAscending }
         } catch {
