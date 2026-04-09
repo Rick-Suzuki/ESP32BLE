@@ -6,6 +6,7 @@ private enum SettingsFocusField: Hashable {
 }
 
 struct SettingsScreen: View {
+    @Environment(\.dismiss) private var dismiss
     @AppStorage("speechRecognitionAutoOffMinutes") private var speechRecognitionAutoOffMinutes = 5
     @AppStorage("sendControlABeforeText") private var sendControlABeforeText = false
     @AppStorage("keyboardTimingOnMs") private var keyboardTimingOnMs = 0.0
@@ -18,6 +19,7 @@ struct SettingsScreen: View {
     let selectedDocumentName: String
     let refreshDocumentFiles: () -> Void
     let loadFunctionKeys: (URL) -> Void
+    let saveSelectedDocumentAndReload: (String) -> Void
     let deleteDocument: (URL) -> Void
     let duplicateDocument: (URL) -> Void
     let canDeleteDocuments: Bool
@@ -25,10 +27,12 @@ struct SettingsScreen: View {
     @State private var bleTextSelection: TextSelection?
     @State private var documentEditorText = ""
     @State private var documentEditorFontSize: CGFloat = 18
+    @State private var documentEditorCommitRequest = 0
     @State private var isLoadingDocumentText = false
     @State private var isDocumentEditorFocused = false
     @State private var loadedDocumentName = ""
     @State private var savedDocumentEditorText = ""
+    @State private var shouldDismissAfterSaving = false
     @State private var imageNameSliderValue = 0.5
     @State private var opacitySliderValue = 0.5
     @AppStorage(ButtonClickFeedback.preferenceKey) private var isButtonClickEnabled = true
@@ -53,9 +57,27 @@ struct SettingsScreen: View {
         .navigationTitle("Settings")
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
-                BackButton {
-                    saveCurrentDocumentText()
+                Button("main") {
+                    ButtonClickFeedback.playIfEnabled()
+                    if isDocumentEditorFocused {
+                        shouldDismissAfterSaving = true
+                        documentEditorCommitRequest += 1
+                        isDocumentEditorFocused = false
+                    } else {
+                        saveAndReturnToMain()
+                    }
                 }
+                .font(.headline)
+                .foregroundStyle(.white)
+                .padding(.horizontal, 14)
+                .frame(minWidth: 92, minHeight: 44)
+                .background(Color.gray.opacity(0.45))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.gray.opacity(0.5), lineWidth: 1.5)
+                }
+                .clipShape(.rect(cornerRadius: 12))
+                .contentShape(.rect)
             }
             ToolbarItem(placement: .topBarTrailing) {
                 Button("new") {
@@ -91,6 +113,10 @@ struct SettingsScreen: View {
             saveCurrentDocumentText()
             loadSelectedDocumentText()
         }
+        .onChange(of: documentEditorText) {
+            guard !isLoadingDocumentText else { return }
+            saveCurrentDocumentText()
+        }
         .onAppear {
             UIApplication.shared.isIdleTimerDisabled = keepScreenAwake
         }
@@ -104,7 +130,9 @@ struct SettingsScreen: View {
             PinchZoomDocumentEditor(
                 text: $documentEditorText,
                 fontSize: $documentEditorFontSize,
-                isFocused: $isDocumentEditorFocused
+                isFocused: $isDocumentEditorFocused,
+                commitRequest: documentEditorCommitRequest,
+                onEditingEnded: handleDocumentEditorDidEndEditing
             )
             .background(Color.black.opacity(0.55))
             .clipShape(.rect(cornerRadius: 12))
@@ -193,6 +221,7 @@ struct SettingsScreen: View {
 
             }
             .frame(maxWidth: .infinity, alignment: .topLeading)
+            .fixedSize(horizontal: false, vertical: true)
 
             VStack(spacing: 12) {
                 settingsPlaceholderSlider(title: "image name", value: $imageNameSliderValue)
@@ -205,7 +234,9 @@ struct SettingsScreen: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+            .fixedSize(horizontal: false, vertical: true)
         }
+        .fixedSize(horizontal: false, vertical: true)
     }
 
     private var sleepWakeButton: some View {
@@ -301,6 +332,7 @@ struct SettingsScreen: View {
         VStack(alignment: .leading, spacing: 12) {
             customKeyboardTimingSection
         }
+        .fixedSize(horizontal: false, vertical: true)
     }
 
     private var combinedBottomPanelSection: some View {
@@ -311,6 +343,7 @@ struct SettingsScreen: View {
             keyboardSettingsContent
                 .frame(maxWidth: .infinity, alignment: .topLeading)
         }
+        .fixedSize(horizontal: false, vertical: true)
         .padding()
         .background(Color.black)
         .overlay {
@@ -654,6 +687,33 @@ struct SettingsScreen: View {
         saveDocumentText(documentEditorText, to: fileURL)
     }
 
+    private func saveCurrentDocumentText(_ text: String) {
+        guard !loadedDocumentName.isEmpty,
+              let fileURL = documentFiles.first(where: { $0.lastPathComponent == loadedDocumentName }) else {
+            return
+        }
+
+        saveDocumentText(text, to: fileURL)
+    }
+
+    private func saveAndReturnToMain(using text: String? = nil) {
+        if let text {
+            documentEditorText = text
+            saveSelectedDocumentAndReload(text)
+        } else {
+            saveSelectedDocumentAndReload(documentEditorText)
+        }
+        dismiss()
+    }
+
+    private func handleDocumentEditorDidEndEditing(finalText: String) {
+        documentEditorText = finalText
+        if shouldDismissAfterSaving {
+            shouldDismissAfterSaving = false
+            saveAndReturnToMain(using: finalText)
+        }
+    }
+
     private func saveDocumentText(_ text: String, to fileURL: URL) {
         do {
             try text.write(to: fileURL, atomically: true, encoding: .utf8)
@@ -761,9 +821,16 @@ private struct PinchZoomDocumentEditor: UIViewRepresentable {
     @Binding var text: String
     @Binding var fontSize: CGFloat
     @Binding var isFocused: Bool
+    let commitRequest: Int
+    let onEditingEnded: (String) -> Void
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(text: $text, fontSize: $fontSize, isFocused: $isFocused)
+        Coordinator(
+            text: $text,
+            fontSize: $fontSize,
+            isFocused: $isFocused,
+            onEditingEnded: onEditingEnded
+        )
     }
 
     func makeUIView(context: Context) -> DocumentCanvasEditorView {
@@ -777,23 +844,33 @@ private struct PinchZoomDocumentEditor: UIViewRepresentable {
         editorView.onFocusChange = { focused in
             context.coordinator.updateFocus(focused)
         }
-        editorView.update(text: text, fontSize: fontSize, isFocused: isFocused)
+        editorView.onEditingEnded = { finalText in
+            context.coordinator.editingEnded(finalText: finalText)
+        }
+        editorView.update(text: text, fontSize: fontSize, isFocused: isFocused, commitRequest: commitRequest)
         return editorView
     }
 
     func updateUIView(_ editorView: DocumentCanvasEditorView, context: Context) {
-        editorView.update(text: text, fontSize: fontSize, isFocused: isFocused)
+        editorView.update(text: text, fontSize: fontSize, isFocused: isFocused, commitRequest: commitRequest)
     }
 
     final class Coordinator: NSObject {
         @Binding var text: String
         @Binding var fontSize: CGFloat
         @Binding var isFocused: Bool
+        let onEditingEnded: (String) -> Void
 
-        init(text: Binding<String>, fontSize: Binding<CGFloat>, isFocused: Binding<Bool>) {
+        init(
+            text: Binding<String>,
+            fontSize: Binding<CGFloat>,
+            isFocused: Binding<Bool>,
+            onEditingEnded: @escaping (String) -> Void
+        ) {
             _text = text
             _fontSize = fontSize
             _isFocused = isFocused
+            self.onEditingEnded = onEditingEnded
         }
 
         func updateText(_ updatedText: String) {
@@ -812,6 +889,12 @@ private struct PinchZoomDocumentEditor: UIViewRepresentable {
                 self.isFocused = focused
             }
         }
+
+        func editingEnded(finalText: String) {
+            DispatchQueue.main.async {
+                self.onEditingEnded(finalText)
+            }
+        }
     }
 }
 
@@ -819,6 +902,7 @@ private final class DocumentCanvasEditorView: UIView, UITextViewDelegate, UIGest
     var onTextChange: ((String) -> Void)?
     var onFontSizeChange: ((CGFloat) -> Void)?
     var onFocusChange: ((Bool) -> Void)?
+    var onEditingEnded: ((String) -> Void)?
 
     private let scrollView = UIScrollView()
     private let canvasView = UIView()
@@ -829,6 +913,7 @@ private final class DocumentCanvasEditorView: UIView, UITextViewDelegate, UIGest
     private var didApplyInitialOffset = false
     private var isUpdatingFromSwiftUI = false
     private var pinchStartFontSize: CGFloat = 18
+    private var lastCommitRequest = 0
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -846,7 +931,7 @@ private final class DocumentCanvasEditorView: UIView, UITextViewDelegate, UIGest
         layoutCanvas(preserveOffset: true)
     }
 
-    func update(text: String, fontSize: CGFloat, isFocused: Bool) {
+    func update(text: String, fontSize: CGFloat, isFocused: Bool, commitRequest: Int) {
         isUpdatingFromSwiftUI = true
 
         if textView.text != text {
@@ -856,6 +941,11 @@ private final class DocumentCanvasEditorView: UIView, UITextViewDelegate, UIGest
         if abs(currentFontSize - fontSize) > 0.25 {
             currentFontSize = fontSize
             textView.font = .systemFont(ofSize: currentFontSize)
+        }
+
+        if commitRequest != lastCommitRequest {
+            lastCommitRequest = commitRequest
+            commitPendingText()
         }
 
         layoutCanvas(preserveOffset: true)
@@ -871,6 +961,10 @@ private final class DocumentCanvasEditorView: UIView, UITextViewDelegate, UIGest
         }
 
         isUpdatingFromSwiftUI = false
+    }
+
+    private func commitPendingText() {
+        onTextChange?(textView.text ?? "")
     }
 
     private func configure() {
@@ -980,7 +1074,9 @@ private final class DocumentCanvasEditorView: UIView, UITextViewDelegate, UIGest
     }
 
     func textViewDidEndEditing(_ textView: UITextView) {
+        onTextChange?(textView.text ?? "")
         onFocusChange?(false)
+        onEditingEnded?(textView.text ?? "")
     }
 
     @objc private func handlePinch(_ gesture: UIPinchGestureRecognizer) {

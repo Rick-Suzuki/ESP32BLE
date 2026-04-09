@@ -80,6 +80,7 @@ struct MainScreen: View {
     let definedFunctionKeyCount: Int
     let refreshDocumentFiles: () -> Void
     let loadFunctionKeys: (URL) -> Void
+    let saveSelectedDocumentAndReload: (String) -> Void
     let renameDocument: (String) -> String?
     let deleteDocument: (URL) -> Void
     let duplicateDocument: (URL) -> Void
@@ -94,6 +95,48 @@ struct MainScreen: View {
     @Binding var settingsBLEText: String
 
     var body: some View {
+        mainScreenContent
+            .task(id: isEditingDocumentName) {
+                guard isEditingDocumentName else { return }
+                isDocumentNameFieldFocused = true
+            }
+            .onAppear {
+                reloadSelectedDocumentIfAvailable()
+            }
+            .onChange(of: selectedDocumentDisplayName) {
+                handleSelectedDocumentDisplayNameChange()
+            }
+            .onChange(of: definedFunctionKeyCount) {
+                updateVisibleBoxCountToFitDefinedButtons()
+            }
+            .onChange(of: isDocumentNameFieldFocused) {
+                handleDocumentNameFieldFocusChange()
+            }
+            .onChange(of: isSpkRecEnabled) {
+                handleSpeechRecognitionToggle()
+            }
+            .onChange(of: speechRecognitionAutoOffMinutes) {
+                handleSpeechRecognitionAutoOffMinutesChange()
+            }
+            .onChange(of: latestRecognizedText) {
+                handleLatestRecognizedTextChange()
+            }
+            .onDisappear {
+                handleMainScreenDisappear()
+            }
+            .task(id: definedFunctionKeyCount) {
+                updateVisibleBoxCountToFitDefinedButtons()
+            }
+            .alert("Rename File", isPresented: renameAlertIsPresented) {
+                Button("OK", role: .cancel) {
+                    renameAlertMessage = nil
+                }
+            } message: {
+                Text(renameAlertMessage ?? "")
+            }
+    }
+
+    private var mainScreenContent: some View {
         VStack(spacing: 20) {
             GeometryReader { geometry in
                 let gridDimensions = gridDimensions(for: visibleBoxCount)
@@ -131,42 +174,15 @@ struct MainScreen: View {
                                 ble.sendLine(sendText)
                             }
                         } label: {
-                            ZStack {
-                                RoundedRectangle(cornerRadius: mainGridButtonCornerRadius, style: .continuous)
-                                    .fill(buttonBackgroundColor(for: entry))
-
-                                Text(buttonTitle(for: entry))
-                                    .font(.system(size: boxFontSize, weight: .semibold))
-                                    .foregroundStyle(buttonTextColor(for: entry))
-                                    .multilineTextAlignment(.center)
-                                    .padding(.horizontal, 6)
-                            }
-                            .frame(maxWidth: .infinity, minHeight: buttonHeight, maxHeight: buttonHeight)
-                            .background {
-                                Color.clear
-                            }
-                            .overlay(buttonOverlay(for: entry, index: index))
-                            .contentShape(.rect(cornerRadius: mainGridButtonCornerRadius))
+                            mainGridButtonLabel(entry: entry, index: index, buttonHeight: buttonHeight)
                         }
                         .buttonStyle(.plain)
                         .simultaneousGesture(
-                            DragGesture(minimumDistance: 20)
-                                .onChanged { _ in
-                                    guard isGridEditModeEnabled,
-                                          editingSlotIndex == nil,
-                                          !entry.isBlankPlaceholder else {
-                                        return
-                                    }
-
-                                    activeDragIndex = index
-                                }
-                                .onEnded { value in
-                                    handleEditDragEnded(
-                                        from: index,
-                                        translation: value.translation,
-                                        gridDimensions: gridDimensions
-                                    )
-                                }
+                            mainGridButtonDragGesture(
+                                entry: entry,
+                                index: index,
+                                gridDimensions: gridDimensions
+                            )
                         )
                         .simultaneousGesture(
                             LongPressGesture(minimumDuration: 0.4)
@@ -263,80 +279,20 @@ struct MainScreen: View {
                             selectedDocumentName: selectedDocumentName,
                             refreshDocumentFiles: refreshDocumentFiles,
                             loadFunctionKeys: loadFunctionKeys,
+                            saveSelectedDocumentAndReload: saveSelectedDocumentAndReload,
                             deleteDocument: deleteDocument,
                             duplicateDocument: duplicateDocument,
                             canDeleteDocuments: canDeleteDocuments,
                             bleTextToSend: $settingsBLEText
                         )
                     } label: {
-                        Text("settings >")
-                            .font(.headline)
-                            .foregroundStyle(.white)
-                            .frame(minWidth: 92, minHeight: 44)
-                            .background(toolbarButtonBackgroundColor(isEditingSlotActive: editingSlotIndex != nil, normalBackground: Color.gray.opacity(0.45)))
-                            .overlay {
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(toolbarButtonBorderColor(isEditingSlotActive: editingSlotIndex != nil), lineWidth: 1.5)
-                            }
-                            .clipShape(.rect(cornerRadius: 12))
-                            .contentShape(.rect)
+                        settingsToolbarButtonLabel
                     }
                     .simultaneousGesture(TapGesture().onEnded { ButtonClickFeedback.playIfEnabled() })
                     .disabled(isGridEditModeEnabled || editingSlotIndex != nil)
                     .opacity(isGridEditModeEnabled || editingSlotIndex != nil ? 0.45 : 1)
                 }
             }
-        }
-        .task(id: isEditingDocumentName) {
-            guard isEditingDocumentName else { return }
-            isDocumentNameFieldFocused = true
-        }
-        .onChange(of: selectedDocumentDisplayName) {
-            cancelDocumentRename()
-            isGridEditModeEnabled = false
-            activeDragIndex = nil
-            cancelSlotEditing()
-        }
-        .onChange(of: definedFunctionKeyCount) {
-            updateVisibleBoxCountToFitDefinedButtons()
-        }
-        .onChange(of: isDocumentNameFieldFocused) {
-            guard isEditingDocumentName, !isDocumentNameFieldFocused else {
-                return
-            }
-
-            cancelDocumentRename()
-        }
-        .onChange(of: isSpkRecEnabled) {
-            handleSpeechRecognitionToggle()
-        }
-        .onChange(of: speechRecognitionAutoOffMinutes) {
-            guard isSpkRecEnabled else {
-                return
-            }
-
-            scheduleSpeechRecognitionAutoOff()
-        }
-        .onChange(of: speechRecognition.latestRecognition) {
-            guard let latestRecognition = speechRecognition.latestRecognition else {
-                return
-            }
-
-            applyRecognizedSpeech(latestRecognition.text)
-        }
-        .onDisappear {
-            speechRecognitionAutoOffTask?.cancel()
-            speechRecognition.setListeningEnabled(false)
-        }
-        .task(id: definedFunctionKeyCount) {
-            updateVisibleBoxCountToFitDefinedButtons()
-        }
-        .alert("Rename File", isPresented: renameAlertIsPresented) {
-            Button("OK", role: .cancel) {
-                renameAlertMessage = nil
-            }
-        } message: {
-            Text(renameAlertMessage ?? "")
         }
     }
 
@@ -397,6 +353,25 @@ struct MainScreen: View {
             .foregroundStyle(.white)
             .disabled(currentFileNumber >= totalFileCount)
         }
+    }
+
+    private var settingsToolbarButtonLabel: some View {
+        Text("settings >")
+            .font(.headline)
+            .foregroundStyle(.white)
+            .frame(minWidth: 92, minHeight: 44)
+            .background(
+                toolbarButtonBackgroundColor(
+                    isEditingSlotActive: editingSlotIndex != nil,
+                    normalBackground: Color.gray.opacity(0.45)
+                )
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(toolbarButtonBorderColor(isEditingSlotActive: editingSlotIndex != nil), lineWidth: 1.5)
+            }
+            .clipShape(.rect(cornerRadius: 12))
+            .contentShape(.rect)
     }
 
     private var displayModeButtonSection: some View {
@@ -903,6 +878,51 @@ struct MainScreen: View {
         return .white
     }
 
+    private func mainGridButtonLabel(entry: FunctionKeyEntry, index: Int, buttonHeight: CGFloat) -> some View {
+        let backgroundColor = buttonBackgroundColor(for: entry)
+        let title = buttonTitle(for: entry)
+        let textColor = buttonTextColor(for: entry)
+
+        return ZStack {
+            RoundedRectangle(cornerRadius: mainGridButtonCornerRadius, style: .continuous)
+                .fill(backgroundColor)
+
+            Text(title)
+                .font(.system(size: boxFontSize, weight: .semibold))
+                .foregroundStyle(textColor)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 6)
+        }
+        .frame(maxWidth: .infinity, minHeight: buttonHeight, maxHeight: buttonHeight)
+        .background(Color.clear)
+        .overlay(buttonOverlay(for: entry, index: index))
+        .contentShape(.rect(cornerRadius: mainGridButtonCornerRadius))
+    }
+
+    private func mainGridButtonDragGesture(
+        entry: FunctionKeyEntry,
+        index: Int,
+        gridDimensions: (columns: Int, rows: Int)
+    ) -> some Gesture {
+        DragGesture(minimumDistance: 20)
+            .onChanged { _ in
+                guard isGridEditModeEnabled,
+                      editingSlotIndex == nil,
+                      !entry.isBlankPlaceholder else {
+                    return
+                }
+
+                activeDragIndex = index
+            }
+            .onEnded { value in
+                handleEditDragEnded(
+                    from: index,
+                    translation: value.translation,
+                    gridDimensions: gridDimensions
+                )
+            }
+    }
+
     @ViewBuilder
     private func buttonOverlay(for entry: FunctionKeyEntry, index: Int) -> some View {
         if shouldShowBorder(for: entry) {
@@ -938,6 +958,54 @@ struct MainScreen: View {
         unmatchedSpeechText = nil
         speechRecognition.setListeningEnabled(false)
         sendModifierFunctionKey("f19")
+    }
+
+    private var latestRecognizedText: String? {
+        speechRecognition.latestRecognition?.text
+    }
+
+    private func handleSelectedDocumentDisplayNameChange() {
+        cancelDocumentRename()
+        isGridEditModeEnabled = false
+        activeDragIndex = nil
+        cancelSlotEditing()
+    }
+
+    private func handleDocumentNameFieldFocusChange() {
+        guard isEditingDocumentName, !isDocumentNameFieldFocused else {
+            return
+        }
+
+        cancelDocumentRename()
+    }
+
+    private func reloadSelectedDocumentIfAvailable() {
+        guard let selectedDocumentURL = documentFiles.first(where: { $0.lastPathComponent == selectedDocumentName }) else {
+            return
+        }
+
+        loadFunctionKeys(selectedDocumentURL)
+    }
+
+    private func handleSpeechRecognitionAutoOffMinutesChange() {
+        guard isSpkRecEnabled else {
+            return
+        }
+
+        scheduleSpeechRecognitionAutoOff()
+    }
+
+    private func handleLatestRecognizedTextChange() {
+        guard let recognizedText = latestRecognizedText else {
+            return
+        }
+
+        applyRecognizedSpeech(recognizedText)
+    }
+
+    private func handleMainScreenDisappear() {
+        speechRecognitionAutoOffTask?.cancel()
+        speechRecognition.setListeningEnabled(false)
     }
 
     private func scheduleSpeechRecognitionAutoOff() {

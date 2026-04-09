@@ -72,6 +72,7 @@ struct ContentView: View {
                         definedFunctionKeyCount: loadedFunctionKeySlotCount,
                         refreshDocumentFiles: refreshDocumentFiles,
                         loadFunctionKeys: selectDocument,
+                        saveSelectedDocumentAndReload: saveSelectedDocumentAndReload,
                         renameDocument: renameSelectedDocument,
                         deleteDocument: deleteDocument,
                         duplicateDocument: duplicateDocument,
@@ -103,6 +104,7 @@ struct ContentView: View {
                     selectedDocumentName: selectedDocumentName,
                     refreshDocumentFiles: refreshDocumentFiles,
                     loadFunctionKeys: selectDocument,
+                    saveSelectedDocumentAndReload: saveSelectedDocumentAndReload,
                     deleteDocument: deleteDocument,
                     duplicateDocument: duplicateDocument,
                     canDeleteDocuments: documentFiles.count > 1,
@@ -274,6 +276,18 @@ struct ContentView: View {
         do {
             try contents.write(to: selectedDocumentURL, atomically: true, encoding: .utf8)
             applySlotLines(normalizedLines)
+        } catch {
+            loadFunctionKeys(from: selectedDocumentURL)
+        }
+    }
+
+    private func saveSelectedDocumentAndReload(_ text: String) {
+        guard let selectedDocumentURL = selectedDocumentURL() else { return }
+
+        do {
+            try text.write(to: selectedDocumentURL, atomically: true, encoding: .utf8)
+            let loadedTitles = normalizedSlotLines(from: text)
+            applySlotLines(loadedTitles)
         } catch {
             loadFunctionKeys(from: selectedDocumentURL)
         }
