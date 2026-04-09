@@ -30,8 +30,8 @@ struct SettingsScreen: View {
     @State private var isDocumentEditorFocused = false
     @State private var loadedDocumentName = ""
     @State private var savedDocumentEditorText = ""
-    @State private var imageNameSliderValue = 0.5
     @State private var opacitySliderValue = 0.5
+    @State private var selectedImageIndex = 0
     @AppStorage(ButtonClickFeedback.preferenceKey) private var isButtonClickEnabled = true
     @FocusState private var focusedField: SettingsFocusField?
 
@@ -267,7 +267,7 @@ struct SettingsScreen: View {
             .fixedSize(horizontal: false, vertical: true)
 
             VStack(spacing: 12) {
-                settingsPlaceholderSlider(title: "image name", value: $imageNameSliderValue)
+                imageControlButtons
                 settingsPlaceholderSlider(title: "opacity: 0.5", value: $opacitySliderValue)
 
                 HStack(spacing: 18) {
@@ -298,6 +298,126 @@ struct SettingsScreen: View {
         .background(sleepWakeButtonBackgroundColor)
         .clipShape(.rect(cornerRadius: 18))
         .disabled(!ble.isConnected)
+    }
+
+    private var imagePreviewSection: some View {
+        ZStack {
+            Color.black
+
+            if let previewImage {
+                Image(uiImage: previewImage)
+                    .resizable()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .opacity(opacitySliderValue)
+            }
+        }
+        .aspectRatio(1.3, contentMode: .fit)
+        .overlay {
+            Rectangle()
+                .stroke(Color.white, lineWidth: 2)
+        }
+        .clipped()
+    }
+
+    private var imageControlButtons: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(truncatedImageDisplayName)
+                .font(.headline)
+                .foregroundStyle(.white)
+                .lineLimit(1)
+
+            HStack(spacing: 18) {
+                imageControlButton(systemName: "arrow.counterclockwise.circle") {
+                    selectedImageIndex = 0
+                }
+
+                imageControlButton(systemName: "shuffle.circle") {
+                    guard maximumSelectableImageIndex > 0 else { return }
+                    selectedImageIndex = Int.random(in: 0...maximumSelectableImageIndex)
+                }
+
+                imageControlButton(systemName: "arrowshape.left.circle") {
+                    guard selectedImageIndex > 0 else { return }
+                    selectedImageIndex -= 1
+                }
+                .disabled(selectedImageIndex <= 0)
+                .opacity(selectedImageIndex <= 0 ? 0.35 : 1)
+
+                imageControlButton(systemName: "arrowshape.right.circle") {
+                    guard selectedImageIndex < maximumSelectableImageIndex else { return }
+                    selectedImageIndex += 1
+                }
+                .disabled(selectedImageIndex >= maximumSelectableImageIndex)
+                .opacity(selectedImageIndex >= maximumSelectableImageIndex ? 0.35 : 1)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var availableImageURLs: [URL] {
+        let directoryURL: URL
+        if let existingDocumentURL = documentFiles.first {
+            directoryURL = existingDocumentURL.deletingLastPathComponent()
+        } else if let fallbackDirectoryURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
+            directoryURL = fallbackDirectoryURL
+        } else {
+            return []
+        }
+
+        let supportedExtensions = Set(["png", "jpg", "jpeg", "heic", "heif", "gif", "bmp", "tiff", "webp"])
+
+        let urls = (try? FileManager.default.contentsOfDirectory(
+            at: directoryURL,
+            includingPropertiesForKeys: [.isRegularFileKey],
+            options: [.skipsHiddenFiles]
+        )) ?? []
+
+        return urls
+            .filter { url in
+                let values = try? url.resourceValues(forKeys: [.isRegularFileKey])
+                return values?.isRegularFile == true && supportedExtensions.contains(url.pathExtension.lowercased())
+            }
+            .sorted { $0.lastPathComponent.localizedCaseInsensitiveCompare($1.lastPathComponent) == .orderedAscending }
+    }
+
+    private var maximumSelectableImageIndex: Int {
+        availableImageURLs.count
+    }
+
+    private var previewImage: UIImage? {
+        guard selectedImageIndex > 0 else { return nil }
+        let imageIndex = selectedImageIndex - 1
+        guard availableImageURLs.indices.contains(imageIndex) else { return nil }
+        return UIImage(contentsOfFile: availableImageURLs[imageIndex].path)
+    }
+
+    private var truncatedImageDisplayName: String {
+        if selectedImageIndex == 0 {
+            return "black bg"
+        }
+
+        let imageIndex = selectedImageIndex - 1
+        guard availableImageURLs.indices.contains(imageIndex) else { return "no image" }
+
+        let name = availableImageURLs[imageIndex].lastPathComponent
+        let maxCharacterCount = 20
+        if name.count <= maxCharacterCount {
+            return name
+        }
+
+        return String(name.prefix(maxCharacterCount)) + "..."
+    }
+
+    private func imageControlButton(systemName: String, action: @escaping () -> Void) -> some View {
+        Button {
+            ButtonClickFeedback.playIfEnabled()
+            action()
+        } label: {
+            Image(systemName: systemName)
+                .font(.system(size: 28))
+                .foregroundStyle(.white)
+        }
+        .buttonStyle(.plain)
     }
 
     private var sleepWakeButtonBackgroundColor: Color {
@@ -450,9 +570,10 @@ struct SettingsScreen: View {
             .listStyle(.plain)
             .scrollContentBackground(.hidden)
             .background(.clear)
+
+            imagePreviewSection
         }
         .frame(maxHeight: .infinity, alignment: .top)
-        .padding(.bottom)
         .background(Color.black)
         .overlay {
             Rectangle()
@@ -996,6 +1117,7 @@ private final class NoWrapDocumentTextView: UITextView {
         )
     }
 
+	
     func ensureCaretVisible() {
         guard let selectedTextRange else { return }
 
