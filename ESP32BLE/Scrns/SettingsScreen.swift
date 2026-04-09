@@ -25,7 +25,9 @@ struct SettingsScreen: View {
     @Binding var bleTextToSend: String
     @State private var bleTextSelection: TextSelection?
     @State private var documentEditorText = ""
+    @State private var documentEditorFontSize: CGFloat = 18
     @State private var isLoadingDocumentText = false
+    @State private var isDocumentEditorFocused = false
     @State private var loadedDocumentName = ""
     @State private var savedDocumentEditorText = ""
     @State private var imageNameSliderValue = 0.5
@@ -38,7 +40,10 @@ struct SettingsScreen: View {
             HStack(alignment: .top, spacing: 0) {
                 VStack(spacing: 0) {
                     editableDocumentSection
-                    combinedBottomPanelSection
+
+                    if !isDocumentEditorFocused {
+                        combinedBottomPanelSection
+                    }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
 
@@ -122,11 +127,11 @@ struct SettingsScreen: View {
 
     private var editableDocumentSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            TextEditor(text: $documentEditorText)
-                .font(.system(size: 18))
-                .foregroundStyle(.white)
-                .scrollContentBackground(.hidden)
-                .padding(8)
+            PlainDocumentEditor(
+                text: $documentEditorText,
+                fontSize: $documentEditorFontSize,
+                isFocused: $isDocumentEditorFocused
+            )
                 .background(Color.black.opacity(0.55))
                 .clipShape(.rect(cornerRadius: 12))
         }
@@ -138,25 +143,70 @@ struct SettingsScreen: View {
                 .stroke(Color.white, lineWidth: 1)
         }
         .overlay(alignment: .bottomTrailing) {
-            Button("undo") {
-                ButtonClickFeedback.playIfEnabled()
-                documentEditorText = savedDocumentEditorText
+            HStack(spacing: 8) {
+                fontSizeControls
+                undoButton
+            }
+            .padding(8)
+        }
+        .clipShape(.rect(cornerRadius: 0))
+    }
+
+    private var fontSizeControls: some View {
+        HStack(spacing: 8) {
+            Button {
+                documentEditorFontSize = max(10, documentEditorFontSize - 1)
+            } label: {
+                Image(systemName: "triangle.fill")
+                    .font(.system(size: 16))
+                    .rotationEffect(.degrees(-90))
+                    .frame(width: 18, height: 18)
+                    .padding(8)
             }
             .buttonStyle(.plain)
             .foregroundStyle(.white)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-            .background(Color.gray.opacity(0.45))
-            .overlay {
-                RoundedRectangle(cornerRadius: 8)
-                    .stroke(Color.gray.opacity(0.5), lineWidth: 1)
+            .contentShape(.rect)
+
+            Text("font:\(Int(documentEditorFontSize))")
+                .font(.title3.weight(.semibold))
+                .foregroundStyle(.white)
+
+            Button {
+                documentEditorFontSize = min(40, documentEditorFontSize + 1)
+            } label: {
+                Image(systemName: "triangle.fill")
+                    .font(.system(size: 16))
+                    .rotationEffect(.degrees(90))
+                    .frame(width: 18, height: 18)
+                    .padding(8)
             }
-            .clipShape(.rect(cornerRadius: 8))
-            .padding(8)
-            .disabled(documentEditorText == savedDocumentEditorText)
-            .opacity(documentEditorText == savedDocumentEditorText ? 0.35 : 1)
+            .buttonStyle(.plain)
+            .foregroundStyle(.white)
+            .contentShape(.rect)
         }
-        .clipShape(.rect(cornerRadius: 0))
+        .padding(.horizontal, 20)
+        .padding(.vertical, 13)
+        .background(Color.black.opacity(0.5))
+        .clipShape(.rect(cornerRadius: 10))
+    }
+
+    private var undoButton: some View {
+        Button("undo") {
+            ButtonClickFeedback.playIfEnabled()
+            documentEditorText = savedDocumentEditorText
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(.white)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(Color.gray.opacity(0.45))
+        .overlay {
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Color.gray.opacity(0.5), lineWidth: 1)
+        }
+        .clipShape(.rect(cornerRadius: 8))
+        .disabled(documentEditorText == savedDocumentEditorText)
+        .opacity(documentEditorText == savedDocumentEditorText ? 0.35 : 1)
     }
 
     private var availableDevicesContent: some View {
@@ -800,6 +850,186 @@ private extension VerticalAlignment {
     }
 
     static let sliderTrackCenter = VerticalAlignment(SliderTrackCenterAlignment.self)
+}
+
+private struct PlainDocumentEditor: UIViewRepresentable {
+    @Binding var text: String
+    @Binding var fontSize: CGFloat
+    @Binding var isFocused: Bool
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(text: $text, isFocused: $isFocused)
+    }
+
+    func makeUIView(context: Context) -> NoWrapDocumentTextView {
+        let textView = NoWrapDocumentTextView()
+        textView.delegate = context.coordinator
+        textView.backgroundColor = .clear
+        textView.textColor = .white
+        textView.tintColor = .white
+        textView.keyboardAppearance = .dark
+        textView.autocapitalizationType = .none
+        textView.autocorrectionType = .no
+        textView.smartQuotesType = .no
+        textView.smartDashesType = .no
+        textView.smartInsertDeleteType = .no
+        textView.isScrollEnabled = true
+        textView.alwaysBounceHorizontal = true
+        textView.alwaysBounceVertical = true
+        textView.showsHorizontalScrollIndicator = true
+        textView.showsVerticalScrollIndicator = true
+        textView.textContainerInset = UIEdgeInsets(top: 8, left: 8, bottom: 8, right: 8)
+        textView.textContainer.lineFragmentPadding = 0
+        textView.textContainer.lineBreakMode = .byClipping
+        textView.textContainer.widthTracksTextView = false
+        textView.textContainer.size = CGSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
+        textView.font = .systemFont(ofSize: fontSize)
+        textView.text = text
+        return textView
+    }
+
+    func updateUIView(_ textView: NoWrapDocumentTextView, context: Context) {
+        context.coordinator.parent = self
+        let previousOffset = textView.contentOffset
+        var shouldRestoreOffset = false
+        var didChangeContent = false
+
+        if textView.text != text {
+            textView.text = text
+            shouldRestoreOffset = true
+            didChangeContent = true
+        }
+
+        let currentSize = textView.font?.pointSize ?? fontSize
+        if abs(currentSize - fontSize) > 0.25 {
+            textView.font = .systemFont(ofSize: fontSize)
+            shouldRestoreOffset = true
+        }
+
+        if shouldRestoreOffset {
+            textView.layoutIfNeeded()
+            textView.refreshNoWrapContentSize()
+            let targetOffset: CGPoint
+            if didChangeContent, !textView.hasUserAdjustedHorizontalOffset {
+                targetOffset = .zero
+            } else {
+                targetOffset = textView.clampedContentOffset(for: previousOffset)
+            }
+            textView.setContentOffset(targetOffset, animated: false)
+        }
+    }
+
+    final class Coordinator: NSObject, UITextViewDelegate {
+        var parent: PlainDocumentEditor
+
+        init(text: Binding<String>, isFocused: Binding<Bool>) {
+            self.parent = PlainDocumentEditor(text: text, fontSize: .constant(18), isFocused: isFocused)
+        }
+
+        func textViewDidChange(_ textView: UITextView) {
+            let updatedText = textView.text ?? ""
+            guard parent.text != updatedText else { return }
+            parent.text = updatedText
+            (textView as? NoWrapDocumentTextView)?.ensureCaretVisible()
+        }
+
+        func textViewDidChangeSelection(_ textView: UITextView) {
+            (textView as? NoWrapDocumentTextView)?.ensureCaretVisible()
+        }
+
+        func textView(
+            _ textView: UITextView,
+            shouldChangeTextIn range: NSRange,
+            replacementText text: String
+        ) -> Bool {
+            ButtonClickFeedback.playIfEnabled()
+            return true
+        }
+
+        func textViewDidBeginEditing(_ textView: UITextView) {
+            guard !parent.isFocused else { return }
+            parent.isFocused = true
+        }
+
+        func textViewDidEndEditing(_ textView: UITextView) {
+            guard parent.isFocused else { return }
+            parent.isFocused = false
+        }
+    }
+}
+
+private final class NoWrapDocumentTextView: UITextView {
+    var hasUserAdjustedHorizontalOffset = false
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        textContainer.size = CGSize(
+            width: CGFloat.greatestFiniteMagnitude,
+            height: CGFloat.greatestFiniteMagnitude
+        )
+        refreshNoWrapContentSize()
+    }
+
+    override var contentOffset: CGPoint {
+        didSet {
+            if abs(contentOffset.x) > 0.5 {
+                hasUserAdjustedHorizontalOffset = true
+            }
+        }
+    }
+
+    override func scrollRectToVisible(_ rect: CGRect, animated: Bool) {
+        // Keep the user's horizontal position instead of auto-jumping back to the caret.
+    }
+
+    override func scrollRangeToVisible(_ range: NSRange) {
+        // Keep the user's horizontal position instead of auto-jumping back to the caret.
+    }
+
+    func refreshNoWrapContentSize() {
+        let measuredSize = sizeThatFits(
+            CGSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
+        )
+        contentSize = CGSize(
+            width: max(bounds.width + 1, ceil(measuredSize.width)),
+            height: max(bounds.height + 1, ceil(measuredSize.height))
+        )
+    }
+
+    func ensureCaretVisible() {
+        guard let selectedTextRange else { return }
+
+        let caretRect = self.caretRect(for: selectedTextRange.end).insetBy(dx: -16, dy: -12)
+        var targetOffset = contentOffset
+
+        let visibleMinX = contentOffset.x
+        let visibleMaxX = contentOffset.x + bounds.width
+        if caretRect.maxX > visibleMaxX {
+            targetOffset.x = caretRect.maxX - bounds.width
+        } else if caretRect.minX < visibleMinX {
+            targetOffset.x = caretRect.minX
+        }
+
+        let visibleMinY = contentOffset.y
+        let visibleMaxY = contentOffset.y + bounds.height
+        if caretRect.maxY > visibleMaxY {
+            targetOffset.y = caretRect.maxY - bounds.height
+        } else if caretRect.minY < visibleMinY {
+            targetOffset.y = caretRect.minY
+        }
+
+        setContentOffset(clampedContentOffset(for: targetOffset), animated: false)
+    }
+
+    func clampedContentOffset(for proposedOffset: CGPoint) -> CGPoint {
+        let maximumX = max(0, contentSize.width - bounds.width)
+        let maximumY = max(0, contentSize.height - bounds.height)
+
+        return CGPoint(
+            x: min(max(0, proposedOffset.x), maximumX),
+            y: min(max(0, proposedOffset.y), maximumY)
+        )
+    }
 }
 
 private struct BackButton: View {
