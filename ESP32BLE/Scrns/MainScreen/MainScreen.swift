@@ -13,7 +13,7 @@ struct MainScreen: View {
     // Easy-to-find width for all slot editor helper buttons.
     private let slotEditorHelperButtonWidth: CGFloat = 58
 
-    @AppStorage("speechRecognitionAutoOffMinutes") private var speechRecognitionAutoOffMinutes = 5
+    @AppStorage("speechRecognitionAutoOffMinutes") var speechRecognitionAutoOffMinutes = 5
     let allowedVisibleBoxCounts = [
         1, 2, 4, 6, 9, 12, 15, 16, 18, 20, 24, 28, 32, 36, 40, 42, 45, 48,
         50, 54, 56, 60, 63, 64, 70, 72, 80, 81, 84, 88, 90, 96, 99, 100
@@ -24,11 +24,11 @@ struct MainScreen: View {
     private let speechRecognitionActiveColor = Color(red: 0.42, green: 0.12, blue: 0.12)
     private let bleSendActiveColor = Color(red: 0.55, green: 0.45, blue: 0.08)
     @State var visibleBoxCount = 20
-    @State private var isBLESendEnabled = true
-    @State private var isSpkRecEnabled = false
-    @State private var unmatchedSpeechText: String?
-    @State private var speechRecognitionAutoOffTask: Task<Void, Never>?
-    @StateObject private var speechRecognition = SpeechRecognitionManager()
+    @State var isBLESendEnabled = true
+    @State var isSpkRecEnabled = false
+    @State var unmatchedSpeechText: String?
+    @State var speechRecognitionAutoOffTask: Task<Void, Never>?
+    @StateObject var speechRecognition = SpeechRecognitionManager()
     @ObservedObject var ble: BLEKeyboardManager
     @State var displayMode: FunctionKeyDisplayMode = .both
     @State var isEditingDocumentName = false
@@ -38,6 +38,8 @@ struct MainScreen: View {
     @State var activeDragIndex: Int?
     @State var editingSlotIndex: Int?
     @State var editingSlotText = ""
+    @AppStorage("selectedBackgroundImageIndex") var selectedBackgroundImageIndex = 0
+    @AppStorage("backgroundImageOpacity") var backgroundImageOpacity = 0.5
     @FocusState var isDocumentNameFieldFocused: Bool
     @FocusState var isSlotEditorFocused: Bool
     let functionKeys: [FunctionKeyEntry]
@@ -107,31 +109,42 @@ struct MainScreen: View {
     }
 
     private var mainScreenContent: some View {
-        VStack(spacing: 20) {
-            mainGridSection
+        GeometryReader { geometry in
+            let horizontalContentInset: CGFloat = 0
+            let contentWidth = max(0, geometry.size.width - (horizontalContentInset * 2))
+            let topContentInset: CGFloat = 8
+            let bottomContentInset: CGFloat = 0
 
-            displayModeButtonSection
-        }
-        .background(Color.black.ignoresSafeArea())
-        .ignoresSafeArea(.keyboard)
-        .overlay {
-            if editingSlotIndex != nil {
-                Color.black.opacity(0.5)
-                    .ignoresSafeArea()
-                    .contentShape(Rectangle())
-            }
-        }
-        .overlay(alignment: .top) {
-            if isGridEditModeEnabled, editingSlotIndex != nil {
-                slotEditorSection
-                    .offset(y: -2)
+            ZStack {
+                VStack(spacing: 20) {
+                    mainGridSection(availableWidth: contentWidth)
+
+                    displayModeButtonSection(availableWidth: contentWidth)
+                }
+                .frame(width: contentWidth)
+                .frame(maxHeight: .infinity, alignment: .top)
+                .padding(.top, topContentInset)
+                .padding(.bottom, bottomContentInset)
+                .ignoresSafeArea(.keyboard)
+                .overlay {
+                    if editingSlotIndex != nil {
+                        Color.black.opacity(0.5)
+                            .ignoresSafeArea()
+                            .contentShape(Rectangle())
+                    }
+                }
+                .overlay(alignment: .top) {
+                    if isGridEditModeEnabled, editingSlotIndex != nil {
+                        slotEditorSection
+                            .offset(y: -2)
+                    }
+                }
             }
         }
         .padding(.horizontal, 2)
         .navigationTitle("")
         .toolbarTitleDisplayMode(.inline)
-        .toolbarBackground(Color.black, for: .navigationBar)
-        .toolbarBackground(.visible, for: .navigationBar)
+        .toolbarBackground(.hidden, for: .navigationBar)
         .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbar {
             MainScreenToolbarContent(
@@ -171,8 +184,9 @@ struct MainScreen: View {
         }
     }
 
-    private var mainGridSection: some View {
+    private func mainGridSection(availableWidth: CGFloat) -> some View {
         MainScreenGridSection(
+            availableWidth: availableWidth,
             functionKeys: functionKeys,
             visibleBoxCount: visibleBoxCount,
             mainGridButtonSpacing: mainGridButtonSpacing,
@@ -204,8 +218,9 @@ struct MainScreen: View {
             .contentShape(.rect)
     }
 
-    private var displayModeButtonSection: some View {
+    private func displayModeButtonSection(availableWidth: CGFloat) -> some View {
         MainScreenBottomBar(
+            availableWidth: availableWidth,
             allowedVisibleBoxCounts: allowedVisibleBoxCounts,
             visibleBoxCount: visibleBoxCount,
             boxFontSize: boxFontSize,
@@ -252,67 +267,6 @@ struct MainScreen: View {
         ble.sendString(editingSlotText)
     }
 
-    private func applyRecognizedSpeech(_ recognizedText: String) {
-        guard isSpkRecEnabled, !isGridEditModeEnabled else {
-            return
-        }
-
-        scheduleSpeechRecognitionAutoOff()
-
-        guard let matchingEntry = functionKeys.first(where: { entry in
-            guard let alternateDisplayText = entry.alternateDisplayText else {
-                return false
-            }
-
-            return normalizedSpeechMatchText(alternateDisplayText) == recognizedText
-        }) else {
-            unmatchedSpeechText = recognizedText
-            return
-        }
-
-        unmatchedSpeechText = nil
-
-        guard isBLESendEnabled else {
-            return
-        }
-
-        for sendText in matchingEntry.sendTexts {
-            ble.sendLine(sendText)
-        }
-    }
-
-    private func normalizedSpeechMatchText(_ text: String) -> String {
-        canonicalSpeechText(from: displayText(from: text))
-    }
-
-    private func canonicalSpeechText(from text: String) -> String {
-        text
-            .lowercased()
-            .components(separatedBy: CharacterSet.alphanumerics.inverted)
-            .filter { !$0.isEmpty }
-            .joined(separator: " ")
-    }
-
-    private func handleSpeechRecognitionToggle() {
-        if isSpkRecEnabled {
-            unmatchedSpeechText = nil
-            sendModifierFunctionKey("f20")
-            speechRecognition.setListeningEnabled(true)
-            scheduleSpeechRecognitionAutoOff()
-            return
-        }
-
-        speechRecognitionAutoOffTask?.cancel()
-        speechRecognitionAutoOffTask = nil
-        unmatchedSpeechText = nil
-        speechRecognition.setListeningEnabled(false)
-        sendModifierFunctionKey("f19")
-    }
-
-    private var latestRecognizedText: String? {
-        speechRecognition.latestRecognition?.text
-    }
-
     private func handleSelectedDocumentDisplayNameChange() {
         cancelDocumentRename()
         isGridEditModeEnabled = false
@@ -334,88 +288,6 @@ struct MainScreen: View {
         }
 
         loadFunctionKeys(selectedDocumentURL)
-    }
-
-    private func handleSpeechRecognitionAutoOffMinutesChange() {
-        guard isSpkRecEnabled else {
-            return
-        }
-
-        scheduleSpeechRecognitionAutoOff()
-    }
-
-    private func handleLatestRecognizedTextChange() {
-        guard let recognizedText = latestRecognizedText else {
-            return
-        }
-
-        applyRecognizedSpeech(recognizedText)
-    }
-
-    private func handleMainScreenDisappear() {
-        speechRecognitionAutoOffTask?.cancel()
-        speechRecognition.setListeningEnabled(false)
-    }
-
-    private func scheduleSpeechRecognitionAutoOff() {
-        speechRecognitionAutoOffTask?.cancel()
-
-        let autoOffMinutes = min(max(speechRecognitionAutoOffMinutes, 1), 30)
-        speechRecognitionAutoOffTask = Task {
-            do {
-                try await Task.sleep(for: .seconds(autoOffMinutes * 60))
-            } catch {
-                return
-            }
-
-            await MainActor.run {
-                guard isSpkRecEnabled else {
-                    return
-                }
-
-                isSpkRecEnabled = false
-            }
-        }
-    }
-
-    private func sendModifierFunctionKey(_ functionKey: String) {
-        guard !isGridEditModeEnabled else {
-            return
-        }
-
-        ble.sendLine("ct")
-        ble.sendLine("sh")
-        ble.sendLine("op")
-        ble.sendLine("cm")
-        ble.sendLine(functionKey)
-    }
-
-    private var speechRecognitionDisplayText: String {
-        if let unmatchedSpeechText {
-            return unmatchedSpeechText
-        }
-
-        switch speechRecognition.displayState {
-        case .disabled:
-            return "disabled"
-        case .recognizing:
-            return "recognizing..."
-        case .recognized(let text):
-            return text
-        }
-    }
-
-    private var speechRecognitionDisplayColor: Color {
-        if unmatchedSpeechText != nil {
-            return .white
-        }
-
-        switch speechRecognition.displayState {
-        case .recognized:
-            return .white
-        case .disabled, .recognizing:
-            return .gray
-        }
     }
 
     private var renameAlertIsPresented: Binding<Bool> {

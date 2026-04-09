@@ -93,32 +93,4 @@ struct KeyboardScreen: View {
         )
     }
 
-    func toggleModifier(_ modifier: KeyboardModifier) {
-        if activeModifiers.contains(modifier) {
-            activeModifiers.remove(modifier)
-        } else {
-            activeModifiers.insert(modifier)
-        }
-    }
-
-    func resetModifierToggles() {
-        activeModifiers.removeAll()
-    }
-
-    func sendKeyWithStickyModifiers(_ keyToken: String) {
-        sendTokens(activeModifierTokens + [keyToken])
-    }
-
-    func sendTokens(_ tokens: [String]) {
-        guard !tokens.isEmpty else {
-            return
-        }
-
-        if isSendOnReturnMode {
-            replaceSoftKeyTokensBuffer(with: tokens)
-            return
-        }
-
-        sendTokensDirectlyToBLE(tokens)
-    }
 }

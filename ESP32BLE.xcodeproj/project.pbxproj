@@ -44,6 +44,11 @@
 		1DDFB8092F87A62700776ED6 /* MainScreenDocumentActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DDFB8082F87A62700776ED6 /* MainScreenDocumentActions.swift */; };
 		1DDFB80B2F87A62700776ED6 /* SettingsImageSelectionSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DDFB80A2F87A62700776ED6 /* SettingsImageSelectionSupport.swift */; };
 		1DDFB80D2F87A62700776ED6 /* KeyboardNavigationSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DDFB80C2F87A62700776ED6 /* KeyboardNavigationSupport.swift */; };
+		1DDFB80F2F87AAB800776ED6 /* MainScreenBackgroundImageSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DDFB80E2F87AAB800776ED6 /* MainScreenBackgroundImageSupport.swift */; };
+		1DDFB8112F87C64500776ED6 /* debug.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DDFB8102F87C64000776ED6 /* debug.swift */; };
+		1DDFB8132F8868D600776ED6 /* MainScreenSpeechRecognitionSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DDFB8122F8868D600776ED6 /* MainScreenSpeechRecognitionSupport.swift */; };
+		1DDFB8152F8868D700776ED6 /* SettingsSendTextSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DDFB8142F8868D700776ED6 /* SettingsSendTextSupport.swift */; };
+		1DDFB8172F8868D700776ED6 /* KeyboardModifierSendSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DDFB8162F8868D700776ED6 /* KeyboardModifierSendSupport.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -87,6 +92,11 @@
 		1DDFB8082F87A62700776ED6 /* MainScreenDocumentActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainScreenDocumentActions.swift; sourceTree = "<group>"; };
 		1DDFB80A2F87A62700776ED6 /* SettingsImageSelectionSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsImageSelectionSupport.swift; sourceTree = "<group>"; };
 		1DDFB80C2F87A62700776ED6 /* KeyboardNavigationSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardNavigationSupport.swift; sourceTree = "<group>"; };
+		1DDFB80E2F87AAB800776ED6 /* MainScreenBackgroundImageSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainScreenBackgroundImageSupport.swift; sourceTree = "<group>"; };
+		1DDFB8102F87C64000776ED6 /* debug.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = debug.swift; sourceTree = "<group>"; };
+		1DDFB8122F8868D600776ED6 /* MainScreenSpeechRecognitionSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainScreenSpeechRecognitionSupport.swift; sourceTree = "<group>"; };
+		1DDFB8142F8868D700776ED6 /* SettingsSendTextSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsSendTextSupport.swift; sourceTree = "<group>"; };
+		1DDFB8162F8868D700776ED6 /* KeyboardModifierSendSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardModifierSendSupport.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -153,6 +163,7 @@
 				1D33C2D12F6145DC0098FD5C /* Info.plist */,
 				1D590E4A2F61206100E430E0 /* Assets.xcassets */,
 				1D590E512F61206100E430E0 /* ESP32BLEApp.swift */,
+				1DDFB8102F87C64000776ED6 /* debug.swift */,
 				1D590E532F61206100E430E0 /* scratchpad.txt */,
 				1D1B29CD2F63AC3D004733D7 /* Scrns */,
 				1D1B29CC2F63ABF8004733D7 /* BLE */,
@@ -174,6 +185,8 @@
 				1DDFB7FC2F879EFD00776ED6 /* MainScreenGridSection.swift */,
 				1DDFB8022F87A4E300776ED6 /* MainScreenButtonBehavior.swift */,
 				1DDFB8082F87A62700776ED6 /* MainScreenDocumentActions.swift */,
+				1DDFB80E2F87AAB800776ED6 /* MainScreenBackgroundImageSupport.swift */,
+				1DDFB8122F8868D600776ED6 /* MainScreenSpeechRecognitionSupport.swift */,
 			);
 			path = MainScreen;
 			sourceTree = "<group>";
@@ -190,6 +203,7 @@
 				1DDFB7FE2F879EFE00776ED6 /* SettingsBottomControlsSection.swift */,
 				1DDFB8042F87A4E300776ED6 /* SettingsImageControlsSection.swift */,
 				1DDFB80A2F87A62700776ED6 /* SettingsImageSelectionSupport.swift */,
+				1DDFB8142F8868D700776ED6 /* SettingsSendTextSupport.swift */,
 			);
 			path = SettingsScreen;
 			sourceTree = "<group>";
@@ -206,6 +220,7 @@
 				1DDFB8002F879EFE00776ED6 /* KeyboardModeRows.swift */,
 				1DDFB8062F87A4E300776ED6 /* KeyboardInputBehavior.swift */,
 				1DDFB80C2F87A62700776ED6 /* KeyboardNavigationSupport.swift */,
+				1DDFB8162F8868D700776ED6 /* KeyboardModifierSendSupport.swift */,
 			);
 			path = KeyboardScreen;
 			sourceTree = "<group>";
@@ -287,11 +302,13 @@
 				1DDFB8052F87A4E300776ED6 /* SettingsImageControlsSection.swift in Sources */,
 				1DDFB7F72F87989E00776ED6 /* SettingsDocumentTableSection.swift in Sources */,
 				1DDFB8072F87A4E300776ED6 /* KeyboardInputBehavior.swift in Sources */,
+				1DDFB8152F8868D700776ED6 /* SettingsSendTextSupport.swift in Sources */,
 				1D590E572F61206100E430E0 /* BLEKeyboardManager.swift in Sources */,
 				1D590E582F61206100E430E0 /* CommandButtonsSection.swift in Sources */,
 				1DDFB7E52F87903300776ED6 /* KeyboardModels.swift in Sources */,
 				1D590E592F61206100E430E0 /* ConnectionStatusSection.swift in Sources */,
 				1D590E5A2F61206100E430E0 /* ContentView.swift in Sources */,
+				1DDFB8132F8868D600776ED6 /* MainScreenSpeechRecognitionSupport.swift in Sources */,
 				1DDFB7FB2F87989F00776ED6 /* KeyboardLayoutSelection.swift in Sources */,
 				1D590E5C2F61206100E430E0 /* ESP32BLEApp.swift in Sources */,
 				1DDFB8012F879EFE00776ED6 /* KeyboardModeRows.swift in Sources */,
@@ -302,12 +319,15 @@
 				1DDFB7E72F87903400776ED6 /* KeyboardInputField.swift in Sources */,
 				1DDFB7E32F87903300776ED6 /* SettingsEditorSupport.swift in Sources */,
 				1D590E5D2F61206100E430E0 /* PhraseButtonsSection.swift in Sources */,
+				1DDFB80F2F87AAB800776ED6 /* MainScreenBackgroundImageSupport.swift in Sources */,
 				1DDFB80D2F87A62700776ED6 /* KeyboardNavigationSupport.swift in Sources */,
 				1D590E662F61350F00E430E0 /* SettingsScreen.swift in Sources */,
+				1DDFB8112F87C64500776ED6 /* debug.swift in Sources */,
 				1DDFB7ED2F87946400776ED6 /* KeyboardTopSectionView.swift in Sources */,
 				1DDFB7F92F87989F00776ED6 /* SettingsKeyboardTimingSection.swift in Sources */,
 				1DDFB8032F87A4E300776ED6 /* MainScreenButtonBehavior.swift in Sources */,
 				1DDFB7EB2F87946400776ED6 /* SettingsImagePreviewPanel.swift in Sources */,
+				1DDFB8172F8868D700776ED6 /* KeyboardModifierSendSupport.swift in Sources */,
 				1DDFB8092F87A62700776ED6 /* MainScreenDocumentActions.swift in Sources */,
 				1DDFB7FF2F879EFE00776ED6 /* SettingsBottomControlsSection.swift in Sources */,
 				1DDFB7F32F8795E000776ED6 /* KeyboardGridView.swift in Sources */,

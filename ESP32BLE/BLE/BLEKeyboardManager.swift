@@ -274,10 +274,12 @@ extension BLEKeyboardManager: CBCentralManagerDelegate {
 			let advertisedName = advertisementData[CBAdvertisementDataLocalNameKey] as? String ?? "nil"
 			let now = Date()
 		
-		print("** Found peripheral: \(name)")
-		print("** Found advertised local name: \(advertisedName)")
-		print("** Peripheral identifier: \(peripheral.identifier.uuidString)")
-		
+			if db_bt {
+				print("** Found peripheral: \(name)")
+				print("** Found advertised local name: \(advertisedName)")
+				print("** Peripheral identifier: \(peripheral.identifier.uuidString)")
+			}
+			
 			if let index = discoveredDevices.firstIndex(where: { $0.id == peripheral.identifier }) {
 				discoveredDevices[index] = BLEDiscoveredDevice(
 					id: peripheral.identifier,

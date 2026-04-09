@@ -30,12 +30,6 @@ extension KeyboardScreen {
         isSendOnReturnMode && !typingText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
-    var activeModifierTokens: [String] {
-        KeyboardModifier.allCases
-            .filter { activeModifiers.contains($0) }
-            .map(\.token)
-    }
-
     func handleInsertedText(_ insertedText: String) {
         guard !insertedText.isEmpty else {
             return
@@ -69,33 +63,6 @@ extension KeyboardScreen {
         cursorCommandID += 1
     }
 
-    func sendTokensDirectlyToBLE(_ tokens: [String]) {
-        guard ble.isConnected else {
-            print("Bluetooth not connected.")
-            return
-        }
-
-        for token in tokens {
-            ble.sendLine(token)
-        }
-
-        resetModifierToggles()
-    }
-
-    func sendModifiedTypedText() {
-        let trimmedText = typingText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedText.isEmpty else {
-            return
-        }
-
-        guard ble.isConnected else {
-            print("Bluetooth not connected.")
-            return
-        }
-
-        ble.sendString(typingText)
-    }
-
     func replaceSoftKeyTokensBuffer(with tokens: [String]) {
         bufferedSoftKeyTokens = tokens
         syncTypingTextWithBufferedTokens()
@@ -109,17 +76,6 @@ extension KeyboardScreen {
     func clearTypingArea() {
         typingText = ""
         bufferedSoftKeyTokens.removeAll()
-    }
-
-    func sendBufferedKeyboardContent() {
-        if !bufferedSoftKeyTokens.isEmpty {
-            sendTokensDirectlyToBLE(bufferedSoftKeyTokens)
-            clearTypingArea()
-            return
-        }
-
-        sendModifiedTypedText()
-        clearTypingArea()
     }
 
     func requestKeyboardFocus() {

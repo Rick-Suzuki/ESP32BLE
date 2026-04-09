@@ -3,6 +3,7 @@ import SwiftUI
 typealias GridDimensions = (columns: Int, rows: Int)
 
 struct MainScreenGridSection: View {
+    let availableWidth: CGFloat
     let functionKeys: [FunctionKeyEntry]
     let visibleBoxCount: Int
     let mainGridButtonSpacing: CGFloat
@@ -17,13 +18,17 @@ struct MainScreenGridSection: View {
     var body: some View {
         GeometryReader { geometry in
             let gridDimensions = gridDimensions(for: visibleBoxCount)
-            let columns = Array(
-                repeating: GridItem(.flexible(), spacing: mainGridButtonSpacing),
-                count: gridDimensions.columns
-            )
             let totalGridSpacing = mainGridButtonSpacing * CGFloat(max(gridDimensions.rows - 1, 0))
             let availableGridHeight = geometry.size.height.isFinite ? max(0, geometry.size.height - totalGridSpacing) : 0
             let buttonHeight = availableGridHeight / CGFloat(max(gridDimensions.rows, 1))
+            let totalColumnSpacing = mainGridButtonSpacing * CGFloat(max(gridDimensions.columns - 1, 0))
+            let safeAvailableWidth = availableWidth.isFinite ? max(0, availableWidth) : 0
+            let availableGridWidth = max(0, safeAvailableWidth - totalColumnSpacing)
+            let buttonWidth = availableGridWidth / CGFloat(max(gridDimensions.columns, 1))
+            let columns = Array(
+                repeating: GridItem(.fixed(buttonWidth), spacing: mainGridButtonSpacing),
+                count: gridDimensions.columns
+            )
             let visibleEntries = Array(functionKeys.prefix(visibleBoxCount).enumerated())
 
             LazyVGrid(columns: columns, spacing: mainGridButtonSpacing) {
@@ -44,6 +49,7 @@ struct MainScreenGridSection: View {
                         buttonLabel(entry, index, buttonHeight)
                     }
                     .buttonStyle(.plain)
+                    .frame(width: buttonWidth, height: buttonHeight)
                     .simultaneousGesture(dragGesture(entry, index, gridDimensions))
                     .simultaneousGesture(
                         LongPressGesture(minimumDuration: 0.4)
@@ -57,7 +63,7 @@ struct MainScreenGridSection: View {
                     )
                 }
             }
-            .background(Color.black)
+            .frame(width: safeAvailableWidth, alignment: .center)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }

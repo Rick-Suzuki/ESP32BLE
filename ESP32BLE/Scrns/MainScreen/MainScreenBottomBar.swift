@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct MainScreenBottomBar: View {
+    let availableWidth: CGFloat
     let allowedVisibleBoxCounts: [Int]
     let visibleBoxCount: Int
     let boxFontSize: Double
@@ -25,93 +26,110 @@ struct MainScreenBottomBar: View {
     let onAdvanceDisplayMode: () -> Void
 
     var body: some View {
-        HStack {
-            HStack(spacing: 12) {
-                controlTriangle(rotationDegrees: -90, foreground: countControlColor) {
-                    onDecreaseVisibleBoxCount()
+        GeometryReader { _ in
+            let isCompact = availableWidth < 1200
+            let speechBoxWidth: CGFloat = 220
+            let toggleWidth: CGFloat = isCompact ? 88 : 140
+            let displayModeWidth: CGFloat = isCompact ? 100 : 170
+
+            HStack(spacing: isCompact ? 8 : 12) {
+                HStack(spacing: isCompact ? 8 : 12) {
+                    controlTriangle(rotationDegrees: -90, foreground: countControlColor) {
+                        onDecreaseVisibleBoxCount()
+                    }
+                    .disabled(visibleBoxCount == allowedVisibleBoxCounts.first)
+
+                    Text("num:\(visibleBoxCount)")
+                        .font(.headline)
+                        .foregroundStyle(.white)
+                        .frame(minWidth: isCompact ? 28 : 32)
+
+                    controlTriangle(rotationDegrees: 90, foreground: countControlColor) {
+                        onIncreaseVisibleBoxCount()
+                    }
+                    .disabled(visibleBoxCount == allowedVisibleBoxCounts.last)
                 }
-                .disabled(visibleBoxCount == allowedVisibleBoxCounts.first)
 
-                Text("num:\(visibleBoxCount)")
-                    .font(.headline)
-                    .foregroundStyle(.white)
-                    .frame(minWidth: 32)
+                if !isCompact {
+                    HStack(spacing: 12) {
+                        controlTriangle(rotationDegrees: -90, foreground: fontControlColor) {
+                            onDecreaseBoxFontSize()
+                        }
+                        .disabled(boxFontSize <= minimumBoxFontSize)
 
-                controlTriangle(rotationDegrees: 90, foreground: countControlColor) {
-                    onIncreaseVisibleBoxCount()
+                        Text("fnt:\(Int(boxFontSize))")
+                            .font(.headline)
+                            .foregroundStyle(.white)
+                            .frame(minWidth: 32)
+
+                        controlTriangle(rotationDegrees: 90, foreground: fontControlColor) {
+                            onIncreaseBoxFontSize()
+                        }
+                        .disabled(boxFontSize >= maximumBoxFontSize)
+                    }
                 }
-                .disabled(visibleBoxCount == allowedVisibleBoxCounts.last)
-            }
 
-            HStack(spacing: 12) {
-                controlTriangle(rotationDegrees: -90, foreground: fontControlColor) {
-                    onDecreaseBoxFontSize()
+                Spacer(minLength: isCompact ? 6 : 12)
+
+                if !isCompact {
+                    Text(speechRecognitionDisplayText)
+                        .font(.body)
+                        .foregroundStyle(speechRecognitionDisplayColor)
+                        .opacity(0.6)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .frame(width: speechBoxWidth, alignment: .leading)
+                        .padding(.horizontal, 12)
+                        .frame(minHeight: 38)
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 6)
+                                .stroke(Color.white.opacity(0.35), lineWidth: 1)
+                        }
+                        .clipShape(.rect(cornerRadius: 6))
+
+                    Spacer(minLength: 12)
                 }
-                .disabled(boxFontSize <= minimumBoxFontSize)
 
-                Text("fnt:\(Int(boxFontSize))")
-                    .font(.headline)
-                    .foregroundStyle(.white)
-                    .frame(minWidth: 32)
+                toggleButton(
+                    title: isSpeechRecognitionEnabled ? "spk rec on" : "spk rec off",
+                    background: isSpeechRecognitionEnabled ? speechRecognitionActiveColor : Color.gray.opacity(0.45),
+                    border: isSpeechRecognitionEnabled ? speechRecognitionActiveColor : Color.gray.opacity(0.4),
+                    action: onToggleSpeechRecognition
+                )
+                .frame(width: toggleWidth)
 
-                controlTriangle(rotationDegrees: 90, foreground: fontControlColor) {
-                    onIncreaseBoxFontSize()
+                toggleButton(
+                    title: isBLESendEnabled ? "btn active" : "disabled",
+                    background: isBLESendEnabled ? bleSendActiveColor : Color.gray.opacity(0.45),
+                    border: isBLESendEnabled ? bleSendActiveColor : Color.gray.opacity(0.4),
+                    action: onToggleBLESend
+                )
+                .frame(width: toggleWidth)
+
+                Button {
+                    onAdvanceDisplayMode()
+                } label: {
+                    Text(displayMode.title)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                        .frame(maxWidth: .infinity, minHeight: 50)
+                        .contentShape(.rect)
                 }
-                .disabled(boxFontSize >= maximumBoxFontSize)
+                .buttonStyle(.plain)
+                .foregroundStyle(.white)
+                .background(displayModeButtonColor)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(displayModeButtonColor, lineWidth: 2)
+                }
+                .clipShape(.rect(cornerRadius: 12))
+                .frame(width: displayModeWidth)
             }
-
-            Spacer(minLength: 12)
-
-            Text(speechRecognitionDisplayText)
-                .font(.body)
-                .foregroundStyle(speechRecognitionDisplayColor)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 12)
-                .frame(minHeight: 38)
-                .background(Color.black.opacity(0.8))
-                .clipShape(.rect(cornerRadius: 6))
-                .frame(maxWidth: 360)
-
-            Spacer(minLength: 12)
-
-            toggleButton(
-                title: isSpeechRecognitionEnabled ? "spk rec on" : "spk rec off",
-                background: isSpeechRecognitionEnabled ? speechRecognitionActiveColor : Color.gray.opacity(0.45),
-                border: isSpeechRecognitionEnabled ? speechRecognitionActiveColor : Color.gray.opacity(0.4),
-                action: onToggleSpeechRecognition
-            )
-            .frame(maxWidth: 150)
-
-            toggleButton(
-                title: isBLESendEnabled ? "btn active" : "disabled",
-                background: isBLESendEnabled ? bleSendActiveColor : Color.gray.opacity(0.45),
-                border: isBLESendEnabled ? bleSendActiveColor : Color.gray.opacity(0.4),
-                action: onToggleBLESend
-            )
-            .frame(maxWidth: 150)
-
-            Button {
-                onAdvanceDisplayMode()
-            } label: {
-                Text(displayMode.title)
-                    .frame(maxWidth: .infinity, minHeight: 50)
-                    .contentShape(.rect)
-            }
-            .buttonStyle(.plain)
-            .foregroundStyle(.white)
-            .background(displayModeButtonColor)
-            .overlay {
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(displayModeButtonColor, lineWidth: 2)
-            }
-            .clipShape(.rect(cornerRadius: 12))
-            .frame(maxWidth: 180)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
         }
-        .frame(maxWidth: .infinity, alignment: .trailing)
-        .padding(.horizontal, 8)
+        .frame(height: 62)
+        .padding(.horizontal, 4)
         .padding(.vertical, 6)
-        .background(.thinMaterial)
-        .clipShape(.rect(cornerRadius: 16))
     }
 
     private func controlTriangle(rotationDegrees: Double, foreground: Color, action: @escaping () -> Void) -> some View {
@@ -120,9 +138,9 @@ struct MainScreenBottomBar: View {
             action()
         } label: {
             Image(systemName: "triangle.fill")
-                .font(.system(size: 30))
+                .font(.system(size: 24))
                 .rotationEffect(.degrees(rotationDegrees))
-                .frame(width: 30, height: 30)
+                .frame(width: 24, height: 24)
         }
         .buttonStyle(.plain)
         .foregroundStyle(foreground)
@@ -133,6 +151,8 @@ struct MainScreenBottomBar: View {
             action()
         } label: {
             Text(title)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
                 .frame(maxWidth: .infinity, minHeight: 50)
                 .contentShape(.rect)
         }

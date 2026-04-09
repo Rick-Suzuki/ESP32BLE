@@ -4,7 +4,7 @@ import UIKit
 struct SettingsScreen: View {
     @Environment(\.dismiss) private var dismiss
     @AppStorage("speechRecognitionAutoOffMinutes") private var speechRecognitionAutoOffMinutes = 5
-    @AppStorage("sendControlABeforeText") private var sendControlABeforeText = false
+    @AppStorage("sendControlABeforeText") var sendControlABeforeText = false
     @AppStorage("keyboardTimingOnMs") private var keyboardTimingOnMs = 0.0
     @AppStorage("keyboardTimingOffMs") private var keyboardTimingOffMs = 0.0
     @AppStorage("keepScreenAwake") private var keepScreenAwake = false
@@ -19,17 +19,17 @@ struct SettingsScreen: View {
     let duplicateDocument: (URL) -> Void
     let canDeleteDocuments: Bool
     @Binding var bleTextToSend: String
-    @State private var bleTextSelection: TextSelection?
+    @State var bleTextSelection: TextSelection?
     @State private var documentEditorText = ""
     @State private var documentEditorFontSize: CGFloat = 18
     @State private var isLoadingDocumentText = false
     @State private var isDocumentEditorFocused = false
     @State private var loadedDocumentName = ""
     @State private var savedDocumentEditorText = ""
-    @State private var opacitySliderValue = 0.5
-    @State var selectedImageIndex = 0
+    @AppStorage("backgroundImageOpacity") private var opacitySliderValue = 0.5
+    @AppStorage("selectedBackgroundImageIndex") var selectedImageIndex = 0
     @AppStorage(ButtonClickFeedback.preferenceKey) private var isButtonClickEnabled = true
-    @FocusState private var focusedField: SettingsFocusField?
+    @FocusState var focusedField: SettingsFocusField?
 
     var body: some View {
         GeometryReader { geometry in
@@ -197,50 +197,6 @@ struct SettingsScreen: View {
                 .stroke(Color.white, lineWidth: 1)
         }
         .clipShape(.rect(cornerRadius: 0))
-    }
-
-    private var sendTextSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 12) {
-                Button("del") {
-                    ButtonClickFeedback.playIfEnabled()
-                    bleTextToSend = ""
-                }
-                .buttonStyle(.bordered)
-                .tint(.red)
-                .disabled(bleTextToSend.isEmpty)
-
-                TextField("Text to send", text: $bleTextToSend, selection: $bleTextSelection)
-                    .focused($focusedField, equals: .sendText)
-                    .textFieldStyle(.roundedBorder)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .onSubmit(sendEnteredText)
-
-                Button("tab") {
-                    ButtonClickFeedback.playIfEnabled()
-                    insertTextAtCursor("\\n")
-                }
-                .buttonStyle(.bordered)
-
-                Button("return") {
-                    ButtonClickFeedback.playIfEnabled()
-                    insertTextAtCursor("\\n")
-                }
-                .buttonStyle(.bordered)
-
-                Button("Send") {
-                    ButtonClickFeedback.playIfEnabled()
-                    sendEnteredText()
-                }
-                .buttonStyle(.borderedProminent)
-                .disabled(bleTextToSend.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding()
-        .background(.thinMaterial)
-        .clipShape(.rect(cornerRadius: 16))
     }
 
     private var documentTableSection: some View {
@@ -443,26 +399,6 @@ struct SettingsScreen: View {
         }
     }
 
-    private func sendEnteredText() {
-        let trimmedText = bleTextToSend.trimmingCharacters(in: .whitespacesAndNewlines)
-
-        guard !trimmedText.isEmpty else {
-            return
-        }
-
-        guard ble.isConnected else {
-            print("Bluetooth not connected.")
-            return
-        }
-
-        if sendControlABeforeText {
-            ble.sendLine("ca")
-        }
-
-        print("Settings text sent: [\(trimmedText)]")
-        ble.sendString(trimmedText)
-    }
-
     private func loadSelectedDocumentText() {
         isLoadingDocumentText = true
         defer { isLoadingDocumentText = false }
@@ -580,33 +516,6 @@ struct SettingsScreen: View {
         ble.sendKeyboardTiming(onMs: Int(keyboardTimingOnMs), offMs: Int(keyboardTimingOffMs))
     }
 
-    private func insertTextAtCursor(_ insertedText: String) {
-        guard let selection = bleTextSelection else {
-            bleTextToSend.append(insertedText)
-            bleTextSelection = TextSelection(insertionPoint: bleTextToSend.endIndex)
-            return
-        }
-
-        switch selection.indices {
-        case .selection(let range):
-            let lowerOffset = bleTextToSend.distance(from: bleTextToSend.startIndex, to: range.lowerBound)
-            let upperOffset = bleTextToSend.distance(from: bleTextToSend.startIndex, to: range.upperBound)
-            let lowerBound = bleTextToSend.index(bleTextToSend.startIndex, offsetBy: lowerOffset)
-            let upperBound = bleTextToSend.index(bleTextToSend.startIndex, offsetBy: upperOffset)
-
-            bleTextToSend.replaceSubrange(lowerBound..<upperBound, with: insertedText)
-
-            let insertionOffset = lowerOffset + insertedText.count
-            let insertionPoint = bleTextToSend.index(bleTextToSend.startIndex, offsetBy: insertionOffset)
-            bleTextSelection = TextSelection(insertionPoint: insertionPoint)
-        case .multiSelection:
-            bleTextToSend.append(insertedText)
-            bleTextSelection = TextSelection(insertionPoint: bleTextToSend.endIndex)
-        @unknown default:
-            bleTextToSend.append(insertedText)
-            bleTextSelection = TextSelection(insertionPoint: bleTextToSend.endIndex)
-        }
-    }
 }
 
 private extension VerticalAlignment {

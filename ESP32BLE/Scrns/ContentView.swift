@@ -34,6 +34,8 @@ struct FunctionKeyEntry {
 
 struct ContentView: View {
     private let defaultDocumentFontSize: Double = 20
+    @AppStorage("selectedBackgroundImageIndex") private var selectedBackgroundImageIndex = 0
+    @AppStorage("backgroundImageOpacity") private var backgroundImageOpacity = 0.5
     @StateObject private var ble = BLEKeyboardManager()
     @State private var functionKeys = ContentView.makeDefaultFunctionKeys()
     @State private var functionKeySlotLines = ContentView.defaultFunctionKeyTitles()
@@ -47,56 +49,63 @@ struct ContentView: View {
 
     var body: some View {
         NavigationStack {
-            GeometryReader { geometry in
-                let containerWidth = geometry.size.width.isFinite ? max(0, geometry.size.width) : 0
-                let containerHeight = geometry.size.height.isFinite ? max(0, geometry.size.height) : 0
+            ZStack {
+                GeometryReader { geometry in
+                    let containerWidth = geometry.size.width.isFinite ? max(0, geometry.size.width) : 0
+                    let containerHeight = geometry.size.height.isFinite ? max(0, geometry.size.height) : 0
 
-                ZStack {
-                    KeyboardScreen(ble: ble, isPresented: isKeyboardScreenPresented) {
-                        withAnimation(.easeInOut(duration: 0.25)) {
-                            isKeyboardScreenPresented = false
+                    ZStack {
+                        KeyboardScreen(ble: ble, isPresented: isKeyboardScreenPresented) {
+                            withAnimation(.easeInOut(duration: 0.25)) {
+                                isKeyboardScreenPresented = false
+                            }
                         }
+                        .frame(width: containerWidth, height: containerHeight)
+                        .offset(x: isKeyboardScreenPresented ? 0 : -containerWidth)
+
+                        MainScreen(
+                            ble: ble,
+                            functionKeys: functionKeys,
+                            documentFiles: documentFiles,
+                            selectedDocumentName: selectedDocumentName,
+                            selectedDocumentDisplayName: displayName(for: selectedDocumentName),
+                            boxFontSize: fontSize(for: selectedDocumentName),
+                            currentFileNumber: currentFileNumber,
+                            totalFileCount: documentFiles.count,
+                            definedFunctionKeyCount: loadedFunctionKeySlotCount,
+                            refreshDocumentFiles: refreshDocumentFiles,
+                            loadFunctionKeys: selectDocument,
+                            saveSelectedDocumentAndReload: saveSelectedDocumentAndReload,
+                            renameDocument: renameSelectedDocument,
+                            deleteDocument: deleteDocument,
+                            duplicateDocument: duplicateDocument,
+                            canDeleteDocuments: documentFiles.count > 1,
+                            selectPreviousDocument: selectPreviousDocument,
+                            selectNextDocument: selectNextDocument,
+                            resizeVisibleBoxCount: resizeSelectedDocumentSlotCount,
+                            moveFunctionKeySlot: moveSelectedDocumentSlot,
+                            updateFunctionKeySlot: updateSelectedDocumentSlot,
+                            updateDocumentFontSize: updateDocumentFontSize,
+                            openKeyboardScreen: {
+                                withAnimation(.easeInOut(duration: 0.25)) {
+                                    isKeyboardScreenPresented = true
+                                }
+                            },
+                            settingsBLEText: $settingsBLEText
+                        )
+                        .frame(width: containerWidth, height: containerHeight)
+                        .offset(x: isKeyboardScreenPresented ? containerWidth : 0)
                     }
                     .frame(width: containerWidth, height: containerHeight)
-                    .offset(x: isKeyboardScreenPresented ? 0 : -containerWidth)
-
-                    MainScreen(
-                        ble: ble,
-                        functionKeys: functionKeys,
-                        documentFiles: documentFiles,
-                        selectedDocumentName: selectedDocumentName,
-                        selectedDocumentDisplayName: displayName(for: selectedDocumentName),
-                        boxFontSize: fontSize(for: selectedDocumentName),
-                        currentFileNumber: currentFileNumber,
-                        totalFileCount: documentFiles.count,
-                        definedFunctionKeyCount: loadedFunctionKeySlotCount,
-                        refreshDocumentFiles: refreshDocumentFiles,
-                        loadFunctionKeys: selectDocument,
-                        saveSelectedDocumentAndReload: saveSelectedDocumentAndReload,
-                        renameDocument: renameSelectedDocument,
-                        deleteDocument: deleteDocument,
-                        duplicateDocument: duplicateDocument,
-                        canDeleteDocuments: documentFiles.count > 1,
-                        selectPreviousDocument: selectPreviousDocument,
-                        selectNextDocument: selectNextDocument,
-                        resizeVisibleBoxCount: resizeSelectedDocumentSlotCount,
-                        moveFunctionKeySlot: moveSelectedDocumentSlot,
-                        updateFunctionKeySlot: updateSelectedDocumentSlot,
-                        updateDocumentFontSize: updateDocumentFontSize,
-                        openKeyboardScreen: {
-                            withAnimation(.easeInOut(duration: 0.25)) {
-                                isKeyboardScreenPresented = true
-                            }
-                        },
-                        settingsBLEText: $settingsBLEText
-                    )
-                    .frame(width: containerWidth, height: containerHeight)
-                    .offset(x: isKeyboardScreenPresented ? containerWidth : 0)
+                    .clipped()
                 }
-                .frame(width: containerWidth, height: containerHeight)
-                .clipped()
+            }
+            .background {
+                mainScreenBackgroundView
             }
             .toolbarVisibility(isKeyboardScreenPresented ? .hidden : .visible, for: .navigationBar)
+            .toolbarBackground(.hidden, for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar)
             .navigationDestination(isPresented: $isSettingsScreenPresented) {
                 SettingsScreen(
                     ble: ble,
@@ -491,6 +500,48 @@ struct ContentView: View {
 
     private func displayName(for fileName: String) -> String {
         URL(fileURLWithPath: fileName).deletingPathExtension().lastPathComponent
+    }
+
+    private var availableBackgroundImageURLs: [URL] {
+        guard let documentsDirectoryURL = documentsDirectoryURL() else {
+            return []
+        }
+
+        let supportedExtensions = Set(["png", "jpg", "jpeg", "heic", "heif", "gif", "bmp", "tiff", "webp"])
+        let urls = (try? FileManager.default.contentsOfDirectory(
+            at: documentsDirectoryURL,
+            includingPropertiesForKeys: [.isRegularFileKey],
+            options: [.skipsHiddenFiles]
+        )) ?? []
+
+        return urls
+            .filter { url in
+                let values = try? url.resourceValues(forKeys: [.isRegularFileKey])
+                return values?.isRegularFile == true && supportedExtensions.contains(url.pathExtension.lowercased())
+            }
+            .sorted { $0.lastPathComponent.localizedCaseInsensitiveCompare($1.lastPathComponent) == .orderedAscending }
+    }
+
+    private var currentBackgroundImage: UIImage? {
+        guard selectedBackgroundImageIndex > 0 else { return nil }
+        let imageIndex = selectedBackgroundImageIndex - 1
+        guard availableBackgroundImageURLs.indices.contains(imageIndex) else { return nil }
+        return UIImage(contentsOfFile: availableBackgroundImageURLs[imageIndex].path)
+    }
+
+    @ViewBuilder
+    private var mainScreenBackgroundView: some View {
+        ZStack {
+            Color.black
+
+            if let currentBackgroundImage, !isKeyboardScreenPresented, !isSettingsScreenPresented {
+                Image(uiImage: currentBackgroundImage)
+                    .resizable()
+                    .scaledToFill()
+                    .opacity(backgroundImageOpacity)
+            }
+        }
+        .ignoresSafeArea()
     }
 
     private var currentFileNumber: Int {

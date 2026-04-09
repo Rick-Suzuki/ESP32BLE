@@ -44,6 +44,7 @@ extension MainScreen {
                 Image(uiImage: mainBackgroundImage)
                     .resizable()
                     .scaledToFill()
+                    .opacity(backgroundImageOpacity)
                     .ignoresSafeArea()
             }
         }
