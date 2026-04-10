@@ -147,8 +147,8 @@ struct MainScreen: View {
         .padding(.horizontal, 2)
         .navigationTitle("")
         .toolbarTitleDisplayMode(.inline)
-        .toolbarBackground(editingSlotIndex != nil ? .visible : .hidden, for: .navigationBar)
-        .toolbarBackground(Color.black.opacity(0.5), for: .navigationBar)
+        .toolbarVisibility(.visible, for: .navigationBar)
+        .toolbarBackground(.hidden, for: .navigationBar)
         .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbar {
             MainScreenToolbarContent(
@@ -221,7 +221,7 @@ struct MainScreen: View {
     private var settingsToolbarButtonLabel: some View {
         Text("settings >")
             .font(.headline)
-            .foregroundStyle(.white)
+            .foregroundStyle(editingSlotIndex != nil ? Color(white: 0.65) : .white)
             .frame(minWidth: 92, minHeight: 44)
             .background(Color.gray.opacity(0.45))
             .overlay {

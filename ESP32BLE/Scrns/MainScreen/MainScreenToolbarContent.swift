@@ -41,7 +41,7 @@ struct MainScreenToolbarContent: ToolbarContent {
             }
             .clipShape(.rect(cornerRadius: 12))
             .contentShape(.rect)
-            .disabled(isGridEditModeEnabled || editingSlotIndex != nil)
+            .disabled(editingSlotIndex != nil)
         }
 
         ToolbarItem(placement: .principal) {
@@ -52,7 +52,6 @@ struct MainScreenToolbarContent: ToolbarContent {
                 } label: {
                     Image(systemName: "arrow.uturn.backward.circle")
                         .font(.system(size: 22))
-                        .frame(width: 20, height: 20)
                         .frame(width: 44, height: 44)
                         .contentShape(.rect)
                 }
@@ -67,7 +66,6 @@ struct MainScreenToolbarContent: ToolbarContent {
                     Image(systemName: "triangle.fill")
                         .font(.system(size: 20))
                         .rotationEffect(.degrees(-90))
-                        .frame(width: 20, height: 20)
                         .frame(width: 44, height: 44)
                         .contentShape(.rect)
                 }
@@ -96,6 +94,7 @@ struct MainScreenToolbarContent: ToolbarContent {
                                 .frame(maxWidth: .infinity)
                         }
                         .buttonStyle(.plain)
+                        .disabled(isGridEditModeEnabled)
                     }
                 }
                 .frame(maxWidth: .infinity)
@@ -107,7 +106,6 @@ struct MainScreenToolbarContent: ToolbarContent {
                     Image(systemName: "triangle.fill")
                         .font(.system(size: 20))
                         .rotationEffect(.degrees(90))
-                        .frame(width: 20, height: 20)
                         .frame(width: 44, height: 44)
                         .contentShape(.rect)
                 }
@@ -115,13 +113,12 @@ struct MainScreenToolbarContent: ToolbarContent {
                 .foregroundStyle(toolbarPrincipalForegroundColor)
                 .disabled(currentFileNumber >= totalFileCount)
             }
-            .allowsHitTesting(!(isGridEditModeEnabled || editingSlotIndex != nil))
         }
 
         ToolbarItem(placement: .topBarTrailing) {
             HStack(spacing: 12) {
                 Slider(value: $gridBackgroundOpacity, in: 0...1)
-                    .tint(editingSlotIndex != nil ? inactiveToolbarForegroundColor : .white)
+                    .tint(.white)
                     .frame(width: 126)
                     .disabled(editingSlotIndex != nil)
 
@@ -145,33 +142,28 @@ struct MainScreenToolbarContent: ToolbarContent {
                 .disabled(editingSlotIndex != nil)
 
                 openSettings
-                    .disabled(isGridEditModeEnabled || editingSlotIndex != nil)
-                    .saturation(editingSlotIndex != nil ? 0 : 1)
-                    .brightness(editingSlotIndex != nil ? -0.25 : 0)
+                    .disabled(isGridEditModeEnabled)
             }
         }
     }
 
     private var editModeButtonBackgroundColor: Color {
-        if editingSlotIndex != nil {
-            return inactiveToolbarBackgroundColor
-        }
         return isGridEditModeEnabled ? Color.blue : normalToolbarBackgroundColor
     }
 
     private var toolbarButtonBorderColor: Color {
-        editingSlotIndex != nil ? inactiveToolbarBorderColor : normalToolbarBorderColor
+        normalToolbarBorderColor
     }
 
     private func toolbarButtonBackgroundColor(normalBackground: Color) -> Color {
-        editingSlotIndex != nil ? inactiveToolbarBackgroundColor : normalBackground
+        normalBackground
     }
 
     private var toolbarActionForegroundColor: Color {
-        editingSlotIndex != nil ? inactiveToolbarForegroundColor : .white
+        editingSlotIndex != nil ? Color(white: 0.75) : .white
     }
 
     private var toolbarPrincipalForegroundColor: Color {
-        isGridEditModeEnabled || editingSlotIndex != nil ? inactiveToolbarForegroundColor : .white
+        isGridEditModeEnabled ? inactiveToolbarForegroundColor : .white
     }
 }

@@ -32,9 +32,9 @@ struct MainScreenBottomBar: View {
             ViewThatFits(in: .horizontal) {
                 bottomBarLayout(
                     isCompact: false,
-                    speechBoxWidth: 220,
-                    toggleWidth: 140,
-                    displayModeWidth: 170
+                    speechBoxWidth: 270,
+                    toggleWidth: 110,
+                    displayModeWidth: 150
                 )
 
                 bottomBarLayout(
@@ -64,7 +64,7 @@ struct MainScreenBottomBar: View {
                 }
                 .disabled(visibleBoxCount == allowedVisibleBoxCounts.first)
 
-                Text("num:\\(visibleBoxCount)")
+                Text("num:\(visibleBoxCount)")
                     .font(.headline)
                     .foregroundStyle(.white)
                     .frame(minWidth: isCompact ? 28 : 32)
@@ -82,7 +82,7 @@ struct MainScreenBottomBar: View {
                     }
                     .disabled(boxFontSize <= minimumBoxFontSize)
 
-                    Text("fnt:\\(Int(boxFontSize))")
+                    Text("fnt:\(Int(boxFontSize))")
                         .font(.headline)
                         .foregroundStyle(.white)
                         .frame(minWidth: 32)
@@ -95,6 +95,14 @@ struct MainScreenBottomBar: View {
             }
 
             Spacer(minLength: isCompact ? 6 : 12)
+
+            toggleButton(
+                title: isSpeechRecognitionEnabled ? "spk rec on" : "spk rec off",
+                background: isSpeechRecognitionEnabled ? speechRecognitionActiveColor : inactiveButtonBackgroundColor,
+                border: isSpeechRecognitionEnabled ? speechRecognitionActiveColor : inactiveButtonBorderColor,
+                action: onToggleSpeechRecognition
+            )
+            .frame(width: toggleWidth)
 
             if !isCompact {
                 Text(speechRecognitionDisplayText)
@@ -112,17 +120,7 @@ struct MainScreenBottomBar: View {
                             .stroke(Color.white, lineWidth: 1)
                     }
                     .clipShape(.rect(cornerRadius: 6))
-
-                Spacer(minLength: 12)
             }
-
-            toggleButton(
-                title: isSpeechRecognitionEnabled ? "spk rec on" : "spk rec off",
-                background: isSpeechRecognitionEnabled ? speechRecognitionActiveColor : inactiveButtonBackgroundColor,
-                border: isSpeechRecognitionEnabled ? speechRecognitionActiveColor : inactiveButtonBorderColor,
-                action: onToggleSpeechRecognition
-            )
-            .frame(width: toggleWidth)
 
             toggleButton(
                 title: isBLESendEnabled ? "btn active" : "disabled",
