@@ -120,7 +120,7 @@ struct MainScreen: View {
             let topContentInset: CGFloat = 8
             let bottomContentInset: CGFloat = 0
 
-            ZStack {
+            ZStack(alignment: .top) {
                 VStack(spacing: 20) {
                     mainGridSection(availableWidth: contentWidth)
 
@@ -131,25 +131,24 @@ struct MainScreen: View {
                 .padding(.top, topContentInset)
                 .padding(.bottom, bottomContentInset)
                 .ignoresSafeArea(.keyboard)
-                .overlay {
-                    if editingSlotIndex != nil {
-                        Color.black.opacity(0.5)
-                            .ignoresSafeArea()
-                            .contentShape(Rectangle())
-                    }
+
+                if editingSlotIndex != nil {
+                    Color.black.opacity(0.5)
+                        .ignoresSafeArea()
+                        .contentShape(Rectangle())
                 }
-                .overlay(alignment: .top) {
-                    if isGridEditModeEnabled, editingSlotIndex != nil {
-                        slotEditorSection
-                            .offset(y: -2)
-                    }
+
+                if isGridEditModeEnabled, editingSlotIndex != nil {
+                    slotEditorSection
+                        .offset(y: topContentInset)
                 }
             }
         }
         .padding(.horizontal, 2)
         .navigationTitle("")
         .toolbarTitleDisplayMode(.inline)
-        .toolbarBackground(.hidden, for: .navigationBar)
+        .toolbarBackground(editingSlotIndex != nil ? .visible : .hidden, for: .navigationBar)
+        .toolbarBackground(Color.black.opacity(0.5), for: .navigationBar)
         .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbar {
             MainScreenToolbarContent(

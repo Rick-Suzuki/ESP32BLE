@@ -31,7 +31,7 @@ struct MainScreenToolbarContent: ToolbarContent {
                 openKeyboardScreen()
             }
             .font(.headline)
-            .foregroundStyle(.white)
+            .foregroundStyle(toolbarActionForegroundColor)
             .padding(.horizontal, 14)
             .frame(minHeight: 44)
             .background(toolbarButtonBackgroundColor(normalBackground: normalToolbarBackgroundColor))
@@ -121,8 +121,9 @@ struct MainScreenToolbarContent: ToolbarContent {
         ToolbarItem(placement: .topBarTrailing) {
             HStack(spacing: 12) {
                 Slider(value: $gridBackgroundOpacity, in: 0...1)
-                    .tint(.white)
+                    .tint(editingSlotIndex != nil ? inactiveToolbarForegroundColor : .white)
                     .frame(width: 126)
+                    .disabled(editingSlotIndex != nil)
 
                 Button {
                     ButtonClickFeedback.playIfEnabled()
@@ -130,7 +131,7 @@ struct MainScreenToolbarContent: ToolbarContent {
                 } label: {
                     Text(isGridEditModeEnabled ? "done" : "edit")
                         .font(.headline)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(toolbarActionForegroundColor)
                         .frame(minWidth: 84, minHeight: 44)
                         .background(toolbarButtonBackgroundColor(normalBackground: editModeButtonBackgroundColor))
                         .overlay {
@@ -145,6 +146,8 @@ struct MainScreenToolbarContent: ToolbarContent {
 
                 openSettings
                     .disabled(isGridEditModeEnabled || editingSlotIndex != nil)
+                    .saturation(editingSlotIndex != nil ? 0 : 1)
+                    .brightness(editingSlotIndex != nil ? -0.25 : 0)
             }
         }
     }
@@ -162,6 +165,10 @@ struct MainScreenToolbarContent: ToolbarContent {
 
     private func toolbarButtonBackgroundColor(normalBackground: Color) -> Color {
         editingSlotIndex != nil ? inactiveToolbarBackgroundColor : normalBackground
+    }
+
+    private var toolbarActionForegroundColor: Color {
+        editingSlotIndex != nil ? inactiveToolbarForegroundColor : .white
     }
 
     private var toolbarPrincipalForegroundColor: Color {
