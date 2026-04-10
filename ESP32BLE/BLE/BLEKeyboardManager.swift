@@ -88,8 +88,7 @@ final class BLEKeyboardManager: NSObject, ObservableObject {
 		// Create the central manager.
 		// Delegate callbacks will tell us when Bluetooth is ready.
 		//
-			centralManager = CBCentralManager(delegate: self, queue: .main)
-			startStaleDeviceCleanupTimer()
+				centralManager = CBCentralManager(delegate: self, queue: .main)
 		}
 	
 		func clearDiscoveredDevices() {
@@ -99,9 +98,6 @@ final class BLEKeyboardManager: NSObject, ObservableObject {
 
 		private func startStaleDeviceCleanupTimer() {
 			staleDeviceCleanupTimer?.invalidate()
-			staleDeviceCleanupTimer = Timer.scheduledTimer(withTimeInterval: staleDeviceCleanupInterval, repeats: true) { [weak self] _ in
-				self?.removeStaleDiscoveredDevices()
-			}
 		}
 
 		private func removeStaleDiscoveredDevices() {
@@ -135,10 +131,10 @@ final class BLEKeyboardManager: NSObject, ObservableObject {
 		clearDiscoveredDevices()
 		probePeripheralIDs.removeAll()
 		
-		centralManager.scanForPeripherals(
-			withServices: [serviceUUID],
-			options: [CBCentralManagerScanOptionAllowDuplicatesKey: true]
-		)
+			centralManager.scanForPeripherals(
+				withServices: [serviceUUID],
+				options: nil
+			)
 	}
 	
 	func connectToSelectedDevice() {

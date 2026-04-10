@@ -41,6 +41,8 @@ struct ContentView: View {
     @State private var functionKeySlotLines = ContentView.defaultFunctionKeyTitles()
     @State private var loadedFunctionKeySlotCount = defaultNamedFunctionKeyCount
     @State private var documentFiles: [URL] = []
+    @State private var backgroundImageFiles: [URL] = []
+    @State private var loadedBackgroundImage: UIImage?
     @State private var documentNavigationHistory: [String] = []
     @AppStorage("selectedDocumentName") private var selectedDocumentName = "fnkeys.txt"
     @AppStorage("documentFontSizesData") private var documentFontSizesData = ""
@@ -128,7 +130,12 @@ struct ContentView: View {
         .task {
             ensureDefaultFunctionKeysFile()
             refreshDocumentFiles()
+            refreshBackgroundImageFiles()
             selectInitialDocument()
+            reloadBackgroundImage()
+        }
+        .onChange(of: selectedBackgroundImageIndex) {
+            reloadBackgroundImage()
         }
     }
 
@@ -202,6 +209,43 @@ struct ContentView: View {
         } catch {
             documentFiles = []
         }
+    }
+
+    private func refreshBackgroundImageFiles() {
+        guard let documentsDirectoryURL = documentsDirectoryURL() else {
+            backgroundImageFiles = []
+            loadedBackgroundImage = nil
+            return
+        }
+
+        let supportedExtensions = Set(["png", "jpg", "jpeg", "heic", "heif", "gif", "bmp", "tiff", "webp"])
+        let urls = (try? FileManager.default.contentsOfDirectory(
+            at: documentsDirectoryURL,
+            includingPropertiesForKeys: [.isRegularFileKey],
+            options: [.skipsHiddenFiles]
+        )) ?? []
+
+        backgroundImageFiles = urls
+            .filter { url in
+                let values = try? url.resourceValues(forKeys: [.isRegularFileKey])
+                return values?.isRegularFile == true && supportedExtensions.contains(url.pathExtension.lowercased())
+            }
+            .sorted { $0.lastPathComponent.localizedCaseInsensitiveCompare($1.lastPathComponent) == .orderedAscending }
+    }
+
+    private func reloadBackgroundImage() {
+        guard selectedBackgroundImageIndex > 0 else {
+            loadedBackgroundImage = nil
+            return
+        }
+
+        let imageIndex = selectedBackgroundImageIndex - 1
+        guard backgroundImageFiles.indices.contains(imageIndex) else {
+            loadedBackgroundImage = nil
+            return
+        }
+
+        loadedBackgroundImage = UIImage(contentsOfFile: backgroundImageFiles[imageIndex].path)
     }
 
     private func selectInitialDocument() {
@@ -545,40 +589,13 @@ struct ContentView: View {
         URL(fileURLWithPath: fileName).deletingPathExtension().lastPathComponent
     }
 
-    private var availableBackgroundImageURLs: [URL] {
-        guard let documentsDirectoryURL = documentsDirectoryURL() else {
-            return []
-        }
-
-        let supportedExtensions = Set(["png", "jpg", "jpeg", "heic", "heif", "gif", "bmp", "tiff", "webp"])
-        let urls = (try? FileManager.default.contentsOfDirectory(
-            at: documentsDirectoryURL,
-            includingPropertiesForKeys: [.isRegularFileKey],
-            options: [.skipsHiddenFiles]
-        )) ?? []
-
-        return urls
-            .filter { url in
-                let values = try? url.resourceValues(forKeys: [.isRegularFileKey])
-                return values?.isRegularFile == true && supportedExtensions.contains(url.pathExtension.lowercased())
-            }
-            .sorted { $0.lastPathComponent.localizedCaseInsensitiveCompare($1.lastPathComponent) == .orderedAscending }
-    }
-
-    private var currentBackgroundImage: UIImage? {
-        guard selectedBackgroundImageIndex > 0 else { return nil }
-        let imageIndex = selectedBackgroundImageIndex - 1
-        guard availableBackgroundImageURLs.indices.contains(imageIndex) else { return nil }
-        return UIImage(contentsOfFile: availableBackgroundImageURLs[imageIndex].path)
-    }
-
     @ViewBuilder
     private var mainScreenBackgroundView: some View {
         ZStack {
             Color.black
 
-            if let currentBackgroundImage, !isKeyboardScreenPresented, !isSettingsScreenPresented {
-                Image(uiImage: currentBackgroundImage)
+            if let loadedBackgroundImage, !isKeyboardScreenPresented, !isSettingsScreenPresented {
+                Image(uiImage: loadedBackgroundImage)
                     .resizable()
                     .scaledToFill()
                     .opacity(backgroundImageOpacity)
