@@ -19,9 +19,9 @@ struct SettingsAvailableDevicesPanel: View {
                         ble.disconnect()
                     } label: {
                         Image(systemName: "xmark")
-                            .font(.system(size: 18, weight: .bold))
+                            .font(.system(size: 14, weight: .bold))
                             .foregroundStyle(ble.isConnected ? .white : Color.gray)
-                            .frame(width: 38, height: 38)
+                            .frame(width: 30, height: 30)
                             .background(ble.isConnected ? Color.red : Color.gray.opacity(0.45))
                             .clipShape(Circle())
                     }
