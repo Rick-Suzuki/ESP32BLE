@@ -172,24 +172,26 @@ struct MainScreenButtonLabelView: View {
         Group {
             if entry.isBlankPlaceholder {
                 Color.clear
-                    .frame(maxWidth: .infinity)
-                    .frame(height: buttonHeight)
-            } else {
-                Text(title)
-                    .font(.system(size: boxFontSize, weight: .bold))
-                    .multilineTextAlignment(.center)
-                    .lineLimit(4)
-                    .minimumScaleFactor(0.35)
-                    .foregroundStyle(buttonTextColor)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .padding(8)
-                    .frame(height: buttonHeight)
-                    .background(buttonBackgroundColor)
-                    .overlay {
-                        RoundedRectangle(cornerRadius: cornerRadius)
-                            .stroke(borderColor, lineWidth: borderWidth)
-                    }
-                    .clipShape(.rect(cornerRadius: cornerRadius))
+            } else {
+                ZStack {
+                    RoundedRectangle(cornerRadius: cornerRadius)
+                        .fill(buttonBackgroundColor)
+
+                    RoundedRectangle(cornerRadius: cornerRadius)
+                        .stroke(borderColor, lineWidth: borderWidth)
+
+                    Text(title)
+                        .font(.system(size: boxFontSize, weight: .bold))
+                        .multilineTextAlignment(.center)
+                        .lineLimit(4)
+                        .truncationMode(.tail)
+                        .minimumScaleFactor(0.35)
+                        .foregroundStyle(buttonTextColor)
+                        .padding(8)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
     }
