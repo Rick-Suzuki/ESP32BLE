@@ -40,6 +40,7 @@ struct MainScreen: View {
     @State var editingSlotText = ""
     @AppStorage("selectedBackgroundImageIndex") var selectedBackgroundImageIndex = 0
     @AppStorage("backgroundImageOpacity") var backgroundImageOpacity = 0.5
+    @AppStorage("mainGridBackgroundOpacity") var mainGridBackgroundOpacity = 1.0
     @FocusState var isDocumentNameFieldFocused: Bool
     @FocusState var isSlotEditorFocused: Bool
     let functionKeys: [FunctionKeyEntry]
@@ -152,6 +153,7 @@ struct MainScreen: View {
                 editingSlotIndex: editingSlotIndex,
                 currentFileNumber: currentFileNumber,
                 totalFileCount: totalFileCount,
+                gridBackgroundOpacity: $mainGridBackgroundOpacity,
                 isEditingDocumentName: $isEditingDocumentName,
                 documentNameDraft: $documentNameDraft,
                 selectedDocumentDisplayName: selectedDocumentDisplayName,
@@ -196,7 +198,14 @@ struct MainScreen: View {
             sendLine: sendMainGridEntry,
             onBeginSlotEditing: beginSlotEditing,
             buttonLabel: { entry, index, buttonHeight in
-                AnyView(mainGridButtonLabel(entry: entry, index: index, buttonHeight: buttonHeight))
+                AnyView(
+                    mainGridButtonLabel(
+                        entry: entry,
+                        index: index,
+                        buttonHeight: buttonHeight,
+                        backgroundOpacity: mainGridBackgroundOpacity
+                    )
+                )
             },
             dragGesture: { entry, index, gridDimensions in
                 AnyGesture(mainGridButtonDragGesture(entry: entry, index: index, gridDimensions: gridDimensions))

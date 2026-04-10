@@ -77,7 +77,12 @@ extension MainScreen {
         }
     }
 
-    func mainGridButtonLabel(entry: FunctionKeyEntry, index: Int, buttonHeight: CGFloat) -> some View {
+    func mainGridButtonLabel(
+        entry: FunctionKeyEntry,
+        index: Int,
+        buttonHeight: CGFloat,
+        backgroundOpacity: Double
+    ) -> some View {
         let title = buttonTitle(for: entry)
 
         return MainScreenButtonLabelView(
@@ -89,7 +94,8 @@ extension MainScreen {
             cornerRadius: mainGridButtonCornerRadius,
             borderWidth: mainGridButtonBorderWidth,
             isGridEditModeEnabled: isGridEditModeEnabled,
-            activeDragIndex: activeDragIndex
+            activeDragIndex: activeDragIndex,
+            backgroundOpacity: backgroundOpacity
         )
     }
 
@@ -144,6 +150,7 @@ struct MainScreenButtonLabelView: View {
     let borderWidth: CGFloat
     let isGridEditModeEnabled: Bool
     let activeDragIndex: Int?
+    let backgroundOpacity: Double
 
     var body: some View {
         Group {
@@ -173,30 +180,30 @@ struct MainScreenButtonLabelView: View {
 
     private var buttonBackgroundColor: Color {
         guard !isEmptyButtonEntry else {
-            return Color.black
+            return Color.black.opacity(backgroundOpacity)
         }
 
         switch (entry.buttonColorCode ?? "").lowercased() {
         case "l":
-            return .white
+            return .white.opacity(backgroundOpacity)
         case "w", "warning":
-            return Color(red: 0.55, green: 0.45, blue: 0.08)
+            return Color(red: 0.55, green: 0.45, blue: 0.08).opacity(backgroundOpacity)
         case "g", "pos":
-            return Color(red: 0.05, green: 0.33, blue: 0.18)
+            return Color(red: 0.05, green: 0.33, blue: 0.18).opacity(backgroundOpacity)
         case "b", "actions":
-            return Color(red: 0.0, green: 0.2, blue: 0.45)
+            return Color(red: 0.0, green: 0.2, blue: 0.45).opacity(backgroundOpacity)
         case "o":
-            return Color(red: 0.5, green: 0.28, blue: 0.0)
+            return Color(red: 0.5, green: 0.28, blue: 0.0).opacity(backgroundOpacity)
         case "r", "dest":
-            return Color(red: 0.42, green: 0.12, blue: 0.12)
+            return Color(red: 0.42, green: 0.12, blue: 0.12).opacity(backgroundOpacity)
         case "y":
-            return Color(red: 0.78, green: 0.68, blue: 0.12)
+            return Color(red: 0.78, green: 0.68, blue: 0.12).opacity(backgroundOpacity)
         case "p", "info":
-            return Color(red: 0.42, green: 0.18, blue: 0.52)
+            return Color(red: 0.42, green: 0.18, blue: 0.52).opacity(backgroundOpacity)
         case "k":
-            return Color.black
+            return Color.black.opacity(backgroundOpacity)
         default:
-            return Color.black
+            return Color.black.opacity(backgroundOpacity)
         }
     }
 

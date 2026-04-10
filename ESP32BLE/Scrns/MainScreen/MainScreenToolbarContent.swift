@@ -10,6 +10,7 @@ struct MainScreenToolbarContent: ToolbarContent {
     let editingSlotIndex: Int?
     let currentFileNumber: Int
     let totalFileCount: Int
+    @Binding var gridBackgroundOpacity: Double
     @Binding var isEditingDocumentName: Bool
     @Binding var documentNameDraft: String
     let selectedDocumentDisplayName: String
@@ -103,6 +104,10 @@ struct MainScreenToolbarContent: ToolbarContent {
 
         ToolbarItem(placement: .topBarTrailing) {
             HStack(spacing: 12) {
+                Slider(value: $gridBackgroundOpacity, in: 0...1)
+                    .tint(.white)
+                    .frame(width: 126)
+
                 Button {
                     ButtonClickFeedback.playIfEnabled()
                     toggleGridEditMode()
