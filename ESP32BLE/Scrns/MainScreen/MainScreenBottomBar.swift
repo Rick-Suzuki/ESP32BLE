@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct MainScreenBottomBar: View {
+    private let inactiveButtonBackgroundColor = Color(red: 0.22, green: 0.22, blue: 0.24)
+    private let inactiveButtonBorderColor = Color(red: 0.30, green: 0.30, blue: 0.32)
     let availableWidth: CGFloat
     let allowedVisibleBoxCounts: [Int]
     let visibleBoxCount: Int
@@ -81,9 +83,10 @@ struct MainScreenBottomBar: View {
                         .frame(width: speechBoxWidth, alignment: .leading)
                         .padding(.horizontal, 12)
                         .frame(minHeight: 38)
+                        .background(Color.black.opacity(0.7))
                         .overlay {
                             RoundedRectangle(cornerRadius: 6)
-                                .stroke(Color.white.opacity(0.35), lineWidth: 1)
+                                .stroke(Color.white, lineWidth: 1)
                         }
                         .clipShape(.rect(cornerRadius: 6))
 
@@ -92,16 +95,16 @@ struct MainScreenBottomBar: View {
 
                 toggleButton(
                     title: isSpeechRecognitionEnabled ? "spk rec on" : "spk rec off",
-                    background: isSpeechRecognitionEnabled ? speechRecognitionActiveColor : Color.gray.opacity(0.45),
-                    border: isSpeechRecognitionEnabled ? speechRecognitionActiveColor : Color.gray.opacity(0.4),
+                    background: isSpeechRecognitionEnabled ? speechRecognitionActiveColor : inactiveButtonBackgroundColor,
+                    border: isSpeechRecognitionEnabled ? speechRecognitionActiveColor : inactiveButtonBorderColor,
                     action: onToggleSpeechRecognition
                 )
                 .frame(width: toggleWidth)
 
                 toggleButton(
                     title: isBLESendEnabled ? "btn active" : "disabled",
-                    background: isBLESendEnabled ? bleSendActiveColor : Color.gray.opacity(0.45),
-                    border: isBLESendEnabled ? bleSendActiveColor : Color.gray.opacity(0.4),
+                    background: isBLESendEnabled ? bleSendActiveColor : inactiveButtonBackgroundColor,
+                    border: isBLESendEnabled ? bleSendActiveColor : inactiveButtonBorderColor,
                     action: onToggleBLESend
                 )
                 .frame(width: toggleWidth)

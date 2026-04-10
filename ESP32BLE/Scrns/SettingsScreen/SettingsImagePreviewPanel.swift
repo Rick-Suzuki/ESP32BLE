@@ -2,8 +2,9 @@ import SwiftUI
 import UIKit
 
 struct SettingsImagePreviewPanel: View {
-    let previewImage: UIImage?
+    let imageURL: URL?
     let opacitySliderValue: Double
+    @State private var previewImage: UIImage?
 
     var body: some View {
         GeometryReader { geometry in
@@ -29,5 +30,17 @@ struct SettingsImagePreviewPanel: View {
             }
         }
         .aspectRatio(1.3, contentMode: .fit)
+        .task(id: imageURL?.path) {
+            loadPreviewImage()
+        }
+    }
+
+    private func loadPreviewImage() {
+        guard let imageURL else {
+            previewImage = nil
+            return
+        }
+
+        previewImage = UIImage(contentsOfFile: imageURL.path)
     }
 }

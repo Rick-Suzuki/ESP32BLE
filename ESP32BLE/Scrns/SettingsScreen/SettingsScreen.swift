@@ -119,7 +119,7 @@ struct SettingsScreen: View {
 
     private var imagePreviewSection: some View {
         SettingsImagePreviewPanel(
-            previewImage: previewImage,
+            imageURL: selectedImageURL,
             opacitySliderValue: opacitySliderValue
         )
     }

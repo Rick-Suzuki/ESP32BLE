@@ -1,6 +1,11 @@
 import SwiftUI
 
 struct MainScreenToolbarContent: ToolbarContent {
+    private let inactiveToolbarBackgroundColor = Color(red: 0.22, green: 0.22, blue: 0.24)
+    private let normalToolbarBackgroundColor = Color(red: 0.32, green: 0.32, blue: 0.34)
+    private let inactiveToolbarBorderColor = Color(red: 0.30, green: 0.30, blue: 0.32)
+    private let normalToolbarBorderColor = Color(red: 0.46, green: 0.46, blue: 0.48)
+    private let inactiveToolbarForegroundColor = Color(red: 0.55, green: 0.55, blue: 0.57)
     let isGridEditModeEnabled: Bool
     let editingSlotIndex: Int?
     let currentFileNumber: Int
@@ -26,7 +31,7 @@ struct MainScreenToolbarContent: ToolbarContent {
             .foregroundStyle(.white)
             .padding(.horizontal, 14)
             .frame(minHeight: 44)
-            .background(toolbarButtonBackgroundColor(normalBackground: isGridEditModeEnabled ? Color.gray.opacity(0.3) : Color.gray.opacity(0.45)))
+            .background(toolbarButtonBackgroundColor(normalBackground: normalToolbarBackgroundColor))
             .overlay {
                 RoundedRectangle(cornerRadius: 12)
                     .stroke(toolbarButtonBorderColor, lineWidth: 1.5)
@@ -34,7 +39,6 @@ struct MainScreenToolbarContent: ToolbarContent {
             .clipShape(.rect(cornerRadius: 12))
             .contentShape(.rect)
             .disabled(isGridEditModeEnabled || editingSlotIndex != nil)
-            .opacity(isGridEditModeEnabled || editingSlotIndex != nil ? 0.45 : 1)
         }
 
         ToolbarItem(placement: .principal) {
@@ -51,7 +55,7 @@ struct MainScreenToolbarContent: ToolbarContent {
                         .contentShape(.rect)
                 }
                 .buttonStyle(.plain)
-                .foregroundStyle(.white)
+                .foregroundStyle(toolbarPrincipalForegroundColor)
                 .disabled(currentFileNumber <= 1)
 
                 Group {
@@ -71,7 +75,7 @@ struct MainScreenToolbarContent: ToolbarContent {
                         } label: {
                             Text(selectedDocumentDisplayName)
                                 .font(.title2.weight(.semibold))
-                                .foregroundStyle(.primary)
+                                .foregroundStyle(toolbarPrincipalForegroundColor)
                                 .frame(maxWidth: .infinity)
                         }
                         .buttonStyle(.plain)
@@ -91,10 +95,9 @@ struct MainScreenToolbarContent: ToolbarContent {
                         .contentShape(.rect)
                 }
                 .buttonStyle(.plain)
-                .foregroundStyle(.white)
+                .foregroundStyle(toolbarPrincipalForegroundColor)
                 .disabled(currentFileNumber >= totalFileCount)
             }
-            .opacity(isGridEditModeEnabled || editingSlotIndex != nil ? 0.45 : 1)
             .allowsHitTesting(!(isGridEditModeEnabled || editingSlotIndex != nil))
         }
 
@@ -118,27 +121,29 @@ struct MainScreenToolbarContent: ToolbarContent {
                 }
                 .buttonStyle(.plain)
                 .disabled(editingSlotIndex != nil)
-                .opacity(editingSlotIndex == nil ? 1 : 0.45)
 
                 openSettings
                     .disabled(isGridEditModeEnabled || editingSlotIndex != nil)
-                    .opacity(isGridEditModeEnabled || editingSlotIndex != nil ? 0.45 : 1)
             }
         }
     }
 
     private var editModeButtonBackgroundColor: Color {
         if editingSlotIndex != nil {
-            return Color.gray.opacity(0.3)
+            return inactiveToolbarBackgroundColor
         }
-        return isGridEditModeEnabled ? Color.blue : Color.gray.opacity(0.45)
+        return isGridEditModeEnabled ? Color.blue : normalToolbarBackgroundColor
     }
 
     private var toolbarButtonBorderColor: Color {
-        editingSlotIndex != nil ? Color.gray.opacity(0.35) : Color.gray.opacity(0.5)
+        editingSlotIndex != nil ? inactiveToolbarBorderColor : normalToolbarBorderColor
     }
 
     private func toolbarButtonBackgroundColor(normalBackground: Color) -> Color {
-        editingSlotIndex != nil ? Color.gray.opacity(0.3) : normalBackground
+        editingSlotIndex != nil ? inactiveToolbarBackgroundColor : normalBackground
+    }
+
+    private var toolbarPrincipalForegroundColor: Color {
+        isGridEditModeEnabled || editingSlotIndex != nil ? inactiveToolbarForegroundColor : .white
     }
 }

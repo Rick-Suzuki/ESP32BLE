@@ -32,11 +32,11 @@ extension SettingsScreen {
         availableImageURLs.count
     }
 
-    var previewImage: UIImage? {
+    var selectedImageURL: URL? {
         guard selectedImageIndex > 0 else { return nil }
         let imageIndex = selectedImageIndex - 1
         guard availableImageURLs.indices.contains(imageIndex) else { return nil }
-        return UIImage(contentsOfFile: availableImageURLs[imageIndex].path)
+        return availableImageURLs[imageIndex]
     }
 
     var truncatedImageDisplayName: String {
