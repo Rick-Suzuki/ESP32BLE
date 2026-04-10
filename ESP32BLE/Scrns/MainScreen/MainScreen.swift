@@ -381,5 +381,4 @@ struct MainScreen: View {
 
         _ = moveFunctionKeySlot(sourceIndex, targetIndex)
     }
-
 }
