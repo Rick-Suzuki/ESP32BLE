@@ -33,6 +33,7 @@ struct MainScreen: View {
     @State var displayMode: FunctionKeyDisplayMode = .both
     @State var isEditingDocumentName = false
     @State var documentNameDraft = ""
+    @State var alertTitle = "Alert"
     @State var renameAlertMessage: String?
     @State var isGridEditModeEnabled = false
     @State var activeDragIndex: Int?
@@ -103,7 +104,7 @@ struct MainScreen: View {
             .task(id: definedFunctionKeyCount) {
                 updateVisibleBoxCountToFitDefinedButtons()
             }
-            .alert("Rename File", isPresented: renameAlertIsPresented) {
+            .alert(alertTitle, isPresented: renameAlertIsPresented) {
                 Button("OK", role: .cancel) {
                     renameAlertMessage = nil
                 }

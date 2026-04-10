@@ -61,8 +61,13 @@ extension MainScreen {
     }
 
     func sendMainGridEntry(_ entry: FunctionKeyEntry) {
-        if let targetDocumentName = targetDocumentNameForGridEntry(entry),
-           selectDocumentNamedFromGrid(targetDocumentName) {
+        if let targetDocumentName = targetDocumentNameForGridEntry(entry) {
+            if selectDocumentNamedFromGrid(targetDocumentName) {
+                return
+            }
+
+            alertTitle = "File Not Found"
+            renameAlertMessage = "Couldn't find \(targetDocumentName.lowercased())."
             return
         }
 
