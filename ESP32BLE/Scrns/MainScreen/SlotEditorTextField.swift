@@ -1,8 +1,27 @@
 import SwiftUI
 import UIKit
 
+final class SlotEditorInputController {
+    weak var textField: UITextField?
+
+    func insertText(_ text: String) {
+        guard let textField else { return }
+        textField.insertText(text)
+    }
+
+    func deleteBackward() {
+        guard let textField else { return }
+        textField.deleteBackward()
+    }
+
+    func focus() {
+        textField?.becomeFirstResponder()
+    }
+}
+
 struct SlotEditorTextField: UIViewRepresentable {
     @Binding var text: String
+    let inputController: SlotEditorInputController
     let placeholder: String
     let onSubmit: () -> Void
 
@@ -35,6 +54,8 @@ struct SlotEditorTextField: UIViewRepresentable {
     }
 
     func updateUIView(_ textField: UITextField, context: Context) {
+        inputController.textField = textField
+
         if textField.text != text {
             textField.text = text
         }
@@ -51,17 +72,23 @@ struct SlotEditorTextField: UIViewRepresentable {
     }
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(text: $text, onSubmit: onSubmit)
+        Coordinator(text: $text, inputController: inputController, onSubmit: onSubmit)
     }
 
     final class Coordinator: NSObject, UITextFieldDelegate {
         @Binding var text: String
+        let inputController: SlotEditorInputController
         let onSubmit: () -> Void
         var didPlaceCursorAtEnd = false
 
-        init(text: Binding<String>, onSubmit: @escaping () -> Void) {
+        init(text: Binding<String>, inputController: SlotEditorInputController, onSubmit: @escaping () -> Void) {
             _text = text
+            self.inputController = inputController
             self.onSubmit = onSubmit
+        }
+
+        func textFieldDidBeginEditing(_ textField: UITextField) {
+            inputController.textField = textField
         }
 
         func textFieldDidChangeSelection(_ textField: UITextField) {

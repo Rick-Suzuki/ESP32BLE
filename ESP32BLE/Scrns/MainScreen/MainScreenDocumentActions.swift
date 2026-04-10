@@ -33,11 +33,11 @@ extension MainScreen {
     }
 
     func decreaseBoxFontSize() {
-        updateDocumentFontSize(max(minimumBoxFontSize, boxFontSize - 2))
+        updateDocumentFontSize(max(minimumBoxFontSize, boxFontSize - 1))
     }
 
     func increaseBoxFontSize() {
-        updateDocumentFontSize(min(maximumBoxFontSize, boxFontSize + 2))
+        updateDocumentFontSize(min(maximumBoxFontSize, boxFontSize + 1))
     }
 
     func commitDocumentRename() {

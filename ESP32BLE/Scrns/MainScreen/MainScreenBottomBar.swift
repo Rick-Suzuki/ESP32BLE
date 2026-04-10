@@ -1,5 +1,70 @@
 import SwiftUI
 
+private struct RepeatingToolbarButton<Label: View>: View {
+    let isEnabled: Bool
+    let actionVersion: Int
+    let action: () -> Void
+    @ViewBuilder let label: () -> Label
+
+    @State private var repeatTask: Task<Void, Never>?
+    @State private var latestAction: (() -> Void)?
+
+    var body: some View {
+        Button {
+            guard isEnabled else { return }
+            ButtonClickFeedback.playIfEnabled()
+            latestAction?()
+        } label: {
+            label()
+        }
+        .buttonStyle(.plain)
+        .disabled(!isEnabled)
+        .onLongPressGesture(minimumDuration: 1, maximumDistance: .infinity, pressing: { isPressing in
+            guard isEnabled else {
+                stopRepeating()
+                return
+            }
+
+            if isPressing {
+                startRepeating()
+            } else {
+                stopRepeating()
+            }
+        }, perform: {})
+            .opacity(isEnabled ? 1 : 0.35)
+            .contentShape(.rect)
+            .onAppear {
+                latestAction = action
+            }
+            .onChange(of: actionVersion) {
+                latestAction = action
+            }
+            .onDisappear {
+                stopRepeating()
+            }
+    }
+
+    private func startRepeating() {
+        repeatTask?.cancel()
+        repeatTask = Task {
+            try? await Task.sleep(nanoseconds: 1_000_000_000)
+
+            while !Task.isCancelled {
+                await MainActor.run {
+                    ButtonClickFeedback.playIfEnabled()
+                    latestAction?()
+                }
+                try? await Task.sleep(nanoseconds: 100_000_000)
+            }
+        }
+    }
+
+    private func stopRepeating() {
+        repeatTask?.cancel()
+        repeatTask = nil
+    }
+}
+
 struct MainScreenBottomBar: View {
     private let inactiveButtonBackgroundColor = Color(red: 0.22, green: 0.22, blue: 0.24)
     private let inactiveButtonBorderColor = Color(red: 0.30, green: 0.30, blue: 0.32)
@@ -59,38 +124,54 @@ struct MainScreenBottomBar: View {
     ) -> some View {
         HStack(spacing: isCompact ? 8 : 12) {
             HStack(spacing: isCompact ? 8 : 12) {
-                controlTriangle(rotationDegrees: -90, foreground: countControlColor) {
+                controlTriangle(
+                    rotationDegrees: -90,
+                    foreground: countControlColor,
+                    isEnabled: visibleBoxCount != allowedVisibleBoxCounts.first,
+                    actionVersion: visibleBoxCount
+                ) {
                     onDecreaseVisibleBoxCount()
                 }
-                .disabled(visibleBoxCount == allowedVisibleBoxCounts.first)
 
                 Text("num:\(visibleBoxCount)")
                     .font(.headline)
                     .foregroundStyle(.white)
                     .frame(minWidth: isCompact ? 28 : 32)
 
-                controlTriangle(rotationDegrees: 90, foreground: countControlColor) {
+                controlTriangle(
+                    rotationDegrees: 90,
+                    foreground: countControlColor,
+                    isEnabled: visibleBoxCount != allowedVisibleBoxCounts.last,
+                    actionVersion: visibleBoxCount
+                ) {
                     onIncreaseVisibleBoxCount()
                 }
-                .disabled(visibleBoxCount == allowedVisibleBoxCounts.last)
             }
 
             if !isCompact {
                 HStack(spacing: 12) {
-                    controlTriangle(rotationDegrees: -90, foreground: fontControlColor) {
+                    controlTriangle(
+                        rotationDegrees: -90,
+                        foreground: fontControlColor,
+                        isEnabled: boxFontSize > minimumBoxFontSize,
+                        actionVersion: Int(boxFontSize)
+                    ) {
                         onDecreaseBoxFontSize()
                     }
-                    .disabled(boxFontSize <= minimumBoxFontSize)
 
                     Text("fnt:\(Int(boxFontSize))")
                         .font(.headline)
                         .foregroundStyle(.white)
                         .frame(minWidth: 32)
 
-                    controlTriangle(rotationDegrees: 90, foreground: fontControlColor) {
+                    controlTriangle(
+                        rotationDegrees: 90,
+                        foreground: fontControlColor,
+                        isEnabled: boxFontSize < maximumBoxFontSize,
+                        actionVersion: Int(boxFontSize)
+                    ) {
                         onIncreaseBoxFontSize()
                     }
-                    .disabled(boxFontSize >= maximumBoxFontSize)
                 }
             }
 
@@ -151,17 +232,19 @@ struct MainScreenBottomBar: View {
         }
     }
 
-    private func controlTriangle(rotationDegrees: Double, foreground: Color, action: @escaping () -> Void) -> some View {
-        Button {
-            ButtonClickFeedback.playIfEnabled()
-            action()
-        } label: {
+    private func controlTriangle(
+        rotationDegrees: Double,
+        foreground: Color,
+        isEnabled: Bool,
+        actionVersion: Int,
+        action: @escaping () -> Void
+    ) -> some View {
+        RepeatingToolbarButton(isEnabled: isEnabled, actionVersion: actionVersion, action: action) {
             Image(systemName: "triangle.fill")
                 .font(.system(size: 24))
                 .rotationEffect(.degrees(rotationDegrees))
                 .frame(width: 24, height: 24)
         }
-        .buttonStyle(.plain)
         .foregroundStyle(foreground)
     }
 

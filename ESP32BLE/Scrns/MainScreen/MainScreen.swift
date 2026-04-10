@@ -30,7 +30,7 @@ struct MainScreen: View {
     @State var speechRecognitionAutoOffTask: Task<Void, Never>?
     @StateObject var speechRecognition = SpeechRecognitionManager()
     @ObservedObject var ble: BLEKeyboardManager
-    @State var displayMode: FunctionKeyDisplayMode = .both
+    @State var displayMode: FunctionKeyDisplayMode = .right
     @State var isEditingDocumentName = false
     @State var documentNameDraft = ""
     @State var alertTitle = "Alert"

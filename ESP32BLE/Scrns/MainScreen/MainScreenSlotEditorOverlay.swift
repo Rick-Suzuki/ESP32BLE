@@ -8,6 +8,7 @@ struct MainScreenSlotEditorOverlay: View {
     let onCancel: () -> Void
     let onCommit: () -> Void
     let onTest: () -> Void
+    @State private var inputController = SlotEditorInputController()
 
     var body: some View {
         GeometryReader { geometry in
@@ -29,7 +30,11 @@ struct MainScreenSlotEditorOverlay: View {
                     }
                     .clipShape(.rect(cornerRadius: 12))
 
-                    SlotEditorTextField(text: $editingSlotText, placeholder: "edit button text") {
+                    SlotEditorTextField(
+                        text: $editingSlotText,
+                        inputController: inputController,
+                        placeholder: "edit button text"
+                    ) {
                         onCommit()
                     }
                     .frame(width: geometry.size.width.isFinite ? max(0, geometry.size.width * 0.36) : 0, height: 36)
@@ -137,7 +142,8 @@ struct MainScreenSlotEditorOverlay: View {
     private func helperInsertButton(_ text: String) -> some View {
         Button(text) {
             ButtonClickFeedback.playIfEnabled()
-            editingSlotText.append(text)
+            inputController.insertText(text)
+            inputController.focus()
             focusBinding.wrappedValue = true
         }
         .buttonStyle(.plain)
@@ -154,7 +160,8 @@ struct MainScreenSlotEditorOverlay: View {
     private func helperInsertButton(systemImage: String, rotationDegrees: Double, insertedText: String) -> some View {
         Button {
             ButtonClickFeedback.playIfEnabled()
-            editingSlotText.append(insertedText)
+            inputController.insertText(insertedText)
+            inputController.focus()
             focusBinding.wrappedValue = true
         } label: {
             Image(systemName: systemImage)
@@ -176,11 +183,13 @@ struct MainScreenSlotEditorOverlay: View {
         Button {
             ButtonClickFeedback.playIfEnabled()
             guard !editingSlotText.isEmpty else {
+                inputController.focus()
                 focusBinding.wrappedValue = true
                 return
             }
 
-            editingSlotText.removeLast()
+            inputController.deleteBackward()
+            inputController.focus()
             focusBinding.wrappedValue = true
         } label: {
             Image(systemName: "delete.left")
