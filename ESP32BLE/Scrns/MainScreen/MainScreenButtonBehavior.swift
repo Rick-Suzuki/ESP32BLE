@@ -186,7 +186,7 @@ struct MainScreenButtonLabelView: View {
                         .multilineTextAlignment(.center)
                         .lineLimit(4)
                         .truncationMode(.tail)
-                        .minimumScaleFactor(0.35)
+                        .allowsTightening(true)
                         .foregroundStyle(buttonTextColor)
                         .padding(8)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)

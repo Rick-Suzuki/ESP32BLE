@@ -20,9 +20,17 @@ final class SlotEditorInputController {
 }
 
 struct SlotEditorTextField: UIViewRepresentable {
+    enum JoinPosition {
+        case single
+        case left
+        case right
+    }
+
     @Binding var text: String
     let inputController: SlotEditorInputController
     let placeholder: String
+    let joinPosition: JoinPosition
+    let onBeginEditing: () -> Void
     let onSubmit: () -> Void
 
     func makeUIView(context: Context) -> UITextField {
@@ -43,13 +51,19 @@ struct SlotEditorTextField: UIViewRepresentable {
             string: placeholder,
             attributes: [.foregroundColor: UIColor.lightGray]
         )
+        textField.adjustsFontSizeToFitWidth = true
+        textField.minimumFontSize = 12
+        textField.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        textField.setContentHuggingPriority(.defaultLow, for: .horizontal)
         textField.layer.cornerRadius = 8
         textField.layer.borderWidth = 1
         textField.layer.borderColor = UIColor.darkGray.cgColor
+        textField.layer.masksToBounds = true
         textField.leftView = UIView(frame: CGRect(x: 0, y: 0, width: 10, height: 1))
         textField.leftViewMode = .always
         textField.rightView = UIView(frame: CGRect(x: 0, y: 0, width: 10, height: 1))
         textField.rightViewMode = .always
+        applyCornerMask(to: textField)
         return textField
     }
 
@@ -61,34 +75,61 @@ struct SlotEditorTextField: UIViewRepresentable {
         }
 
         textField.placeholder = placeholder
-
-        if textField.isFirstResponder, !context.coordinator.didPlaceCursorAtEnd {
-            let endOfDocument = textField.endOfDocument
-            textField.selectedTextRange = textField.textRange(from: endOfDocument, to: endOfDocument)
-            context.coordinator.didPlaceCursorAtEnd = true
-        } else if !textField.isFirstResponder {
-            context.coordinator.didPlaceCursorAtEnd = false
-        }
+        applyCornerMask(to: textField)
     }
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(text: $text, inputController: inputController, onSubmit: onSubmit)
+        Coordinator(
+            text: $text,
+            inputController: inputController,
+            onBeginEditing: onBeginEditing,
+            onSubmit: onSubmit
+        )
+    }
+
+    private func applyCornerMask(to textField: UITextField) {
+        switch joinPosition {
+        case .single:
+            textField.layer.maskedCorners = [
+                .layerMinXMinYCorner,
+                .layerMaxXMinYCorner,
+                .layerMinXMaxYCorner,
+                .layerMaxXMaxYCorner
+            ]
+        case .left:
+            textField.layer.maskedCorners = [
+                .layerMinXMinYCorner,
+                .layerMinXMaxYCorner
+            ]
+        case .right:
+            textField.layer.maskedCorners = [
+                .layerMaxXMinYCorner,
+                .layerMaxXMaxYCorner
+            ]
+        }
     }
 
     final class Coordinator: NSObject, UITextFieldDelegate {
         @Binding var text: String
         let inputController: SlotEditorInputController
+        let onBeginEditing: () -> Void
         let onSubmit: () -> Void
-        var didPlaceCursorAtEnd = false
 
-        init(text: Binding<String>, inputController: SlotEditorInputController, onSubmit: @escaping () -> Void) {
+        init(
+            text: Binding<String>,
+            inputController: SlotEditorInputController,
+            onBeginEditing: @escaping () -> Void,
+            onSubmit: @escaping () -> Void
+        ) {
             _text = text
             self.inputController = inputController
+            self.onBeginEditing = onBeginEditing
             self.onSubmit = onSubmit
         }
 
         func textFieldDidBeginEditing(_ textField: UITextField) {
             inputController.textField = textField
+            onBeginEditing()
         }
 
         func textFieldDidChangeSelection(_ textField: UITextField) {

@@ -1,6 +1,11 @@
 import SwiftUI
 
 struct MainScreenSlotEditorOverlay: View {
+    private enum ActiveEditorField {
+        case action
+        case text
+    }
+
     @Binding var editingSlotText: String
     let focusBinding: FocusState<Bool>.Binding
     let buttonSpacing: CGFloat
@@ -8,7 +13,11 @@ struct MainScreenSlotEditorOverlay: View {
     let onCancel: () -> Void
     let onCommit: () -> Void
     let onTest: () -> Void
-    @State private var inputController = SlotEditorInputController()
+    @State private var actionInputController = SlotEditorInputController()
+    @State private var rightInputController = SlotEditorInputController()
+    @State private var activeEditorField: ActiveEditorField = .action
+    @State private var actionDraft = ""
+    @State private var rightDraft = ""
 
     var body: some View {
         GeometryReader { geometry in
@@ -30,29 +39,33 @@ struct MainScreenSlotEditorOverlay: View {
                     }
                     .clipShape(.rect(cornerRadius: 12))
 
-                    SlotEditorTextField(
-                        text: $editingSlotText,
-                        inputController: inputController,
-                        placeholder: "edit button text"
-                    ) {
-                        onCommit()
-                    }
-                    .frame(width: geometry.size.width.isFinite ? max(0, geometry.size.width * 0.36) : 0, height: 36)
-                    .focused(focusBinding)
+                    clearActionButton
 
-                    Button {
-                        ButtonClickFeedback.playIfEnabled()
-                        editingSlotText = ""
-                        focusBinding.wrappedValue = true
-                    } label: {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 12, weight: .bold))
-                            .foregroundStyle(.white)
-                            .frame(width: 30, height: 30)
-                            .background(Color.red)
-                            .clipShape(Circle())
+                    HStack(spacing: 0) {
+                        SlotEditorTextField(
+                            text: actionTextBinding,
+                            inputController: actionInputController,
+                            placeholder: "action",
+                            joinPosition: .left,
+                            onBeginEditing: { activeEditorField = .action }
+                        ) {
+                            onCommit()
+                        }
+                        .frame(width: geometry.size.width.isFinite ? max(0, geometry.size.width * 0.18) : 0, height: 36)
+
+                        SlotEditorTextField(
+                            text: rightTextBinding,
+                            inputController: rightInputController,
+                            placeholder: "text",
+                            joinPosition: .right,
+                            onBeginEditing: { activeEditorField = .text }
+                        ) {
+                            onCommit()
+                        }
+                        .frame(width: geometry.size.width.isFinite ? max(0, geometry.size.width * 0.18) : 0, height: 36)
                     }
-                    .buttonStyle(.plain)
+
+                    clearRightButton
 
                     Button("test") {
                         ButtonClickFeedback.playIfEnabled()
@@ -93,9 +106,9 @@ struct MainScreenSlotEditorOverlay: View {
                     helperInsertButton("op:")
                     helperInsertButton("cm:")
                     helperInsertButton("F")
-                    helperInsertButton("F1::")
+                    helperInsertButton("F1")
                     helperInsertButton(":")
-                    helperInsertButton("::")
+                    helperInsertButton("__")
                     helperInsertButton("kp")
                     helperBackspaceButton()
                 }
@@ -114,10 +127,10 @@ struct MainScreenSlotEditorOverlay: View {
                 }
 
                 HStack(spacing: buttonSpacing) {
-                    helperInsertButton(systemImage: "triangle.fill", rotationDegrees: 0, insertedText: "UP::")
-                    helperInsertButton(systemImage: "triangle.fill", rotationDegrees: 180, insertedText: "DOWN::")
-                    helperInsertButton(systemImage: "triangle.fill", rotationDegrees: -90, insertedText: "LEFT::")
-                    helperInsertButton(systemImage: "triangle.fill", rotationDegrees: 90, insertedText: "RIGHT::")
+                    helperInsertButton(systemImage: "triangle.fill", rotationDegrees: 0, insertedText: "UP:")
+                    helperInsertButton(systemImage: "triangle.fill", rotationDegrees: 180, insertedText: "DOWN:")
+                    helperInsertButton(systemImage: "triangle.fill", rotationDegrees: -90, insertedText: "LEFT:")
+                    helperInsertButton(systemImage: "triangle.fill", rotationDegrees: 90, insertedText: "RIGHT:")
                     helperInsertButton("+")
                     helperInsertButton("_")
                     helperInsertButton("/")
@@ -137,31 +150,49 @@ struct MainScreenSlotEditorOverlay: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         }
         .frame(height: 192)
+        .onAppear {
+            syncDraftsFromCombinedText()
+        }
+        .onChange(of: editingSlotText) {
+            let currentCombinedText = composeEditingText(action: actionDraft, text: rightDraft)
+            if editingSlotText != currentCombinedText {
+                syncDraftsFromCombinedText()
+            }
+        }
+        .onChange(of: actionDraft) {
+            syncCombinedTextFromDrafts()
+        }
+        .onChange(of: rightDraft) {
+            syncCombinedTextFromDrafts()
+        }
     }
 
     private func helperInsertButton(_ text: String) -> some View {
-        Button(text) {
+        Button {
             ButtonClickFeedback.playIfEnabled()
-            inputController.insertText(text)
-            inputController.focus()
+            activeInputController.insertText(text)
+            activeInputController.focus()
             focusBinding.wrappedValue = true
+        } label: {
+            Text(text)
+                .foregroundStyle(.white)
+                .frame(width: helperButtonWidth, height: 44)
+                .background(Color.black)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.white, lineWidth: 2)
+                }
+                .clipShape(.rect(cornerRadius: 12))
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .foregroundStyle(.white)
-        .frame(width: helperButtonWidth, height: 44)
-        .background(Color.black)
-        .overlay {
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.white, lineWidth: 2)
-        }
-        .clipShape(.rect(cornerRadius: 12))
     }
 
     private func helperInsertButton(systemImage: String, rotationDegrees: Double, insertedText: String) -> some View {
         Button {
             ButtonClickFeedback.playIfEnabled()
-            inputController.insertText(insertedText)
-            inputController.focus()
+            activeInputController.insertText(insertedText)
+            activeInputController.focus()
             focusBinding.wrappedValue = true
         } label: {
             Image(systemName: systemImage)
@@ -169,40 +200,134 @@ struct MainScreenSlotEditorOverlay: View {
                 .rotationEffect(.degrees(rotationDegrees))
                 .foregroundStyle(.white)
                 .frame(width: helperButtonWidth, height: 44)
+                .background(Color.black)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.white, lineWidth: 2)
+                }
+                .clipShape(.rect(cornerRadius: 12))
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .background(Color.black)
-        .overlay {
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.white, lineWidth: 2)
-        }
-        .clipShape(.rect(cornerRadius: 12))
     }
 
     private func helperBackspaceButton() -> some View {
         Button {
             ButtonClickFeedback.playIfEnabled()
             guard !editingSlotText.isEmpty else {
-                inputController.focus()
+                activeInputController.focus()
                 focusBinding.wrappedValue = true
                 return
             }
 
-            inputController.deleteBackward()
-            inputController.focus()
+            activeInputController.deleteBackward()
+            activeInputController.focus()
             focusBinding.wrappedValue = true
         } label: {
             Image(systemName: "delete.left")
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundStyle(.white)
                 .frame(width: helperButtonWidth, height: 44)
+                .background(Color(red: 0.0, green: 0.2, blue: 0.45))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.white, lineWidth: 2)
+                }
+                .clipShape(.rect(cornerRadius: 12))
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .background(Color(red: 0.0, green: 0.2, blue: 0.45))
-        .overlay {
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.white, lineWidth: 2)
+    }
+
+    private var actionTextBinding: Binding<String> {
+        $actionDraft
+    }
+
+    private var rightTextBinding: Binding<String> {
+        $rightDraft
+    }
+
+    private var splitEditingText: (action: String, text: String) {
+        let components = editingSlotText.components(separatedBy: "::")
+
+        guard components.count > 1 else {
+            return (editingSlotText, "")
         }
-        .clipShape(.rect(cornerRadius: 12))
+
+        let action = components.first ?? ""
+        let text = components.dropFirst().joined(separator: "::")
+        return (action, text)
+    }
+
+    private func composeEditingText(action: String, text: String) -> String {
+        if text.isEmpty {
+            return action
+        }
+
+        return "\(action)::\(text)"
+    }
+
+    private func syncDraftsFromCombinedText() {
+        let splitText = splitEditingText
+        if actionDraft != splitText.action {
+            actionDraft = splitText.action
+        }
+        if rightDraft != splitText.text {
+            rightDraft = splitText.text
+        }
+    }
+
+    private func syncCombinedTextFromDrafts() {
+        let combinedText = composeEditingText(action: actionDraft, text: rightDraft)
+        if editingSlotText != combinedText {
+            editingSlotText = combinedText
+        }
+    }
+
+    private var clearActionButton: some View {
+        Button {
+            ButtonClickFeedback.playIfEnabled()
+            actionTextBinding.wrappedValue = ""
+            activeEditorField = .action
+            actionInputController.focus()
+            focusBinding.wrappedValue = true
+        } label: {
+            Image(systemName: "xmark")
+                .font(.system(size: 14, weight: .bold))
+                .foregroundStyle(.white)
+                .frame(width: 35, height: 35)
+                .background(Color(red: 0.42, green: 0.12, blue: 0.12))
+                .clipShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .contentShape(Circle())
+    }
+
+    private var clearRightButton: some View {
+        Button {
+            ButtonClickFeedback.playIfEnabled()
+            rightTextBinding.wrappedValue = ""
+            activeEditorField = .text
+            rightInputController.focus()
+            focusBinding.wrappedValue = true
+        } label: {
+            Image(systemName: "xmark")
+                .font(.system(size: 14, weight: .bold))
+                .foregroundStyle(.white)
+                .frame(width: 35, height: 35)
+                .background(Color(red: 0.42, green: 0.12, blue: 0.12))
+                .clipShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .contentShape(Circle())
+    }
+
+    private var activeInputController: SlotEditorInputController {
+        switch activeEditorField {
+        case .action:
+            return actionInputController
+        case .text:
+            return rightInputController
+        }
     }
 }
