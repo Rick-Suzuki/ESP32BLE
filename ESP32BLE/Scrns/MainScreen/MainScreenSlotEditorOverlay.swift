@@ -30,7 +30,7 @@ struct MainScreenSlotEditorOverlay: View {
                     .buttonStyle(.plain)
                     .foregroundStyle(.white)
                     .padding(.horizontal, 14)
-                    .frame(minWidth: 101)
+                    .frame(minWidth: 70)//101
                     .frame(minHeight: 44)
                     .background(Color.gray.opacity(0.45))
                     .overlay {
@@ -101,42 +101,50 @@ struct MainScreenSlotEditorOverlay: View {
                 }
 
                 HStack(spacing: buttonSpacing) {
+					helperInsertButton("F")
                     helperInsertButton("ctl:")
                     helperInsertButton("sh:")
                     helperInsertButton("op:")
                     helperInsertButton("cm:")
-                    helperInsertButton("F")
-                    helperInsertButton("F1")
-                    helperInsertButton(":")
-                    helperInsertButton("__")
-                    helperInsertButton("kp")
+                   
+					helperInsertButton("ESC:")
+					helperInsertButton("RET:")
+					helperInsertButton("BS:")
+					helperInsertButton("CA:")
                     helperBackspaceButton()
                 }
-
+				//
+				//----------------------------------------
+				//
                 HStack(spacing: buttonSpacing) {
                     helperInsertButton("0")
                     helperInsertButton("1")
                     helperInsertButton("2")
                     helperInsertButton("3")
                     helperInsertButton("4")
-                    helperInsertButton("5")
-                    helperInsertButton("6")
-                    helperInsertButton("7")
-                    helperInsertButton("8")
-                    helperInsertButton("9")
+					
+					helperInsertButton("+")
+					helperInsertButton("_")
+					helperInsertButton("/")
+					helperInsertButton("*")
+					helperInsertButton("kp")
                 }
-
+				//
+				//----------------------------------------
+				//
                 HStack(spacing: buttonSpacing) {
-                    helperInsertButton(systemImage: "triangle.fill", rotationDegrees: 0, insertedText: "UP:")
-                    helperInsertButton(systemImage: "triangle.fill", rotationDegrees: 180, insertedText: "DOWN:")
-                    helperInsertButton(systemImage: "triangle.fill", rotationDegrees: -90, insertedText: "LEFT:")
-                    helperInsertButton(systemImage: "triangle.fill", rotationDegrees: 90, insertedText: "RIGHT:")
-                    helperInsertButton("+")
-                    helperInsertButton("_")
-                    helperInsertButton("/")
-                    helperInsertButton("*")
-                    helperInsertButton("ESC:")
-                    helperInsertButton("RET:")
+					helperInsertButton("5")
+					helperInsertButton("6")
+					helperInsertButton("7")
+					helperInsertButton("8")
+					helperInsertButton("9")
+
+					helperInsertButton(":")
+
+					helperInsertButton(systemImage: "triangle.fill", rotationDegrees: 0, insertedText: "UP:")
+					helperInsertButton(systemImage: "triangle.fill", rotationDegrees: 180, insertedText: "DOWN:")
+					helperInsertButton(systemImage: "triangle.fill", rotationDegrees: -90, insertedText: "LEFT:")
+					helperInsertButton(systemImage: "triangle.fill", rotationDegrees: 90, insertedText: "RIGHT:")
                 }
             }
             .padding(.horizontal, 12)
