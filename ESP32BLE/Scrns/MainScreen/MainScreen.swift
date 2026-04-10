@@ -225,10 +225,10 @@ struct MainScreen: View {
             .frame(minWidth: 92, minHeight: 44)
             .background(Color.gray.opacity(0.45))
             .overlay {
-                RoundedRectangle(cornerRadius: 12)
+                RoundedRectangle(cornerRadius: 23)
                     .stroke(Color.gray.opacity(0.5), lineWidth: 1.5)
             }
-            .clipShape(.rect(cornerRadius: 12))
+            .clipShape(.rect(cornerRadius: 23))
             .contentShape(.rect)
     }
 

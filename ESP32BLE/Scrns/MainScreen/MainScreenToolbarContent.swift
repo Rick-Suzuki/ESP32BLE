@@ -36,10 +36,10 @@ struct MainScreenToolbarContent: ToolbarContent {
             .frame(minHeight: 44)
             .background(toolbarButtonBackgroundColor(normalBackground: normalToolbarBackgroundColor))
             .overlay {
-                RoundedRectangle(cornerRadius: 12)
+                RoundedRectangle(cornerRadius: 23)
                     .stroke(toolbarButtonBorderColor, lineWidth: 1.5)
             }
-            .clipShape(.rect(cornerRadius: 12))
+            .clipShape(.rect(cornerRadius: 23))
             .contentShape(.rect)
             .disabled(editingSlotIndex != nil)
         }
@@ -132,10 +132,10 @@ struct MainScreenToolbarContent: ToolbarContent {
                         .frame(minWidth: 84, minHeight: 44)
                         .background(toolbarButtonBackgroundColor(normalBackground: editModeButtonBackgroundColor))
                         .overlay {
-                            RoundedRectangle(cornerRadius: 12)
+                            RoundedRectangle(cornerRadius: 23)
                                 .stroke(toolbarButtonBorderColor, lineWidth: 1.5)
                         }
-                        .clipShape(.rect(cornerRadius: 12))
+                        .clipShape(.rect(cornerRadius: 23))
                         .contentShape(.rect)
                 }
                 .buttonStyle(.plain)
