@@ -61,6 +61,11 @@ extension MainScreen {
     }
 
     func sendMainGridEntry(_ entry: FunctionKeyEntry) {
+        if let targetDocumentName = targetDocumentNameForGridEntry(entry),
+           selectDocumentNamedFromGrid(targetDocumentName) {
+            return
+        }
+
         guard ble.isConnected else {
             print("Bluetooth not connected.")
             return
@@ -74,6 +79,12 @@ extension MainScreen {
 
         for sendText in entry.sendTexts {
             ble.sendLine(sendText)
+        }
+    }
+
+    func targetDocumentNameForGridEntry(_ entry: FunctionKeyEntry) -> String? {
+        entry.sendTexts.first { sendText in
+            sendText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased().hasSuffix(".txt")
         }
     }
 

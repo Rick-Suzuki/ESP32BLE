@@ -16,6 +16,8 @@ struct MainScreenToolbarContent: ToolbarContent {
     let selectedDocumentDisplayName: String
     let isDocumentNameFieldFocused: FocusState<Bool>.Binding
     let openKeyboardScreen: () -> Void
+    let canGoBackToPreviousDocument: Bool
+    let goBackToPreviousDocument: () -> Void
     let selectPreviousDocument: () -> Void
     let selectNextDocument: () -> Void
     let toggleGridEditMode: () -> Void
@@ -44,6 +46,20 @@ struct MainScreenToolbarContent: ToolbarContent {
 
         ToolbarItem(placement: .principal) {
             HStack(spacing: 20) {
+                Button {
+                    ButtonClickFeedback.playIfEnabled()
+                    goBackToPreviousDocument()
+                } label: {
+                    Image(systemName: "arrow.uturn.backward.circle")
+                        .font(.system(size: 22))
+                        .frame(width: 20, height: 20)
+                        .frame(width: 44, height: 44)
+                        .contentShape(.rect)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(toolbarPrincipalForegroundColor)
+                .disabled(!canGoBackToPreviousDocument)
+
                 Button {
                     ButtonClickFeedback.playIfEnabled()
                     selectPreviousDocument()

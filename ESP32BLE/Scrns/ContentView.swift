@@ -41,6 +41,7 @@ struct ContentView: View {
     @State private var functionKeySlotLines = ContentView.defaultFunctionKeyTitles()
     @State private var loadedFunctionKeySlotCount = defaultNamedFunctionKeyCount
     @State private var documentFiles: [URL] = []
+    @State private var documentNavigationHistory: [String] = []
     @AppStorage("selectedDocumentName") private var selectedDocumentName = "fnkeys.txt"
     @AppStorage("documentFontSizesData") private var documentFontSizesData = ""
     @State private var settingsBLEText = ""
@@ -82,6 +83,9 @@ struct ContentView: View {
                             canDeleteDocuments: documentFiles.count > 1,
                             selectPreviousDocument: selectPreviousDocument,
                             selectNextDocument: selectNextDocument,
+                            goBackToPreviousDocument: goBackToPreviousDocument,
+                            canGoBackToPreviousDocument: canGoBackToPreviousDocument,
+                            selectDocumentNamedFromGrid: selectDocumentNamedFromGrid,
                             resizeVisibleBoxCount: resizeSelectedDocumentSlotCount,
                             moveFunctionKeySlot: moveSelectedDocumentSlot,
                             updateFunctionKeySlot: updateSelectedDocumentSlot,
@@ -498,6 +502,45 @@ struct ContentView: View {
         refreshDocumentFiles()
     }
 
+    private func selectDocument(_ fileURL: URL, recordHistory: Bool) {
+        if recordHistory {
+            recordDocumentHistory(beforeSwitchingTo: fileURL.lastPathComponent)
+        }
+        loadFunctionKeys(from: fileURL)
+        refreshDocumentFiles()
+    }
+
+    private func recordDocumentHistory(beforeSwitchingTo targetDocumentName: String) {
+        guard !selectedDocumentName.isEmpty,
+              selectedDocumentName != targetDocumentName else {
+            return
+        }
+
+        if documentNavigationHistory.last != selectedDocumentName {
+            documentNavigationHistory.append(selectedDocumentName)
+        }
+    }
+
+    private func canonicalDocumentFileName(from rawName: String) -> String {
+        let trimmedName = rawName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedName.isEmpty else { return trimmedName }
+        return trimmedName.lowercased().hasSuffix(".txt") ? trimmedName : "\(trimmedName).txt"
+    }
+
+    @discardableResult
+    private func selectDocumentNamedFromGrid(_ rawName: String) -> Bool {
+        let targetFileName = canonicalDocumentFileName(from: rawName)
+        guard !targetFileName.isEmpty,
+              let fileURL = documentFiles.first(where: {
+                  $0.lastPathComponent.caseInsensitiveCompare(targetFileName) == .orderedSame
+              }) else {
+            return false
+        }
+
+        selectDocument(fileURL, recordHistory: true)
+        return true
+    }
+
     private func displayName(for fileName: String) -> String {
         URL(fileURLWithPath: fileName).deletingPathExtension().lastPathComponent
     }
@@ -621,7 +664,8 @@ struct ContentView: View {
             refreshDocumentFiles()
 
             if let fallbackFileURL {
-                loadFunctionKeys(from: fallbackFileURL)
+                documentNavigationHistory.removeAll { $0 == fileURL.lastPathComponent }
+                selectDocument(fallbackFileURL)
             }
         } catch {
             refreshDocumentFiles()
@@ -648,7 +692,7 @@ struct ContentView: View {
             updatedFontSizes[targetURL.lastPathComponent] = defaultDocumentFontSize
             saveDocumentFontSizes(updatedFontSizes)
             refreshDocumentFiles()
-            loadFunctionKeys(from: targetURL)
+            selectDocument(targetURL)
         } catch {
             refreshDocumentFiles()
         }
@@ -660,7 +704,7 @@ struct ContentView: View {
             return
         }
 
-        loadFunctionKeys(from: documentFiles[currentIndex - 1])
+        selectDocument(documentFiles[currentIndex - 1], recordHistory: true)
     }
 
     private func selectNextDocument() {
@@ -669,6 +713,25 @@ struct ContentView: View {
             return
         }
 
-        loadFunctionKeys(from: documentFiles[currentIndex + 1])
+        selectDocument(documentFiles[currentIndex + 1], recordHistory: true)
+    }
+
+    private var canGoBackToPreviousDocument: Bool {
+        documentNavigationHistory.contains { previousName in
+            previousName != selectedDocumentName &&
+            documentFiles.contains(where: { $0.lastPathComponent == previousName })
+        }
+    }
+
+    private func goBackToPreviousDocument() {
+        while let previousName = documentNavigationHistory.popLast() {
+            guard previousName != selectedDocumentName,
+                  let fileURL = documentFiles.first(where: { $0.lastPathComponent == previousName }) else {
+                continue
+            }
+
+            selectDocument(fileURL)
+            return
+        }
     }
 }

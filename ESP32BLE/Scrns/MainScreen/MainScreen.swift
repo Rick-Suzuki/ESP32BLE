@@ -60,6 +60,9 @@ struct MainScreen: View {
     let canDeleteDocuments: Bool
     let selectPreviousDocument: () -> Void
     let selectNextDocument: () -> Void
+    let goBackToPreviousDocument: () -> Void
+    let canGoBackToPreviousDocument: Bool
+    let selectDocumentNamedFromGrid: (String) -> Bool
     let resizeVisibleBoxCount: (Int) -> Bool
     let moveFunctionKeySlot: (Int, Int) -> Bool
     let updateFunctionKeySlot: (Int, String) -> Bool
@@ -159,6 +162,8 @@ struct MainScreen: View {
                 selectedDocumentDisplayName: selectedDocumentDisplayName,
                 isDocumentNameFieldFocused: $isDocumentNameFieldFocused,
                 openKeyboardScreen: openKeyboardScreen,
+                canGoBackToPreviousDocument: canGoBackToPreviousDocument,
+                goBackToPreviousDocument: goBackToPreviousDocument,
                 selectPreviousDocument: selectPreviousDocument,
                 selectNextDocument: selectNextDocument,
                 toggleGridEditMode: { isGridEditModeEnabled.toggle() },
