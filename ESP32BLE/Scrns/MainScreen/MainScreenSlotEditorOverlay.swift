@@ -99,7 +99,7 @@ struct MainScreenSlotEditorOverlay: View {
                     }
                     .clipShape(.rect(cornerRadius: 12))
                 }
-
+				// MARK: - BM: main scrn editor kb
                 HStack(spacing: buttonSpacing) {
 					helperInsertButton("F")
                     helperInsertButton("ctl:")

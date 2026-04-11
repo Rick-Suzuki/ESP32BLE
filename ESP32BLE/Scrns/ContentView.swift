@@ -518,6 +518,7 @@ struct ContentView: View {
             .first?
             .lowercased() ?? ""
 
+		// MARK: - BM:🟥 btns keywords
         if ["delete", "del", "rem", "remove", "clr", "clear", "erase", "destroy"].contains(firstWord) {
             return (rightText, "dest")
         }

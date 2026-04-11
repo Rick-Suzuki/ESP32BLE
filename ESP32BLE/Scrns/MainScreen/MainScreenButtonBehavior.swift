@@ -196,6 +196,7 @@ struct MainScreenButtonLabelView: View {
         }
     }
 
+	// MARK: - BM:🟩 main scrn btn colors
     private var buttonBackgroundColor: Color {
         guard !isEmptyButtonEntry else {
             return Color.black.opacity(backgroundOpacity)
