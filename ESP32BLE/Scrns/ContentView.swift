@@ -120,6 +120,7 @@ struct ContentView: View {
                     refreshDocumentFiles: refreshDocumentFiles,
                     loadFunctionKeys: selectDocument,
                     saveSelectedDocumentAndReload: saveSelectedDocumentAndReload,
+                    renameDocument: renameSelectedDocument,
                     deleteDocument: deleteDocument,
                     duplicateDocument: duplicateDocument,
                     canDeleteDocuments: documentFiles.count > 1,

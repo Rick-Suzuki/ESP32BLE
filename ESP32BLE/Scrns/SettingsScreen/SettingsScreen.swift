@@ -15,6 +15,7 @@ struct SettingsScreen: View {
     let refreshDocumentFiles: () -> Void
     let loadFunctionKeys: (URL) -> Void
     let saveSelectedDocumentAndReload: (String) -> Void
+    let renameDocument: (String) -> String?
     let deleteDocument: (URL) -> Void
     let duplicateDocument: (URL) -> Void
     let canDeleteDocuments: Bool
@@ -26,10 +27,14 @@ struct SettingsScreen: View {
     @State private var isDocumentEditorFocused = false
     @State private var loadedDocumentName = ""
     @State private var savedDocumentEditorText = ""
+    @State private var isEditingDocumentName = false
+    @State private var documentNameDraft = ""
+    @State private var renameAlertMessage: String?
     @AppStorage("backgroundImageOpacity") private var opacitySliderValue = 0.5
     @AppStorage("selectedBackgroundImageIndex") var selectedImageIndex = 0
     @AppStorage(ButtonClickFeedback.preferenceKey) private var isButtonClickEnabled = true
     @FocusState var focusedField: SettingsFocusField?
+    @FocusState private var isDocumentNameFieldFocused: Bool
 
     var body: some View {
         GeometryReader { geometry in
@@ -49,12 +54,15 @@ struct SettingsScreen: View {
             .frame(maxHeight: .infinity, alignment: .top)
         }
         .background(Color.black.ignoresSafeArea())
-        .navigationTitle("Settings")
+        .navigationTitle("")
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
                 SettingsToolbarButton(title: "main", backgroundColor: Color.gray.opacity(0.45)) {
                     saveAndReturnToMain()
                 }
+            }
+            ToolbarItem(placement: .principal) {
+                settingsTitleControl
             }
             ToolbarItem(placement: .topBarTrailing) {
                 SettingsToolbarButton(title: "new", backgroundColor: Color.green.opacity(0.5)) {
@@ -77,16 +85,33 @@ struct SettingsScreen: View {
         .onChange(of: selectedDocumentName) {
             saveCurrentDocumentText()
             loadSelectedDocumentText()
+            cancelDocumentRename()
         }
         .onChange(of: documentEditorText) {
             guard !isLoadingDocumentText else { return }
             saveCurrentDocumentText()
         }
+        .onChange(of: isDocumentNameFieldFocused) {
+            guard isEditingDocumentName, !isDocumentNameFieldFocused else { return }
+            cancelDocumentRename()
+        }
         .onAppear {
             UIApplication.shared.isIdleTimerDisabled = keepScreenAwake
+            documentNameDraft = selectedDocumentDisplayName
         }
         .onChange(of: keepScreenAwake) {
             UIApplication.shared.isIdleTimerDisabled = keepScreenAwake
+        }
+        .task(id: isEditingDocumentName) {
+            guard isEditingDocumentName else { return }
+            isDocumentNameFieldFocused = true
+        }
+        .alert("Alert", isPresented: renameAlertIsPresented) {
+            Button("OK", role: .cancel) {
+                renameAlertMessage = nil
+            }
+        } message: {
+            Text(renameAlertMessage ?? "")
         }
     }
 
@@ -105,6 +130,34 @@ struct SettingsScreen: View {
             savedText: savedDocumentEditorText,
             onUndo: { documentEditorText = savedDocumentEditorText }
         )
+    }
+
+    private var settingsTitleControl: some View {
+        Group {
+            if isEditingDocumentName {
+                TextField("", text: $documentNameDraft)
+                    .textFieldStyle(.plain)
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                    .multilineTextAlignment(.center)
+                    .frame(minWidth: 180)
+                    .focused($isDocumentNameFieldFocused)
+                    .onSubmit {
+                        commitDocumentRename()
+                    }
+            } else {
+                Button(selectedDocumentDisplayName) {
+                    ButtonClickFeedback.playIfEnabled()
+                    documentNameDraft = selectedDocumentDisplayName
+                    isEditingDocumentName = true
+                }
+                .buttonStyle(.plain)
+                .font(.headline)
+                .foregroundStyle(.white)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+            }
+        }
     }
 
     private var availableDevicesContent: some View {
@@ -414,6 +467,7 @@ struct SettingsScreen: View {
         documentEditorText = loadedText
         savedDocumentEditorText = loadedText
         loadedDocumentName = fileURL.lastPathComponent
+        documentNameDraft = selectedDocumentDisplayName
     }
 
     private func saveSelectedDocumentText() {
@@ -464,6 +518,40 @@ struct SettingsScreen: View {
 
     private var selectedDocumentFileURL: URL? {
         documentFiles.first(where: { $0.lastPathComponent == selectedDocumentName })
+    }
+
+    private var selectedDocumentDisplayName: String {
+        URL(fileURLWithPath: selectedDocumentName).deletingPathExtension().lastPathComponent
+    }
+
+    private var renameAlertIsPresented: Binding<Bool> {
+        Binding(
+            get: { renameAlertMessage != nil },
+            set: { newValue in
+                if !newValue {
+                    renameAlertMessage = nil
+                }
+            }
+        )
+    }
+
+    private func commitDocumentRename() {
+        let proposedName = documentNameDraft
+
+        if let alertMessage = renameDocument(proposedName) {
+            renameAlertMessage = alertMessage
+            return
+        }
+
+        documentNameDraft = selectedDocumentDisplayName
+        isEditingDocumentName = false
+        isDocumentNameFieldFocused = false
+    }
+
+    private func cancelDocumentRename() {
+        documentNameDraft = selectedDocumentDisplayName
+        isEditingDocumentName = false
+        isDocumentNameFieldFocused = false
     }
 
     private func createNewDocument() {

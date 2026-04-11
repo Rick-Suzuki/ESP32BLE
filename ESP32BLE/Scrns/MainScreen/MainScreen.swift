@@ -192,6 +192,7 @@ struct MainScreen: View {
                             refreshDocumentFiles: refreshDocumentFiles,
                             loadFunctionKeys: loadFunctionKeys,
                             saveSelectedDocumentAndReload: saveSelectedDocumentAndReload,
+                            renameDocument: renameDocument,
                             deleteDocument: deleteDocument,
                             duplicateDocument: duplicateDocument,
                             canDeleteDocuments: canDeleteDocuments,
