@@ -39,6 +39,7 @@ struct MainScreen: View {
     @State var activeDragIndex: Int?
     @State var editingSlotIndex: Int?
     @State var editingSlotText = ""
+    @State private var keyboardMinY: CGFloat = .greatestFiniteMagnitude
     @AppStorage("selectedBackgroundImageIndex") var selectedBackgroundImageIndex = 0
     @AppStorage("backgroundImageOpacity") var backgroundImageOpacity = 0.5
     @AppStorage("mainGridBackgroundOpacity") var mainGridBackgroundOpacity = 1.0
@@ -104,6 +105,9 @@ struct MainScreen: View {
             .task(id: definedFunctionKeyCount) {
                 updateVisibleBoxCountToFitDefinedButtons()
             }
+            .task {
+                await observeKeyboardFrameChanges()
+            }
             .alert(alertTitle, isPresented: renameAlertIsPresented) {
                 Button("OK", role: .cancel) {
                     renameAlertMessage = nil
@@ -119,6 +123,10 @@ struct MainScreen: View {
             let contentWidth = max(0, geometry.size.width - (horizontalContentInset * 2))
             let topContentInset: CGFloat = 8
             let bottomContentInset: CGFloat = 0
+            let containerFrame = geometry.frame(in: .global)
+            let maskBottomY = min(containerFrame.maxY, keyboardMinY)
+            let maskHeight = max(0, maskBottomY - containerFrame.minY)
+            let maskedScreenHeight = maskHeight + geometry.safeAreaInsets.top
 
             ZStack(alignment: .top) {
                 VStack(spacing: 20) {
@@ -135,7 +143,13 @@ struct MainScreen: View {
                 if editingSlotIndex != nil {
                     Color.black.opacity(0.5)
                         .ignoresSafeArea()
+                        .mask(alignment: .top) {
+                            Rectangle()
+                                .frame(height: maskedScreenHeight)
+                                .padding(.horizontal, -2)
+                        }
                         .contentShape(Rectangle())
+                        .allowsHitTesting(false)
                 }
 
                 if isGridEditModeEnabled, editingSlotIndex != nil {
@@ -143,6 +157,7 @@ struct MainScreen: View {
                         .offset(y: topContentInset)
                 }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         }
         .padding(.horizontal, 2)
         .navigationTitle("")
@@ -294,6 +309,36 @@ struct MainScreen: View {
         }
 
         cancelDocumentRename()
+    }
+
+    @MainActor
+    private func observeKeyboardFrameChanges() async {
+        let notificationCenter = NotificationCenter.default
+
+        Task {
+            for await _ in notificationCenter.notifications(named: UIResponder.keyboardWillHideNotification) {
+                await MainActor.run {
+                    keyboardMinY = .greatestFiniteMagnitude
+                }
+            }
+        }
+
+        for await notification in notificationCenter.notifications(named: UIResponder.keyboardWillChangeFrameNotification) {
+            guard let endFrame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect else {
+                keyboardMinY = .greatestFiniteMagnitude
+                continue
+            }
+
+            let screenHeight = UIApplication.shared.connectedScenes
+                .compactMap { $0 as? UIWindowScene }
+                .first?.screen.bounds.height ?? 0
+
+            if screenHeight > 0, endFrame.minY >= screenHeight {
+                keyboardMinY = .greatestFiniteMagnitude
+            } else {
+                keyboardMinY = endFrame.minY
+            }
+        }
     }
 
     private func reloadSelectedDocumentIfAvailable() {
