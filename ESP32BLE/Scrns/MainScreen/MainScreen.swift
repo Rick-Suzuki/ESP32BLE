@@ -22,7 +22,7 @@ struct MainScreen: View {
     private let displayModeButtonColor = Color(red: 0.05, green: 0.33, blue: 0.18)
     private let countControlColor = Color(red: 0.15, green: 0.72, blue: 0.22)
     private let fontControlColor = Color(red: 0.78, green: 0.68, blue: 0.12)
-    private let speechRecognitionActiveColor = Color(red: 0.42, green: 0.12, blue: 0.12)
+    private let speechRecognitionActiveColor = Color(red: 0.0, green: 0.2, blue: 0.45)
     private let bleSendActiveColor = Color(red: 0.55, green: 0.45, blue: 0.08)
     @State var visibleBoxCount = 20
     @State var mainGridButtonMode: MainGridButtonMode = .active

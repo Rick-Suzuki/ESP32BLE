@@ -5,6 +5,10 @@ import UniformTypeIdentifiers
 
 struct SettingsScreen: View {
     private let ttsControlColor = Color(red: 0.0, green: 0.2, blue: 0.45)
+    private let defaultTextToSpeechRate = Double(AVSpeechUtteranceDefaultSpeechRate)
+    private let minimumTextToSpeechPercentage = 40.0
+    private let maximumTextToSpeechPercentage = 140.0
+    private let textToSpeechPercentageStep = 5.0
     @Environment(\.dismiss) private var dismiss
     @AppStorage("speechRecognitionAutoOffMinutes") private var speechRecognitionAutoOffMinutes = 5
     @AppStorage("sendControlABeforeText") var sendControlABeforeText = false
@@ -265,8 +269,9 @@ struct SettingsScreen: View {
                 .offset(y: 1.5)
 
             Slider(
-                value: speechRateBinding,
-                in: 0.2...0.7,
+                value: speechRatePercentageBinding,
+                in: minimumTextToSpeechPercentage...maximumTextToSpeechPercentage,
+                step: textToSpeechPercentageStep,
                 onEditingChanged: { isEditing in
                     guard !isEditing else { return }
                     previewCurrentSpeechVoice()
@@ -851,19 +856,35 @@ struct SettingsScreen: View {
     }
 
     private var clampedTextToSpeechRate: Double {
-        min(max(textToSpeechRate, 0.2), 0.7)
+        min(max(textToSpeechRate, minimumTextToSpeechRate), maximumTextToSpeechRate)
     }
 
     private var textToSpeechRateLabel: String {
-        let percentage = Int((clampedTextToSpeechRate / Double(AVSpeechUtteranceDefaultSpeechRate) * 100).rounded())
-        return "\(percentage)%"
+        "\(Int(clampedTextToSpeechPercentage.rounded()))%"
     }
 
-    private var speechRateBinding: Binding<Double> {
+    private var speechRatePercentageBinding: Binding<Double> {
         Binding(
-            get: { clampedTextToSpeechRate },
-            set: { textToSpeechRate = min(max($0, 0.2), 0.7) }
+            get: { clampedTextToSpeechPercentage },
+            set: { newValue in
+                let snappedPercentage = (newValue / textToSpeechPercentageStep).rounded() * textToSpeechPercentageStep
+                textToSpeechRate = defaultTextToSpeechRate * min(max(snappedPercentage, minimumTextToSpeechPercentage), maximumTextToSpeechPercentage) / 100
+            }
         )
+    }
+
+    private var clampedTextToSpeechPercentage: Double {
+        let rawPercentage = (clampedTextToSpeechRate / defaultTextToSpeechRate) * 100
+        let snappedPercentage = (rawPercentage / textToSpeechPercentageStep).rounded() * textToSpeechPercentageStep
+        return min(max(snappedPercentage, minimumTextToSpeechPercentage), maximumTextToSpeechPercentage)
+    }
+
+    private var minimumTextToSpeechRate: Double {
+        defaultTextToSpeechRate * minimumTextToSpeechPercentage / 100
+    }
+
+    private var maximumTextToSpeechRate: Double {
+        defaultTextToSpeechRate * maximumTextToSpeechPercentage / 100
     }
 
 }
