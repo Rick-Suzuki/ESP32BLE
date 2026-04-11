@@ -382,25 +382,103 @@ struct ContentView: View {
     @discardableResult
     private func resizeSelectedDocumentSlotCount(to newCount: Int) -> Bool {
         let boundedCount = min(max(newCount, 1), maxFunctionKeyCount)
+        let currentCount = functionKeySlotLines.count
 
-        guard boundedCount != functionKeySlotLines.count else {
+        guard boundedCount != currentCount else {
             return true
         }
 
-        if boundedCount > functionKeySlotLines.count {
-            let expandedLines = functionKeySlotLines + Array(repeating: "_", count: boundedCount - functionKeySlotLines.count)
-            persistSlotLines(expandedLines)
-            return true
-        }
+        let currentLines = Array(functionKeySlotLines.prefix(currentCount))
 
-        let trailingLines = functionKeySlotLines[boundedCount...]
-        guard trailingLines.allSatisfy(isBlankPlaceholderLine(_:)) else {
+        guard let resizedLines = resizedSlotLines(
+            from: currentLines,
+            oldCount: currentCount,
+            to: boundedCount
+        ) else {
             print("Can't shrink grid because trailing buttons contain text.")
             return false
         }
 
-        persistSlotLines(Array(functionKeySlotLines.prefix(boundedCount)))
+        persistSlotLines(resizedLines)
         return true
+    }
+
+    private func resizedSlotLines(from slotLines: [String], oldCount: Int, to newCount: Int) -> [String]? {
+        let oldGrid = functionKeyGridDimensions(for: oldCount)
+        let newGrid = functionKeyGridDimensions(for: newCount)
+        var remappedLines = Array(repeating: "_", count: newCount)
+
+        for index in 0..<oldCount {
+            let line = index < slotLines.count ? slotLines[index] : "_"
+            let row = index / oldGrid.columns
+            let column = index % oldGrid.columns
+
+            guard row < newGrid.rows, column < newGrid.columns else {
+                if isBlankPlaceholderLine(line) {
+                    continue
+                }
+                return nil
+            }
+
+            let newIndex = row * newGrid.columns + column
+            guard newIndex < newCount else {
+                if isBlankPlaceholderLine(line) {
+                    continue
+                }
+                return nil
+            }
+
+            remappedLines[newIndex] = line
+        }
+
+        return remappedLines
+    }
+
+    private func functionKeyGridDimensions(for count: Int) -> (columns: Int, rows: Int) {
+        switch count {
+        case ...1:
+            return (1, 1)
+        case 2:
+            return (2, 1)
+        case 3...4:
+            return (2, 2)
+        case 5...6:
+            return (3, 2)
+        case 7...9:
+            return (3, 3)
+        case 10...12:
+            return (4, 3)
+        case 13...16:
+            return (4, 4)
+        case 17...20:
+            return (5, 4)
+        case 21...24:
+            return (6, 4)
+        case 25...28:
+            return (7, 4)
+        case 29...32:
+            return (8, 4)
+        case 33...36:
+            return (9, 4)
+        case 37...40:
+            return (10, 4)
+        case 41...45:
+            return (9, 5)
+        case 46...50:
+            return (10, 5)
+        case 51...56:
+            return (8, 7)
+        case 57...64:
+            return (8, 8)
+        case 65...72:
+            return (9, 8)
+        case 73...81:
+            return (9, 9)
+        case 82...90:
+            return (10, 9)
+        default:
+            return (10, 10)
+        }
     }
 
     @discardableResult
