@@ -1,4 +1,5 @@
 import SwiftUI
+import AVFoundation
 
 extension MainScreen {
     func buttonTitle(for entry: FunctionKeyEntry) -> String {
@@ -61,6 +62,16 @@ extension MainScreen {
     }
 
     func sendMainGridEntry(_ entry: FunctionKeyEntry) {
+        switch mainGridButtonMode {
+        case .disabled:
+            return
+        case .speech:
+            speakMainGridEntry(entry)
+            return
+        case .active:
+            break
+        }
+
         if let targetDocumentName = targetDocumentNameForGridEntry(entry) {
             if selectDocumentNamedFromGrid(targetDocumentName) {
                 return
@@ -85,6 +96,31 @@ extension MainScreen {
         for sendText in entry.sendTexts {
             ble.sendLine(sendText)
         }
+    }
+
+    func speakMainGridEntry(_ entry: FunctionKeyEntry) {
+        let spokenText = buttonTitle(for: entry)
+            .replacingOccurrences(of: "\n", with: ", ")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard !spokenText.isEmpty else {
+            return
+        }
+
+        stopSpokenGridText()
+
+        let utterance = AVSpeechUtterance(string: spokenText)
+        utterance.voice = resolvedSpeechVoice
+        utterance.rate = AVSpeechUtteranceDefaultSpeechRate
+        speechSynthesizer.speak(utterance)
+    }
+
+    var resolvedSpeechVoice: AVSpeechSynthesisVoice? {
+        if let selectedVoice = AVSpeechSynthesisVoice(identifier: selectedTextToSpeechVoiceIdentifier) {
+            return selectedVoice
+        }
+
+        return AVSpeechSynthesisVoice(language: AVSpeechSynthesisVoice.currentLanguageCode())
     }
 
     func targetDocumentNameForGridEntry(_ entry: FunctionKeyEntry) -> String? {

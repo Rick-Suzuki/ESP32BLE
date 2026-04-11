@@ -1,6 +1,7 @@
 
 import SwiftUI
 import UIKit
+import AVFoundation
 
 struct MainScreen: View {
     // Easy-to-find styling controls for the main button grid.
@@ -24,11 +25,12 @@ struct MainScreen: View {
     private let speechRecognitionActiveColor = Color(red: 0.42, green: 0.12, blue: 0.12)
     private let bleSendActiveColor = Color(red: 0.55, green: 0.45, blue: 0.08)
     @State var visibleBoxCount = 20
-    @State var isBLESendEnabled = true
+    @State var mainGridButtonMode: MainGridButtonMode = .active
     @State var isSpkRecEnabled = false
     @State var unmatchedSpeechText: String?
     @State var speechRecognitionAutoOffTask: Task<Void, Never>?
     @StateObject var speechRecognition = SpeechRecognitionManager()
+    @State var speechSynthesizer = AVSpeechSynthesizer()
     @ObservedObject var ble: BLEKeyboardManager
     @State var displayMode: FunctionKeyDisplayMode = .right
     @State var isEditingDocumentName = false
@@ -40,6 +42,7 @@ struct MainScreen: View {
     @State var editingSlotIndex: Int?
     @State var editingSlotText = ""
     @State private var keyboardMinY: CGFloat = .greatestFiniteMagnitude
+    @AppStorage("selectedTextToSpeechVoiceIdentifier") var selectedTextToSpeechVoiceIdentifier = ""
     @AppStorage("selectedBackgroundImageIndex") var selectedBackgroundImageIndex = 0
     @AppStorage("backgroundImageOpacity") var backgroundImageOpacity = 0.5
     @AppStorage("mainGridBackgroundOpacity") var mainGridBackgroundOpacity = 1.0
@@ -214,7 +217,7 @@ struct MainScreen: View {
             visibleBoxCount: visibleBoxCount,
             mainGridButtonSpacing: mainGridButtonSpacing,
             isGridEditModeEnabled: isGridEditModeEnabled,
-            bleSendEnabled: isBLESendEnabled,
+            bleSendEnabled: mainGridButtonMode != .disabled,
             onButtonClick: { ButtonClickFeedback.playIfEnabled() },
             sendLine: sendMainGridEntry,
             onBeginSlotEditing: beginSlotEditing,
@@ -259,7 +262,7 @@ struct MainScreen: View {
             speechRecognitionDisplayText: speechRecognitionDisplayText,
             speechRecognitionDisplayColor: speechRecognitionDisplayColor,
             isSpeechRecognitionEnabled: isSpkRecEnabled,
-            isBLESendEnabled: isBLESendEnabled,
+            mainGridButtonMode: mainGridButtonMode,
             displayMode: displayMode,
             displayModeButtonColor: displayModeButtonColor,
             countControlColor: countControlColor,
@@ -271,7 +274,8 @@ struct MainScreen: View {
             onDecreaseBoxFontSize: decreaseBoxFontSize,
             onIncreaseBoxFontSize: increaseBoxFontSize,
             onToggleSpeechRecognition: { isSpkRecEnabled.toggle() },
-            onToggleBLESend: { isBLESendEnabled.toggle() },
+            onCycleMainGridButtonMode: cycleMainGridButtonMode,
+            onStopSpeech: stopSpokenGridText,
             onAdvanceDisplayMode: { displayMode = displayMode.next() }
         )
     }
@@ -348,6 +352,17 @@ struct MainScreen: View {
         }
 
         loadFunctionKeys(selectedDocumentURL)
+    }
+
+    func cycleMainGridButtonMode() {
+        mainGridButtonMode = mainGridButtonMode.next()
+        if mainGridButtonMode != .speech {
+            stopSpokenGridText()
+        }
+    }
+
+    func stopSpokenGridText() {
+        speechSynthesizer.stopSpeaking(at: .immediate)
     }
 
     private var renameAlertIsPresented: Binding<Bool> {

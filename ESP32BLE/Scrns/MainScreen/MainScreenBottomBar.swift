@@ -1,5 +1,33 @@
 import SwiftUI
 
+enum MainGridButtonMode {
+    case active
+    case disabled
+    case speech
+
+    var title: String {
+        switch self {
+        case .active:
+            return "btn active"
+        case .disabled:
+            return "disabled"
+        case .speech:
+            return "speech"
+        }
+    }
+
+    func next() -> MainGridButtonMode {
+        switch self {
+        case .active:
+            return .disabled
+        case .disabled:
+            return .speech
+        case .speech:
+            return .active
+        }
+    }
+}
+
 private struct RepeatingToolbarButton<Label: View>: View {
     let isEnabled: Bool
     let actionVersion: Int
@@ -77,7 +105,7 @@ struct MainScreenBottomBar: View {
     let speechRecognitionDisplayText: String
     let speechRecognitionDisplayColor: Color
     let isSpeechRecognitionEnabled: Bool
-    let isBLESendEnabled: Bool
+    let mainGridButtonMode: MainGridButtonMode
     let displayMode: FunctionKeyDisplayMode
     let displayModeButtonColor: Color
     let countControlColor: Color
@@ -89,7 +117,8 @@ struct MainScreenBottomBar: View {
     let onDecreaseBoxFontSize: () -> Void
     let onIncreaseBoxFontSize: () -> Void
     let onToggleSpeechRecognition: () -> Void
-    let onToggleBLESend: () -> Void
+    let onCycleMainGridButtonMode: () -> Void
+    let onStopSpeech: () -> Void
     let onAdvanceDisplayMode: () -> Void
 
     var body: some View {
@@ -104,9 +133,9 @@ struct MainScreenBottomBar: View {
 
                 bottomBarLayout(
                     isCompact: true,
-                    speechBoxWidth: 0,
-                    toggleWidth: 88,
-                    displayModeWidth: 80
+                    speechBoxWidth: 120,
+                    toggleWidth: 76,
+                    displayModeWidth: 72
                 )
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
@@ -148,30 +177,28 @@ struct MainScreenBottomBar: View {
                 }
             }
 
-            if !isCompact {
-                HStack(spacing: 12) {
-                    controlTriangle(
-                        rotationDegrees: -90,
-                        foreground: fontControlColor,
-                        isEnabled: boxFontSize > minimumBoxFontSize,
-                        actionVersion: Int(boxFontSize)
-                    ) {
-                        onDecreaseBoxFontSize()
-                    }
+            HStack(spacing: isCompact ? 8 : 12) {
+                controlTriangle(
+                    rotationDegrees: -90,
+                    foreground: fontControlColor,
+                    isEnabled: boxFontSize > minimumBoxFontSize,
+                    actionVersion: Int(boxFontSize)
+                ) {
+                    onDecreaseBoxFontSize()
+                }
 
-                    Text("fnt:\(Int(boxFontSize))")
-                        .font(.headline)
-                        .foregroundStyle(.white)
-                        .frame(minWidth: 32)
+                Text("fnt:\(Int(boxFontSize))")
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                    .frame(minWidth: isCompact ? 24 : 32)
 
-                    controlTriangle(
-                        rotationDegrees: 90,
-                        foreground: fontControlColor,
-                        isEnabled: boxFontSize < maximumBoxFontSize,
-                        actionVersion: Int(boxFontSize)
-                    ) {
-                        onIncreaseBoxFontSize()
-                    }
+                controlTriangle(
+                    rotationDegrees: 90,
+                    foreground: fontControlColor,
+                    isEnabled: boxFontSize < maximumBoxFontSize,
+                    actionVersion: Int(boxFontSize)
+                ) {
+                    onIncreaseBoxFontSize()
                 }
             }
 
@@ -185,31 +212,33 @@ struct MainScreenBottomBar: View {
             )
             .frame(width: toggleWidth)
 
-            if !isCompact {
-                Text(speechRecognitionDisplayText)
-                    .font(.body)
-                    .foregroundStyle(speechRecognitionDisplayColor)
-                    .opacity(0.6)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                    .frame(width: speechBoxWidth, alignment: .leading)
-                    .padding(.horizontal, 12)
-                    .frame(minHeight: 38)
-                    .background(Color.black.opacity(0.7))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 6)
-                            .stroke(Color.white, lineWidth: 1)
-                    }
-                    .clipShape(.rect(cornerRadius: 6))
-            }
+            Text(speechRecognitionDisplayText)
+                .font(isCompact ? .caption : .body)
+                .foregroundStyle(speechRecognitionDisplayColor)
+                .opacity(0.6)
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .frame(width: speechBoxWidth, alignment: .leading)
+                .padding(.horizontal, isCompact ? 8 : 12)
+                .frame(minHeight: isCompact ? 34 : 38)
+                .background(Color.black.opacity(0.7))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 6)
+                        .stroke(Color.white, lineWidth: 1)
+                }
+                .clipShape(.rect(cornerRadius: 6))
 
-            toggleButton(
-                title: isBLESendEnabled ? "btn active" : "disabled",
-                background: isBLESendEnabled ? bleSendActiveColor : inactiveButtonBackgroundColor,
-                border: isBLESendEnabled ? bleSendActiveColor : inactiveButtonBorderColor,
-                action: onToggleBLESend
-            )
-            .frame(width: toggleWidth)
+            HStack(spacing: 8) {
+                stopSpeechButton
+
+                toggleButton(
+                    title: mainGridButtonMode.title,
+                    background: mainGridButtonModeBackgroundColor,
+                    border: mainGridButtonModeBorderColor,
+                    action: onCycleMainGridButtonMode
+                )
+                .frame(width: toggleWidth)
+            }
 
             Button {
                 onAdvanceDisplayMode()
@@ -266,5 +295,46 @@ struct MainScreenBottomBar: View {
                 .stroke(border, lineWidth: 2)
         }
         .clipShape(.rect(cornerRadius: 12))
+    }
+
+    private var stopSpeechButton: some View {
+        Button {
+            onStopSpeech()
+        } label: {
+            Image(systemName: "stop.fill")
+                .font(.headline)
+                .frame(width: 40, height: 50)
+                .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(.white)
+        .background(speechRecognitionActiveColor)
+        .overlay {
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(speechRecognitionActiveColor, lineWidth: 2)
+        }
+        .clipShape(.rect(cornerRadius: 12))
+    }
+
+    private var mainGridButtonModeBackgroundColor: Color {
+        switch mainGridButtonMode {
+        case .active:
+            return bleSendActiveColor
+        case .disabled:
+            return inactiveButtonBackgroundColor
+        case .speech:
+            return speechRecognitionActiveColor
+        }
+    }
+
+    private var mainGridButtonModeBorderColor: Color {
+        switch mainGridButtonMode {
+        case .active:
+            return bleSendActiveColor
+        case .disabled:
+            return inactiveButtonBorderColor
+        case .speech:
+            return speechRecognitionActiveColor
+        }
     }
 }

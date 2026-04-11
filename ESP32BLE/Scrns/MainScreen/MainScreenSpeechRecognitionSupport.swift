@@ -21,7 +21,7 @@ extension MainScreen {
 
         unmatchedSpeechText = nil
 
-        guard isBLESendEnabled else {
+        guard mainGridButtonMode == .active else {
             return
         }
 
