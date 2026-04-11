@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import UniformTypeIdentifiers
 
 struct SettingsScreen: View {
     @Environment(\.dismiss) private var dismiss
@@ -30,6 +31,9 @@ struct SettingsScreen: View {
     @State private var isEditingDocumentName = false
     @State private var documentNameDraft = ""
     @State private var renameAlertMessage: String?
+    @State private var isImportingDocument = false
+    @State private var isExportingDocument = false
+    @State private var exportDocument: SettingsTextFileDocument?
     @AppStorage("backgroundImageOpacity") private var opacitySliderValue = 0.5
     @AppStorage("selectedBackgroundImageIndex") var selectedImageIndex = 0
     @AppStorage(ButtonClickFeedback.preferenceKey) private var isButtonClickEnabled = true
@@ -63,6 +67,30 @@ struct SettingsScreen: View {
             }
             ToolbarItem(placement: .principal) {
                 settingsTitleControl
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    ButtonClickFeedback.playIfEnabled()
+                    isImportingDocument = true
+                } label: {
+                    Image(systemName: "square.and.arrow.down")
+                        .font(.headline)
+                        .foregroundStyle(.white)
+                }
+                .contentShape(.rect)
+                .accessibilityLabel("Import from iCloud")
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    ButtonClickFeedback.playIfEnabled()
+                    prepareExport()
+                } label: {
+                    Image(systemName: "square.and.arrow.up")
+                        .font(.headline)
+                        .foregroundStyle(.white)
+                }
+                .contentShape(.rect)
+                .accessibilityLabel("Export to iCloud")
             }
             ToolbarItem(placement: .topBarTrailing) {
                 SettingsToolbarButton(title: "new", backgroundColor: Color.green.opacity(0.5)) {
@@ -112,6 +140,24 @@ struct SettingsScreen: View {
             }
         } message: {
             Text(renameAlertMessage ?? "")
+        }
+        .fileImporter(
+            isPresented: $isImportingDocument,
+            allowedContentTypes: [.plainText, .text],
+            allowsMultipleSelection: false
+        ) { result in
+            handleDocumentImport(result)
+        }
+        .fileExporter(
+            isPresented: $isExportingDocument,
+            document: exportDocument,
+            contentType: .plainText,
+            defaultFilename: selectedDocumentDisplayName
+        ) { result in
+            if case let .failure(error) = result {
+                renameAlertMessage = error.localizedDescription
+            }
+            exportDocument = nil
         }
     }
 
@@ -572,17 +618,52 @@ struct SettingsScreen: View {
         }
     }
 
-    private func nextAvailableNewDocumentURL() -> URL? {
-        let directoryURL: URL
-        if let existingDocumentURL = documentFiles.first {
-            directoryURL = existingDocumentURL.deletingLastPathComponent()
-        } else if let selectedDocumentFileURL {
-            directoryURL = selectedDocumentFileURL.deletingLastPathComponent()
-        } else {
-            guard let defaultDirectoryURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
-                return nil
+    private func prepareExport() {
+        exportDocument = SettingsTextFileDocument(text: documentEditorText)
+        isExportingDocument = true
+    }
+
+    private func handleDocumentImport(_ result: Result<[URL], Error>) {
+        guard case let .success(urls) = result, let sourceURL = urls.first else {
+            if case let .failure(error) = result {
+                renameAlertMessage = error.localizedDescription
             }
-            directoryURL = defaultDirectoryURL
+            return
+        }
+
+        guard let directoryURL = currentDocumentsDirectoryURL else {
+            renameAlertMessage = "Couldn't access the documents folder."
+            return
+        }
+
+        let targetFileName = sourceURL.lastPathComponent
+        let targetURL = directoryURL.appendingPathComponent(targetFileName)
+
+        if documentFiles.contains(where: { $0.lastPathComponent.caseInsensitiveCompare(targetFileName) == .orderedSame }) {
+            renameAlertMessage = "a file with that name already exists."
+            return
+        }
+
+        let didAccessSecurityScopedResource = sourceURL.startAccessingSecurityScopedResource()
+        defer {
+            if didAccessSecurityScopedResource {
+                sourceURL.stopAccessingSecurityScopedResource()
+            }
+        }
+
+        do {
+            let importedText = try String(contentsOf: sourceURL, encoding: .utf8)
+            try importedText.write(to: targetURL, atomically: true, encoding: .utf8)
+            refreshDocumentFiles()
+            loadFunctionKeys(targetURL)
+        } catch {
+            renameAlertMessage = "Couldn't import the file."
+        }
+    }
+
+    private func nextAvailableNewDocumentURL() -> URL? {
+        guard let directoryURL = currentDocumentsDirectoryURL else {
+            return nil
         }
 
         let fileExtension = "txt"
@@ -600,10 +681,44 @@ struct SettingsScreen: View {
         }
     }
 
+    private var currentDocumentsDirectoryURL: URL? {
+        if let existingDocumentURL = documentFiles.first {
+            return existingDocumentURL.deletingLastPathComponent()
+        }
+
+        if let selectedDocumentFileURL {
+            return selectedDocumentFileURL.deletingLastPathComponent()
+        }
+
+        return FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
+    }
+
     private func sendKeyboardTimingCommand() {
         ble.sendKeyboardTiming(onMs: Int(keyboardTimingOnMs), offMs: Int(keyboardTimingOffMs))
     }
 
+}
+
+private struct SettingsTextFileDocument: FileDocument {
+    static var readableContentTypes: [UTType] { [.plainText] }
+
+    var text: String
+
+    init(text: String) {
+        self.text = text
+    }
+
+    init(configuration: ReadConfiguration) throws {
+        guard let data = configuration.file.regularFileContents,
+              let string = String(data: data, encoding: .utf8) else {
+            throw CocoaError(.fileReadCorruptFile)
+        }
+        text = string
+    }
+
+    func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
+        FileWrapper(regularFileWithContents: Data(text.utf8))
+    }
 }
 
 private extension VerticalAlignment {
