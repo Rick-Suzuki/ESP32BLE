@@ -111,7 +111,7 @@ extension MainScreen {
 
         let utterance = AVSpeechUtterance(string: spokenText)
         utterance.voice = resolvedSpeechVoice
-        utterance.rate = AVSpeechUtteranceDefaultSpeechRate
+        utterance.rate = Float(clampedTextToSpeechRate)
         speechSynthesizer.speak(utterance)
     }
 
@@ -121,6 +121,10 @@ extension MainScreen {
         }
 
         return AVSpeechSynthesisVoice(language: AVSpeechSynthesisVoice.currentLanguageCode())
+    }
+
+    var clampedTextToSpeechRate: Double {
+        min(max(textToSpeechRate, 0.2), 0.7)
     }
 
     func targetDocumentNameForGridEntry(_ entry: FunctionKeyEntry) -> String? {

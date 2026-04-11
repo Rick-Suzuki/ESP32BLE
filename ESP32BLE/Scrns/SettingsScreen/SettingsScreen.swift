@@ -38,6 +38,7 @@ struct SettingsScreen: View {
     @State private var exportDocument: SettingsTextFileDocument?
     @State private var availableSpeechVoices: [SpeechVoiceOption] = []
     @AppStorage("selectedTextToSpeechVoiceIdentifier") private var selectedTextToSpeechVoiceIdentifier = ""
+    @AppStorage("textToSpeechRate") private var textToSpeechRate = Double(AVSpeechUtteranceDefaultSpeechRate)
     @AppStorage("backgroundImageOpacity") private var opacitySliderValue = 0.5
     @AppStorage("selectedBackgroundImageIndex") var selectedImageIndex = 0
     @AppStorage(ButtonClickFeedback.preferenceKey) private var isButtonClickEnabled = true
@@ -71,6 +72,9 @@ struct SettingsScreen: View {
             }
             ToolbarItem(placement: .topBarLeading) {
                 textToSpeechVoiceMenu
+            }
+            ToolbarItem(placement: .topBarLeading) {
+                textToSpeechRateControl
             }
             ToolbarItem(placement: .principal) {
                 settingsTitleControl
@@ -250,6 +254,33 @@ struct SettingsScreen: View {
         }
         .accessibilityLabel("Text to speech voice")
         .accessibilityValue(selectedSpeechVoiceDisplayName)
+    }
+
+    private var textToSpeechRateControl: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text("spd:\(textToSpeechRateLabel)")
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.white.opacity(0.8))
+
+            Slider(
+                value: speechRateBinding,
+                in: 0.2...0.7,
+                onEditingChanged: { isEditing in
+                    guard !isEditing else { return }
+                    previewCurrentSpeechVoice()
+                }
+            )
+            .tint(.white)
+            .frame(width: 110)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(Color.gray.opacity(0.35))
+        .overlay {
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.gray.opacity(0.5), lineWidth: 1.5)
+        }
+        .clipShape(.rect(cornerRadius: 12))
     }
 
     private var availableDevicesContent: some View {
@@ -812,8 +843,31 @@ struct SettingsScreen: View {
 
         let utterance = AVSpeechUtterance(string: "\(voice.name). \(voice.languageDisplayName)")
         utterance.voice = AVSpeechSynthesisVoice(identifier: voice.identifier)
-        utterance.rate = AVSpeechUtteranceDefaultSpeechRate
+        utterance.rate = Float(clampedTextToSpeechRate)
         speechSynthesizer.speak(utterance)
+    }
+
+    private func previewCurrentSpeechVoice() {
+        guard let voice = availableSpeechVoices.first(where: { $0.identifier == resolvedTextToSpeechVoiceIdentifier }) else {
+            return
+        }
+
+        previewSpeechVoice(voice)
+    }
+
+    private var clampedTextToSpeechRate: Double {
+        min(max(textToSpeechRate, 0.2), 0.7)
+    }
+
+    private var textToSpeechRateLabel: String {
+        String(format: "%.2f", clampedTextToSpeechRate)
+    }
+
+    private var speechRateBinding: Binding<Double> {
+        Binding(
+            get: { clampedTextToSpeechRate },
+            set: { textToSpeechRate = min(max($0, 0.2), 0.7) }
+        )
     }
 
 }

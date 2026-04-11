@@ -43,6 +43,7 @@ struct MainScreen: View {
     @State var editingSlotText = ""
     @State private var keyboardMinY: CGFloat = .greatestFiniteMagnitude
     @AppStorage("selectedTextToSpeechVoiceIdentifier") var selectedTextToSpeechVoiceIdentifier = ""
+    @AppStorage("textToSpeechRate") var textToSpeechRate = Double(AVSpeechUtteranceDefaultSpeechRate)
     @AppStorage("selectedBackgroundImageIndex") var selectedBackgroundImageIndex = 0
     @AppStorage("backgroundImageOpacity") var backgroundImageOpacity = 0.5
     @AppStorage("mainGridBackgroundOpacity") var mainGridBackgroundOpacity = 1.0
