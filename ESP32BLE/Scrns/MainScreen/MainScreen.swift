@@ -357,7 +357,7 @@ struct MainScreen: View {
 
     func cycleMainGridButtonMode() {
         mainGridButtonMode = mainGridButtonMode.next()
-        if mainGridButtonMode != .speech {
+        if !mainGridButtonMode.speaksText {
             stopSpokenGridText()
         }
     }

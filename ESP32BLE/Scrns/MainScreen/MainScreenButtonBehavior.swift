@@ -62,14 +62,16 @@ extension MainScreen {
     }
 
     func sendMainGridEntry(_ entry: FunctionKeyEntry) {
-        switch mainGridButtonMode {
-        case .disabled:
+        guard mainGridButtonMode != .disabled else {
             return
-        case .speech:
+        }
+
+        if mainGridButtonMode.speaksText {
             speakMainGridEntry(entry)
+        }
+
+        guard mainGridButtonMode.sendsBluetooth else {
             return
-        case .active:
-            break
         }
 
         if let targetDocumentName = targetDocumentNameForGridEntry(entry) {

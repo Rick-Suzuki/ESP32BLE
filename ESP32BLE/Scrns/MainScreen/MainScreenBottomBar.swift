@@ -4,6 +4,7 @@ enum MainGridButtonMode {
     case active
     case disabled
     case speech
+    case speechActive
 
     var title: String {
         switch self {
@@ -13,17 +14,39 @@ enum MainGridButtonMode {
             return "disabled"
         case .speech:
             return "speech"
+        case .speechActive:
+            return "spk / active"
         }
     }
 
     func next() -> MainGridButtonMode {
         switch self {
         case .active:
-            return .disabled
-        case .disabled:
             return .speech
         case .speech:
+            return .speechActive
+        case .speechActive:
+            return .disabled
+        case .disabled:
             return .active
+        }
+    }
+
+    var sendsBluetooth: Bool {
+        switch self {
+        case .active, .speechActive:
+            return true
+        case .disabled, .speech:
+            return false
+        }
+    }
+
+    var speaksText: Bool {
+        switch self {
+        case .speech, .speechActive:
+            return true
+        case .active, .disabled:
+            return false
         }
     }
 }
@@ -96,6 +119,7 @@ private struct RepeatingToolbarButton<Label: View>: View {
 struct MainScreenBottomBar: View {
     private let inactiveButtonBackgroundColor = Color(red: 0.22, green: 0.22, blue: 0.24)
     private let inactiveButtonBorderColor = Color(red: 0.30, green: 0.30, blue: 0.32)
+    private let speechActiveModeColor = Color(red: 0.48, green: 0.24, blue: 0.02)
     let availableWidth: CGFloat
     let allowedVisibleBoxCounts: [Int]
     let visibleBoxCount: Int
@@ -314,6 +338,7 @@ struct MainScreenBottomBar: View {
                 .contentShape(.rect)
         }
         .buttonStyle(.plain)
+        .disabled(!isStopSpeechEnabled)
         .foregroundStyle(.white)
         .background(stopSpeechButtonBackgroundColor)
         .overlay {
@@ -321,6 +346,7 @@ struct MainScreenBottomBar: View {
                 .stroke(stopSpeechButtonBorderColor, lineWidth: 2)
         }
         .clipShape(.rect(cornerRadius: 12))
+        .opacity(isStopSpeechEnabled ? 1 : 0.55)
     }
 
     private var stopSpeechButtonBackgroundColor: Color {
@@ -331,6 +357,10 @@ struct MainScreenBottomBar: View {
         mainGridButtonMode == .speech ? speechRecognitionActiveColor : inactiveButtonBorderColor
     }
 
+    private var isStopSpeechEnabled: Bool {
+        mainGridButtonMode == .speech
+    }
+
     private var mainGridButtonModeBackgroundColor: Color {
         switch mainGridButtonMode {
         case .active:
@@ -339,6 +369,8 @@ struct MainScreenBottomBar: View {
             return inactiveButtonBackgroundColor
         case .speech:
             return speechRecognitionActiveColor
+        case .speechActive:
+            return speechActiveModeColor
         }
     }
 
@@ -350,6 +382,8 @@ struct MainScreenBottomBar: View {
             return inactiveButtonBorderColor
         case .speech:
             return speechRecognitionActiveColor
+        case .speechActive:
+            return speechActiveModeColor
         }
     }
 }

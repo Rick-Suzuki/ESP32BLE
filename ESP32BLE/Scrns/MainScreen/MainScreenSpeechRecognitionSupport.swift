@@ -21,7 +21,7 @@ extension MainScreen {
 
         unmatchedSpeechText = nil
 
-        guard mainGridButtonMode == .active else {
+        guard mainGridButtonMode.sendsBluetooth else {
             return
         }
 
