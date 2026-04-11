@@ -4,6 +4,7 @@ import AVFoundation
 import UniformTypeIdentifiers
 
 struct SettingsScreen: View {
+    private let ttsControlColor = Color(red: 0.0, green: 0.2, blue: 0.45)
     @Environment(\.dismiss) private var dismiss
     @AppStorage("speechRecognitionAutoOffMinutes") private var speechRecognitionAutoOffMinutes = 5
     @AppStorage("sendControlABeforeText") var sendControlABeforeText = false
@@ -244,10 +245,10 @@ struct SettingsScreen: View {
             .foregroundStyle(.white)
             .padding(.horizontal, 14)
             .frame(minWidth: 60, minHeight: 44)
-            .background(Color.gray.opacity(0.35))
+            .background(ttsControlColor)
             .overlay {
                 RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color.gray.opacity(0.5), lineWidth: 1.5)
+                    .stroke(ttsControlColor, lineWidth: 1.5)
             }
             .clipShape(.rect(cornerRadius: 12))
             .contentShape(.rect)
@@ -257,10 +258,11 @@ struct SettingsScreen: View {
     }
 
     private var textToSpeechRateControl: some View {
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: -2) {
             Text("spd:\(textToSpeechRateLabel)")
                 .font(.caption2.weight(.semibold))
                 .foregroundStyle(.white.opacity(0.8))
+                .offset(y: 1.5)
 
             Slider(
                 value: speechRateBinding,
@@ -270,17 +272,10 @@ struct SettingsScreen: View {
                     previewCurrentSpeechVoice()
                 }
             )
-            .tint(.white)
+            .tint(ttsControlColor)
             .frame(width: 110)
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-        .background(Color.gray.opacity(0.35))
-        .overlay {
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.gray.opacity(0.5), lineWidth: 1.5)
-        }
-        .clipShape(.rect(cornerRadius: 12))
+        .padding(.leading, 4)
     }
 
     private var availableDevicesContent: some View {
@@ -860,7 +855,8 @@ struct SettingsScreen: View {
     }
 
     private var textToSpeechRateLabel: String {
-        String(format: "%.2f", clampedTextToSpeechRate)
+        let percentage = Int((clampedTextToSpeechRate / Double(AVSpeechUtteranceDefaultSpeechRate) * 100).rounded())
+        return "\(percentage)%"
     }
 
     private var speechRateBinding: Binding<Double> {
