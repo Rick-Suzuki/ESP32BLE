@@ -133,6 +133,13 @@ struct MainScreenBottomBar: View {
 
                 bottomBarLayout(
                     isCompact: true,
+                    speechBoxWidth: 180,
+                    toggleWidth: 92,
+                    displayModeWidth: 88
+                )
+
+                bottomBarLayout(
+                    isCompact: true,
                     speechBoxWidth: 120,
                     toggleWidth: 76,
                     displayModeWidth: 72
