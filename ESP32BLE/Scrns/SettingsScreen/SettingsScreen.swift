@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import AVFoundation
 import UniformTypeIdentifiers
 
 struct SettingsScreen: View {
@@ -34,6 +35,8 @@ struct SettingsScreen: View {
     @State private var isImportingDocument = false
     @State private var isExportingDocument = false
     @State private var exportDocument: SettingsTextFileDocument?
+    @State private var availableSpeechVoices: [SpeechVoiceOption] = []
+    @AppStorage("selectedTextToSpeechVoiceIdentifier") private var selectedTextToSpeechVoiceIdentifier = ""
     @AppStorage("backgroundImageOpacity") private var opacitySliderValue = 0.5
     @AppStorage("selectedBackgroundImageIndex") var selectedImageIndex = 0
     @AppStorage(ButtonClickFeedback.preferenceKey) private var isButtonClickEnabled = true
@@ -64,6 +67,9 @@ struct SettingsScreen: View {
                 SettingsToolbarButton(title: "main", backgroundColor: Color.gray.opacity(0.45)) {
                     saveAndReturnToMain()
                 }
+            }
+            ToolbarItem(placement: .topBarLeading) {
+                textToSpeechVoiceMenu
             }
             ToolbarItem(placement: .principal) {
                 settingsTitleControl
@@ -126,6 +132,7 @@ struct SettingsScreen: View {
         .onAppear {
             UIApplication.shared.isIdleTimerDisabled = keepScreenAwake
             documentNameDraft = selectedDocumentDisplayName
+            loadSpeechVoicesIfNeeded()
         }
         .onChange(of: keepScreenAwake) {
             UIApplication.shared.isIdleTimerDisabled = keepScreenAwake
@@ -204,6 +211,43 @@ struct SettingsScreen: View {
                 .minimumScaleFactor(0.7)
             }
         }
+    }
+
+    private var textToSpeechVoiceMenu: some View {
+        Menu {
+            ForEach(availableSpeechVoices, id: \.identifier) { voice in
+                Button {
+                    ButtonClickFeedback.playIfEnabled()
+                    selectedTextToSpeechVoiceIdentifier = voice.identifier
+                } label: {
+                    if voice.identifier == resolvedTextToSpeechVoiceIdentifier {
+                        Label(voice.menuTitle, systemImage: "checkmark")
+                    } else {
+                        Text(voice.menuTitle)
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "speaker.wave.2.fill")
+                    .font(.headline)
+                Image(systemName: "chevron.down")
+                    .font(.caption.weight(.semibold))
+            }
+            .font(.headline)
+            .foregroundStyle(.white)
+            .padding(.horizontal, 14)
+            .frame(minWidth: 60, minHeight: 44)
+            .background(Color.gray.opacity(0.35))
+            .overlay {
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(Color.gray.opacity(0.5), lineWidth: 1.5)
+            }
+            .clipShape(.rect(cornerRadius: 12))
+            .contentShape(.rect)
+        }
+        .accessibilityLabel("Text to speech voice")
+        .accessibilityValue(selectedSpeechVoiceDisplayName)
     }
 
     private var availableDevicesContent: some View {
@@ -697,6 +741,58 @@ struct SettingsScreen: View {
         ble.sendKeyboardTiming(onMs: Int(keyboardTimingOnMs), offMs: Int(keyboardTimingOffMs))
     }
 
+    private var resolvedTextToSpeechVoiceIdentifier: String {
+        if availableSpeechVoices.contains(where: { $0.identifier == selectedTextToSpeechVoiceIdentifier }) {
+            return selectedTextToSpeechVoiceIdentifier
+        }
+
+        if let defaultVoice = AVSpeechSynthesisVoice(language: Locale.current.identifier) {
+            return defaultVoice.identifier
+        }
+
+        return availableSpeechVoices.first?.identifier ?? ""
+    }
+
+    private var selectedSpeechVoiceDisplayName: String {
+        guard let selectedVoice = availableSpeechVoices.first(where: { $0.identifier == resolvedTextToSpeechVoiceIdentifier }) else {
+            return "voice"
+        }
+
+        return selectedVoice.name
+    }
+
+    private func loadSpeechVoicesIfNeeded() {
+        guard availableSpeechVoices.isEmpty else { return }
+
+        availableSpeechVoices = AVSpeechSynthesisVoice.speechVoices()
+            .map { voice in
+                let localeName = Locale.current.localizedString(forIdentifier: voice.language) ?? voice.language
+                return SpeechVoiceOption(
+                    identifier: voice.identifier,
+                    languageDisplayName: localeName,
+                    name: voice.name,
+                    menuTitle: "\(voice.name) (\(localeName))"
+                )
+            }
+            .sorted {
+                let languageComparison = $0.languageDisplayName.localizedCaseInsensitiveCompare($1.languageDisplayName)
+                if languageComparison != .orderedSame {
+                    return languageComparison == .orderedAscending
+                }
+
+                return $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+            }
+    }
+
+}
+
+private struct SpeechVoiceOption: Identifiable, Equatable {
+    let identifier: String
+    let languageDisplayName: String
+    let name: String
+    let menuTitle: String
+
+    var id: String { identifier }
 }
 
 private struct SettingsTextFileDocument: FileDocument {
