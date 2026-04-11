@@ -27,6 +27,7 @@ struct SettingsScreen: View {
     @State private var documentEditorFontSize: CGFloat = 18
     @State private var isLoadingDocumentText = false
     @State private var isDocumentEditorFocused = false
+    @State private var speechSynthesizer = AVSpeechSynthesizer()
     @State private var loadedDocumentName = ""
     @State private var savedDocumentEditorText = ""
     @State private var isEditingDocumentName = false
@@ -219,6 +220,7 @@ struct SettingsScreen: View {
                 Button {
                     ButtonClickFeedback.playIfEnabled()
                     selectedTextToSpeechVoiceIdentifier = voice.identifier
+                    previewSpeechVoice(voice)
                 } label: {
                     if voice.identifier == resolvedTextToSpeechVoiceIdentifier {
                         Label(voice.menuTitle, systemImage: "checkmark")
@@ -769,25 +771,56 @@ struct SettingsScreen: View {
                 let localeName = Locale.current.localizedString(forIdentifier: voice.language) ?? voice.language
                 return SpeechVoiceOption(
                     identifier: voice.identifier,
+                    languageCode: Locale(identifier: voice.language).language.languageCode?.identifier.lowercased() ?? "",
                     languageDisplayName: localeName,
                     name: voice.name,
                     menuTitle: "\(voice.name) (\(localeName))"
                 )
             }
             .sorted {
-                let languageComparison = $0.languageDisplayName.localizedCaseInsensitiveCompare($1.languageDisplayName)
-                if languageComparison != .orderedSame {
-                    return languageComparison == .orderedAscending
+                let leftPriority = speechVoiceSortPriority(for: $0)
+                let rightPriority = speechVoiceSortPriority(for: $1)
+
+                if leftPriority != rightPriority {
+                    return leftPriority < rightPriority
+                }
+
+                if leftPriority == 2 {
+                    let languageComparison = $0.languageDisplayName.localizedCaseInsensitiveCompare($1.languageDisplayName)
+                    if languageComparison != .orderedSame {
+                        return languageComparison == .orderedAscending
+                    }
                 }
 
                 return $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
             }
     }
 
+    private func speechVoiceSortPriority(for voice: SpeechVoiceOption) -> Int {
+        switch voice.languageCode {
+        case "en":
+            return 0
+        case "ja":
+            return 1
+        default:
+            return 2
+        }
+    }
+
+    private func previewSpeechVoice(_ voice: SpeechVoiceOption) {
+        speechSynthesizer.stopSpeaking(at: .immediate)
+
+        let utterance = AVSpeechUtterance(string: "\(voice.name). \(voice.languageDisplayName)")
+        utterance.voice = AVSpeechSynthesisVoice(identifier: voice.identifier)
+        utterance.rate = AVSpeechUtteranceDefaultSpeechRate
+        speechSynthesizer.speak(utterance)
+    }
+
 }
 
 private struct SpeechVoiceOption: Identifiable, Equatable {
     let identifier: String
+    let languageCode: String
     let languageDisplayName: String
     let name: String
     let menuTitle: String
