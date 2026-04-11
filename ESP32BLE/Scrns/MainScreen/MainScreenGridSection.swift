@@ -50,6 +50,7 @@ struct MainScreenGridSection: View {
                     }
                     .buttonStyle(.plain)
                     .frame(width: buttonWidth, height: buttonHeight)
+                    .contentShape(Rectangle())
                     .simultaneousGesture(dragGesture(entry, index, gridDimensions))
                     .simultaneousGesture(
                         LongPressGesture(minimumDuration: 0.4)

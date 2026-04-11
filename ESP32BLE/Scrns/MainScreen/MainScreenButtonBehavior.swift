@@ -2,6 +2,8 @@ import SwiftUI
 import AVFoundation
 
 extension MainScreen {
+    private var defaultNewButtonEntryText: String { "F::spare" }
+
     func buttonTitle(for entry: FunctionKeyEntry) -> String {
         guard entry.displayUsesAlternateText else {
             return displayText(from: entry.rawLine)
@@ -185,7 +187,7 @@ extension MainScreen {
 
     func editableText(for entry: FunctionKeyEntry) -> String {
         if entry.isBlankPlaceholder || isEmptyButtonEntry(entry) {
-            return ""
+            return defaultNewButtonEntryText
         }
 
         return entry.rawLine
