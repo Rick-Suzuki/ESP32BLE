@@ -15,7 +15,7 @@ enum MainGridButtonMode {
         case .speech:
             return "speech"
         case .speechActive:
-            return "spk / active"
+            return "spk/active"
         }
     }
 
