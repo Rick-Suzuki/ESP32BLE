@@ -308,12 +308,20 @@ struct MainScreenBottomBar: View {
         }
         .buttonStyle(.plain)
         .foregroundStyle(.white)
-        .background(speechRecognitionActiveColor)
+        .background(stopSpeechButtonBackgroundColor)
         .overlay {
             RoundedRectangle(cornerRadius: 12)
-                .stroke(speechRecognitionActiveColor, lineWidth: 2)
+                .stroke(stopSpeechButtonBorderColor, lineWidth: 2)
         }
         .clipShape(.rect(cornerRadius: 12))
+    }
+
+    private var stopSpeechButtonBackgroundColor: Color {
+        mainGridButtonMode == .speech ? speechRecognitionActiveColor : inactiveButtonBackgroundColor
+    }
+
+    private var stopSpeechButtonBorderColor: Color {
+        mainGridButtonMode == .speech ? speechRecognitionActiveColor : inactiveButtonBorderColor
     }
 
     private var mainGridButtonModeBackgroundColor: Color {
