@@ -123,6 +123,7 @@ struct MainScreenBottomBar: View {
     let availableWidth: CGFloat
     let allowedVisibleBoxCounts: [Int]
     let visibleBoxCount: Int
+    let visibleActiveBoxCount: Int
     let boxFontSize: Double
     let minimumBoxFontSize: Double
     let maximumBoxFontSize: Double
@@ -231,6 +232,11 @@ struct MainScreenBottomBar: View {
                 ) {
                     onIncreaseBoxFontSize()
                 }
+
+                Text("B:\(visibleActiveBoxCount)")
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                    .frame(minWidth: isCompact ? 24 : 32)
             }
 
             Spacer(minLength: isCompact ? 6 : 12)

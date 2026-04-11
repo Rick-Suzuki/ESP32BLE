@@ -257,6 +257,7 @@ struct MainScreen: View {
             availableWidth: availableWidth,
             allowedVisibleBoxCounts: allowedVisibleBoxCounts,
             visibleBoxCount: visibleBoxCount,
+            visibleActiveBoxCount: visibleActiveBoxCount,
             boxFontSize: boxFontSize,
             minimumBoxFontSize: minimumBoxFontSize,
             maximumBoxFontSize: maximumBoxFontSize,
@@ -380,6 +381,15 @@ struct MainScreen: View {
     var minimumBoxFontSize: Double { 12 }
 
     var maximumBoxFontSize: Double { 100 }
+
+    var visibleActiveBoxCount: Int {
+        functionKeys
+            .prefix(visibleBoxCount)
+            .filter { entry in
+                !entry.isBlankPlaceholder && !isEmptyButtonEntry(entry)
+            }
+            .count
+    }
 
     private func gridDimensions(for itemCount: Int) -> (columns: Int, rows: Int) {
         let preferredDimensions: [Int: (columns: Int, rows: Int)] = [
