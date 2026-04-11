@@ -99,14 +99,14 @@ struct MainScreenBottomBar: View {
                     isCompact: false,
                     speechBoxWidth: 270,
                     toggleWidth: 110,
-                    displayModeWidth: 150
+                    displayModeWidth: 120
                 )
 
                 bottomBarLayout(
                     isCompact: true,
                     speechBoxWidth: 0,
                     toggleWidth: 88,
-                    displayModeWidth: 100
+                    displayModeWidth: 80
                 )
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
