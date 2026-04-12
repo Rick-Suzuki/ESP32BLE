@@ -18,27 +18,27 @@ struct MainScreenSlotEditorOverlay: View {
     @State private var activeEditorField: ActiveEditorField = .action
     @State private var actionDraft = ""
     @State private var rightDraft = ""
+    private let rightColumnButtonWidth: CGFloat = 90
+    private let colorKeyCodes: [(code: String, color: Color)] = [
+        ("l", .black),
+        ("w", .white),
+		("b", .blue),
+		 ("g", .green),
+		("o", .orange),
+		("r", .red),
+		("c", .cyan),
+		("u", .purple),
+		("y", .yellow),
+		("a", .gray)
+    ]
 
     var body: some View {
         GeometryReader { geometry in
+            let helperRowWidth = (helperButtonWidth * 10) + (buttonSpacing * 10) + rightColumnButtonWidth
+            let topRowWidth = max(0, min(geometry.size.width - 24, helperRowWidth))
+
             VStack(spacing: buttonSpacing) {
                 HStack(spacing: buttonSpacing) {
-                    Button("cancel") {
-                        ButtonClickFeedback.playIfEnabled()
-                        onCancel()
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 14)
-                    .frame(minWidth: 70)//101
-                    .frame(minHeight: 44)
-                    .background(Color.gray.opacity(0.45))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(Color.gray.opacity(0.5), lineWidth: 1.5)
-                    }
-                    .clipShape(.rect(cornerRadius: 12))
-
                     clearActionButton
 
                     HStack(spacing: 0) {
@@ -51,7 +51,7 @@ struct MainScreenSlotEditorOverlay: View {
                         ) {
                             onCommit()
                         }
-                        .frame(width: geometry.size.width.isFinite ? max(0, geometry.size.width * 0.18) : 0, height: 36)
+                        .frame(minWidth: helperButtonWidth * 2.5, maxWidth: .infinity, minHeight: 44)
 
                         SlotEditorTextField(
                             text: rightTextBinding,
@@ -62,46 +62,16 @@ struct MainScreenSlotEditorOverlay: View {
                         ) {
                             onCommit()
                         }
-                        .frame(width: geometry.size.width.isFinite ? max(0, geometry.size.width * 0.18) : 0, height: 36)
+                        .frame(minWidth: helperButtonWidth * 2.5, maxWidth: .infinity, minHeight: 44)
                     }
+                    .frame(maxWidth: .infinity)
 
                     clearRightButton
-
-                    Button("test") {
-                        ButtonClickFeedback.playIfEnabled()
-                        onTest()
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 14)
-                    .frame(minWidth: 71)
-                    .frame(minHeight: 44)
-                    .background(Color(red: 0.0, green: 0.5, blue: 0.0))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(Color(red: 0.0, green: 0.5, blue: 0.0), lineWidth: 1.5)
-                    }
-                    .clipShape(.rect(cornerRadius: 12))
-
-                    Button("save") {
-                        ButtonClickFeedback.playIfEnabled()
-                        onCommit()
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 14)
-                    .frame(minWidth: 71)
-                    .frame(minHeight: 44)
-                    .background(Color.blue)
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(Color.blue, lineWidth: 1.5)
-                    }
-                    .clipShape(.rect(cornerRadius: 12))
                 }
-				// MARK: - BM: main scrn editor kb
+                .frame(width: topRowWidth)
+					// MARK: - BM: main scrn editor kb
                 HStack(spacing: buttonSpacing) {
-					helperInsertButton("F")
+						helperInsertButton("F")
                     helperInsertButton("ctl:")
                     helperInsertButton("sh:")
                     helperInsertButton("op:")
@@ -112,7 +82,23 @@ struct MainScreenSlotEditorOverlay: View {
 					helperInsertButton("BS:")
 					helperInsertButton("CA:")
                     helperBackspaceButton()
-                }
+
+					Button("cancel") {
+						ButtonClickFeedback.playIfEnabled()
+						onCancel()
+					}
+					.buttonStyle(.plain)
+					.foregroundStyle(.white)
+					.padding(.horizontal, 14)
+					.frame(width: 90)//101
+					.frame(minHeight: 44)
+					.background(Color.gray.opacity(0.45))
+					.overlay {
+						RoundedRectangle(cornerRadius: 12)
+							.stroke(Color.gray.opacity(0.5), lineWidth: 1.5)
+					}
+					.clipShape(.rect(cornerRadius: 12))
+}
 				//
 				//----------------------------------------
 				//
@@ -128,13 +114,29 @@ struct MainScreenSlotEditorOverlay: View {
 					helperInsertButton("/")
 					helperInsertButton("*")
 					helperInsertButton("kp")
-                }
+
+					Button("test") {
+						ButtonClickFeedback.playIfEnabled()
+						onTest()
+					}
+					.buttonStyle(.plain)
+					.foregroundStyle(.white)
+					.padding(.horizontal, 14)
+					.frame(width: 90)
+					.frame(minHeight: 44)
+					.background(Color(red: 0.0, green: 0.5, blue: 0.0))
+					.overlay {
+						RoundedRectangle(cornerRadius: 12)
+							.stroke(Color(red: 0.0, green: 0.5, blue: 0.0), lineWidth: 1.5)
+					}
+					.clipShape(.rect(cornerRadius: 12))
+				}
 				//
 				//----------------------------------------
 				//
                 HStack(spacing: buttonSpacing) {
-					helperInsertButton("5")
-					helperInsertButton("6")
+						helperInsertButton("5")
+						helperInsertButton("6")
 					helperInsertButton("7")
 					helperInsertButton("8")
 					helperInsertButton("9")
@@ -145,7 +147,56 @@ struct MainScreenSlotEditorOverlay: View {
 					helperInsertButton(systemImage: "triangle.fill", rotationDegrees: 180, insertedText: "DOWN:")
 					helperInsertButton(systemImage: "triangle.fill", rotationDegrees: -90, insertedText: "LEFT:")
 					helperInsertButton(systemImage: "triangle.fill", rotationDegrees: 90, insertedText: "RIGHT:")
+					
+					
+
+					Button("del btn") {
+						ButtonClickFeedback.playIfEnabled()
+						actionDraft = ""
+						rightDraft = ""
+						editingSlotText = ""
+						onCommit()
+					}
+					.buttonStyle(.plain)
+					.foregroundStyle(.white)
+					.frame(width: rightColumnButtonWidth, height: 44)
+					.background(Color(red: 0.6, green: 0, blue: 0))   // darker red
+					.overlay {
+						RoundedRectangle(cornerRadius: 12)
+							.stroke(Color.red, lineWidth: 1.5)
+					}
+					.clipShape(.rect(cornerRadius: 12))
+
+						
                 }
+
+				HStack(spacing: buttonSpacing) {
+					ForEach(colorKeyCodes, id: \.code) { colorKey in
+						colorInsertButton(
+							code: colorKey.code,
+							background: colorKey.color
+						)
+					}
+					
+					
+					Button("save") {
+						ButtonClickFeedback.playIfEnabled()
+						onCommit()
+					}
+					.buttonStyle(.plain)
+					.foregroundStyle(.white)
+					.padding(.horizontal, 14)
+					.frame(width:90)
+					.frame(minHeight: 44)
+					.background(Color.blue)
+					.overlay {
+						RoundedRectangle(cornerRadius: 12)
+							.stroke(Color.blue, lineWidth: 1.5)
+					}
+					.clipShape(.rect(cornerRadius: 12))
+
+					
+				}
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 4)
@@ -157,7 +208,7 @@ struct MainScreenSlotEditorOverlay: View {
             .clipShape(.rect(cornerRadius: 12))
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         }
-        .frame(height: 192)
+        .frame(height: 242)
         .onAppear {
             syncDraftsFromCombinedText()
         }
@@ -247,6 +298,26 @@ struct MainScreenSlotEditorOverlay: View {
         .buttonStyle(.plain)
     }
 
+    private func colorInsertButton(code: String, background: Color) -> some View {
+        Button {
+            ButtonClickFeedback.playIfEnabled()
+            rightDraft = prefixedRightText(with: code)
+            activeEditorField = .text
+            rightInputController.focus()
+            focusBinding.wrappedValue = true
+        } label: {
+            RoundedRectangle(cornerRadius: 12)
+                .fill(background)
+                .frame(width: helperButtonWidth, height: 44)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.white.opacity(0.35), lineWidth: 1)
+                }
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
     private var actionTextBinding: Binding<String> {
         $actionDraft
     }
@@ -292,6 +363,21 @@ struct MainScreenSlotEditorOverlay: View {
         }
     }
 
+    private func prefixedRightText(with code: String) -> String {
+        let trimmedRightDraft = rightDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        let components = trimmedRightDraft.components(separatedBy: ":")
+
+        if let firstComponent = components.first,
+           firstComponent.count == 1,
+           let existingCode = firstComponent.lowercased().first,
+           "lwbgorpucya".contains(existingCode) {
+            let remainingText = components.dropFirst().joined(separator: ":").trimmingCharacters(in: .whitespacesAndNewlines)
+            return remainingText.isEmpty ? "\(code):" : "\(code):\(remainingText)"
+        }
+
+        return trimmedRightDraft.isEmpty ? "\(code):" : "\(code):\(trimmedRightDraft)"
+    }
+
     private var clearActionButton: some View {
         Button {
             ButtonClickFeedback.playIfEnabled()
@@ -300,34 +386,36 @@ struct MainScreenSlotEditorOverlay: View {
             actionInputController.focus()
             focusBinding.wrappedValue = true
         } label: {
-            Image(systemName: "xmark")
+				Text("del")
                 .font(.system(size: 14, weight: .bold))
                 .foregroundStyle(.white)
-                .frame(width: 35, height: 35)
-                .background(Color(red: 0.42, green: 0.12, blue: 0.12))
-                .clipShape(Circle())
-        }
+                .frame(width: helperButtonWidth, height: 44)
+					.background(
+						RoundedRectangle(cornerRadius: 12)
+							.fill(Color(red: 0.42, green: 0.12, blue: 0.12))
+					)
+			}
         .buttonStyle(.plain)
-        .contentShape(Circle())
     }
 
     private var clearRightButton: some View {
         Button {
             ButtonClickFeedback.playIfEnabled()
-            rightTextBinding.wrappedValue = ""
-            activeEditorField = .text
-            rightInputController.focus()
-            focusBinding.wrappedValue = true
+            actionDraft = ""
+            rightDraft = ""
+            editingSlotText = ""
+            onCommit()
         } label: {
-            Image(systemName: "xmark")
+					Text("del")
                 .font(.system(size: 14, weight: .bold))
                 .foregroundStyle(.white)
-                .frame(width: 35, height: 35)
-                .background(Color(red: 0.42, green: 0.12, blue: 0.12))
-                .clipShape(Circle())
+					.frame(width: rightColumnButtonWidth, height: 44)
+					.background(
+						RoundedRectangle(cornerRadius: 12)
+							.fill(Color(red: 0.42, green: 0.12, blue: 0.12))
+					)
         }
         .buttonStyle(.plain)
-        .contentShape(Circle())
     }
 
     private var activeInputController: SlotEditorInputController {

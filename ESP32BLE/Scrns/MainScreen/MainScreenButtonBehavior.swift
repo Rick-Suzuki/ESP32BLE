@@ -46,7 +46,7 @@ extension MainScreen {
         if let firstComponent = rightComponents.first,
            firstComponent.count == 1,
            let manualColorCode = firstComponent.lowercased().first,
-           "lwgborypk".contains(manualColorCode) {
+           "lwbgorpucya".contains(manualColorCode) {
             let remainingText = rightComponents
                 .dropFirst()
                 .joined(separator: ":")
@@ -255,23 +255,27 @@ struct MainScreenButtonLabelView: View {
 
         switch (entry.buttonColorCode ?? "").lowercased() {
         case "l":
+            return Color.black.opacity(backgroundOpacity)
+        case "w":
             return .white.opacity(backgroundOpacity)
-        case "w", "warning":
-            return Color(red: 0.55, green: 0.45, blue: 0.08).opacity(backgroundOpacity)
-        case "g", "pos":
-            return Color(red: 0.05, green: 0.33, blue: 0.18).opacity(backgroundOpacity)
         case "b", "actions":
             return Color(red: 0.0, green: 0.2, blue: 0.45).opacity(backgroundOpacity)
+        case "g", "pos":
+            return Color(red: 0.05, green: 0.33, blue: 0.18).opacity(backgroundOpacity)
         case "o":
             return Color(red: 0.5, green: 0.28, blue: 0.0).opacity(backgroundOpacity)
         case "r", "dest":
             return Color(red: 0.42, green: 0.12, blue: 0.12).opacity(backgroundOpacity)
-        case "y":
-            return Color(red: 0.78, green: 0.68, blue: 0.12).opacity(backgroundOpacity)
-        case "p", "info":
+        case "p":
+            return Color(red: 0.82, green: 0.42, blue: 0.58).opacity(backgroundOpacity)
+        case "u", "info":
             return Color(red: 0.42, green: 0.18, blue: 0.52).opacity(backgroundOpacity)
-        case "k":
-            return Color.black.opacity(backgroundOpacity)
+        case "c":
+            return Color.cyan.opacity(backgroundOpacity)
+        case "y", "warning":
+            return Color(red: 0.55, green: 0.45, blue: 0.08).opacity(backgroundOpacity)
+        case "a":
+            return Color.gray.opacity(backgroundOpacity)
         default:
             return Color.black.opacity(backgroundOpacity)
         }
@@ -279,7 +283,7 @@ struct MainScreenButtonLabelView: View {
 
     private var buttonTextColor: Color {
         switch (entry.buttonColorCode ?? "").lowercased() {
-        case "l", "y":
+        case "w", "y", "c":
             return .black
         default:
             return .white

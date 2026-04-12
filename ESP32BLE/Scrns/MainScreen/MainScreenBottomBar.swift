@@ -295,6 +295,7 @@ struct MainScreenBottomBar: View {
             }
             .clipShape(.rect(cornerRadius: 12))
             .frame(width: displayModeWidth)
+			.opacity(0.7)
         }
     }
 
@@ -332,6 +333,7 @@ struct MainScreenBottomBar: View {
                 .stroke(border, lineWidth: 2)
         }
         .clipShape(.rect(cornerRadius: 12))
+		.opacity(0.7)
     }
 
     private var stopSpeechButton: some View {

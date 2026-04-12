@@ -539,7 +539,7 @@ struct ContentView: View {
         if let firstComponent = components.first,
            firstComponent.count == 1,
            let manualColorCode = firstComponent.lowercased().first,
-           "lwgborypk".contains(manualColorCode) {
+           "lwbgorpucya".contains(manualColorCode) {
             let remainingText = components.dropFirst().joined(separator: ":").trimmingCharacters(in: .whitespacesAndNewlines)
             return (remainingText.isEmpty ? rightText : remainingText, String(manualColorCode))
         }
