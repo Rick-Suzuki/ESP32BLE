@@ -119,7 +119,7 @@ struct MainScreenToolbarContent: ToolbarContent {
             HStack(spacing: 12) {
                 Slider(value: $gridBackgroundOpacity, in: 0...1)
                     .tint(.white)
-                    .frame(width: 126)
+                    .frame(width: 200)
                     .disabled(editingSlotIndex != nil)
 
                 Button {

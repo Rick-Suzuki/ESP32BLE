@@ -12,10 +12,11 @@ extension MainScreen {
             return
         }
 
-        let nextCount = allowedVisibleBoxCounts[currentIndex - 1]
-
-        if resizeVisibleBoxCount(nextCount) {
-            visibleBoxCount = nextCount
+        for candidateCount in allowedVisibleBoxCounts[..<currentIndex].reversed() {
+            if resizeVisibleBoxCount(candidateCount) {
+                visibleBoxCount = candidateCount
+                return
+            }
         }
     }
 
@@ -25,10 +26,18 @@ extension MainScreen {
             return
         }
 
-        let nextCount = allowedVisibleBoxCounts[currentIndex + 1]
+        let currentGridDimensions = functionKeyGridDimensions(for: visibleBoxCount)
+        let candidateCounts = allowedVisibleBoxCounts[(currentIndex + 1)...].filter { candidateCount in
+            let candidateGridDimensions = functionKeyGridDimensions(for: candidateCount)
+            return candidateGridDimensions.columns >= currentGridDimensions.columns &&
+                candidateGridDimensions.rows >= currentGridDimensions.rows
+        }
 
-        if resizeVisibleBoxCount(nextCount) {
-            visibleBoxCount = nextCount
+        for candidateCount in candidateCounts {
+            if resizeVisibleBoxCount(candidateCount) {
+                visibleBoxCount = candidateCount
+                return
+            }
         }
     }
 
