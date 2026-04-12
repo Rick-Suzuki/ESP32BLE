@@ -136,13 +136,24 @@ struct MainScreen: View {
                 VStack(spacing: 20) {
                     mainGridSection(availableWidth: contentWidth)
 
-                    displayModeButtonSection(availableWidth: contentWidth)
+                    if !isGridEditModeEnabled {
+                        displayModeButtonSection(availableWidth: contentWidth)
+                    }
                 }
                 .frame(width: contentWidth)
                 .frame(maxHeight: .infinity, alignment: .top)
                 .padding(.top, topContentInset)
                 .padding(.bottom, bottomContentInset)
                 .ignoresSafeArea(.keyboard)
+
+                if isGridEditModeEnabled {
+                    VStack {
+                        Spacer()
+                        displayModeButtonSection(availableWidth: contentWidth)
+                            .allowsHitTesting(false)
+                    }
+                    .frame(maxWidth: contentWidth, maxHeight: .infinity)
+                }
 
                 if editingSlotIndex != nil {
                     Color.black.opacity(0.5)

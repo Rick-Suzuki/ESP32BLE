@@ -215,9 +215,13 @@ struct MainScreenButtonLabelView: View {
     var body: some View {
         Group {
             if entry.isBlankPlaceholder {
-                ZStack {
-                    RoundedRectangle(cornerRadius: cornerRadius)
-                        .fill(Color.black.opacity(backgroundOpacity * 0.45))
+                Group {
+                    if isGridEditModeEnabled {
+                        RoundedRectangle(cornerRadius: cornerRadius)
+                            .stroke(Color.white.opacity(0.5), lineWidth: borderWidth)
+                    } else {
+                        Color.clear
+                    }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {

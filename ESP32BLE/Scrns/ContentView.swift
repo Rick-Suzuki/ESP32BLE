@@ -434,53 +434,6 @@ struct ContentView: View {
         return remappedLines
     }
 
-    private func functionKeyGridDimensions(for count: Int) -> (columns: Int, rows: Int) {
-        switch count {
-        case ...1:
-            return (1, 1)
-        case 2:
-            return (2, 1)
-        case 3...4:
-            return (2, 2)
-        case 5...6:
-            return (3, 2)
-        case 7...9:
-            return (3, 3)
-        case 10...12:
-            return (4, 3)
-        case 13...16:
-            return (4, 4)
-        case 17...20:
-            return (5, 4)
-        case 21...24:
-            return (6, 4)
-        case 25...28:
-            return (7, 4)
-        case 29...32:
-            return (8, 4)
-        case 33...36:
-            return (9, 4)
-        case 37...40:
-            return (10, 4)
-        case 41...45:
-            return (9, 5)
-        case 46...50:
-            return (10, 5)
-        case 51...56:
-            return (8, 7)
-        case 57...64:
-            return (8, 8)
-        case 65...72:
-            return (9, 8)
-        case 73...81:
-            return (9, 9)
-        case 82...90:
-            return (10, 9)
-        default:
-            return (10, 10)
-        }
-    }
-
     @discardableResult
     private func moveSelectedDocumentSlot(from sourceIndex: Int, to targetIndex: Int) -> Bool {
         guard sourceIndex != targetIndex,
