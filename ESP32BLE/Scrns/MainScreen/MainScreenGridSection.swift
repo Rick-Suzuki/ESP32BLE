@@ -45,6 +45,7 @@ func functionKeyGridDimensions(for itemCount: Int) -> GridDimensions {
 
 struct MainScreenGridSection: View {
     let availableWidth: CGFloat
+    let reservedBottomInset: CGFloat
     let functionKeys: [FunctionKeyEntry]
     let visibleBoxCount: Int
     let mainGridButtonSpacing: CGFloat
@@ -60,7 +61,7 @@ struct MainScreenGridSection: View {
         GeometryReader { geometry in
             let gridDimensions = functionKeyGridDimensions(for: visibleBoxCount)
             let totalGridSpacing = mainGridButtonSpacing * CGFloat(max(gridDimensions.rows - 1, 0))
-            let availableGridHeight = geometry.size.height.isFinite ? max(0, geometry.size.height - totalGridSpacing) : 0
+            let availableGridHeight = geometry.size.height.isFinite ? max(0, geometry.size.height - totalGridSpacing - reservedBottomInset) : 0
             let buttonHeight = availableGridHeight / CGFloat(max(gridDimensions.rows, 1))
             let totalColumnSpacing = mainGridButtonSpacing * CGFloat(max(gridDimensions.columns - 1, 0))
             let safeAvailableWidth = availableWidth.isFinite ? max(0, availableWidth) : 0

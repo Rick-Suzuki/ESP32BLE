@@ -225,6 +225,7 @@ struct MainScreen: View {
     private func mainGridSection(availableWidth: CGFloat) -> some View {
         MainScreenGridSection(
             availableWidth: availableWidth,
+            reservedBottomInset: isGridEditModeEnabled ? 74 : 0,
             functionKeys: functionKeys,
             visibleBoxCount: visibleBoxCount,
             mainGridButtonSpacing: mainGridButtonSpacing,
