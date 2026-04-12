@@ -66,6 +66,7 @@ struct SettingsScreen: View {
     @AppStorage("textToSpeechRate") private var textToSpeechRate = Double(AVSpeechUtteranceDefaultSpeechRate)
     @AppStorage("backgroundImageOpacity") private var opacitySliderValue = 0.5
     @AppStorage("selectedBackgroundImageIndex") var selectedImageIndex = 0
+    @AppStorage("selectedBackgroundImageName") var selectedImageName = ""
     @AppStorage(ButtonClickFeedback.preferenceKey) private var isButtonClickEnabled = true
     @FocusState var focusedField: SettingsFocusField?
     @FocusState private var isDocumentNameFieldFocused: Bool
@@ -346,22 +347,27 @@ struct SettingsScreen: View {
     private var imageControlButtons: some View {
         SettingsImageControlsSection(
             displayName: truncatedImageDisplayName,
-            canGoPrevious: selectedImageIndex > 0,
-            canGoNext: selectedImageIndex < maximumSelectableImageIndex,
+            canGoPrevious: (selectedImagePosition ?? 0) > 0,
+            canGoNext: (selectedImagePosition ?? 0) < maximumSelectableImageIndex,
             onReset: {
-                selectedImageIndex = 0
+                persistSelectedImage(nil)
             },
             onRandom: {
                 guard maximumSelectableImageIndex > 0 else { return }
-                selectedImageIndex = Int.random(in: 0...maximumSelectableImageIndex)
+                let randomIndex = Int.random(in: 0..<maximumSelectableImageIndex)
+                persistSelectedImage(availableImageURLs[randomIndex])
             },
             onPrevious: {
-                guard selectedImageIndex > 0 else { return }
-                selectedImageIndex -= 1
+                guard let selectedImagePosition, selectedImagePosition > 1 else {
+                    persistSelectedImage(nil)
+                    return
+                }
+                persistSelectedImage(availableImageURLs[selectedImagePosition - 2])
             },
             onNext: {
-                guard selectedImageIndex < maximumSelectableImageIndex else { return }
-                selectedImageIndex += 1
+                let currentPosition = selectedImagePosition ?? 0
+                guard currentPosition < maximumSelectableImageIndex else { return }
+                persistSelectedImage(availableImageURLs[currentPosition])
             }
         )
     }
@@ -749,11 +755,7 @@ struct SettingsScreen: View {
     }
 
     private func selectImage(_ imageURL: URL) {
-        guard let imageIndex = availableImageURLs.firstIndex(where: { $0.lastPathComponent == imageURL.lastPathComponent }) else {
-            return
-        }
-
-        selectedImageIndex = imageIndex + 1
+        persistSelectedImage(imageURL)
     }
 
     private func deleteImage(_ imageURL: URL) {
@@ -771,15 +773,15 @@ struct SettingsScreen: View {
         if let previousSelectedImageURL,
            previousSelectedImageURL.lastPathComponent == imageURL.lastPathComponent {
             if let replacementURL = refreshedImageURLs.first {
-                selectImage(replacementURL)
+                persistSelectedImage(replacementURL)
             } else {
-                selectedImageIndex = 0
+                persistSelectedImage(nil)
             }
         } else if let previousSelectedImageURL,
                   let refreshedImageIndex = refreshedImageURLs.firstIndex(where: { $0.lastPathComponent == previousSelectedImageURL.lastPathComponent }) {
-            selectedImageIndex = refreshedImageIndex + 1
-        } else if selectedImageIndex > refreshedImageURLs.count {
-            selectedImageIndex = refreshedImageURLs.isEmpty ? 0 : refreshedImageURLs.count
+            persistSelectedImage(refreshedImageURLs[refreshedImageIndex])
+        } else if let selectedImagePosition, selectedImagePosition > refreshedImageURLs.count {
+            persistSelectedImage(refreshedImageURLs.last)
         }
     }
 
@@ -904,7 +906,7 @@ struct SettingsScreen: View {
             refreshDocumentFiles()
             if let previousImageURL,
                let refreshedImageIndex = availableImageURLs.firstIndex(where: { $0.lastPathComponent == previousImageURL.lastPathComponent }) {
-                selectedImageIndex = refreshedImageIndex + 1
+                persistSelectedImage(availableImageURLs[refreshedImageIndex])
             }
         } else {
             refreshDocumentFiles()

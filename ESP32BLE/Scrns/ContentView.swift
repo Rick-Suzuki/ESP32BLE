@@ -35,6 +35,7 @@ struct FunctionKeyEntry {
 struct ContentView: View {
     private let defaultDocumentFontSize: Double = 20
     @AppStorage("selectedBackgroundImageIndex") private var selectedBackgroundImageIndex = 0
+    @AppStorage("selectedBackgroundImageName") private var selectedBackgroundImageName = ""
     @AppStorage("backgroundImageOpacity") private var backgroundImageOpacity = 0.5
     @StateObject private var ble = BLEKeyboardManager()
     @State private var functionKeys = ContentView.makeDefaultFunctionKeys()
@@ -138,6 +139,9 @@ struct ContentView: View {
         .onChange(of: selectedBackgroundImageIndex) {
             reloadBackgroundImage()
         }
+        .onChange(of: selectedBackgroundImageName) {
+            reloadBackgroundImage()
+        }
     }
 
     private static func defaultFunctionKeyTitles() -> [String] {
@@ -235,6 +239,15 @@ struct ContentView: View {
     }
 
     private func reloadBackgroundImage() {
+        if !selectedBackgroundImageName.isEmpty,
+           let namedImageURL = backgroundImageFiles.first(where: { $0.lastPathComponent == selectedBackgroundImageName }) {
+            loadedBackgroundImage = UIImage(contentsOfFile: namedImageURL.path)
+            if let namedImageIndex = backgroundImageFiles.firstIndex(where: { $0.lastPathComponent == selectedBackgroundImageName }) {
+                selectedBackgroundImageIndex = namedImageIndex + 1
+            }
+            return
+        }
+
         guard selectedBackgroundImageIndex > 0 else {
             loadedBackgroundImage = nil
             return
@@ -246,7 +259,9 @@ struct ContentView: View {
             return
         }
 
-        loadedBackgroundImage = UIImage(contentsOfFile: backgroundImageFiles[imageIndex].path)
+        let resolvedImageURL = backgroundImageFiles[imageIndex]
+        selectedBackgroundImageName = resolvedImageURL.lastPathComponent
+        loadedBackgroundImage = UIImage(contentsOfFile: resolvedImageURL.path)
     }
 
     private func selectInitialDocument() {

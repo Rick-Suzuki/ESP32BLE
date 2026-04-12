@@ -32,21 +32,30 @@ extension SettingsScreen {
         availableImageURLs.count
     }
 
-    var selectedImageURL: URL? {
+    var selectedImagePosition: Int? {
+        if !selectedImageName.isEmpty,
+           let imageIndex = availableImageURLs.firstIndex(where: { $0.lastPathComponent == selectedImageName }) {
+            return imageIndex + 1
+        }
+
         guard selectedImageIndex > 0 else { return nil }
         let imageIndex = selectedImageIndex - 1
         guard availableImageURLs.indices.contains(imageIndex) else { return nil }
+        return imageIndex + 1
+    }
+
+    var selectedImageURL: URL? {
+        guard let selectedImagePosition else { return nil }
+        let imageIndex = selectedImagePosition - 1
         return availableImageURLs[imageIndex]
     }
 
     var truncatedImageDisplayName: String {
-        if selectedImageIndex == 0 {
+        guard let selectedImagePosition else {
             return "black bg"
         }
 
-        let imageIndex = selectedImageIndex - 1
-        guard availableImageURLs.indices.contains(imageIndex) else { return "no image" }
-
+        let imageIndex = selectedImagePosition - 1
         let name = availableImageURLs[imageIndex].lastPathComponent
         let maxCharacterCount = 20
         if name.count <= maxCharacterCount {
@@ -54,5 +63,15 @@ extension SettingsScreen {
         }
 
         return String(name.prefix(maxCharacterCount)) + "..."
+    }
+
+    func persistSelectedImage(_ imageURL: URL?) {
+        selectedImageName = imageURL?.lastPathComponent ?? ""
+        if let imageURL,
+           let imageIndex = availableImageURLs.firstIndex(where: { $0.lastPathComponent == imageURL.lastPathComponent }) {
+            selectedImageIndex = imageIndex + 1
+        } else {
+            selectedImageIndex = 0
+        }
     }
 }
