@@ -1,5 +1,6 @@
 import SwiftUI
 import AVFoundation
+import UIKit
 
 extension MainScreen {
     private var defaultNewButtonEntryText: String { "F::spare" }
@@ -103,7 +104,7 @@ extension MainScreen {
     }
 
     func speakMainGridEntry(_ entry: FunctionKeyEntry) {
-        let spokenText = buttonTitle(for: entry)
+        let spokenText = spokenTitle(for: entry)
             .replacingOccurrences(of: "\n", with: ", ")
             .trimmingCharacters(in: .whitespacesAndNewlines)
 
@@ -117,6 +118,28 @@ extension MainScreen {
         utterance.voice = resolvedSpeechVoice
         utterance.rate = Float(clampedTextToSpeechRate)
         speechSynthesizer.speak(utterance)
+    }
+
+    func spokenTitle(for entry: FunctionKeyEntry) -> String {
+        let leftTitle = displayText(from: entry.primaryDisplayText)
+
+        if let rightSymbolDisplay = parsedSFSymbolDisplay(for: entry) {
+            let spokenRightText = rightSymbolDisplay.subtitle ?? ""
+
+            switch displayMode {
+            case .left:
+                return leftTitle
+            case .right:
+                return spokenRightText
+            case .both:
+                if spokenRightText.isEmpty {
+                    return leftTitle
+                }
+                return "\(leftTitle)\n\(spokenRightText)"
+            }
+        }
+
+        return buttonTitle(for: entry)
     }
 
     var resolvedSpeechVoice: AVSpeechSynthesisVoice? {
@@ -143,12 +166,18 @@ extension MainScreen {
         buttonHeight: CGFloat,
         backgroundOpacity: Double
     ) -> some View {
+        let leftTitle = displayText(from: entry.primaryDisplayText)
+        let rightTitle = displayText(from: resolvedAlternateDisplayText(for: entry))
         let title = buttonTitle(for: entry)
 
         return MainScreenButtonLabelView(
             entry: entry,
             index: index,
             title: title,
+            leftTitle: leftTitle,
+            rightTitle: rightTitle,
+            displayMode: displayMode,
+            rightSymbolDisplay: parsedSFSymbolDisplay(for: entry),
             boxFontSize: boxFontSize,
             buttonHeight: buttonHeight,
             cornerRadius: mainGridButtonCornerRadius,
@@ -198,12 +227,36 @@ extension MainScreen {
         let trimmedAlternateText = entry.alternateDisplayText?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         return trimmedRawLine.isEmpty && entry.sendTexts.isEmpty && trimmedAlternateText.isEmpty
     }
+
+    func parsedSFSymbolDisplay(for entry: FunctionKeyEntry) -> (name: String, subtitle: String?)? {
+        let rightText = displayText(from: resolvedAlternateDisplayText(for: entry))
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let components = rightText.components(separatedBy: ":")
+        let candidateName = components.first?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+
+        guard !candidateName.isEmpty,
+              !candidateName.contains(where: \.isWhitespace),
+              UIImage(systemName: candidateName) != nil else {
+            return nil
+        }
+
+        let subtitle = components
+            .dropFirst()
+            .joined(separator: ":")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        return (candidateName, subtitle.isEmpty ? nil : subtitle)
+    }
 }
 
 struct MainScreenButtonLabelView: View {
     let entry: FunctionKeyEntry
     let index: Int
     let title: String
+    let leftTitle: String
+    let rightTitle: String
+    let displayMode: FunctionKeyDisplayMode
+    let rightSymbolDisplay: (name: String, subtitle: String?)?
     let boxFontSize: Double
     let buttonHeight: CGFloat
     let cornerRadius: CGFloat
@@ -232,17 +285,58 @@ struct MainScreenButtonLabelView: View {
                     RoundedRectangle(cornerRadius: cornerRadius)
                         .stroke(borderColor, lineWidth: borderWidth)
 
-                    Text(title)
-                        .font(.system(size: boxFontSize, weight: .bold))
-                        .multilineTextAlignment(.center)
-                        .lineLimit(4)
-                        .truncationMode(.tail)
-                        .allowsTightening(true)
-                        .foregroundStyle(buttonTextColor)
+                    buttonContent
                         .padding(8)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var buttonContent: some View {
+        if let rightSymbolDisplay {
+            switch displayMode {
+            case .left:
+                textLabel(title: leftTitle)
+            case .right:
+                symbolContent(name: rightSymbolDisplay.name, subtitle: rightSymbolDisplay.subtitle)
+            case .both:
+                VStack(spacing: 6) {
+                    textLabel(title: leftTitle)
+                    symbolContent(name: rightSymbolDisplay.name, subtitle: rightSymbolDisplay.subtitle)
+                }
+            }
+        } else {
+            textLabel(title: title)
+        }
+    }
+
+    private func textLabel(title: String) -> some View {
+        Text(title)
+            .font(.system(size: boxFontSize, weight: .bold))
+            .multilineTextAlignment(.center)
+            .lineLimit(4)
+            .truncationMode(.tail)
+            .allowsTightening(true)
+            .foregroundStyle(buttonTextColor)
+    }
+
+    private func symbolContent(name: String, subtitle: String?) -> some View {
+        VStack(spacing: 4) {
+            Image(systemName: name)
+                .resizable()
+                .scaledToFit()
+                .foregroundStyle(buttonTextColor)
+                .frame(
+                    width: max(18, CGFloat(boxFontSize) * 1.5),
+                    height: max(18, CGFloat(boxFontSize) * 1.5)
+                )
+
+            if let subtitle {
+                textLabel(title: subtitle)
+                    .lineLimit(2)
             }
         }
     }
