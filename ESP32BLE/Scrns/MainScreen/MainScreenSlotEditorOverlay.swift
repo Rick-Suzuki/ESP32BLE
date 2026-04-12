@@ -401,10 +401,10 @@ struct MainScreenSlotEditorOverlay: View {
     private var clearRightButton: some View {
         Button {
             ButtonClickFeedback.playIfEnabled()
-            actionDraft = ""
-            rightDraft = ""
-            editingSlotText = ""
-            onCommit()
+            rightTextBinding.wrappedValue = ""
+            activeEditorField = .text
+            rightInputController.focus()
+            focusBinding.wrappedValue = true
         } label: {
 					Text("del")
                 .font(.system(size: 14, weight: .bold))
