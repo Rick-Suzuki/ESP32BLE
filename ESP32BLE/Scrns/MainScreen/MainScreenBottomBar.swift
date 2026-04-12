@@ -116,6 +116,8 @@ private struct RepeatingToolbarButton<Label: View>: View {
     }
 }
 
+// MARK: - BM:🟩 btm toolbar
+
 struct MainScreenBottomBar: View {
     private let inactiveButtonBackgroundColor = Color(red: 0.22, green: 0.22, blue: 0.24)
     private let inactiveButtonBorderColor = Color(red: 0.30, green: 0.30, blue: 0.32)
@@ -276,27 +278,34 @@ struct MainScreenBottomBar: View {
                 )
                 .frame(width: toggleWidth)
             }
-
-            Button {
-                onAdvanceDisplayMode()
-            } label: {
-                Text(displayMode.title)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
-                    .frame(maxWidth: .infinity, minHeight: 50)
-                    .contentShape(.rect)
-            }
-            .buttonStyle(.plain)
-            .foregroundStyle(.white)
-            .background(displayModeButtonColor)
-            .overlay {
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(displayModeButtonColor, lineWidth: 2)
-            }
-            .clipShape(.rect(cornerRadius: 12))
-            .frame(width: displayModeWidth)
+			//
+			//----------------------------------------
+			//
+			Button {
+				onAdvanceDisplayMode()
+			} label: {
+				Text(displayMode.title)
+					.lineLimit(1)
+					.minimumScaleFactor(0.7)
+					.frame(maxWidth: .infinity, minHeight: 50)
+					.foregroundStyle(.white)
+					.background(
+						RoundedRectangle(cornerRadius: 12)
+							.fill(displayModeButtonColor.opacity(0.7))
+					)
+					.overlay(
+						RoundedRectangle(cornerRadius: 12)
+							.stroke(displayModeButtonColor, lineWidth: 2)
+					)
+					.clipShape(RoundedRectangle(cornerRadius: 12))
+			}
 			.opacity(0.7)
-        }
+			.buttonStyle(.plain)
+			.frame(width: displayModeWidth)
+			//
+			//----------------------------------------
+			//
+		}
     }
 
     private func controlTriangle(
