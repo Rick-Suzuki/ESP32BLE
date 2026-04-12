@@ -4,6 +4,24 @@ import AVFoundation
 import UniformTypeIdentifiers
 
 struct SettingsScreen: View {
+    private enum SettingsListMode: String {
+        case files
+        case images
+
+        var buttonTitle: String {
+            switch self {
+            case .files:
+                return "Files"
+            case .images:
+                return "Images"
+            }
+        }
+
+        mutating func toggle() {
+            self = self == .files ? .images : .files
+        }
+    }
+
     private let ttsControlColor = Color(red: 0.0, green: 0.2, blue: 0.45)
     private let defaultTextToSpeechRate = Double(AVSpeechUtteranceDefaultSpeechRate)
     private let minimumTextToSpeechPercentage = 40.0
@@ -38,7 +56,9 @@ struct SettingsScreen: View {
     @State private var isEditingDocumentName = false
     @State private var documentNameDraft = ""
     @State private var renameAlertMessage: String?
+    @AppStorage("settingsListMode") private var listModeRawValue = SettingsListMode.files.rawValue
     @State private var isImportingDocument = false
+    @State private var isImportingImages = false
     @State private var isExportingDocument = false
     @State private var exportDocument: SettingsTextFileDocument?
     @State private var availableSpeechVoices: [SpeechVoiceOption] = []
@@ -85,9 +105,15 @@ struct SettingsScreen: View {
                 settingsTitleControl
             }
             ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    ButtonClickFeedback.playIfEnabled()
-                    isImportingDocument = true
+                Menu {
+                    Button("Import TXT") {
+                        ButtonClickFeedback.playIfEnabled()
+                        isImportingDocument = true
+                    }
+                    Button("Import Images") {
+                        ButtonClickFeedback.playIfEnabled()
+                        isImportingImages = true
+                    }
                 } label: {
                     Image(systemName: "square.and.arrow.down")
                         .font(.headline)
@@ -107,6 +133,11 @@ struct SettingsScreen: View {
                 }
                 .contentShape(.rect)
                 .accessibilityLabel("Export to iCloud")
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                SettingsToolbarButton(title: listMode.buttonTitle, backgroundColor: Color.gray.opacity(0.45)) {
+                    listMode.toggle()
+                }
             }
             ToolbarItem(placement: .topBarTrailing) {
                 SettingsToolbarButton(title: "new", backgroundColor: Color.green.opacity(0.5)) {
@@ -160,10 +191,17 @@ struct SettingsScreen: View {
         }
         .fileImporter(
             isPresented: $isImportingDocument,
-            allowedContentTypes: [.plainText, .text],
-            allowsMultipleSelection: false
+            allowedContentTypes: [plainTextImportType],
+            allowsMultipleSelection: true
         ) { result in
             handleDocumentImport(result)
+        }
+        .fileImporter(
+            isPresented: $isImportingImages,
+            allowedContentTypes: [.image],
+            allowsMultipleSelection: true
+        ) { result in
+            handleImageImport(result)
         }
         .fileExporter(
             isPresented: $isExportingDocument,
@@ -176,6 +214,11 @@ struct SettingsScreen: View {
             }
             exportDocument = nil
         }
+    }
+
+    private var listMode: SettingsListMode {
+        get { SettingsListMode(rawValue: listModeRawValue) ?? .files }
+        nonmutating set { listModeRawValue = newValue.rawValue }
     }
 
     private func documentTableWidth(for availableWidth: CGFloat) -> CGFloat {
@@ -377,13 +420,18 @@ struct SettingsScreen: View {
 
     private var documentTableSection: some View {
         SettingsDocumentTableSection(
+            listMode: listMode == .files ? .files : .images,
             documentFiles: documentFiles,
             selectedDocumentName: selectedDocumentName,
+            imageURLs: availableImageURLs,
+            selectedImageURL: selectedImageURL,
             canDeleteDocuments: canDeleteDocuments,
             imagePreviewSection: AnyView(imagePreviewSection),
             loadFunctionKeys: loadFunctionKeys,
             deleteDocument: deleteDocument,
-            duplicateDocument: duplicateDocument
+            duplicateDocument: duplicateDocument,
+            selectImage: selectImage,
+            deleteImage: deleteImage
         )
     }
 
@@ -700,8 +748,51 @@ struct SettingsScreen: View {
         isExportingDocument = true
     }
 
+    private func selectImage(_ imageURL: URL) {
+        guard let imageIndex = availableImageURLs.firstIndex(where: { $0.lastPathComponent == imageURL.lastPathComponent }) else {
+            return
+        }
+
+        selectedImageIndex = imageIndex + 1
+    }
+
+    private func deleteImage(_ imageURL: URL) {
+        let previousSelectedImageURL = selectedImageURL
+
+        do {
+            try FileManager.default.removeItem(at: imageURL)
+        } catch {
+            renameAlertMessage = "Couldn't delete the image."
+            return
+        }
+
+        let refreshedImageURLs = availableImageURLs
+
+        if let previousSelectedImageURL,
+           previousSelectedImageURL.lastPathComponent == imageURL.lastPathComponent {
+            if let replacementURL = refreshedImageURLs.first {
+                selectImage(replacementURL)
+            } else {
+                selectedImageIndex = 0
+            }
+        } else if let previousSelectedImageURL,
+                  let refreshedImageIndex = refreshedImageURLs.firstIndex(where: { $0.lastPathComponent == previousSelectedImageURL.lastPathComponent }) {
+            selectedImageIndex = refreshedImageIndex + 1
+        } else if selectedImageIndex > refreshedImageURLs.count {
+            selectedImageIndex = refreshedImageURLs.isEmpty ? 0 : refreshedImageURLs.count
+        }
+    }
+
+    private var plainTextImportType: UTType {
+        UTType(filenameExtension: "txt") ?? .plainText
+    }
+
+    private var supportedImportedImageExtensions: Set<String> {
+        ["png", "jpg", "jpeg", "heic", "heif", "gif", "bmp", "tiff", "webp"]
+    }
+
     private func handleDocumentImport(_ result: Result<[URL], Error>) {
-        guard case let .success(urls) = result, let sourceURL = urls.first else {
+        guard case let .success(urls) = result else {
             if case let .failure(error) = result {
                 renameAlertMessage = error.localizedDescription
             }
@@ -713,28 +804,116 @@ struct SettingsScreen: View {
             return
         }
 
-        let targetFileName = sourceURL.lastPathComponent
-        let targetURL = directoryURL.appendingPathComponent(targetFileName)
+        let existingFileNames = Set(documentFiles.map { $0.lastPathComponent.lowercased() })
+        var duplicateFileNames: [String] = []
 
-        if documentFiles.contains(where: { $0.lastPathComponent.caseInsensitiveCompare(targetFileName) == .orderedSame }) {
-            renameAlertMessage = "a file with that name already exists."
-            return
-        }
+        for sourceURL in urls {
+            guard sourceURL.pathExtension.lowercased() == "txt" else {
+                renameAlertMessage = "Only .txt files can be imported."
+                return
+            }
 
-        let didAccessSecurityScopedResource = sourceURL.startAccessingSecurityScopedResource()
-        defer {
-            if didAccessSecurityScopedResource {
-                sourceURL.stopAccessingSecurityScopedResource()
+            let targetFileName = sourceURL.lastPathComponent
+            let targetURL = directoryURL.appendingPathComponent(targetFileName)
+
+            if existingFileNames.contains(targetFileName.lowercased()) {
+                duplicateFileNames.append(targetFileName)
+                continue
+            }
+
+            let didAccessSecurityScopedResource = sourceURL.startAccessingSecurityScopedResource()
+            defer {
+                if didAccessSecurityScopedResource {
+                    sourceURL.stopAccessingSecurityScopedResource()
+                }
+            }
+
+            do {
+                let importedText = try String(contentsOf: sourceURL, encoding: .utf8)
+                try importedText.write(to: targetURL, atomically: true, encoding: .utf8)
+            } catch {
+                renameAlertMessage = "Couldn't import the file."
+                return
             }
         }
 
-        do {
-            let importedText = try String(contentsOf: sourceURL, encoding: .utf8)
-            try importedText.write(to: targetURL, atomically: true, encoding: .utf8)
+        refreshDocumentFiles()
+
+        if let firstImportedURL = urls.first(where: { !duplicateFileNames.contains($0.lastPathComponent) }) {
+            loadFunctionKeys(directoryURL.appendingPathComponent(firstImportedURL.lastPathComponent))
+        }
+
+        if let duplicateFileName = duplicateFileNames.first {
+            renameAlertMessage = duplicateFileNames.count == 1
+                ? "a file with that name already exists."
+                : "Some files were skipped because they already exist. First skipped: \(duplicateFileName)"
+        }
+    }
+
+    private func handleImageImport(_ result: Result<[URL], Error>) {
+        guard case let .success(urls) = result else {
+            if case let .failure(error) = result {
+                renameAlertMessage = error.localizedDescription
+            }
+            return
+        }
+
+        guard let directoryURL = currentDocumentsDirectoryURL else {
+            renameAlertMessage = "Couldn't access the documents folder."
+            return
+        }
+
+        let existingImageNames = Set(availableImageURLs.map { $0.lastPathComponent.lowercased() })
+        var duplicateImageNames: [String] = []
+
+        for sourceURL in urls {
+            guard supportedImportedImageExtensions.contains(sourceURL.pathExtension.lowercased()) else {
+                renameAlertMessage = "Only supported image files can be imported."
+                return
+            }
+
+            let targetFileName = sourceURL.lastPathComponent
+            let targetURL = directoryURL.appendingPathComponent(targetFileName)
+
+            if existingImageNames.contains(targetFileName.lowercased()) {
+                duplicateImageNames.append(targetFileName)
+                continue
+            }
+
+            let didAccessSecurityScopedResource = sourceURL.startAccessingSecurityScopedResource()
+            defer {
+                if didAccessSecurityScopedResource {
+                    sourceURL.stopAccessingSecurityScopedResource()
+                }
+            }
+
+            do {
+                if FileManager.default.fileExists(atPath: targetURL.path) {
+                    duplicateImageNames.append(targetFileName)
+                    continue
+                }
+                try FileManager.default.copyItem(at: sourceURL, to: targetURL)
+            } catch {
+                renameAlertMessage = "Couldn't import the image."
+                return
+            }
+        }
+
+        if !availableImageURLs.isEmpty {
+            let previousImageURL = selectedImageURL
             refreshDocumentFiles()
-            loadFunctionKeys(targetURL)
-        } catch {
-            renameAlertMessage = "Couldn't import the file."
+            if let previousImageURL,
+               let refreshedImageIndex = availableImageURLs.firstIndex(where: { $0.lastPathComponent == previousImageURL.lastPathComponent }) {
+                selectedImageIndex = refreshedImageIndex + 1
+            }
+        } else {
+            refreshDocumentFiles()
+        }
+
+        if let duplicateImageName = duplicateImageNames.first {
+            renameAlertMessage = duplicateImageNames.count == 1
+                ? "a file with that name already exists."
+                : "Some images were skipped because they already exist. First skipped: \(duplicateImageName)"
         }
     }
 
