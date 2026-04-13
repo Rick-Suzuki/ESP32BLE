@@ -192,6 +192,7 @@ struct MainScreen: View {
                 selectedDocumentDisplayName: selectedDocumentDisplayName,
                 isDocumentNameFieldFocused: $isDocumentNameFieldFocused,
                 openKeyboardScreen: openKeyboardScreen,
+                openHomeDocument: { _ = selectDocumentNamedFromGrid("home.txt") },
                 canGoBackToPreviousDocument: canGoBackToPreviousDocument,
                 goBackToPreviousDocument: goBackToPreviousDocument,
                 selectPreviousDocument: selectPreviousDocument,

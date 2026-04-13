@@ -16,6 +16,7 @@ struct MainScreenToolbarContent: ToolbarContent {
     let selectedDocumentDisplayName: String
     let isDocumentNameFieldFocused: FocusState<Bool>.Binding
     let openKeyboardScreen: () -> Void
+    let openHomeDocument: () -> Void
     let canGoBackToPreviousDocument: Bool
     let goBackToPreviousDocument: () -> Void
     let selectPreviousDocument: () -> Void
@@ -32,7 +33,7 @@ struct MainScreenToolbarContent: ToolbarContent {
             }
             .font(.headline)
             .foregroundStyle(toolbarActionForegroundColor)
-            .padding(.horizontal, 14)
+            .padding(.horizontal, 5)
             .frame(minHeight: 44)
             .background(toolbarButtonBackgroundColor(normalBackground: normalToolbarBackgroundColor))
             .overlay {
@@ -46,6 +47,18 @@ struct MainScreenToolbarContent: ToolbarContent {
 
         ToolbarItem(placement: .principal) {
             HStack(spacing: 20) {
+                Button {
+                    ButtonClickFeedback.playIfEnabled()
+					openHomeDocument()
+                } label: {
+                    Image(systemName: "house")
+                        .font(.system(size: 22))
+                        .frame(width: 44, height: 44)
+                        .contentShape(.rect)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(toolbarPrincipalForegroundColor)
+
                 Button {
                     ButtonClickFeedback.playIfEnabled()
                     goBackToPreviousDocument()

@@ -4,6 +4,14 @@ import UIKit
 
 extension MainScreen {
     private var defaultNewButtonEntryText: String { "F::spare" }
+    private var supportedMainScreenSFSymbolNames: Set<String> {
+        [
+            "folder", "trash", "magnifyingglass", "gearshape", "house",
+            "lightbulb.max.fill", "speaker.wave.2", "star", "heart", "bell",
+            "paperclip", "link", "paperplane", "doc", "calendar",
+            "camera", "photo", "tray", "sun.max.fill", "chart.bar.fill"
+        ]
+    }
 
     func buttonTitle(for entry: FunctionKeyEntry) -> String {
         guard entry.displayUsesAlternateText else {
@@ -256,6 +264,7 @@ extension MainScreen {
 
         guard !candidateName.isEmpty,
               !candidateName.contains(where: \.isWhitespace),
+              supportedMainScreenSFSymbolNames.contains(candidateName),
               UIImage(systemName: candidateName) != nil else {
             return nil
         }
@@ -293,13 +302,24 @@ extension MainScreen {
             return false
         }
 
-        return token.unicodeScalars.contains { scalar in
-            scalar.properties.isEmojiPresentation || scalar.properties.isEmoji
+        let containsLettersOrNumbers = token.unicodeScalars.contains { scalar in
+            CharacterSet.alphanumerics.contains(scalar)
+        }
+        guard !containsLettersOrNumbers else {
+            return false
+        }
+
+        return token.contains { character in
+            character.unicodeScalars.contains { scalar in
+                scalar.properties.isEmojiPresentation || scalar.properties.isEmoji
+            }
         }
     }
 }
 
 struct MainScreenButtonLabelView: View {
+    // Easy-to-tune size for buttons that display only a single emoji.
+    private let loneEmojiScaleMultiplier: CGFloat = 1.5
     let entry: FunctionKeyEntry
     let index: Int
     let title: String
@@ -317,7 +337,7 @@ struct MainScreenButtonLabelView: View {
     let backgroundOpacity: Double
 
     // Adjust emojiScaleMultiplier to tune how much larger emoji should render than text.
-    private let emojiScaleMultiplier: CGFloat = 2
+    private let emojiScaleMultiplier: CGFloat = 1.5
 
     var body: some View {
         Group {
@@ -408,14 +428,22 @@ struct MainScreenButtonLabelView: View {
     }
 
     private func emojiContent(emoji: String, subtitle: String?) -> some View {
-        VStack(spacing: 4) {
-            Text(emoji)
-                .font(.system(size: CGFloat(boxFontSize) * emojiScaleMultiplier))
-                .lineLimit(1)
-
+        Group {
             if let subtitle {
-                textLabel(title: subtitle)
-                    .lineLimit(2)
+                VStack(spacing: 4) {
+                    Text(emoji)
+                        .font(.system(size: CGFloat(boxFontSize) * emojiScaleMultiplier))
+                        .lineLimit(1)
+
+                    textLabel(title: subtitle)
+                        .lineLimit(2)
+                }
+            } else {
+                Text(emoji)
+                    .font(.system(size: max(18, CGFloat(boxFontSize) * loneEmojiScaleMultiplier)))
+                    .minimumScaleFactor(0.5)
+                    .lineLimit(1)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
     }
