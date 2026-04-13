@@ -519,11 +519,6 @@ struct ContentView: View {
         }
 
         let sendTexts = parsedSendTexts(from: leftText)
-
-        guard !sendTexts.isEmpty else {
-            return FunctionKeyEntry(rawLine: line, sendTexts: [line], alternateDisplayText: nil, buttonColorCode: nil, isBlankPlaceholder: false)
-        }
-
         let parsedRightText = parsedRightTextAndColor(from: rightText)
         return FunctionKeyEntry(
             rawLine: line,

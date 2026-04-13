@@ -430,11 +430,18 @@ struct MainScreenSlotEditorOverlay: View {
     }
 
     private func composeEditingText(action: String, text: String) -> String {
-        if text.isEmpty {
-            return action
+        let trimmedAction = action.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if trimmedAction.isEmpty {
+            return trimmedText
         }
 
-        return "\(action)::\(text)"
+        if trimmedText.isEmpty {
+            return trimmedAction
+        }
+
+        return "\(trimmedAction)::\(trimmedText)"
     }
 
     private func syncDraftsFromCombinedText() {
