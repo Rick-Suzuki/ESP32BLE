@@ -78,7 +78,8 @@ extension MainScreen {
         }
 
         guard ble.isConnected else {
-            print("Bluetooth not connected.")
+            alertTitle = "Bluetooth Not Connected"
+            renameAlertMessage = "Bluetooth needs to be connected\nbefore using buttons."
             return
         }
 
