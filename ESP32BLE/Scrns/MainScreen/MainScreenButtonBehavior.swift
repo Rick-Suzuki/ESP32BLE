@@ -302,17 +302,20 @@ extension MainScreen {
             return false
         }
 
-        let containsLettersOrNumbers = token.unicodeScalars.contains { scalar in
-            CharacterSet.alphanumerics.contains(scalar)
-        }
-        guard !containsLettersOrNumbers else {
+        // Treat only a single rendered emoji character as an emoji token.
+        guard token.count == 1, let character = token.first else {
             return false
         }
 
-        return token.contains { character in
-            character.unicodeScalars.contains { scalar in
-                scalar.properties.isEmojiPresentation || scalar.properties.isEmoji
-            }
+        let isPlainASCIIAlphaNumeric = character.unicodeScalars.allSatisfy { scalar in
+            scalar.isASCII && CharacterSet.alphanumerics.contains(scalar)
+        }
+        guard !isPlainASCIIAlphaNumeric else {
+            return false
+        }
+
+        return character.unicodeScalars.contains { scalar in
+            scalar.properties.isEmojiPresentation || scalar.properties.isEmoji
         }
     }
 }

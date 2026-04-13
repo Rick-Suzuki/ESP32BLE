@@ -14,6 +14,7 @@ struct MainScreenToolbarContent: ToolbarContent {
     @Binding var isEditingDocumentName: Bool
     @Binding var documentNameDraft: String
     let selectedDocumentDisplayName: String
+    let isHomeDocumentSelected: Bool
     let isDocumentNameFieldFocused: FocusState<Bool>.Binding
     let openKeyboardScreen: () -> Void
     let openHomeDocument: () -> Void
@@ -58,6 +59,7 @@ struct MainScreenToolbarContent: ToolbarContent {
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(toolbarPrincipalForegroundColor)
+                .disabled(isHomeDocumentSelected)
 
                 Button {
                     ButtonClickFeedback.playIfEnabled()

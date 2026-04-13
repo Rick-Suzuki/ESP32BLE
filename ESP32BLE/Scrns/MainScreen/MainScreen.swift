@@ -190,6 +190,7 @@ struct MainScreen: View {
                 isEditingDocumentName: $isEditingDocumentName,
                 documentNameDraft: $documentNameDraft,
                 selectedDocumentDisplayName: selectedDocumentDisplayName,
+                isHomeDocumentSelected: selectedDocumentName.caseInsensitiveCompare("home.txt") == .orderedSame,
                 isDocumentNameFieldFocused: $isDocumentNameFieldFocused,
                 openKeyboardScreen: openKeyboardScreen,
                 openHomeDocument: { _ = selectDocumentNamedFromGrid("home.txt") },
