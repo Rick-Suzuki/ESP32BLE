@@ -31,7 +31,7 @@ extension MainScreen {
     }
 
     func normalizedSpeechMatchText(_ text: String) -> String {
-        canonicalSpeechText(from: displayText(from: text))
+        canonicalSpeechText(from: speechMatchDisplayText(from: text))
     }
 
     func canonicalSpeechText(from text: String) -> String {
@@ -40,6 +40,16 @@ extension MainScreen {
             .components(separatedBy: CharacterSet.alphanumerics.inverted)
             .filter { !$0.isEmpty }
             .joined(separator: " ")
+    }
+
+    func speechMatchDisplayText(from text: String) -> String {
+        let displayString = displayText(from: text)
+        let trailingComponent = displayString
+            .components(separatedBy: ":")
+            .last?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+
+        return trailingComponent.isEmpty ? displayString : trailingComponent
     }
 
     func handleSpeechRecognitionToggle() {
