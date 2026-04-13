@@ -197,6 +197,7 @@ extension MainScreen {
             rightTitle: rightTitle,
             displayMode: displayMode,
             rightSymbolDisplay: parsedSFSymbolDisplay(for: entry),
+            rightEmojiDisplay: parsedEmojiDisplay(for: entry),
             boxFontSize: boxFontSize,
             buttonHeight: buttonHeight,
             cornerRadius: mainGridButtonCornerRadius,
@@ -266,6 +267,36 @@ extension MainScreen {
 
         return (candidateName, subtitle.isEmpty ? nil : subtitle)
     }
+
+    func parsedEmojiDisplay(for entry: FunctionKeyEntry) -> (emoji: String, subtitle: String?)? {
+        let rightText = displayText(from: resolvedAlternateDisplayText(for: entry))
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let components = rightText.components(separatedBy: ":")
+        let candidateEmoji = components.first?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+
+        guard isEmojiDisplayToken(candidateEmoji) else {
+            return nil
+        }
+
+        let subtitle = components
+            .dropFirst()
+            .joined(separator: ":")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        return (candidateEmoji, subtitle.isEmpty ? nil : subtitle)
+    }
+
+    private func isEmojiDisplayToken(_ token: String) -> Bool {
+        guard !token.isEmpty,
+              !token.contains(where: \.isWhitespace),
+              UIImage(systemName: token) == nil else {
+            return false
+        }
+
+        return token.unicodeScalars.contains { scalar in
+            scalar.properties.isEmojiPresentation || scalar.properties.isEmoji
+        }
+    }
 }
 
 struct MainScreenButtonLabelView: View {
@@ -276,6 +307,7 @@ struct MainScreenButtonLabelView: View {
     let rightTitle: String
     let displayMode: FunctionKeyDisplayMode
     let rightSymbolDisplay: (name: String, subtitle: String?)?
+    let rightEmojiDisplay: (emoji: String, subtitle: String?)?
     let boxFontSize: Double
     let buttonHeight: CGFloat
     let cornerRadius: CGFloat
@@ -283,6 +315,9 @@ struct MainScreenButtonLabelView: View {
     let isGridEditModeEnabled: Bool
     let activeDragIndex: Int?
     let backgroundOpacity: Double
+
+    // Adjust this multiplier to tune how much larger emoji should render than text.
+    private let emojiScaleMultiplier: CGFloat = 1.5
 
     var body: some View {
         Group {
@@ -327,6 +362,18 @@ struct MainScreenButtonLabelView: View {
                     symbolContent(name: rightSymbolDisplay.name, subtitle: rightSymbolDisplay.subtitle)
                 }
             }
+        } else if let rightEmojiDisplay {
+            switch displayMode {
+            case .left:
+                textLabel(title: leftTitle)
+            case .right:
+                emojiContent(emoji: rightEmojiDisplay.emoji, subtitle: rightEmojiDisplay.subtitle)
+            case .both:
+                VStack(spacing: 6) {
+                    textLabel(title: leftTitle)
+                    emojiContent(emoji: rightEmojiDisplay.emoji, subtitle: rightEmojiDisplay.subtitle)
+                }
+            }
         } else {
             textLabel(title: title)
         }
@@ -352,6 +399,19 @@ struct MainScreenButtonLabelView: View {
                     width: max(18, CGFloat(boxFontSize) * 1.5),
                     height: max(18, CGFloat(boxFontSize) * 1.5)
                 )
+
+            if let subtitle {
+                textLabel(title: subtitle)
+                    .lineLimit(2)
+            }
+        }
+    }
+
+    private func emojiContent(emoji: String, subtitle: String?) -> some View {
+        VStack(spacing: 4) {
+            Text(emoji)
+                .font(.system(size: CGFloat(boxFontSize) * emojiScaleMultiplier))
+                .lineLimit(1)
 
             if let subtitle {
                 textLabel(title: subtitle)
