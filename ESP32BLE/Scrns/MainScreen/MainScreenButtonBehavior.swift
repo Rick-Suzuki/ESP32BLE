@@ -316,8 +316,8 @@ struct MainScreenButtonLabelView: View {
     let activeDragIndex: Int?
     let backgroundOpacity: Double
 
-    // Adjust this multiplier to tune how much larger emoji should render than text.
-    private let emojiScaleMultiplier: CGFloat = 1.5
+    // Adjust emojiScaleMultiplier to tune how much larger emoji should render than text.
+    private let emojiScaleMultiplier: CGFloat = 2
 
     var body: some View {
         Group {

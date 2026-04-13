@@ -36,6 +36,7 @@ struct ContentView: View {
     private let defaultDocumentFontSize: Double = 20
     @AppStorage("selectedBackgroundImageIndex") private var selectedBackgroundImageIndex = 0
     @AppStorage("selectedBackgroundImageName") private var selectedBackgroundImageName = ""
+    @AppStorage("documentBackgroundImageNamesData") private var documentBackgroundImageNamesData = ""
     @AppStorage("backgroundImageOpacity") private var backgroundImageOpacity = 0.5
     @StateObject private var ble = BLEKeyboardManager()
     @State private var functionKeys = ContentView.makeDefaultFunctionKeys()
@@ -140,6 +141,7 @@ struct ContentView: View {
             reloadBackgroundImage()
         }
         .onChange(of: selectedBackgroundImageName) {
+            saveBackgroundImageSelection(for: selectedDocumentName)
             reloadBackgroundImage()
         }
     }
@@ -249,6 +251,7 @@ struct ContentView: View {
         }
 
         guard selectedBackgroundImageIndex > 0 else {
+            selectedBackgroundImageName = ""
             loadedBackgroundImage = nil
             return
         }
@@ -286,6 +289,7 @@ struct ContentView: View {
             let loadedTitles = normalizedSlotLines(from: contents)
             applySlotLines(loadedTitles)
             selectedDocumentName = fileURL.lastPathComponent
+            restoreBackgroundImageSelection(for: selectedDocumentName)
         } catch {
             functionKeySlotLines = []
             functionKeys = Array(repeating: FunctionKeyEntry(rawLine: "", sendTexts: [], alternateDisplayText: nil, buttonColorCode: nil, isBlankPlaceholder: false), count: maxFunctionKeyCount)
@@ -392,6 +396,64 @@ struct ContentView: View {
         }
 
         documentFontSizesData = encoded
+    }
+
+    private func loadDocumentBackgroundImageNames() -> [String: String] {
+        guard let data = documentBackgroundImageNamesData.data(using: .utf8),
+              let decoded = try? JSONDecoder().decode([String: String].self, from: data) else {
+            return [:]
+        }
+
+        return decoded
+    }
+
+    private func saveDocumentBackgroundImageNames(_ mappings: [String: String]) {
+        guard let data = try? JSONEncoder().encode(mappings),
+              let encoded = String(data: data, encoding: .utf8) else {
+            return
+        }
+
+        documentBackgroundImageNamesData = encoded
+    }
+
+    private func saveBackgroundImageSelection(for documentName: String) {
+        let trimmedDocumentName = documentName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedDocumentName.isEmpty else {
+            return
+        }
+
+        var mappings = loadDocumentBackgroundImageNames()
+        if selectedBackgroundImageName.isEmpty {
+            mappings.removeValue(forKey: trimmedDocumentName)
+        } else {
+            mappings[trimmedDocumentName] = selectedBackgroundImageName
+        }
+        saveDocumentBackgroundImageNames(mappings)
+    }
+
+    private func restoreBackgroundImageSelection(for documentName: String) {
+        let trimmedDocumentName = documentName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedDocumentName.isEmpty else {
+            selectedBackgroundImageIndex = 0
+            selectedBackgroundImageName = ""
+            loadedBackgroundImage = nil
+            return
+        }
+
+        let mappings = loadDocumentBackgroundImageNames()
+        guard let imageName = mappings[trimmedDocumentName],
+              backgroundImageFiles.contains(where: { $0.lastPathComponent == imageName }) else {
+            selectedBackgroundImageIndex = 0
+            selectedBackgroundImageName = ""
+            loadedBackgroundImage = nil
+            return
+        }
+
+        selectedBackgroundImageName = imageName
+        if let imageIndex = backgroundImageFiles.firstIndex(where: { $0.lastPathComponent == imageName }) {
+            selectedBackgroundImageIndex = imageIndex + 1
+        }
+        reloadBackgroundImage()
     }
 
     @discardableResult
