@@ -19,6 +19,7 @@ struct MainScreenSlotEditorOverlay: View {
     @State private var actionDraft = ""
     @State private var rightDraft = ""
     private let rightColumnButtonWidth: CGFloat = 90
+    private let orderedModifierPrefixes = ["ctl:", "sh:", "op:", "cm:"]
 	
 	// MARK: - BM:🟦 SF symbols list
 	
@@ -237,24 +238,66 @@ struct MainScreenSlotEditorOverlay: View {
     }
 
     private func helperInsertButton(_ text: String) -> some View {
-        Button {
+        let isModifierButton = orderedModifierPrefixes.contains(text)
+        let isDisabled = isModifierButton && activeEditorField == .text
+
+        return Button {
+            guard !isDisabled else {
+                return
+            }
             ButtonClickFeedback.playIfEnabled()
-            activeInputController.insertText(text)
-            activeInputController.focus()
+            if orderedModifierPrefixes.contains(text) {
+                actionDraft = toggledModifierPrefix(text)
+                activeEditorField = .action
+                actionInputController.focus()
+            } else {
+                activeInputController.insertText(text)
+                activeInputController.focus()
+            }
             focusBinding.wrappedValue = true
         } label: {
             Text(text)
-                .foregroundStyle(.white)
+                .foregroundStyle(isDisabled ? Color.gray : .white)
                 .frame(width: helperButtonWidth, height: 44)
                 .background(Color.black)
                 .overlay {
                     RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.white, lineWidth: 2)
+                        .stroke(isDisabled ? Color.gray : Color.white, lineWidth: 2)
                 }
                 .clipShape(.rect(cornerRadius: 12))
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+    }
+
+    private func toggledModifierPrefix(_ modifier: String) -> String {
+        var remainingText = actionDraft
+        var enabledModifiers: Set<String> = []
+
+        var didStripModifier = true
+        while didStripModifier {
+            didStripModifier = false
+            for knownModifier in orderedModifierPrefixes {
+                if remainingText.hasPrefix(knownModifier) {
+                    enabledModifiers.insert(knownModifier)
+                    remainingText.removeFirst(knownModifier.count)
+                    didStripModifier = true
+                    break
+                }
+            }
+        }
+
+        if enabledModifiers.contains(modifier) {
+            enabledModifiers.remove(modifier)
+        } else {
+            enabledModifiers.insert(modifier)
+        }
+
+        let orderedPrefix = orderedModifierPrefixes
+            .filter { enabledModifiers.contains($0) }
+            .joined()
+
+        return orderedPrefix + remainingText
     }
 
     private func helperInsertButton(systemImage: String, rotationDegrees: Double, insertedText: String) -> some View {
