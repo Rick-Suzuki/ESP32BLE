@@ -77,16 +77,6 @@ extension MainScreen {
             return
         }
 
-        if let targetDocumentName = targetDocumentNameForGridEntry(entry) {
-            if selectDocumentNamedFromGrid(targetDocumentName) {
-                return
-            }
-
-            alertTitle = "File Not Found"
-            renameAlertMessage = "Couldn't find \(targetDocumentName.lowercased())."
-            return
-        }
-
         guard ble.isConnected else {
             print("Bluetooth not connected.")
             return
@@ -98,8 +88,21 @@ extension MainScreen {
 
         logMainButtonPress(entry)
 
-        for sendText in entry.sendTexts {
-            ble.sendLine(sendText)
+        let bluetoothSendTexts = entry.sendTexts.filter { sendText in
+            targetDocumentNameForSendText(sendText) == nil
+        }
+
+        for sendText in bluetoothSendTexts {
+            ble.sendLine(normalizedBluetoothSendText(sendText))
+        }
+
+        if let targetDocumentName = targetDocumentNameForGridEntry(entry) {
+            if selectDocumentNamedFromGrid(targetDocumentName) {
+                return
+            }
+
+            alertTitle = "File Not Found"
+            renameAlertMessage = "Couldn't find \(targetDocumentName.lowercased())."
         }
     }
 
@@ -155,9 +158,24 @@ extension MainScreen {
     }
 
     func targetDocumentNameForGridEntry(_ entry: FunctionKeyEntry) -> String? {
-        entry.sendTexts.first { sendText in
-            sendText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased().hasSuffix(".txt")
+        entry.sendTexts.first(where: { targetDocumentNameForSendText($0) != nil })
+    }
+
+    func targetDocumentNameForSendText(_ sendText: String) -> String? {
+        let trimmedSendText = sendText.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmedSendText.lowercased().hasSuffix(".txt") ? trimmedSendText : nil
+    }
+
+    func normalizedBluetoothSendText(_ sendText: String) -> String {
+        let trimmedSendText = sendText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let loweredSendText = trimmedSendText.lowercased()
+
+        guard loweredSendText.first == "f",
+              loweredSendText.dropFirst().allSatisfy({ $0.isNumber }) else {
+            return sendText
         }
+
+        return loweredSendText
     }
 
     func mainGridButtonLabel(
