@@ -45,6 +45,7 @@ struct MainScreen: View {
     @State var editingSlotIndex: Int?
     @State var editingSlotText = ""
     @State private var keyboardMinY: CGFloat = .greatestFiniteMagnitude
+    @State private var popupDismissTask: Task<Void, Never>?
     @AppStorage("selectedTextToSpeechVoiceIdentifier") var selectedTextToSpeechVoiceIdentifier = ""
     @AppStorage("textToSpeechRate") var textToSpeechRate = Double(AVSpeechUtteranceDefaultSpeechRate)
     @AppStorage("selectedBackgroundImageIndex") var selectedBackgroundImageIndex = 0
@@ -108,6 +109,7 @@ struct MainScreen: View {
             }
             .onDisappear {
                 handleMainScreenDisappear()
+                popupDismissTask?.cancel()
             }
             .task(id: definedFunctionKeyCount) {
                 updateVisibleBoxCountToFitDefinedButtons()
@@ -115,12 +117,11 @@ struct MainScreen: View {
             .task {
                 await observeKeyboardFrameChanges()
             }
-            .alert(alertTitle, isPresented: renameAlertIsPresented) {
-                Button("OK", role: .cancel) {
-                    renameAlertMessage = nil
-                }
-            } message: {
-                Text(renameAlertMessage ?? "")
+            .overlay {
+                popupOverlay
+            }
+            .onChange(of: renameAlertMessage) {
+                schedulePopupDismissIfNeeded()
             }
     }
 
@@ -399,15 +400,60 @@ struct MainScreen: View {
         speechSynthesizer.stopSpeaking(at: .immediate)
     }
 
-    private var renameAlertIsPresented: Binding<Bool> {
-        Binding(
-            get: { renameAlertMessage != nil },
-            set: { newValue in
-                if !newValue {
-                    renameAlertMessage = nil
+    @ViewBuilder
+    private var popupOverlay: some View {
+        if let renameAlertMessage {
+            VStack {
+                Spacer()
+
+                VStack(spacing: 8) {
+                    if !alertTitle.isEmpty, alertTitle != "Alert" {
+                        Text(alertTitle)
+                            .font(.headline)
+                            .foregroundStyle(.white)
+                    }
+
+                    Text(renameAlertMessage)
+                        .font(.body)
+                        .multilineTextAlignment(.center)
+                        .foregroundStyle(.white)
                 }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 16)
+                .background(Color.black.opacity(0.88))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 14)
+                        .stroke(Color.white.opacity(0.25), lineWidth: 1)
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 14))
+                .padding(.horizontal, 24)
+
+                Spacer()
             }
-        )
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .transition(.opacity)
+            .allowsHitTesting(false)
+        }
+    }
+
+    private func schedulePopupDismissIfNeeded() {
+        popupDismissTask?.cancel()
+
+        guard renameAlertMessage != nil else {
+            popupDismissTask = nil
+            return
+        }
+
+        popupDismissTask = Task {
+            try? await Task.sleep(for: .seconds(2))
+            guard !Task.isCancelled else {
+                return
+            }
+
+            await MainActor.run {
+                renameAlertMessage = nil
+            }
+        }
     }
 
     var minimumBoxFontSize: Double { 12 }

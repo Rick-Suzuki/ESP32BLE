@@ -81,37 +81,37 @@ extension MainScreen {
             speakMainGridEntry(entry)
         }
 
-        guard mainGridButtonMode.sendsBluetooth else {
+        guard !entry.sendTexts.isEmpty else {
+            return
+        }
+
+        let bluetoothSendTexts = entry.sendTexts.filter { sendText in
+            targetDocumentNameForSendText(sendText) == nil
+        }
+        let targetDocumentName = targetDocumentNameForGridEntry(entry)
+
+        if let targetDocumentName {
+            guard selectDocumentNamedFromGrid(targetDocumentName) else {
+                alertTitle = "File Not Found"
+                renameAlertMessage = "Couldn't find \(targetDocumentName.lowercased())."
+                return
+            }
+        }
+
+        guard mainGridButtonMode.sendsBluetooth, !bluetoothSendTexts.isEmpty else {
             return
         }
 
         guard ble.isConnected else {
-            alertTitle = "Bluetooth Not Connected"
-            renameAlertMessage = "Bluetooth needs to be connected\nbefore using buttons."
-            return
-        }
-
-        guard !entry.sendTexts.isEmpty else {
+            alertTitle = "Bluetooth not connected"
+            renameAlertMessage = "Bluetooth needs to be connected\nin order to send data to the ESP32."
             return
         }
 
         logMainButtonPress(entry)
 
-        let bluetoothSendTexts = entry.sendTexts.filter { sendText in
-            targetDocumentNameForSendText(sendText) == nil
-        }
-
         for sendText in bluetoothSendTexts {
             ble.sendLine(normalizedBluetoothSendText(sendText))
-        }
-
-        if let targetDocumentName = targetDocumentNameForGridEntry(entry) {
-            if selectDocumentNamedFromGrid(targetDocumentName) {
-                return
-            }
-
-            alertTitle = "File Not Found"
-            renameAlertMessage = "Couldn't find \(targetDocumentName.lowercased())."
         }
     }
 
