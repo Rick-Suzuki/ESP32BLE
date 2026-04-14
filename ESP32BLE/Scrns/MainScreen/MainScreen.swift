@@ -2,7 +2,7 @@
 import SwiftUI
 import UIKit
 import AVFoundation
-
+//
 struct MainScreen: View {
     // Easy-to-find styling controls for the main button grid.
     private let mainGridButtonSpacing: CGFloat = 10
@@ -317,7 +317,22 @@ struct MainScreen: View {
             return
         }
 
-        ble.sendString(editingSlotText)
+        let actionText = editingSlotText.components(separatedBy: "::").first ?? editingSlotText
+        let actionTokens = actionText
+            .components(separatedBy: ":")
+            .compactMap { component -> String? in
+                if !component.isEmpty,
+                   component.allSatisfy({ $0.isWhitespace && !$0.isNewline }) {
+                    return " "
+                }
+
+                let trimmedComponent = component.trimmingCharacters(in: .whitespacesAndNewlines)
+                return trimmedComponent.isEmpty ? nil : trimmedComponent
+            }
+
+        for actionToken in actionTokens where targetDocumentNameForSendText(actionToken) == nil {
+            ble.sendLine(normalizedBluetoothSendText(actionToken))
+        }
     }
 
     private func handleSelectedDocumentDisplayNameChange() {

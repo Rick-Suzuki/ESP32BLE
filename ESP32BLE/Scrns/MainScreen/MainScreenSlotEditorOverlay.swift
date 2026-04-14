@@ -18,6 +18,8 @@ struct MainScreenSlotEditorOverlay: View {
     @State private var activeEditorField: ActiveEditorField = .action
     @State private var actionDraft = ""
     @State private var rightDraft = ""
+    @AppStorage("slotEditorClipboardAction") private var clipboardActionDraft = ""
+    @AppStorage("slotEditorClipboardRight") private var clipboardRightDraft = ""
     private let rightColumnButtonWidth: CGFloat = 90
     private let orderedModifierPrefixes = ["ctl:", "sh:", "op:", "cm:"]
 	
@@ -387,6 +389,15 @@ struct MainScreenSlotEditorOverlay: View {
     }
 
     private func sfSymbolInsertButton(_ symbolName: String, width: CGFloat) -> some View {
+        if symbolName == "folder" {
+            return AnyView(copySlotButton(width: width))
+        }
+
+        if symbolName == "trash" {
+            return AnyView(pasteSlotButton(width: width))
+        }
+
+        return AnyView(
         Button {
             ButtonClickFeedback.playIfEnabled()
             rightDraft = insertingRightTextPreservingColorPrefix(symbolName)
@@ -397,6 +408,52 @@ struct MainScreenSlotEditorOverlay: View {
             Image(systemName: symbolName)
                 .font(.system(size: 20, weight: .semibold))
                 .foregroundStyle(.yellow)
+                .frame(width: width, height: 44)
+                .background(Color.black)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.white.opacity(0.8), lineWidth: 1.5)
+                }
+                .clipShape(.rect(cornerRadius: 12))
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        )
+    }
+
+    private func copySlotButton(width: CGFloat) -> some View {
+        Button {
+            ButtonClickFeedback.playIfEnabled()
+            clipboardActionDraft = actionDraft
+            clipboardRightDraft = rightDraft
+        } label: {
+            Image(systemName: "doc.on.doc")
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundStyle(.green)
+                .frame(width: width, height: 44)
+                .background(Color.black)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.white.opacity(0.8), lineWidth: 1.5)
+                }
+                .clipShape(.rect(cornerRadius: 12))
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func pasteSlotButton(width: CGFloat) -> some View {
+        Button {
+            ButtonClickFeedback.playIfEnabled()
+            actionDraft = clipboardActionDraft
+            rightDraft = clipboardRightDraft
+            activeEditorField = .action
+            actionInputController.focus()
+            focusBinding.wrappedValue = true
+        } label: {
+            Image(systemName: "doc.on.clipboard")
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundStyle(.green)
                 .frame(width: width, height: 44)
                 .background(Color.black)
                 .overlay {
