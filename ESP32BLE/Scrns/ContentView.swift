@@ -484,13 +484,44 @@ struct ContentView: View {
         let oldGrid = functionKeyGridDimensions(for: oldCount)
         let newGrid = functionKeyGridDimensions(for: newCount)
         var remappedLines = Array(repeating: "_", count: newCount)
+        let occupiedPositions = (0..<oldCount).compactMap { index -> (row: Int, column: Int)? in
+            let line = index < slotLines.count ? slotLines[index] : "_"
+            guard !isBlankPlaceholderLine(line) else {
+                return nil
+            }
+
+            return (index / oldGrid.columns, index % oldGrid.columns)
+        }
+        let shouldNormalizeOccupiedOrigin = newCount < oldCount
+        let rowOffset: Int
+        let columnOffset: Int
+
+        if shouldNormalizeOccupiedOrigin,
+           let minimumRow = occupiedPositions.map(\.row).min(),
+           let maximumRow = occupiedPositions.map(\.row).max(),
+           let minimumColumn = occupiedPositions.map(\.column).min(),
+           let maximumColumn = occupiedPositions.map(\.column).max() {
+            let occupiedRowCount = (maximumRow - minimumRow) + 1
+            let occupiedColumnCount = (maximumColumn - minimumColumn) + 1
+
+            if occupiedRowCount <= newGrid.rows && occupiedColumnCount <= newGrid.columns {
+                rowOffset = minimumRow
+                columnOffset = minimumColumn
+            } else {
+                rowOffset = 0
+                columnOffset = 0
+            }
+        } else {
+            rowOffset = 0
+            columnOffset = 0
+        }
 
         for index in 0..<oldCount {
             let line = index < slotLines.count ? slotLines[index] : "_"
-            let row = index / oldGrid.columns
-            let column = index % oldGrid.columns
+            let row = (index / oldGrid.columns) - rowOffset
+            let column = (index % oldGrid.columns) - columnOffset
 
-            guard row < newGrid.rows, column < newGrid.columns else {
+            guard row >= 0, column >= 0, row < newGrid.rows, column < newGrid.columns else {
                 if isBlankPlaceholderLine(line) {
                     continue
                 }

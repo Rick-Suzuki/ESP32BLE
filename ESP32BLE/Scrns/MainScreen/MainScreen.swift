@@ -15,8 +15,11 @@ struct MainScreen: View {
     private let slotEditorHelperButtonWidth: CGFloat = 58
 
     @AppStorage("speechRecognitionAutoOffMinutes") var speechRecognitionAutoOffMinutes = 5
+	
+	// MARK: - BM:🔆 grid dims - allowed sizes
+	
     let allowedVisibleBoxCounts = [
-        1, 2, 4, 6, 9, 12, 15, 16, 18, 20, 24, 28, 32, 36, 40, 42, 45, 48,
+        1, 2, 4, 6, 9, 12, 15, 16, 18, 20, 21, 24, 28, 32, 36, 40, 42, 45, 48,
         50, 54, 56, 60, 63, 64, 70, 72, 80, 81, 84, 88, 90, 96, 99, 100
     ]
     private let displayModeButtonColor = Color(red: 0.05, green: 0.33, blue: 0.18)
