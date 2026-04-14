@@ -126,6 +126,7 @@ struct MainScreenBottomBar: View {
     let allowedVisibleBoxCounts: [Int]
     let visibleBoxCount: Int
     let visibleActiveBoxCount: Int
+    let isGridEditModeEnabled: Bool
     let boxFontSize: Double
     let minimumBoxFontSize: Double
     let maximumBoxFontSize: Double
@@ -247,6 +248,7 @@ struct MainScreenBottomBar: View {
                 title: isSpeechRecognitionEnabled ? "spk rec on" : "spk rec off",
                 background: isSpeechRecognitionEnabled ? speechRecognitionActiveColor : inactiveButtonBackgroundColor,
                 border: isSpeechRecognitionEnabled ? speechRecognitionActiveColor : inactiveButtonBorderColor,
+                isEnabled: !isGridEditModeEnabled,
                 action: onToggleSpeechRecognition
             )
             .frame(width: toggleWidth)
@@ -274,6 +276,7 @@ struct MainScreenBottomBar: View {
                     title: mainGridButtonMode.title,
                     background: mainGridButtonModeBackgroundColor,
                     border: mainGridButtonModeBorderColor,
+                    isEnabled: !isGridEditModeEnabled,
                     action: onCycleMainGridButtonMode
                 )
                 .frame(width: toggleWidth)
@@ -281,9 +284,9 @@ struct MainScreenBottomBar: View {
 			//
 			//----------------------------------------
 			//
-			Button {
-				onAdvanceDisplayMode()
-			} label: {
+				Button {
+					onAdvanceDisplayMode()
+				} label: {
 				Text(displayMode.title)
 					.lineLimit(1)
 					.minimumScaleFactor(0.7)
@@ -298,10 +301,11 @@ struct MainScreenBottomBar: View {
 							.stroke(displayModeButtonColor, lineWidth: 2)
 					)
 					.clipShape(RoundedRectangle(cornerRadius: 12))
-			}
-			.opacity(0.7)
-			.buttonStyle(.plain)
-			.frame(width: displayModeWidth)
+				}
+				.opacity(0.7)
+				.buttonStyle(.plain)
+				.disabled(isGridEditModeEnabled)
+				.frame(width: displayModeWidth)
 			//
 			//----------------------------------------
 			//
@@ -324,7 +328,7 @@ struct MainScreenBottomBar: View {
         .foregroundStyle(foreground)
     }
 
-    private func toggleButton(title: String, background: Color, border: Color, action: @escaping () -> Void) -> some View {
+    private func toggleButton(title: String, background: Color, border: Color, isEnabled: Bool = true, action: @escaping () -> Void) -> some View {
         Button {
             action()
         } label: {
@@ -335,6 +339,7 @@ struct MainScreenBottomBar: View {
                 .contentShape(.rect)
         }
         .buttonStyle(.plain)
+        .disabled(!isEnabled)
         .foregroundStyle(.white)
         .background(background)
         .overlay {
@@ -342,7 +347,7 @@ struct MainScreenBottomBar: View {
                 .stroke(border, lineWidth: 2)
         }
         .clipShape(.rect(cornerRadius: 12))
-		.opacity(0.7)
+			.opacity(isEnabled ? 0.7 : 0.35)
     }
 
     private var stopSpeechButton: some View {

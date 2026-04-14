@@ -153,7 +153,6 @@ struct MainScreen: View {
                     VStack {
                         Spacer()
                         displayModeButtonSection(availableWidth: contentWidth)
-                            .allowsHitTesting(false)
                     }
                     .frame(maxWidth: contentWidth, maxHeight: .infinity)
                 }
@@ -275,6 +274,7 @@ struct MainScreen: View {
             allowedVisibleBoxCounts: allowedVisibleBoxCounts,
             visibleBoxCount: visibleBoxCount,
             visibleActiveBoxCount: visibleActiveBoxCount,
+            isGridEditModeEnabled: isGridEditModeEnabled,
             boxFontSize: boxFontSize,
             minimumBoxFontSize: minimumBoxFontSize,
             maximumBoxFontSize: maximumBoxFontSize,
