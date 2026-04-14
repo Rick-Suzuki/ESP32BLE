@@ -30,6 +30,8 @@ struct KeyboardScreen: View {
     @State var cursorCommand: CursorMovement = .right
     @State var cursorCommandID = 0
     @State var bufferedSoftKeyTokens: [String] = []
+    @State var popupMessage: String?
+    @State private var popupDismissTask: Task<Void, Never>?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -39,11 +41,17 @@ struct KeyboardScreen: View {
             keyGrid
         }
         .background(Color.black.ignoresSafeArea())
+        .overlay {
+            popupOverlay
+        }
         .preferredColorScheme(.dark)
         .onChange(of: isPresented) {
             if !isPresented {
                 shouldFocusInput = false
             }
+        }
+        .onChange(of: popupMessage) {
+            schedulePopupDismissIfNeeded()
         }
     }
 
@@ -91,6 +99,54 @@ struct KeyboardScreen: View {
             gridKeyFontSize: gridKeyFontSize,
             gridKeyCornerRadius: gridKeyCornerRadius
         )
+    }
+
+    @ViewBuilder
+    private var popupOverlay: some View {
+        if let popupMessage {
+            VStack {
+                Spacer()
+
+                Text(popupMessage)
+                    .font(.body)
+                    .multilineTextAlignment(.center)
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 16)
+                    .background(Color.black.opacity(0.88))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 14)
+                            .stroke(Color.white.opacity(0.25), lineWidth: 1)
+                    }
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                    .padding(.horizontal, 24)
+
+                Spacer()
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .transition(.opacity)
+            .allowsHitTesting(false)
+        }
+    }
+
+    private func schedulePopupDismissIfNeeded() {
+        popupDismissTask?.cancel()
+
+        guard popupMessage != nil else {
+            popupDismissTask = nil
+            return
+        }
+
+        popupDismissTask = Task {
+            try? await Task.sleep(for: .seconds(2))
+            guard !Task.isCancelled else {
+                return
+            }
+
+            await MainActor.run {
+                popupMessage = nil
+            }
+        }
     }
 
 }

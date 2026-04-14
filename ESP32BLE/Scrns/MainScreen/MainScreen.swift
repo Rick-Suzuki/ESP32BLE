@@ -308,13 +308,16 @@ struct MainScreen: View {
             helperButtonWidth: slotEditorHelperButtonWidth,
             onCancel: cancelSlotEditing,
             onCommit: commitSlotEditing,
-            onTest: testEditingSlotText
+            onTest: testEditingSlotText,
+            onCopy: showSlotCopiedPopup,
+            onPaste: showSlotPastedPopup
         )
     }
 
     private func testEditingSlotText() {
         guard ble.isConnected else {
-            print("Bluetooth not connected.")
+            alertTitle = "Bluetooth not connected"
+            renameAlertMessage = "Bluetooth not connected. Bluetooth needs to be connected before sending data to the ESP32."
             return
         }
 
@@ -334,6 +337,16 @@ struct MainScreen: View {
         for actionToken in actionTokens where targetDocumentNameForSendText(actionToken) == nil {
             ble.sendLine(normalizedBluetoothSendText(actionToken))
         }
+    }
+
+    private func showSlotCopiedPopup() {
+        alertTitle = ""
+        renameAlertMessage = "Copied"
+    }
+
+    private func showSlotPastedPopup() {
+        alertTitle = ""
+        renameAlertMessage = "Pasted"
     }
 
     private func handleSelectedDocumentDisplayNameChange() {

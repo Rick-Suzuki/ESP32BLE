@@ -1,6 +1,14 @@
 import SwiftUI
 
 extension KeyboardScreen {
+    private var bluetoothDisconnectedPopupMessage: String {
+        "Bluetooth not connected. Bluetooth needs to be connected before sending data to the ESP32."
+    }
+
+    func showBluetoothDisconnectedPopup() {
+        popupMessage = bluetoothDisconnectedPopupMessage
+    }
+
     var activeModifierTokens: [String] {
         KeyboardModifier.allCases
             .filter { activeModifiers.contains($0) }
@@ -38,7 +46,7 @@ extension KeyboardScreen {
 
     func sendTokensDirectlyToBLE(_ tokens: [String]) {
         guard ble.isConnected else {
-            print("Bluetooth not connected.")
+            showBluetoothDisconnectedPopup()
             return
         }
 
@@ -56,7 +64,7 @@ extension KeyboardScreen {
         }
 
         guard ble.isConnected else {
-            print("Bluetooth not connected.")
+            showBluetoothDisconnectedPopup()
             return
         }
 

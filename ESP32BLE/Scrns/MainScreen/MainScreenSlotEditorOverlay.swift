@@ -13,6 +13,8 @@ struct MainScreenSlotEditorOverlay: View {
     let onCancel: () -> Void
     let onCommit: () -> Void
     let onTest: () -> Void
+    let onCopy: () -> Void
+    let onPaste: () -> Void
     @State private var actionInputController = SlotEditorInputController()
     @State private var rightInputController = SlotEditorInputController()
     @State private var activeEditorField: ActiveEditorField = .action
@@ -426,6 +428,7 @@ struct MainScreenSlotEditorOverlay: View {
             ButtonClickFeedback.playIfEnabled()
             clipboardActionDraft = actionDraft
             clipboardRightDraft = rightDraft
+            onCopy()
         } label: {
             Image(systemName: "doc.on.doc")
                 .font(.system(size: 20, weight: .semibold))
@@ -450,6 +453,7 @@ struct MainScreenSlotEditorOverlay: View {
             activeEditorField = .action
             actionInputController.focus()
             focusBinding.wrappedValue = true
+            onPaste()
         } label: {
             Image(systemName: "doc.on.clipboard")
                 .font(.system(size: 20, weight: .semibold))
