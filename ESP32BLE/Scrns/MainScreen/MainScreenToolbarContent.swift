@@ -33,7 +33,7 @@ struct MainScreenToolbarContent: ToolbarContent {
                 openKeyboardScreen()
             }
             .font(.headline)
-            .foregroundStyle(toolbarActionForegroundColor)
+            .foregroundStyle(keyboardButtonForegroundColor)
             .padding(.horizontal, 5)
             .frame(minHeight: 44)
             .background(toolbarButtonBackgroundColor(normalBackground: normalToolbarBackgroundColor))
@@ -43,7 +43,7 @@ struct MainScreenToolbarContent: ToolbarContent {
             }
             .clipShape(.rect(cornerRadius: 23))
             .contentShape(.rect)
-            .disabled(editingSlotIndex != nil)
+            .disabled(isGridEditModeEnabled || editingSlotIndex != nil)
         }
 
         ToolbarItem(placement: .principal) {
@@ -176,6 +176,10 @@ struct MainScreenToolbarContent: ToolbarContent {
 
     private var toolbarActionForegroundColor: Color {
         editingSlotIndex != nil ? Color(white: 0.75) : .white
+    }
+
+    private var keyboardButtonForegroundColor: Color {
+        (isGridEditModeEnabled || editingSlotIndex != nil) ? inactiveToolbarForegroundColor : .white
     }
 
     private var toolbarPrincipalForegroundColor: Color {
