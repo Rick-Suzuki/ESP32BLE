@@ -75,6 +75,7 @@ struct MainScreen: View {
     let selectDocumentNamedFromGrid: (String) -> Bool
     let resizeVisibleBoxCount: (Int) -> Bool
     let moveFunctionKeySlot: (Int, Int) -> Bool
+    let duplicateFunctionKeySlot: (Int, Int) -> Bool
     let updateFunctionKeySlot: (Int, String) -> Bool
     let updateDocumentFontSize: (Double) -> Void
     let openKeyboardScreen: () -> Void
@@ -251,6 +252,9 @@ struct MainScreen: View {
             },
             dragGesture: { entry, index, gridDimensions in
                 AnyGesture(mainGridButtonDragGesture(entry: entry, index: index, gridDimensions: gridDimensions))
+            },
+            onDuplicateSlot: { entry, index, gridDimensions in
+                duplicateSlotIfPossible(entry: entry, index: index, gridDimensions: gridDimensions)
             }
         )
     }
@@ -308,9 +312,7 @@ struct MainScreen: View {
             helperButtonWidth: slotEditorHelperButtonWidth,
             onCancel: cancelSlotEditing,
             onCommit: commitSlotEditing,
-            onTest: testEditingSlotText,
-            onCopy: showSlotCopiedPopup,
-            onPaste: showSlotPastedPopup
+            onTest: testEditingSlotText
         )
     }
 
@@ -337,16 +339,6 @@ struct MainScreen: View {
         for actionToken in actionTokens where targetDocumentNameForSendText(actionToken) == nil {
             ble.sendLine(normalizedBluetoothSendText(actionToken))
         }
-    }
-
-    private func showSlotCopiedPopup() {
-        alertTitle = ""
-        renameAlertMessage = "Copied"
-    }
-
-    private func showSlotPastedPopup() {
-        alertTitle = ""
-        renameAlertMessage = "Pasted"
     }
 
     private func handleSelectedDocumentDisplayNameChange() {

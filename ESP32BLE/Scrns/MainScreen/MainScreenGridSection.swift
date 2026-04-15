@@ -88,6 +88,7 @@ struct MainScreenGridSection: View {
     let onBeginSlotEditing: (Int) -> Void
     let buttonLabel: (FunctionKeyEntry, Int, CGFloat) -> AnyView
     let dragGesture: (FunctionKeyEntry, Int, GridDimensions) -> AnyGesture<DragGesture.Value>
+    let onDuplicateSlot: (FunctionKeyEntry, Int, GridDimensions) -> Void
 
     var body: some View {
         GeometryReader { geometry in
@@ -126,6 +127,16 @@ struct MainScreenGridSection: View {
                     .frame(width: buttonWidth, height: buttonHeight)
                     .contentShape(Rectangle())
                     .simultaneousGesture(dragGesture(entry, index, gridDimensions))
+                    .simultaneousGesture(
+                        TapGesture(count: 2)
+                            .onEnded {
+                                guard isGridEditModeEnabled else {
+                                    return
+                                }
+
+                                onDuplicateSlot(entry, index, gridDimensions)
+                            }
+                    )
                     .simultaneousGesture(
                         LongPressGesture(minimumDuration: 0.4)
                             .onEnded { _ in

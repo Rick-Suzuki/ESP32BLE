@@ -93,6 +93,65 @@ extension MainScreen {
         isSlotEditorFocused = false
     }
 
+    func duplicateSlotIfPossible(entry: FunctionKeyEntry, index: Int, gridDimensions: GridDimensions) {
+        guard isGridEditModeEnabled else {
+            return
+        }
+
+        guard !entry.isBlankPlaceholder,
+              !isEmptyButtonEntry(entry) else {
+            return
+        }
+
+        guard let targetIndex = duplicateTargetIndex(from: index, gridDimensions: gridDimensions) else {
+            alertTitle = "Duplicate btn"
+            renameAlertMessage = "no space to dup btn"
+            return
+        }
+
+        guard duplicateFunctionKeySlot(index, targetIndex) else {
+            alertTitle = "Duplicate btn"
+            renameAlertMessage = "no space to dup btn"
+            return
+        }
+    }
+
+    func duplicateTargetIndex(from sourceIndex: Int, gridDimensions: GridDimensions) -> Int? {
+        let sourceRow = sourceIndex / gridDimensions.columns
+        let rightIndex = sourceIndex + 1
+        let leftIndex = sourceIndex - 1
+        let downIndex = sourceIndex + gridDimensions.columns
+        let upIndex = sourceIndex - gridDimensions.columns
+
+        let candidateIndexes = [
+            rightIndex,
+            leftIndex,
+            downIndex,
+            upIndex
+        ]
+
+        for candidateIndex in candidateIndexes {
+            guard candidateIndex >= 0,
+                  candidateIndex < visibleBoxCount,
+                  functionKeys.indices.contains(candidateIndex) else {
+                continue
+            }
+
+            let candidateRow = candidateIndex / gridDimensions.columns
+            let isHorizontalNeighbor = abs(candidateIndex - sourceIndex) == 1
+            if isHorizontalNeighbor && candidateRow != sourceRow {
+                continue
+            }
+
+            let candidateEntry = functionKeys[candidateIndex]
+            if candidateEntry.isBlankPlaceholder || isEmptyButtonEntry(candidateEntry) {
+                return candidateIndex
+            }
+        }
+
+        return nil
+    }
+
     func targetIndexForEditDrag(
         from sourceIndex: Int,
         translation: CGSize,

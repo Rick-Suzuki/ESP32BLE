@@ -92,6 +92,7 @@ struct ContentView: View {
                             selectDocumentNamedFromGrid: selectDocumentNamedFromGrid,
                             resizeVisibleBoxCount: resizeSelectedDocumentSlotCount,
                             moveFunctionKeySlot: moveSelectedDocumentSlot,
+                            duplicateFunctionKeySlot: duplicateSelectedDocumentSlot,
                             updateFunctionKeySlot: updateSelectedDocumentSlot,
                             updateDocumentFontSize: updateDocumentFontSize,
                             openKeyboardScreen: {
@@ -566,6 +567,34 @@ struct ContentView: View {
 
         updatedLines[targetIndex] = sourceLine
         updatedLines[sourceIndex] = targetLine
+        persistSlotLines(updatedLines)
+        return true
+    }
+
+    @discardableResult
+    private func duplicateSelectedDocumentSlot(from sourceIndex: Int, to targetIndex: Int) -> Bool {
+        guard sourceIndex != targetIndex,
+              functionKeySlotLines.indices.contains(sourceIndex),
+              targetIndex >= 0,
+              targetIndex < maxFunctionKeyCount else {
+            return false
+        }
+
+        var updatedLines = functionKeySlotLines
+
+        if targetIndex >= updatedLines.count {
+            updatedLines += Array(repeating: "_", count: targetIndex - updatedLines.count + 1)
+        }
+
+        let sourceLine = updatedLines[sourceIndex]
+        let targetLine = updatedLines[targetIndex]
+
+        guard !isBlankPlaceholderLine(sourceLine),
+              isBlankPlaceholderLine(targetLine) else {
+            return false
+        }
+
+        updatedLines[targetIndex] = sourceLine
         persistSlotLines(updatedLines)
         return true
     }

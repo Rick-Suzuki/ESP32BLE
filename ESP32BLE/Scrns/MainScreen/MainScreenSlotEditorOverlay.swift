@@ -13,8 +13,6 @@ struct MainScreenSlotEditorOverlay: View {
     let onCancel: () -> Void
     let onCommit: () -> Void
     let onTest: () -> Void
-    let onCopy: () -> Void
-    let onPaste: () -> Void
     @State private var actionInputController = SlotEditorInputController()
     @State private var rightInputController = SlotEditorInputController()
     @State private var activeEditorField: ActiveEditorField = .action
@@ -391,14 +389,6 @@ struct MainScreenSlotEditorOverlay: View {
     }
 
     private func sfSymbolInsertButton(_ symbolName: String, width: CGFloat) -> some View {
-        if symbolName == "folder" {
-            return AnyView(copySlotButton(width: width))
-        }
-
-        if symbolName == "trash" {
-            return AnyView(pasteSlotButton(width: width))
-        }
-
         return AnyView(
         Button {
             ButtonClickFeedback.playIfEnabled()
@@ -421,53 +411,6 @@ struct MainScreenSlotEditorOverlay: View {
         }
         .buttonStyle(.plain)
         )
-    }
-
-    private func copySlotButton(width: CGFloat) -> some View {
-        Button {
-            ButtonClickFeedback.playIfEnabled()
-            clipboardActionDraft = actionDraft
-            clipboardRightDraft = rightDraft
-            onCopy()
-        } label: {
-            Image(systemName: "doc.on.doc")
-                .font(.system(size: 20, weight: .semibold))
-                .foregroundStyle(.green)
-                .frame(width: width, height: 44)
-                .background(Color.black)
-                .overlay {
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.white.opacity(0.8), lineWidth: 1.5)
-                }
-                .clipShape(.rect(cornerRadius: 12))
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-    }
-
-    private func pasteSlotButton(width: CGFloat) -> some View {
-        Button {
-            ButtonClickFeedback.playIfEnabled()
-            actionDraft = clipboardActionDraft
-            rightDraft = clipboardRightDraft
-            activeEditorField = .action
-            actionInputController.focus()
-            focusBinding.wrappedValue = true
-            onPaste()
-        } label: {
-            Image(systemName: "doc.on.clipboard")
-                .font(.system(size: 20, weight: .semibold))
-                .foregroundStyle(.green)
-                .frame(width: width, height: 44)
-                .background(Color.black)
-                .overlay {
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.white.opacity(0.8), lineWidth: 1.5)
-                }
-                .clipShape(.rect(cornerRadius: 12))
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
     }
 
     private var actionTextBinding: Binding<String> {
