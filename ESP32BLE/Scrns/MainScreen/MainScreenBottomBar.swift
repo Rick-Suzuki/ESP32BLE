@@ -301,13 +301,12 @@ struct MainScreenBottomBar: View {
 							.stroke(displayModeButtonColor, lineWidth: 2)
 					)
 					.clipShape(RoundedRectangle(cornerRadius: 12))
-				}
-				.opacity(0.7)
-				.buttonStyle(.plain)
-				.disabled(isGridEditModeEnabled)
-				.frame(width: displayModeWidth)
-			//
-			//----------------------------------------
+					}
+					.opacity(0.7)
+					.buttonStyle(.plain)
+					.frame(width: displayModeWidth)
+				//
+				//----------------------------------------
 			//
 		}
     }
@@ -380,7 +379,7 @@ struct MainScreenBottomBar: View {
     }
 
     private var isStopSpeechEnabled: Bool {
-        mainGridButtonMode == .speech
+        !isGridEditModeEnabled && mainGridButtonMode == .speech
     }
 
     private var mainGridButtonModeBackgroundColor: Color {
