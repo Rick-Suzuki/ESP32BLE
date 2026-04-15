@@ -13,6 +13,8 @@ struct MainScreenSlotEditorOverlay: View {
     let onCancel: () -> Void
     let onCommit: () -> Void
     let onTest: () -> Void
+    let onCopy: () -> Void
+    let onPaste: () -> Void
     @State private var actionInputController = SlotEditorInputController()
     @State private var rightInputController = SlotEditorInputController()
     @State private var activeEditorField: ActiveEditorField = .action
@@ -26,11 +28,10 @@ struct MainScreenSlotEditorOverlay: View {
 	// MARK: - BM:🟦 SF symbols list
 	
     private let sfSymbolNames = [
-        "folder", "trash", "magnifyingglass", "gearshape", "house",
+        "square.and.arrow.up.on.square.fill", "square.and.arrow.down.on.square.fill", "folder", "trash", "magnifyingglass",
         "lightbulb.max.fill", "speaker.wave.2", "star", "heart", "bell",
-		
         "paperclip", "link", "paperplane", "doc", "calendar",
-        "camera", "photo", "tray", "sun.max.fill", "chart.bar.fill"
+        "camera", "photo", "tray", "sun.max.fill"
     ]
 	
 	// MARK: - BM:🟪 color keycodes
@@ -389,6 +390,14 @@ struct MainScreenSlotEditorOverlay: View {
     }
 
     private func sfSymbolInsertButton(_ symbolName: String, width: CGFloat) -> some View {
+        if symbolName == "square.and.arrow.up.on.square.fill" {
+            return AnyView(copySlotButton(width: width))
+        }
+
+        if symbolName == "square.and.arrow.down.on.square.fill" {
+            return AnyView(pasteSlotButton(width: width))
+        }
+
         return AnyView(
         Button {
             ButtonClickFeedback.playIfEnabled()
@@ -411,6 +420,53 @@ struct MainScreenSlotEditorOverlay: View {
         }
         .buttonStyle(.plain)
         )
+    }
+
+    private func copySlotButton(width: CGFloat) -> some View {
+        Button {
+            ButtonClickFeedback.playIfEnabled()
+            clipboardActionDraft = actionDraft
+            clipboardRightDraft = rightDraft
+            onCopy()
+        } label: {
+            Image(systemName: "square.and.arrow.up.on.square.fill")
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundStyle(.green)
+                .frame(width: width, height: 44)
+                .background(Color.black)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.white.opacity(0.8), lineWidth: 1.5)
+                }
+                .clipShape(.rect(cornerRadius: 12))
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func pasteSlotButton(width: CGFloat) -> some View {
+        Button {
+            ButtonClickFeedback.playIfEnabled()
+            actionDraft = clipboardActionDraft
+            rightDraft = clipboardRightDraft
+            activeEditorField = .action
+            actionInputController.focus()
+            focusBinding.wrappedValue = true
+            onPaste()
+        } label: {
+            Image(systemName: "square.and.arrow.down.on.square.fill")
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundStyle(.green)
+                .frame(width: width, height: 44)
+                .background(Color.black)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.white.opacity(0.8), lineWidth: 1.5)
+                }
+                .clipShape(.rect(cornerRadius: 12))
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 
     private var actionTextBinding: Binding<String> {

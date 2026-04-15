@@ -89,6 +89,10 @@ struct MainScreenGridSection: View {
     let buttonLabel: (FunctionKeyEntry, Int, CGFloat) -> AnyView
     let dragGesture: (FunctionKeyEntry, Int, GridDimensions) -> AnyGesture<DragGesture.Value>
     let onDuplicateSlot: (FunctionKeyEntry, Int, GridDimensions) -> Void
+    let onDeleteSlot: (FunctionKeyEntry, Int) -> Void
+    @State private var pendingTapIndex: Int?
+    @State private var pendingTapCount = 0
+    @State private var pendingTapTask: Task<Void, Never>?
 
     var body: some View {
         GeometryReader { geometry in
@@ -128,13 +132,17 @@ struct MainScreenGridSection: View {
                     .contentShape(Rectangle())
                     .simultaneousGesture(dragGesture(entry, index, gridDimensions))
                     .simultaneousGesture(
-                        TapGesture(count: 2)
+                        TapGesture()
                             .onEnded {
                                 guard isGridEditModeEnabled else {
                                     return
                                 }
 
-                                onDuplicateSlot(entry, index, gridDimensions)
+                                registerEditTap(
+                                    entry: entry,
+                                    index: index,
+                                    gridDimensions: gridDimensions
+                                )
                             }
                     )
                     .simultaneousGesture(
@@ -152,5 +160,65 @@ struct MainScreenGridSection: View {
             .frame(width: safeAvailableWidth, alignment: .center)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onDisappear {
+            pendingTapTask?.cancel()
+        }
+    }
+
+    private func registerEditTap(
+        entry: FunctionKeyEntry,
+        index: Int,
+        gridDimensions: GridDimensions
+    ) {
+        if pendingTapIndex == index {
+            pendingTapCount += 1
+        } else {
+            pendingTapTask?.cancel()
+            pendingTapIndex = index
+            pendingTapCount = 1
+        }
+
+        guard pendingTapCount < 3 else {
+            pendingTapTask?.cancel()
+            resetPendingTapState()
+            onDeleteSlot(entry, index)
+            return
+        }
+
+        schedulePendingTapResolution(entry: entry, index: index, gridDimensions: gridDimensions)
+    }
+
+    private func schedulePendingTapResolution(
+        entry: FunctionKeyEntry,
+        index: Int,
+        gridDimensions: GridDimensions
+    ) {
+        pendingTapTask?.cancel()
+        let tapCount = pendingTapCount
+
+        pendingTapTask = Task {
+            try? await Task.sleep(for: .milliseconds(450))
+            guard !Task.isCancelled else {
+                return
+            }
+
+            await MainActor.run {
+                guard pendingTapIndex == index, pendingTapCount == tapCount else {
+                    return
+                }
+
+                if tapCount == 2 {
+                    onDuplicateSlot(entry, index, gridDimensions)
+                }
+
+                resetPendingTapState()
+            }
+        }
+    }
+
+    private func resetPendingTapState() {
+        pendingTapTask = nil
+        pendingTapIndex = nil
+        pendingTapCount = 0
     }
 }

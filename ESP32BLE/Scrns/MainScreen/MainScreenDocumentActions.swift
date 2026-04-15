@@ -116,6 +116,16 @@ extension MainScreen {
         }
     }
 
+    func deleteSlotIfPossible(entry: FunctionKeyEntry, index: Int) {
+        guard isGridEditModeEnabled,
+              !entry.isBlankPlaceholder,
+              !isEmptyButtonEntry(entry) else {
+            return
+        }
+
+        _ = updateFunctionKeySlot(index, "_")
+    }
+
     func duplicateTargetIndex(from sourceIndex: Int, gridDimensions: GridDimensions) -> Int? {
         let sourceRow = sourceIndex / gridDimensions.columns
         let rightIndex = sourceIndex + 1

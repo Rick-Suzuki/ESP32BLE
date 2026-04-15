@@ -255,6 +255,9 @@ struct MainScreen: View {
             },
             onDuplicateSlot: { entry, index, gridDimensions in
                 duplicateSlotIfPossible(entry: entry, index: index, gridDimensions: gridDimensions)
+            },
+            onDeleteSlot: { entry, index in
+                deleteSlotIfPossible(entry: entry, index: index)
             }
         )
     }
@@ -312,7 +315,9 @@ struct MainScreen: View {
             helperButtonWidth: slotEditorHelperButtonWidth,
             onCancel: cancelSlotEditing,
             onCommit: commitSlotEditing,
-            onTest: testEditingSlotText
+            onTest: testEditingSlotText,
+            onCopy: showSlotCopiedPopup,
+            onPaste: showSlotPastedPopup
         )
     }
 
@@ -339,6 +344,16 @@ struct MainScreen: View {
         for actionToken in actionTokens where targetDocumentNameForSendText(actionToken) == nil {
             ble.sendLine(normalizedBluetoothSendText(actionToken))
         }
+    }
+
+    private func showSlotCopiedPopup() {
+        alertTitle = ""
+        renameAlertMessage = "Copied"
+    }
+
+    private func showSlotPastedPopup() {
+        alertTitle = ""
+        renameAlertMessage = "Pasted"
     }
 
     private func handleSelectedDocumentDisplayNameChange() {
