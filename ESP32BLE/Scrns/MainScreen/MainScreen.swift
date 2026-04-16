@@ -289,6 +289,7 @@ struct MainScreen: View {
             speechRecognitionDisplayText: speechRecognitionDisplayText,
             speechRecognitionDisplayColor: speechRecognitionDisplayColor,
             isSpeechRecognitionEnabled: isSpkRecEnabled,
+            isBluetoothConnected: ble.isConnected,
             mainGridButtonMode: mainGridButtonMode,
             displayMode: displayMode,
             displayModeButtonColor: displayModeButtonColor,

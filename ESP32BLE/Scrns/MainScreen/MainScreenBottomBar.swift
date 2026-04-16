@@ -133,6 +133,7 @@ struct MainScreenBottomBar: View {
     let speechRecognitionDisplayText: String
     let speechRecognitionDisplayColor: Color
     let isSpeechRecognitionEnabled: Bool
+    let isBluetoothConnected: Bool
     let mainGridButtonMode: MainGridButtonMode
     let displayMode: FunctionKeyDisplayMode
     let displayModeButtonColor: Color
@@ -225,7 +226,9 @@ struct MainScreenBottomBar: View {
                 Text("fnt:\(Int(boxFontSize))")
                     .font(.headline)
                     .foregroundStyle(.white)
-                    .frame(minWidth: isCompact ? 24 : 32)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
+                    .frame(width: isCompact ? 58 : 68, alignment: .leading)
 
                 controlTriangle(
                     rotationDegrees: 90,
@@ -236,10 +239,16 @@ struct MainScreenBottomBar: View {
                     onIncreaseBoxFontSize()
                 }
 
-                Text("B:\(visibleActiveBoxCount)")
-                    .font(.headline)
-                    .foregroundStyle(.white)
-                    .frame(minWidth: isCompact ? 24 : 32)
+                HStack(spacing: 30) {
+                    Text("B:\(visibleActiveBoxCount)")
+                        .font(.headline)
+                        .foregroundStyle(.white)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
+                        .frame(width: isCompact ? 44 : 52, alignment: .leading)
+
+                    bluetoothIndicator
+                }
             }
 
             Spacer(minLength: isCompact ? 6 : 12)
@@ -380,6 +389,29 @@ struct MainScreenBottomBar: View {
 
     private var isStopSpeechEnabled: Bool {
         !isGridEditModeEnabled && mainGridButtonMode == .speech
+    }
+
+    private var bluetoothIndicator: some View {
+        TimelineView(.periodic(from: .now, by: 0.05)) { context in
+            Circle()
+                .fill(bluetoothIndicatorColor(at: context.date))
+                .frame(width: 24, height: 24)
+                .overlay {
+                    Circle()
+                        .stroke(Color.white, lineWidth: 1.5)
+                }
+        }
+        .frame(width: 24, height: 24)
+    }
+
+    private func bluetoothIndicatorColor(at date: Date) -> Color {
+        guard !isBluetoothConnected else {
+            return Color.blue
+        }
+
+        let seconds = date.timeIntervalSinceReferenceDate
+        let fractionalSecond = seconds - floor(seconds)
+        return fractionalSecond < 0.1 ? .red : .black
     }
 
     private var mainGridButtonModeBackgroundColor: Color {
