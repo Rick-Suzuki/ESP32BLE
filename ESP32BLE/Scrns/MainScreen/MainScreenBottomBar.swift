@@ -22,10 +22,10 @@ enum MainGridButtonMode {
     func next() -> MainGridButtonMode {
         switch self {
         case .active:
-            return .speech
-        case .speech:
             return .speechActive
         case .speechActive:
+            return .speech
+        case .speech:
             return .disabled
         case .disabled:
             return .active
