@@ -19,7 +19,7 @@ struct MainScreen: View {
 	// MARK: - BM:🔆 grid dims - allowed sizes
 	
     let allowedVisibleBoxCounts = [
-        1, 2, 4, 6, 9, 12, 15, 16, 18, 20, 21, 24, 28, 32, 36, 40, 42, 45, 48,
+        1, 2, 4, 6, 9, 12, 15, 16, 18, 20, 21, 24, 25, 28, 32, 35, 36, 40, 42, 45, 48,
         50, 54, 56, 60, 63, 64, 70, 72, 80, 81, 84, 88, 90, 96, 99, 100
     ]
     private let displayModeButtonColor = Color(red: 0.05, green: 0.33, blue: 0.18)
@@ -494,8 +494,11 @@ struct MainScreen: View {
             15: (5, 3),
             18: (6, 3),
             24: (6, 4),
+            25: (5, 5),
             28: (7, 4),
             32: (8, 4),
+            35: (7, 5),
+            36: (6, 6),
             40: (8, 5),
             45: (9, 5),
             48: (8, 6),
@@ -508,7 +511,8 @@ struct MainScreen: View {
             84: (12, 7),
             88: (11, 8),
             96: (12, 8),
-            99: (11, 9)
+            99: (11, 9),
+            100: (10, 10)
         ]
 
         if let preferred = preferredDimensions[itemCount] {

@@ -51,9 +51,10 @@ func functionKeyGridDimensions(for itemCount: Int) -> GridDimensions {
         84: (12, 7),
         88: (11, 8),
 		
-		90: (10, 9),
-		96: (12, 8),
+			90: (10, 9),
+			96: (12, 8),
         99: (11, 9),
+        100: (10, 10),
     ]
 
     if let preferred = preferredDimensions[itemCount] {

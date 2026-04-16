@@ -26,14 +26,7 @@ extension MainScreen {
             return
         }
 
-        let currentGridDimensions = functionKeyGridDimensions(for: visibleBoxCount)
-        let candidateCounts = allowedVisibleBoxCounts[(currentIndex + 1)...].filter { candidateCount in
-            let candidateGridDimensions = functionKeyGridDimensions(for: candidateCount)
-            return candidateGridDimensions.columns >= currentGridDimensions.columns &&
-                candidateGridDimensions.rows >= currentGridDimensions.rows
-        }
-
-        for candidateCount in candidateCounts {
+        for candidateCount in allowedVisibleBoxCounts[(currentIndex + 1)...] {
             if resizeVisibleBoxCount(candidateCount) {
                 visibleBoxCount = candidateCount
                 return
