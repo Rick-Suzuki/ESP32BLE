@@ -133,25 +133,21 @@ extension MainScreen {
     }
 
     func spokenTitle(for entry: FunctionKeyEntry) -> String {
-        let leftTitle = displayText(from: entry.primaryDisplayText)
+        let rightTitle = resolvedAlternateDisplayText(for: entry)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
 
-        if let rightSymbolDisplay = parsedSFSymbolDisplay(for: entry) {
-            let spokenRightText = rightSymbolDisplay.subtitle ?? ""
-
-            switch displayMode {
-            case .left:
-                return leftTitle
-            case .right:
-                return spokenRightText
-            case .both:
-                if spokenRightText.isEmpty {
-                    return leftTitle
-                }
-                return "\(leftTitle)\n\(spokenRightText)"
-            }
+        if !rightTitle.isEmpty {
+            return speechMatchDisplayText(from: rightTitle)
         }
 
-        return buttonTitle(for: entry)
+        let leftTitle = displayText(from: entry.primaryDisplayText)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard !leftTitle.isEmpty else {
+            return ""
+        }
+
+        return speechMatchDisplayText(from: leftTitle)
     }
 
     var resolvedSpeechVoice: AVSpeechSynthesisVoice? {
