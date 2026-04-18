@@ -265,6 +265,8 @@ struct SettingsScreen: View {
                     .textFieldStyle(.plain)
                     .font(.headline)
                     .foregroundStyle(.white)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
                     .multilineTextAlignment(.center)
                     .frame(minWidth: 180)
                     .focused($isDocumentNameFieldFocused)

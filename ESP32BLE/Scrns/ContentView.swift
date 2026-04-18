@@ -731,7 +731,7 @@ struct ContentView: View {
     }
 
     private func canonicalDocumentFileName(from rawName: String) -> String {
-        let trimmedName = rawName.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let trimmedName = rawName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedName.isEmpty else { return trimmedName }
         return trimmedName.lowercased().hasSuffix(".txt") ? trimmedName : "\(trimmedName).txt"
     }
