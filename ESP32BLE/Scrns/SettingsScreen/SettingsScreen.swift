@@ -57,6 +57,8 @@ struct SettingsScreen: View {
     @State private var documentNameDraft = ""
     @State private var renameAlertMessage: String?
     @AppStorage("settingsListMode") private var listModeRawValue = SettingsListMode.files.rawValue
+    @AppStorage("settingsFilesScrollPositionID") private var fileScrollPositionIDStorage = ""
+    @AppStorage("settingsImagesScrollPositionID") private var imageScrollPositionIDStorage = ""
     @State private var isImportingDocument = false
     @State private var isImportingImages = false
     @State private var isExportingDocument = false
@@ -240,6 +242,20 @@ struct SettingsScreen: View {
     private var listMode: SettingsListMode {
         get { SettingsListMode(rawValue: listModeRawValue) ?? .files }
         nonmutating set { listModeRawValue = newValue.rawValue }
+    }
+
+    private var fileScrollPositionID: Binding<String?> {
+        Binding(
+            get: { fileScrollPositionIDStorage.isEmpty ? nil : fileScrollPositionIDStorage },
+            set: { fileScrollPositionIDStorage = $0 ?? "" }
+        )
+    }
+
+    private var imageScrollPositionID: Binding<String?> {
+        Binding(
+            get: { imageScrollPositionIDStorage.isEmpty ? nil : imageScrollPositionIDStorage },
+            set: { imageScrollPositionIDStorage = $0 ?? "" }
+        )
     }
 
     private func documentTableWidth(for availableWidth: CGFloat) -> CGFloat {
@@ -453,6 +469,8 @@ struct SettingsScreen: View {
             selectedDocumentName: selectedDocumentName,
             imageURLs: availableImageURLs,
             selectedImageURL: selectedImageURL,
+            fileScrollPositionID: fileScrollPositionID,
+            imageScrollPositionID: imageScrollPositionID,
             canDeleteDocuments: canDeleteDocuments,
             imagePreviewSection: AnyView(imagePreviewSection),
             loadFunctionKeys: loadFunctionKeys,

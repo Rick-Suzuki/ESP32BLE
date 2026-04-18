@@ -11,6 +11,8 @@ struct SettingsDocumentTableSection: View {
     let selectedDocumentName: String
     let imageURLs: [URL]
     let selectedImageURL: URL?
+    @Binding var fileScrollPositionID: String?
+    @Binding var imageScrollPositionID: String?
     let canDeleteDocuments: Bool
     let imagePreviewSection: AnyView
     let loadFunctionKeys: (URL) -> Void
@@ -27,14 +29,17 @@ struct SettingsDocumentTableSection: View {
                     ForEach(documentFiles, id: \.path) { fileURL in
                         documentRow(for: fileURL)
                     }
+                    .scrollTargetLayout()
                 case .images:
                     ForEach(imageURLs, id: \.path) { imageURL in
                         imageRow(for: imageURL)
                     }
+                    .scrollTargetLayout()
                 }
             }
             .listStyle(.plain)
             .scrollContentBackground(.hidden)
+            .scrollPosition(id: activeScrollPositionID, anchor: .top)
             .background(.clear)
 
             imagePreviewSection
@@ -46,6 +51,15 @@ struct SettingsDocumentTableSection: View {
                 .stroke(Color.white, lineWidth: 1)
         }
         .clipShape(.rect(cornerRadius: 0))
+    }
+
+    private var activeScrollPositionID: Binding<String?> {
+        switch listMode {
+        case .files:
+            return $fileScrollPositionID
+        case .images:
+            return $imageScrollPositionID
+        }
     }
 
     private func documentRow(for fileURL: URL) -> some View {
@@ -76,6 +90,7 @@ struct SettingsDocumentTableSection: View {
             .contentShape(.rect)
         }
         .buttonStyle(.plain)
+        .id(fileURL.path)
         .listRowInsets(EdgeInsets())
         .listRowSeparator(.hidden)
         .listRowBackground(Color.clear)
@@ -126,6 +141,7 @@ struct SettingsDocumentTableSection: View {
             .contentShape(.rect)
         }
         .buttonStyle(.plain)
+        .id(imageURL.path)
         .listRowInsets(EdgeInsets())
         .listRowSeparator(.hidden)
         .listRowBackground(Color.clear)
