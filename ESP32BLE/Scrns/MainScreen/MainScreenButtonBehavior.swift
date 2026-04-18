@@ -455,9 +455,9 @@ struct MainScreenButtonLabelView: View {
 
         switch (entry.buttonColorCode ?? "").lowercased() {
         case "l":
-            return Color.black.opacity(backgroundOpacity)
+            return .clear
         case "w":
-            return .white.opacity(backgroundOpacity)
+            return Color.brown.opacity(backgroundOpacity)
         case "b", "actions":
             return Color(red: 0.0, green: 0.2, blue: 0.45).opacity(backgroundOpacity)
         case "g", "pos":
@@ -482,12 +482,7 @@ struct MainScreenButtonLabelView: View {
     }
 
     private var buttonTextColor: Color {
-        switch (entry.buttonColorCode ?? "").lowercased() {
-        case "w", "y", "c":
-            return .black
-        default:
-            return .white
-        }
+        .white
     }
 
     private var borderColor: Color {

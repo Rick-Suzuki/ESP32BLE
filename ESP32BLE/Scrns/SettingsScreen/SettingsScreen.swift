@@ -61,6 +61,8 @@ struct SettingsScreen: View {
     @State private var isImportingImages = false
     @State private var isExportingDocument = false
     @State private var exportDocument: SettingsTextFileDocument?
+    @State private var isExportingArchive = false
+    @State private var exportArchiveDocument: SettingsArchiveFileDocument?
     @State private var availableSpeechVoices: [SpeechVoiceOption] = []
     @AppStorage("selectedTextToSpeechVoiceIdentifier") private var selectedTextToSpeechVoiceIdentifier = ""
     @AppStorage("textToSpeechRate") private var textToSpeechRate = Double(AVSpeechUtteranceDefaultSpeechRate)
@@ -124,9 +126,15 @@ struct SettingsScreen: View {
                 .accessibilityLabel("Import from iCloud")
             }
             ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    ButtonClickFeedback.playIfEnabled()
-                    prepareExport()
+                Menu {
+                    Button("Export Single File") {
+                        ButtonClickFeedback.playIfEnabled()
+                        prepareSingleFileExport()
+                    }
+                    Button("Export Archive.zip") {
+                        ButtonClickFeedback.playIfEnabled()
+                        prepareArchiveExport()
+                    }
                 } label: {
                     Image(systemName: "square.and.arrow.up")
                         .font(.headline)
@@ -214,6 +222,17 @@ struct SettingsScreen: View {
                 renameAlertMessage = error.localizedDescription
             }
             exportDocument = nil
+        }
+        .fileExporter(
+            isPresented: $isExportingArchive,
+            document: exportArchiveDocument,
+            contentType: archiveExportType,
+            defaultFilename: "Archive"
+        ) { result in
+            if case let .failure(error) = result {
+                renameAlertMessage = error.localizedDescription
+            }
+            exportArchiveDocument = nil
         }
     }
 
@@ -749,9 +768,27 @@ struct SettingsScreen: View {
         }
     }
 
-    private func prepareExport() {
+    private func prepareSingleFileExport() {
         exportDocument = SettingsTextFileDocument(text: documentEditorText)
         isExportingDocument = true
+    }
+
+    private func prepareArchiveExport() {
+        saveCurrentDocumentText()
+
+        let textDocumentURLs = archiveTextDocumentURLs
+        guard !textDocumentURLs.isEmpty else {
+            renameAlertMessage = "There are no text files to export."
+            return
+        }
+
+        do {
+            let archiveData = try makeArchiveData(from: textDocumentURLs)
+            exportArchiveDocument = SettingsArchiveFileDocument(data: archiveData)
+            isExportingArchive = true
+        } catch {
+            renameAlertMessage = "Couldn't create Archive.zip."
+        }
     }
 
     private func selectImage(_ imageURL: URL) {
@@ -951,6 +988,34 @@ struct SettingsScreen: View {
         return FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
     }
 
+    private var archiveTextDocumentURLs: [URL] {
+        let textFiles = documentFiles.filter { $0.pathExtension.lowercased() == "txt" }
+        if !textFiles.isEmpty {
+            return textFiles
+        }
+
+        if let selectedDocumentFileURL, selectedDocumentFileURL.pathExtension.lowercased() == "txt" {
+            return [selectedDocumentFileURL]
+        }
+
+        return []
+    }
+
+    private var archiveExportType: UTType {
+        UTType(filenameExtension: "zip") ?? .data
+    }
+
+    private func makeArchiveData(from fileURLs: [URL]) throws -> Data {
+        let entries = try fileURLs.map { fileURL in
+            SettingsArchiveFileDocument.ArchiveEntry(
+                fileName: fileURL.lastPathComponent,
+                data: try Data(contentsOf: fileURL)
+            )
+        }
+
+        return try SettingsArchiveFileDocument.makeArchiveData(with: entries)
+    }
+
     private func sendKeyboardTimingCommand() {
         ble.sendKeyboardTiming(onMs: Int(keyboardTimingOnMs), offMs: Int(keyboardTimingOffMs))
     }
@@ -1099,6 +1164,152 @@ private struct SettingsTextFileDocument: FileDocument {
 
     func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
         FileWrapper(regularFileWithContents: Data(text.utf8))
+    }
+}
+
+private struct SettingsArchiveFileDocument: FileDocument {
+    struct ArchiveEntry {
+        let fileName: String
+        let data: Data
+    }
+
+    static var readableContentTypes: [UTType] {
+        [UTType(filenameExtension: "zip") ?? .data]
+    }
+
+    static var writableContentTypes: [UTType] {
+        readableContentTypes
+    }
+
+    let data: Data
+
+    init(data: Data) {
+        self.data = data
+    }
+
+    init(configuration: ReadConfiguration) throws {
+        guard let data = configuration.file.regularFileContents else {
+            throw CocoaError(.fileReadCorruptFile)
+        }
+        self.data = data
+    }
+
+    func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
+        FileWrapper(regularFileWithContents: data)
+    }
+
+    static func makeArchiveData(with entries: [ArchiveEntry]) throws -> Data {
+        guard entries.count <= Int(UInt16.max) else {
+            throw CocoaError(.fileWriteUnknown)
+        }
+
+        var archiveData = Data()
+        var centralDirectoryData = Data()
+
+        for entry in entries {
+            let fileNameData = Data(entry.fileName.utf8)
+            guard fileNameData.count <= Int(UInt16.max),
+                  entry.data.count <= Int(UInt32.max),
+                  archiveData.count <= Int(UInt32.max) else {
+                throw CocoaError(.fileWriteUnknown)
+            }
+
+            let crc32 = crc32(of: entry.data)
+            let localHeaderOffset = UInt32(archiveData.count)
+            let uncompressedSize = UInt32(entry.data.count)
+            let compressedSize = UInt32(entry.data.count)
+            let fileNameLength = UInt16(fileNameData.count)
+
+            archiveData.appendUInt32LE(0x04034B50)
+            archiveData.appendUInt16LE(20)
+            archiveData.appendUInt16LE(0)
+            archiveData.appendUInt16LE(0)
+            archiveData.appendUInt16LE(0)
+            archiveData.appendUInt16LE(0)
+            archiveData.appendUInt32LE(crc32)
+            archiveData.appendUInt32LE(compressedSize)
+            archiveData.appendUInt32LE(uncompressedSize)
+            archiveData.appendUInt16LE(fileNameLength)
+            archiveData.appendUInt16LE(0)
+            archiveData.append(fileNameData)
+            archiveData.append(entry.data)
+
+            centralDirectoryData.appendUInt32LE(0x02014B50)
+            centralDirectoryData.appendUInt16LE(20)
+            centralDirectoryData.appendUInt16LE(20)
+            centralDirectoryData.appendUInt16LE(0)
+            centralDirectoryData.appendUInt16LE(0)
+            centralDirectoryData.appendUInt16LE(0)
+            centralDirectoryData.appendUInt16LE(0)
+            centralDirectoryData.appendUInt32LE(crc32)
+            centralDirectoryData.appendUInt32LE(compressedSize)
+            centralDirectoryData.appendUInt32LE(uncompressedSize)
+            centralDirectoryData.appendUInt16LE(fileNameLength)
+            centralDirectoryData.appendUInt16LE(0)
+            centralDirectoryData.appendUInt16LE(0)
+            centralDirectoryData.appendUInt16LE(0)
+            centralDirectoryData.appendUInt16LE(0)
+            centralDirectoryData.appendUInt32LE(0)
+            centralDirectoryData.appendUInt32LE(localHeaderOffset)
+            centralDirectoryData.append(fileNameData)
+        }
+
+        guard centralDirectoryData.count <= Int(UInt32.max),
+              archiveData.count <= Int(UInt32.max) else {
+            throw CocoaError(.fileWriteUnknown)
+        }
+
+        let centralDirectoryOffset = UInt32(archiveData.count)
+        let centralDirectorySize = UInt32(centralDirectoryData.count)
+
+        archiveData.append(centralDirectoryData)
+        archiveData.appendUInt32LE(0x06054B50)
+        archiveData.appendUInt16LE(0)
+        archiveData.appendUInt16LE(0)
+        archiveData.appendUInt16LE(UInt16(entries.count))
+        archiveData.appendUInt16LE(UInt16(entries.count))
+        archiveData.appendUInt32LE(centralDirectorySize)
+        archiveData.appendUInt32LE(centralDirectoryOffset)
+        archiveData.appendUInt16LE(0)
+
+        return archiveData
+    }
+
+    private static func crc32(of data: Data) -> UInt32 {
+        var crc = UInt32.max
+
+        for byte in data {
+            let index = Int((crc ^ UInt32(byte)) & 0xFF)
+            crc = (crc >> 8) ^ crc32Table[index]
+        }
+
+        return crc ^ UInt32.max
+    }
+
+    private static let crc32Table: [UInt32] = (0..<256).map { value in
+        var current = UInt32(value)
+
+        for _ in 0..<8 {
+            if current & 1 == 1 {
+                current = 0xEDB88320 ^ (current >> 1)
+            } else {
+                current >>= 1
+            }
+        }
+
+        return current
+    }
+}
+
+private extension Data {
+    mutating func appendUInt16LE(_ value: UInt16) {
+        var littleEndianValue = value.littleEndian
+        append(Data(bytes: &littleEndianValue, count: MemoryLayout<UInt16>.size))
+    }
+
+    mutating func appendUInt32LE(_ value: UInt32) {
+        var littleEndianValue = value.littleEndian
+        append(Data(bytes: &littleEndianValue, count: MemoryLayout<UInt32>.size))
     }
 }
 

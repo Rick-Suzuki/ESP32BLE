@@ -34,18 +34,18 @@ struct MainScreenSlotEditorOverlay: View {
         "camera", "photo", "tray", "sun.max.fill"
     ]
 	
-	// MARK: - BM:🟪 color keycodes
-    private let colorKeyCodes: [(code: String, color: Color)] = [
-        ("l", .black),
-        ("w", .white),
-		("b", .blue),
-		("g", .green),
-		("o", .orange),
-		("r", .red),
-		("c", .cyan),
-		("u", .purple),
-		("y", .yellow),
-		("a", .gray)
+    // MARK: - BM:🟪 color keycodes
+    private let colorKeyCodes: [(code: String?, label: String?, color: Color)] = [
+        ("l", "clr", Color(white: 0.22)),
+        ("w", nil, Color.brown),
+				("b", nil, .blue),
+				("g", nil, .green),
+			("o", nil, .orange),
+			("r", nil, .red),
+			("c", nil, .cyan),
+			("u", nil, .purple),
+			("y", nil, .yellow),
+			("a", nil, .gray)
     ]
 
     var body: some View {
@@ -185,10 +185,11 @@ struct MainScreenSlotEditorOverlay: View {
                     }
 
                     HStack(spacing: buttonSpacing) {
-                        ForEach(colorKeyCodes, id: \.code) { colorKey in
+                        ForEach(Array(colorKeyCodes.enumerated()), id: \.offset) { colorKey in
                             colorInsertButton(
-                                code: colorKey.code,
-                                background: colorKey.color
+                                code: colorKey.element.code,
+                                label: colorKey.element.label,
+                                background: colorKey.element.color
                             )
                         }
 
@@ -354,10 +355,10 @@ struct MainScreenSlotEditorOverlay: View {
         .buttonStyle(.plain)
     }
 
-    private func colorInsertButton(code: String, background: Color) -> some View {
+    private func colorInsertButton(code: String?, label: String?, background: Color) -> some View {
         Button {
             ButtonClickFeedback.playIfEnabled()
-            rightDraft = prefixedRightText(with: code)
+            rightDraft = code.map(prefixedRightText(with:)) ?? rightTextWithoutColorPrefix()
             activeEditorField = .text
             rightInputController.focus()
             focusBinding.wrappedValue = true
@@ -365,6 +366,13 @@ struct MainScreenSlotEditorOverlay: View {
             RoundedRectangle(cornerRadius: 12)
                 .fill(background)
                 .frame(width: helperButtonWidth, height: 44)
+                .overlay {
+                    if let label {
+                        Text(label)
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundStyle(.white)
+                    }
+                }
                 .overlay {
                     RoundedRectangle(cornerRadius: 12)
                         .stroke(Color.white.opacity(1), lineWidth: 1)
@@ -538,6 +546,20 @@ struct MainScreenSlotEditorOverlay: View {
         }
 
         return trimmedRightDraft.isEmpty ? "\(code):" : "\(code):\(trimmedRightDraft)"
+    }
+
+    private func rightTextWithoutColorPrefix() -> String {
+        let trimmedRightDraft = rightDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        let components = trimmedRightDraft.components(separatedBy: ":")
+
+        if let firstComponent = components.first,
+           firstComponent.count == 1,
+           let existingCode = firstComponent.lowercased().first,
+           "lwbgorpucya".contains(existingCode) {
+            return components.dropFirst().joined(separator: ":").trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+
+        return trimmedRightDraft
     }
 
     private func insertingRightTextPreservingColorPrefix(_ symbolName: String) -> String {
