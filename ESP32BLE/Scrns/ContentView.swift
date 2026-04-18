@@ -36,7 +36,9 @@ struct ContentView: View {
     private let defaultDocumentFontSize: Double = 20
     @AppStorage("selectedBackgroundImageIndex") private var selectedBackgroundImageIndex = 0
     @AppStorage("selectedBackgroundImageName") private var selectedBackgroundImageName = ""
+    @AppStorage("selectedBackgroundImagePath") private var selectedBackgroundImagePath = ""
     @AppStorage("documentBackgroundImageNamesData") private var documentBackgroundImageNamesData = ""
+    @AppStorage("documentBackgroundImagePathsData") private var documentBackgroundImagePathsData = ""
     @AppStorage("backgroundImageOpacity") private var backgroundImageOpacity = 0.5
     @StateObject private var ble = BLEKeyboardManager()
     @State private var functionKeys = ContentView.makeDefaultFunctionKeys()
@@ -139,9 +141,15 @@ struct ContentView: View {
             reloadBackgroundImage()
         }
         .onChange(of: selectedBackgroundImageIndex) {
+            refreshBackgroundImageFiles()
+            reloadBackgroundImage()
+        }
+        .onChange(of: selectedBackgroundImagePath) {
+            refreshBackgroundImageFiles()
             reloadBackgroundImage()
         }
         .onChange(of: selectedBackgroundImageName) {
+            refreshBackgroundImageFiles()
             saveBackgroundImageSelection(for: selectedDocumentName)
             reloadBackgroundImage()
         }
@@ -242,9 +250,23 @@ struct ContentView: View {
     }
 
     private func reloadBackgroundImage() {
+        if !selectedBackgroundImagePath.isEmpty {
+            let pathImageURL = URL(fileURLWithPath: selectedBackgroundImagePath)
+            if FileManager.default.fileExists(atPath: pathImageURL.path),
+               let pathImage = UIImage(contentsOfFile: pathImageURL.path) {
+                loadedBackgroundImage = pathImage
+                selectedBackgroundImageName = pathImageURL.lastPathComponent
+                if let pathImageIndex = backgroundImageFiles.firstIndex(where: { $0.path == pathImageURL.path }) {
+                    selectedBackgroundImageIndex = pathImageIndex + 1
+                }
+                return
+            }
+        }
+
         if !selectedBackgroundImageName.isEmpty,
            let namedImageURL = backgroundImageFiles.first(where: { $0.lastPathComponent == selectedBackgroundImageName }) {
             loadedBackgroundImage = UIImage(contentsOfFile: namedImageURL.path)
+            selectedBackgroundImagePath = namedImageURL.path
             if let namedImageIndex = backgroundImageFiles.firstIndex(where: { $0.lastPathComponent == selectedBackgroundImageName }) {
                 selectedBackgroundImageIndex = namedImageIndex + 1
             }
@@ -252,6 +274,7 @@ struct ContentView: View {
         }
 
         guard selectedBackgroundImageIndex > 0 else {
+            selectedBackgroundImagePath = ""
             selectedBackgroundImageName = ""
             loadedBackgroundImage = nil
             return
@@ -264,6 +287,7 @@ struct ContentView: View {
         }
 
         let resolvedImageURL = backgroundImageFiles[imageIndex]
+        selectedBackgroundImagePath = resolvedImageURL.path
         selectedBackgroundImageName = resolvedImageURL.lastPathComponent
         loadedBackgroundImage = UIImage(contentsOfFile: resolvedImageURL.path)
     }
@@ -417,41 +441,83 @@ struct ContentView: View {
         documentBackgroundImageNamesData = encoded
     }
 
+    private func loadDocumentBackgroundImagePaths() -> [String: String] {
+        guard let data = documentBackgroundImagePathsData.data(using: .utf8),
+              let decoded = try? JSONDecoder().decode([String: String].self, from: data) else {
+            return [:]
+        }
+
+        return decoded
+    }
+
+    private func saveDocumentBackgroundImagePaths(_ mappings: [String: String]) {
+        guard let data = try? JSONEncoder().encode(mappings),
+              let encoded = String(data: data, encoding: .utf8) else {
+            return
+        }
+
+        documentBackgroundImagePathsData = encoded
+    }
+
     private func saveBackgroundImageSelection(for documentName: String) {
         let trimmedDocumentName = documentName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedDocumentName.isEmpty else {
             return
         }
 
-        var mappings = loadDocumentBackgroundImageNames()
+        var nameMappings = loadDocumentBackgroundImageNames()
+        var pathMappings = loadDocumentBackgroundImagePaths()
         if selectedBackgroundImageName.isEmpty {
-            mappings.removeValue(forKey: trimmedDocumentName)
+            nameMappings.removeValue(forKey: trimmedDocumentName)
+            pathMappings.removeValue(forKey: trimmedDocumentName)
         } else {
-            mappings[trimmedDocumentName] = selectedBackgroundImageName
+            nameMappings[trimmedDocumentName] = selectedBackgroundImageName
+            if !selectedBackgroundImagePath.isEmpty {
+                pathMappings[trimmedDocumentName] = selectedBackgroundImagePath
+            } else {
+                pathMappings.removeValue(forKey: trimmedDocumentName)
+            }
         }
-        saveDocumentBackgroundImageNames(mappings)
+        saveDocumentBackgroundImageNames(nameMappings)
+        saveDocumentBackgroundImagePaths(pathMappings)
     }
 
     private func restoreBackgroundImageSelection(for documentName: String) {
         let trimmedDocumentName = documentName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedDocumentName.isEmpty else {
             selectedBackgroundImageIndex = 0
+            selectedBackgroundImagePath = ""
             selectedBackgroundImageName = ""
             loadedBackgroundImage = nil
             return
         }
 
-        let mappings = loadDocumentBackgroundImageNames()
-        guard let imageName = mappings[trimmedDocumentName],
-              backgroundImageFiles.contains(where: { $0.lastPathComponent == imageName }) else {
+        let nameMappings = loadDocumentBackgroundImageNames()
+        let pathMappings = loadDocumentBackgroundImagePaths()
+        let savedImagePath = pathMappings[trimmedDocumentName] ?? ""
+        let savedImageName = nameMappings[trimmedDocumentName] ?? ""
+
+        if !savedImagePath.isEmpty,
+           let pathImageURL = backgroundImageFiles.first(where: { $0.path == savedImagePath }) {
+            selectedBackgroundImagePath = pathImageURL.path
+            selectedBackgroundImageName = pathImageURL.lastPathComponent
+            selectedBackgroundImageIndex = (backgroundImageFiles.firstIndex(where: { $0.path == pathImageURL.path }) ?? -1) + 1
+            reloadBackgroundImage()
+            return
+        }
+
+        guard !savedImageName.isEmpty,
+              let nameImageURL = backgroundImageFiles.first(where: { $0.lastPathComponent == savedImageName }) else {
             selectedBackgroundImageIndex = 0
+            selectedBackgroundImagePath = ""
             selectedBackgroundImageName = ""
             loadedBackgroundImage = nil
             return
         }
 
-        selectedBackgroundImageName = imageName
-        if let imageIndex = backgroundImageFiles.firstIndex(where: { $0.lastPathComponent == imageName }) {
+        selectedBackgroundImagePath = nameImageURL.path
+        selectedBackgroundImageName = nameImageURL.lastPathComponent
+        if let imageIndex = backgroundImageFiles.firstIndex(where: { $0.path == nameImageURL.path }) {
             selectedBackgroundImageIndex = imageIndex + 1
         }
         reloadBackgroundImage()

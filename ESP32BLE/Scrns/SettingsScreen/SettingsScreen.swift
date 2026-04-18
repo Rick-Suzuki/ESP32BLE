@@ -69,6 +69,7 @@ struct SettingsScreen: View {
     @AppStorage("backgroundImageOpacity") private var opacitySliderValue = 0.5
     @AppStorage("selectedBackgroundImageIndex") var selectedImageIndex = 0
     @AppStorage("selectedBackgroundImageName") var selectedImageName = ""
+    @AppStorage("selectedBackgroundImagePath") var selectedImagePath = ""
     @AppStorage(ButtonClickFeedback.preferenceKey) private var isButtonClickEnabled = true
     @FocusState var focusedField: SettingsFocusField?
     @FocusState private var isDocumentNameFieldFocused: Bool

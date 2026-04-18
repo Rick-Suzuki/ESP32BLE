@@ -32,22 +32,32 @@ extension SettingsScreen {
         availableImageURLs.count
     }
 
-    var selectedImagePosition: Int? {
+    var selectedImageURL: URL? {
+        if !selectedImagePath.isEmpty,
+           let imageURL = availableImageURLs.first(where: { $0.path == selectedImagePath }) {
+            return imageURL
+        }
+
         if !selectedImageName.isEmpty,
-           let imageIndex = availableImageURLs.firstIndex(where: { $0.lastPathComponent == selectedImageName }) {
-            return imageIndex + 1
+           let imageURL = availableImageURLs.first(where: {
+               $0.lastPathComponent.caseInsensitiveCompare(selectedImageName) == .orderedSame
+           }) {
+            return imageURL
         }
 
         guard selectedImageIndex > 0 else { return nil }
         let imageIndex = selectedImageIndex - 1
         guard availableImageURLs.indices.contains(imageIndex) else { return nil }
-        return imageIndex + 1
+        return availableImageURLs[imageIndex]
     }
 
-    var selectedImageURL: URL? {
-        guard let selectedImagePosition else { return nil }
-        let imageIndex = selectedImagePosition - 1
-        return availableImageURLs[imageIndex]
+    var selectedImagePosition: Int? {
+        guard let selectedImageURL,
+              let imageIndex = availableImageURLs.firstIndex(where: { $0.path == selectedImageURL.path }) else {
+            return nil
+        }
+
+        return imageIndex + 1
     }
 
     var truncatedImageDisplayName: String {
@@ -66,9 +76,10 @@ extension SettingsScreen {
     }
 
     func persistSelectedImage(_ imageURL: URL?) {
+        selectedImagePath = imageURL?.path ?? ""
         selectedImageName = imageURL?.lastPathComponent ?? ""
         if let imageURL,
-           let imageIndex = availableImageURLs.firstIndex(where: { $0.lastPathComponent == imageURL.lastPathComponent }) {
+           let imageIndex = availableImageURLs.firstIndex(where: { $0.path == imageURL.path }) {
             selectedImageIndex = imageIndex + 1
         } else {
             selectedImageIndex = 0
