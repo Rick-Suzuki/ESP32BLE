@@ -406,12 +406,21 @@ struct MainScreenBottomBar: View {
 
     private func bluetoothIndicatorColor(at date: Date) -> Color {
         guard !isBluetoothConnected else {
-            return Color.blue
+            guard isGridEditModeEnabled else {
+                return .blue
+            }
+
+            return isIndicatorPulseVisible(at: date, activeFraction: 0.5) ? .blue : .black
         }
 
+        return isIndicatorPulseVisible(at: date, activeFraction: 0.1) ? .red : .black
+    }
+
+    private func isIndicatorPulseVisible(at date: Date, activeFraction: Double) -> Bool {
+        let normalizedFraction = min(max(activeFraction, 0), 1)
         let seconds = date.timeIntervalSinceReferenceDate
         let fractionalSecond = seconds - floor(seconds)
-        return fractionalSecond < 0.1 ? .red : .black
+        return fractionalSecond < normalizedFraction
     }
 
     private var mainGridButtonModeBackgroundColor: Color {
