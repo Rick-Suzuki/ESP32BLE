@@ -3,6 +3,7 @@ import UIKit
 
 struct SettingsImagePreviewPanel: View {
     let imageURL: URL?
+    let opacitySliderValue: Double
     @State private var previewImage: UIImage?
 
     var body: some View {
@@ -18,6 +19,7 @@ struct SettingsImagePreviewPanel: View {
                         .resizable()
                         .scaledToFill()
                         .frame(width: previewWidth, height: previewHeight)
+                        .opacity(opacitySliderValue)
                 }
             }
             .frame(width: previewWidth, height: previewHeight)

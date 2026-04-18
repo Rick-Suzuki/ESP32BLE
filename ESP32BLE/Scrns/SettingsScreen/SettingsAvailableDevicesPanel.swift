@@ -4,6 +4,7 @@ struct SettingsAvailableDevicesPanel: View {
     @ObservedObject var ble: BLEKeyboardManager
     @Binding var keepScreenAwake: Bool
     @Binding var isButtonClickEnabled: Bool
+    @Binding var opacitySliderValue: Double
     let imageControlButtons: AnyView
 
     var body: some View {
@@ -71,6 +72,7 @@ struct SettingsAvailableDevicesPanel: View {
 
             VStack(spacing: 12) {
                 imageControlButtons
+                settingsPlaceholderSlider(title: "opacity: 0.5", value: $opacitySliderValue)
 
                 HStack(spacing: 18) {
                     sleepWakeButton
@@ -132,5 +134,13 @@ struct SettingsAvailableDevicesPanel: View {
         .padding(.vertical, 10)
         .background(isButtonClickEnabled ? Color.blue.opacity(0.5) : Color.gray.opacity(0.5))
         .clipShape(.rect(cornerRadius: 18))
+    }
+
+    private func settingsPlaceholderSlider(title: String, value: Binding<Double>) -> some View {
+        VStack(spacing: 8) {
+            Slider(value: value, in: 0...1)
+                .tint(.white)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
