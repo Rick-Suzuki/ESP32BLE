@@ -68,7 +68,6 @@ struct SettingsScreen: View {
     @State private var availableSpeechVoices: [SpeechVoiceOption] = []
     @AppStorage("selectedTextToSpeechVoiceIdentifier") private var selectedTextToSpeechVoiceIdentifier = ""
     @AppStorage("textToSpeechRate") private var textToSpeechRate = Double(AVSpeechUtteranceDefaultSpeechRate)
-    @AppStorage("backgroundImageOpacity") private var opacitySliderValue = 0.5
     @AppStorage("selectedBackgroundImageIndex") var selectedImageIndex = 0
     @AppStorage("selectedBackgroundImageName") var selectedImageName = ""
     @AppStorage("selectedBackgroundImagePath") var selectedImagePath = ""
@@ -370,21 +369,18 @@ struct SettingsScreen: View {
             ble: ble,
             keepScreenAwake: $keepScreenAwake,
             isButtonClickEnabled: $isButtonClickEnabled,
-            opacitySliderValue: $opacitySliderValue,
             imageControlButtons: AnyView(imageControlButtons)
         )
     }
 
     private var imagePreviewSection: some View {
         SettingsImagePreviewPanel(
-            imageURL: selectedImageURL,
-            opacitySliderValue: opacitySliderValue
+            imageURL: selectedImageURL
         )
     }
 
     private var imageControlButtons: some View {
         SettingsImageControlsSection(
-            displayName: truncatedImageDisplayName,
             canGoPrevious: (selectedImagePosition ?? 0) > 0,
             canGoNext: (selectedImagePosition ?? 0) < maximumSelectableImageIndex,
             onReset: {

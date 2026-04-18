@@ -1,7 +1,6 @@
 import SwiftUI
 
 struct SettingsImageControlsSection: View {
-    let displayName: String
     let canGoPrevious: Bool
     let canGoNext: Bool
     let onReset: () -> Void
@@ -13,7 +12,7 @@ struct SettingsImageControlsSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(displayName)
+            Text("image")
                 .font(.headline)
                 .foregroundStyle(.white)
                 .lineLimit(1)
