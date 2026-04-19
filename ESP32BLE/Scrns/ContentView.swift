@@ -39,6 +39,7 @@ struct ContentView: View {
     @AppStorage("selectedBackgroundImagePath") private var selectedBackgroundImagePath = ""
     @AppStorage("documentBackgroundImageNamesData") private var documentBackgroundImageNamesData = ""
     @AppStorage("documentBackgroundImagePathsData") private var documentBackgroundImagePathsData = ""
+    @AppStorage("documentBackgroundImageOpacitiesData") private var documentBackgroundImageOpacitiesData = ""
     @AppStorage("backgroundImageOpacity") private var backgroundImageOpacity = 0.5
     @StateObject private var ble = BLEKeyboardManager()
     @State private var functionKeys = ContentView.makeDefaultFunctionKeys()
@@ -152,6 +153,9 @@ struct ContentView: View {
             refreshBackgroundImageFiles()
             saveBackgroundImageSelection(for: selectedDocumentName)
             reloadBackgroundImage()
+        }
+        .onChange(of: backgroundImageOpacity) {
+            saveBackgroundImageOpacity(for: selectedDocumentName)
         }
     }
 
@@ -459,6 +463,46 @@ struct ContentView: View {
         documentBackgroundImagePathsData = encoded
     }
 
+    private func loadDocumentBackgroundImageOpacities() -> [String: Double] {
+        guard let data = documentBackgroundImageOpacitiesData.data(using: .utf8),
+              let decoded = try? JSONDecoder().decode([String: Double].self, from: data) else {
+            return [:]
+        }
+
+        return decoded
+    }
+
+    private func saveDocumentBackgroundImageOpacities(_ mappings: [String: Double]) {
+        guard let data = try? JSONEncoder().encode(mappings),
+              let encoded = String(data: data, encoding: .utf8) else {
+            return
+        }
+
+        documentBackgroundImageOpacitiesData = encoded
+    }
+
+    private func saveBackgroundImageOpacity(for documentName: String) {
+        let trimmedDocumentName = documentName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedDocumentName.isEmpty else {
+            return
+        }
+
+        var opacityMappings = loadDocumentBackgroundImageOpacities()
+        opacityMappings[trimmedDocumentName] = backgroundImageOpacity
+        saveDocumentBackgroundImageOpacities(opacityMappings)
+    }
+
+    private func restoreBackgroundImageOpacity(for documentName: String) {
+        let trimmedDocumentName = documentName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedDocumentName.isEmpty else {
+            backgroundImageOpacity = 0.5
+            return
+        }
+
+        let opacityMappings = loadDocumentBackgroundImageOpacities()
+        backgroundImageOpacity = opacityMappings[trimmedDocumentName] ?? 0.5
+    }
+
     private func saveBackgroundImageSelection(for documentName: String) {
         let trimmedDocumentName = documentName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedDocumentName.isEmpty else {
@@ -488,9 +532,12 @@ struct ContentView: View {
             selectedBackgroundImageIndex = 0
             selectedBackgroundImagePath = ""
             selectedBackgroundImageName = ""
+            backgroundImageOpacity = 0.5
             loadedBackgroundImage = nil
             return
         }
+
+        restoreBackgroundImageOpacity(for: trimmedDocumentName)
 
         let nameMappings = loadDocumentBackgroundImageNames()
         let pathMappings = loadDocumentBackgroundImagePaths()

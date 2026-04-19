@@ -172,7 +172,7 @@ struct SettingsScreen: View {
         .onChange(of: selectedDocumentName) {
             saveCurrentDocumentText()
             loadSelectedDocumentText()
-            cancelDocumentRename()
+            cancelNameEditing()
         }
         .onChange(of: documentEditorText) {
             guard !isLoadingDocumentText else { return }
@@ -180,11 +180,18 @@ struct SettingsScreen: View {
         }
         .onChange(of: isDocumentNameFieldFocused) {
             guard isEditingDocumentName, !isDocumentNameFieldFocused else { return }
-            cancelDocumentRename()
+            cancelNameEditing()
+        }
+        .onChange(of: selectedImagePath) {
+            guard listMode == .images else { return }
+            cancelNameEditing()
+        }
+        .onChange(of: listModeRawValue) {
+            cancelNameEditing()
         }
         .onAppear {
             UIApplication.shared.isIdleTimerDisabled = keepScreenAwake
-            documentNameDraft = selectedDocumentDisplayName
+            documentNameDraft = currentTitleDisplayName
             loadSpeechVoicesIfNeeded()
         }
         .onChange(of: keepScreenAwake) {
@@ -288,12 +295,13 @@ struct SettingsScreen: View {
                     .frame(minWidth: 180)
                     .focused($isDocumentNameFieldFocused)
                     .onSubmit {
-                        commitDocumentRename()
+                        commitNameEdit()
                     }
             } else {
-                Button(selectedDocumentDisplayName) {
+                Button(currentTitleDisplayName) {
+                    guard canEditCurrentTitle else { return }
                     ButtonClickFeedback.playIfEnabled()
-                    documentNameDraft = selectedDocumentDisplayName
+                    documentNameDraft = currentTitleDisplayName
                     isEditingDocumentName = true
                 }
                 .buttonStyle(.plain)
@@ -301,6 +309,7 @@ struct SettingsScreen: View {
                 .foregroundStyle(.white)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
+                .disabled(!canEditCurrentTitle)
             }
         }
     }
@@ -683,7 +692,7 @@ struct SettingsScreen: View {
         documentEditorText = loadedText
         savedDocumentEditorText = loadedText
         loadedDocumentName = fileURL.lastPathComponent
-        documentNameDraft = selectedDocumentDisplayName
+        documentNameDraft = currentTitleDisplayName
     }
 
     private func saveSelectedDocumentText() {
@@ -740,6 +749,32 @@ struct SettingsScreen: View {
         URL(fileURLWithPath: selectedDocumentName).deletingPathExtension().lastPathComponent
     }
 
+    private var selectedImageDisplayName: String {
+        guard let selectedImageURL else {
+            return "black bg"
+        }
+
+        return selectedImageURL.deletingPathExtension().lastPathComponent
+    }
+
+    private var currentTitleDisplayName: String {
+        switch listMode {
+        case .files:
+            return selectedDocumentDisplayName
+        case .images:
+            return selectedImageDisplayName
+        }
+    }
+
+    private var canEditCurrentTitle: Bool {
+        switch listMode {
+        case .files:
+            return selectedDocumentFileURL != nil
+        case .images:
+            return selectedImageURL != nil
+        }
+    }
+
     private var renameAlertIsPresented: Binding<Bool> {
         Binding(
             get: { renameAlertMessage != nil },
@@ -751,21 +786,29 @@ struct SettingsScreen: View {
         )
     }
 
-    private func commitDocumentRename() {
+    private func commitNameEdit() {
         let proposedName = documentNameDraft
+        let alertMessage: String?
 
-        if let alertMessage = renameDocument(proposedName) {
+        switch listMode {
+        case .files:
+            alertMessage = renameDocument(proposedName)
+        case .images:
+            alertMessage = renameSelectedImage(to: proposedName)
+        }
+
+        if let alertMessage {
             renameAlertMessage = alertMessage
             return
         }
 
-        documentNameDraft = selectedDocumentDisplayName
+        documentNameDraft = currentTitleDisplayName
         isEditingDocumentName = false
         isDocumentNameFieldFocused = false
     }
 
-    private func cancelDocumentRename() {
-        documentNameDraft = selectedDocumentDisplayName
+    private func cancelNameEditing() {
+        documentNameDraft = currentTitleDisplayName
         isEditingDocumentName = false
         isDocumentNameFieldFocused = false
     }
@@ -813,6 +856,41 @@ struct SettingsScreen: View {
 
     private func selectImage(_ imageURL: URL) {
         persistSelectedImage(imageURL)
+    }
+
+    private func renameSelectedImage(to proposedName: String) -> String? {
+        let trimmedName = proposedName.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard !trimmedName.isEmpty else {
+            return "Filename can't be blank."
+        }
+
+        guard let sourceURL = selectedImageURL else {
+            return "Select an image first."
+        }
+
+        let fileExtension = sourceURL.pathExtension
+        let targetFileName = "\(trimmedName).\(fileExtension)"
+
+        if targetFileName.caseInsensitiveCompare(sourceURL.lastPathComponent) == .orderedSame {
+            return nil
+        }
+
+        let directoryURL = sourceURL.deletingLastPathComponent()
+
+        if availableImageURLs.contains(where: { $0.lastPathComponent.caseInsensitiveCompare(targetFileName) == .orderedSame }) {
+            return "a file with that name already exists."
+        }
+
+        let targetURL = directoryURL.appendingPathComponent(targetFileName)
+
+        do {
+            try FileManager.default.moveItem(at: sourceURL, to: targetURL)
+            persistSelectedImage(targetURL)
+            return nil
+        } catch {
+            return "Couldn't rename the image."
+        }
     }
 
     private func deleteImage(_ imageURL: URL) {
