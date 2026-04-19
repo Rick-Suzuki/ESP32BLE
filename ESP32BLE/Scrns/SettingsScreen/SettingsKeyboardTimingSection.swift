@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct SettingsKeyboardTimingSection: View {
+    private let maximumSpeechRecognitionAutoOffMinutes = 31
     let timingLabelWidth: Double
     @Binding var keyboardTimingOnMs: Double
     @Binding var keyboardTimingOffMs: Double
@@ -103,7 +104,7 @@ struct SettingsKeyboardTimingSection: View {
             .disabled(speechRecognitionAutoOffMinutes <= 1)
 
             VStack(spacing: -10) {
-                Text("\(speechRecognitionAutoOffMinutes) min")
+                Text(speechRecognitionAutoOffDisplayText)
                     .font(.headline)
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
@@ -113,7 +114,7 @@ struct SettingsKeyboardTimingSection: View {
                         get: { Double(speechRecognitionAutoOffMinutes) },
                         set: { speechRecognitionAutoOffMinutes = Int($0.rounded()) }
                     ),
-                    in: 1...30,
+                    in: 1...Double(maximumSpeechRecognitionAutoOffMinutes),
                     step: 1
                 )
                 .tint(.white)
@@ -123,7 +124,7 @@ struct SettingsKeyboardTimingSection: View {
 
             Button {
                 ButtonClickFeedback.playIfEnabled()
-                speechRecognitionAutoOffMinutes = min(30, speechRecognitionAutoOffMinutes + 1)
+                speechRecognitionAutoOffMinutes = min(maximumSpeechRecognitionAutoOffMinutes, speechRecognitionAutoOffMinutes + 1)
             } label: {
                 Image(systemName: "triangle.fill")
                     .font(.system(size: 26))
@@ -132,7 +133,13 @@ struct SettingsKeyboardTimingSection: View {
             }
             .buttonStyle(.plain)
             .foregroundStyle(.white)
-            .disabled(speechRecognitionAutoOffMinutes >= 30)
+            .disabled(speechRecognitionAutoOffMinutes >= maximumSpeechRecognitionAutoOffMinutes)
         }
+    }
+
+    private var speechRecognitionAutoOffDisplayText: String {
+        speechRecognitionAutoOffMinutes >= maximumSpeechRecognitionAutoOffMinutes
+            ? "Never"
+            : "\(speechRecognitionAutoOffMinutes) min"
     }
 }

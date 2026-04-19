@@ -96,7 +96,12 @@ extension MainScreen {
     func scheduleSpeechRecognitionAutoOff() {
         speechRecognitionAutoOffTask?.cancel()
 
-        let autoOffMinutes = min(max(speechRecognitionAutoOffMinutes, 1), 30)
+        let autoOffMinutes = max(speechRecognitionAutoOffMinutes, 1)
+        guard autoOffMinutes < 31 else {
+            speechRecognitionAutoOffTask = nil
+            return
+        }
+
         speechRecognitionAutoOffTask = Task {
             do {
                 try await Task.sleep(for: .seconds(autoOffMinutes * 60))

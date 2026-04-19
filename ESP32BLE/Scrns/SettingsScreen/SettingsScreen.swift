@@ -27,6 +27,7 @@ struct SettingsScreen: View {
     private let minimumTextToSpeechPercentage = 40.0
     private let maximumTextToSpeechPercentage = 140.0
     private let textToSpeechPercentageStep = 5.0
+    private let maximumSpeechRecognitionAutoOffMinutes = 31
     @Environment(\.dismiss) private var dismiss
     @AppStorage("speechRecognitionAutoOffMinutes") private var speechRecognitionAutoOffMinutes = 5
     @AppStorage("sendControlABeforeText") var sendControlABeforeText = false
@@ -588,7 +589,7 @@ struct SettingsScreen: View {
             }
 
             VStack(spacing: -10) {
-                Text("\(speechRecognitionAutoOffMinutes) min")
+                Text(speechRecognitionAutoOffDisplayText)
                     .font(.headline)
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
@@ -598,7 +599,7 @@ struct SettingsScreen: View {
                         get: { Double(speechRecognitionAutoOffMinutes) },
                         set: { speechRecognitionAutoOffMinutes = Int($0.rounded()) }
                     ),
-                    in: 1...30,
+                    in: 1...Double(maximumSpeechRecognitionAutoOffMinutes),
                     step: 1
                 )
                 .tint(.white)
@@ -611,7 +612,7 @@ struct SettingsScreen: View {
 
             Button {
                 ButtonClickFeedback.playIfEnabled()
-                speechRecognitionAutoOffMinutes = min(30, speechRecognitionAutoOffMinutes + 1)
+                speechRecognitionAutoOffMinutes = min(maximumSpeechRecognitionAutoOffMinutes, speechRecognitionAutoOffMinutes + 1)
             } label: {
                 Image(systemName: "triangle.fill")
                     .font(.system(size: 26))
@@ -620,11 +621,17 @@ struct SettingsScreen: View {
             }
             .buttonStyle(.plain)
             .foregroundStyle(.white)
-            .disabled(speechRecognitionAutoOffMinutes >= 30)
+            .disabled(speechRecognitionAutoOffMinutes >= maximumSpeechRecognitionAutoOffMinutes)
             .alignmentGuide(.sliderTrackCenter) { dimensions in
                 dimensions[VerticalAlignment.center]
             }
         }
+    }
+
+    private var speechRecognitionAutoOffDisplayText: String {
+        speechRecognitionAutoOffMinutes >= maximumSpeechRecognitionAutoOffMinutes
+            ? "Never"
+            : "\(speechRecognitionAutoOffMinutes) min"
     }
 
     private func documentRow(for fileURL: URL) -> some View {
