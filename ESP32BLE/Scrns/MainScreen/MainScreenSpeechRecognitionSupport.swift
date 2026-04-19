@@ -140,6 +140,9 @@ extension MainScreen {
         case .disabled:
             return "disabled"
         case .recognizing:
+            if let latestRecognizedText, !latestRecognizedText.isEmpty {
+                return latestRecognizedText
+            }
             return "recognizing..."
         case .recognized(let text):
             return text
@@ -154,7 +157,9 @@ extension MainScreen {
         switch speechRecognition.displayState {
         case .recognized:
             return .white
-        case .disabled, .recognizing:
+        case .recognizing:
+            return latestRecognizedText == nil ? .gray : .white
+        case .disabled:
             return .gray
         }
     }

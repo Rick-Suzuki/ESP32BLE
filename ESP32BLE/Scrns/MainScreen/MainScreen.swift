@@ -105,7 +105,7 @@ struct MainScreen: View {
             .onChange(of: speechRecognitionAutoOffMinutes) {
                 handleSpeechRecognitionAutoOffMinutesChange()
             }
-            .onChange(of: latestRecognizedText) {
+            .onChange(of: speechRecognition.latestRecognition) {
                 handleLatestRecognizedTextChange()
             }
             .onDisappear {
