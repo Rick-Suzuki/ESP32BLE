@@ -299,6 +299,7 @@ struct MainScreen: View {
             onIncreaseColumns: increaseGridColumns,
             onDecreaseBoxFontSize: decreaseBoxFontSize,
             onIncreaseBoxFontSize: increaseBoxFontSize,
+            onResetBoxFontSize: resetBoxFontSize,
             onToggleSpeechRecognition: { isSpkRecEnabled.toggle() },
             onCycleMainGridButtonMode: cycleMainGridButtonMode,
             onStopSpeech: stopSpokenGridText,

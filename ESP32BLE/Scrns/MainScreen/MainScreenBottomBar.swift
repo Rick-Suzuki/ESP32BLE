@@ -146,6 +146,7 @@ struct MainScreenBottomBar: View {
     let onIncreaseColumns: () -> Void
     let onDecreaseBoxFontSize: () -> Void
     let onIncreaseBoxFontSize: () -> Void
+    let onResetBoxFontSize: () -> Void
     let onToggleSpeechRecognition: () -> Void
     let onCycleMainGridButtonMode: () -> Void
     let onStopSpeech: () -> Void
@@ -241,19 +242,19 @@ struct MainScreenBottomBar: View {
                     onDecreaseBoxFontSize()
                 }
 
-                ZStack {
-                    Rectangle()
-                        .fill(Color.black.opacity(0.001))
-
+                Button {
+                    ButtonClickFeedback.playIfEnabled()
+                    onResetBoxFontSize()
+                } label: {
                     Text("\(Int(boxFontSize))")
                         .font(.headline)
                         .foregroundStyle(.white)
                         .lineLimit(1)
                         .minimumScaleFactor(0.85)
+                        .frame(width: isCompact ? 40 : 48, alignment: .center)
+                        .contentShape(.rect)
                 }
-                .frame(width: isCompact ? 40 : 48, alignment: .center)
-                .contentShape(.rect)
-                .onTapGesture {}
+                .buttonStyle(.plain)
 
                 controlTriangle(
                     rotationDegrees: 90,

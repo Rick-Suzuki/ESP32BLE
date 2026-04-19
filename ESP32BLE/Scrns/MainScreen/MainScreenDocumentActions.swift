@@ -59,6 +59,10 @@ extension MainScreen {
         updateDocumentFontSize(min(maximumBoxFontSize, boxFontSize + 1))
     }
 
+    func resetBoxFontSize() {
+        updateDocumentFontSize(min(maximumBoxFontSize, max(minimumBoxFontSize, 24)))
+    }
+
     @discardableResult
     func applyGridDimensions(columns: Int, rows: Int) -> Bool {
         let sanitizedColumns = max(columns, 1)
