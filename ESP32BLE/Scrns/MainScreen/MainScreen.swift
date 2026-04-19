@@ -5,8 +5,10 @@ import AVFoundation
 
 struct MainScreen: View {
     // Easy-to-find styling controls for the main button grid.
-    private let mainGridButtonSpacing: CGFloat = 10
-    let mainGridButtonCornerRadius: CGFloat = 30
+    private let mainGridButtonSpacingMaximum: CGFloat = 10
+    private let mainGridButtonSpacingMinimum: CGFloat = 4
+    private let mainGridButtonCornerRadiusMaximum: CGFloat = 20
+    private let mainGridButtonCornerRadiusMinimum: CGFloat = 5
     let mainGridButtonBorderWidth: CGFloat = 2
   
 	// Easy-to-find spacing for the slot editor controls row.
@@ -354,6 +356,18 @@ struct MainScreen: View {
     private func showSlotPastedPopup() {
         alertTitle = ""
         renameAlertMessage = "Pasted"
+    }
+
+    var mainGridButtonSpacing: CGFloat {
+        let buttonCount = max(visibleGridDimensions.columns * visibleGridDimensions.rows, 1)
+        let normalizedProgress = min(max(CGFloat(buttonCount - 1) / CGFloat(144 - 1), 0), 1)
+        return mainGridButtonSpacingMaximum - ((mainGridButtonSpacingMaximum - mainGridButtonSpacingMinimum) * normalizedProgress)
+    }
+
+    var mainGridButtonCornerRadius: CGFloat {
+        let buttonCount = max(visibleGridDimensions.columns * visibleGridDimensions.rows, 1)
+        let normalizedProgress = min(max(CGFloat(buttonCount - 1) / CGFloat(144 - 1), 0), 1)
+        return mainGridButtonCornerRadiusMaximum - ((mainGridButtonCornerRadiusMaximum - mainGridButtonCornerRadiusMinimum) * normalizedProgress)
     }
 
     private func handleSelectedDocumentDisplayNameChange() {

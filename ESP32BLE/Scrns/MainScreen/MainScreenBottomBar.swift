@@ -269,7 +269,7 @@ struct MainScreenBottomBar: View {
             HStack(spacing: isCompact ? 8 : 12) {
                 bluetoothIndicator
             }
-            .padding(.leading, 100)
+            .padding(.leading, 25)
 
             Spacer(minLength: isCompact ? 6 : 12)
 
