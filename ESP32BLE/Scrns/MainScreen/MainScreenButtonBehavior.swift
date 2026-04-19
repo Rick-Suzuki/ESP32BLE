@@ -116,6 +116,10 @@ extension MainScreen {
     }
 
     func speakMainGridEntry(_ entry: FunctionKeyEntry) {
+        guard !isSpkRecEnabled else {
+            return
+        }
+
         let spokenText = spokenTitle(for: entry)
             .replacingOccurrences(of: "\n", with: ", ")
             .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -125,6 +129,7 @@ extension MainScreen {
         }
 
         stopSpokenGridText()
+        activateAudioSessionForSpeechPlayback()
 
         let utterance = AVSpeechUtterance(string: spokenText)
         utterance.voice = resolvedSpeechVoice

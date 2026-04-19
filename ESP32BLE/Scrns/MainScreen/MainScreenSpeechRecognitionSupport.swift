@@ -1,4 +1,5 @@
 import SwiftUI
+import AVFAudio
 
 extension MainScreen {
     func applyRecognizedSpeech(_ recognizedText: String) {
@@ -65,6 +66,7 @@ extension MainScreen {
         speechRecognitionAutoOffTask = nil
         unmatchedSpeechText = nil
         speechRecognition.setListeningEnabled(false)
+        resetAudioSessionForSpeechPlayback()
         sendModifierFunctionKey("f19")
     }
 
@@ -117,6 +119,17 @@ extension MainScreen {
                 isSpkRecEnabled = false
             }
         }
+    }
+
+    func activateAudioSessionForSpeechPlayback() {
+        let audioSession = AVAudioSession.sharedInstance()
+        try? audioSession.setCategory(.playback, mode: .spokenAudio, options: [.duckOthers])
+        try? audioSession.setActive(true, options: .notifyOthersOnDeactivation)
+    }
+
+    func resetAudioSessionForSpeechPlayback() {
+        let audioSession = AVAudioSession.sharedInstance()
+        try? audioSession.setCategory(.playback, mode: .spokenAudio, options: [.duckOthers])
     }
 
     func sendModifierFunctionKey(_ functionKey: String) {
