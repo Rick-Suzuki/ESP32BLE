@@ -2,7 +2,7 @@
 import SwiftUI
 import AudioToolbox
 
-private let maxFunctionKeyCount = 100
+let maxFunctionKeyCount = 144
 private let defaultNamedFunctionKeyCount = 20
 
 enum ButtonClickFeedback {
@@ -32,6 +32,11 @@ struct FunctionKeyEntry {
     }
 }
 
+private struct StoredGridDimensions: Codable {
+    let columns: Int
+    let rows: Int
+}
+
 struct ContentView: View {
     private let defaultDocumentFontSize: Double = 20
     @AppStorage("selectedBackgroundImageIndex") private var selectedBackgroundImageIndex = 0
@@ -40,6 +45,7 @@ struct ContentView: View {
     @AppStorage("documentBackgroundImageNamesData") private var documentBackgroundImageNamesData = ""
     @AppStorage("documentBackgroundImagePathsData") private var documentBackgroundImagePathsData = ""
     @AppStorage("documentBackgroundImageOpacitiesData") private var documentBackgroundImageOpacitiesData = ""
+    @AppStorage("documentGridDimensionsData") private var documentGridDimensionsData = ""
     @AppStorage("backgroundImageOpacity") private var backgroundImageOpacity = 0.5
     @StateObject private var ble = BLEKeyboardManager()
     @State private var functionKeys = ContentView.makeDefaultFunctionKeys()
@@ -98,6 +104,10 @@ struct ContentView: View {
                             duplicateFunctionKeySlot: duplicateSelectedDocumentSlot,
                             updateFunctionKeySlot: updateSelectedDocumentSlot,
                             updateDocumentFontSize: updateDocumentFontSize,
+                            loadGridDimensions: loadStoredGridDimensions,
+                            saveGridDimensions: { documentName, gridDimensions in
+                                saveGridDimensions(gridDimensions, for: documentName)
+                            },
                             openKeyboardScreen: {
                                 withAnimation(.easeInOut(duration: 0.25)) {
                                     isKeyboardScreenPresented = true
@@ -479,6 +489,59 @@ struct ContentView: View {
         }
 
         documentBackgroundImageOpacitiesData = encoded
+    }
+
+    private func loadDocumentGridDimensions() -> [String: StoredGridDimensions] {
+        guard let data = documentGridDimensionsData.data(using: .utf8),
+              let decoded = try? JSONDecoder().decode([String: StoredGridDimensions].self, from: data) else {
+            return [:]
+        }
+
+        return decoded
+    }
+
+    private func saveDocumentGridDimensions(_ mappings: [String: StoredGridDimensions]) {
+        guard let data = try? JSONEncoder().encode(mappings),
+              let encoded = String(data: data, encoding: .utf8) else {
+            return
+        }
+
+        documentGridDimensionsData = encoded
+    }
+
+    private func loadStoredGridDimensions(for documentName: String, requiredBoxCount: Int) -> GridDimensions {
+        let trimmedDocumentName = documentName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let minimumRequiredCount = max(requiredBoxCount, 1)
+
+        guard !trimmedDocumentName.isEmpty else {
+            return functionKeyGridDimensions(for: minimumRequiredCount)
+        }
+
+        let mappings = loadDocumentGridDimensions()
+        if let storedDimensions = mappings[trimmedDocumentName] {
+            let sanitizedColumns = max(storedDimensions.columns, 1)
+            let sanitizedRows = max(storedDimensions.rows, 1)
+            if sanitizedColumns * sanitizedRows >= minimumRequiredCount,
+               sanitizedColumns * sanitizedRows <= maxFunctionKeyCount {
+                return (columns: sanitizedColumns, rows: sanitizedRows)
+            }
+        }
+
+        return functionKeyGridDimensions(for: minimumRequiredCount)
+    }
+
+    private func saveGridDimensions(_ gridDimensions: GridDimensions, for documentName: String) {
+        let trimmedDocumentName = documentName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedDocumentName.isEmpty else {
+            return
+        }
+
+        var mappings = loadDocumentGridDimensions()
+        mappings[trimmedDocumentName] = StoredGridDimensions(
+            columns: max(gridDimensions.columns, 1),
+            rows: max(gridDimensions.rows, 1)
+        )
+        saveDocumentGridDimensions(mappings)
     }
 
     private func saveBackgroundImageOpacity(for documentName: String) {
@@ -920,6 +983,11 @@ struct ContentView: View {
                 updatedFontSizes[targetFileName] = existingFontSize
                 saveDocumentFontSizes(updatedFontSizes)
             }
+            var updatedGridDimensions = loadDocumentGridDimensions()
+            if let existingGridDimensions = updatedGridDimensions.removeValue(forKey: selectedDocumentName) {
+                updatedGridDimensions[targetFileName] = existingGridDimensions
+                saveDocumentGridDimensions(updatedGridDimensions)
+            }
             try FileManager.default.moveItem(at: sourceURL, to: targetURL)
             loadFunctionKeys(from: targetURL)
             refreshDocumentFiles()
@@ -956,6 +1024,9 @@ struct ContentView: View {
             var updatedFontSizes = loadDocumentFontSizes()
             updatedFontSizes.removeValue(forKey: fileURL.lastPathComponent)
             saveDocumentFontSizes(updatedFontSizes)
+            var updatedGridDimensions = loadDocumentGridDimensions()
+            updatedGridDimensions.removeValue(forKey: fileURL.lastPathComponent)
+            saveDocumentGridDimensions(updatedGridDimensions)
             refreshDocumentFiles()
 
             if let fallbackFileURL {
@@ -986,6 +1057,11 @@ struct ContentView: View {
             var updatedFontSizes = loadDocumentFontSizes()
             updatedFontSizes[targetURL.lastPathComponent] = defaultDocumentFontSize
             saveDocumentFontSizes(updatedFontSizes)
+            var updatedGridDimensions = loadDocumentGridDimensions()
+            if let existingGridDimensions = updatedGridDimensions[fileURL.lastPathComponent] {
+                updatedGridDimensions[targetURL.lastPathComponent] = existingGridDimensions
+                saveDocumentGridDimensions(updatedGridDimensions)
+            }
             refreshDocumentFiles()
             selectDocument(targetURL)
         } catch {

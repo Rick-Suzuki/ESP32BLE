@@ -122,10 +122,10 @@ struct MainScreenBottomBar: View {
     private let inactiveButtonBackgroundColor = Color(red: 0.22, green: 0.22, blue: 0.24)
     private let inactiveButtonBorderColor = Color(red: 0.30, green: 0.30, blue: 0.32)
     private let speechActiveModeColor = Color(red: 0.48, green: 0.24, blue: 0.02)
+    private let rowControlColor = Color.red
+    private let columnControlColor = Color.green
     let availableWidth: CGFloat
-    let allowedVisibleBoxCounts: [Int]
-    let visibleBoxCount: Int
-    let visibleActiveBoxCount: Int
+    let visibleGridDimensions: GridDimensions
     let isGridEditModeEnabled: Bool
     let boxFontSize: Double
     let minimumBoxFontSize: Double
@@ -137,12 +137,13 @@ struct MainScreenBottomBar: View {
     let mainGridButtonMode: MainGridButtonMode
     let displayMode: FunctionKeyDisplayMode
     let displayModeButtonColor: Color
-    let countControlColor: Color
     let fontControlColor: Color
     let speechRecognitionActiveColor: Color
     let bleSendActiveColor: Color
-    let onDecreaseVisibleBoxCount: () -> Void
-    let onIncreaseVisibleBoxCount: () -> Void
+    let onDecreaseRows: () -> Void
+    let onIncreaseRows: () -> Void
+    let onDecreaseColumns: () -> Void
+    let onIncreaseColumns: () -> Void
     let onDecreaseBoxFontSize: () -> Void
     let onIncreaseBoxFontSize: () -> Void
     let onToggleSpeechRecognition: () -> Void
@@ -189,28 +190,45 @@ struct MainScreenBottomBar: View {
     ) -> some View {
         HStack(spacing: isCompact ? 8 : 12) {
             HStack(spacing: isCompact ? 8 : 12) {
-                controlTriangle(
+                singleStepTriangle(
                     rotationDegrees: -90,
-                    foreground: countControlColor,
-                    isEnabled: visibleBoxCount != allowedVisibleBoxCounts.first,
-                    actionVersion: visibleBoxCount
-                ) {
-                    onDecreaseVisibleBoxCount()
-                }
+                    foreground: rowControlColor,
+                    isEnabled: visibleGridDimensions.rows > 1,
+                    action: onDecreaseRows
+                )
 
-                Text("num:\(visibleBoxCount)")
+                Text("\(visibleGridDimensions.rows)")
                     .font(.headline)
                     .foregroundStyle(.white)
                     .frame(minWidth: isCompact ? 28 : 32)
 
-                controlTriangle(
+                singleStepTriangle(
                     rotationDegrees: 90,
-                    foreground: countControlColor,
-                    isEnabled: visibleBoxCount != allowedVisibleBoxCounts.last,
-                    actionVersion: visibleBoxCount
-                ) {
-                    onIncreaseVisibleBoxCount()
-                }
+                    foreground: rowControlColor,
+                    isEnabled: visibleGridDimensions.rows < 12,
+                    action: onIncreaseRows
+                )
+            }
+
+            HStack(spacing: isCompact ? 8 : 12) {
+                singleStepTriangle(
+                    rotationDegrees: -90,
+                    foreground: columnControlColor,
+                    isEnabled: visibleGridDimensions.columns > 1,
+                    action: onDecreaseColumns
+                )
+
+                Text("\(visibleGridDimensions.columns)")
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                    .frame(minWidth: isCompact ? 28 : 32)
+
+                singleStepTriangle(
+                    rotationDegrees: 90,
+                    foreground: columnControlColor,
+                    isEnabled: visibleGridDimensions.columns < 12,
+                    action: onIncreaseColumns
+                )
             }
 
             HStack(spacing: isCompact ? 8 : 12) {
@@ -223,12 +241,19 @@ struct MainScreenBottomBar: View {
                     onDecreaseBoxFontSize()
                 }
 
-                Text("fnt:\(Int(boxFontSize))")
-                    .font(.headline)
-                    .foregroundStyle(.white)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.85)
-                    .frame(width: isCompact ? 58 : 68, alignment: .leading)
+                ZStack {
+                    Rectangle()
+                        .fill(Color.black.opacity(0.001))
+
+                    Text("\(Int(boxFontSize))")
+                        .font(.headline)
+                        .foregroundStyle(.white)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
+                }
+                .frame(width: isCompact ? 40 : 48, alignment: .center)
+                .contentShape(.rect)
+                .onTapGesture {}
 
                 controlTriangle(
                     rotationDegrees: 90,
@@ -238,18 +263,12 @@ struct MainScreenBottomBar: View {
                 ) {
                     onIncreaseBoxFontSize()
                 }
-
-                HStack(spacing: 30) {
-                    Text("B:\(visibleActiveBoxCount)")
-                        .font(.headline)
-                        .foregroundStyle(.white)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.85)
-                        .frame(width: isCompact ? 44 : 52, alignment: .leading)
-
-                    bluetoothIndicator
-                }
             }
+
+            HStack(spacing: isCompact ? 8 : 12) {
+                bluetoothIndicator
+            }
+            .padding(.leading, 100)
 
             Spacer(minLength: isCompact ? 6 : 12)
 
@@ -334,6 +353,28 @@ struct MainScreenBottomBar: View {
                 .frame(width: 24, height: 24)
         }
         .foregroundStyle(foreground)
+    }
+
+    private func singleStepTriangle(
+        rotationDegrees: Double,
+        foreground: Color,
+        isEnabled: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button {
+            guard isEnabled else { return }
+            ButtonClickFeedback.playIfEnabled()
+            action()
+        } label: {
+            Image(systemName: "triangle.fill")
+                .font(.system(size: 24))
+                .rotationEffect(.degrees(rotationDegrees))
+                .frame(width: 24, height: 24)
+        }
+        .buttonStyle(.plain)
+        .disabled(!isEnabled)
+        .foregroundStyle(foreground)
+        .opacity(isEnabled ? 1 : 0.35)
     }
 
     private func toggleButton(title: String, background: Color, border: Color, isEnabled: Bool = true, action: @escaping () -> Void) -> some View {

@@ -3,35 +3,52 @@ import SwiftUI
 extension MainScreen {
     func updateVisibleBoxCountToFitDefinedButtons() {
         let requiredBoxCount = max(definedFunctionKeyCount, 1)
-        visibleBoxCount = allowedVisibleBoxCounts.first(where: { $0 >= requiredBoxCount }) ?? allowedVisibleBoxCounts.last ?? requiredBoxCount
-    }
-
-    func decreaseVisibleBoxCount() {
-        guard let currentIndex = allowedVisibleBoxCounts.firstIndex(of: visibleBoxCount),
-              currentIndex > 0 else {
+        guard requiredBoxCount > visibleBoxCount else {
             return
         }
 
-        for candidateCount in allowedVisibleBoxCounts[..<currentIndex].reversed() {
-            if resizeVisibleBoxCount(candidateCount) {
-                visibleBoxCount = candidateCount
-                return
-            }
-        }
+        restoreVisibleGridState(requiredBoxCount: requiredBoxCount)
     }
 
-    func increaseVisibleBoxCount() {
-        guard let currentIndex = allowedVisibleBoxCounts.firstIndex(of: visibleBoxCount),
-              currentIndex < allowedVisibleBoxCounts.count - 1 else {
+    func restoreVisibleGridState(requiredBoxCount: Int? = nil) {
+        let resolvedRequiredBoxCount = max(requiredBoxCount ?? definedFunctionKeyCount, 1)
+        let restoredGridDimensions = loadGridDimensions(selectedDocumentName, resolvedRequiredBoxCount)
+        visibleGridDimensions = restoredGridDimensions
+        visibleBoxCount = max(resolvedRequiredBoxCount, restoredGridDimensions.columns * restoredGridDimensions.rows)
+    }
+
+    func decreaseGridRows() {
+        guard visibleGridDimensions.rows > 1 else {
             return
         }
 
-        for candidateCount in allowedVisibleBoxCounts[(currentIndex + 1)...] {
-            if resizeVisibleBoxCount(candidateCount) {
-                visibleBoxCount = candidateCount
-                return
-            }
+        _ = applyGridDimensions(columns: visibleGridDimensions.columns, rows: visibleGridDimensions.rows - 1)
+    }
+
+    func increaseGridRows() {
+        let nextRows = visibleGridDimensions.rows + 1
+        guard nextRows <= 12 else {
+            return
         }
+
+        _ = applyGridDimensions(columns: visibleGridDimensions.columns, rows: nextRows)
+    }
+
+    func decreaseGridColumns() {
+        guard visibleGridDimensions.columns > 1 else {
+            return
+        }
+
+        _ = applyGridDimensions(columns: visibleGridDimensions.columns - 1, rows: visibleGridDimensions.rows)
+    }
+
+    func increaseGridColumns() {
+        let nextColumns = visibleGridDimensions.columns + 1
+        guard nextColumns <= 12 else {
+            return
+        }
+
+        _ = applyGridDimensions(columns: nextColumns, rows: visibleGridDimensions.rows)
     }
 
     func decreaseBoxFontSize() {
@@ -40,6 +57,27 @@ extension MainScreen {
 
     func increaseBoxFontSize() {
         updateDocumentFontSize(min(maximumBoxFontSize, boxFontSize + 1))
+    }
+
+    @discardableResult
+    func applyGridDimensions(columns: Int, rows: Int) -> Bool {
+        let sanitizedColumns = max(columns, 1)
+        let sanitizedRows = max(rows, 1)
+        let candidateBoxCount = sanitizedColumns * sanitizedRows
+
+        guard candidateBoxCount <= maxFunctionKeyCount else {
+            return false
+        }
+
+        guard resizeVisibleBoxCount(candidateBoxCount) else {
+            return false
+        }
+
+        let updatedGridDimensions = (columns: sanitizedColumns, rows: sanitizedRows)
+        visibleGridDimensions = updatedGridDimensions
+        visibleBoxCount = candidateBoxCount
+        saveGridDimensions(selectedDocumentName, updatedGridDimensions)
+        return true
     }
 
     func commitDocumentRename() {

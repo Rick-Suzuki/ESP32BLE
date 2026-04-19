@@ -18,17 +18,12 @@ struct MainScreen: View {
 	
 	// MARK: - BM:🔆 grid dims - allowed sizes
 	
-    let allowedVisibleBoxCounts = [
-        1, 2, 4, 6, 8, 9, 10, 12, 15, 16, 18, 20, 21, 24, 25, 27, 28, 30, 32, 35, 36, 40,
-        42, 44, 45, 48, 49, 50, 54, 56, 60, 63, 64, 66, 70, 72, 75, 78, 80, 81, 84, 88, 90,
-        96, 98, 99, 100
-    ]
     private let displayModeButtonColor = Color(red: 0.05, green: 0.33, blue: 0.18)
-    private let countControlColor = Color(red: 0.15, green: 0.72, blue: 0.22)
     private let fontControlColor = Color(red: 0.78, green: 0.68, blue: 0.12)
     private let speechRecognitionActiveColor = Color(red: 0.0, green: 0.2, blue: 0.45)
     private let bleSendActiveColor = Color(red: 0.55, green: 0.45, blue: 0.08)
     @State var visibleBoxCount = 20
+    @State var visibleGridDimensions: GridDimensions = functionKeyGridDimensions(for: 20)
     @State var mainGridButtonMode: MainGridButtonMode = .active
     @State var isSpkRecEnabled = false
     @State var unmatchedSpeechText: String?
@@ -79,6 +74,8 @@ struct MainScreen: View {
     let duplicateFunctionKeySlot: (Int, Int) -> Bool
     let updateFunctionKeySlot: (Int, String) -> Bool
     let updateDocumentFontSize: (Double) -> Void
+    let loadGridDimensions: (String, Int) -> GridDimensions
+    let saveGridDimensions: (String, GridDimensions) -> Void
     let openKeyboardScreen: () -> Void
     @Binding var settingsBLEText: String
 
@@ -235,6 +232,7 @@ struct MainScreen: View {
             reservedBottomInset: isGridEditModeEnabled ? 74 : 0,
             functionKeys: functionKeys,
             visibleBoxCount: visibleBoxCount,
+            visibleGridDimensions: visibleGridDimensions,
             mainGridButtonSpacing: mainGridButtonSpacing,
             isGridEditModeEnabled: isGridEditModeEnabled,
             bleSendEnabled: mainGridButtonMode != .disabled,
@@ -280,9 +278,7 @@ struct MainScreen: View {
     private func displayModeButtonSection(availableWidth: CGFloat) -> some View {
         MainScreenBottomBar(
             availableWidth: availableWidth,
-            allowedVisibleBoxCounts: allowedVisibleBoxCounts,
-            visibleBoxCount: visibleBoxCount,
-            visibleActiveBoxCount: visibleActiveBoxCount,
+            visibleGridDimensions: visibleGridDimensions,
             isGridEditModeEnabled: isGridEditModeEnabled,
             boxFontSize: boxFontSize,
             minimumBoxFontSize: minimumBoxFontSize,
@@ -294,12 +290,13 @@ struct MainScreen: View {
             mainGridButtonMode: mainGridButtonMode,
             displayMode: displayMode,
             displayModeButtonColor: displayModeButtonColor,
-            countControlColor: countControlColor,
             fontControlColor: fontControlColor,
             speechRecognitionActiveColor: speechRecognitionActiveColor,
             bleSendActiveColor: bleSendActiveColor,
-            onDecreaseVisibleBoxCount: decreaseVisibleBoxCount,
-            onIncreaseVisibleBoxCount: increaseVisibleBoxCount,
+            onDecreaseRows: decreaseGridRows,
+            onIncreaseRows: increaseGridRows,
+            onDecreaseColumns: decreaseGridColumns,
+            onIncreaseColumns: increaseGridColumns,
             onDecreaseBoxFontSize: decreaseBoxFontSize,
             onIncreaseBoxFontSize: increaseBoxFontSize,
             onToggleSpeechRecognition: { isSpkRecEnabled.toggle() },
@@ -359,6 +356,7 @@ struct MainScreen: View {
     }
 
     private func handleSelectedDocumentDisplayNameChange() {
+        restoreVisibleGridState()
         cancelDocumentRename()
         isGridEditModeEnabled = false
         activeDragIndex = nil
@@ -405,10 +403,12 @@ struct MainScreen: View {
 
     private func reloadSelectedDocumentIfAvailable() {
         guard let selectedDocumentURL = documentFiles.first(where: { $0.lastPathComponent == selectedDocumentName }) else {
+            restoreVisibleGridState()
             return
         }
 
         loadFunctionKeys(selectedDocumentURL)
+        restoreVisibleGridState()
     }
 
     func cycleMainGridButtonMode() {
@@ -478,73 +478,9 @@ struct MainScreen: View {
         }
     }
 
-    var minimumBoxFontSize: Double { 12 }
+    var minimumBoxFontSize: Double { 10 }
 
-    var maximumBoxFontSize: Double { 100 }
-
-    var visibleActiveBoxCount: Int {
-        functionKeys
-            .prefix(visibleBoxCount)
-            .filter { entry in
-                !entry.isBlankPlaceholder && !isEmptyButtonEntry(entry)
-            }
-            .count
-    }
-
-    private func gridDimensions(for itemCount: Int) -> (columns: Int, rows: Int) {
-        let preferredDimensions: [Int: (columns: Int, rows: Int)] = [
-            8: (4, 2),
-            10: (5, 2),
-            15: (5, 3),
-            18: (6, 3),
-            24: (6, 4),
-            25: (5, 5),
-            27: (9, 3),
-            28: (7, 4),
-            30: (6, 5),
-            32: (8, 4),
-            35: (7, 5),
-            36: (6, 6),
-            40: (8, 5),
-            44: (11, 4),
-            45: (9, 5),
-            48: (8, 6),
-            49: (7, 7),
-            50: (10, 5),
-            54: (9, 6),
-            60: (10, 6),
-            63: (9, 7),
-            66: (11, 6),
-            70: (10, 7),
-            75: (15, 5),
-            78: (13, 6),
-            80: (10, 8),
-            84: (12, 7),
-            88: (11, 8),
-            96: (12, 8),
-            98: (14, 7),
-            99: (11, 9),
-            100: (10, 10)
-        ]
-
-        if let preferred = preferredDimensions[itemCount] {
-            return preferred
-        }
-
-        guard itemCount > 0 else {
-            return (1, 1)
-        }
-
-        let baseColumns = Int(ceil(sqrt(Double(itemCount))))
-        var columns = max(baseColumns, Int(ceil(Double(itemCount) / Double(baseColumns))))
-        var rows = Int(ceil(Double(itemCount) / Double(columns)))
-
-        if rows > columns {
-            swap(&rows, &columns)
-        }
-
-        return (columns, rows)
-    }
+    var maximumBoxFontSize: Double { 200 }
 
     func handleEditDragEnded(
         from sourceIndex: Int,
