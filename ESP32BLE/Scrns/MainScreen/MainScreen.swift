@@ -32,6 +32,7 @@ struct MainScreen: View {
     @State var speechRecognitionAutoOffTask: Task<Void, Never>?
     @StateObject var speechRecognition = SpeechRecognitionManager()
     @State var speechSynthesizer = AVSpeechSynthesizer()
+    @State var soundEffectPlayer: AVAudioPlayer?
     @ObservedObject var ble: BLEKeyboardManager
     @State var displayMode: FunctionKeyDisplayMode = .right
     @State var isEditingDocumentName = false
@@ -239,6 +240,7 @@ struct MainScreen: View {
             isGridEditModeEnabled: isGridEditModeEnabled,
             bleSendEnabled: mainGridButtonMode != .disabled,
             onButtonClick: { ButtonClickFeedback.playIfEnabled() },
+            isHiddenEntry: isMainGridEntryHidden,
             sendLine: sendMainGridEntry,
             onBeginSlotEditing: beginSlotEditing,
             buttonLabel: { entry, index, buttonHeight in

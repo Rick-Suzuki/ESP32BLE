@@ -4,6 +4,7 @@ import AudioToolbox
 
 let maxFunctionKeyCount = 144
 private let defaultNamedFunctionKeyCount = 20
+let hiddenButtonMetadataToken = "@@hidden"
 
 enum ButtonClickFeedback {
     static let preferenceKey = "isButtonClickEnabled"
@@ -22,6 +23,7 @@ struct FunctionKeyEntry {
     let alternateDisplayText: String?
     let buttonColorCode: String?
     let isBlankPlaceholder: Bool
+    let isHiddenInNormalMode: Bool
 
     var primaryDisplayText: String {
         sendTexts.joined(separator: ":")
@@ -175,10 +177,10 @@ struct ContentView: View {
 
     private static func makeDefaultFunctionKeys() -> [FunctionKeyEntry] {
         let namedEntries = (1...defaultNamedFunctionKeyCount).map { index in
-            FunctionKeyEntry(rawLine: "F\(index)", sendTexts: ["F\(index)"], alternateDisplayText: nil, buttonColorCode: nil, isBlankPlaceholder: false)
+            FunctionKeyEntry(rawLine: "F\(index)", sendTexts: ["F\(index)"], alternateDisplayText: nil, buttonColorCode: nil, isBlankPlaceholder: false, isHiddenInNormalMode: false)
         }
         let emptyEntries = Array(
-            repeating: FunctionKeyEntry(rawLine: "", sendTexts: [], alternateDisplayText: nil, buttonColorCode: nil, isBlankPlaceholder: false),
+            repeating: FunctionKeyEntry(rawLine: "", sendTexts: [], alternateDisplayText: nil, buttonColorCode: nil, isBlankPlaceholder: false, isHiddenInNormalMode: false),
             count: maxFunctionKeyCount - defaultNamedFunctionKeyCount
         )
 
@@ -331,7 +333,7 @@ struct ContentView: View {
             restoreBackgroundImageSelection(for: selectedDocumentName)
         } catch {
             functionKeySlotLines = []
-            functionKeys = Array(repeating: FunctionKeyEntry(rawLine: "", sendTexts: [], alternateDisplayText: nil, buttonColorCode: nil, isBlankPlaceholder: false), count: maxFunctionKeyCount)
+            functionKeys = Array(repeating: FunctionKeyEntry(rawLine: "", sendTexts: [], alternateDisplayText: nil, buttonColorCode: nil, isBlankPlaceholder: false, isHiddenInNormalMode: false), count: maxFunctionKeyCount)
             loadedFunctionKeySlotCount = 0
         }
     }
@@ -363,7 +365,7 @@ struct ContentView: View {
 
         let entries = (0..<maxFunctionKeyCount).map { index in
             guard index < firstHundred.count else {
-                return FunctionKeyEntry(rawLine: "", sendTexts: [], alternateDisplayText: nil, buttonColorCode: nil, isBlankPlaceholder: false)
+                return FunctionKeyEntry(rawLine: "", sendTexts: [], alternateDisplayText: nil, buttonColorCode: nil, isBlankPlaceholder: false, isHiddenInNormalMode: false)
             }
 
             return functionKeyEntry(from: firstHundred[index])
@@ -800,30 +802,41 @@ struct ContentView: View {
 
     private func functionKeyEntry(from line: String) -> FunctionKeyEntry {
         if line == "_" || line.isEmpty {
-            return FunctionKeyEntry(rawLine: "", sendTexts: [], alternateDisplayText: nil, buttonColorCode: nil, isBlankPlaceholder: true)
+            return FunctionKeyEntry(rawLine: "", sendTexts: [], alternateDisplayText: nil, buttonColorCode: nil, isBlankPlaceholder: true, isHiddenInNormalMode: false)
         }
 
         let components = line.components(separatedBy: "::")
 
         guard components.count >= 2 else {
-            return FunctionKeyEntry(rawLine: line, sendTexts: [line], alternateDisplayText: nil, buttonColorCode: nil, isBlankPlaceholder: false)
+            return FunctionKeyEntry(rawLine: line, sendTexts: [line], alternateDisplayText: nil, buttonColorCode: nil, isBlankPlaceholder: false, isHiddenInNormalMode: false)
         }
 
         let leftText = components[0]
-        let rightText = components.dropFirst().joined(separator: "::").trimmingCharacters(in: .whitespacesAndNewlines)
+        let rightSideComponents = components.dropFirst().filter { $0 != hiddenButtonMetadataToken }
+        let isHiddenInNormalMode = components.dropFirst().contains(hiddenButtonMetadataToken)
+        let rightText = rightSideComponents.joined(separator: "::").trimmingCharacters(in: .whitespacesAndNewlines)
 
         guard !rightText.isEmpty else {
-            return FunctionKeyEntry(rawLine: line, sendTexts: [line], alternateDisplayText: nil, buttonColorCode: nil, isBlankPlaceholder: false)
+            return FunctionKeyEntry(
+                rawLine: line,
+                sendTexts: parsedSendTexts(from: leftText),
+                alternateDisplayText: nil,
+                buttonColorCode: nil,
+                isBlankPlaceholder: false,
+                isHiddenInNormalMode: isHiddenInNormalMode
+            )
         }
 
         let sendTexts = parsedSendTexts(from: leftText)
         let parsedRightText = parsedRightTextAndColor(from: rightText)
+        let usesLegacyVisibilitySymbol = parsedRightText.text == "eye" || parsedRightText.text == "eye.slash"
         return FunctionKeyEntry(
             rawLine: line,
             sendTexts: sendTexts,
-            alternateDisplayText: parsedRightText.text,
+            alternateDisplayText: usesLegacyVisibilitySymbol ? nil : parsedRightText.text,
             buttonColorCode: parsedRightText.colorCode,
-            isBlankPlaceholder: false
+            isBlankPlaceholder: false,
+            isHiddenInNormalMode: isHiddenInNormalMode || parsedRightText.text == "eye.slash"
         )
     }
 
@@ -832,9 +845,7 @@ struct ContentView: View {
         let loweredLeftText = trimmedLeftText.lowercased()
 
         if loweredLeftText.hasPrefix("http:") ||
-            loweredLeftText.hasPrefix("https:") ||
-            loweredLeftText.hasPrefix("http//") ||
-            loweredLeftText.hasPrefix("https//") {
+            loweredLeftText.hasPrefix("https:") {
             return trimmedLeftText.isEmpty ? [] : [trimmedLeftText]
         }
 

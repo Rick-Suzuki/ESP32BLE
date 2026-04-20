@@ -7,6 +7,7 @@ struct SettingsScreen: View {
     private enum SettingsListMode: String {
         case files
         case images
+        case sounds
 
         var buttonTitle: String {
             switch self {
@@ -14,11 +15,20 @@ struct SettingsScreen: View {
                 return "Files"
             case .images:
                 return "Images"
+            case .sounds:
+                return "Snds"
             }
         }
 
         mutating func toggle() {
-            self = self == .files ? .images : .files
+            switch self {
+            case .files:
+                self = .images
+            case .images:
+                self = .sounds
+            case .sounds:
+                self = .files
+            }
         }
     }
 
@@ -60,8 +70,10 @@ struct SettingsScreen: View {
     @AppStorage("settingsListMode") private var listModeRawValue = SettingsListMode.files.rawValue
     @AppStorage("settingsFilesScrollPositionID") private var fileScrollPositionIDStorage = ""
     @AppStorage("settingsImagesScrollPositionID") private var imageScrollPositionIDStorage = ""
+    @AppStorage("settingsSoundsScrollPositionID") private var soundScrollPositionIDStorage = ""
     @State private var isImportingDocument = false
     @State private var isImportingImages = false
+    @State private var isImportingSounds = false
     @State private var isExportingDocument = false
     @State private var exportDocument: SettingsTextFileDocument?
     @State private var isExportingArchive = false
@@ -73,11 +85,17 @@ struct SettingsScreen: View {
     @AppStorage("selectedBackgroundImageIndex") var selectedImageIndex = 0
     @AppStorage("selectedBackgroundImageName") var selectedImageName = ""
     @AppStorage("selectedBackgroundImagePath") var selectedImagePath = ""
+    @AppStorage("selectedSoundName") var selectedSoundName = ""
+    @AppStorage("selectedSoundPath") var selectedSoundPath = ""
     @AppStorage(ButtonClickFeedback.preferenceKey) private var isButtonClickEnabled = true
     @FocusState var focusedField: SettingsFocusField?
     @FocusState private var isDocumentNameFieldFocused: Bool
 
     var body: some View {
+        configuredSettingsScreen
+    }
+
+    private var settingsScreenBase: some View {
         GeometryReader { geometry in
             HStack(alignment: .top, spacing: 0) {
                 VStack(spacing: 0) {
@@ -94,6 +112,10 @@ struct SettingsScreen: View {
             }
             .frame(maxHeight: .infinity, alignment: .top)
         }
+    }
+
+    private var configuredSettingsScreen: some View {
+        settingsScreenBase
         .background(Color.black.ignoresSafeArea())
         .navigationTitle("")
         .toolbar {
@@ -120,6 +142,10 @@ struct SettingsScreen: View {
                     Button("Import Images") {
                         ButtonClickFeedback.playIfEnabled()
                         isImportingImages = true
+                    }
+                    Button("Import Sounds") {
+                        ButtonClickFeedback.playIfEnabled()
+                        isImportingSounds = true
                     }
                 } label: {
                     Image(systemName: "square.and.arrow.down")
@@ -183,11 +209,7 @@ struct SettingsScreen: View {
             guard isEditingDocumentName, !isDocumentNameFieldFocused else { return }
             cancelNameEditing()
         }
-        .onChange(of: selectedImagePath) {
-            guard listMode == .images else { return }
-            cancelNameEditing()
-        }
-        .onChange(of: listModeRawValue) {
+        .onChange(of: settingsModeEditResetKey) {
             cancelNameEditing()
         }
         .onAppear {
@@ -222,6 +244,13 @@ struct SettingsScreen: View {
             allowsMultipleSelection: true
         ) { result in
             handleImageImport(result)
+        }
+        .fileImporter(
+            isPresented: $isImportingSounds,
+            allowedContentTypes: [.audio],
+            allowsMultipleSelection: true
+        ) { result in
+            handleSoundImport(result)
         }
         .fileExporter(
             isPresented: $isExportingDocument,
@@ -264,6 +293,17 @@ struct SettingsScreen: View {
             get: { imageScrollPositionIDStorage.isEmpty ? nil : imageScrollPositionIDStorage },
             set: { imageScrollPositionIDStorage = $0 ?? "" }
         )
+    }
+
+    private var soundScrollPositionID: Binding<String?> {
+        Binding(
+            get: { soundScrollPositionIDStorage.isEmpty ? nil : soundScrollPositionIDStorage },
+            set: { soundScrollPositionIDStorage = $0 ?? "" }
+        )
+    }
+
+    private var settingsModeEditResetKey: String {
+        "\(listModeRawValue)|\(selectedImagePath)|\(selectedSoundPath)"
     }
 
     private func documentTableWidth(for availableWidth: CGFloat) -> CGFloat {
@@ -473,21 +513,45 @@ struct SettingsScreen: View {
 
     private var documentTableSection: some View {
         SettingsDocumentTableSection(
-            listMode: listMode == .files ? .files : .images,
+            listMode: settingsDocumentTableListMode,
             documentFiles: documentFiles,
             selectedDocumentName: selectedDocumentName,
             imageURLs: availableImageURLs,
             selectedImageURL: selectedImageURL,
+            soundURLs: availableSoundURLs,
+            selectedSoundURL: selectedSoundURL,
             fileScrollPositionID: fileScrollPositionID,
             imageScrollPositionID: imageScrollPositionID,
+            soundScrollPositionID: soundScrollPositionID,
             canDeleteDocuments: canDeleteDocuments,
-            imagePreviewSection: AnyView(imagePreviewSection),
+            imagePreviewSection: settingsTablePreviewSection,
             loadFunctionKeys: loadFunctionKeys,
             deleteDocument: deleteDocument,
             duplicateDocument: duplicateDocument,
             selectImage: selectImage,
-            deleteImage: deleteImage
+            deleteImage: deleteImage,
+            selectSound: selectSound,
+            deleteSound: deleteSound
         )
+    }
+
+    private var settingsDocumentTableListMode: SettingsDocumentTableSection.ListMode {
+        switch listMode {
+        case .files:
+            return .files
+        case .images:
+            return .images
+        case .sounds:
+            return .sounds
+        }
+    }
+
+    private var settingsTablePreviewSection: AnyView {
+        if listMode == .images {
+            return AnyView(imagePreviewSection)
+        }
+
+        return AnyView(EmptyView())
     }
 
     private var customKeyboardTimingSection: some View {
@@ -764,12 +828,69 @@ struct SettingsScreen: View {
         return selectedImageURL.deletingPathExtension().lastPathComponent
     }
 
+    private var availableSoundURLs: [URL] {
+        let directoryURL: URL
+        if let existingDocumentURL = documentFiles.first {
+            directoryURL = existingDocumentURL.deletingLastPathComponent()
+        } else if let fallbackDirectoryURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
+            directoryURL = fallbackDirectoryURL
+        } else {
+            return []
+        }
+
+        let supportedExtensions = supportedImportedSoundExtensions
+
+        let urls = (try? FileManager.default.contentsOfDirectory(
+            at: directoryURL,
+            includingPropertiesForKeys: [.isRegularFileKey],
+            options: [.skipsHiddenFiles]
+        )) ?? []
+
+        return urls
+            .filter { url in
+                let values = try? url.resourceValues(forKeys: [.isRegularFileKey])
+                return values?.isRegularFile == true && supportedExtensions.contains(url.pathExtension.lowercased())
+            }
+            .sorted { $0.lastPathComponent.localizedCaseInsensitiveCompare($1.lastPathComponent) == .orderedAscending }
+    }
+
+    private var selectedSoundURL: URL? {
+        if !selectedSoundPath.isEmpty,
+           let soundURL = availableSoundURLs.first(where: { $0.path == selectedSoundPath }) {
+            return soundURL
+        }
+
+        if !selectedSoundName.isEmpty,
+           let soundURL = availableSoundURLs.first(where: {
+               $0.lastPathComponent.caseInsensitiveCompare(selectedSoundName) == .orderedSame
+           }) {
+            return soundURL
+        }
+
+        return nil
+    }
+
+    private func persistSelectedSound(_ soundURL: URL?) {
+        selectedSoundPath = soundURL?.path ?? ""
+        selectedSoundName = soundURL?.lastPathComponent ?? ""
+    }
+
+    private var selectedSoundDisplayName: String {
+        guard let selectedSoundURL else {
+            return "sound"
+        }
+
+        return selectedSoundURL.deletingPathExtension().lastPathComponent
+    }
+
     private var currentTitleDisplayName: String {
         switch listMode {
         case .files:
             return selectedDocumentDisplayName
         case .images:
             return selectedImageDisplayName
+        case .sounds:
+            return selectedSoundDisplayName
         }
     }
 
@@ -779,6 +900,8 @@ struct SettingsScreen: View {
             return selectedDocumentFileURL != nil
         case .images:
             return selectedImageURL != nil
+        case .sounds:
+            return selectedSoundURL != nil
         }
     }
 
@@ -802,6 +925,8 @@ struct SettingsScreen: View {
             alertMessage = renameDocument(proposedName)
         case .images:
             alertMessage = renameSelectedImage(to: proposedName)
+        case .sounds:
+            alertMessage = renameSelectedSound(to: proposedName)
         }
 
         if let alertMessage {
@@ -863,6 +988,10 @@ struct SettingsScreen: View {
 
     private func selectImage(_ imageURL: URL) {
         persistSelectedImage(imageURL)
+    }
+
+    private func selectSound(_ soundURL: URL) {
+        persistSelectedSound(soundURL)
     }
 
     private func renameSelectedImage(to proposedName: String) -> String? {
@@ -927,12 +1056,72 @@ struct SettingsScreen: View {
         }
     }
 
+    private func renameSelectedSound(to proposedName: String) -> String? {
+        let trimmedName = proposedName.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard !trimmedName.isEmpty else {
+            return "Filename can't be blank."
+        }
+
+        guard let sourceURL = selectedSoundURL else {
+            return "Select a sound first."
+        }
+
+        let fileExtension = sourceURL.pathExtension
+        let targetFileName = "\(trimmedName).\(fileExtension)"
+
+        if targetFileName.caseInsensitiveCompare(sourceURL.lastPathComponent) == .orderedSame {
+            return nil
+        }
+
+        let directoryURL = sourceURL.deletingLastPathComponent()
+
+        if availableSoundURLs.contains(where: { $0.lastPathComponent.caseInsensitiveCompare(targetFileName) == .orderedSame }) {
+            return "a file with that name already exists."
+        }
+
+        let targetURL = directoryURL.appendingPathComponent(targetFileName)
+
+        do {
+            try FileManager.default.moveItem(at: sourceURL, to: targetURL)
+            persistSelectedSound(targetURL)
+            return nil
+        } catch {
+            return "Couldn't rename the sound."
+        }
+    }
+
+    private func deleteSound(_ soundURL: URL) {
+        let previousSelectedSoundURL = selectedSoundURL
+
+        do {
+            try FileManager.default.removeItem(at: soundURL)
+        } catch {
+            renameAlertMessage = "Couldn't delete the sound."
+            return
+        }
+
+        let refreshedSoundURLs = availableSoundURLs
+
+        if let previousSelectedSoundURL,
+           previousSelectedSoundURL.lastPathComponent == soundURL.lastPathComponent {
+            persistSelectedSound(refreshedSoundURLs.first)
+        } else if let previousSelectedSoundURL,
+                  let refreshedSoundIndex = refreshedSoundURLs.firstIndex(where: { $0.lastPathComponent == previousSelectedSoundURL.lastPathComponent }) {
+            persistSelectedSound(refreshedSoundURLs[refreshedSoundIndex])
+        }
+    }
+
     private var plainTextImportType: UTType {
         UTType(filenameExtension: "txt") ?? .plainText
     }
 
     private var supportedImportedImageExtensions: Set<String> {
         ["png", "jpg", "jpeg", "heic", "heif", "gif", "bmp", "tiff", "webp"]
+    }
+
+    var supportedImportedSoundExtensions: Set<String> {
+        ["mp3", "wav", "m4a", "aiff", "aac", "caf"]
     }
 
     private func handleDocumentImport(_ result: Result<[URL], Error>) {
@@ -1058,6 +1247,68 @@ struct SettingsScreen: View {
             renameAlertMessage = duplicateImageNames.count == 1
                 ? "a file with that name already exists."
                 : "Some images were skipped because they already exist. First skipped: \(duplicateImageName)"
+        }
+    }
+
+    private func handleSoundImport(_ result: Result<[URL], Error>) {
+        guard case let .success(urls) = result else {
+            if case let .failure(error) = result {
+                renameAlertMessage = error.localizedDescription
+            }
+            return
+        }
+
+        guard let directoryURL = currentDocumentsDirectoryURL else {
+            renameAlertMessage = "Couldn't access the documents folder."
+            return
+        }
+
+        let existingSoundNames = Set(availableSoundURLs.map { $0.lastPathComponent.lowercased() })
+        var duplicateSoundNames: [String] = []
+
+        for sourceURL in urls {
+            guard supportedImportedSoundExtensions.contains(sourceURL.pathExtension.lowercased()) else {
+                renameAlertMessage = "Only supported sound files can be imported."
+                return
+            }
+
+            let targetFileName = sourceURL.lastPathComponent
+            let targetURL = directoryURL.appendingPathComponent(targetFileName)
+
+            if existingSoundNames.contains(targetFileName.lowercased()) {
+                duplicateSoundNames.append(targetFileName)
+                continue
+            }
+
+            let didAccessSecurityScopedResource = sourceURL.startAccessingSecurityScopedResource()
+            defer {
+                if didAccessSecurityScopedResource {
+                    sourceURL.stopAccessingSecurityScopedResource()
+                }
+            }
+
+            do {
+                if FileManager.default.fileExists(atPath: targetURL.path) {
+                    duplicateSoundNames.append(targetFileName)
+                    continue
+                }
+                try FileManager.default.copyItem(at: sourceURL, to: targetURL)
+            } catch {
+                renameAlertMessage = "Couldn't import the sound."
+                return
+            }
+        }
+
+        refreshDocumentFiles()
+
+        if let firstImportedURL = urls.first(where: { !duplicateSoundNames.contains($0.lastPathComponent) }) {
+            persistSelectedSound(directoryURL.appendingPathComponent(firstImportedURL.lastPathComponent))
+        }
+
+        if let duplicateSoundName = duplicateSoundNames.first {
+            renameAlertMessage = duplicateSoundNames.count == 1
+                ? "a file with that name already exists."
+                : "Some sounds were skipped because they already exist. First skipped: \(duplicateSoundName)"
         }
     }
 

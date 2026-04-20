@@ -20,6 +20,7 @@ struct MainScreenSlotEditorOverlay: View {
     @State private var activeEditorField: ActiveEditorField = .action
     @State private var actionDraft = ""
     @State private var rightDraft = ""
+    @State private var isHiddenInNormalMode = false
     @AppStorage("slotEditorClipboardAction") private var clipboardActionDraft = ""
     @AppStorage("slotEditorClipboardRight") private var clipboardRightDraft = ""
     private let rightColumnButtonWidth: CGFloat = 90
@@ -27,11 +28,16 @@ struct MainScreenSlotEditorOverlay: View {
 	
 	// MARK: - BM:🟦 SF symbols list
 	
-    private let sfSymbolNames = [
-        "square.and.arrow.up.on.square.fill", "square.and.arrow.down.on.square.fill", "folder", "trash", "magnifyingglass",
-        "lightbulb.max.fill", "speaker.wave.2", "star", "heart", "bell",
-        "paperclip", "link", "paperplane", "doc", "calendar",
-        "camera", "photo", "tray", "sun.max.fill"
+    private let visibilityToggleSymbolToken = "__visibility_toggle__"
+    private let visibleEyeSymbolName = "eye"
+    private let hiddenEyeSymbolName = "eye.slash"
+    private let leftSymbolNames = [
+        "square.and.arrow.up.on.square.fill", "square.and.arrow.down.on.square.fill", "folder", "__visibility_toggle__", "magnifyingglass",
+        "lightbulb.max.fill", "speaker.wave.2", "star", "heart", "bell"
+    ]
+    private let rightSymbolNames = [
+        "paperclip", "paperplane", "doc", "calendar", "camera",
+        "photo", "tray", "sun.max.fill", "link"
     ]
 	
     // MARK: - BM:🟪 color keycodes
@@ -239,6 +245,9 @@ struct MainScreenSlotEditorOverlay: View {
         .onChange(of: rightDraft) {
             syncCombinedTextFromDrafts()
         }
+        .onChange(of: isHiddenInNormalMode) {
+            syncCombinedTextFromDrafts()
+        }
     }
 
     private func helperInsertButton(_ text: String) -> some View {
@@ -398,6 +407,10 @@ struct MainScreenSlotEditorOverlay: View {
     }
 
     private func sfSymbolInsertButton(_ symbolName: String, width: CGFloat) -> some View {
+        if symbolName == visibilityToggleSymbolToken {
+            return AnyView(visibilityToggleButton(width: width))
+        }
+
         if symbolName == "square.and.arrow.up.on.square.fill" {
             return AnyView(copySlotButton(width: width))
         }
@@ -428,6 +441,29 @@ struct MainScreenSlotEditorOverlay: View {
         }
         .buttonStyle(.plain)
         )
+    }
+
+    private func visibilityToggleButton(width: CGFloat) -> some View {
+            Button {
+                ButtonClickFeedback.playIfEnabled()
+            isHiddenInNormalMode.toggle()
+            activeEditorField = .text
+            rightInputController.focus()
+            focusBinding.wrappedValue = true
+        } label: {
+            Image(systemName: currentVisibilitySymbolName)
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundStyle(.green)
+                .frame(width: width, height: 44)
+                .background(Color.black)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.white.opacity(0.8), lineWidth: 1.5)
+                }
+                .clipShape(.rect(cornerRadius: 12))
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 
     private func copySlotButton(width: CGFloat) -> some View {
@@ -493,7 +529,10 @@ struct MainScreenSlotEditorOverlay: View {
         }
 
         let action = components.first ?? ""
-        let text = components.dropFirst().joined(separator: "::")
+        let textComponents = components
+            .dropFirst()
+            .filter { $0 != hiddenButtonMetadataToken }
+        let text = textComponents.joined(separator: "::")
         return (action, text)
     }
 
@@ -504,25 +543,36 @@ struct MainScreenSlotEditorOverlay: View {
             ? action
             : action.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let baseText: String
 
-        if normalizedAction.isEmpty {
-            return trimmedText
+        if normalizedAction.isEmpty && trimmedText.isEmpty {
+            baseText = ""
+        } else if normalizedAction.isEmpty {
+            baseText = "::\(trimmedText)"
+        } else if trimmedText.isEmpty {
+            baseText = normalizedAction
+        } else {
+            baseText = "\(normalizedAction)::\(trimmedText)"
         }
 
-        if trimmedText.isEmpty {
-            return normalizedAction
+        guard isHiddenInNormalMode, !baseText.isEmpty else {
+            return baseText
         }
 
-        return "\(normalizedAction)::\(trimmedText)"
+        return baseText.contains("::")
+            ? "\(baseText)::\(hiddenButtonMetadataToken)"
+            : "\(baseText)::\(hiddenButtonMetadataToken)"
     }
 
     private func syncDraftsFromCombinedText() {
+        isHiddenInNormalMode = editingSlotText.components(separatedBy: "::").contains(hiddenButtonMetadataToken)
         let splitText = splitEditingText
         if actionDraft != splitText.action {
             actionDraft = splitText.action
         }
-        if rightDraft != splitText.text {
-            rightDraft = splitText.text
+        let normalizedRightText = normalizedRightDraft(splitText.text)
+        if rightDraft != normalizedRightText {
+            rightDraft = normalizedRightText
         }
     }
 
@@ -584,19 +634,11 @@ struct MainScreenSlotEditorOverlay: View {
 
     private func droppingLeadingEditorSymbol(from components: [String]) -> [String] {
         guard let firstComponent = components.first?.trimmingCharacters(in: .whitespacesAndNewlines),
-              sfSymbolNames.contains(firstComponent) else {
+              removableLeadingEditorSymbolNames.contains(firstComponent) else {
             return components
         }
 
         return Array(components.dropFirst())
-    }
-
-    private var leftSymbolNames: [String] {
-        Array(sfSymbolNames.prefix(10))
-    }
-
-    private var rightSymbolNames: [String] {
-        Array(sfSymbolNames.suffix(10))
     }
 
     private var clearActionButton: some View {
@@ -646,5 +688,18 @@ struct MainScreenSlotEditorOverlay: View {
         case .text:
             return rightInputController
         }
+    }
+
+    private var removableLeadingEditorSymbolNames: Set<String> {
+        Set(leftSymbolNames + rightSymbolNames + [visibleEyeSymbolName, hiddenEyeSymbolName])
+    }
+
+    private var currentVisibilitySymbolName: String {
+        isHiddenInNormalMode ? hiddenEyeSymbolName : visibleEyeSymbolName
+    }
+
+    private func normalizedRightDraft(_ text: String) -> String {
+        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        return (trimmedText == visibleEyeSymbolName || trimmedText == hiddenEyeSymbolName) ? "" : text
     }
 }

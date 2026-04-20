@@ -4,6 +4,7 @@ struct SettingsDocumentTableSection: View {
     enum ListMode {
         case files
         case images
+        case sounds
     }
 
     let listMode: ListMode
@@ -11,8 +12,11 @@ struct SettingsDocumentTableSection: View {
     let selectedDocumentName: String
     let imageURLs: [URL]
     let selectedImageURL: URL?
+    let soundURLs: [URL]
+    let selectedSoundURL: URL?
     @Binding var fileScrollPositionID: String?
     @Binding var imageScrollPositionID: String?
+    @Binding var soundScrollPositionID: String?
     let canDeleteDocuments: Bool
     let imagePreviewSection: AnyView
     let loadFunctionKeys: (URL) -> Void
@@ -20,6 +24,8 @@ struct SettingsDocumentTableSection: View {
     let duplicateDocument: (URL) -> Void
     let selectImage: (URL) -> Void
     let deleteImage: (URL) -> Void
+    let selectSound: (URL) -> Void
+    let deleteSound: (URL) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -33,6 +39,11 @@ struct SettingsDocumentTableSection: View {
                 case .images:
                     ForEach(imageURLs, id: \.path) { imageURL in
                         imageRow(for: imageURL)
+                    }
+                    .scrollTargetLayout()
+                case .sounds:
+                    ForEach(soundURLs, id: \.path) { soundURL in
+                        soundRow(for: soundURL)
                     }
                     .scrollTargetLayout()
                 }
@@ -59,6 +70,8 @@ struct SettingsDocumentTableSection: View {
             return $fileScrollPositionID
         case .images:
             return $imageScrollPositionID
+        case .sounds:
+            return $soundScrollPositionID
         }
     }
 
@@ -148,6 +161,47 @@ struct SettingsDocumentTableSection: View {
         .swipeActions(edge: .leading, allowsFullSwipe: false) {
             Button(role: .destructive) {
                 deleteImage(imageURL)
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
+        }
+    }
+
+    private func soundRow(for soundURL: URL) -> some View {
+        let isSelected = selectedSoundURL?.lastPathComponent == soundURL.lastPathComponent
+
+        return Button {
+            ButtonClickFeedback.playIfEnabled()
+            selectSound(soundURL)
+        } label: {
+            HStack {
+                Text(soundURL.lastPathComponent)
+                    .fontWeight(isSelected ? .bold : .regular)
+                    .foregroundStyle(isSelected ? Color.green : .white)
+                    .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Spacer()
+            }
+            .padding(.leading, 10)
+            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            .background(Color.black)
+            .overlay {
+                Rectangle()
+                    .fill(Color.gray.opacity(0.6))
+                    .frame(height: 1)
+                    .frame(maxHeight: .infinity, alignment: .bottom)
+            }
+            .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .id(soundURL.path)
+        .listRowInsets(EdgeInsets())
+        .listRowSeparator(.hidden)
+        .listRowBackground(Color.clear)
+        .swipeActions(edge: .leading, allowsFullSwipe: false) {
+            Button(role: .destructive) {
+                deleteSound(soundURL)
             } label: {
                 Label("Delete", systemImage: "trash")
             }

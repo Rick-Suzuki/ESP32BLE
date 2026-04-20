@@ -93,6 +93,7 @@ struct MainScreenGridSection: View {
     let isGridEditModeEnabled: Bool
     let bleSendEnabled: Bool
     let onButtonClick: () -> Void
+    let isHiddenEntry: (FunctionKeyEntry) -> Bool
     let sendLine: (FunctionKeyEntry) -> Void
     let onBeginSlotEditing: (Int) -> Void
     let buttonLabel: (FunctionKeyEntry, Int, CGFloat) -> AnyView

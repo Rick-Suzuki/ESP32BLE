@@ -6,7 +6,7 @@ extension MainScreen {
     private var defaultNewButtonEntryText: String { "F::spare" }
     private var supportedMainScreenSFSymbolNames: Set<String> {
         [
-            "folder", "trash", "magnifyingglass", "gearshape", "house",
+            "folder", "magnifyingglass", "gearshape", "house",
             "lightbulb.max.fill", "speaker.wave.2", "star", "heart", "bell",
             "paperclip", "link", "paperplane", "doc", "calendar",
             "camera", "photo", "tray", "sun.max.fill", "chart.bar.fill"
@@ -15,7 +15,7 @@ extension MainScreen {
 
     func buttonTitle(for entry: FunctionKeyEntry) -> String {
         guard entry.displayUsesAlternateText else {
-            return displayText(from: entry.rawLine)
+            return displayText(from: rawLineWithoutHiddenMetadata(entry))
         }
 
         let alternateDisplayText = resolvedAlternateDisplayText(for: entry)
@@ -41,9 +41,9 @@ extension MainScreen {
             return alternateDisplayText
         }
 
-        let components = entry.rawLine.components(separatedBy: "::")
+        let components = rawLineWithoutHiddenMetadata(entry).components(separatedBy: "::")
         guard components.count >= 2 else {
-            return entry.rawLine
+            return rawLineWithoutHiddenMetadata(entry)
         }
 
         let rawRightText = components
@@ -86,14 +86,22 @@ extension MainScreen {
         }
 
         let bluetoothSendTexts = entry.sendTexts.filter { sendText in
-            targetDocumentNameForSendText(sendText) == nil && targetURLForSendText(sendText) == nil
+            targetDocumentNameForSendText(sendText) == nil &&
+                targetURLForSendText(sendText) == nil &&
+                targetSoundFilenameForSendText(sendText) == nil &&
+                targetSpokenTextForSendText(sendText) == nil
         }
         let targetDocumentName = targetDocumentNameForGridEntry(entry)
         let targetURL = targetURLForGridEntry(entry)
+        let targetSoundFilename = targetSoundFilenameForGridEntry(entry)
 
         if let targetURL {
             UIApplication.shared.open(targetURL)
             return
+        }
+
+        if let targetSoundFilename {
+            playMainGridSound(named: targetSoundFilename)
         }
 
         if let targetDocumentName {
@@ -144,6 +152,10 @@ extension MainScreen {
     }
 
     func spokenTitle(for entry: FunctionKeyEntry) -> String {
+        if let spokenCommandText = targetSpokenTextForGridEntry(entry) {
+            return spokenCommandText
+        }
+
         let rightTitle = resolvedAlternateDisplayText(for: entry)
             .trimmingCharacters(in: .whitespacesAndNewlines)
 
@@ -215,6 +227,75 @@ extension MainScreen {
         return URL(string: encodedSendText)
     }
 
+    func targetSoundFilenameForGridEntry(_ entry: FunctionKeyEntry) -> String? {
+        entry.sendTexts.compactMap(targetSoundFilenameForSendText).first
+    }
+
+    func targetSpokenTextForGridEntry(_ entry: FunctionKeyEntry) -> String? {
+        entry.sendTexts.compactMap(targetSpokenTextForSendText).first
+    }
+
+    func targetSoundFilenameForSendText(_ sendText: String) -> String? {
+        let trimmedSendText = sendText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let loweredSendText = trimmedSendText.lowercased()
+
+        guard loweredSendText.hasPrefix("snd ") else {
+            return nil
+        }
+
+        let filename = trimmedSendText.dropFirst(4).trimmingCharacters(in: .whitespacesAndNewlines)
+        return filename.isEmpty ? nil : filename
+    }
+
+    func targetSpokenTextForSendText(_ sendText: String) -> String? {
+        let trimmedSendText = sendText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let loweredSendText = trimmedSendText.lowercased()
+
+        guard loweredSendText.hasPrefix("spk ") else {
+            return nil
+        }
+
+        let spokenText = displayText(from: String(trimmedSendText.dropFirst(4)))
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return spokenText.isEmpty ? nil : spokenText
+    }
+
+    func playMainGridSound(named filename: String) {
+        guard let audioURL = soundURL(named: filename) else {
+            alertTitle = "Sound Not Found"
+            renameAlertMessage = "Couldn't find \(filename)."
+            return
+        }
+
+        activateAudioSessionForSpeechPlayback()
+
+        do {
+            let player = try AVAudioPlayer(contentsOf: audioURL)
+            player.prepareToPlay()
+            player.play()
+            soundEffectPlayer = player
+        } catch {
+            alertTitle = "Sound Error"
+            renameAlertMessage = "Couldn't play \(filename)."
+        }
+    }
+
+    func soundURL(named filename: String) -> URL? {
+        let trimmedFilename = filename.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedFilename.isEmpty else {
+            return nil
+        }
+
+        if let documentsDirectoryURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
+            let documentSoundURL = documentsDirectoryURL.appendingPathComponent(trimmedFilename)
+            if FileManager.default.fileExists(atPath: documentSoundURL.path) {
+                return documentSoundURL
+            }
+        }
+
+        return Bundle.main.resourceURL?.appendingPathComponent(trimmedFilename)
+    }
+
     func normalizedBluetoothSendText(_ sendText: String) -> String {
         let trimmedSendText = sendText.trimmingCharacters(in: .whitespacesAndNewlines)
         let loweredSendText = trimmedSendText.lowercased()
@@ -254,6 +335,14 @@ extension MainScreen {
             activeDragIndex: activeDragIndex,
             backgroundOpacity: backgroundOpacity
         )
+    }
+
+    func isMainGridEntryHidden(_ entry: FunctionKeyEntry) -> Bool {
+        guard !isGridEditModeEnabled else {
+            return false
+        }
+
+        return entry.isHiddenInNormalMode
     }
 
     func mainGridButtonDragGesture(
@@ -358,6 +447,13 @@ extension MainScreen {
             scalar.properties.isEmojiPresentation || scalar.properties.isEmoji
         }
     }
+
+    private func rawLineWithoutHiddenMetadata(_ entry: FunctionKeyEntry) -> String {
+        entry.rawLine
+            .components(separatedBy: "::")
+            .filter { $0 != hiddenButtonMetadataToken }
+            .joined(separator: "::")
+    }
 }
 
 struct MainScreenButtonLabelView: View {
@@ -394,6 +490,11 @@ struct MainScreenButtonLabelView: View {
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if isHiddenMainGridEntry {
+                Rectangle()
+                    .fill(Color.white.opacity(0.001))
+                    .contentShape(Rectangle())
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 ZStack {
                     RoundedRectangle(cornerRadius: cornerRadius)
@@ -409,6 +510,10 @@ struct MainScreenButtonLabelView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
+    }
+
+    private var isHiddenMainGridEntry: Bool {
+        !isGridEditModeEnabled && entry.isHiddenInNormalMode
     }
 
     @ViewBuilder
@@ -457,7 +562,7 @@ struct MainScreenButtonLabelView: View {
             Image(systemName: name)
                 .resizable()
                 .scaledToFit()
-                .foregroundStyle(buttonTextColor)
+                .foregroundStyle(symbolForegroundColor(for: name))
                 .frame(
                     width: max(18, CGFloat(boxFontSize) * 1.5),
                     height: max(18, CGFloat(boxFontSize) * 1.5)
@@ -535,6 +640,15 @@ struct MainScreenButtonLabelView: View {
         }
 
         return Color.white.opacity(0.8)
+    }
+
+    private func symbolForegroundColor(for name: String) -> Color {
+        switch name {
+        case "eye", "eye.slash":
+            return .green
+        default:
+            return buttonTextColor
+        }
     }
 
     private var isEmptyButtonEntry: Bool {
