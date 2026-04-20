@@ -26,12 +26,21 @@ extension MainScreen {
             return
         }
 
+        let recognizedTextWithoutSpaces = recognizedText.replacingOccurrences(of: " ", with: "")
+
         guard let matchingEntry = functionKeys.first(where: { entry in
             guard let alternateDisplayText = entry.alternateDisplayText else {
                 return false
             }
 
             return normalizedSpeechMatchText(alternateDisplayText) == recognizedText
+        }) ?? functionKeys.first(where: { entry in
+            guard let alternateDisplayText = entry.alternateDisplayText else {
+                return false
+            }
+
+            return recognizedTextWithoutSpaces != recognizedText &&
+                normalizedSpeechMatchText(alternateDisplayText) == recognizedTextWithoutSpaces
         }) else {
             unmatchedSpeechText = recognizedText
             return
@@ -66,11 +75,7 @@ extension MainScreen {
     }
 
     func canonicalSpeechText(from text: String) -> String {
-        text
-            .lowercased()
-            .components(separatedBy: CharacterSet.alphanumerics.inverted)
-            .filter { !$0.isEmpty }
-            .joined(separator: " ")
+        normalizedSpeechRecognitionText(text)
     }
 
     func speechMatchDisplayText(from text: String) -> String {

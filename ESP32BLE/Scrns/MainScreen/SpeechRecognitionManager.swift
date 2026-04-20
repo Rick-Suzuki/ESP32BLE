@@ -3,6 +3,28 @@ import Combine
 import Speech
 import SwiftUI
 
+private let spokenDigitTokenMap: [String: String] = [
+    "zero": "0",
+    "one": "1",
+    "two": "2",
+    "three": "3",
+    "four": "4",
+    "five": "5",
+    "six": "6",
+    "seven": "7",
+    "eight": "8",
+    "nine": "9"
+]
+
+func normalizedSpeechRecognitionText(_ text: String) -> String {
+    text
+        .lowercased()
+        .components(separatedBy: CharacterSet.alphanumerics.inverted)
+        .filter { !$0.isEmpty }
+        .map { spokenDigitTokenMap[$0] ?? $0 }
+        .joined(separator: " ")
+}
+
 struct SpeechRecognitionEvent: Equatable {
     let id = UUID()
     let text: String
@@ -279,11 +301,7 @@ final class SpeechRecognitionManager: NSObject, ObservableObject {
     }
 
     private func normalizedTranscript(from text: String) -> String {
-        text
-            .lowercased()
-            .components(separatedBy: CharacterSet.alphanumerics.inverted)
-            .filter { !$0.isEmpty }
-            .joined(separator: " ")
+        normalizedSpeechRecognitionText(text)
     }
 }
 
