@@ -828,7 +828,17 @@ struct ContentView: View {
     }
 
     private func parsedSendTexts(from leftText: String) -> [String] {
-        leftText
+        let trimmedLeftText = leftText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let loweredLeftText = trimmedLeftText.lowercased()
+
+        if loweredLeftText.hasPrefix("http:") ||
+            loweredLeftText.hasPrefix("https:") ||
+            loweredLeftText.hasPrefix("http//") ||
+            loweredLeftText.hasPrefix("https//") {
+            return trimmedLeftText.isEmpty ? [] : [trimmedLeftText]
+        }
+
+        return leftText
             .components(separatedBy: ":")
             .compactMap { component in
                 if !component.isEmpty,

@@ -86,9 +86,15 @@ extension MainScreen {
         }
 
         let bluetoothSendTexts = entry.sendTexts.filter { sendText in
-            targetDocumentNameForSendText(sendText) == nil
+            targetDocumentNameForSendText(sendText) == nil && targetURLForSendText(sendText) == nil
         }
         let targetDocumentName = targetDocumentNameForGridEntry(entry)
+        let targetURL = targetURLForGridEntry(entry)
+
+        if let targetURL {
+            UIApplication.shared.open(targetURL)
+            return
+        }
 
         if let targetDocumentName {
             guard selectDocumentNamedFromGrid(targetDocumentName) else {
@@ -174,6 +180,39 @@ extension MainScreen {
     func targetDocumentNameForSendText(_ sendText: String) -> String? {
         let trimmedSendText = sendText.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmedSendText.lowercased().hasSuffix(".txt") ? trimmedSendText : nil
+    }
+
+    func targetURLForGridEntry(_ entry: FunctionKeyEntry) -> URL? {
+        entry.sendTexts.compactMap(targetURLForSendText).first
+    }
+
+    func targetURLForSendText(_ sendText: String) -> URL? {
+        let trimmedSendText = sendText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let normalizedSendText: String
+
+        if trimmedSendText.lowercased().hasPrefix("https//") {
+            normalizedSendText = "https://" + trimmedSendText.dropFirst("https//".count)
+        } else if trimmedSendText.lowercased().hasPrefix("http//") {
+            normalizedSendText = "http://" + trimmedSendText.dropFirst("http//".count)
+        } else {
+            normalizedSendText = trimmedSendText
+        }
+
+        let loweredSendText = normalizedSendText.lowercased()
+
+        guard loweredSendText.hasPrefix("http://") || loweredSendText.hasPrefix("https://") else {
+            return nil
+        }
+
+        if let url = URL(string: normalizedSendText) {
+            return url
+        }
+
+        guard let encodedSendText = normalizedSendText.addingPercentEncoding(withAllowedCharacters: .urlFragmentAllowed) else {
+            return nil
+        }
+
+        return URL(string: encodedSendText)
     }
 
     func normalizedBluetoothSendText(_ sendText: String) -> String {
