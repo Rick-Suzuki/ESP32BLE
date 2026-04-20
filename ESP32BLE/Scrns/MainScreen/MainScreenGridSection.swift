@@ -94,6 +94,7 @@ struct MainScreenGridSection: View {
     let bleSendEnabled: Bool
     let onButtonClick: () -> Void
     let isHiddenEntry: (FunctionKeyEntry) -> Bool
+    let isInteractiveWidgetEntry: (FunctionKeyEntry) -> Bool
     let sendLine: (FunctionKeyEntry) -> Void
     let onBeginSlotEditing: (Int) -> Void
     let buttonLabel: (FunctionKeyEntry, Int, CGFloat) -> AnyView
@@ -122,49 +123,56 @@ struct MainScreenGridSection: View {
 
             LazyVGrid(columns: columns, spacing: mainGridButtonSpacing) {
                 ForEach(visibleEntries, id: \.offset) { index, entry in
-                    Button {
-                        guard !isGridEditModeEnabled else {
-                            return
-                        }
-
-                        onButtonClick()
-
-                        guard bleSendEnabled else {
-                            return
-                        }
-
-                        sendLine(entry)
-                    } label: {
+                    if !isGridEditModeEnabled && isInteractiveWidgetEntry(entry) {
                         buttonLabel(entry, index, buttonHeight)
+                            .frame(width: buttonWidth, height: buttonHeight)
+                            .contentShape(Rectangle())
+                            .simultaneousGesture(dragGesture(entry, index, gridDimensions))
+                    } else {
+                        Button {
+                            guard !isGridEditModeEnabled else {
+                                return
+                            }
+
+                            onButtonClick()
+
+                            guard bleSendEnabled else {
+                                return
+                            }
+
+                            sendLine(entry)
+                        } label: {
+                            buttonLabel(entry, index, buttonHeight)
+                        }
+                        .buttonStyle(.plain)
+                        .frame(width: buttonWidth, height: buttonHeight)
+                        .contentShape(Rectangle())
+                        .simultaneousGesture(dragGesture(entry, index, gridDimensions))
+                        .simultaneousGesture(
+                            TapGesture()
+                                .onEnded {
+                                    guard isGridEditModeEnabled else {
+                                        return
+                                    }
+
+                                    registerEditTap(
+                                        entry: entry,
+                                        index: index,
+                                        gridDimensions: gridDimensions
+                                    )
+                                }
+                        )
+                        .simultaneousGesture(
+                            LongPressGesture(minimumDuration: 0.4)
+                                .onEnded { _ in
+                                    guard isGridEditModeEnabled else {
+                                        return
+                                    }
+
+                                    onBeginSlotEditing(index)
+                                }
+                        )
                     }
-                    .buttonStyle(.plain)
-                    .frame(width: buttonWidth, height: buttonHeight)
-                    .contentShape(Rectangle())
-                    .simultaneousGesture(dragGesture(entry, index, gridDimensions))
-                    .simultaneousGesture(
-                        TapGesture()
-                            .onEnded {
-                                guard isGridEditModeEnabled else {
-                                    return
-                                }
-
-                                registerEditTap(
-                                    entry: entry,
-                                    index: index,
-                                    gridDimensions: gridDimensions
-                                )
-                            }
-                    )
-                    .simultaneousGesture(
-                        LongPressGesture(minimumDuration: 0.4)
-                            .onEnded { _ in
-                                guard isGridEditModeEnabled else {
-                                    return
-                                }
-
-                                onBeginSlotEditing(index)
-                            }
-                    )
                 }
             }
             .frame(width: safeAvailableWidth, alignment: .center)

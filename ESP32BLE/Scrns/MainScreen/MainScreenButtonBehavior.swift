@@ -91,7 +91,7 @@ extension MainScreen {
                 targetSoundFilenameForSendText(sendText) == nil &&
                 targetSpokenTextForSendText(sendText) == nil &&
                 targetAppURLForSendText(sendText) == nil &&
-                targetWidgetKindForSendText(sendText) == nil
+                targetWidgetDescriptorForSendText(sendText) == nil
         }
         let targetDocumentName = targetDocumentNameForGridEntry(entry)
         let targetURL = targetURLForGridEntry(entry)
@@ -178,7 +178,7 @@ extension MainScreen {
             return speechMatchDisplayText(from: rightTitle)
         }
 
-        if targetWidgetKindForGridEntry(entry) != nil {
+        if targetWidgetDescriptorForGridEntry(entry) != nil {
             return ""
         }
 
@@ -258,8 +258,8 @@ extension MainScreen {
         entry.sendTexts.compactMap(targetSpokenTextForSendText).first
     }
 
-    func targetWidgetKindForGridEntry(_ entry: FunctionKeyEntry) -> MainGridWidgetKind? {
-        entry.sendTexts.compactMap(targetWidgetKindForSendText).first
+    func targetWidgetDescriptorForGridEntry(_ entry: FunctionKeyEntry) -> MainGridWidgetDescriptor? {
+        entry.sendTexts.compactMap(targetWidgetDescriptorForSendText).first
     }
 
     func targetAppURLForSendText(_ sendText: String) -> URL? {
@@ -328,26 +328,42 @@ extension MainScreen {
         return spokenText.isEmpty ? nil : spokenText
     }
 
-    func targetWidgetKindForSendText(_ sendText: String) -> MainGridWidgetKind? {
+    func targetWidgetDescriptorForSendText(_ sendText: String) -> MainGridWidgetDescriptor? {
         let trimmedSendText = sendText.trimmingCharacters(in: .whitespacesAndNewlines)
         let loweredSendText = trimmedSendText.lowercased()
-        let widgetName: String
+        let widgetText: String
 
         if loweredSendText.hasPrefix("wid ") {
-            widgetName = String(trimmedSendText.dropFirst(4))
+            widgetText = String(trimmedSendText.dropFirst(4))
         } else if loweredSendText.hasPrefix("widget ") {
-            widgetName = String(trimmedSendText.dropFirst(7))
+            widgetText = String(trimmedSendText.dropFirst(7))
         } else {
             return nil
         }
 
-        switch widgetName.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+        let components = widgetText
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .split(separator: " ", maxSplits: 1, omittingEmptySubsequences: true)
+        guard let widgetName = components.first?.lowercased() else {
+            return nil
+        }
+
+        switch widgetName {
         case "clock":
             return .clock
         case "date":
             return .date
         case "power", "battery":
             return .power
+        case "add":
+            return .add
+        case "minus":
+            return .minus
+        case "timer":
+            let completionSoundFilename = components.count > 1
+                ? String(components[1]).trimmingCharacters(in: .whitespacesAndNewlines)
+                : ""
+            return .timer(completionSoundFilename: completionSoundFilename.isEmpty ? nil : completionSoundFilename)
         default:
             return nil
         }
@@ -418,7 +434,7 @@ extension MainScreen {
             leftTitle: leftTitle,
             rightTitle: rightTitle,
             displayMode: displayMode,
-            widgetKind: targetWidgetKindForGridEntry(entry),
+            widgetDescriptor: targetWidgetDescriptorForGridEntry(entry),
             rightSymbolDisplay: parsedSFSymbolDisplay(for: entry),
             rightEmojiDisplay: parsedEmojiDisplay(for: entry),
             boxFontSize: boxFontSize,
@@ -427,8 +443,27 @@ extension MainScreen {
             borderWidth: mainGridButtonBorderWidth,
             isGridEditModeEnabled: isGridEditModeEnabled,
             activeDragIndex: activeDragIndex,
-            backgroundOpacity: backgroundOpacity
+            backgroundOpacity: backgroundOpacity,
+            playSoundNamed: playMainGridSound
         )
+    }
+
+    func isInteractiveMainGridWidgetEntry(_ entry: FunctionKeyEntry) -> Bool {
+        guard !isGridEditModeEnabled,
+              let widgetDescriptor = targetWidgetDescriptorForGridEntry(entry) else {
+            return false
+        }
+
+        switch widgetDescriptor {
+        case .add:
+            return true
+        case .minus:
+            return true
+        case .timer:
+            return true
+        default:
+            return false
+        }
     }
 
     func isMainGridEntryHidden(_ entry: FunctionKeyEntry) -> Bool {
@@ -559,7 +594,7 @@ struct MainScreenButtonLabelView: View {
     let leftTitle: String
     let rightTitle: String
     let displayMode: FunctionKeyDisplayMode
-    let widgetKind: MainGridWidgetKind?
+    let widgetDescriptor: MainGridWidgetDescriptor?
     let rightSymbolDisplay: (name: String, subtitle: String?)?
     let rightEmojiDisplay: (emoji: String, subtitle: String?)?
     let boxFontSize: Double
@@ -569,6 +604,7 @@ struct MainScreenButtonLabelView: View {
     let isGridEditModeEnabled: Bool
     let activeDragIndex: Int?
     let backgroundOpacity: Double
+    let playSoundNamed: (String) -> Void
 
     // Adjust emojiScaleMultiplier to tune how much larger emoji should render than text.
     private let emojiScaleMultiplier: CGFloat = 1.5
@@ -613,8 +649,8 @@ struct MainScreenButtonLabelView: View {
 
     @ViewBuilder
     private var buttonContent: some View {
-        if let widgetKind {
-            widgetContent(kind: widgetKind)
+        if let widgetDescriptor {
+            widgetContent(descriptor: widgetDescriptor)
         } else if let rightSymbolDisplay {
             switch displayMode {
             case .left:
@@ -645,8 +681,8 @@ struct MainScreenButtonLabelView: View {
     }
 
     @ViewBuilder
-    private func widgetContent(kind: MainGridWidgetKind) -> some View {
-        switch kind {
+    private func widgetContent(descriptor: MainGridWidgetDescriptor) -> some View {
+        switch descriptor {
         case .clock:
             TimelineView(.periodic(from: .now, by: 1)) { context in
                 VStack(spacing: 4) {
@@ -685,6 +721,26 @@ struct MainScreenButtonLabelView: View {
             MainGridBatteryWidgetView(
                 fontSize: boxFontSize,
                 foregroundColor: buttonTextColor
+            )
+        case .add:
+            MainGridStepUpCounterWidgetView(
+                configurationText: rightTitleWithoutColorPrefix,
+                fontSize: boxFontSize,
+                foregroundColor: buttonTextColor
+            )
+        case .minus:
+            MainGridStepDownCounterWidgetView(
+                configurationText: rightTitleWithoutColorPrefix,
+                fontSize: boxFontSize,
+                foregroundColor: buttonTextColor
+            )
+        case .timer(let completionSoundFilename):
+            MainGridTimerWidgetView(
+                configurationText: rightTitleWithoutColorPrefix,
+                completionSoundFilename: completionSoundFilename,
+                fontSize: boxFontSize,
+                foregroundColor: buttonTextColor,
+                onPlayCompletionSound: playSoundNamed
             )
         }
     }
@@ -870,10 +926,13 @@ struct MainScreenButtonLabelView: View {
     }
 }
 
-enum MainGridWidgetKind {
+enum MainGridWidgetDescriptor {
     case clock
     case date
     case power
+    case add
+    case minus
+    case timer(completionSoundFilename: String?)
 }
 
 private struct MainGridBatteryWidgetView: View {
@@ -933,5 +992,271 @@ private struct MainGridBatteryWidgetView: View {
     private func refreshBatteryState() {
         batteryLevel = UIDevice.current.batteryLevel
         batteryState = UIDevice.current.batteryState
+    }
+}
+
+private struct MainGridStepUpCounterWidgetView: View {
+    let configurationText: String
+    let fontSize: Double
+    let foregroundColor: Color
+
+    @State private var initialCount = 0
+    @State private var currentCount = 0
+    @State private var title = ""
+
+    var body: some View {
+        VStack(spacing: 4) {
+            if !title.isEmpty {
+                Text(title)
+                    .font(.system(size: fontSize, weight: .semibold, design: .rounded))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.2)
+                    .multilineTextAlignment(.center)
+            }
+
+            Text("\(currentCount)")
+                .font(.system(size: fontSize, weight: .bold, design: .rounded))
+                .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.2)
+        }
+        .foregroundStyle(foregroundColor)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            currentCount += 1
+        }
+        .onLongPressGesture(minimumDuration: 0.5) {
+            currentCount = 0
+        }
+        .onAppear {
+            applyConfiguration()
+        }
+        .onChange(of: configurationText) {
+            applyConfiguration()
+        }
+    }
+
+    private func applyConfiguration() {
+        let components = configurationText.split(separator: ":", maxSplits: 1, omittingEmptySubsequences: false)
+        let firstComponent = components.first?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let parsedInitialCount = Int(firstComponent) ?? 0
+        let parsedTitle: String
+
+        if components.count > 1 {
+            parsedTitle = String(components[1]).trimmingCharacters(in: .whitespacesAndNewlines)
+        } else if Int(firstComponent) == nil {
+            parsedTitle = firstComponent
+        } else {
+            parsedTitle = ""
+        }
+
+        initialCount = max(parsedInitialCount, 0)
+        currentCount = initialCount
+        title = parsedTitle
+    }
+}
+
+private struct MainGridStepDownCounterWidgetView: View {
+    let configurationText: String
+    let fontSize: Double
+    let foregroundColor: Color
+
+    @State private var initialCount = 0
+    @State private var currentCount = 0
+    @State private var title = ""
+
+    var body: some View {
+        VStack(spacing: 4) {
+            if !title.isEmpty {
+                Text(title)
+                    .font(.system(size: fontSize, weight: .semibold, design: .rounded))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.2)
+                    .multilineTextAlignment(.center)
+            }
+
+            Text("\(currentCount)")
+                .font(.system(size: fontSize, weight: .bold, design: .rounded))
+                .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.2)
+        }
+        .foregroundStyle(foregroundColor)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            currentCount = max(0, currentCount - 1)
+        }
+        .onLongPressGesture(minimumDuration: 0.5) {
+            currentCount = initialCount
+        }
+        .onAppear {
+            applyConfiguration()
+        }
+        .onChange(of: configurationText) {
+            applyConfiguration()
+        }
+    }
+
+    private func applyConfiguration() {
+        let components = configurationText.split(separator: ":", maxSplits: 1, omittingEmptySubsequences: false)
+        let firstComponent = components.first?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let parsedInitialCount = Int(firstComponent) ?? 0
+        let parsedTitle: String
+
+        if components.count > 1 {
+            parsedTitle = String(components[1]).trimmingCharacters(in: .whitespacesAndNewlines)
+        } else if Int(firstComponent) == nil {
+            parsedTitle = firstComponent
+        } else {
+            parsedTitle = ""
+        }
+
+        initialCount = max(parsedInitialCount, 0)
+        currentCount = initialCount
+        title = parsedTitle
+    }
+}
+
+private struct MainGridTimerWidgetView: View {
+    let configurationText: String
+    let completionSoundFilename: String?
+    let fontSize: Double
+    let foregroundColor: Color
+    let onPlayCompletionSound: (String) -> Void
+
+    @State private var configuredDuration = 0
+    @State private var remainingSeconds = 0
+    @State private var title = ""
+    @State private var isRunning = false
+    @State private var countdownTask: Task<Void, Never>?
+
+    var body: some View {
+        VStack(spacing: 4) {
+            if !title.isEmpty {
+                Text(title)
+                    .font(.system(size: fontSize, weight: .semibold, design: .rounded))
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.5)
+                    .multilineTextAlignment(.center)
+            }
+
+            Text(formattedRemainingTime)
+                .font(.system(size: fontSize, weight: .bold, design: .rounded))
+                .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.5)
+        }
+        .foregroundStyle(foregroundColor)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            togglePlayback()
+        }
+        .onLongPressGesture(minimumDuration: 0.5) {
+            resetAndPause()
+        }
+        .onAppear {
+            applyConfiguration()
+        }
+        .onChange(of: configurationText) {
+            applyConfiguration()
+        }
+        .onDisappear {
+            countdownTask?.cancel()
+        }
+    }
+
+    private var formattedRemainingTime: String {
+        let hours = remainingSeconds / 3600
+        let minutes = (remainingSeconds % 3600) / 60
+        let seconds = remainingSeconds % 60
+
+        if hours > 0 {
+            return String(format: "%02d:%02d:%02d", hours, minutes, seconds)
+        }
+
+        return String(format: "%02d:%02d", minutes, seconds)
+    }
+
+    private func applyConfiguration() {
+        countdownTask?.cancel()
+        isRunning = false
+
+        let components = configurationText.split(separator: ":", maxSplits: 1, omittingEmptySubsequences: false)
+        let parsedDuration = components.first
+            .map { Int($0.trimmingCharacters(in: .whitespacesAndNewlines)) ?? 0 } ?? 0
+        let parsedTitle = components.count > 1
+            ? String(components[1]).trimmingCharacters(in: .whitespacesAndNewlines)
+            : ""
+
+        configuredDuration = max(parsedDuration, 0)
+        remainingSeconds = configuredDuration
+        title = parsedTitle
+    }
+
+    private func togglePlayback() {
+        guard configuredDuration > 0 else {
+            return
+        }
+
+        if isRunning {
+            pause()
+            return
+        }
+
+        if remainingSeconds == 0 {
+            remainingSeconds = configuredDuration
+        }
+
+        isRunning = true
+        startCountdownTask()
+    }
+
+    private func pause() {
+        isRunning = false
+        countdownTask?.cancel()
+        countdownTask = nil
+    }
+
+    private func resetAndPause() {
+        pause()
+        remainingSeconds = configuredDuration
+    }
+
+    private func startCountdownTask() {
+        countdownTask?.cancel()
+
+        countdownTask = Task {
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(1))
+
+                guard !Task.isCancelled else {
+                    return
+                }
+
+                await MainActor.run {
+                    guard isRunning, remainingSeconds > 0 else {
+                        return
+                    }
+
+                    remainingSeconds -= 1
+
+                    guard remainingSeconds == 0 else {
+                        return
+                    }
+
+                    isRunning = false
+                    countdownTask?.cancel()
+                    countdownTask = nil
+
+                    if let completionSoundFilename,
+                       !completionSoundFilename.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        onPlayCompletionSound(completionSoundFilename)
+                    }
+                }
+            }
+        }
     }
 }

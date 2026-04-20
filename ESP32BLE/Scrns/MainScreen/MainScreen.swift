@@ -241,6 +241,7 @@ struct MainScreen: View {
             bleSendEnabled: mainGridButtonMode != .disabled,
             onButtonClick: { ButtonClickFeedback.playIfEnabled() },
             isHiddenEntry: isMainGridEntryHidden,
+            isInteractiveWidgetEntry: isInteractiveMainGridWidgetEntry,
             sendLine: sendMainGridEntry,
             onBeginSlotEditing: beginSlotEditing,
             buttonLabel: { entry, index, buttonHeight in
