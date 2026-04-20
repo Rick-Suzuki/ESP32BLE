@@ -20,6 +20,12 @@ extension MainScreen {
             return
         }
 
+        if recognizedText == canonicalSpeechText(from: "speech off") {
+            unmatchedSpeechText = nil
+            isSpkRecEnabled = false
+            return
+        }
+
         guard let matchingEntry = functionKeys.first(where: { entry in
             guard let alternateDisplayText = entry.alternateDisplayText else {
                 return false
