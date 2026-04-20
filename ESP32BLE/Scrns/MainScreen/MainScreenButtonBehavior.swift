@@ -6,7 +6,7 @@ extension MainScreen {
     private var defaultNewButtonEntryText: String { "F::spare" }
     private var supportedMainScreenSFSymbolNames: Set<String> {
         [
-            "folder", "magnifyingglass", "gearshape", "house",
+            "folder", "eye", "magnifyingglass", "gearshape", "house",
             "lightbulb.max.fill", "speaker.wave.2", "star", "heart", "bell",
             "paperclip", "link", "paperplane", "doc", "calendar",
             "camera", "photo", "tray", "sun.max.fill", "chart.bar.fill"

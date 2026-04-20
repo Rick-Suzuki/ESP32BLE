@@ -36,7 +36,7 @@ struct MainScreenSlotEditorOverlay: View {
         "lightbulb.max.fill", "speaker.wave.2", "star", "heart", "bell"
     ]
     private let rightSymbolNames = [
-        "paperclip", "paperplane", "doc", "calendar", "camera",
+        "paperclip", "eye", "paperplane", "doc", "calendar", "camera",
         "photo", "tray", "sun.max.fill", "link"
     ]
 	
