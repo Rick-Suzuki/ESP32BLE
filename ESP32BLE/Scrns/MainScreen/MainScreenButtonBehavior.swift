@@ -1,6 +1,7 @@
 import SwiftUI
 import AVFoundation
 import UIKit
+import Combine
 
 extension MainScreen {
     private var defaultNewButtonEntryText: String { "F::spare" }
@@ -1130,7 +1131,7 @@ private struct MainGridTimerWidgetView: View {
     @State private var remainingSeconds = 0
     @State private var title = ""
     @State private var isRunning = false
-    @State private var countdownTask: Task<Void, Never>?
+    private let ticker = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     var body: some View {
         VStack(spacing: 4) {
@@ -1163,8 +1164,23 @@ private struct MainGridTimerWidgetView: View {
         .onChange(of: configurationText) {
             applyConfiguration()
         }
-        .onDisappear {
-            countdownTask?.cancel()
+        .onReceive(ticker) { _ in
+            guard isRunning, remainingSeconds > 0 else {
+                return
+            }
+
+            remainingSeconds -= 1
+
+            guard remainingSeconds == 0 else {
+                return
+            }
+
+            isRunning = false
+
+            if let completionSoundFilename,
+               !completionSoundFilename.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                onPlayCompletionSound(completionSoundFilename)
+            }
         }
     }
 
@@ -1181,7 +1197,6 @@ private struct MainGridTimerWidgetView: View {
     }
 
     private func applyConfiguration() {
-        countdownTask?.cancel()
         isRunning = false
 
         let components = configurationText.split(separator: ":", maxSplits: 1, omittingEmptySubsequences: false)
@@ -1211,52 +1226,14 @@ private struct MainGridTimerWidgetView: View {
         }
 
         isRunning = true
-        startCountdownTask()
     }
 
     private func pause() {
         isRunning = false
-        countdownTask?.cancel()
-        countdownTask = nil
     }
 
     private func resetAndPause() {
         pause()
         remainingSeconds = configuredDuration
-    }
-
-    private func startCountdownTask() {
-        countdownTask?.cancel()
-
-        countdownTask = Task {
-            while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(1))
-
-                guard !Task.isCancelled else {
-                    return
-                }
-
-                await MainActor.run {
-                    guard isRunning, remainingSeconds > 0 else {
-                        return
-                    }
-
-                    remainingSeconds -= 1
-
-                    guard remainingSeconds == 0 else {
-                        return
-                    }
-
-                    isRunning = false
-                    countdownTask?.cancel()
-                    countdownTask = nil
-
-                    if let completionSoundFilename,
-                       !completionSoundFilename.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                        onPlayCompletionSound(completionSoundFilename)
-                    }
-                }
-            }
-        }
     }
 }
