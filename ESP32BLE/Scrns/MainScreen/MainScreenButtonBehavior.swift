@@ -90,7 +90,8 @@ extension MainScreen {
                 targetURLForSendText(sendText) == nil &&
                 targetSoundFilenameForSendText(sendText) == nil &&
                 targetSpokenTextForSendText(sendText) == nil &&
-                targetAppURLForSendText(sendText) == nil
+                targetAppURLForSendText(sendText) == nil &&
+                targetWidgetKindForSendText(sendText) == nil
         }
         let targetDocumentName = targetDocumentNameForGridEntry(entry)
         let targetURL = targetURLForGridEntry(entry)
@@ -177,6 +178,10 @@ extension MainScreen {
             return speechMatchDisplayText(from: rightTitle)
         }
 
+        if targetWidgetKindForGridEntry(entry) != nil {
+            return ""
+        }
+
         let leftTitle = displayText(from: entry.primaryDisplayText)
             .trimmingCharacters(in: .whitespacesAndNewlines)
 
@@ -253,6 +258,10 @@ extension MainScreen {
         entry.sendTexts.compactMap(targetSpokenTextForSendText).first
     }
 
+    func targetWidgetKindForGridEntry(_ entry: FunctionKeyEntry) -> MainGridWidgetKind? {
+        entry.sendTexts.compactMap(targetWidgetKindForSendText).first
+    }
+
     func targetAppURLForSendText(_ sendText: String) -> URL? {
         let trimmedSendText = sendText.trimmingCharacters(in: .whitespacesAndNewlines)
         let loweredSendText = trimmedSendText.lowercased()
@@ -317,6 +326,31 @@ extension MainScreen {
         let spokenText = displayText(from: String(trimmedSendText.dropFirst(4)))
             .trimmingCharacters(in: .whitespacesAndNewlines)
         return spokenText.isEmpty ? nil : spokenText
+    }
+
+    func targetWidgetKindForSendText(_ sendText: String) -> MainGridWidgetKind? {
+        let trimmedSendText = sendText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let loweredSendText = trimmedSendText.lowercased()
+        let widgetName: String
+
+        if loweredSendText.hasPrefix("wid ") {
+            widgetName = String(trimmedSendText.dropFirst(4))
+        } else if loweredSendText.hasPrefix("widget ") {
+            widgetName = String(trimmedSendText.dropFirst(7))
+        } else {
+            return nil
+        }
+
+        switch widgetName.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+        case "clock":
+            return .clock
+        case "date":
+            return .date
+        case "power", "battery":
+            return .power
+        default:
+            return nil
+        }
     }
 
     func playMainGridSound(named filename: String) {
@@ -384,6 +418,7 @@ extension MainScreen {
             leftTitle: leftTitle,
             rightTitle: rightTitle,
             displayMode: displayMode,
+            widgetKind: targetWidgetKindForGridEntry(entry),
             rightSymbolDisplay: parsedSFSymbolDisplay(for: entry),
             rightEmojiDisplay: parsedEmojiDisplay(for: entry),
             boxFontSize: boxFontSize,
@@ -524,6 +559,7 @@ struct MainScreenButtonLabelView: View {
     let leftTitle: String
     let rightTitle: String
     let displayMode: FunctionKeyDisplayMode
+    let widgetKind: MainGridWidgetKind?
     let rightSymbolDisplay: (name: String, subtitle: String?)?
     let rightEmojiDisplay: (emoji: String, subtitle: String?)?
     let boxFontSize: Double
@@ -577,7 +613,9 @@ struct MainScreenButtonLabelView: View {
 
     @ViewBuilder
     private var buttonContent: some View {
-        if let rightSymbolDisplay {
+        if let widgetKind {
+            widgetContent(kind: widgetKind)
+        } else if let rightSymbolDisplay {
             switch displayMode {
             case .left:
                 textLabel(title: leftTitle)
@@ -604,6 +642,121 @@ struct MainScreenButtonLabelView: View {
         } else {
             textLabel(title: title)
         }
+    }
+
+    @ViewBuilder
+    private func widgetContent(kind: MainGridWidgetKind) -> some View {
+        switch kind {
+        case .clock:
+            TimelineView(.periodic(from: .now, by: 1)) { context in
+                VStack(spacing: 4) {
+                    Text(clockText(for: context.date))
+                        .font(.system(size: boxFontSize, weight: .bold, design: .rounded))
+                        .monospacedDigit()
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
+
+                    if let widgetCityLabel {
+                        Text(widgetCityLabel)
+                            .font(.system(size: boxFontSize, weight: .semibold, design: .rounded))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.5)
+                    }
+                }
+                .foregroundStyle(buttonTextColor)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        case .date:
+            TimelineView(.periodic(from: .now, by: 60)) { context in
+                VStack(spacing: 4) {
+                    Text(dateWeekdayText(for: context.date))
+                    .font(.system(size: max(12, boxFontSize * 0.85), weight: .bold, design: .rounded))
+
+                    Text(dateValueText(for: context.date))
+                    .font(.system(size: boxFontSize, weight: .bold, design: .rounded))
+                    .monospacedDigit()
+                }
+                .lineLimit(1)
+                .minimumScaleFactor(0.5)
+                .foregroundStyle(buttonTextColor)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        case .power:
+            MainGridBatteryWidgetView(
+                fontSize: boxFontSize,
+                foregroundColor: buttonTextColor
+            )
+        }
+    }
+
+    private var widgetCityLabel: String? {
+        let trimmedRightTitle = rightTitleWithoutColorPrefix.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmedRightTitle.isEmpty ? nil : trimmedRightTitle
+    }
+
+    private var widgetTimeZone: TimeZone? {
+        guard let widgetCityLabel else {
+            return nil
+        }
+
+        if let directMatch = TimeZone(identifier: widgetCityLabel) {
+            return directMatch
+        }
+
+        let normalizedQuery = normalizedWidgetLocation(widgetCityLabel)
+        let matchingIdentifier = TimeZone.knownTimeZoneIdentifiers.first { identifier in
+            let normalizedIdentifier = normalizedWidgetLocation(identifier)
+            let normalizedLastComponent = normalizedWidgetLocation(identifier.components(separatedBy: "/").last ?? identifier)
+            return normalizedIdentifier == normalizedQuery ||
+                normalizedLastComponent == normalizedQuery ||
+                normalizedIdentifier.hasSuffix("/\(normalizedQuery)")
+        }
+
+        return matchingIdentifier.flatMap(TimeZone.init(identifier:))
+    }
+
+    private func clockText(for date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale.current
+        formatter.timeZone = widgetTimeZone ?? .current
+        formatter.dateFormat = "HH:mm:ss"
+        return formatter.string(from: date)
+    }
+
+    private func dateWeekdayText(for date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale.current
+        formatter.timeZone = widgetTimeZone ?? .current
+        formatter.dateFormat = "EEE"
+        return formatter.string(from: date)
+    }
+
+    private func dateValueText(for date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale.current
+        formatter.timeZone = widgetTimeZone ?? .current
+        formatter.dateFormat = "dd/MM/yy"
+        return formatter.string(from: date)
+    }
+
+    private func normalizedWidgetLocation(_ text: String) -> String {
+        text
+            .lowercased()
+            .replacingOccurrences(of: "_", with: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var rightTitleWithoutColorPrefix: String {
+        let components = rightTitle.components(separatedBy: ":")
+
+        if let firstComponent = components.first?.trimmingCharacters(in: .whitespacesAndNewlines),
+           firstComponent.count == 1,
+           let existingCode = firstComponent.lowercased().first,
+           "lwbgorpucya".contains(existingCode) {
+            return components.dropFirst().joined(separator: ":")
+        }
+
+        return rightTitle
     }
 
     private func textLabel(title: String) -> some View {
@@ -714,5 +867,71 @@ struct MainScreenButtonLabelView: View {
         let trimmedRawLine = entry.rawLine.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedAlternateText = entry.alternateDisplayText?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         return trimmedRawLine.isEmpty && entry.sendTexts.isEmpty && trimmedAlternateText.isEmpty
+    }
+}
+
+enum MainGridWidgetKind {
+    case clock
+    case date
+    case power
+}
+
+private struct MainGridBatteryWidgetView: View {
+    let fontSize: Double
+    let foregroundColor: Color
+    @State private var batteryLevel: Float = UIDevice.current.batteryLevel
+    @State private var batteryState: UIDevice.BatteryState = UIDevice.current.batteryState
+
+    var body: some View {
+        VStack(spacing: 4) {
+            Text(batteryPercentageText)
+                .font(.system(size: fontSize, weight: .bold, design: .rounded))
+                .monospacedDigit()
+
+            Text(batteryStateText)
+                .font(.system(size: fontSize, weight: .semibold, design: .rounded))
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+        }
+        .foregroundStyle(foregroundColor)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onAppear {
+            UIDevice.current.isBatteryMonitoringEnabled = true
+            refreshBatteryState()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIDevice.batteryLevelDidChangeNotification)) { _ in
+            refreshBatteryState()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIDevice.batteryStateDidChangeNotification)) { _ in
+            refreshBatteryState()
+        }
+    }
+
+    private var batteryPercentageText: String {
+        guard batteryLevel >= 0 else {
+            return "--%"
+        }
+
+        return "\(Int((batteryLevel * 100).rounded()))%"
+    }
+
+    private var batteryStateText: String {
+        switch batteryState {
+        case .charging:
+            return "charging"
+        case .full:
+            return "full"
+        case .unplugged:
+            return "battery"
+        case .unknown:
+            return "unknown"
+        @unknown default:
+            return "unknown"
+        }
+    }
+
+    private func refreshBatteryState() {
+        batteryLevel = UIDevice.current.batteryLevel
+        batteryState = UIDevice.current.batteryState
     }
 }
