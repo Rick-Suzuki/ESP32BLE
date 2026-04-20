@@ -9,6 +9,17 @@ extension MainScreen {
 
         scheduleSpeechRecognitionAutoOff()
 
+        if recognizedText == canonicalSpeechText(from: "go back") {
+            unmatchedSpeechText = nil
+
+            guard canGoBackToPreviousDocument else {
+                return
+            }
+
+            goBackToPreviousDocument()
+            return
+        }
+
         guard let matchingEntry = functionKeys.first(where: { entry in
             guard let alternateDisplayText = entry.alternateDisplayText else {
                 return false
@@ -22,12 +33,25 @@ extension MainScreen {
 
         unmatchedSpeechText = nil
 
-        guard mainGridButtonMode.sendsBluetooth else {
+        let bluetoothSendTexts = matchingEntry.sendTexts.filter { sendText in
+            targetDocumentNameForSendText(sendText) == nil
+        }
+        let targetDocumentName = targetDocumentNameForGridEntry(matchingEntry)
+
+        if let targetDocumentName {
+            guard selectDocumentNamedFromGrid(targetDocumentName) else {
+                alertTitle = "File Not Found"
+                renameAlertMessage = "Couldn't find \(targetDocumentName.lowercased())."
+                return
+            }
+        }
+
+        guard mainGridButtonMode.sendsBluetooth, !bluetoothSendTexts.isEmpty else {
             return
         }
 
-        for sendText in matchingEntry.sendTexts {
-            ble.sendLine(sendText)
+        for sendText in bluetoothSendTexts {
+            ble.sendLine(normalizedBluetoothSendText(sendText))
         }
     }
 
