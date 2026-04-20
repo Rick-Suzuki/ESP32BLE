@@ -89,14 +89,28 @@ extension MainScreen {
             targetDocumentNameForSendText(sendText) == nil &&
                 targetURLForSendText(sendText) == nil &&
                 targetSoundFilenameForSendText(sendText) == nil &&
-                targetSpokenTextForSendText(sendText) == nil
+                targetSpokenTextForSendText(sendText) == nil &&
+                targetAppURLForSendText(sendText) == nil
         }
         let targetDocumentName = targetDocumentNameForGridEntry(entry)
         let targetURL = targetURLForGridEntry(entry)
         let targetSoundFilename = targetSoundFilenameForGridEntry(entry)
+        let targetAppURL = targetAppURLForGridEntry(entry)
 
         if let targetURL {
             UIApplication.shared.open(targetURL)
+            return
+        }
+
+        if let targetAppURL {
+            UIApplication.shared.open(targetAppURL) { success in
+                guard !success else {
+                    return
+                }
+
+                alertTitle = "App Not Available"
+                renameAlertMessage = "Couldn't open \(targetAppURL.absoluteString)."
+            }
             return
         }
 
@@ -198,6 +212,10 @@ extension MainScreen {
         entry.sendTexts.compactMap(targetURLForSendText).first
     }
 
+    func targetAppURLForGridEntry(_ entry: FunctionKeyEntry) -> URL? {
+        entry.sendTexts.compactMap(targetAppURLForSendText).first
+    }
+
     func targetURLForSendText(_ sendText: String) -> URL? {
         let trimmedSendText = sendText.trimmingCharacters(in: .whitespacesAndNewlines)
         let normalizedSendText: String
@@ -233,6 +251,47 @@ extension MainScreen {
 
     func targetSpokenTextForGridEntry(_ entry: FunctionKeyEntry) -> String? {
         entry.sendTexts.compactMap(targetSpokenTextForSendText).first
+    }
+
+    func targetAppURLForSendText(_ sendText: String) -> URL? {
+        let trimmedSendText = sendText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let loweredSendText = trimmedSendText.lowercased()
+
+        guard loweredSendText.hasPrefix("app ") else {
+            return nil
+        }
+
+        let appName = String(trimmedSendText.dropFirst(4)).trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !appName.isEmpty else {
+            return nil
+        }
+
+        if appName.contains(":") {
+            return URL(string: appName)
+        }
+
+        switch appName
+            .lowercased()
+            .replacingOccurrences(of: " ", with: "") {
+        case "notes", "applenotes":
+            return URL(string: "mobilenotes://")
+        case "mail":
+            return URL(string: "message://")
+        case "messages", "imessage":
+            return URL(string: "sms:")
+        case "facetime":
+            return URL(string: "facetime://")
+        case "maps":
+            return URL(string: "maps://")
+        case "music":
+            return URL(string: "music://")
+        case "calendar":
+            return URL(string: "calshow://")
+        case "phone":
+            return URL(string: "tel://")
+        default:
+            return URL(string: "\(appName.lowercased().replacingOccurrences(of: " ", with: ""))://")
+        }
     }
 
     func targetSoundFilenameForSendText(_ sendText: String) -> String? {
