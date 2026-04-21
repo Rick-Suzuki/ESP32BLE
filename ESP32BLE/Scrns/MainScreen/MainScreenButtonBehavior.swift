@@ -344,7 +344,7 @@ extension MainScreen {
 
         let components = widgetText
             .trimmingCharacters(in: .whitespacesAndNewlines)
-            .split(separator: " ", maxSplits: 1, omittingEmptySubsequences: true)
+            .split(separator: " ", omittingEmptySubsequences: true)
         guard let widgetName = components.first?.lowercased() else {
             return nil
         }
@@ -360,6 +360,30 @@ extension MainScreen {
             return .add
         case "minus":
             return .minus
+        case "rnd", "random":
+            let minimumValue: Int
+            let maximumValue: Int
+
+            switch components.count {
+            case 1:
+                minimumValue = 1
+                maximumValue = 10
+            case 2:
+                guard let parsedMaximumValue = Int(components[1]) else {
+                    return nil
+                }
+                minimumValue = 1
+                maximumValue = parsedMaximumValue
+            default:
+                guard let parsedMinimumValue = Int(components[1]),
+                      let parsedMaximumValue = Int(components[2]) else {
+                    return nil
+                }
+                minimumValue = parsedMinimumValue
+                maximumValue = parsedMaximumValue
+            }
+
+            return .random(minimumValue: minimumValue, maximumValue: maximumValue)
         case "stop", "stopwatch":
             return .stopwatch
         case "timer":
@@ -461,6 +485,8 @@ extension MainScreen {
         case .add:
             return true
         case .minus:
+            return true
+        case .random:
             return true
         case .stopwatch:
             return true
@@ -739,6 +765,14 @@ struct MainScreenButtonLabelView: View {
                 fontSize: boxFontSize,
                 foregroundColor: buttonTextColor
             )
+        case .random(let minimumValue, let maximumValue):
+            MainGridRandomNumberWidgetView(
+                title: rightTitleWithoutColorPrefix,
+                minimumValue: minimumValue,
+                maximumValue: maximumValue,
+                fontSize: boxFontSize,
+                foregroundColor: buttonTextColor
+            )
         case .stopwatch:
             MainGridStopwatchWidgetView(
                 title: rightTitleWithoutColorPrefix,
@@ -943,6 +977,7 @@ enum MainGridWidgetDescriptor {
     case power
     case add
     case minus
+    case random(minimumValue: Int, maximumValue: Int)
     case stopwatch
     case timer(completionSoundFilename: String?)
 }
@@ -1307,5 +1342,89 @@ private struct MainGridStopwatchWidgetView: View {
         }
 
         return String(format: "%02d:%02d", minutes, seconds)
+    }
+}
+
+private struct MainGridRandomNumberWidgetView: View {
+    let title: String
+    let minimumValue: Int
+    let maximumValue: Int
+    let fontSize: Double
+    let foregroundColor: Color
+
+    @State private var displayedValue = 0
+    @State private var animationTask: Task<Void, Never>?
+
+    var body: some View {
+        VStack(spacing: 4) {
+            if !trimmedTitle.isEmpty {
+                Text(trimmedTitle)
+                    .font(.system(size: fontSize, weight: .semibold, design: .rounded))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.2)
+                    .multilineTextAlignment(.center)
+            }
+
+            Text("\(displayedValue)")
+                .font(.system(size: fontSize, weight: .bold, design: .rounded))
+                .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.2)
+        }
+        .foregroundStyle(foregroundColor)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            generateRandomValue()
+        }
+        .onAppear {
+            displayedValue = normalizedRange.lowerBound
+        }
+        .onChange(of: minimumValue) {
+            displayedValue = normalizedRange.lowerBound
+        }
+        .onChange(of: maximumValue) {
+            displayedValue = normalizedRange.lowerBound
+        }
+        .onDisappear {
+            animationTask?.cancel()
+        }
+    }
+
+    private var trimmedTitle: String {
+        title.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var normalizedRange: ClosedRange<Int> {
+        let lowerBound = min(minimumValue, maximumValue)
+        let upperBound = max(minimumValue, maximumValue)
+        return lowerBound...upperBound
+    }
+
+    private func generateRandomValue() {
+        animationTask?.cancel()
+
+        animationTask = Task {
+            for _ in 0..<10 {
+                guard !Task.isCancelled else {
+                    return
+                }
+
+                await MainActor.run {
+                    displayedValue = Int.random(in: normalizedRange)
+                }
+
+                try? await Task.sleep(for: .milliseconds(100))
+            }
+
+            guard !Task.isCancelled else {
+                return
+            }
+
+            await MainActor.run {
+                displayedValue = Int.random(in: normalizedRange)
+                animationTask = nil
+            }
+        }
     }
 }
