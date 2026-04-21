@@ -944,14 +944,14 @@ private struct MainGridBatteryWidgetView: View {
 
     var body: some View {
         VStack(spacing: 4) {
-            Text(batteryPercentageText)
-                .font(.system(size: fontSize, weight: .bold, design: .rounded))
-                .monospacedDigit()
-
             Text(batteryStateText)
                 .font(.system(size: fontSize, weight: .semibold, design: .rounded))
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
+
+            Text(batteryPercentageText)
+                .font(.system(size: fontSize, weight: .bold, design: .rounded))
+                .monospacedDigit()
         }
         .foregroundStyle(foregroundColor)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
