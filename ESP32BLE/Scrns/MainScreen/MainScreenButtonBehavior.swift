@@ -146,14 +146,19 @@ extension MainScreen {
     }
 
     func speakMainGridEntry(_ entry: FunctionKeyEntry) {
-        guard !isSpkRecEnabled else {
-            return
-        }
-
         let spokenText = spokenTitle(for: entry)
             .replacingOccurrences(of: "\n", with: ", ")
             .trimmingCharacters(in: .whitespacesAndNewlines)
 
+        speakMainGridText(spokenText)
+    }
+
+    func speakMainGridText(_ text: String) {
+        guard !isSpkRecEnabled else {
+            return
+        }
+
+        let spokenText = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !spokenText.isEmpty else {
             return
         }
@@ -475,7 +480,9 @@ extension MainScreen {
             isGridEditModeEnabled: isGridEditModeEnabled,
             activeDragIndex: activeDragIndex,
             backgroundOpacity: backgroundOpacity,
-            playSoundNamed: playMainGridSound
+            playSoundNamed: playMainGridSound,
+            shouldSpeakWidgetSelections: mainGridButtonMode.speaksText,
+            speakText: speakMainGridText
         )
     }
 
@@ -642,6 +649,8 @@ struct MainScreenButtonLabelView: View {
     let activeDragIndex: Int?
     let backgroundOpacity: Double
     let playSoundNamed: (String) -> Void
+    let shouldSpeakWidgetSelections: Bool
+    let speakText: (String) -> Void
 
     // Adjust emojiScaleMultiplier to tune how much larger emoji should render than text.
     private let emojiScaleMultiplier: CGFloat = 1.5
@@ -784,7 +793,13 @@ struct MainScreenButtonLabelView: View {
                 title: rightTitleWithoutColorPrefix,
                 filename: filename,
                 fontSize: boxFontSize,
-                foregroundColor: buttonTextColor
+                foregroundColor: buttonTextColor,
+                onSelectionCommitted: shouldSpeakWidgetSelections ? { selectedText in
+                    speakText(selectedText)
+                } : nil,
+                onRepeatRequested: shouldSpeakWidgetSelections ? { selectedText in
+                    speakText(selectedText)
+                } : nil
             )
         case .stopwatch:
             MainGridStopwatchWidgetView(
@@ -1448,9 +1463,13 @@ private struct MainGridRandomTextWidgetView: View {
     let filename: String
     let fontSize: Double
     let foregroundColor: Color
+    let onSelectionCommitted: ((String) -> Void)?
+    let onRepeatRequested: ((String) -> Void)?
 
     @State private var displayedLine = ""
     @State private var availableLines: [String] = []
+    @State private var shuffledLines: [String] = []
+    @State private var nextShuffledLineIndex = 0
     @State private var animationTask: Task<Void, Never>?
 
     var body: some View {
@@ -1463,11 +1482,22 @@ private struct MainGridRandomTextWidgetView: View {
         .foregroundStyle(foregroundColor)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .contentShape(Rectangle())
-        .onTapGesture {
-            chooseRandomLine()
-        }
+        .gesture(
+            TapGesture(count: 2)
+                .onEnded {
+                    repeatDisplayedLine()
+                }
+                .exclusively(before:
+                    TapGesture()
+                        .onEnded {
+                            chooseRandomLine()
+                        }
+                )
+        )
         .task(id: "\(filename)|\(title)") {
             availableLines = loadLines()
+            shuffledLines = []
+            nextShuffledLineIndex = 0
             displayedLine = trimmedTitle
         }
         .onDisappear {
@@ -1488,16 +1518,18 @@ private struct MainGridRandomTextWidgetView: View {
             return
         }
 
+        let previousLine = displayedLine
+        let selectedLine = nextQueuedLine(from: lines, avoiding: previousLine)
+
         animationTask?.cancel()
         animationTask = Task {
-            let previousLine = displayedLine
             for _ in 0..<10 {
                 guard !Task.isCancelled else {
                     return
                 }
 
                 await MainActor.run {
-                    displayedLine = randomLine(from: lines, avoiding: previousLine)
+                    displayedLine = previewLine(from: lines, avoiding: previousLine, preferredLine: selectedLine)
                 }
 
                 try? await Task.sleep(for: .milliseconds(100))
@@ -1508,19 +1540,70 @@ private struct MainGridRandomTextWidgetView: View {
             }
 
             await MainActor.run {
-                displayedLine = randomLine(from: lines, avoiding: previousLine)
+                displayedLine = selectedLine
+                onSelectionCommitted?(selectedLine)
                 animationTask = nil
             }
         }
     }
 
-    private func randomLine(from lines: [String], avoiding previousLine: String) -> String {
+    private func nextQueuedLine(from lines: [String], avoiding previousLine: String) -> String {
+        if shuffledLines.count != lines.count || Set(shuffledLines) != Set(lines) {
+            shuffledLines = reshuffledLines(from: lines, avoidingFirst: previousLine)
+            nextShuffledLineIndex = 0
+        }
+
+        guard !shuffledLines.isEmpty else {
+            return ""
+        }
+
+        if nextShuffledLineIndex >= shuffledLines.count {
+            shuffledLines = reshuffledLines(from: lines, avoidingFirst: previousLine)
+            nextShuffledLineIndex = 0
+        }
+
+        let selectedLine = shuffledLines[nextShuffledLineIndex]
+        nextShuffledLineIndex += 1
+        return selectedLine
+    }
+
+    private func reshuffledLines(from lines: [String], avoidingFirst previousLine: String) -> [String] {
+        guard lines.count > 1 else {
+            return lines
+        }
+
+        var shuffled = lines.shuffled()
+        if shuffled.first == previousLine,
+           let replacementIndex = shuffled.firstIndex(where: { $0 != previousLine }) {
+            shuffled.swapAt(0, replacementIndex)
+        }
+        return shuffled
+    }
+
+    private func previewLine(from lines: [String], avoiding previousLine: String, preferredLine: String) -> String {
+        let previewCandidates = lines.filter { $0 != previousLine }
+        if let previewLine = previewCandidates.randomElement() {
+            return previewLine
+        }
+
+        if !preferredLine.isEmpty {
+            return preferredLine
+        }
+
         guard lines.count > 1 else {
             return lines.first ?? ""
         }
 
-        let filteredLines = lines.filter { $0 != previousLine }
-        return (filteredLines.isEmpty ? lines : filteredLines).randomElement() ?? ""
+        return lines.randomElement() ?? ""
+    }
+
+    private func repeatDisplayedLine() {
+        let trimmedDisplayedLine = displayedLine.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedDisplayedLine.isEmpty else {
+            return
+        }
+
+        onRepeatRequested?(trimmedDisplayedLine)
     }
 
     private func loadLines() -> [String] {
