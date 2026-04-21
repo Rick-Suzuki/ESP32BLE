@@ -28,7 +28,7 @@ struct MainScreenToolbarContent: ToolbarContent {
 
     var body: some ToolbarContent {
         ToolbarItem(placement: .topBarLeading) {
-            Button("Keyboard") {
+            Button("KB") {
                 ButtonClickFeedback.playIfEnabled()
                 openKeyboardScreen()
             }

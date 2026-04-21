@@ -313,12 +313,18 @@ extension MainScreen {
         let trimmedSendText = sendText.trimmingCharacters(in: .whitespacesAndNewlines)
         let loweredSendText = trimmedSendText.lowercased()
 
-        guard loweredSendText.hasPrefix("snd ") else {
+        if loweredSendText.hasPrefix("snd ") {
+            let filename = trimmedSendText.dropFirst(4).trimmingCharacters(in: .whitespacesAndNewlines)
+            return filename.isEmpty ? nil : filename
+        }
+
+        let pathExtension = URL(fileURLWithPath: trimmedSendText).pathExtension.lowercased()
+        let supportedSoundExtensions = Set(["mp3", "wav", "m4a", "aiff", "aac", "caf"])
+        guard supportedSoundExtensions.contains(pathExtension) else {
             return nil
         }
 
-        let filename = trimmedSendText.dropFirst(4).trimmingCharacters(in: .whitespacesAndNewlines)
-        return filename.isEmpty ? nil : filename
+        return trimmedSendText.isEmpty ? nil : trimmedSendText
     }
 
     func targetSpokenTextForSendText(_ sendText: String) -> String? {
