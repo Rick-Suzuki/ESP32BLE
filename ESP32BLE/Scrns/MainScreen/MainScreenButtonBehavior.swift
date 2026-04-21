@@ -1454,31 +1454,21 @@ private struct MainGridRandomTextWidgetView: View {
     @State private var animationTask: Task<Void, Never>?
 
     var body: some View {
-        VStack(spacing: 4) {
-            if !trimmedTitle.isEmpty {
-                Text(trimmedTitle)
-                    .font(.system(size: fontSize, weight: .semibold, design: .rounded))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.2)
-                    .multilineTextAlignment(.center)
-            }
-
-            Text(displayedLine)
-                .font(.system(size: fontSize, weight: .bold, design: .rounded))
-                .multilineTextAlignment(.center)
-                .lineLimit(4)
-                .minimumScaleFactor(0.2)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-        }
+        Text(displayedLine)
+            .font(.system(size: fontSize, weight: .bold, design: .rounded))
+            .multilineTextAlignment(.center)
+            .lineLimit(4)
+            .minimumScaleFactor(0.2)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         .foregroundStyle(foregroundColor)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .contentShape(Rectangle())
         .onTapGesture {
             chooseRandomLine()
         }
-        .task(id: filename) {
+        .task(id: "\(filename)|\(title)") {
             availableLines = loadLines()
-            displayedLine = ""
+            displayedLine = trimmedTitle
         }
         .onDisappear {
             animationTask?.cancel()
@@ -1500,13 +1490,14 @@ private struct MainGridRandomTextWidgetView: View {
 
         animationTask?.cancel()
         animationTask = Task {
+            let previousLine = displayedLine
             for _ in 0..<10 {
                 guard !Task.isCancelled else {
                     return
                 }
 
                 await MainActor.run {
-                    displayedLine = lines.randomElement() ?? ""
+                    displayedLine = randomLine(from: lines, avoiding: previousLine)
                 }
 
                 try? await Task.sleep(for: .milliseconds(100))
@@ -1517,10 +1508,19 @@ private struct MainGridRandomTextWidgetView: View {
             }
 
             await MainActor.run {
-                displayedLine = lines.randomElement() ?? ""
+                displayedLine = randomLine(from: lines, avoiding: previousLine)
                 animationTask = nil
             }
         }
+    }
+
+    private func randomLine(from lines: [String], avoiding previousLine: String) -> String {
+        guard lines.count > 1 else {
+            return lines.first ?? ""
+        }
+
+        let filteredLines = lines.filter { $0 != previousLine }
+        return (filteredLines.isEmpty ? lines : filteredLines).randomElement() ?? ""
     }
 
     private func loadLines() -> [String] {
