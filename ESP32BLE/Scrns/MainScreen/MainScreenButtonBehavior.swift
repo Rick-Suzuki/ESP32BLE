@@ -360,6 +360,8 @@ extension MainScreen {
             return .add
         case "minus":
             return .minus
+        case "stop", "stopwatch":
+            return .stopwatch
         case "timer":
             let completionSoundFilename = components.count > 1
                 ? String(components[1]).trimmingCharacters(in: .whitespacesAndNewlines)
@@ -459,6 +461,8 @@ extension MainScreen {
         case .add:
             return true
         case .minus:
+            return true
+        case .stopwatch:
             return true
         case .timer:
             return true
@@ -735,6 +739,12 @@ struct MainScreenButtonLabelView: View {
                 fontSize: boxFontSize,
                 foregroundColor: buttonTextColor
             )
+        case .stopwatch:
+            MainGridStopwatchWidgetView(
+                title: rightTitleWithoutColorPrefix,
+                fontSize: boxFontSize,
+                foregroundColor: buttonTextColor
+            )
         case .timer(let completionSoundFilename):
             MainGridTimerWidgetView(
                 configurationText: rightTitleWithoutColorPrefix,
@@ -933,6 +943,7 @@ enum MainGridWidgetDescriptor {
     case power
     case add
     case minus
+    case stopwatch
     case timer(completionSoundFilename: String?)
 }
 
@@ -1235,5 +1246,66 @@ private struct MainGridTimerWidgetView: View {
     private func resetAndPause() {
         pause()
         remainingSeconds = configuredDuration
+    }
+}
+
+private struct MainGridStopwatchWidgetView: View {
+    let title: String
+    let fontSize: Double
+    let foregroundColor: Color
+
+    @State private var elapsedSeconds = 0
+    @State private var isRunning = false
+    private let ticker = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+
+    var body: some View {
+        VStack(spacing: 4) {
+            if !trimmedTitle.isEmpty {
+                Text(trimmedTitle)
+                    .font(.system(size: fontSize, weight: .semibold, design: .rounded))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.2)
+                    .multilineTextAlignment(.center)
+            }
+
+            Text(formattedElapsedTime)
+                .font(.system(size: fontSize, weight: .bold, design: .rounded))
+                .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.2)
+        }
+        .foregroundStyle(foregroundColor)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            isRunning.toggle()
+        }
+        .onLongPressGesture(minimumDuration: 0.5) {
+            isRunning = false
+            elapsedSeconds = 0
+        }
+        .onReceive(ticker) { _ in
+            guard isRunning else {
+                return
+            }
+
+            elapsedSeconds += 1
+        }
+    }
+
+    private var trimmedTitle: String {
+        title.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var formattedElapsedTime: String {
+        let hours = elapsedSeconds / 3600
+        let minutes = (elapsedSeconds % 3600) / 60
+        let seconds = elapsedSeconds % 60
+
+        if hours > 0 {
+            return String(format: "%02d:%02d:%02d", hours, minutes, seconds)
+        }
+
+        return String(format: "%02d:%02d", minutes, seconds)
     }
 }
