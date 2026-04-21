@@ -349,6 +349,10 @@ extension MainScreen {
             return nil
         }
 
+        if widgetName.hasSuffix(".txt") {
+            return .textFileRandom(filename: String(components[0]))
+        }
+
         switch widgetName {
         case "clock":
             return .clock
@@ -487,6 +491,8 @@ extension MainScreen {
         case .minus:
             return true
         case .random:
+            return true
+        case .textFileRandom:
             return true
         case .stopwatch:
             return true
@@ -773,6 +779,13 @@ struct MainScreenButtonLabelView: View {
                 fontSize: boxFontSize,
                 foregroundColor: buttonTextColor
             )
+        case .textFileRandom(let filename):
+            MainGridRandomTextWidgetView(
+                title: rightTitleWithoutColorPrefix,
+                filename: filename,
+                fontSize: boxFontSize,
+                foregroundColor: buttonTextColor
+            )
         case .stopwatch:
             MainGridStopwatchWidgetView(
                 title: rightTitleWithoutColorPrefix,
@@ -978,6 +991,7 @@ enum MainGridWidgetDescriptor {
     case add
     case minus
     case random(minimumValue: Int, maximumValue: Int)
+    case textFileRandom(filename: String)
     case stopwatch
     case timer(completionSoundFilename: String?)
 }
@@ -1426,5 +1440,119 @@ private struct MainGridRandomNumberWidgetView: View {
                 animationTask = nil
             }
         }
+    }
+}
+
+private struct MainGridRandomTextWidgetView: View {
+    let title: String
+    let filename: String
+    let fontSize: Double
+    let foregroundColor: Color
+
+    @State private var displayedLine = ""
+    @State private var availableLines: [String] = []
+    @State private var animationTask: Task<Void, Never>?
+
+    var body: some View {
+        VStack(spacing: 4) {
+            if !trimmedTitle.isEmpty {
+                Text(trimmedTitle)
+                    .font(.system(size: fontSize, weight: .semibold, design: .rounded))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.2)
+                    .multilineTextAlignment(.center)
+            }
+
+            Text(displayedLine)
+                .font(.system(size: fontSize, weight: .bold, design: .rounded))
+                .multilineTextAlignment(.center)
+                .lineLimit(4)
+                .minimumScaleFactor(0.2)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        .foregroundStyle(foregroundColor)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            chooseRandomLine()
+        }
+        .task(id: filename) {
+            availableLines = loadLines()
+            displayedLine = ""
+        }
+        .onDisappear {
+            animationTask?.cancel()
+        }
+    }
+
+    private var trimmedTitle: String {
+        title.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func chooseRandomLine() {
+        let lines = availableLines.isEmpty ? loadLines() : availableLines
+        availableLines = lines
+
+        guard !lines.isEmpty else {
+            displayedLine = ""
+            return
+        }
+
+        animationTask?.cancel()
+        animationTask = Task {
+            for _ in 0..<10 {
+                guard !Task.isCancelled else {
+                    return
+                }
+
+                await MainActor.run {
+                    displayedLine = lines.randomElement() ?? ""
+                }
+
+                try? await Task.sleep(for: .milliseconds(100))
+            }
+
+            guard !Task.isCancelled else {
+                return
+            }
+
+            await MainActor.run {
+                displayedLine = lines.randomElement() ?? ""
+                animationTask = nil
+            }
+        }
+    }
+
+    private func loadLines() -> [String] {
+        guard let fileURL = textFileURL(named: filename),
+              let contents = try? String(contentsOf: fileURL, encoding: .utf8) else {
+            return []
+        }
+
+        return contents
+            .components(separatedBy: CharacterSet.newlines)
+            .compactMap { line in
+                let trimmedLine = line.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !trimmedLine.isEmpty, !trimmedLine.hasPrefix("//") else {
+                    return nil
+                }
+                return line.replacingOccurrences(of: "\r", with: "")
+            }
+    }
+
+    private func textFileURL(named filename: String) -> URL? {
+        let trimmedFilename = filename.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedFilename.isEmpty else {
+            return nil
+        }
+
+        if let documentsDirectoryURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
+            let documentFileURL = documentsDirectoryURL.appendingPathComponent(trimmedFilename)
+            if FileManager.default.fileExists(atPath: documentFileURL.path) {
+                return documentFileURL
+            }
+        }
+
+        return Bundle.main.resourceURL?.appendingPathComponent(trimmedFilename)
     }
 }
