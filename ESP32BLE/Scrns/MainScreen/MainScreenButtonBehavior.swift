@@ -364,6 +364,13 @@ extension MainScreen {
             return .textFileRandom(filename: String(components[0]))
         }
 
+        if widgetName.hasPrefix("timer:") {
+            let firstComponent = String(components[0]).trimmingCharacters(in: .whitespacesAndNewlines)
+            let completionSoundFilename = String(firstComponent.dropFirst("timer:".count))
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            return .timer(completionSoundFilename: completionSoundFilename.isEmpty ? nil : completionSoundFilename)
+        }
+
         switch widgetName {
         case "clock":
             return .clock

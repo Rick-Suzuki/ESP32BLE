@@ -849,6 +849,11 @@ struct ContentView: View {
             return trimmedLeftText.isEmpty ? [] : [trimmedLeftText]
         }
 
+        if loweredLeftText.hasPrefix("wid ") ||
+            loweredLeftText.hasPrefix("widget ") {
+            return parsedWidgetSendTexts(from: trimmedLeftText)
+        }
+
         return leftText
             .components(separatedBy: ":")
             .compactMap { component in
@@ -860,6 +865,45 @@ struct ContentView: View {
                 let trimmedComponent = component.trimmingCharacters(in: .whitespacesAndNewlines)
                 return trimmedComponent.isEmpty ? nil : trimmedComponent
             }
+    }
+
+    private func parsedWidgetSendTexts(from text: String) -> [String] {
+        guard !text.isEmpty else {
+            return []
+        }
+
+        var components: [String] = []
+        var currentComponent = ""
+        let characters = Array(text)
+        var index = 0
+
+        while index < characters.count {
+            let character = characters[index]
+
+            if character == ":", index + 1 < characters.count, characters[index + 1].isWhitespace {
+                let trimmedComponent = currentComponent.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !trimmedComponent.isEmpty {
+                    components.append(trimmedComponent)
+                }
+                currentComponent = ""
+                index += 1
+
+                while index < characters.count, characters[index].isWhitespace {
+                    index += 1
+                }
+                continue
+            }
+
+            currentComponent.append(character)
+            index += 1
+        }
+
+        let trimmedComponent = currentComponent.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedComponent.isEmpty {
+            components.append(trimmedComponent)
+        }
+
+        return components
     }
 
     private func parsedRightTextAndColor(from rightText: String) -> (text: String, colorCode: String?) {
