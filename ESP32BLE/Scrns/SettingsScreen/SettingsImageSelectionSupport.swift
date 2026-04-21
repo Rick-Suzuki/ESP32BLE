@@ -3,12 +3,7 @@ import UIKit
 
 extension SettingsScreen {
     var availableImageURLs: [URL] {
-        let directoryURL: URL
-        if let existingDocumentURL = documentFiles.first {
-            directoryURL = existingDocumentURL.deletingLastPathComponent()
-        } else if let fallbackDirectoryURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
-            directoryURL = fallbackDirectoryURL
-        } else {
+        guard let directoryURL = currentDocumentsDirectoryURL else {
             return []
         }
 
@@ -16,7 +11,7 @@ extension SettingsScreen {
 
         let urls = (try? FileManager.default.contentsOfDirectory(
             at: directoryURL,
-            includingPropertiesForKeys: [.isRegularFileKey],
+            includingPropertiesForKeys: [URLResourceKey.isRegularFileKey],
             options: [.skipsHiddenFiles]
         )) ?? []
 

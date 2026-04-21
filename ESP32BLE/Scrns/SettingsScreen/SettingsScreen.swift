@@ -16,7 +16,7 @@ struct SettingsScreen: View {
             case .images:
                 return "Images"
             case .sounds:
-                return "Snds"
+                return "Sounds"
             }
         }
 
@@ -71,9 +71,8 @@ struct SettingsScreen: View {
     @AppStorage("settingsFilesScrollPositionID") private var fileScrollPositionIDStorage = ""
     @AppStorage("settingsImagesScrollPositionID") private var imageScrollPositionIDStorage = ""
     @AppStorage("settingsSoundsScrollPositionID") private var soundScrollPositionIDStorage = ""
-    @State private var isImportingDocument = false
-    @State private var isImportingImages = false
-    @State private var isImportingSounds = false
+    @State private var pendingImportListMode: SettingsListMode?
+    @State private var importRefreshID = UUID()
     @State private var isExportingDocument = false
     @State private var exportDocument: SettingsTextFileDocument?
     @State private var isExportingArchive = false
@@ -134,26 +133,16 @@ struct SettingsScreen: View {
                 settingsTitleControl
             }
             ToolbarItem(placement: .topBarTrailing) {
-                Menu {
-                    Button("Import TXT") {
-                        ButtonClickFeedback.playIfEnabled()
-                        isImportingDocument = true
-                    }
-                    Button("Import Images") {
-                        ButtonClickFeedback.playIfEnabled()
-                        isImportingImages = true
-                    }
-                    Button("Import Sounds") {
-                        ButtonClickFeedback.playIfEnabled()
-                        isImportingSounds = true
-                    }
+                Button {
+                    ButtonClickFeedback.playIfEnabled()
+                    pendingImportListMode = listMode
                 } label: {
                     Image(systemName: "square.and.arrow.down")
                         .font(.headline)
                         .foregroundStyle(.white)
                 }
                 .contentShape(.rect)
-                .accessibilityLabel("Import from iCloud")
+                .accessibilityLabel("Import \(listMode.buttonTitle) from iCloud")
             }
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
@@ -232,25 +221,12 @@ struct SettingsScreen: View {
             Text(renameAlertMessage ?? "")
         }
         .fileImporter(
-            isPresented: $isImportingDocument,
-            allowedContentTypes: [plainTextImportType],
+            isPresented: isImporting,
+            allowedContentTypes: activeImportContentTypes,
             allowsMultipleSelection: true
         ) { result in
-            handleDocumentImport(result)
-        }
-        .fileImporter(
-            isPresented: $isImportingImages,
-            allowedContentTypes: [.image],
-            allowsMultipleSelection: true
-        ) { result in
-            handleImageImport(result)
-        }
-        .fileImporter(
-            isPresented: $isImportingSounds,
-            allowedContentTypes: [.audio],
-            allowsMultipleSelection: true
-        ) { result in
-            handleSoundImport(result)
+            pendingImportListMode = nil
+            handleImportedSelection(result)
         }
         .fileExporter(
             isPresented: $isExportingDocument,
@@ -304,6 +280,26 @@ struct SettingsScreen: View {
 
     private var settingsModeEditResetKey: String {
         "\(listModeRawValue)|\(selectedImagePath)|\(selectedSoundPath)"
+    }
+
+    private var isImporting: Binding<Bool> {
+        Binding(
+            get: { pendingImportListMode != nil },
+            set: { _ in }
+        )
+    }
+
+    private var activeImportContentTypes: [UTType] {
+        switch pendingImportListMode {
+        case .files:
+            return [.data]
+        case .images:
+            return [.image]
+        case .sounds:
+            return [.data]
+        case nil:
+            return [.data]
+        }
     }
 
     private func documentTableWidth(for availableWidth: CGFloat) -> CGFloat {
@@ -514,7 +510,7 @@ struct SettingsScreen: View {
     private var documentTableSection: some View {
         SettingsDocumentTableSection(
             listMode: settingsDocumentTableListMode,
-            documentFiles: documentFiles,
+            documentFiles: availableDocumentURLs,
             selectedDocumentName: selectedDocumentName,
             imageURLs: availableImageURLs,
             selectedImageURL: selectedImageURL,
@@ -533,6 +529,7 @@ struct SettingsScreen: View {
             selectSound: selectSound,
             deleteSound: deleteSound
         )
+        .id(importRefreshID)
     }
 
     private var settingsDocumentTableListMode: SettingsDocumentTableSection.ListMode {
@@ -776,7 +773,7 @@ struct SettingsScreen: View {
 
     private func saveCurrentDocumentText() {
         guard !loadedDocumentName.isEmpty,
-              let fileURL = documentFiles.first(where: { $0.lastPathComponent == loadedDocumentName }) else {
+              let fileURL = availableDocumentURLs.first(where: { $0.lastPathComponent == loadedDocumentName }) else {
             return
         }
 
@@ -785,7 +782,7 @@ struct SettingsScreen: View {
 
     private func saveCurrentDocumentText(_ text: String) {
         guard !loadedDocumentName.isEmpty,
-              let fileURL = documentFiles.first(where: { $0.lastPathComponent == loadedDocumentName }) else {
+              let fileURL = availableDocumentURLs.first(where: { $0.lastPathComponent == loadedDocumentName }) else {
             return
         }
 
@@ -813,7 +810,26 @@ struct SettingsScreen: View {
     }
 
     private var selectedDocumentFileURL: URL? {
-        documentFiles.first(where: { $0.lastPathComponent == selectedDocumentName })
+        availableDocumentURLs.first(where: { $0.lastPathComponent == selectedDocumentName })
+    }
+
+    private var availableDocumentURLs: [URL] {
+        guard let directoryURL = currentDocumentsDirectoryURL else {
+            return []
+        }
+
+        let urls = (try? FileManager.default.contentsOfDirectory(
+            at: directoryURL,
+            includingPropertiesForKeys: [.isRegularFileKey],
+            options: [.skipsHiddenFiles]
+        )) ?? []
+
+        return urls
+            .filter { url in
+                let values = try? url.resourceValues(forKeys: [.isRegularFileKey])
+                return values?.isRegularFile == true && url.pathExtension.lowercased() == "txt"
+            }
+            .sorted { $0.lastPathComponent.localizedCaseInsensitiveCompare($1.lastPathComponent) == .orderedAscending }
     }
 
     private var selectedDocumentDisplayName: String {
@@ -829,12 +845,7 @@ struct SettingsScreen: View {
     }
 
     private var availableSoundURLs: [URL] {
-        let directoryURL: URL
-        if let existingDocumentURL = documentFiles.first {
-            directoryURL = existingDocumentURL.deletingLastPathComponent()
-        } else if let fallbackDirectoryURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
-            directoryURL = fallbackDirectoryURL
-        } else {
+        guard let directoryURL = currentDocumentsDirectoryURL else {
             return []
         }
 
@@ -1124,6 +1135,103 @@ struct SettingsScreen: View {
         ["mp3", "wav", "m4a", "aiff", "aac", "caf"]
     }
 
+    private func handleImportedSelection(_ result: Result<[URL], Error>) {
+        guard case let .success(urls) = result else {
+            return
+        }
+
+        guard let directoryURL = currentDocumentsDirectoryURL else {
+            return
+        }
+
+        var existingFileNames = Set(availableDocumentURLs.map { $0.lastPathComponent.lowercased() })
+        var existingImageNames = Set(availableImageURLs.map { $0.lastPathComponent.lowercased() })
+        var existingSoundNames = Set(availableSoundURLs.map { $0.lastPathComponent.lowercased() })
+        var firstImportedDocumentURL: URL?
+        var firstImportedImageURL: URL?
+        var firstImportedSoundURL: URL?
+        var importedAnything = false
+
+        for sourceURL in urls {
+            let pathExtension = sourceURL.pathExtension.lowercased()
+            let targetFileName = sourceURL.lastPathComponent
+            let targetFileNameKey = targetFileName.lowercased()
+            let targetURL = directoryURL.appendingPathComponent(targetFileName)
+
+            if pathExtension == "txt" {
+                guard !existingFileNames.contains(targetFileNameKey),
+                      !FileManager.default.fileExists(atPath: targetURL.path) else {
+                    continue
+                }
+
+                do {
+                    try importFileData(from: sourceURL, to: targetURL)
+                    existingFileNames.insert(targetFileNameKey)
+                    importedAnything = true
+                    if firstImportedDocumentURL == nil {
+                        firstImportedDocumentURL = targetURL
+                    }
+                } catch {
+                    print("Failed to import text file \(targetFileName): \(error.localizedDescription)")
+                }
+                continue
+            }
+
+            if supportedImportedImageExtensions.contains(pathExtension) {
+                guard !existingImageNames.contains(targetFileNameKey),
+                      !FileManager.default.fileExists(atPath: targetURL.path) else {
+                    continue
+                }
+
+                do {
+                    try importFileData(from: sourceURL, to: targetURL)
+                    existingImageNames.insert(targetFileNameKey)
+                    importedAnything = true
+                    if firstImportedImageURL == nil {
+                        firstImportedImageURL = targetURL
+                    }
+                } catch {
+                    print("Failed to import image \(targetFileName): \(error.localizedDescription)")
+                }
+                continue
+            }
+
+            if supportedImportedSoundExtensions.contains(pathExtension) {
+                guard !existingSoundNames.contains(targetFileNameKey),
+                      !FileManager.default.fileExists(atPath: targetURL.path) else {
+                    continue
+                }
+
+                do {
+                    try importFileData(from: sourceURL, to: targetURL)
+                    existingSoundNames.insert(targetFileNameKey)
+                    importedAnything = true
+                    if firstImportedSoundURL == nil {
+                        firstImportedSoundURL = targetURL
+                    }
+                } catch {
+                    print("Failed to import sound \(targetFileName): \(error.localizedDescription)")
+                }
+            }
+        }
+
+        guard importedAnything else { return }
+
+        markImportedContentChanged()
+
+        if let firstImportedDocumentURL {
+            loadFunctionKeys(firstImportedDocumentURL)
+        }
+
+        if let firstImportedImageURL, listMode == .images || selectedImageURL == nil {
+            persistSelectedImage(firstImportedImageURL)
+        }
+
+        if let firstImportedSoundURL, listMode == .sounds || selectedSoundURL == nil {
+            persistSelectedSound(firstImportedSoundURL)
+        }
+    }
+
     private func handleDocumentImport(_ result: Result<[URL], Error>) {
         guard case let .success(urls) = result else {
             if case let .failure(error) = result {
@@ -1137,7 +1245,7 @@ struct SettingsScreen: View {
             return
         }
 
-        let existingFileNames = Set(documentFiles.map { $0.lastPathComponent.lowercased() })
+        var existingFileNames = Set(availableDocumentURLs.map { $0.lastPathComponent.lowercased() })
         var duplicateFileNames: [String] = []
 
         for sourceURL in urls {
@@ -1154,23 +1262,16 @@ struct SettingsScreen: View {
                 continue
             }
 
-            let didAccessSecurityScopedResource = sourceURL.startAccessingSecurityScopedResource()
-            defer {
-                if didAccessSecurityScopedResource {
-                    sourceURL.stopAccessingSecurityScopedResource()
-                }
-            }
-
             do {
-                let importedText = try String(contentsOf: sourceURL, encoding: .utf8)
-                try importedText.write(to: targetURL, atomically: true, encoding: .utf8)
+                try importFileData(from: sourceURL, to: targetURL)
+                existingFileNames.insert(targetFileName.lowercased())
             } catch {
-                renameAlertMessage = "Couldn't import the file."
+                renameAlertMessage = "Couldn't import the file: \(error.localizedDescription)"
                 return
             }
         }
 
-        refreshDocumentFiles()
+        markImportedContentChanged()
 
         if let firstImportedURL = urls.first(where: { !duplicateFileNames.contains($0.lastPathComponent) }) {
             loadFunctionKeys(directoryURL.appendingPathComponent(firstImportedURL.lastPathComponent))
@@ -1196,7 +1297,7 @@ struct SettingsScreen: View {
             return
         }
 
-        let existingImageNames = Set(availableImageURLs.map { $0.lastPathComponent.lowercased() })
+        var existingImageNames = Set(availableImageURLs.map { $0.lastPathComponent.lowercased() })
         var duplicateImageNames: [String] = []
 
         for sourceURL in urls {
@@ -1213,34 +1314,28 @@ struct SettingsScreen: View {
                 continue
             }
 
-            let didAccessSecurityScopedResource = sourceURL.startAccessingSecurityScopedResource()
-            defer {
-                if didAccessSecurityScopedResource {
-                    sourceURL.stopAccessingSecurityScopedResource()
-                }
-            }
-
             do {
                 if FileManager.default.fileExists(atPath: targetURL.path) {
                     duplicateImageNames.append(targetFileName)
                     continue
                 }
-                try FileManager.default.copyItem(at: sourceURL, to: targetURL)
+                try importFileData(from: sourceURL, to: targetURL)
+                existingImageNames.insert(targetFileName.lowercased())
             } catch {
-                renameAlertMessage = "Couldn't import the image."
+                renameAlertMessage = "Couldn't import the image: \(error.localizedDescription)"
                 return
             }
         }
 
         if !availableImageURLs.isEmpty {
             let previousImageURL = selectedImageURL
-            refreshDocumentFiles()
+            markImportedContentChanged()
             if let previousImageURL,
                let refreshedImageIndex = availableImageURLs.firstIndex(where: { $0.lastPathComponent == previousImageURL.lastPathComponent }) {
                 persistSelectedImage(availableImageURLs[refreshedImageIndex])
             }
         } else {
-            refreshDocumentFiles()
+            markImportedContentChanged()
         }
 
         if let duplicateImageName = duplicateImageNames.first {
@@ -1263,7 +1358,7 @@ struct SettingsScreen: View {
             return
         }
 
-        let existingSoundNames = Set(availableSoundURLs.map { $0.lastPathComponent.lowercased() })
+        var existingSoundNames = Set(availableSoundURLs.map { $0.lastPathComponent.lowercased() })
         var duplicateSoundNames: [String] = []
 
         for sourceURL in urls {
@@ -1280,26 +1375,20 @@ struct SettingsScreen: View {
                 continue
             }
 
-            let didAccessSecurityScopedResource = sourceURL.startAccessingSecurityScopedResource()
-            defer {
-                if didAccessSecurityScopedResource {
-                    sourceURL.stopAccessingSecurityScopedResource()
-                }
-            }
-
             do {
                 if FileManager.default.fileExists(atPath: targetURL.path) {
                     duplicateSoundNames.append(targetFileName)
                     continue
                 }
-                try FileManager.default.copyItem(at: sourceURL, to: targetURL)
+                try importFileData(from: sourceURL, to: targetURL)
+                existingSoundNames.insert(targetFileName.lowercased())
             } catch {
-                renameAlertMessage = "Couldn't import the sound."
+                renameAlertMessage = "Couldn't import the sound: \(error.localizedDescription)"
                 return
             }
         }
 
-        refreshDocumentFiles()
+        markImportedContentChanged()
 
         if let firstImportedURL = urls.first(where: { !duplicateSoundNames.contains($0.lastPathComponent) }) {
             persistSelectedSound(directoryURL.appendingPathComponent(firstImportedURL.lastPathComponent))
@@ -1332,20 +1421,66 @@ struct SettingsScreen: View {
         }
     }
 
-    private var currentDocumentsDirectoryURL: URL? {
-        if let existingDocumentURL = documentFiles.first {
-            return existingDocumentURL.deletingLastPathComponent()
-        }
-
-        if let selectedDocumentFileURL {
-            return selectedDocumentFileURL.deletingLastPathComponent()
-        }
-
+    var currentDocumentsDirectoryURL: URL? {
         return FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
     }
 
+    private func markImportedContentChanged() {
+        refreshDocumentFiles()
+        importRefreshID = UUID()
+    }
+
+    private func importFileData(from sourceURL: URL, to targetURL: URL) throws {
+        let didAccessSecurityScopedResource = sourceURL.startAccessingSecurityScopedResource()
+        defer {
+            if didAccessSecurityScopedResource {
+                sourceURL.stopAccessingSecurityScopedResource()
+            }
+        }
+
+        let coordinator = NSFileCoordinator()
+        var importError: Error?
+        var coordinatorError: NSError?
+
+        coordinator.coordinate(readingItemAt: sourceURL, options: [], error: &coordinatorError) { coordinatedURL in
+            do {
+                try FileManager.default.createDirectory(
+                    at: targetURL.deletingLastPathComponent(),
+                    withIntermediateDirectories: true
+                )
+
+                let temporaryURL = FileManager.default.temporaryDirectory
+                    .appendingPathComponent(UUID().uuidString)
+                    .appendingPathExtension(targetURL.pathExtension)
+
+                defer {
+                    try? FileManager.default.removeItem(at: temporaryURL)
+                }
+
+                do {
+                    try FileManager.default.copyItem(at: coordinatedURL, to: temporaryURL)
+                } catch {
+                    let importedData = try Data(contentsOf: coordinatedURL)
+                    try importedData.write(to: temporaryURL, options: .atomic)
+                }
+
+                try FileManager.default.moveItem(at: temporaryURL, to: targetURL)
+            } catch {
+                importError = error
+            }
+        }
+
+        if let importError {
+            throw importError
+        }
+
+        if let coordinatorError {
+            throw coordinatorError
+        }
+    }
+
     private var archiveTextDocumentURLs: [URL] {
-        let textFiles = documentFiles.filter { $0.pathExtension.lowercased() == "txt" }
+        let textFiles = availableDocumentURLs
         if !textFiles.isEmpty {
             return textFiles
         }
