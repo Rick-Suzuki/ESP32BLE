@@ -91,7 +91,6 @@ extension MainScreen {
     func handleSpeechRecognitionToggle() {
         if isSpkRecEnabled {
             unmatchedSpeechText = nil
-            sendModifierFunctionKey("f20")
             speechRecognition.setListeningEnabled(true)
             scheduleSpeechRecognitionAutoOff()
             return
@@ -102,7 +101,6 @@ extension MainScreen {
         unmatchedSpeechText = nil
         speechRecognition.setListeningEnabled(false)
         resetAudioSessionForSpeechPlayback()
-        sendModifierFunctionKey("f19")
     }
 
     var latestRecognizedText: String? {

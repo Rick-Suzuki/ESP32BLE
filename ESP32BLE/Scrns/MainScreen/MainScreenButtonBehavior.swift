@@ -687,18 +687,18 @@ struct MainScreenButtonLabelView: View {
         case .clock:
             TimelineView(.periodic(from: .now, by: 1)) { context in
                 VStack(spacing: 4) {
-                    Text(clockText(for: context.date))
-                        .font(.system(size: boxFontSize, weight: .bold, design: .rounded))
-                        .monospacedDigit()
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.5)
-
                     if let widgetCityLabel {
                         Text(widgetCityLabel)
                             .font(.system(size: boxFontSize, weight: .semibold, design: .rounded))
                             .lineLimit(1)
                             .minimumScaleFactor(0.5)
                     }
+
+                    Text(clockText(for: context.date))
+                        .font(.system(size: boxFontSize, weight: .bold, design: .rounded))
+                        .monospacedDigit()
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
                 }
                 .foregroundStyle(buttonTextColor)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
