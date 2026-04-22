@@ -1575,9 +1575,9 @@ private struct MainGridStopwatchWidgetView: View {
     let fontSize: Double
     let foregroundColor: Color
 
-    @State private var elapsedSeconds = 0
+    @State private var elapsedTenths = 0
     @State private var isRunning = false
-    private let ticker = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+    private let ticker = Timer.publish(every: 0.1, on: .main, in: .common).autoconnect()
 
     var body: some View {
         VStack(spacing: 4) {
@@ -1603,14 +1603,14 @@ private struct MainGridStopwatchWidgetView: View {
         }
         .onLongPressGesture(minimumDuration: 0.5) {
             isRunning = false
-            elapsedSeconds = 0
+            elapsedTenths = 0
         }
         .onReceive(ticker) { _ in
             guard isRunning else {
                 return
             }
 
-            elapsedSeconds += 1
+            elapsedTenths += 1
         }
     }
 
@@ -1619,15 +1619,17 @@ private struct MainGridStopwatchWidgetView: View {
     }
 
     private var formattedElapsedTime: String {
-        let hours = elapsedSeconds / 3600
-        let minutes = (elapsedSeconds % 3600) / 60
-        let seconds = elapsedSeconds % 60
+        let totalSeconds = elapsedTenths / 10
+        let tenths = elapsedTenths % 10
+        let hours = totalSeconds / 3600
+        let minutes = (totalSeconds % 3600) / 60
+        let seconds = totalSeconds % 60
 
         if hours > 0 {
-            return String(format: "%02d:%02d:%02d", hours, minutes, seconds)
+            return String(format: "%02d:%02d:%02d.%01d", hours, minutes, seconds, tenths)
         }
 
-        return String(format: "%02d:%02d", minutes, seconds)
+        return String(format: "%02d:%02d.%01d", minutes, seconds, tenths)
     }
 }
 
