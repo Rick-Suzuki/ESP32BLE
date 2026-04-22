@@ -33,6 +33,7 @@ struct MainScreen: View {
     @StateObject var speechRecognition = SpeechRecognitionManager()
     @State var speechSynthesizer = AVSpeechSynthesizer()
     @State var soundEffectPlayer: AVAudioPlayer?
+    @StateObject var mainGridTimerState = MainGridSharedTimerState()
     @ObservedObject var ble: BLEKeyboardManager
     @State var displayMode: FunctionKeyDisplayMode = .right
     @State var isEditingDocumentName = false

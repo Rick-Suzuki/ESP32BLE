@@ -545,6 +545,7 @@ extension MainScreen {
         return MainScreenButtonLabelView(
             entry: entry,
             index: index,
+            widgetID: "\(selectedDocumentName)#\(index)",
             title: title,
             leftTitle: leftTitle,
             rightTitle: rightTitle,
@@ -559,6 +560,7 @@ extension MainScreen {
             isGridEditModeEnabled: isGridEditModeEnabled,
             activeDragIndex: activeDragIndex,
             backgroundOpacity: backgroundOpacity,
+            sharedTimer: mainGridTimerState,
             playSoundNamed: playMainGridSound,
             shouldSpeakWidgetSelections: mainGridButtonMode.speaksText,
             speakText: speakMainGridText
@@ -713,6 +715,7 @@ struct MainScreenButtonLabelView: View {
     private let loneEmojiScaleMultiplier: CGFloat = 1.5
     let entry: FunctionKeyEntry
     let index: Int
+    let widgetID: String
     let title: String
     let leftTitle: String
     let rightTitle: String
@@ -727,6 +730,7 @@ struct MainScreenButtonLabelView: View {
     let isGridEditModeEnabled: Bool
     let activeDragIndex: Int?
     let backgroundOpacity: Double
+    @ObservedObject var sharedTimer: MainGridSharedTimerState
     let playSoundNamed: (String) -> Void
     let shouldSpeakWidgetSelections: Bool
     let speakText: (String) -> Void
@@ -888,8 +892,10 @@ struct MainScreenButtonLabelView: View {
             )
         case .timer(let completionSoundFilename):
             MainGridTimerWidgetView(
+                widgetID: widgetID,
                 configurationText: rightTitleWithoutColorPrefix,
                 completionSoundFilename: completionSoundFilename,
+                sharedTimer: sharedTimer,
                 fontSize: boxFontSize,
                 foregroundColor: buttonTextColor,
                 onPlayCompletionSound: playSoundNamed
@@ -1274,18 +1280,169 @@ private struct MainGridStepDownCounterWidgetView: View {
     }
 }
 
+final class MainGridSharedTimerState: ObservableObject {
+    @Published var activeWidgetID: String?
+    @Published var configuredDuration = 0
+    @Published var remainingSeconds = 0
+    @Published var isRunning = false
+
+    private var completionSoundFilename: String?
+    private var soundCallback: ((String) -> Void)?
+    private var endDate: Date?
+    private var tickTask: Task<Void, Never>?
+
+    deinit {
+        tickTask?.cancel()
+    }
+
+    func startTimer(
+        widgetID: String,
+        duration: Int,
+        completionSoundFilename: String?,
+        onPlayCompletionSound: @escaping (String) -> Void
+    ) {
+        tickTask?.cancel()
+        tickTask = nil
+
+        activeWidgetID = widgetID
+        configuredDuration = max(duration, 0)
+        remainingSeconds = configuredDuration
+        isRunning = configuredDuration > 0
+        endDate = isRunning ? Date().addingTimeInterval(TimeInterval(configuredDuration)) : nil
+        self.completionSoundFilename = normalizedCompletionSoundFilename(completionSoundFilename)
+        soundCallback = onPlayCompletionSound
+
+        guard isRunning else {
+            return
+        }
+
+        startTicking(for: widgetID)
+    }
+
+    func resumeTimer(
+        widgetID: String,
+        duration: Int,
+        completionSoundFilename: String?,
+        onPlayCompletionSound: @escaping (String) -> Void
+    ) {
+        if activeWidgetID != widgetID {
+            startTimer(
+                widgetID: widgetID,
+                duration: duration,
+                completionSoundFilename: completionSoundFilename,
+                onPlayCompletionSound: onPlayCompletionSound
+            )
+            return
+        }
+
+        if remainingSeconds <= 0 {
+            remainingSeconds = max(duration, 0)
+        }
+
+        configuredDuration = max(duration, 0)
+        self.completionSoundFilename = normalizedCompletionSoundFilename(completionSoundFilename)
+        soundCallback = onPlayCompletionSound
+
+        guard remainingSeconds > 0 else {
+            isRunning = false
+            endDate = nil
+            return
+        }
+
+        isRunning = true
+        endDate = Date().addingTimeInterval(TimeInterval(remainingSeconds))
+        startTicking(for: widgetID)
+    }
+
+    func pauseTimer(widgetID: String) {
+        guard activeWidgetID == widgetID else {
+            return
+        }
+
+        syncRemainingFromEndDate()
+        isRunning = false
+        endDate = nil
+        tickTask?.cancel()
+        tickTask = nil
+    }
+
+    func resetAndPauseTimer(
+        widgetID: String,
+        duration: Int,
+        completionSoundFilename: String?,
+        onPlayCompletionSound: @escaping (String) -> Void
+    ) {
+        tickTask?.cancel()
+        tickTask = nil
+
+        activeWidgetID = widgetID
+        configuredDuration = max(duration, 0)
+        remainingSeconds = configuredDuration
+        isRunning = false
+        endDate = nil
+        self.completionSoundFilename = normalizedCompletionSoundFilename(completionSoundFilename)
+        soundCallback = onPlayCompletionSound
+    }
+
+    private func startTicking(for widgetID: String) {
+        tickTask?.cancel()
+        tickTask = Task { [weak self] in
+            guard let self else {
+                return
+            }
+
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(1))
+
+                await MainActor.run {
+                    guard self.activeWidgetID == widgetID, self.isRunning else {
+                        return
+                    }
+
+                    self.syncRemainingFromEndDate()
+
+                    guard self.remainingSeconds == 0 else {
+                        return
+                    }
+
+                    self.isRunning = false
+                    self.endDate = nil
+                    self.tickTask?.cancel()
+                    self.tickTask = nil
+
+                    if let completionSoundFilename = self.completionSoundFilename {
+                        self.soundCallback?(completionSoundFilename)
+                    }
+                }
+            }
+        }
+    }
+
+    private func syncRemainingFromEndDate() {
+        guard let endDate else {
+            return
+        }
+
+        remainingSeconds = max(Int(ceil(endDate.timeIntervalSinceNow)), 0)
+    }
+
+    private func normalizedCompletionSoundFilename(_ filename: String?) -> String? {
+        let trimmedFilename = filename?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return trimmedFilename.isEmpty ? nil : trimmedFilename
+    }
+}
+
 private struct MainGridTimerWidgetView: View {
+    let widgetID: String
     let configurationText: String
     let completionSoundFilename: String?
+    @ObservedObject var sharedTimer: MainGridSharedTimerState
     let fontSize: Double
     let foregroundColor: Color
     let onPlayCompletionSound: (String) -> Void
 
     @State private var configuredDuration = 0
-    @State private var remainingSeconds = 0
     @State private var title = ""
-    @State private var isRunning = false
-    private let ticker = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     var body: some View {
         VStack(spacing: 4) {
@@ -1318,27 +1475,14 @@ private struct MainGridTimerWidgetView: View {
         .onChange(of: configurationText) {
             applyConfiguration()
         }
-        .onReceive(ticker) { _ in
-            guard isRunning, remainingSeconds > 0 else {
-                return
-            }
+    }
 
-            remainingSeconds -= 1
-
-            guard remainingSeconds == 0 else {
-                return
-            }
-
-            isRunning = false
-
-            if let completionSoundFilename,
-               !completionSoundFilename.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                onPlayCompletionSound(completionSoundFilename)
-            }
-        }
+    private var displayedRemainingSeconds: Int {
+        isActiveTimer ? sharedTimer.remainingSeconds : configuredDuration
     }
 
     private var formattedRemainingTime: String {
+        let remainingSeconds = max(displayedRemainingSeconds, 0)
         let hours = remainingSeconds / 3600
         let minutes = (remainingSeconds % 3600) / 60
         let seconds = remainingSeconds % 60
@@ -1351,8 +1495,6 @@ private struct MainGridTimerWidgetView: View {
     }
 
     private func applyConfiguration() {
-        isRunning = false
-
         let components = configurationText.split(separator: ":", maxSplits: 1, omittingEmptySubsequences: false)
         let parsedDuration = components.first
             .map { parseTimerDuration(String($0)) } ?? 0
@@ -1361,7 +1503,6 @@ private struct MainGridTimerWidgetView: View {
             : ""
 
         configuredDuration = max(parsedDuration, 0)
-        remainingSeconds = configuredDuration
         title = parsedTitle
     }
 
@@ -1402,25 +1543,30 @@ private struct MainGridTimerWidgetView: View {
             return
         }
 
-        if isRunning {
-            pause()
+        if isActiveTimer && sharedTimer.isRunning {
+            sharedTimer.pauseTimer(widgetID: widgetID)
             return
         }
 
-        if remainingSeconds == 0 {
-            remainingSeconds = configuredDuration
-        }
-
-        isRunning = true
-    }
-
-    private func pause() {
-        isRunning = false
+        sharedTimer.resumeTimer(
+            widgetID: widgetID,
+            duration: configuredDuration,
+            completionSoundFilename: completionSoundFilename,
+            onPlayCompletionSound: onPlayCompletionSound
+        )
     }
 
     private func resetAndPause() {
-        pause()
-        remainingSeconds = configuredDuration
+        sharedTimer.resetAndPauseTimer(
+            widgetID: widgetID,
+            duration: configuredDuration,
+            completionSoundFilename: completionSoundFilename,
+            onPlayCompletionSound: onPlayCompletionSound
+        )
+    }
+
+    private var isActiveTimer: Bool {
+        sharedTimer.activeWidgetID == widgetID
     }
 }
 
