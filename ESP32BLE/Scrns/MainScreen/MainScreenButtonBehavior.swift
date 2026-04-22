@@ -427,7 +427,7 @@ extension MainScreen {
         }
     }
 
-    func playMainGridSound(named filename: String) {
+    func playMainGridSound(named filename: String, repeats: Bool = false) {
         guard let audioURL = soundURL(named: filename) else {
             alertTitle = "Sound Not Found"
             renameAlertMessage = "Couldn't find \(filename)."
@@ -438,6 +438,7 @@ extension MainScreen {
 
         do {
             let player = try AVAudioPlayer(contentsOf: audioURL)
+            player.numberOfLoops = repeats ? -1 : 0
             player.prepareToPlay()
             player.play()
             soundEffectPlayer = player
@@ -445,6 +446,11 @@ extension MainScreen {
             alertTitle = "Sound Error"
             renameAlertMessage = "Couldn't play \(filename)."
         }
+    }
+
+    func stopMainGridSoundPlayback() {
+        soundEffectPlayer?.stop()
+        soundEffectPlayer = nil
     }
 
     func soundURL(named filename: String) -> URL? {
@@ -561,7 +567,9 @@ extension MainScreen {
             activeDragIndex: activeDragIndex,
             backgroundOpacity: backgroundOpacity,
             sharedTimer: mainGridTimerState,
-            playSoundNamed: playMainGridSound,
+            playSoundNamed: { playMainGridSound(named: $0) },
+            playLoopingSoundNamed: { playMainGridSound(named: $0, repeats: true) },
+            stopSoundPlayback: stopMainGridSoundPlayback,
             shouldSpeakWidgetSelections: mainGridButtonMode.speaksText,
             speakText: speakMainGridText
         )
@@ -732,6 +740,8 @@ struct MainScreenButtonLabelView: View {
     let backgroundOpacity: Double
     @ObservedObject var sharedTimer: MainGridSharedTimerState
     let playSoundNamed: (String) -> Void
+    let playLoopingSoundNamed: (String) -> Void
+    let stopSoundPlayback: () -> Void
     let shouldSpeakWidgetSelections: Bool
     let speakText: (String) -> Void
 
@@ -898,7 +908,8 @@ struct MainScreenButtonLabelView: View {
                 sharedTimer: sharedTimer,
                 fontSize: boxFontSize,
                 foregroundColor: buttonTextColor,
-                onPlayCompletionSound: playSoundNamed
+                onPlayCompletionSound: playLoopingSoundNamed,
+                onStopCompletionSound: stopSoundPlayback
             )
         }
     }
@@ -1285,9 +1296,11 @@ final class MainGridSharedTimerState: ObservableObject {
     @Published var configuredDuration = 0
     @Published var remainingSeconds = 0
     @Published var isRunning = false
+    @Published var isCompletionSoundLooping = false
 
     private var completionSoundFilename: String?
-    private var soundCallback: ((String) -> Void)?
+    private var startCompletionSoundLoopCallback: ((String) -> Void)?
+    private var stopCompletionSoundLoopCallback: (() -> Void)?
     private var endDate: Date?
     private var tickTask: Task<Void, Never>?
 
@@ -1299,8 +1312,10 @@ final class MainGridSharedTimerState: ObservableObject {
         widgetID: String,
         duration: Int,
         completionSoundFilename: String?,
-        onPlayCompletionSound: @escaping (String) -> Void
+        onPlayCompletionSound: @escaping (String) -> Void,
+        onStopCompletionSound: @escaping () -> Void
     ) {
+        stopCompletionSoundLoop()
         tickTask?.cancel()
         tickTask = nil
 
@@ -1310,7 +1325,8 @@ final class MainGridSharedTimerState: ObservableObject {
         isRunning = configuredDuration > 0
         endDate = isRunning ? Date().addingTimeInterval(TimeInterval(configuredDuration)) : nil
         self.completionSoundFilename = normalizedCompletionSoundFilename(completionSoundFilename)
-        soundCallback = onPlayCompletionSound
+        startCompletionSoundLoopCallback = onPlayCompletionSound
+        stopCompletionSoundLoopCallback = onStopCompletionSound
 
         guard isRunning else {
             return
@@ -1323,17 +1339,21 @@ final class MainGridSharedTimerState: ObservableObject {
         widgetID: String,
         duration: Int,
         completionSoundFilename: String?,
-        onPlayCompletionSound: @escaping (String) -> Void
+        onPlayCompletionSound: @escaping (String) -> Void,
+        onStopCompletionSound: @escaping () -> Void
     ) {
         if activeWidgetID != widgetID {
             startTimer(
                 widgetID: widgetID,
                 duration: duration,
                 completionSoundFilename: completionSoundFilename,
-                onPlayCompletionSound: onPlayCompletionSound
+                onPlayCompletionSound: onPlayCompletionSound,
+                onStopCompletionSound: onStopCompletionSound
             )
             return
         }
+
+        stopCompletionSoundLoop()
 
         if remainingSeconds <= 0 {
             remainingSeconds = max(duration, 0)
@@ -1341,7 +1361,8 @@ final class MainGridSharedTimerState: ObservableObject {
 
         configuredDuration = max(duration, 0)
         self.completionSoundFilename = normalizedCompletionSoundFilename(completionSoundFilename)
-        soundCallback = onPlayCompletionSound
+        startCompletionSoundLoopCallback = onPlayCompletionSound
+        stopCompletionSoundLoopCallback = onStopCompletionSound
 
         guard remainingSeconds > 0 else {
             isRunning = false
@@ -1359,6 +1380,7 @@ final class MainGridSharedTimerState: ObservableObject {
             return
         }
 
+        stopCompletionSoundLoop()
         syncRemainingFromEndDate()
         isRunning = false
         endDate = nil
@@ -1370,8 +1392,10 @@ final class MainGridSharedTimerState: ObservableObject {
         widgetID: String,
         duration: Int,
         completionSoundFilename: String?,
-        onPlayCompletionSound: @escaping (String) -> Void
+        onPlayCompletionSound: @escaping (String) -> Void,
+        onStopCompletionSound: @escaping () -> Void
     ) {
+        stopCompletionSoundLoop()
         tickTask?.cancel()
         tickTask = nil
 
@@ -1381,7 +1405,17 @@ final class MainGridSharedTimerState: ObservableObject {
         isRunning = false
         endDate = nil
         self.completionSoundFilename = normalizedCompletionSoundFilename(completionSoundFilename)
-        soundCallback = onPlayCompletionSound
+        startCompletionSoundLoopCallback = onPlayCompletionSound
+        stopCompletionSoundLoopCallback = onStopCompletionSound
+    }
+
+    func stopCompletionSoundLoop() {
+        guard isCompletionSoundLooping else {
+            return
+        }
+
+        stopCompletionSoundLoopCallback?()
+        isCompletionSoundLooping = false
     }
 
     private func startTicking(for widgetID: String) {
@@ -1411,7 +1445,8 @@ final class MainGridSharedTimerState: ObservableObject {
                     self.tickTask = nil
 
                     if let completionSoundFilename = self.completionSoundFilename {
-                        self.soundCallback?(completionSoundFilename)
+                        self.startCompletionSoundLoopCallback?(completionSoundFilename)
+                        self.isCompletionSoundLooping = true
                     }
                 }
             }
@@ -1440,6 +1475,7 @@ private struct MainGridTimerWidgetView: View {
     let fontSize: Double
     let foregroundColor: Color
     let onPlayCompletionSound: (String) -> Void
+    let onStopCompletionSound: () -> Void
 
     @State private var configuredDuration = 0
     @State private var title = ""
@@ -1543,6 +1579,11 @@ private struct MainGridTimerWidgetView: View {
             return
         }
 
+        if isActiveTimer && sharedTimer.isCompletionSoundLooping {
+            sharedTimer.stopCompletionSoundLoop()
+            return
+        }
+
         if isActiveTimer && sharedTimer.isRunning {
             sharedTimer.pauseTimer(widgetID: widgetID)
             return
@@ -1552,7 +1593,8 @@ private struct MainGridTimerWidgetView: View {
             widgetID: widgetID,
             duration: configuredDuration,
             completionSoundFilename: completionSoundFilename,
-            onPlayCompletionSound: onPlayCompletionSound
+            onPlayCompletionSound: onPlayCompletionSound,
+            onStopCompletionSound: onStopCompletionSound
         )
     }
 
@@ -1561,7 +1603,8 @@ private struct MainGridTimerWidgetView: View {
             widgetID: widgetID,
             duration: configuredDuration,
             completionSoundFilename: completionSoundFilename,
-            onPlayCompletionSound: onPlayCompletionSound
+            onPlayCompletionSound: onPlayCompletionSound,
+            onStopCompletionSound: onStopCompletionSound
         )
     }
 
