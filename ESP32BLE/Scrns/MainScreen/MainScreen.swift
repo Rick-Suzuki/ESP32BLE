@@ -73,7 +73,7 @@ struct MainScreen: View {
     let goBackToPreviousDocument: () -> Void
     let canGoBackToPreviousDocument: Bool
     let selectDocumentNamedFromGrid: (String) -> Bool
-    let resizeVisibleBoxCount: (Int) -> Bool
+    let resizeVisibleBoxCount: (GridDimensions, GridDimensions) -> Bool
     let moveFunctionKeySlot: (Int, Int) -> Bool
     let duplicateFunctionKeySlot: (Int, Int) -> Bool
     let updateFunctionKeySlot: (Int, String) -> Bool

@@ -67,17 +67,19 @@ extension MainScreen {
     func applyGridDimensions(columns: Int, rows: Int) -> Bool {
         let sanitizedColumns = max(columns, 1)
         let sanitizedRows = max(rows, 1)
+        let currentGridDimensions = visibleGridDimensions
         let candidateBoxCount = sanitizedColumns * sanitizedRows
 
         guard candidateBoxCount <= maxFunctionKeyCount else {
             return false
         }
 
-        guard resizeVisibleBoxCount(candidateBoxCount) else {
+        let updatedGridDimensions = (columns: sanitizedColumns, rows: sanitizedRows)
+
+        guard resizeVisibleBoxCount(currentGridDimensions, updatedGridDimensions) else {
             return false
         }
 
-        let updatedGridDimensions = (columns: sanitizedColumns, rows: sanitizedRows)
         visibleGridDimensions = updatedGridDimensions
         visibleBoxCount = candidateBoxCount
         saveGridDimensions(selectedDocumentName, updatedGridDimensions)

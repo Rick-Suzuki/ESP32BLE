@@ -101,7 +101,7 @@ struct ContentView: View {
                             goBackToPreviousDocument: goBackToPreviousDocument,
                             canGoBackToPreviousDocument: canGoBackToPreviousDocument,
                             selectDocumentNamedFromGrid: selectDocumentNamedFromGrid,
-                            resizeVisibleBoxCount: resizeSelectedDocumentSlotCount,
+                            resizeVisibleBoxCount: resizeSelectedDocumentGrid,
                             moveFunctionKeySlot: moveSelectedDocumentSlot,
                             duplicateFunctionKeySlot: duplicateSelectedDocumentSlot,
                             updateFunctionKeySlot: updateSelectedDocumentSlot,
@@ -636,9 +636,24 @@ struct ContentView: View {
     }
 
     @discardableResult
-    private func resizeSelectedDocumentSlotCount(to newCount: Int) -> Bool {
-        let boundedCount = min(max(newCount, 1), maxFunctionKeyCount)
-        let currentCount = functionKeySlotLines.count
+    private func resizeSelectedDocumentGrid(from oldDimensions: GridDimensions, to newDimensions: GridDimensions) -> Bool {
+        let sanitizedOldDimensions = (
+            columns: max(oldDimensions.columns, 1),
+            rows: max(oldDimensions.rows, 1)
+        )
+        let sanitizedNewDimensions = (
+            columns: max(newDimensions.columns, 1),
+            rows: max(newDimensions.rows, 1)
+        )
+        let boundedCount = min(
+            max(sanitizedNewDimensions.columns * sanitizedNewDimensions.rows, 1),
+            maxFunctionKeyCount
+        )
+        let currentCount = sanitizedOldDimensions.columns * sanitizedOldDimensions.rows
+
+        guard boundedCount == sanitizedNewDimensions.columns * sanitizedNewDimensions.rows else {
+            return false
+        }
 
         guard boundedCount != currentCount else {
             return true
@@ -648,10 +663,10 @@ struct ContentView: View {
 
         guard let resizedLines = resizedSlotLines(
             from: currentLines,
-            oldCount: currentCount,
-            to: boundedCount
+            oldGrid: sanitizedOldDimensions,
+            newGrid: sanitizedNewDimensions
         ) else {
-            print("Can't shrink grid because trailing buttons contain text.")
+            print("Can't resize grid because occupied buttons would fall outside the new dimensions.")
             return false
         }
 
@@ -659,63 +674,58 @@ struct ContentView: View {
         return true
     }
 
-    private func resizedSlotLines(from slotLines: [String], oldCount: Int, to newCount: Int) -> [String]? {
-        let oldGrid = functionKeyGridDimensions(for: oldCount)
-        let newGrid = functionKeyGridDimensions(for: newCount)
+    private func resizedSlotLines(from slotLines: [String], oldGrid: GridDimensions, newGrid: GridDimensions) -> [String]? {
+        let oldCount = oldGrid.columns * oldGrid.rows
+        let newCount = newGrid.columns * newGrid.rows
         var remappedLines = Array(repeating: "_", count: newCount)
-        let occupiedPositions = (0..<oldCount).compactMap { index -> (row: Int, column: Int)? in
+        let occupiedSlots: [(line: String, row: Int, column: Int)] = (0..<oldCount).compactMap { index in
             let line = index < slotLines.count ? slotLines[index] : "_"
-            guard !isBlankPlaceholderLine(line) else {
+            guard !isEmptyGridSlotLine(line) else {
                 return nil
             }
 
-            return (index / oldGrid.columns, index % oldGrid.columns)
-        }
-        let shouldNormalizeOccupiedOrigin = newCount < oldCount
-        let rowOffset: Int
-        let columnOffset: Int
-
-        if shouldNormalizeOccupiedOrigin,
-           let minimumRow = occupiedPositions.map(\.row).min(),
-           let maximumRow = occupiedPositions.map(\.row).max(),
-           let minimumColumn = occupiedPositions.map(\.column).min(),
-           let maximumColumn = occupiedPositions.map(\.column).max() {
-            let occupiedRowCount = (maximumRow - minimumRow) + 1
-            let occupiedColumnCount = (maximumColumn - minimumColumn) + 1
-
-            if occupiedRowCount <= newGrid.rows && occupiedColumnCount <= newGrid.columns {
-                rowOffset = minimumRow
-                columnOffset = minimumColumn
-            } else {
-                rowOffset = 0
-                columnOffset = 0
-            }
-        } else {
-            rowOffset = 0
-            columnOffset = 0
+            return (
+                line: line,
+                row: index / oldGrid.columns,
+                column: index % oldGrid.columns
+            )
         }
 
-        for index in 0..<oldCount {
-            let line = index < slotLines.count ? slotLines[index] : "_"
-            let row = (index / oldGrid.columns) - rowOffset
-            let column = (index % oldGrid.columns) - columnOffset
+        guard !occupiedSlots.isEmpty else {
+            return remappedLines
+        }
 
-            guard row >= 0, column >= 0, row < newGrid.rows, column < newGrid.columns else {
-                if isBlankPlaceholderLine(line) {
-                    continue
-                }
+        let minimumRow = occupiedSlots.map(\.row).min() ?? 0
+        let maximumRow = occupiedSlots.map(\.row).max() ?? 0
+        let minimumColumn = occupiedSlots.map(\.column).min() ?? 0
+        let maximumColumn = occupiedSlots.map(\.column).max() ?? 0
+        let occupiedHeight = maximumRow - minimumRow + 1
+        let occupiedWidth = maximumColumn - minimumColumn + 1
+
+        guard occupiedHeight <= newGrid.rows, occupiedWidth <= newGrid.columns else {
+            return nil
+        }
+
+        let upwardShift = max(0, maximumRow - (newGrid.rows - 1))
+        let leftwardShift = max(0, maximumColumn - (newGrid.columns - 1))
+
+        for occupiedSlot in occupiedSlots {
+            let newRow = occupiedSlot.row - upwardShift
+            let newColumn = occupiedSlot.column - leftwardShift
+
+            guard newRow >= 0,
+                  newColumn >= 0,
+                  newRow < newGrid.rows,
+                  newColumn < newGrid.columns else {
                 return nil
             }
 
-            let newIndex = row * newGrid.columns + column
+            let newIndex = newRow * newGrid.columns + newColumn
             guard newIndex < newCount else {
-                if isBlankPlaceholderLine(line) {
-                    continue
-                }
                 return nil
             }
 
-            remappedLines[newIndex] = line
+            remappedLines[newIndex] = occupiedSlot.line
         }
 
         return remappedLines
@@ -798,6 +808,11 @@ struct ContentView: View {
 
     private func isBlankPlaceholderLine(_ line: String) -> Bool {
         line.trimmingCharacters(in: .whitespacesAndNewlines) == "_"
+    }
+
+    private func isEmptyGridSlotLine(_ line: String) -> Bool {
+        let trimmedLine = line.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmedLine.isEmpty || trimmedLine == "_"
     }
 
     private func functionKeyEntry(from line: String) -> FunctionKeyEntry {
