@@ -314,17 +314,17 @@ extension MainScreen {
         let loweredSendText = trimmedSendText.lowercased()
 
         if loweredSendText.hasPrefix("snd ") {
-            let filename = trimmedSendText.dropFirst(4).trimmingCharacters(in: .whitespacesAndNewlines)
+            let filename = normalizedSoundFilename(String(trimmedSendText.dropFirst(4)))
             return filename.isEmpty ? nil : filename
         }
 
-        let pathExtension = URL(fileURLWithPath: trimmedSendText).pathExtension.lowercased()
-        let supportedSoundExtensions = Set(["mp3", "wav", "m4a", "aiff", "aac", "caf"])
+        let normalizedFilename = normalizedSoundFilename(trimmedSendText)
+        let pathExtension = URL(fileURLWithPath: normalizedFilename).pathExtension.lowercased()
         guard supportedSoundExtensions.contains(pathExtension) else {
             return nil
         }
 
-        return trimmedSendText.isEmpty ? nil : trimmedSendText
+        return normalizedFilename.isEmpty ? nil : normalizedFilename
     }
 
     func targetSpokenTextForSendText(_ sendText: String) -> String? {
@@ -353,8 +353,24 @@ extension MainScreen {
             return nil
         }
 
-        let components = widgetText
-            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedWidgetText = widgetText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let loweredWidgetText = trimmedWidgetText.lowercased()
+
+        if loweredWidgetText.hasPrefix("timer:") {
+            let completionSoundFilename = normalizedSoundFilename(
+                String(trimmedWidgetText.dropFirst("timer:".count))
+            )
+            return .timer(completionSoundFilename: completionSoundFilename.isEmpty ? nil : completionSoundFilename)
+        }
+
+        if loweredWidgetText.hasPrefix("timer ") {
+            let completionSoundFilename = normalizedSoundFilename(
+                String(trimmedWidgetText.dropFirst("timer".count))
+            )
+            return .timer(completionSoundFilename: completionSoundFilename.isEmpty ? nil : completionSoundFilename)
+        }
+
+        let components = trimmedWidgetText
             .split(separator: " ", omittingEmptySubsequences: true)
         guard let widgetName = components.first?.lowercased() else {
             return nil
@@ -362,13 +378,6 @@ extension MainScreen {
 
         if widgetName.hasSuffix(".txt") {
             return .textFileRandom(filename: String(components[0]))
-        }
-
-        if widgetName.hasPrefix("timer:") {
-            let firstComponent = String(components[0]).trimmingCharacters(in: .whitespacesAndNewlines)
-            let completionSoundFilename = String(firstComponent.dropFirst("timer:".count))
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-            return .timer(completionSoundFilename: completionSoundFilename.isEmpty ? nil : completionSoundFilename)
         }
 
         switch widgetName {
@@ -410,7 +419,7 @@ extension MainScreen {
             return .stopwatch
         case "timer":
             let completionSoundFilename = components.count > 1
-                ? String(components[1]).trimmingCharacters(in: .whitespacesAndNewlines)
+                ? normalizedSoundFilename(String(components.dropFirst().joined(separator: " ")))
                 : ""
             return .timer(completionSoundFilename: completionSoundFilename.isEmpty ? nil : completionSoundFilename)
         default:
@@ -439,19 +448,76 @@ extension MainScreen {
     }
 
     func soundURL(named filename: String) -> URL? {
-        let trimmedFilename = filename.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedFilename.isEmpty else {
+        let normalizedFilename = normalizedSoundFilename(filename)
+        guard !normalizedFilename.isEmpty else {
             return nil
         }
 
         if let documentsDirectoryURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
-            let documentSoundURL = documentsDirectoryURL.appendingPathComponent(trimmedFilename)
+            let documentSoundURL = documentsDirectoryURL.appendingPathComponent(normalizedFilename)
             if FileManager.default.fileExists(atPath: documentSoundURL.path) {
                 return documentSoundURL
             }
+
+            if let matchedDocumentSoundURL = matchedSoundURL(
+                in: documentsDirectoryURL,
+                matching: normalizedFilename
+            ) {
+                return matchedDocumentSoundURL
+            }
         }
 
-        return Bundle.main.resourceURL?.appendingPathComponent(trimmedFilename)
+        guard let bundleResourceURL = Bundle.main.resourceURL else {
+            return nil
+        }
+
+        let bundledSoundURL = bundleResourceURL.appendingPathComponent(normalizedFilename)
+        if FileManager.default.fileExists(atPath: bundledSoundURL.path) {
+            return bundledSoundURL
+        }
+
+        return matchedSoundURL(in: bundleResourceURL, matching: normalizedFilename)
+    }
+
+    private var supportedSoundExtensions: Set<String> {
+        ["mp3", "wav", "m4a", "aiff", "aac", "caf"]
+    }
+
+    private func normalizedSoundFilename(_ filename: String) -> String {
+        filename
+            .components(separatedBy: .whitespacesAndNewlines)
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
+    }
+
+    private func normalizedSoundLookupKey(_ filename: String) -> String {
+        normalizedSoundFilename(filename).lowercased()
+    }
+
+    private func matchedSoundURL(in directoryURL: URL, matching filename: String) -> URL? {
+        let requestedLookupKey = normalizedSoundLookupKey(filename)
+        guard !requestedLookupKey.isEmpty else {
+            return nil
+        }
+
+        let candidateURLs = try? FileManager.default.contentsOfDirectory(
+            at: directoryURL,
+            includingPropertiesForKeys: [URLResourceKey.isRegularFileKey],
+            options: [.skipsHiddenFiles]
+        )
+
+        return candidateURLs?.first { candidateURL in
+            let resourceValues = try? candidateURL.resourceValues(forKeys: [URLResourceKey.isRegularFileKey])
+            guard resourceValues?.isRegularFile == true else {
+                return false
+            }
+
+            guard supportedSoundExtensions.contains(candidateURL.pathExtension.lowercased()) else {
+                return false
+            }
+
+            return normalizedSoundLookupKey(candidateURL.lastPathComponent) == requestedLookupKey
+        }
     }
 
     func normalizedBluetoothSendText(_ sendText: String) -> String {
@@ -1289,7 +1355,7 @@ private struct MainGridTimerWidgetView: View {
 
         let components = configurationText.split(separator: ":", maxSplits: 1, omittingEmptySubsequences: false)
         let parsedDuration = components.first
-            .map { Int($0.trimmingCharacters(in: .whitespacesAndNewlines)) ?? 0 } ?? 0
+            .map { parseTimerDuration(String($0)) } ?? 0
         let parsedTitle = components.count > 1
             ? String(components[1]).trimmingCharacters(in: .whitespacesAndNewlines)
             : ""
@@ -1297,6 +1363,38 @@ private struct MainGridTimerWidgetView: View {
         configuredDuration = max(parsedDuration, 0)
         remainingSeconds = configuredDuration
         title = parsedTitle
+    }
+
+    private func parseTimerDuration(_ durationText: String) -> Int {
+        let trimmedDurationText = durationText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedDurationText.isEmpty else {
+            return 0
+        }
+
+        if let durationInSeconds = Int(trimmedDurationText) {
+            return durationInSeconds
+        }
+
+        let loweredDurationText = trimmedDurationText.lowercased()
+        guard let unit = loweredDurationText.last else {
+            return 0
+        }
+
+        let numericText = String(loweredDurationText.dropLast()).trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let numericValue = Int(numericText) else {
+            return 0
+        }
+
+        switch unit {
+        case "m":
+            return numericValue * 60
+        case "h":
+            return numericValue * 3600
+        case "s":
+            return numericValue
+        default:
+            return 0
+        }
     }
 
     private func togglePlayback() {
