@@ -62,6 +62,7 @@ struct SettingsScreen: View {
     @State private var isLoadingDocumentText = false
     @State private var isDocumentEditorFocused = false
     @State private var speechSynthesizer = AVSpeechSynthesizer()
+    @State private var soundPreviewPlayer: AVAudioPlayer?
     @State private var loadedDocumentName = ""
     @State private var savedDocumentEditorText = ""
     @State private var isEditingDocumentName = false
@@ -1003,6 +1004,18 @@ struct SettingsScreen: View {
 
     private func selectSound(_ soundURL: URL) {
         persistSelectedSound(soundURL)
+        playSelectedSoundPreview(from: soundURL)
+    }
+
+    private func playSelectedSoundPreview(from soundURL: URL) {
+        do {
+            let player = try AVAudioPlayer(contentsOf: soundURL)
+            player.prepareToPlay()
+            player.play()
+            soundPreviewPlayer = player
+        } catch {
+            soundPreviewPlayer = nil
+        }
     }
 
     private func renameSelectedImage(to proposedName: String) -> String? {
