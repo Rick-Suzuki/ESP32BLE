@@ -1552,6 +1552,7 @@ private struct MainGridRandomNumberWidgetView: View {
 
                 await MainActor.run {
                     displayedValue = Int.random(in: normalizedRange)
+                    ButtonClickFeedback.playIfEnabled()
                 }
 
                 try? await Task.sleep(for: .milliseconds(100))
@@ -1641,6 +1642,7 @@ private struct MainGridRandomTextWidgetView: View {
 
                 await MainActor.run {
                     displayedLine = previewLine(from: lines, avoiding: previousLine, preferredLine: selectedLine)
+                    ButtonClickFeedback.playIfEnabled()
                 }
 
                 try? await Task.sleep(for: .milliseconds(100))
