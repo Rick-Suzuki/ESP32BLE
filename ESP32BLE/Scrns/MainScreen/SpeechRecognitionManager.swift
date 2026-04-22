@@ -3,26 +3,184 @@ import Combine
 import Speech
 import SwiftUI
 
-private let spokenDigitTokenMap: [String: String] = [
-    "zero": "0",
-    "one": "1",
-    "two": "2",
-    "three": "3",
-    "four": "4",
-    "five": "5",
-    "six": "6",
-    "seven": "7",
-    "eight": "8",
-    "nine": "9"
+private let spokenSmallNumberTokenMap: [String: Int] = [
+    "zero": 0,
+    "one": 1,
+    "two": 2,
+    "three": 3,
+    "four": 4,
+    "five": 5,
+    "six": 6,
+    "seven": 7,
+    "eight": 8,
+    "nine": 9,
+    "ten": 10,
+    "eleven": 11,
+    "twelve": 12,
+    "thirteen": 13,
+    "fourteen": 14,
+    "fifteen": 15,
+    "sixteen": 16,
+    "seventeen": 17,
+    "eighteen": 18,
+    "nineteen": 19
+]
+
+private let spokenTensNumberTokenMap: [String: Int] = [
+    "twenty": 20,
+    "thirty": 30,
+    "forty": 40,
+    "fifty": 50,
+    "sixty": 60,
+    "seventy": 70,
+    "eighty": 80,
+    "ninety": 90
+]
+
+private let spokenSignTokenMap: [String: String] = [
+    "plus": "+",
+    "positive": "+",
+    "minus": "-",
+    "negative": "-"
 ]
 
 func normalizedSpeechRecognitionText(_ text: String) -> String {
-    text
-        .lowercased()
-        .components(separatedBy: CharacterSet.alphanumerics.inverted)
-        .filter { !$0.isEmpty }
-        .map { spokenDigitTokenMap[$0] ?? $0 }
-        .joined(separator: " ")
+    let rawTokens = speechRecognitionTokens(from: text.lowercased())
+    var normalizedTokens: [String] = []
+    var index = 0
+
+    while index < rawTokens.count {
+        let token = rawTokens[index]
+
+        if let sign = spokenSignTokenMap[token] ?? recognizedSignSymbol(from: token) {
+            if let (number, consumedCount) = parseSpokenNumber(from: rawTokens, startingAt: index + 1) {
+                normalizedTokens.append("\(sign)\(number)")
+                index += consumedCount + 1
+                continue
+            }
+
+            normalizedTokens.append(sign)
+            index += 1
+            continue
+        }
+
+        if let (number, consumedCount) = parseSpokenNumber(from: rawTokens, startingAt: index) {
+            normalizedTokens.append(number)
+            index += consumedCount
+            continue
+        }
+
+        normalizedTokens.append(token)
+        index += 1
+    }
+
+    return normalizedTokens.joined(separator: " ")
+}
+
+private func speechRecognitionTokens(from text: String) -> [String] {
+    var tokens: [String] = []
+    var currentToken = ""
+
+    for character in text {
+        if character.isLetter || character.isNumber {
+            currentToken.append(character)
+            continue
+        }
+
+        if !currentToken.isEmpty {
+            tokens.append(currentToken)
+            currentToken = ""
+        }
+
+        if character == "+" || character == "-" {
+            tokens.append(String(character))
+        }
+    }
+
+    if !currentToken.isEmpty {
+        tokens.append(currentToken)
+    }
+
+    return tokens
+}
+
+private func recognizedSignSymbol(from token: String) -> String? {
+    switch token {
+    case "+":
+        return "+"
+    case "-":
+        return "-"
+    default:
+        return nil
+    }
+}
+
+private func parseSpokenNumber(from tokens: [String], startingAt startIndex: Int) -> (String, Int)? {
+    guard startIndex < tokens.count else {
+        return nil
+    }
+
+    let firstToken = tokens[startIndex]
+    if firstToken.allSatisfy(\.isNumber) {
+        return (firstToken, 1)
+    }
+
+    var currentValue = 0
+    var totalValue = 0
+    var consumedCount = 0
+    var recognizedAnyNumberToken = false
+    var index = startIndex
+
+    while index < tokens.count {
+        let token = tokens[index]
+
+        if let value = spokenSmallNumberTokenMap[token] {
+            currentValue += value
+            recognizedAnyNumberToken = true
+            consumedCount += 1
+            index += 1
+            continue
+        }
+
+        if let value = spokenTensNumberTokenMap[token] {
+            currentValue += value
+            recognizedAnyNumberToken = true
+            consumedCount += 1
+            index += 1
+            continue
+        }
+
+        if token == "hundred", currentValue > 0 {
+            currentValue *= 100
+            recognizedAnyNumberToken = true
+            consumedCount += 1
+            index += 1
+            continue
+        }
+
+        if token == "thousand", currentValue > 0 {
+            totalValue += currentValue * 1000
+            currentValue = 0
+            recognizedAnyNumberToken = true
+            consumedCount += 1
+            index += 1
+            continue
+        }
+
+        if token == "and", recognizedAnyNumberToken {
+            consumedCount += 1
+            index += 1
+            continue
+        }
+
+        break
+    }
+
+    guard recognizedAnyNumberToken else {
+        return nil
+    }
+
+    return (String(totalValue + currentValue), consumedCount)
 }
 
 struct SpeechRecognitionEvent: Equatable {
