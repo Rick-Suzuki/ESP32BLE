@@ -27,7 +27,7 @@ extension MainScreen {
 
     func increaseGridRows() {
         let nextRows = visibleGridDimensions.rows + 1
-        guard nextRows <= 12 else {
+        guard nextRows <= maxGridDimension else {
             return
         }
 
@@ -44,7 +44,7 @@ extension MainScreen {
 
     func increaseGridColumns() {
         let nextColumns = visibleGridDimensions.columns + 1
-        guard nextColumns <= 12 else {
+        guard nextColumns <= maxGridDimension else {
             return
         }
 

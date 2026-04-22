@@ -2,7 +2,8 @@
 import SwiftUI
 import AudioToolbox
 
-let maxFunctionKeyCount = 144
+let maxGridDimension = 20
+let maxFunctionKeyCount = maxGridDimension * maxGridDimension
 private let defaultNamedFunctionKeyCount = 20
 let hiddenButtonMetadataToken = "@@hidden"
 

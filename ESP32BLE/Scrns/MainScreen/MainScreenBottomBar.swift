@@ -206,7 +206,7 @@ struct MainScreenBottomBar: View {
                 singleStepTriangle(
                     rotationDegrees: 90,
                     foreground: rowControlColor,
-                    isEnabled: visibleGridDimensions.rows < 12,
+                    isEnabled: visibleGridDimensions.rows < maxGridDimension,
                     action: onIncreaseRows
                 )
             }
@@ -227,7 +227,7 @@ struct MainScreenBottomBar: View {
                 singleStepTriangle(
                     rotationDegrees: 90,
                     foreground: columnControlColor,
-                    isEnabled: visibleGridDimensions.columns < 12,
+                    isEnabled: visibleGridDimensions.columns < maxGridDimension,
                     action: onIncreaseColumns
                 )
             }
