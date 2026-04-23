@@ -1044,21 +1044,21 @@ struct MainScreenButtonLabelView: View {
             return .clear
         case "w":
             return Color.brown.opacity(backgroundOpacity)
-        case "b", "actions":
+        case "b":
             return Color(red: 0.0, green: 0.2, blue: 0.45).opacity(backgroundOpacity)
-        case "g", "pos":
+        case "g":
             return Color(red: 0.05, green: 0.33, blue: 0.18).opacity(backgroundOpacity)
         case "o":
             return Color(red: 0.5, green: 0.28, blue: 0.0).opacity(backgroundOpacity)
-        case "r", "dest":
+        case "r":
             return Color(red: 0.42, green: 0.12, blue: 0.12).opacity(backgroundOpacity)
         case "p":
             return Color(red: 0.82, green: 0.42, blue: 0.58).opacity(backgroundOpacity)
-        case "u", "info":
+        case "u":
             return Color(red: 0.42, green: 0.18, blue: 0.52).opacity(backgroundOpacity)
         case "c":
             return Color.cyan.opacity(backgroundOpacity)
-        case "y", "warning":
+        case "y":
             return Color(red: 0.55, green: 0.45, blue: 0.08).opacity(backgroundOpacity)
         case "a":
             return Color.gray.opacity(backgroundOpacity)
