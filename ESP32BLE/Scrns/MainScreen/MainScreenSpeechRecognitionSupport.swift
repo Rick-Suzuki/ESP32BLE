@@ -27,6 +27,18 @@ extension MainScreen {
             return
         }
 
+        if let targetDocumentName = targetDocumentNameForSpeechOpenCommand(recognizedText) {
+            unmatchedSpeechText = nil
+
+            guard selectDocumentNamedFromGrid(targetDocumentName) else {
+                alertTitle = "File Not Found"
+                renameAlertMessage = "Couldn't find \(targetDocumentName.lowercased())."
+                return
+            }
+
+            return
+        }
+
         let recognizedTextWithoutSpaces = recognizedText.replacingOccurrences(of: " ", with: "")
 
         guard let matchingEntry = functionKeys.first(where: { entry in
@@ -87,6 +99,17 @@ extension MainScreen {
             .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
 
         return trailingComponent.isEmpty ? displayString : trailingComponent
+    }
+
+    func targetDocumentNameForSpeechOpenCommand(_ recognizedText: String) -> String? {
+        let openPrefix = "\(canonicalSpeechText(from: "open")) "
+        guard recognizedText.hasPrefix(openPrefix) else {
+            return nil
+        }
+
+        let targetDocumentName = String(recognizedText.dropFirst(openPrefix.count))
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return targetDocumentName.isEmpty ? nil : targetDocumentName
     }
 
     func handleSpeechRecognitionToggle() {
