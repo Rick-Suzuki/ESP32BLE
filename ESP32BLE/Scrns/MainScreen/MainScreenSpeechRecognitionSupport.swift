@@ -39,22 +39,7 @@ extension MainScreen {
             return
         }
 
-        let recognizedTextWithoutSpaces = recognizedText.replacingOccurrences(of: " ", with: "")
-
-        guard let matchingEntry = functionKeys.first(where: { entry in
-            guard let alternateDisplayText = entry.alternateDisplayText else {
-                return false
-            }
-
-            return normalizedSpeechMatchText(alternateDisplayText) == recognizedText
-        }) ?? functionKeys.first(where: { entry in
-            guard let alternateDisplayText = entry.alternateDisplayText else {
-                return false
-            }
-
-            return recognizedTextWithoutSpaces != recognizedText &&
-                normalizedSpeechMatchText(alternateDisplayText) == recognizedTextWithoutSpaces
-        }) else {
+        guard let matchingEntry = matchingSpeechEntry(for: recognizedText) else {
             unmatchedSpeechText = recognizedText
             return
         }
@@ -110,6 +95,82 @@ extension MainScreen {
         let targetDocumentName = String(recognizedText.dropFirst(openPrefix.count))
             .trimmingCharacters(in: .whitespacesAndNewlines)
         return targetDocumentName.isEmpty ? nil : targetDocumentName
+    }
+
+    func matchingSpeechEntry(for recognizedText: String) -> FunctionKeyEntry? {
+        let recognizedTextWithoutSpaces = recognizedText.replacingOccurrences(of: " ", with: "")
+        let entriesWithAlternateText = functionKeys.filter { $0.alternateDisplayText != nil }
+
+        if let exactMatch = entriesWithAlternateText.first(where: { entry in
+            guard let alternateDisplayText = entry.alternateDisplayText else {
+                return false
+            }
+
+            return normalizedSpeechMatchText(alternateDisplayText) == recognizedText
+        }) {
+            return exactMatch
+        }
+
+        if recognizedTextWithoutSpaces != recognizedText,
+           let exactMatchWithoutSpaces = entriesWithAlternateText.first(where: { entry in
+               guard let alternateDisplayText = entry.alternateDisplayText else {
+                   return false
+               }
+
+               return normalizedSpeechMatchText(alternateDisplayText)
+                   .replacingOccurrences(of: " ", with: "") == recognizedTextWithoutSpaces
+           }) {
+            return exactMatchWithoutSpaces
+        }
+
+        if let subphraseMatch = entriesWithAlternateText.first(where: { entry in
+            guard let alternateDisplayText = entry.alternateDisplayText else {
+                return false
+            }
+
+            return speechText(normalizedSpeechMatchText(alternateDisplayText), containsPhrase: recognizedText)
+        }) {
+            return subphraseMatch
+        }
+
+        if recognizedTextWithoutSpaces != recognizedText {
+            return entriesWithAlternateText.first(where: { entry in
+                guard let alternateDisplayText = entry.alternateDisplayText else {
+                    return false
+                }
+
+                return normalizedSpeechMatchText(alternateDisplayText)
+                    .replacingOccurrences(of: " ", with: "")
+                    .contains(recognizedTextWithoutSpaces)
+            })
+        }
+
+        return nil
+    }
+
+    func speechText(_ candidateText: String, containsPhrase phraseText: String) -> Bool {
+        let candidateTokens = candidateText
+            .split(whereSeparator: \.isWhitespace)
+            .map(String.init)
+        let phraseTokens = phraseText
+            .split(whereSeparator: \.isWhitespace)
+            .map(String.init)
+
+        guard !candidateTokens.isEmpty,
+              !phraseTokens.isEmpty,
+              phraseTokens.count <= candidateTokens.count else {
+            return false
+        }
+
+        let lastStartIndex = candidateTokens.count - phraseTokens.count
+        for startIndex in 0...lastStartIndex {
+            let candidateSlice = candidateTokens[startIndex..<(startIndex + phraseTokens.count)]
+            if Array(candidateSlice).elementsEqual(phraseTokens) {
+                return true
+            }
+        }
+
+        return false
     }
 
     func handleSpeechRecognitionToggle() {
