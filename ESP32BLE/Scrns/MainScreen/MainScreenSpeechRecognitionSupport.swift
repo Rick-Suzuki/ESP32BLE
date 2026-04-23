@@ -20,7 +20,8 @@ extension MainScreen {
             return
         }
 
-        if recognizedText == canonicalSpeechText(from: "speech off") {
+        if recognizedText == canonicalSpeechText(from: "speech off") ||
+            recognizedText == canonicalSpeechText(from: "stop listening") {
             unmatchedSpeechText = nil
             isSpkRecEnabled = false
             return
