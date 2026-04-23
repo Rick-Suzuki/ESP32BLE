@@ -53,8 +53,8 @@ struct MainScreenSlotEditorOverlay: View {
         ("u", nil, .purple),
         ("y", nil, .yellow),
         ("a", nil, Color(red: 0.25, green: 0.25, blue: 0.25)),// was .gray
-        ("1", nil, Color(red: 0.10, green: 0.12, blue: 0.16)),
-        ("2", nil, Color(red: 0.14, green: 0.3, blue: 0.25)),
+        ("1", nil, Color(red: 0.20, green: 0.22, blue: 0.30)),
+        ("2", nil, Color(red: 0.14, green: 0.30, blue: 0.25)),
         ("3", nil, Color(red: 0.38, green: 0.14, blue: 0.24)),
         ("4", nil, Color(red: 0.23, green: 0.26, blue: 0.08)),
         ("5", nil, Color(red: 0.14, green: 0.16, blue: 0.38))

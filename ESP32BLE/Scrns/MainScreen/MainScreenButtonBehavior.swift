@@ -1063,7 +1063,7 @@ struct MainScreenButtonLabelView: View {
         case "a":
             return Color(red: 0.25, green: 0.25, blue: 0.25).opacity(backgroundOpacity)
         case "1":
-            return Color(red: 0.10, green: 0.12, blue: 0.16).opacity(backgroundOpacity)
+            return Color(red: 0.20, green: 0.22, blue: 0.30).opacity(backgroundOpacity)
         case "2":
             return Color(red: 0.14, green: 0.3, blue: 0.25).opacity(backgroundOpacity)
         case "3":
