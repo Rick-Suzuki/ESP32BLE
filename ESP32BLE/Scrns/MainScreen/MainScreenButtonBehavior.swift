@@ -56,7 +56,7 @@ extension MainScreen {
         if let firstComponent = rightComponents.first,
            firstComponent.count == 1,
            let manualColorCode = firstComponent.lowercased().first,
-           "lwbgorpucya".contains(manualColorCode) {
+           "lwbgorpucya12345".contains(manualColorCode) {
             let remainingText = rightComponents
                 .dropFirst()
                 .joined(separator: ":")
@@ -977,7 +977,7 @@ struct MainScreenButtonLabelView: View {
         if let firstComponent = components.first?.trimmingCharacters(in: .whitespacesAndNewlines),
            firstComponent.count == 1,
            let existingCode = firstComponent.lowercased().first,
-           "lwbgorpucya".contains(existingCode) {
+           "lwbgorpucya12345".contains(existingCode) {
             return components.dropFirst().joined(separator: ":")
         }
 
@@ -1061,7 +1061,17 @@ struct MainScreenButtonLabelView: View {
         case "y":
             return Color(red: 0.55, green: 0.45, blue: 0.08).opacity(backgroundOpacity)
         case "a":
-            return Color.gray.opacity(backgroundOpacity)
+            return Color(red: 0.25, green: 0.25, blue: 0.25).opacity(backgroundOpacity)
+        case "1":
+            return Color(red: 0.10, green: 0.12, blue: 0.16).opacity(backgroundOpacity)
+        case "2":
+            return Color(red: 0.14, green: 0.3, blue: 0.25).opacity(backgroundOpacity)
+        case "3":
+            return Color(red: 0.38, green: 0.14, blue: 0.24).opacity(backgroundOpacity)
+        case "4":
+            return Color(red: 0.23, green: 0.26, blue: 0.08).opacity(backgroundOpacity)
+        case "5":
+            return Color(red: 0.14, green: 0.16, blue: 0.38).opacity(backgroundOpacity)
         default:
             return Color.black.opacity(backgroundOpacity)
         }

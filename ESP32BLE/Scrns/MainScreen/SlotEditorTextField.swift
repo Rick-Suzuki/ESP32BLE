@@ -14,6 +14,25 @@ final class SlotEditorInputController {
         textField.deleteBackward()
     }
 
+    func deleteForward() {
+        guard let textField,
+              let selectedTextRange = textField.selectedTextRange else {
+            return
+        }
+
+        if !selectedTextRange.isEmpty {
+            textField.replace(selectedTextRange, withText: "")
+            return
+        }
+
+        guard let nextPosition = textField.position(from: selectedTextRange.start, offset: 1),
+              let forwardRange = textField.textRange(from: selectedTextRange.start, to: nextPosition) else {
+            return
+        }
+
+        textField.replace(forwardRange, withText: "")
+    }
+
     func focus() {
         textField?.becomeFirstResponder()
     }

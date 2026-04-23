@@ -928,36 +928,9 @@ struct ContentView: View {
         if let firstComponent = components.first,
            firstComponent.count == 1,
            let manualColorCode = firstComponent.lowercased().first,
-           "lwbgorpucya".contains(manualColorCode) {
+           "lwbgorpucya12345".contains(manualColorCode) {
             let remainingText = components.dropFirst().joined(separator: ":").trimmingCharacters(in: .whitespacesAndNewlines)
             return (remainingText.isEmpty ? rightText : remainingText, String(manualColorCode))
-        }
-
-        let firstWord = rightText
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-            .components(separatedBy: .whitespacesAndNewlines)
-            .first?
-            .lowercased() ?? ""
-
-		// MARK: - BM:🟥 btns keywords
-        if ["delete", "del", "rem", "remove", "clr", "clear", "erase", "destroy"].contains(firstWord) {
-            return (rightText, "dest")
-        }
-
-        if ["save", "start", "run", "apply", "ok", "confirm", "enable", "disable"].contains(firstWord) {
-            return (rightText, "pos")
-        }
-
-        if ["rst", "reset", "reload", "restart", "warning", "warn"].contains(firstWord) {
-            return (rightText, "warning")
-        }
-
-        if ["open", "close", "cls", "edit"].contains(firstWord) {
-            return (rightText, "actions")
-        }
-
-        if ["settings", "options", "details", "info"].contains(firstWord) {
-            return (rightText, "info")
         }
 
         return (rightText, nil)
