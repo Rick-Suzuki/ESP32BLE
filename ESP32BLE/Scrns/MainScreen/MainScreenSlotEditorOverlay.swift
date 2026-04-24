@@ -156,7 +156,7 @@ struct MainScreenSlotEditorOverlay: View {
                             HStack(spacing: buttonSpacing) {
                                 helperInsertButton("+")
                                 helperInsertButton("-")
-                                helperInsertButton("/")
+                                helperInsertButton(label: "\\", insertedText: "\\")
                                 helperInsertButton("*")
                                 forwardDeleteButton
                                 testButton
@@ -176,7 +176,7 @@ struct MainScreenSlotEditorOverlay: View {
                                 helperInsertButton("app")
                                 helperInsertButton("spk")
                                 helperInsertButton("kp")
-                                sparePlaceholderButton
+                                newlineInsertButton
                                 saveButton
                             }
                         }
@@ -341,14 +341,31 @@ struct MainScreenSlotEditorOverlay: View {
         .buttonStyle(.plain)
     }
 
-    private var sparePlaceholderButton: some View {
-        RoundedRectangle(cornerRadius: 12)
-            .fill(Color.black)
-            .frame(width: helperButtonWidth, height: 44)
-            .overlay {
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color.white.opacity(0.25), lineWidth: 1)
+    private var newlineInsertButton: some View {
+        Button {
+            ButtonClickFeedback.playIfEnabled()
+            switch activeEditorField {
+            case .action:
+                actionInputController.insertText("\\\\n")
+            case .text:
+                rightInputController.insertText("\\n")
             }
+            activeInputController.focus()
+            focusBinding.wrappedValue = true
+        } label: {
+            Text("NL")
+                .foregroundStyle(.white)
+                .multilineTextAlignment(.center)
+                .frame(width: helperButtonWidth, height: 44)
+                .background(Color.black)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.white.opacity(0.8), lineWidth: 1.5)
+                }
+                .clipShape(.rect(cornerRadius: 12))
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 
     private var forwardDeleteButton: some View {
