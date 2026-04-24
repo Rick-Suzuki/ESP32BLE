@@ -158,7 +158,8 @@ extension MainScreen {
             return
         }
 
-        let spokenText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let spokenText = speechSynthesisText(from: text)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
         guard !spokenText.isEmpty else {
             return
         }
@@ -170,6 +171,150 @@ extension MainScreen {
         utterance.voice = resolvedSpeechVoice
         utterance.rate = Float(clampedTextToSpeechRate)
         speechSynthesizer.speak(utterance)
+    }
+
+    func speechSynthesisText(from text: String) -> String {
+        let transformedText = text.map { character in
+            spokenReplacementForEmoji(character) ?? String(character)
+        }.joined()
+
+        return transformedText
+            .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    func spokenReplacementForEmoji(_ character: Character) -> String? {
+        let configuration = emojiSpeechConfiguration()
+
+        if let override = configuration.overrides[character] {
+            return override
+        }
+
+        return derivedEmojiSpeechName(for: character, removableSuffixes: configuration.removableSuffixes)
+    }
+
+    private struct EmojiSpeechConfiguration {
+        let overrides: [Character: String]
+        let removableSuffixes: [String]
+    }
+
+    private func emojiSpeechConfiguration() -> EmojiSpeechConfiguration {
+        let defaultConfiguration = parseEmojiSpeechConfiguration(ContentView.defaultEmojiSpeechConfigContents)
+
+        guard let documentsDirectoryURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
+            return defaultConfiguration
+        }
+
+        let fileURL = documentsDirectoryURL.appendingPathComponent(ContentView.emojiSpeechConfigFilename)
+        guard let fileContents = try? String(contentsOf: fileURL, encoding: .utf8) else {
+            return defaultConfiguration
+        }
+
+        let loadedConfiguration = parseEmojiSpeechConfiguration(fileContents)
+        let resolvedSuffixes = loadedConfiguration.removableSuffixes.isEmpty
+            ? defaultConfiguration.removableSuffixes
+            : loadedConfiguration.removableSuffixes
+
+        return EmojiSpeechConfiguration(
+            overrides: loadedConfiguration.overrides,
+            removableSuffixes: resolvedSuffixes
+        )
+    }
+
+    // The config file is intentionally plain text so it is easy to tweak without
+    // touching code. Supported lines:
+    // `suffix = symbol`
+    // `⏯ = play pause media`
+    private func parseEmojiSpeechConfiguration(_ contents: String) -> EmojiSpeechConfiguration {
+        var overrides: [Character: String] = [:]
+        var removableSuffixes: [String] = []
+
+        for rawLine in contents.components(separatedBy: .newlines) {
+            let line = rawLine.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !line.isEmpty else {
+                continue
+            }
+            guard !line.hasPrefix("#"), !line.hasPrefix("//") else {
+                continue
+            }
+
+            let parts = line.split(separator: "=", maxSplits: 1, omittingEmptySubsequences: false)
+            guard parts.count == 2 else {
+                continue
+            }
+
+            let key = String(parts[0]).trimmingCharacters(in: .whitespacesAndNewlines)
+            let value = String(parts[1]).trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !key.isEmpty, !value.isEmpty else {
+                continue
+            }
+
+            if key.caseInsensitiveCompare("suffix") == .orderedSame {
+                removableSuffixes.append(value.lowercased())
+                continue
+            }
+
+            guard key.count == 1, let emojiCharacter = key.first else {
+                continue
+            }
+
+            overrides[emojiCharacter] = value
+        }
+
+        return EmojiSpeechConfiguration(
+            overrides: overrides,
+            removableSuffixes: removableSuffixes
+        )
+    }
+
+    private func derivedEmojiSpeechName(for character: Character, removableSuffixes: [String]) -> String? {
+        guard !removableSuffixes.isEmpty else {
+            return nil
+        }
+
+        let scalarNames = character.unicodeScalars.compactMap { scalar -> String? in
+            guard scalar.properties.isEmoji || scalar.properties.isEmojiPresentation else {
+                return nil
+            }
+            guard !scalar.properties.isVariationSelector else {
+                return nil
+            }
+            guard !scalar.properties.isJoinControl else {
+                return nil
+            }
+
+            return scalar.properties.name?.lowercased()
+        }
+
+        guard !scalarNames.isEmpty else {
+            return nil
+        }
+
+        var derivedName = scalarNames.joined(separator: " ")
+        var removedSuffix = false
+
+        while let matchingSuffix = removableSuffixes.first(where: { suffix in
+            derivedName == suffix || derivedName.hasSuffix(" " + suffix)
+        }) {
+            if derivedName == matchingSuffix {
+                derivedName = ""
+            } else {
+                derivedName.removeLast(matchingSuffix.count)
+                derivedName = derivedName.trimmingCharacters(in: .whitespacesAndNewlines)
+            }
+
+            removedSuffix = true
+        }
+
+        guard removedSuffix else {
+            return nil
+        }
+
+        let normalizedName = derivedName
+            .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        return normalizedName.isEmpty ? nil : normalizedName
     }
 
     func spokenTitle(for entry: FunctionKeyEntry) -> String {

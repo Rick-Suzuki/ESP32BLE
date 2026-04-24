@@ -41,6 +41,60 @@ private struct StoredGridDimensions: Codable {
 }
 
 struct ContentView: View {
+	//
+	//-----------------------------------------------------------------------------------------------
+	// MARK: - BM:🔆 EMOJI LIST
+	//
+	// normal emoji map
+	static let emojiSpeechConfigFilename = "emoji_speech_map.cfg"
+	
+	// force emoji map to overwrite with array below
+	static let overwriteConfigFilename:Bool = true
+	
+	// default (start) emoji
+	static let defaultEmojiSpeechConfigContents = """
+
+	# Emoji Speech Map
+	# ----------------
+	# Edit this file to control how Text To Speech speaks emoji on the main screen.
+	#
+	# Emoji override format:
+	# <emoji> = words to speak
+	#
+	# Examples:
+	# ⏯ = play pause media
+	# ⏩ = fast forward
+	#
+	# Suffix format:
+	# suffix = word
+	#
+	# If an emoji has no explicit override, the app can look at its Unicode name.
+	# If that generated name ends with one of the suffixes below, the suffix is
+	# removed and the shorter phrase is spoken. Otherwise the emoji is spoken as-is.
+	#
+
+	⏯️ = play pause 
+	⏸️ = pause
+	⏹️ = stop
+	⏺️ = record
+	⏭️ = next track
+	⏮️ = previous track
+	◀️ = left
+	▶️ = right
+	⬅️ = left
+	➡️ = right
+	⏩ = fast forward
+	⏪ = fast rewind
+	🔼 = up
+	🔽 = down
+	⏏️ = eject
+	🔀 = shuffle
+	🔁 = repeat
+	🔂 = repeat single
+	"""
+	//
+	//-----------------------------------------------------------------------------------------------
+	//
     private let defaultDocumentFontSize: Double = 20
     @AppStorage("selectedBackgroundImageIndex") private var selectedBackgroundImageIndex = 0
     @AppStorage("selectedBackgroundImageName") private var selectedBackgroundImageName = ""
@@ -149,6 +203,7 @@ struct ContentView: View {
         }
         .task {
             ensureDefaultFunctionKeysFile()
+            ensureDefaultEmojiSpeechConfigFile()
             refreshDocumentFiles()
             refreshBackgroundImageFiles()
             selectInitialDocument()
@@ -192,6 +247,7 @@ struct ContentView: View {
         Self.makeDefaultFunctionKeys()
     }
 
+
     private func documentsDirectoryURL() -> URL? {
         FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
     }
@@ -218,6 +274,20 @@ struct ContentView: View {
 
         refreshDocumentFiles()
         selectInitialDocument()
+    }
+
+    private func ensureDefaultEmojiSpeechConfigFile() {
+        guard let documentsDirectoryURL = documentsDirectoryURL() else {
+            return
+        }
+
+        let fileURL = documentsDirectoryURL.appendingPathComponent(Self.emojiSpeechConfigFilename)
+
+        guard Self.overwriteConfigFilename || !FileManager.default.fileExists(atPath: fileURL.path) else {
+            return
+        }
+
+        try? Self.defaultEmojiSpeechConfigContents.write(to: fileURL, atomically: true, encoding: .utf8)
     }
 
     private func refreshDocumentFiles() {
