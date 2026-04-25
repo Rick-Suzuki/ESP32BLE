@@ -32,6 +32,7 @@ struct KeyboardScreen: View {
     @State var bufferedSoftKeyTokens: [String] = []
     @State var popupMessage: String?
     @State private var popupDismissTask: Task<Void, Never>?
+    @State var immediateTypingPreviewTask: Task<Void, Never>?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -48,10 +49,18 @@ struct KeyboardScreen: View {
         .onChange(of: isPresented) {
             if !isPresented {
                 shouldFocusInput = false
+                immediateTypingPreviewTask?.cancel()
             }
         }
         .onChange(of: popupMessage) {
             schedulePopupDismissIfNeeded()
+        }
+        .onChange(of: isSendImmediatelyEnabled) {
+            if isSendImmediatelyEnabled {
+                clearTypingArea()
+            } else {
+                immediateTypingPreviewTask?.cancel()
+            }
         }
     }
 

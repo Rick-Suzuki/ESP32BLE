@@ -41,6 +41,7 @@ struct KeyboardTopSectionView: View {
                     text: $typingText,
                     isFocused: $shouldFocusInput,
                     shouldBeFirstResponder: shouldFocusInput && isPresented,
+                    isSendImmediatelyEnabled: isSendImmediatelyEnabled.wrappedValue,
                     fontSize: typingAreaFontSize,
                     autocapitalizationType: autocapitalizationType,
                     autocorrectionEnabled: autocorrectionEnabled,

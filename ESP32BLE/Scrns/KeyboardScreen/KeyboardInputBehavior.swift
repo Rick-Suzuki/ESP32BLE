@@ -19,11 +19,11 @@ extension KeyboardScreen {
     }
 
     var effectiveKeyboardAutocapitalizationType: UITextAutocapitalizationType {
-        keyboardAutocapitalizationType
+        isSendOnReturnMode ? keyboardAutocapitalizationType : .none
     }
 
     var effectiveAutocorrectionEnabled: Bool {
-        isAutoCorrectEnabled
+        isSendOnReturnMode ? isAutoCorrectEnabled : false
     }
 
     var isSendButtonEnabled: Bool {
@@ -35,12 +35,35 @@ extension KeyboardScreen {
             return
         }
 
+        if isSendImmediatelyEnabled {
+            guard ble.isConnected else {
+                showBluetoothDisconnectedPopup()
+                return
+            }
+
+            ble.sendString(insertedText)
+            showImmediateTypingPreview(insertedText)
+            return
+        }
+
         if !bufferedSoftKeyTokens.isEmpty && typingText != bufferedSoftKeyTokens.joined(separator: ":") {
             bufferedSoftKeyTokens.removeAll()
         }
     }
 
     func handleBackspace() {
+        if isSendImmediatelyEnabled {
+            guard ble.isConnected else {
+                showBluetoothDisconnectedPopup()
+                return
+            }
+
+            ble.pressBackspace()
+            showImmediateTypingPreview("⏪")
+            return
+        }
+
+        // In send-on-return mode, backspace is local text editing only.
         guard !bufferedSoftKeyTokens.isEmpty else {
             return
         }
@@ -52,6 +75,13 @@ extension KeyboardScreen {
 
     func handleReturn() {
         guard isSendOnReturnMode else {
+            guard ble.isConnected else {
+                showBluetoothDisconnectedPopup()
+                return
+            }
+
+            ble.pressEnter()
+            showImmediateTypingPreview("➡️")
             return
         }
 
@@ -80,5 +110,25 @@ extension KeyboardScreen {
 
     func requestKeyboardFocus() {
         shouldFocusInput = true
+    }
+
+    func showImmediateTypingPreview(_ insertedText: String) {
+        guard isSendImmediatelyEnabled else {
+            return
+        }
+
+        immediateTypingPreviewTask?.cancel()
+        typingText = insertedText
+
+        immediateTypingPreviewTask = Task {
+            try? await Task.sleep(for: .milliseconds(100))
+            guard !Task.isCancelled else {
+                return
+            }
+
+            await MainActor.run {
+                typingText = ""
+            }
+        }
     }
 }

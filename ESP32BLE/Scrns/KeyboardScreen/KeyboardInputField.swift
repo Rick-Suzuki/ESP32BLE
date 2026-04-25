@@ -2,9 +2,12 @@ import SwiftUI
 import UIKit
 
 struct KeyboardInputField: UIViewRepresentable {
+    static let immediateModePlaceholder = "\u{200B}"
+
     @Binding var text: String
     @Binding var isFocused: Bool
     let shouldBeFirstResponder: Bool
+    let isSendImmediatelyEnabled: Bool
     let fontSize: CGFloat
     let autocapitalizationType: UITextAutocapitalizationType
     let autocorrectionEnabled: Bool
@@ -17,9 +20,7 @@ struct KeyboardInputField: UIViewRepresentable {
     func makeUIView(context: Context) -> UITextField {
         let textField = BackspaceAwareTextField(frame: .zero)
         textField.delegate = context.coordinator
-        textField.onDeleteBackward = {
-            context.coordinator.onBackspace()
-        }
+        textField.onDeleteBackward = nil
         textField.borderStyle = .none
         textField.returnKeyType = .default
         textField.autocapitalizationType = autocapitalizationType
@@ -53,14 +54,15 @@ struct KeyboardInputField: UIViewRepresentable {
     }
 
     func updateUIView(_ textField: UITextField, context: Context) {
-        if textField.text != text {
-            textField.text = text
+        let displayedText = isSendImmediatelyEnabled
+            ? (text.isEmpty ? Self.immediateModePlaceholder : text)
+            : text
+        if textField.text != displayedText {
+            textField.text = displayedText
         }
 
         if let textField = textField as? BackspaceAwareTextField {
-            textField.onDeleteBackward = {
-                context.coordinator.onBackspace()
-            }
+            textField.onDeleteBackward = nil
         }
 
         let nextAutocorrectionType: UITextAutocorrectionType = autocorrectionEnabled ? .yes : .no
@@ -74,6 +76,8 @@ struct KeyboardInputField: UIViewRepresentable {
         textField.autocorrectionType = nextAutocorrectionType
 
         context.coordinator.onInsertedText = onInsertedText
+        context.coordinator.onBackspace = onBackspace
+        context.coordinator.isSendImmediatelyEnabled = isSendImmediatelyEnabled
         context.coordinator.onReturn = onReturn
 
         if context.coordinator.lastCursorCommandID != cursorCommandID {
@@ -88,12 +92,18 @@ struct KeyboardInputField: UIViewRepresentable {
         } else if traitsChanged, textField.isFirstResponder {
             textField.reloadInputViews()
         }
+
+        if isSendImmediatelyEnabled,
+           let endPosition = textField.endOfDocument as UITextPosition? {
+            textField.selectedTextRange = textField.textRange(from: endPosition, to: endPosition)
+        }
     }
 
     func makeCoordinator() -> Coordinator {
         Coordinator(
             text: $text,
             isFocused: $isFocused,
+            isSendImmediatelyEnabled: isSendImmediatelyEnabled,
             onInsertedText: onInsertedText,
             onBackspace: onBackspace,
             onReturn: onReturn
@@ -103,6 +113,7 @@ struct KeyboardInputField: UIViewRepresentable {
     final class Coordinator: NSObject, UITextFieldDelegate {
         @Binding var text: String
         @Binding var isFocused: Bool
+        var isSendImmediatelyEnabled: Bool
         var onInsertedText: (String) -> Void
         var onBackspace: () -> Void
         var onReturn: () -> Void
@@ -111,12 +122,14 @@ struct KeyboardInputField: UIViewRepresentable {
         init(
             text: Binding<String>,
             isFocused: Binding<Bool>,
+            isSendImmediatelyEnabled: Bool,
             onInsertedText: @escaping (String) -> Void,
             onBackspace: @escaping () -> Void,
             onReturn: @escaping () -> Void
         ) {
             _text = text
             _isFocused = isFocused
+            self.isSendImmediatelyEnabled = isSendImmediatelyEnabled
             self.onInsertedText = onInsertedText
             self.onBackspace = onBackspace
             self.onReturn = onReturn
@@ -142,6 +155,23 @@ struct KeyboardInputField: UIViewRepresentable {
             ButtonClickFeedback.playIfEnabled()
             if string == "\n" {
                 onReturn()
+                return false
+            }
+
+            if isSendImmediatelyEnabled {
+                if string.isEmpty, range.length > 0 {
+                    onBackspace()
+                } else if !string.isEmpty {
+                    onInsertedText(string)
+                }
+
+                DispatchQueue.main.async {
+                    textField.text = KeyboardInputField.immediateModePlaceholder
+                    if let endPosition = textField.endOfDocument as UITextPosition? {
+                        textField.selectedTextRange = textField.textRange(from: endPosition, to: endPosition)
+                    }
+                }
+
                 return false
             }
 
