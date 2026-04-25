@@ -34,6 +34,7 @@ struct MainScreen: View {
     @State var speechSynthesizer = AVSpeechSynthesizer()
     @State var soundEffectPlayer: AVAudioPlayer?
     @StateObject var mainGridTimerState = MainGridSharedTimerState()
+    @StateObject var mainGridAmbientSoundState = MainGridAmbientSoundState()
     @ObservedObject var ble: BLEKeyboardManager
     @State var displayMode: FunctionKeyDisplayMode = .right
     @State var isEditingDocumentName = false
@@ -112,6 +113,7 @@ struct MainScreen: View {
             }
             .onDisappear {
                 handleMainScreenDisappear()
+                mainGridAmbientSoundState.stopPlayback()
                 popupDismissTask?.cancel()
             }
             .task(id: definedFunctionKeyCount) {

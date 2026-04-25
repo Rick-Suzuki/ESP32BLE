@@ -458,9 +458,12 @@ extension MainScreen {
         let trimmedSendText = sendText.trimmingCharacters(in: .whitespacesAndNewlines)
         let loweredSendText = trimmedSendText.lowercased()
 
-        if loweredSendText.hasPrefix("snd ") {
-            let filename = normalizedSoundFilename(String(trimmedSendText.dropFirst(4)))
-            return filename.isEmpty ? nil : filename
+        guard !loweredSendText.hasPrefix("snd "),
+              !loweredSendText.hasPrefix("amb "),
+              !loweredSendText.hasPrefix("ambient "),
+              !loweredSendText.hasPrefix("wid "),
+              !loweredSendText.hasPrefix("widget ") else {
+            return nil
         }
 
         let normalizedFilename = normalizedSoundFilename(trimmedSendText)
@@ -490,7 +493,13 @@ extension MainScreen {
         let loweredSendText = trimmedSendText.lowercased()
         let widgetText: String
 
-        if loweredSendText.hasPrefix("wid ") {
+        if loweredSendText.hasPrefix("amb ") {
+            let filename = normalizedSoundFilename(String(trimmedSendText.dropFirst(4)))
+            return filename.isEmpty ? nil : .ambientSound(filename: filename)
+        } else if loweredSendText.hasPrefix("ambient ") {
+            let filename = normalizedSoundFilename(String(trimmedSendText.dropFirst(8)))
+            return filename.isEmpty ? nil : .ambientSound(filename: filename)
+        } else if loweredSendText.hasPrefix("wid ") {
             widgetText = String(trimmedSendText.dropFirst(4))
         } else if loweredSendText.hasPrefix("widget ") {
             widgetText = String(trimmedSendText.dropFirst(7))
@@ -562,6 +571,11 @@ extension MainScreen {
             return .random(minimumValue: minimumValue, maximumValue: maximumValue)
         case "stop", "stopwatch":
             return .stopwatch
+        case "amb", "ambient":
+            let filename = components.count > 1
+                ? normalizedSoundFilename(String(components.dropFirst().joined(separator: " ")))
+                : ""
+            return filename.isEmpty ? nil : .ambientSound(filename: filename)
         case "timer":
             let completionSoundFilename = components.count > 1
                 ? normalizedSoundFilename(String(components.dropFirst().joined(separator: " ")))
@@ -712,9 +726,20 @@ extension MainScreen {
             activeDragIndex: activeDragIndex,
             backgroundOpacity: backgroundOpacity,
             sharedTimer: mainGridTimerState,
+            ambientSoundState: mainGridAmbientSoundState,
             playSoundNamed: { playMainGridSound(named: $0) },
             playLoopingSoundNamed: { playMainGridSound(named: $0, repeats: true) },
             stopSoundPlayback: stopMainGridSoundPlayback,
+            resolveSoundURL: { soundURL(named: $0) },
+            activateAudioSession: activateAudioSessionForSpeechPlayback,
+            reportSoundError: { title, message in
+                alertTitle = title
+                renameAlertMessage = nil
+                Task { @MainActor in
+                    alertTitle = title
+                    renameAlertMessage = message
+                }
+            },
             shouldSpeakWidgetSelections: mainGridButtonMode.speaksText,
             speakText: speakMainGridText
         )
@@ -736,6 +761,8 @@ extension MainScreen {
         case .textFileRandom:
             return true
         case .stopwatch:
+            return true
+        case .ambientSound:
             return true
         case .timer:
             return true
@@ -884,9 +911,13 @@ struct MainScreenButtonLabelView: View {
     let activeDragIndex: Int?
     let backgroundOpacity: Double
     @ObservedObject var sharedTimer: MainGridSharedTimerState
+    @ObservedObject var ambientSoundState: MainGridAmbientSoundState
     let playSoundNamed: (String) -> Void
     let playLoopingSoundNamed: (String) -> Void
     let stopSoundPlayback: () -> Void
+    let resolveSoundURL: (String) -> URL?
+    let activateAudioSession: () -> Void
+    let reportSoundError: (String, String) -> Void
     let shouldSpeakWidgetSelections: Bool
     let speakText: (String) -> Void
 
@@ -1044,6 +1075,19 @@ struct MainScreenButtonLabelView: View {
                 title: rightTitleWithoutColorPrefix,
                 fontSize: boxFontSize,
                 foregroundColor: buttonTextColor
+            )
+        case .ambientSound(let filename):
+            MainGridAmbientSoundWidgetView(
+                widgetID: widgetID,
+                title: rightTitleWithoutColorPrefix,
+                filename: filename,
+                fontSize: boxFontSize,
+                foregroundColor: buttonTextColor,
+                isInteractionEnabled: !isGridEditModeEnabled,
+                sharedState: ambientSoundState,
+                resolveSoundURL: resolveSoundURL,
+                activateAudioSession: activateAudioSession,
+                reportSoundError: reportSoundError
             )
         case .timer(let completionSoundFilename):
             MainGridTimerWidgetView(
@@ -1259,6 +1303,7 @@ enum MainGridWidgetDescriptor {
     case random(minimumValue: Int, maximumValue: Int)
     case textFileRandom(filename: String)
     case stopwatch
+    case ambientSound(filename: String)
     case timer(completionSoundFilename: String?)
 }
 
@@ -1622,6 +1667,76 @@ final class MainGridSharedTimerState: ObservableObject {
     }
 }
 
+final class MainGridAmbientSoundState: ObservableObject {
+    @Published var activeWidgetID: String?
+    @Published var currentVolume: Float = 0.05
+    @Published var isPlaying = false
+
+    private var activeFilename: String?
+    private var player: AVAudioPlayer?
+
+    func togglePlayback(
+        widgetID: String,
+        filename: String,
+        resolveSoundURL: (String) -> URL?,
+        activateAudioSession: () -> Void,
+        reportSoundError: (String, String) -> Void
+    ) {
+        let normalizedFilename = filename.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalizedFilename.isEmpty else {
+            return
+        }
+
+        if activeWidgetID == widgetID, isPlaying {
+            stopPlayback()
+            return
+        }
+
+        if activeWidgetID != widgetID || activeFilename != normalizedFilename {
+            currentVolume = 0.05
+        }
+
+        guard let audioURL = resolveSoundURL(normalizedFilename) else {
+            reportSoundError("Sound Not Found", "Couldn't find \(normalizedFilename).")
+            return
+        }
+
+        activateAudioSession()
+
+        do {
+            let player = try AVAudioPlayer(contentsOf: audioURL)
+            player.numberOfLoops = -1
+            player.volume = currentVolume
+            player.prepareToPlay()
+            player.play()
+            self.player = player
+            activeWidgetID = widgetID
+            activeFilename = normalizedFilename
+            isPlaying = true
+        } catch {
+            reportSoundError("Sound Error", "Couldn't play \(normalizedFilename).")
+        }
+    }
+
+    func adjustVolume(widgetID: String, by delta: Float) {
+        guard activeWidgetID == nil || activeWidgetID == widgetID else {
+            return
+        }
+
+        let updatedVolume = min(max(currentVolume + delta, 0.0), 1.0)
+        currentVolume = updatedVolume
+        player?.volume = updatedVolume
+    }
+
+    func stopPlayback() {
+        player?.stop()
+        player = nil
+        activeWidgetID = nil
+        activeFilename = nil
+        isPlaying = false
+    }
+}
+
 private struct MainGridTimerWidgetView: View {
     let widgetID: String
     let configurationText: String
@@ -1765,6 +1880,68 @@ private struct MainGridTimerWidgetView: View {
 
     private var isActiveTimer: Bool {
         sharedTimer.activeWidgetID == widgetID
+    }
+}
+
+private struct MainGridAmbientSoundWidgetView: View {
+    let widgetID: String
+    let title: String
+    let filename: String
+    let fontSize: Double
+    let foregroundColor: Color
+    let isInteractionEnabled: Bool
+    @ObservedObject var sharedState: MainGridAmbientSoundState
+    let resolveSoundURL: (String) -> URL?
+    let activateAudioSession: () -> Void
+    let reportSoundError: (String, String) -> Void
+
+    var body: some View {
+        Text(displayTitle)
+            .font(.system(size: fontSize, weight: .bold, design: .rounded))
+            .lineLimit(4)
+            .minimumScaleFactor(0.2)
+            .multilineTextAlignment(.center)
+            .foregroundStyle(foregroundColor)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .contentShape(Rectangle())
+            .gesture(
+                TapGesture(count: 2)
+                    .onEnded {
+                        guard isInteractionEnabled else {
+                            return
+                        }
+                        sharedState.adjustVolume(widgetID: widgetID, by: 0.05)
+                    }
+                    .exclusively(before:
+                        TapGesture()
+                            .onEnded {
+                                guard isInteractionEnabled else {
+                                    return
+                                }
+                                sharedState.adjustVolume(widgetID: widgetID, by: -0.05)
+                            }
+                    )
+            )
+            .onLongPressGesture(minimumDuration: 0.5) {
+                guard isInteractionEnabled else {
+                    return
+                }
+                sharedState.togglePlayback(
+                    widgetID: widgetID,
+                    filename: filename,
+                    resolveSoundURL: resolveSoundURL,
+                    activateAudioSession: activateAudioSession,
+                    reportSoundError: reportSoundError
+                )
+            }
+    }
+
+    private var displayTitle: String {
+        let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmedTitle.isEmpty else {
+            return trimmedTitle
+        }
+        return ""
     }
 }
 
