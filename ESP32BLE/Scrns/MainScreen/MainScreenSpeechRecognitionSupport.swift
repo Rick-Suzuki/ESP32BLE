@@ -69,7 +69,7 @@ extension MainScreen {
     }
 
     func normalizedSpeechMatchText(_ text: String) -> String {
-        canonicalSpeechText(from: speechMatchDisplayText(from: text))
+        canonicalSpeechText(from: speechSynthesisText(from: speechMatchDisplayText(from: text)))
     }
 
     func canonicalSpeechText(from text: String) -> String {
