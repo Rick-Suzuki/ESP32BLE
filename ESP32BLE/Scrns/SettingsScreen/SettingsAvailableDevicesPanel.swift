@@ -49,11 +49,12 @@ struct SettingsAvailableDevicesPanel: View {
                                 VStack {
                                     Text(settingsDeviceName(for: device))
                                         .font(.body)
+                                        .foregroundStyle(settingsDeviceNameColor(for: device))
                                 }
                             }
                             Spacer()
 
-                            if ble.selectedPeripheralID == device.id {
+                            if showsDeviceCheckmark(for: device) {
                                 Image(systemName: "checkmark.circle.fill")
                             }
                         }
@@ -61,7 +62,7 @@ struct SettingsAvailableDevicesPanel: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .background(
                             RoundedRectangle(cornerRadius: 12)
-                                .fill(ble.selectedPeripheralID == device.id ? .blue.opacity(0.15) : .clear)
+                                .fill(settingsDeviceBackgroundColor(for: device))
                         )
                     }
                     .buttonStyle(.plain)
@@ -100,7 +101,7 @@ struct SettingsAvailableDevicesPanel: View {
         .lineLimit(1)
         .minimumScaleFactor(0.7)
         .padding(.horizontal, 16)
-        .padding(.vertical, 10)
+        .frame(width: settingsActionButtonWidth, height: settingsActionButtonHeight)
         .background(sleepWakeButtonBackgroundColor)
         .clipShape(.rect(cornerRadius: 18))
         .disabled(!ble.isConnected)
@@ -112,6 +113,26 @@ struct SettingsAvailableDevicesPanel: View {
         }
 
         return device.compactDisplayName
+    }
+
+    private func settingsDeviceNameColor(for device: BLEDiscoveredDevice) -> Color {
+        if !isPad && ble.isConnected && ble.selectedPeripheralID == device.id {
+            return .green
+        }
+
+        return .white
+    }
+
+    private func showsDeviceCheckmark(for device: BLEDiscoveredDevice) -> Bool {
+        isPad && ble.selectedPeripheralID == device.id
+    }
+
+    private func settingsDeviceBackgroundColor(for device: BLEDiscoveredDevice) -> Color {
+        if isPad && ble.selectedPeripheralID == device.id {
+            return .blue.opacity(0.15)
+        }
+
+        return .clear
     }
 
     private var sleepWakeButtonBackgroundColor: Color {
@@ -141,9 +162,17 @@ struct SettingsAvailableDevicesPanel: View {
         .lineLimit(1)
         .minimumScaleFactor(0.7)
         .padding(.horizontal, 16)
-        .padding(.vertical, 10)
+        .frame(width: settingsActionButtonWidth, height: settingsActionButtonHeight)
         .background(isButtonClickEnabled ? Color.blue.opacity(0.5) : Color.gray.opacity(0.5))
         .clipShape(.rect(cornerRadius: 18))
+    }
+
+    private var settingsActionButtonWidth: CGFloat {
+        isPad ? 140 : 92
+    }
+
+    private var settingsActionButtonHeight: CGFloat {
+        isPad ? 48 : 36
     }
 
     private func settingsPlaceholderSlider(title: String, value: Binding<Double>) -> some View {
