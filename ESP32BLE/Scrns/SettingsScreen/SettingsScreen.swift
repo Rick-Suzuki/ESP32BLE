@@ -14,9 +14,9 @@ struct SettingsScreen: View {
             case .files:
                 return "Files"
             case .images:
-                return "Images"
+                return isPad ? "Images" : "imgs"
             case .sounds:
-                return "Sounds"
+                return isPad ? "Sounds" : "snds"
             }
         }
 
@@ -99,11 +99,11 @@ struct SettingsScreen: View {
         GeometryReader { geometry in
             HStack(alignment: .top, spacing: 0) {
                 VStack(spacing: 0) {
-                    if deviceType {
+                    if isPad {
                         editableDocumentSection
                     }
 
-                    if !deviceType || !isDocumentEditorFocused {
+                    if !isPad || !isDocumentEditorFocused {
                         combinedBottomPanelSection
                     }
                 }
@@ -138,9 +138,9 @@ struct SettingsScreen: View {
         }
         .navigationTitle("")
         .toolbar {
-            if deviceType {
+            if isPad {
                 ToolbarItem(placement: .topBarLeading) {
-                    SettingsToolbarButton(title: "main", backgroundColor: Color.gray.opacity(0.45)) {
+                    SettingsToolbarButton(title: "main", backgroundColor: Color.gray.opacity(0.45), minWidth: 92, isEnabled: true) {
                         saveAndReturnToMain()
                     }
                 }
@@ -185,12 +185,12 @@ struct SettingsScreen: View {
                 .accessibilityLabel("Export to iCloud")
             }
             ToolbarItem(placement: .topBarTrailing) {
-                SettingsToolbarButton(title: listMode.buttonTitle, backgroundColor: Color.gray.opacity(0.45)) {
+                SettingsToolbarButton(title: listMode.buttonTitle, backgroundColor: Color.gray.opacity(0.45), minWidth: 92, isEnabled: true) {
                     listMode.toggle()
                 }
             }
             ToolbarItem(placement: .topBarTrailing) {
-                SettingsToolbarButton(title: "new", backgroundColor: Color.green.opacity(0.5)) {
+                SettingsToolbarButton(title: "new", backgroundColor: Color.green.opacity(0.5), minWidth: 64.4, isEnabled: listMode == .files) {
                     createNewDocument()
                 }
             }

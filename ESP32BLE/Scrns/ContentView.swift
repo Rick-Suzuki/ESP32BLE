@@ -9,7 +9,7 @@ private let defaultNamedFunctionKeyCount = 20
 let hiddenButtonMetadataToken = "@@hidden"
 
 // True on iPad, false on iPhone.
-var deviceType: Bool {
+var isPad: Bool {
     UIDevice.current.userInterfaceIdiom == .pad
 }
 
@@ -264,7 +264,7 @@ struct ContentView: View {
     private func logDeviceTypeIfNeeded() {
         guard !hasLoggedDeviceType else { return }
         hasLoggedDeviceType = true
-        print("deviceType:", deviceType ? "iPad" : "iPhone")
+        print("isPad:", isPad ? "iPad" : "iPhone")
     }
 
     private func refreshOrientationState() {
@@ -297,7 +297,7 @@ struct ContentView: View {
             return
         }
 
-        AppRuntimeFlags.orientationState = deviceType
+        AppRuntimeFlags.orientationState = isPad
     }
 
     private func logOrientationStateIfNeeded() {

@@ -11,8 +11,10 @@ struct SettingsAvailableDevicesPanel: View {
         HStack(alignment: .top, spacing: 32) {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(spacing: 12) {
-                    Text("ESP32")
-                        .font(.headline)
+                    if isPad {
+                        Text("ESP32")
+                            .font(.headline)
+                    }
 
                     Button {
                         ButtonClickFeedback.playIfEnabled()

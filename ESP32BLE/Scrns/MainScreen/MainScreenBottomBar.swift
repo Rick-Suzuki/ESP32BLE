@@ -189,13 +189,13 @@ struct MainScreenBottomBar: View {
         toggleWidth: CGFloat,
         displayModeWidth: CGFloat
     ) -> some View {
-        let speechRecognitionButtonTitle = deviceType ? (isSpeechRecognitionEnabled ? "spk rec on" : "spk rec off") : "rec"
-        let speechRecognitionButtonWidth: CGFloat? = deviceType ? toggleWidth : nil
-        let usesCompactSpeechRecognitionButton = !deviceType
-        let effectiveSpeechBoxWidth = deviceType ? speechBoxWidth : (speechBoxWidth * 0.5)
-        let toolbarButtonHeight: CGFloat = deviceType ? 50 : 35
-        let bottomToolbarButtonFont: Font = deviceType ? .body : .system(size: 14, weight: .regular)
-        let bottomToolbarMinimumScaleFactor: CGFloat = deviceType ? 0.7 : 1
+        let speechRecognitionButtonTitle = isPad ? (isSpeechRecognitionEnabled ? "spk rec on" : "spk rec off") : "rec"
+        let speechRecognitionButtonWidth: CGFloat? = isPad ? toggleWidth : nil
+        let usesCompactSpeechRecognitionButton = !isPad
+        let effectiveSpeechBoxWidth = isPad ? speechBoxWidth : (speechBoxWidth * 0.5)
+        let toolbarButtonHeight: CGFloat = isPad ? 50 : 35
+        let bottomToolbarButtonFont: Font = isPad ? .body : .system(size: 14, weight: .regular)
+        let bottomToolbarMinimumScaleFactor: CGFloat = isPad ? 0.7 : 1
 
         return HStack(spacing: isCompact ? 8 : 12) {
             HStack(spacing: isCompact ? 8 : 12) {

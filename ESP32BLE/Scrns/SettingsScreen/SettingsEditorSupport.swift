@@ -214,6 +214,8 @@ struct BackButton: View {
 struct SettingsToolbarButton: View {
     let title: String
     let backgroundColor: Color
+    let minWidth: CGFloat
+    let isEnabled: Bool
     let action: () -> Void
 
     var body: some View {
@@ -221,17 +223,19 @@ struct SettingsToolbarButton: View {
             ButtonClickFeedback.playIfEnabled()
             action()
         }
+        .disabled(!isEnabled)
         .font(.headline)
-        .foregroundStyle(.white)
+        .foregroundStyle(isEnabled ? .white : Color(white: 0.8))
         .padding(.horizontal, 14)
-        .frame(minWidth: 92, minHeight: 44)
-        .background(backgroundColor)
+        .frame(minWidth: minWidth, minHeight: 44)
+        .background(isEnabled ? backgroundColor : Color.gray.opacity(0.45))
         .overlay {
             RoundedRectangle(cornerRadius: 12)
                 .stroke(Color.gray.opacity(0.5), lineWidth: 1.5)
         }
         .clipShape(.rect(cornerRadius: 12))
         .contentShape(.rect)
+        .opacity(isEnabled ? 1 : 0.75)
     }
 }
 

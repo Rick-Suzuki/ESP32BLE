@@ -27,6 +27,11 @@ struct SettingsDocumentTableSection: View {
     let selectSound: (URL) -> Void
     let deleteSound: (URL) -> Void
 
+	// set table font size for iphone
+    private var tableRowFont: Font? {
+        isPad ? nil : .system(size: 15)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             List {
@@ -84,6 +89,7 @@ struct SettingsDocumentTableSection: View {
         } label: {
             HStack {
                 Text(fileURL.lastPathComponent)
+                    .font(tableRowFont)
                     .fontWeight(isSelected ? .bold : .regular)
                     .foregroundStyle(isSelected ? Color.green : .white)
                     .multilineTextAlignment(.leading)
@@ -135,6 +141,7 @@ struct SettingsDocumentTableSection: View {
         } label: {
             HStack {
                 Text(imageURL.lastPathComponent)
+                    .font(tableRowFont)
                     .fontWeight(isSelected ? .bold : .regular)
                     .foregroundStyle(isSelected ? Color.green : .white)
                     .multilineTextAlignment(.leading)
@@ -176,6 +183,7 @@ struct SettingsDocumentTableSection: View {
         } label: {
             HStack {
                 Text(soundURL.lastPathComponent)
+                    .font(tableRowFont)
                     .fontWeight(isSelected ? .bold : .regular)
                     .foregroundStyle(isSelected ? Color.green : .white)
                     .multilineTextAlignment(.leading)
