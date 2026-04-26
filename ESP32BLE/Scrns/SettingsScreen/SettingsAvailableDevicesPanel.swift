@@ -47,7 +47,7 @@ struct SettingsAvailableDevicesPanel: View {
                         HStack {
                             VStack(alignment: .leading, spacing: 4) {
                                 VStack {
-                                    Text(device.displayName)
+                                    Text(settingsDeviceName(for: device))
                                         .font(.body)
                                 }
                             }
@@ -106,6 +106,14 @@ struct SettingsAvailableDevicesPanel: View {
         .disabled(!ble.isConnected)
     }
 
+    private func settingsDeviceName(for device: BLEDiscoveredDevice) -> String {
+        if isPad {
+            return device.displayName
+        }
+
+        return device.compactDisplayName
+    }
+
     private var sleepWakeButtonBackgroundColor: Color {
         guard ble.isConnected else {
             return Color.gray.opacity(0.5)
@@ -119,7 +127,7 @@ struct SettingsAvailableDevicesPanel: View {
     }
 
     private var buttonClickToggleButton: some View {
-        Button(isButtonClickEnabled ? "btn click" : "btn off") {
+        Button(isButtonClickEnabled ? (isPad ? "btn click" : "click") : "btn off") {
             let willEnableButtonClicks = !isButtonClickEnabled
             isButtonClickEnabled = willEnableButtonClicks
 
