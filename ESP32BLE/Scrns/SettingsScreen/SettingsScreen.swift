@@ -99,9 +99,11 @@ struct SettingsScreen: View {
         GeometryReader { geometry in
             HStack(alignment: .top, spacing: 0) {
                 VStack(spacing: 0) {
-                    editableDocumentSection
+                    if deviceType {
+                        editableDocumentSection
+                    }
 
-                    if !isDocumentEditorFocused {
+                    if !deviceType || !isDocumentEditorFocused {
                         combinedBottomPanelSection
                     }
                 }
