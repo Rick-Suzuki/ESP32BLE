@@ -1,11 +1,26 @@
 
 import SwiftUI
 import AudioToolbox
+import UIKit
 
 let maxGridDimension = 20
 let maxFunctionKeyCount = maxGridDimension * maxGridDimension
 private let defaultNamedFunctionKeyCount = 20
 let hiddenButtonMetadataToken = "@@hidden"
+
+// True on iPad, false on iPhone.
+var deviceType: Bool {
+    UIDevice.current.userInterfaceIdiom == .pad
+}
+
+private enum AppRuntimeFlags {
+    static var orientationState = false
+}
+
+// True when horizontal, false when vertical.
+var orientationState: Bool {
+    AppRuntimeFlags.orientationState
+}
 
 enum ButtonClickFeedback {
     static let preferenceKey = "isButtonClickEnabled"
@@ -117,6 +132,8 @@ struct ContentView: View {
     @State private var settingsBLEText = ""
     @State private var isKeyboardScreenPresented = false
     @State private var isSettingsScreenPresented = true
+    @State private var hasLoggedDeviceType = false
+    @State private var lastLoggedOrientationState: Bool?
 
     var body: some View {
         NavigationStack {
@@ -177,6 +194,9 @@ struct ContentView: View {
                     }
                     .frame(width: containerWidth, height: containerHeight)
                     .clipped()
+                    .onAppear {
+                        logDeviceTypeIfNeeded()
+                    }
                 }
             }
             .background {
@@ -208,6 +228,20 @@ struct ContentView: View {
             refreshBackgroundImageFiles()
             selectInitialDocument()
             reloadBackgroundImage()
+            logDeviceTypeIfNeeded()
+            refreshOrientationState()
+            logOrientationStateIfNeeded()
+        }
+        .task {
+            UIDevice.current.beginGeneratingDeviceOrientationNotifications()
+            defer {
+                UIDevice.current.endGeneratingDeviceOrientationNotifications()
+            }
+
+            for await _ in NotificationCenter.default.notifications(named: UIDevice.orientationDidChangeNotification) {
+                refreshOrientationState()
+                logOrientationStateIfNeeded()
+            }
         }
         .onChange(of: selectedBackgroundImageIndex) {
             refreshBackgroundImageFiles()
@@ -225,6 +259,52 @@ struct ContentView: View {
         .onChange(of: backgroundImageOpacity) {
             saveBackgroundImageOpacity(for: selectedDocumentName)
         }
+    }
+
+    private func logDeviceTypeIfNeeded() {
+        guard !hasLoggedDeviceType else { return }
+        hasLoggedDeviceType = true
+        print("deviceType:", deviceType ? "iPad" : "iPhone")
+    }
+
+    private func refreshOrientationState() {
+        if let activeScene = UIApplication.shared.connectedScenes
+            .compactMap({ $0 as? UIWindowScene })
+            .first(where: { $0.activationState == .foregroundActive }) {
+            let interfaceOrientation = activeScene.effectiveGeometry.interfaceOrientation
+            if interfaceOrientation.isLandscape {
+                AppRuntimeFlags.orientationState = true
+                return
+            }
+            if interfaceOrientation.isPortrait {
+                AppRuntimeFlags.orientationState = false
+                return
+            }
+
+            if let keyWindow = activeScene.keyWindow {
+                AppRuntimeFlags.orientationState = keyWindow.bounds.width > keyWindow.bounds.height
+                return
+            }
+        }
+
+        let deviceOrientation = UIDevice.current.orientation
+        if deviceOrientation.isLandscape {
+            AppRuntimeFlags.orientationState = true
+            return
+        }
+        if deviceOrientation.isPortrait {
+            AppRuntimeFlags.orientationState = false
+            return
+        }
+
+        AppRuntimeFlags.orientationState = deviceType
+    }
+
+    private func logOrientationStateIfNeeded() {
+        let currentOrientationState = orientationState
+        guard lastLoggedOrientationState != currentOrientationState else { return }
+        lastLoggedOrientationState = currentOrientationState
+		print("orientationState:", currentOrientationState ? "horizontal" : "vertical")
     }
 
     private static func defaultFunctionKeyTitles() -> [String] {
