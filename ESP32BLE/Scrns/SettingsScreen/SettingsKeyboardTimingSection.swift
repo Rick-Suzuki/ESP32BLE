@@ -12,19 +12,20 @@ struct SettingsKeyboardTimingSection: View {
         VStack(alignment: .center, spacing: 5) {
             HStack(spacing: 12) {
                 Text("custom kb timing")
-                    .font(.headline)
+                    .font(settingsCompactControlFont)
 
                 Button("set & test") {
                     ButtonClickFeedback.playIfEnabled()
                     onSetAndTest()
                 }
+                .font(settingsCompactControlFont)
                 .buttonStyle(.borderedProminent)
                 .tint(Color.red.opacity(0.5))
             }
             .frame(maxWidth: .infinity, alignment: .center)
 
             HStack(alignment: .top, spacing: 12) {
-                VStack(spacing: 2) {
+                VStack(spacing: 10) {
                     sliderRow(title: "on", value: $keyboardTimingOnMs, range: 0...1000)
                     sliderRow(title: "off", value: $keyboardTimingOffMs, range: 0...3000)
                     speechRecognitionAutoOffRow
@@ -39,7 +40,7 @@ struct SettingsKeyboardTimingSection: View {
     private func sliderRow(title: String, value: Binding<Double>, range: ClosedRange<Double>) -> some View {
         HStack(spacing: 4) {
             Text(title)
-                .font(.headline)
+                .font(settingsCompactControlFont)
                 .foregroundStyle(.primary)
                 .frame(width: timingLabelWidth, alignment: .trailing)
 
@@ -56,9 +57,9 @@ struct SettingsKeyboardTimingSection: View {
             .foregroundStyle(.white)
             .disabled(value.wrappedValue <= range.lowerBound)
 
-            VStack(spacing: -10) {
+			VStack(spacing: isPad ? -10 : 0) {
                 Text("\(Int(value.wrappedValue)) ms")
-                    .font(.headline)
+                    .font(settingsCompactControlFont)
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
 
@@ -86,7 +87,7 @@ struct SettingsKeyboardTimingSection: View {
     private var speechRecognitionAutoOffRow: some View {
         HStack(spacing: 4) {
             Text("rec off")
-                .font(.headline)
+                .font(settingsCompactControlFont)
                 .foregroundStyle(.white)
                 .frame(width: timingLabelWidth, alignment: .trailing)
 
@@ -103,9 +104,9 @@ struct SettingsKeyboardTimingSection: View {
             .foregroundStyle(.white)
             .disabled(speechRecognitionAutoOffMinutes <= 1)
 
-            VStack(spacing: -10) {
+            VStack(spacing: 0) {
                 Text(speechRecognitionAutoOffDisplayText)
-                    .font(.headline)
+                    .font(settingsCompactControlFont)
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
 
@@ -141,5 +142,9 @@ struct SettingsKeyboardTimingSection: View {
         speechRecognitionAutoOffMinutes >= maximumSpeechRecognitionAutoOffMinutes
             ? "Never"
             : "\(speechRecognitionAutoOffMinutes) min"
+    }
+
+    private var settingsCompactControlFont: Font {
+        isPad ? .headline : .system(size: 14, weight: .semibold)
     }
 }

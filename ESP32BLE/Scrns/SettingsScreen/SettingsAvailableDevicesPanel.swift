@@ -45,13 +45,13 @@ struct SettingsAvailableDevicesPanel: View {
                         }
                     } label: {
                         HStack {
-                            VStack(alignment: .leading, spacing: 4) {
-                                VStack {
-                                    Text(settingsDeviceName(for: device))
-                                        .font(.body)
+                                VStack(alignment: .leading, spacing: 4) {
+                                    VStack {
+                                        Text(settingsDeviceName(for: device))
+                                            .font(settingsDeviceFont)
                                         .foregroundStyle(settingsDeviceNameColor(for: device))
+                                    }
                                 }
-                            }
                             Spacer()
 
                             if showsDeviceCheckmark(for: device) {
@@ -123,6 +123,14 @@ struct SettingsAvailableDevicesPanel: View {
         return .white
     }
 
+    private var settingsDeviceFont: Font {
+        isPad ? .body : .system(size: settingsDeviceFontSize)
+    }
+
+    private var settingsDeviceFontSize: CGFloat {
+        13
+    }
+
     private func showsDeviceCheckmark(for device: BLEDiscoveredDevice) -> Bool {
         isPad && ble.selectedPeripheralID == device.id
     }
@@ -168,7 +176,7 @@ struct SettingsAvailableDevicesPanel: View {
     }
 
     private var settingsActionButtonWidth: CGFloat {
-        isPad ? 140 : 92
+        isPad ? 92 : 92
     }
 
     private var settingsActionButtonHeight: CGFloat {

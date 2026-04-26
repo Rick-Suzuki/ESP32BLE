@@ -13,7 +13,7 @@ struct SettingsImageControlsSection: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("image")
-                .font(.headline)
+                .font(settingsCompactControlFont)
                 .foregroundStyle(.white)
                 .lineLimit(1)
 
@@ -36,6 +36,10 @@ struct SettingsImageControlsSection: View {
         .onDisappear {
             stopRepeating()
         }
+    }
+
+    private var settingsCompactControlFont: Font {
+        isPad ? .headline : .system(size: 14, weight: .semibold)
     }
 
     private func imageControlButton(
