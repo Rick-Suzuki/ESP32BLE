@@ -138,9 +138,11 @@ struct SettingsScreen: View {
         }
         .navigationTitle("")
         .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                SettingsToolbarButton(title: "main", backgroundColor: Color.gray.opacity(0.45)) {
-                    saveAndReturnToMain()
+            if deviceType {
+                ToolbarItem(placement: .topBarLeading) {
+                    SettingsToolbarButton(title: "main", backgroundColor: Color.gray.opacity(0.45)) {
+                        saveAndReturnToMain()
+                    }
                 }
             }
             ToolbarItem(placement: .topBarLeading) {
@@ -506,7 +508,7 @@ struct SettingsScreen: View {
             keyboardSettingsContent
                 .frame(maxWidth: .infinity, alignment: .topLeading)
         }
-        .fixedSize(horizontal: false, vertical: true)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .padding()
         .background(Color.black)
         .overlay {
