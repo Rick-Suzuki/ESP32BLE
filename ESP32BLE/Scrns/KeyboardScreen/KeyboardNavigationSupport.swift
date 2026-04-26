@@ -8,7 +8,7 @@ extension KeyboardScreen {
     func advanceKeyboardMode() {
         let allModes = KeyboardMode.allCases
         let currentIndex = allModes.firstIndex(of: currentKeyboardMode) ?? 0
-        let nextIndex = (currentIndex + 1) % allModes.count
+		let nextIndex = (currentIndex + 1) % (isPad ? allModes.count : allModes.count-1)
         keyboardModeNumber = allModes[nextIndex].rawValue
     }
 
