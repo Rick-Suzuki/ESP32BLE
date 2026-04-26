@@ -193,6 +193,9 @@ struct MainScreenBottomBar: View {
         let speechRecognitionButtonWidth: CGFloat? = deviceType ? toggleWidth : nil
         let usesCompactSpeechRecognitionButton = !deviceType
         let effectiveSpeechBoxWidth = deviceType ? speechBoxWidth : (speechBoxWidth * 0.5)
+        let toolbarButtonHeight: CGFloat = deviceType ? 50 : 35
+        let bottomToolbarButtonFont: Font = deviceType ? .body : .system(size: 14, weight: .regular)
+        let bottomToolbarMinimumScaleFactor: CGFloat = deviceType ? 0.7 : 1
 
         return HStack(spacing: isCompact ? 8 : 12) {
             HStack(spacing: isCompact ? 8 : 12) {
@@ -284,6 +287,9 @@ struct MainScreenBottomBar: View {
                 border: isSpeechRecognitionEnabled ? speechRecognitionActiveColor : inactiveButtonBorderColor,
                 isEnabled: !isGridEditModeEnabled,
                 usesCompactWidth: usesCompactSpeechRecognitionButton,
+                buttonHeight: toolbarButtonHeight,
+                font: bottomToolbarButtonFont,
+                minimumScaleFactor: bottomToolbarMinimumScaleFactor,
                 action: onToggleSpeechRecognition
             )
             .frame(width: speechRecognitionButtonWidth)
@@ -305,13 +311,16 @@ struct MainScreenBottomBar: View {
                 .clipShape(.rect(cornerRadius: 6))
 
             HStack(spacing: 8) {
-                stopSpeechButton
+                stopSpeechButton(buttonHeight: toolbarButtonHeight)
 
                 toggleButton(
                     title: mainGridButtonMode.title,
                     background: mainGridButtonModeBackgroundColor,
                     border: mainGridButtonModeBorderColor,
                     isEnabled: !isGridEditModeEnabled,
+                    buttonHeight: toolbarButtonHeight,
+                    font: bottomToolbarButtonFont,
+                    minimumScaleFactor: bottomToolbarMinimumScaleFactor,
                     action: onCycleMainGridButtonMode
                 )
                 .frame(width: toggleWidth)
@@ -322,13 +331,14 @@ struct MainScreenBottomBar: View {
 				Button {
 					onAdvanceDisplayMode()
 				} label: {
-				Text(displayMode.title)
-					.lineLimit(1)
-					.minimumScaleFactor(0.7)
-					.frame(maxWidth: .infinity, minHeight: 50)
-					.foregroundStyle(.white)
-					.background(
-						RoundedRectangle(cornerRadius: 12)
+						Text(displayMode.title)
+                            .font(bottomToolbarButtonFont)
+							.lineLimit(1)
+							.minimumScaleFactor(bottomToolbarMinimumScaleFactor)
+							.frame(maxWidth: .infinity, minHeight: toolbarButtonHeight)
+							.foregroundStyle(.white)
+							.background(
+							RoundedRectangle(cornerRadius: 12)
 							.fill(displayModeButtonColor.opacity(0.7))
 					)
 					.overlay(
@@ -390,16 +400,20 @@ struct MainScreenBottomBar: View {
         border: Color,
         isEnabled: Bool = true,
         usesCompactWidth: Bool = false,
+        buttonHeight: CGFloat = 50,
+        font: Font = .body,
+        minimumScaleFactor: CGFloat = 0.7,
         action: @escaping () -> Void
     ) -> some View {
         Button {
             action()
         } label: {
             Text(title)
+                .font(font)
                 .lineLimit(1)
-                .minimumScaleFactor(0.7)
+                .minimumScaleFactor(minimumScaleFactor)
                 .padding(.horizontal, usesCompactWidth ? 16 : 0)
-                .frame(minWidth: usesCompactWidth ? 64 : nil, maxWidth: usesCompactWidth ? nil : .infinity, minHeight: 50)
+                .frame(minWidth: usesCompactWidth ? 64 : nil, maxWidth: usesCompactWidth ? nil : .infinity, minHeight: buttonHeight)
                 .contentShape(.rect)
         }
         .buttonStyle(.plain)
@@ -414,13 +428,13 @@ struct MainScreenBottomBar: View {
 			.opacity(isEnabled ? 0.7 : 0.35)
     }
 
-    private var stopSpeechButton: some View {
+    private func stopSpeechButton(buttonHeight: CGFloat) -> some View {
         Button {
             onStopSpeech()
         } label: {
             Image(systemName: "stop.fill")
                 .font(.headline)
-                .frame(width: 40, height: 50)
+                .frame(width: 40, height: buttonHeight)
                 .contentShape(.rect)
         }
         .buttonStyle(.plain)
