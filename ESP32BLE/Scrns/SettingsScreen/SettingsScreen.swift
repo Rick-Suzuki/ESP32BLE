@@ -74,10 +74,10 @@ struct SettingsScreen: View {
     @AppStorage("settingsSoundsScrollPositionID") private var soundScrollPositionIDStorage = ""
     @State private var pendingImportListMode: SettingsListMode?
     @State private var importRefreshID = UUID()
-    @State private var isExportingDocument = false
-    @State private var exportDocument: SettingsTextFileDocument?
     @State private var isExportingArchive = false
     @State private var exportArchiveDocument: SettingsArchiveFileDocument?
+    @State private var singleFileExportURL: URL?
+    @State private var singleFileExportTemporaryURL: URL?
     @State private var availableSpeechVoices: [SpeechVoiceOption] = []
     @AppStorage("selectedTextToSpeechVoiceIdentifier") private var selectedTextToSpeechVoiceIdentifier = ""
     @AppStorage("textToSpeechRate") private var textToSpeechRate = Double(AVSpeechUtteranceDefaultSpeechRate)
@@ -117,6 +117,23 @@ struct SettingsScreen: View {
     private var configuredSettingsScreen: some View {
         settingsScreenBase
         .background(Color.black.ignoresSafeArea())
+        .sheet(
+            isPresented: Binding(
+                get: { singleFileExportURL != nil },
+                set: { isPresented in
+                    guard !isPresented else { return }
+                    cleanupSingleFileExportTemporaryURLIfNeeded()
+                    singleFileExportURL = nil
+                }
+            )
+        ) {
+            if let exportURL = singleFileExportURL {
+                SettingsSingleFileExportPicker(url: exportURL) {
+                    cleanupSingleFileExportTemporaryURLIfNeeded()
+                    singleFileExportURL = nil
+                }
+            }
+        }
         .navigationTitle("")
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
@@ -228,17 +245,6 @@ struct SettingsScreen: View {
         ) { result in
             pendingImportListMode = nil
             handleImportedSelection(result)
-        }
-        .fileExporter(
-            isPresented: $isExportingDocument,
-            document: exportDocument,
-            contentType: .plainText,
-            defaultFilename: selectedDocumentDisplayName
-        ) { result in
-            if case let .failure(error) = result {
-                renameAlertMessage = error.localizedDescription
-            }
-            exportDocument = nil
         }
         .fileExporter(
             isPresented: $isExportingArchive,
@@ -837,6 +843,18 @@ struct SettingsScreen: View {
         URL(fileURLWithPath: selectedDocumentName).deletingPathExtension().lastPathComponent
     }
 
+    private var singleFileExportDisplayName: String {
+        if let selectedDocumentFileURL {
+            return selectedDocumentFileURL.deletingPathExtension().lastPathComponent
+        }
+
+        if !loadedDocumentName.isEmpty {
+            return URL(fileURLWithPath: loadedDocumentName).deletingPathExtension().lastPathComponent
+        }
+
+        return "Document"
+    }
+
     private var selectedImageDisplayName: String {
         guard let selectedImageURL else {
             return "black bg"
@@ -976,8 +994,14 @@ struct SettingsScreen: View {
     }
 
     private func prepareSingleFileExport() {
-        exportDocument = SettingsTextFileDocument(text: documentEditorText)
-        isExportingDocument = true
+        saveCurrentDocumentText()
+        do {
+            let exportURL = try makeSingleFileExportURL()
+            singleFileExportURL = exportURL
+        } catch {
+            cleanupSingleFileExportTemporaryURLIfNeeded()
+            renameAlertMessage = "Couldn't prepare the single file export."
+        }
     }
 
     private func prepareArchiveExport() {
@@ -996,6 +1020,30 @@ struct SettingsScreen: View {
         } catch {
             renameAlertMessage = "Couldn't create Archive.zip."
         }
+    }
+
+    private func makeSingleFileExportURL() throws -> URL {
+        cleanupSingleFileExportTemporaryURLIfNeeded()
+
+        if let selectedDocumentFileURL,
+           selectedDocumentFileURL.pathExtension.lowercased() == "txt" {
+            return selectedDocumentFileURL
+        }
+
+        let temporaryURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("\(singleFileExportDisplayName).txt")
+        try documentEditorText.write(to: temporaryURL, atomically: true, encoding: .utf8)
+        singleFileExportTemporaryURL = temporaryURL
+        return temporaryURL
+    }
+
+    private func cleanupSingleFileExportTemporaryURLIfNeeded() {
+        guard let singleFileExportTemporaryURL else {
+            return
+        }
+
+        try? FileManager.default.removeItem(at: singleFileExportTemporaryURL)
+        self.singleFileExportTemporaryURL = nil
     }
 
     private func selectImage(_ imageURL: URL) {
@@ -1651,6 +1699,7 @@ private struct SpeechVoiceOption: Identifiable, Equatable {
 
 private struct SettingsTextFileDocument: FileDocument {
     static var readableContentTypes: [UTType] { [.plainText] }
+    static var writableContentTypes: [UTType] { [.plainText] }
 
     var text: String
 
@@ -1802,6 +1851,40 @@ private struct SettingsArchiveFileDocument: FileDocument {
         }
 
         return current
+    }
+}
+
+private struct SettingsSingleFileExportPicker: UIViewControllerRepresentable {
+    let url: URL
+    let onFinish: () -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onFinish: onFinish)
+    }
+
+    func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
+        let picker = UIDocumentPickerViewController(forExporting: [url], asCopy: true)
+        picker.delegate = context.coordinator
+        return picker
+    }
+
+    func updateUIViewController(_ uiViewController: UIDocumentPickerViewController, context: Context) {
+    }
+
+    final class Coordinator: NSObject, UIDocumentPickerDelegate {
+        let onFinish: () -> Void
+
+        init(onFinish: @escaping () -> Void) {
+            self.onFinish = onFinish
+        }
+
+        func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
+            onFinish()
+        }
+
+        func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
+            onFinish()
+        }
     }
 }
 
