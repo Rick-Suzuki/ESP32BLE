@@ -270,10 +270,10 @@ struct MainScreen: View {
     }
 
     private var settingsToolbarButtonLabel: some View {
-        Text("settings >")
+        Text(deviceType ? "settings >" : ">")
             .font(.headline)
             .foregroundStyle((isGridEditModeEnabled || editingSlotIndex != nil) ? Color(white: 0.65) : .white)
-            .frame(minWidth: 92, minHeight: 44)
+            .frame(minWidth: deviceType ? 92 : 44, minHeight: 44)
             .background(Color.gray.opacity(0.45))
             .overlay {
                 RoundedRectangle(cornerRadius: 23)
