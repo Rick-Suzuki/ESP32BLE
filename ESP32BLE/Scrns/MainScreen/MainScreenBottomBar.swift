@@ -189,7 +189,12 @@ struct MainScreenBottomBar: View {
         toggleWidth: CGFloat,
         displayModeWidth: CGFloat
     ) -> some View {
-        HStack(spacing: isCompact ? 8 : 12) {
+        let speechRecognitionButtonTitle = deviceType ? (isSpeechRecognitionEnabled ? "spk rec on" : "spk rec off") : "rec"
+        let speechRecognitionButtonWidth: CGFloat? = deviceType ? toggleWidth : nil
+        let usesCompactSpeechRecognitionButton = !deviceType
+        let effectiveSpeechBoxWidth = deviceType ? speechBoxWidth : (speechBoxWidth * 0.5)
+
+        return HStack(spacing: isCompact ? 8 : 12) {
             HStack(spacing: isCompact ? 8 : 12) {
                 singleStepTriangle(
                     rotationDegrees: -90,
@@ -274,13 +279,14 @@ struct MainScreenBottomBar: View {
             Spacer(minLength: isCompact ? 6 : 12)
 
             toggleButton(
-                title: isSpeechRecognitionEnabled ? "spk rec on" : "spk rec off",
+                title: speechRecognitionButtonTitle,
                 background: isSpeechRecognitionEnabled ? speechRecognitionActiveColor : inactiveButtonBackgroundColor,
                 border: isSpeechRecognitionEnabled ? speechRecognitionActiveColor : inactiveButtonBorderColor,
                 isEnabled: !isGridEditModeEnabled,
+                usesCompactWidth: usesCompactSpeechRecognitionButton,
                 action: onToggleSpeechRecognition
             )
-            .frame(width: toggleWidth)
+            .frame(width: speechRecognitionButtonWidth)
 
             Text(speechRecognitionDisplayText)
                 .font(isCompact ? .caption : .body)
@@ -288,7 +294,7 @@ struct MainScreenBottomBar: View {
                 .opacity(0.6)
                 .lineLimit(1)
                 .truncationMode(.tail)
-                .frame(width: speechBoxWidth, alignment: .leading)
+                .frame(width: effectiveSpeechBoxWidth, alignment: .leading)
                 .padding(.horizontal, isCompact ? 8 : 12)
                 .frame(minHeight: isCompact ? 34 : 38)
                 .background(Color.black.opacity(0.7))
@@ -378,14 +384,22 @@ struct MainScreenBottomBar: View {
         .opacity(isEnabled ? 1 : 0.35)
     }
 
-    private func toggleButton(title: String, background: Color, border: Color, isEnabled: Bool = true, action: @escaping () -> Void) -> some View {
+    private func toggleButton(
+        title: String,
+        background: Color,
+        border: Color,
+        isEnabled: Bool = true,
+        usesCompactWidth: Bool = false,
+        action: @escaping () -> Void
+    ) -> some View {
         Button {
             action()
         } label: {
             Text(title)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
-                .frame(maxWidth: .infinity, minHeight: 50)
+                .padding(.horizontal, usesCompactWidth ? 16 : 0)
+                .frame(minWidth: usesCompactWidth ? 64 : nil, maxWidth: usesCompactWidth ? nil : .infinity, minHeight: 50)
                 .contentShape(.rect)
         }
         .buttonStyle(.plain)
