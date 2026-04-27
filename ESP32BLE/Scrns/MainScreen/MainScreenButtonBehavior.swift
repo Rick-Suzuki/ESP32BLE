@@ -26,6 +26,8 @@ extension MainScreen {
             return displayText(from: entry.primaryDisplayText)
         case .right:
             return displayText(from: alternateDisplayText)
+        case .last:
+            return displayTextAfterLastColon(in: alternateDisplayText)
         case .both:
             return "\(displayText(from: entry.primaryDisplayText))\n\(displayText(from: alternateDisplayText))"
         }
@@ -35,6 +37,17 @@ extension MainScreen {
         text
             .replacingOccurrences(of: "\\n", with: "\n")
             .replacingOccurrences(of: "\\t", with: "\t")
+    }
+
+    func displayTextAfterLastColon(in text: String) -> String {
+        let normalizedText = displayText(from: text)
+        let components = normalizedText.components(separatedBy: ":")
+        guard let lastComponent = components.last?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !lastComponent.isEmpty else {
+            return normalizedText
+        }
+
+        return lastComponent
     }
 
     func resolvedAlternateDisplayText(for entry: FunctionKeyEntry) -> String {
@@ -992,6 +1005,8 @@ struct MainScreenButtonLabelView: View {
                 textLabel(title: leftTitle)
             case .right:
                 symbolContent(name: rightSymbolDisplay.name, subtitle: rightSymbolDisplay.subtitle)
+            case .last:
+                textLabel(title: lastRightTitleComponent)
             case .both:
                 VStack(spacing: 6) {
                     textLabel(title: leftTitle)
@@ -1004,6 +1019,8 @@ struct MainScreenButtonLabelView: View {
                 textLabel(title: leftTitle)
             case .right:
                 emojiContent(emoji: rightEmojiDisplay.emoji, subtitle: rightEmojiDisplay.subtitle)
+            case .last:
+                textLabel(title: lastRightTitleComponent)
             case .both:
                 VStack(spacing: 6) {
                     textLabel(title: leftTitle)
@@ -1191,6 +1208,16 @@ struct MainScreenButtonLabelView: View {
         }
 
         return rightTitle
+    }
+
+    private var lastRightTitleComponent: String {
+        let components = rightTitleWithoutColorPrefix.components(separatedBy: ":")
+        guard let lastComponent = components.last?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !lastComponent.isEmpty else {
+            return rightTitleWithoutColorPrefix
+        }
+
+        return lastComponent
     }
 
     private func textLabel(title: String) -> some View {
