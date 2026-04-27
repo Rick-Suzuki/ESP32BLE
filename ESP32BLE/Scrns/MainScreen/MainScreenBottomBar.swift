@@ -363,7 +363,7 @@ struct MainScreenBottomBar: View {
 							.foregroundStyle(.white)
 							.background(
 							RoundedRectangle(cornerRadius: 12)
-							.fill(displayModeButtonColor.opacity(0.7))
+							.fill(displayModeButtonColor.opacity(1))
 					)
 					.overlay(
 						RoundedRectangle(cornerRadius: 12)
@@ -371,7 +371,7 @@ struct MainScreenBottomBar: View {
 					)
 					.clipShape(RoundedRectangle(cornerRadius: 12))
 					}
-					.opacity(0.7)
+					.opacity(0.8)
 					.buttonStyle(.plain)
 					.frame(width: displayModeWidth)
 				//
