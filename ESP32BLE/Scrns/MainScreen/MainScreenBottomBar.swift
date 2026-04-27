@@ -61,10 +61,29 @@ private struct RepeatingToolbarButton<Label: View>: View {
     @State private var latestAction: (() -> Void)?
 
     var body: some View {
+        Group {
+            if #available(iOS 18.0, *) {
+                repeatEnabledButton
+            } else {
+                tapOnlyButton
+            }
+        }
+        .opacity(isEnabled ? 1 : 0.35)
+        .contentShape(.rect)
+        .onAppear {
+            latestAction = action
+        }
+        .onChange(of: actionVersion) {
+            latestAction = action
+        }
+        .onDisappear {
+            stopRepeating()
+        }
+    }
+
+    private var repeatEnabledButton: some View {
         Button {
-            guard isEnabled else { return }
-            ButtonClickFeedback.playIfEnabled()
-            latestAction?()
+            triggerCurrentAction()
         } label: {
             label()
         }
@@ -82,17 +101,22 @@ private struct RepeatingToolbarButton<Label: View>: View {
                 stopRepeating()
             }
         }, perform: {})
-            .opacity(isEnabled ? 1 : 0.35)
-            .contentShape(.rect)
-            .onAppear {
-                latestAction = action
-            }
-            .onChange(of: actionVersion) {
-                latestAction = action
-            }
-            .onDisappear {
-                stopRepeating()
-            }
+    }
+
+    private var tapOnlyButton: some View {
+        Button {
+            triggerCurrentAction()
+        } label: {
+            label()
+        }
+        .buttonStyle(.plain)
+        .disabled(!isEnabled)
+    }
+
+    private func triggerCurrentAction() {
+        guard isEnabled else { return }
+        ButtonClickFeedback.playIfEnabled()
+        action()
     }
 
     private func startRepeating() {
@@ -250,19 +274,19 @@ struct MainScreenBottomBar: View {
                     onDecreaseBoxFontSize()
                 }
 
-                Button {
-                    ButtonClickFeedback.playIfEnabled()
-                    onResetBoxFontSize()
-                } label: {
-                    Text("\(Int(boxFontSize))")
-                        .font(.headline)
-                        .foregroundStyle(.white)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.85)
-                        .frame(width: isCompact ? 40 : 48, alignment: .center)
-                        .contentShape(.rect)
+                Group {
+                    if isFontResetButtonEnabled {
+                        Button {
+                            ButtonClickFeedback.playIfEnabled()
+                            onResetBoxFontSize()
+                        } label: {
+                            fontSizeValueLabel(isCompact: isCompact)
+                        }
+                        .buttonStyle(.plain)
+                    } else {
+                        fontSizeValueLabel(isCompact: isCompact)
+                    }
                 }
-                .buttonStyle(.plain)
 
                 controlTriangle(
                     rotationDegrees: 90,
@@ -363,13 +387,33 @@ struct MainScreenBottomBar: View {
         actionVersion: Int,
         action: @escaping () -> Void
     ) -> some View {
-        RepeatingToolbarButton(isEnabled: isEnabled, actionVersion: actionVersion, action: action) {
-            Image(systemName: "triangle.fill")
-                .font(.system(size: 24))
-                .rotationEffect(.degrees(rotationDegrees))
-                .frame(width: 24, height: 24)
+        Group {
+            if #available(iOS 18.0, *) {
+                RepeatingToolbarButton(isEnabled: isEnabled, actionVersion: actionVersion, action: action) {
+                    triangleLabel(rotationDegrees: rotationDegrees)
+                }
+            } else {
+                Button {
+                    guard isEnabled else { return }
+                    ButtonClickFeedback.playIfEnabled()
+                    action()
+                } label: {
+                    triangleLabel(rotationDegrees: rotationDegrees)
+                }
+                .buttonStyle(.plain)
+                .disabled(!isEnabled)
+                .opacity(isEnabled ? 1 : 0.35)
+                .contentShape(.rect)
+            }
         }
         .foregroundStyle(foreground)
+    }
+
+    private func triangleLabel(rotationDegrees: Double) -> some View {
+        Image(systemName: "triangle.fill")
+            .font(.system(size: 24))
+            .rotationEffect(.degrees(rotationDegrees))
+            .frame(width: 24, height: 24)
     }
 
     private func singleStepTriangle(
@@ -459,6 +503,24 @@ struct MainScreenBottomBar: View {
 
     private var isStopSpeechEnabled: Bool {
         !isGridEditModeEnabled && mainGridButtonMode == .speech
+    }
+
+    private var isFontResetButtonEnabled: Bool {
+        if #available(iOS 18.0, *) {
+            return true
+        }
+
+        return false
+    }
+
+    private func fontSizeValueLabel(isCompact: Bool) -> some View {
+        Text("\(Int(boxFontSize))")
+            .font(.headline)
+            .foregroundStyle(.white)
+            .lineLimit(1)
+            .minimumScaleFactor(0.85)
+            .frame(width: isCompact ? 40 : 48, alignment: .center)
+            .contentShape(.rect)
     }
 
     private var bluetoothIndicator: some View {

@@ -10,6 +10,7 @@ struct SettingsImagePreviewPanel: View {
         GeometryReader { geometry in
             let previewWidth = geometry.size.width
             let previewHeight = previewWidth / 1.3
+            let previewMaxPixelDimension = max(previewWidth, previewHeight) * UIScreen.main.scale
 
             ZStack {
                 Color.black
@@ -28,19 +29,23 @@ struct SettingsImagePreviewPanel: View {
                 Rectangle()
                     .stroke(Color.white, lineWidth: 2)
             }
+            .task(id: previewImageTaskID(maxPixelDimension: previewMaxPixelDimension)) {
+                loadPreviewImage(maxPixelDimension: previewMaxPixelDimension)
+            }
         }
         .aspectRatio(1.3, contentMode: .fit)
-        .task(id: imageURL?.path) {
-            loadPreviewImage()
-        }
     }
 
-    private func loadPreviewImage() {
+    private func previewImageTaskID(maxPixelDimension: CGFloat) -> String {
+        "\(imageURL?.path ?? "none"):\(Int(maxPixelDimension.rounded(.up)))"
+    }
+
+    private func loadPreviewImage(maxPixelDimension: CGFloat) {
         guard let imageURL else {
             previewImage = nil
             return
         }
 
-        previewImage = UIImage(contentsOfFile: imageURL.path)
+        previewImage = downsampledUIImage(at: imageURL, maxPixelDimension: maxPixelDimension)
     }
 }

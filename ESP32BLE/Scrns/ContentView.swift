@@ -2,6 +2,7 @@
 import SwiftUI
 import AudioToolbox
 import UIKit
+import ImageIO
 
 let maxGridDimension = 20
 let maxFunctionKeyCount = maxGridDimension * maxGridDimension
@@ -53,6 +54,34 @@ struct FunctionKeyEntry {
 private struct StoredGridDimensions: Codable {
     let columns: Int
     let rows: Int
+}
+
+func downsampledUIImage(at url: URL, maxPixelDimension: CGFloat) -> UIImage? {
+    guard maxPixelDimension > 0 else {
+        return UIImage(contentsOfFile: url.path)
+    }
+
+    let imageSourceOptions = [kCGImageSourceShouldCache: false] as CFDictionary
+    guard let imageSource = CGImageSourceCreateWithURL(url as CFURL, imageSourceOptions) else {
+        return nil
+    }
+
+    let downsampleOptions = [
+        kCGImageSourceCreateThumbnailFromImageAlways: true,
+        kCGImageSourceCreateThumbnailWithTransform: true,
+        kCGImageSourceShouldCacheImmediately: false,
+        kCGImageSourceThumbnailMaxPixelSize: Int(maxPixelDimension.rounded(.up))
+    ] as CFDictionary
+
+    guard let downsampledImage = CGImageSourceCreateThumbnailAtIndex(imageSource, 0, downsampleOptions) else {
+        return nil
+    }
+
+    return UIImage(cgImage: downsampledImage)
+}
+
+private enum ContentViewLaunchDestination: Hashable {
+    case settings
 }
 
 struct ContentView: View {
@@ -130,13 +159,15 @@ struct ContentView: View {
     @AppStorage("selectedDocumentName") private var selectedDocumentName = "fnkeys.txt"
     @AppStorage("documentFontSizesData") private var documentFontSizesData = ""
     @State private var settingsBLEText = ""
+    @State private var rootNavigationPath = NavigationPath()
     @State private var isKeyboardScreenPresented = false
     @State private var isSettingsScreenPresented = true
+    @State private var didPresentInitialSettingsScreen = false
     @State private var hasLoggedDeviceType = false
     @State private var lastLoggedOrientationState: Bool?
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $rootNavigationPath) {
             ZStack {
                 GeometryReader { geometry in
                     let containerWidth = geometry.size.width.isFinite ? max(0, geometry.size.width) : 0
@@ -157,7 +188,14 @@ struct ContentView: View {
                             documentFiles: documentFiles,
                             selectedDocumentName: selectedDocumentName,
                             selectedDocumentDisplayName: displayName(for: selectedDocumentName),
-                            boxFontSize: fontSize(for: selectedDocumentName),
+                            boxFontSize: Binding(
+                                get: {
+                                    fontSize(for: selectedDocumentName)
+                                },
+                                set: { newFontSize in
+                                    updateDocumentFontSize(newFontSize)
+                                }
+                            ),
                             currentFileNumber: currentFileNumber,
                             totalFileCount: documentFiles.count,
                             definedFunctionKeyCount: loadedFunctionKeySlotCount,
@@ -177,7 +215,6 @@ struct ContentView: View {
                             moveFunctionKeySlot: moveSelectedDocumentSlot,
                             duplicateFunctionKeySlot: duplicateSelectedDocumentSlot,
                             updateFunctionKeySlot: updateSelectedDocumentSlot,
-                            updateDocumentFontSize: updateDocumentFontSize,
                             loadGridDimensions: loadStoredGridDimensions,
                             saveGridDimensions: { documentName, gridDimensions in
                                 saveGridDimensions(gridDimensions, for: documentName)
@@ -186,6 +223,9 @@ struct ContentView: View {
                                 withAnimation(.easeInOut(duration: 0.25)) {
                                     isKeyboardScreenPresented = true
                                 }
+                            },
+                            openSettingsScreen: {
+                                showSettingsScreen()
                             },
                             settingsBLEText: $settingsBLEText
                         )
@@ -199,27 +239,21 @@ struct ContentView: View {
                     }
                 }
             }
-            .background {
+            .background { 
                 mainScreenBackgroundView
             }
-            .toolbarVisibility(isKeyboardScreenPresented ? .hidden : .visible, for: .navigationBar)
+            .compatibleNavigationBarVisibility(isKeyboardScreenPresented ? .hidden : .visible)
             .toolbarBackground(.hidden, for: .navigationBar)
             .toolbarColorScheme(.dark, for: .navigationBar)
-            .navigationDestination(isPresented: $isSettingsScreenPresented) {
-                SettingsScreen(
-                    ble: ble,
-                    documentFiles: documentFiles,
-                    selectedDocumentName: selectedDocumentName,
-                    refreshDocumentFiles: refreshDocumentFiles,
-                    loadFunctionKeys: selectDocument,
-                    saveSelectedDocumentAndReload: saveSelectedDocumentAndReload,
-                    renameDocument: renameSelectedDocument,
-                    deleteDocument: deleteDocument,
-                    duplicateDocument: duplicateDocument,
-                    canDeleteDocuments: documentFiles.count > 1,
-                    bleTextToSend: $settingsBLEText
-                )
+            .navigationDestination(for: ContentViewLaunchDestination.self) { destination in
+                switch destination {
+                case .settings:
+                    launchedSettingsScreen
+                }
             }
+        }
+        .onAppear {
+            presentInitialSettingsScreenIfNeeded()
         }
         .task {
             ensureDefaultFunctionKeysFile()
@@ -227,7 +261,7 @@ struct ContentView: View {
             refreshDocumentFiles()
             refreshBackgroundImageFiles()
             selectInitialDocument()
-            reloadBackgroundImage()
+            updateLoadedBackgroundImageForVisibleScreen()
             logDeviceTypeIfNeeded()
             refreshOrientationState()
             logOrientationStateIfNeeded()
@@ -245,16 +279,19 @@ struct ContentView: View {
         }
         .onChange(of: selectedBackgroundImageIndex) {
             refreshBackgroundImageFiles()
-            reloadBackgroundImage()
+            updateLoadedBackgroundImageForVisibleScreen()
         }
         .onChange(of: selectedBackgroundImagePath) {
             refreshBackgroundImageFiles()
-            reloadBackgroundImage()
+            updateLoadedBackgroundImageForVisibleScreen()
         }
         .onChange(of: selectedBackgroundImageName) {
             refreshBackgroundImageFiles()
             saveBackgroundImageSelection(for: selectedDocumentName)
-            reloadBackgroundImage()
+            updateLoadedBackgroundImageForVisibleScreen()
+        }
+        .onChange(of: isSettingsScreenPresented) {
+            updateLoadedBackgroundImageForVisibleScreen()
         }
         .onChange(of: backgroundImageOpacity) {
             saveBackgroundImageOpacity(for: selectedDocumentName)
@@ -417,10 +454,12 @@ struct ContentView: View {
     }
 
     private func reloadBackgroundImage() {
+        let maxPixelDimension = max(UIScreen.main.bounds.width, UIScreen.main.bounds.height) * UIScreen.main.scale
+
         if !selectedBackgroundImagePath.isEmpty {
             let pathImageURL = URL(fileURLWithPath: selectedBackgroundImagePath)
             if FileManager.default.fileExists(atPath: pathImageURL.path),
-               let pathImage = UIImage(contentsOfFile: pathImageURL.path) {
+               let pathImage = downsampledUIImage(at: pathImageURL, maxPixelDimension: maxPixelDimension) {
                 loadedBackgroundImage = pathImage
                 selectedBackgroundImageName = pathImageURL.lastPathComponent
                 if let pathImageIndex = backgroundImageFiles.firstIndex(where: { $0.path == pathImageURL.path }) {
@@ -432,7 +471,7 @@ struct ContentView: View {
 
         if !selectedBackgroundImageName.isEmpty,
            let namedImageURL = backgroundImageFiles.first(where: { $0.lastPathComponent == selectedBackgroundImageName }) {
-            loadedBackgroundImage = UIImage(contentsOfFile: namedImageURL.path)
+            loadedBackgroundImage = downsampledUIImage(at: namedImageURL, maxPixelDimension: maxPixelDimension)
             selectedBackgroundImagePath = namedImageURL.path
             if let namedImageIndex = backgroundImageFiles.firstIndex(where: { $0.lastPathComponent == selectedBackgroundImageName }) {
                 selectedBackgroundImageIndex = namedImageIndex + 1
@@ -456,7 +495,15 @@ struct ContentView: View {
         let resolvedImageURL = backgroundImageFiles[imageIndex]
         selectedBackgroundImagePath = resolvedImageURL.path
         selectedBackgroundImageName = resolvedImageURL.lastPathComponent
-        loadedBackgroundImage = UIImage(contentsOfFile: resolvedImageURL.path)
+        loadedBackgroundImage = downsampledUIImage(at: resolvedImageURL, maxPixelDimension: maxPixelDimension)
+    }
+
+    private func updateLoadedBackgroundImageForVisibleScreen() {
+        if isSettingsScreenPresented {
+            loadedBackgroundImage = nil
+        } else {
+            reloadBackgroundImage()
+        }
     }
 
     private func selectInitialDocument() {
@@ -1135,6 +1182,46 @@ struct ContentView: View {
     }
 
     @ViewBuilder
+    private var launchedSettingsScreen: some View {
+        SettingsScreen(
+            ble: ble,
+            documentFiles: documentFiles,
+            selectedDocumentName: selectedDocumentName,
+            refreshDocumentFiles: refreshDocumentFiles,
+            loadFunctionKeys: selectDocument,
+            saveSelectedDocumentAndReload: saveSelectedDocumentAndReload,
+            renameDocument: renameSelectedDocument,
+            deleteDocument: deleteDocument,
+            duplicateDocument: duplicateDocument,
+            canDeleteDocuments: documentFiles.count > 1,
+            bleTextToSend: $settingsBLEText
+        )
+        .onAppear {
+            isSettingsScreenPresented = true
+        }
+        .onDisappear {
+            isSettingsScreenPresented = false
+        }
+    }
+
+    private func presentInitialSettingsScreenIfNeeded() {
+        guard isSettingsScreenPresented, !didPresentInitialSettingsScreen else {
+            return
+        }
+
+        didPresentInitialSettingsScreen = true
+        rootNavigationPath.append(ContentViewLaunchDestination.settings)
+    }
+
+    private func showSettingsScreen() {
+        guard !isSettingsScreenPresented else {
+            return
+        }
+
+        rootNavigationPath.append(ContentViewLaunchDestination.settings)
+    }
+
+    @ViewBuilder
     private var mainScreenBackgroundView: some View {
         ZStack {
             Color.black
@@ -1307,6 +1394,17 @@ struct ContentView: View {
 
             selectDocument(fileURL)
             return
+        }
+    }
+}
+
+extension View {
+    @ViewBuilder
+    func compatibleNavigationBarVisibility(_ visibility: Visibility) -> some View {
+        if #available(iOS 18.0, *) {
+            toolbarVisibility(visibility, for: .navigationBar)
+        } else {
+            toolbar(visibility, for: .navigationBar)
         }
     }
 }

@@ -82,7 +82,6 @@ struct SettingsScreen: View {
     let duplicateDocument: (URL) -> Void
     let canDeleteDocuments: Bool
     @Binding var bleTextToSend: String
-    @State var bleTextSelection: TextSelection?
     @State private var documentEditorText = ""
     @State private var documentEditorFontSize: CGFloat = 18
     @State private var isLoadingDocumentText = false

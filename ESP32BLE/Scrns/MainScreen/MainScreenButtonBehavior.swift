@@ -946,7 +946,7 @@ struct MainScreenButtonLabelView: View {
 
     var body: some View {
         Group {
-            if entry.isBlankPlaceholder {
+            if entry.isBlankPlaceholder || isEmptyButtonEntry {
                 Group {
                     if isGridEditModeEnabled {
                         RoundedRectangle(cornerRadius: cornerRadius)

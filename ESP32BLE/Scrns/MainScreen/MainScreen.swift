@@ -58,7 +58,7 @@ struct MainScreen: View {
     let documentFiles: [URL]
     let selectedDocumentName: String
     let selectedDocumentDisplayName: String
-    let boxFontSize: Double
+    @Binding var boxFontSize: Double
     let currentFileNumber: Int
     let totalFileCount: Int
     let definedFunctionKeyCount: Int
@@ -78,10 +78,10 @@ struct MainScreen: View {
     let moveFunctionKeySlot: (Int, Int) -> Bool
     let duplicateFunctionKeySlot: (Int, Int) -> Bool
     let updateFunctionKeySlot: (Int, String) -> Bool
-    let updateDocumentFontSize: (Double) -> Void
     let loadGridDimensions: (String, Int) -> GridDimensions
     let saveGridDimensions: (String, GridDimensions) -> Void
     let openKeyboardScreen: () -> Void
+    let openSettingsScreen: () -> Void
     @Binding var settingsBLEText: String
 
     var body: some View {
@@ -185,7 +185,7 @@ struct MainScreen: View {
         .padding(.horizontal, 2)
         .navigationTitle("")
         .toolbarTitleDisplayMode(.inline)
-        .toolbarVisibility(.visible, for: .navigationBar)
+        .compatibleNavigationBarVisibility(.visible)
         .toolbarBackground(.hidden, for: .navigationBar)
         .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbar {
@@ -209,24 +209,13 @@ struct MainScreen: View {
                 toggleGridEditMode: { isGridEditModeEnabled.toggle() },
                 commitDocumentRename: commitDocumentRename,
                 openSettings: AnyView(
-                    NavigationLink {
-                        SettingsScreen(
-                            ble: ble,
-                            documentFiles: documentFiles,
-                            selectedDocumentName: selectedDocumentName,
-                            refreshDocumentFiles: refreshDocumentFiles,
-                            loadFunctionKeys: loadFunctionKeys,
-                            saveSelectedDocumentAndReload: saveSelectedDocumentAndReload,
-                            renameDocument: renameDocument,
-                            deleteDocument: deleteDocument,
-                            duplicateDocument: duplicateDocument,
-                            canDeleteDocuments: canDeleteDocuments,
-                            bleTextToSend: $settingsBLEText
-                        )
+                    Button {
+                        ButtonClickFeedback.playIfEnabled()
+                        openSettingsScreen()
                     } label: {
                         settingsToolbarButtonLabel
                     }
-                    .simultaneousGesture(TapGesture().onEnded { ButtonClickFeedback.playIfEnabled() })
+                    .buttonStyle(.plain)
                 )
             )
         }

@@ -52,15 +52,15 @@ extension MainScreen {
     }
 
     func decreaseBoxFontSize() {
-        updateDocumentFontSize(max(minimumBoxFontSize, boxFontSize - 1))
+        boxFontSize = max(minimumBoxFontSize, boxFontSize - 1)
     }
 
     func increaseBoxFontSize() {
-        updateDocumentFontSize(min(maximumBoxFontSize, boxFontSize + 1))
+        boxFontSize = min(maximumBoxFontSize, boxFontSize + 1)
     }
 
     func resetBoxFontSize() {
-        updateDocumentFontSize(min(maximumBoxFontSize, max(minimumBoxFontSize, 24)))
+        boxFontSize = min(maximumBoxFontSize, max(minimumBoxFontSize, 24))
     }
 
     @discardableResult
