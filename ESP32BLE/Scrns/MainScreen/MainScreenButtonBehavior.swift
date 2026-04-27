@@ -140,8 +140,14 @@ extension MainScreen {
 
         logMainButtonPress(entry)
 
-        for sendText in bluetoothSendTexts {
-            ble.sendLine(normalizedBluetoothSendText(sendText))
+        let normalizedBluetoothSendTexts = bluetoothSendTexts.map(normalizedBluetoothSendText)
+        guard normalizedBluetoothSendTexts.allSatisfy(isASCIIOnlyBluetoothText(_:)) else {
+            showBluetoothEmojiBlockedPopup()
+            return
+        }
+
+        for sendText in normalizedBluetoothSendTexts {
+            ble.sendLine(sendText)
         }
     }
 
@@ -695,6 +701,20 @@ extension MainScreen {
         }
 
         return loweredSendText
+    }
+
+    func isASCIIOnlyBluetoothText(_ sendText: String) -> Bool {
+        sendText.unicodeScalars.allSatisfy(\.isASCII)
+    }
+
+    func showBluetoothEmojiBlockedPopup() {
+        alertTitle = ""
+        renameAlertMessage = nil
+
+        Task { @MainActor in
+            alertTitle = ""
+            renameAlertMessage = "text couldn't be sent to bluetooth\nbecause it contains emoji"
+        }
     }
 
     func mainGridButtonLabel(

@@ -63,8 +63,14 @@ extension MainScreen {
             return
         }
 
-        for sendText in bluetoothSendTexts {
-            ble.sendLine(normalizedBluetoothSendText(sendText))
+        let normalizedBluetoothSendTexts = bluetoothSendTexts.map(normalizedBluetoothSendText)
+        guard normalizedBluetoothSendTexts.allSatisfy(isASCIIOnlyBluetoothText(_:)) else {
+            showBluetoothEmojiBlockedPopup()
+            return
+        }
+
+        for sendText in normalizedBluetoothSendTexts {
+            ble.sendLine(sendText)
         }
     }
 
