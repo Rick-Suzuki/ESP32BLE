@@ -32,6 +32,32 @@ struct SettingsScreen: View {
         }
     }
 
+    private enum ImportedContentKind {
+        case document
+        case image
+        case sound
+    }
+
+    private struct PendingImportConflict {
+        let sourceURL: URL
+        let targetURL: URL
+        let fileName: String
+        let contentKind: ImportedContentKind
+    }
+
+    private struct PendingImportSession {
+        let directoryURL: URL
+        let importListMode: SettingsListMode
+        var remainingURLs: [URL]
+        var existingFileNames: Set<String>
+        var existingImageNames: Set<String>
+        var existingSoundNames: Set<String>
+        var firstImportedDocumentURL: URL?
+        var firstImportedImageURL: URL?
+        var firstImportedSoundURL: URL?
+        var importedAnything = false
+    }
+
     private let ttsControlColor = Color(red: 0.0, green: 0.2, blue: 0.45)
     private let defaultTextToSpeechRate = Double(AVSpeechUtteranceDefaultSpeechRate)
     private let minimumTextToSpeechPercentage = 40.0
@@ -73,6 +99,8 @@ struct SettingsScreen: View {
     @AppStorage("settingsImagesScrollPositionID") private var imageScrollPositionIDStorage = ""
     @AppStorage("settingsSoundsScrollPositionID") private var soundScrollPositionIDStorage = ""
     @State private var pendingImportListMode: SettingsListMode?
+    @State private var pendingImportSession: PendingImportSession?
+    @State private var pendingImportConflict: PendingImportConflict?
     @State private var importRefreshID = UUID()
     @State private var isExportingArchive = false
     @State private var exportArchiveDocument: SettingsArchiveFileDocument?
@@ -242,6 +270,24 @@ struct SettingsScreen: View {
         } message: {
             Text(renameAlertMessage ?? "")
         }
+        .confirmationDialog(
+            "a file with that name already exists.",
+            isPresented: importConflictIsPresented,
+            titleVisibility: .visible
+        ) {
+            Button("Replace Existing") {
+                resolvePendingImportConflictByReplacing()
+            }
+            Button("Skip This File") {
+                resolvePendingImportConflictBySkipping()
+            }
+            Button("Stop Import", role: .destructive) {
+                cancelPendingImportSession()
+            }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text(pendingImportConflict?.fileName ?? "")
+        }
         .fileImporter(
             isPresented: isImporting,
             allowedContentTypes: activeImportContentTypes,
@@ -297,6 +343,17 @@ struct SettingsScreen: View {
         Binding(
             get: { pendingImportListMode != nil },
             set: { _ in }
+        )
+    }
+
+    private var importConflictIsPresented: Binding<Bool> {
+        Binding(
+            get: { pendingImportConflict != nil },
+            set: { isPresented in
+                if !isPresented {
+                    pendingImportConflict = nil
+                }
+            }
         )
     }
 
@@ -1209,33 +1266,48 @@ struct SettingsScreen: View {
             return
         }
 
-        var existingFileNames = Set(availableDocumentURLs.map { $0.lastPathComponent.lowercased() })
-        var existingImageNames = Set(availableImageURLs.map { $0.lastPathComponent.lowercased() })
-        var existingSoundNames = Set(availableSoundURLs.map { $0.lastPathComponent.lowercased() })
-        var firstImportedDocumentURL: URL?
-        var firstImportedImageURL: URL?
-        var firstImportedSoundURL: URL?
-        var importedAnything = false
+        let session = PendingImportSession(
+            directoryURL: directoryURL,
+            importListMode: listMode,
+            remainingURLs: urls,
+            existingFileNames: Set(availableDocumentURLs.map { $0.lastPathComponent.lowercased() }),
+            existingImageNames: Set(availableImageURLs.map { $0.lastPathComponent.lowercased() }),
+            existingSoundNames: Set(availableSoundURLs.map { $0.lastPathComponent.lowercased() })
+        )
+        processPendingImportSession(session)
+    }
 
-        for sourceURL in urls {
+    private func processPendingImportSession(_ session: PendingImportSession) {
+        var session = session
+
+        while !session.remainingURLs.isEmpty {
+            let sourceURL = session.remainingURLs.removeFirst()
             let pathExtension = sourceURL.pathExtension.lowercased()
             let targetFileName = sourceURL.lastPathComponent
             let targetFileNameKey = targetFileName.lowercased()
-            let targetURL = directoryURL.appendingPathComponent(targetFileName)
+            let targetURL = session.directoryURL.appendingPathComponent(targetFileName)
 
             if pathExtension == "txt" {
-                guard !existingFileNames.contains(targetFileNameKey),
-                      !FileManager.default.fileExists(atPath: targetURL.path) else {
-                    continue
+                if session.existingFileNames.contains(targetFileNameKey) ||
+                    FileManager.default.fileExists(atPath: targetURL.path) {
+                    pendingImportSession = session
+                    pendingImportConflict = PendingImportConflict(
+                        sourceURL: sourceURL,
+                        targetURL: targetURL,
+                        fileName: targetFileName,
+                        contentKind: .document
+                    )
+                    return
                 }
 
                 do {
                     try importFileData(from: sourceURL, to: targetURL)
-                    existingFileNames.insert(targetFileNameKey)
-                    importedAnything = true
-                    if firstImportedDocumentURL == nil {
-                        firstImportedDocumentURL = targetURL
-                    }
+                    recordSuccessfulImport(
+                        targetURL: targetURL,
+                        fileNameKey: targetFileNameKey,
+                        contentKind: .document,
+                        session: &session
+                    )
                 } catch {
                     print("Failed to import text file \(targetFileName): \(error.localizedDescription)")
                 }
@@ -1243,18 +1315,26 @@ struct SettingsScreen: View {
             }
 
             if supportedImportedImageExtensions.contains(pathExtension) {
-                guard !existingImageNames.contains(targetFileNameKey),
-                      !FileManager.default.fileExists(atPath: targetURL.path) else {
-                    continue
+                if session.existingImageNames.contains(targetFileNameKey) ||
+                    FileManager.default.fileExists(atPath: targetURL.path) {
+                    pendingImportSession = session
+                    pendingImportConflict = PendingImportConflict(
+                        sourceURL: sourceURL,
+                        targetURL: targetURL,
+                        fileName: targetFileName,
+                        contentKind: .image
+                    )
+                    return
                 }
 
                 do {
                     try importFileData(from: sourceURL, to: targetURL)
-                    existingImageNames.insert(targetFileNameKey)
-                    importedAnything = true
-                    if firstImportedImageURL == nil {
-                        firstImportedImageURL = targetURL
-                    }
+                    recordSuccessfulImport(
+                        targetURL: targetURL,
+                        fileNameKey: targetFileNameKey,
+                        contentKind: .image,
+                        session: &session
+                    )
                 } catch {
                     print("Failed to import image \(targetFileName): \(error.localizedDescription)")
                 }
@@ -1262,37 +1342,131 @@ struct SettingsScreen: View {
             }
 
             if supportedImportedSoundExtensions.contains(pathExtension) {
-                guard !existingSoundNames.contains(targetFileNameKey),
-                      !FileManager.default.fileExists(atPath: targetURL.path) else {
-                    continue
+                if session.existingSoundNames.contains(targetFileNameKey) ||
+                    FileManager.default.fileExists(atPath: targetURL.path) {
+                    pendingImportSession = session
+                    pendingImportConflict = PendingImportConflict(
+                        sourceURL: sourceURL,
+                        targetURL: targetURL,
+                        fileName: targetFileName,
+                        contentKind: .sound
+                    )
+                    return
                 }
 
                 do {
                     try importFileData(from: sourceURL, to: targetURL)
-                    existingSoundNames.insert(targetFileNameKey)
-                    importedAnything = true
-                    if firstImportedSoundURL == nil {
-                        firstImportedSoundURL = targetURL
-                    }
+                    recordSuccessfulImport(
+                        targetURL: targetURL,
+                        fileNameKey: targetFileNameKey,
+                        contentKind: .sound,
+                        session: &session
+                    )
                 } catch {
                     print("Failed to import sound \(targetFileName): \(error.localizedDescription)")
                 }
             }
         }
 
-        guard importedAnything else { return }
+        finishPendingImportSession(session)
+    }
+
+    private func recordSuccessfulImport(
+        targetURL: URL,
+        fileNameKey: String,
+        contentKind: ImportedContentKind,
+        session: inout PendingImportSession
+    ) {
+        session.importedAnything = true
+
+        switch contentKind {
+        case .document:
+            session.existingFileNames.insert(fileNameKey)
+            if session.firstImportedDocumentURL == nil {
+                session.firstImportedDocumentURL = targetURL
+            }
+        case .image:
+            session.existingImageNames.insert(fileNameKey)
+            if session.firstImportedImageURL == nil {
+                session.firstImportedImageURL = targetURL
+            }
+        case .sound:
+            session.existingSoundNames.insert(fileNameKey)
+            if session.firstImportedSoundURL == nil {
+                session.firstImportedSoundURL = targetURL
+            }
+        }
+    }
+
+    private func resolvePendingImportConflictByReplacing() {
+        guard var session = pendingImportSession,
+              let conflict = pendingImportConflict else {
+            return
+        }
+
+        pendingImportConflict = nil
+        pendingImportSession = nil
+
+        do {
+            if FileManager.default.fileExists(atPath: conflict.targetURL.path) {
+                try FileManager.default.removeItem(at: conflict.targetURL)
+            }
+
+            try importFileData(from: conflict.sourceURL, to: conflict.targetURL)
+            recordSuccessfulImport(
+                targetURL: conflict.targetURL,
+                fileNameKey: conflict.fileName.lowercased(),
+                contentKind: conflict.contentKind,
+                session: &session
+            )
+            processPendingImportSession(session)
+        } catch {
+            renameAlertMessage = "Couldn't import the file: \(error.localizedDescription)"
+            finishPendingImportSession(session)
+        }
+    }
+
+    private func resolvePendingImportConflictBySkipping() {
+        guard let session = pendingImportSession else {
+            pendingImportConflict = nil
+            return
+        }
+
+        pendingImportConflict = nil
+        pendingImportSession = nil
+        processPendingImportSession(session)
+    }
+
+    private func cancelPendingImportSession() {
+        guard let session = pendingImportSession else {
+            pendingImportConflict = nil
+            return
+        }
+
+        pendingImportConflict = nil
+        pendingImportSession = nil
+        finishPendingImportSession(session)
+    }
+
+    private func finishPendingImportSession(_ session: PendingImportSession) {
+        pendingImportConflict = nil
+        pendingImportSession = nil
+
+        guard session.importedAnything else { return }
 
         markImportedContentChanged()
 
-        if let firstImportedDocumentURL {
+        if let firstImportedDocumentURL = session.firstImportedDocumentURL {
             loadFunctionKeys(firstImportedDocumentURL)
         }
 
-        if let firstImportedImageURL, listMode == .images || selectedImageURL == nil {
+        if let firstImportedImageURL = session.firstImportedImageURL,
+           session.importListMode == .images || selectedImageURL == nil {
             persistSelectedImage(firstImportedImageURL)
         }
 
-        if let firstImportedSoundURL, listMode == .sounds || selectedSoundURL == nil {
+        if let firstImportedSoundURL = session.firstImportedSoundURL,
+           session.importListMode == .sounds || selectedSoundURL == nil {
             persistSelectedSound(firstImportedSoundURL)
         }
     }
