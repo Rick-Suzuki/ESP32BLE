@@ -1,14 +1,9 @@
 
 
 
-change everything as suggested
-do not chg led timing, comments are incorrect
+Hi, I've stopped you searching because you're taking such a long time (a number of hours).
 
-give me complete code
-
-
-qweyttt
-
+Do you want me to switch to iOS 18 so you can see what compiles and what doesn't? That might be easier than going through all the code. Or is there any other way I can help you?
 
 
 1 2 3 4 5 6 7 8 9 0 a b c d e f g h i j k
