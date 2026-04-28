@@ -10,7 +10,7 @@ extension KeyboardScreen {
     }
 
     var activeModifierTokens: [String] {
-        KeyboardModifier.allCases
+        KeyboardModifier.orderedCases
             .filter { activeModifiers.contains($0) }
             .map(\.token)
     }
@@ -21,10 +21,13 @@ extension KeyboardScreen {
         } else {
             activeModifiers.insert(modifier)
         }
+
+        syncBufferedTokensWithActiveModifiers()
     }
 
     func resetModifierToggles() {
         activeModifiers.removeAll()
+        syncBufferedTokensWithActiveModifiers()
     }
 
     func sendKeyWithStickyModifiers(_ keyToken: String) {
@@ -32,16 +35,18 @@ extension KeyboardScreen {
     }
 
     func sendTokens(_ tokens: [String]) {
-        guard !tokens.isEmpty else {
+        let normalizedTokens = normalizedModifierTokenSequence(tokens)
+
+        guard !normalizedTokens.isEmpty else {
             return
         }
 
         if isSendOnReturnMode {
-            replaceSoftKeyTokensBuffer(with: tokens)
+            replaceSoftKeyTokensBuffer(with: normalizedTokens)
             return
         }
 
-        sendTokensDirectlyToBLE(tokens)
+        sendTokensDirectlyToBLE(normalizedTokens)
     }
 
     func sendTokensDirectlyToBLE(_ tokens: [String]) {
@@ -80,5 +85,24 @@ extension KeyboardScreen {
 
         sendModifiedTypedText()
         clearTypingArea()
+    }
+
+    func normalizedModifierTokenSequence(_ tokens: [String]) -> [String] {
+        let activeModifierSet = Set(tokens.compactMap(KeyboardModifier.init(token:)))
+        let orderedModifierTokens = KeyboardModifier.orderedCases
+            .filter { activeModifierSet.contains($0) }
+            .map(\.token)
+        let nonModifierTokens = tokens.filter { KeyboardModifier(token: $0) == nil }
+        return orderedModifierTokens + nonModifierTokens
+    }
+
+    func syncBufferedTokensWithActiveModifiers() {
+        guard isSendOnReturnMode else {
+            return
+        }
+
+        let nonModifierTokens = bufferedSoftKeyTokens.filter { KeyboardModifier(token: $0) == nil }
+        bufferedSoftKeyTokens = activeModifierTokens + nonModifierTokens
+        syncTypingTextWithBufferedTokens()
     }
 }

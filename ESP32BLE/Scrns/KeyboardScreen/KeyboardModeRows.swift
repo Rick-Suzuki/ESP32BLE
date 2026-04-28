@@ -175,8 +175,8 @@ extension KeyboardScreen {
                 resetModifierToggles()
             },
             modifierCell(.control),
-            modifierCell(.shift),
             modifierCell(.option),
+            modifierCell(.shift),
             modifierCell(.command),
             keyTokenCell(title: "", systemImageName: "triangle.fill", keyToken: "UP", background: arrowColor, applyStickyModifiers: true),
             keyTokenCell(title: "", systemImageName: "triangle.fill", keyToken: "DOWN", background: arrowColor, applyStickyModifiers: true),

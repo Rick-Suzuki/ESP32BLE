@@ -24,7 +24,7 @@ struct MainScreenSlotEditorOverlay: View {
     @AppStorage("slotEditorClipboardAction") private var clipboardActionDraft = ""
     @AppStorage("slotEditorClipboardRight") private var clipboardRightDraft = ""
     private let rightColumnButtonWidth: CGFloat = 90
-    private let orderedModifierPrefixes = ["ctl:", "sh:", "op:", "cm:"]
+    private let orderedModifierPrefixes = ["ctl:", "op:", "sh:", "cm:"]
     private let supportedColorCodes = "lwbgorpucya12345"
 		
 	// MARK: - BM:🟦 SF symbols list
@@ -110,8 +110,8 @@ struct MainScreenSlotEditorOverlay: View {
                     HStack(spacing: buttonSpacing) {
                         helperInsertButton("F")
                         helperInsertButton("ctl:")
-                        helperInsertButton("sh:")
                         helperInsertButton("op:")
+                        helperInsertButton("sh:")
                         helperInsertButton("cm:")
 
                         helperInsertButton("ESC:")

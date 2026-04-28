@@ -94,20 +94,22 @@ struct Mode4RowDefinition {
 
 enum KeyboardModifier: CaseIterable, Hashable {
     case control
-    case shift
     case option
+    case shift
     case command
+
+    static let orderedCases: [KeyboardModifier] = [.control, .option, .shift, .command]
 
     var title: String {
         switch self {
         case .control:
-            return "ctl"
+            return "⌃:"
         case .shift:
-            return "sh"
+            return "⇧:"
         case .option:
-            return "opt"
+            return "⌥:"
         case .command:
-            return "cmd"
+            return "⌘:"
         }
     }
 
@@ -121,6 +123,25 @@ enum KeyboardModifier: CaseIterable, Hashable {
             return "op"
         case .command:
             return "cm"
+        }
+    }
+
+    var displayToken: String {
+        title
+    }
+
+    nonisolated init?(token: String) {
+        switch token {
+        case "ct":
+            self = .control
+        case "sh":
+            self = .shift
+        case "op":
+            self = .option
+        case "cm":
+            self = .command
+        default:
+            return nil
         }
     }
 }

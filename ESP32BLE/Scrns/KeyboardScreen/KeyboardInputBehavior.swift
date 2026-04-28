@@ -46,7 +46,7 @@ extension KeyboardScreen {
             return
         }
 
-        if !bufferedSoftKeyTokens.isEmpty && typingText != bufferedSoftKeyTokens.joined(separator: ":") {
+        if !bufferedSoftKeyTokens.isEmpty && typingText != displayText(for: bufferedSoftKeyTokens) {
             bufferedSoftKeyTokens.removeAll()
         }
     }
@@ -100,7 +100,7 @@ extension KeyboardScreen {
     }
 
     func syncTypingTextWithBufferedTokens() {
-        typingText = bufferedSoftKeyTokens.joined(separator: ":")
+        typingText = displayText(for: bufferedSoftKeyTokens)
     }
 
     func clearTypingArea() {
@@ -130,5 +130,21 @@ extension KeyboardScreen {
                 typingText = ""
             }
         }
+    }
+
+    func displayText(for tokens: [String]) -> String {
+        normalizedModifierTokenSequence(tokens)
+            .map { token in
+                if let modifier = KeyboardModifier(token: token) {
+                    return modifier.displayToken
+                }
+
+                if token.hasPrefix("f"), token.dropFirst().allSatisfy(\.isNumber) {
+                    return token.uppercased()
+                }
+
+                return token
+            }
+            .joined(separator: " ")
     }
 }
