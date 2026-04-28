@@ -25,6 +25,7 @@ struct MainScreenSlotEditorOverlay: View {
     @AppStorage("slotEditorClipboardRight") private var clipboardRightDraft = ""
     private let rightColumnButtonWidth: CGFloat = 90
     private let orderedModifierPrefixes = ["ctl:", "op:", "sh:", "cm:"]
+    private let displayModifierPrefixes = ["⌃:", "⌥:", "⇧:", "⌘:"]
     private let supportedColorCodes = "lwbgorpucya12345"
 		
 	// MARK: - BM:🟦 SF symbols list
@@ -109,10 +110,10 @@ struct MainScreenSlotEditorOverlay: View {
 
                     HStack(spacing: buttonSpacing) {
                         helperInsertButton("F")
-                        helperInsertButton("ctl:")
-                        helperInsertButton("op:")
-                        helperInsertButton("sh:")
-                        helperInsertButton("cm:")
+                        helperInsertButton(label: "⌃:", insertedText: "ctl:")
+                        helperInsertButton(label: "⌥:", insertedText: "op:")
+                        helperInsertButton(label: "⇧:", insertedText: "sh:")
+                        helperInsertButton(label: "⌘:", insertedText: "cm:")
 
                         helperInsertButton("ESC:")
                         helperInsertButton("RET:")
@@ -288,6 +289,46 @@ struct MainScreenSlotEditorOverlay: View {
             .joined()
 
         return orderedPrefix + remainingText
+    }
+
+    private func displayedActionDraft(_ rawActionText: String) -> String {
+        var remainingText = rawActionText
+        var displayPrefix = ""
+
+        var didStripModifier = true
+        while didStripModifier {
+            didStripModifier = false
+            for (index, knownModifier) in orderedModifierPrefixes.enumerated() {
+                if remainingText.hasPrefix(knownModifier) {
+                    displayPrefix += displayModifierPrefixes[index]
+                    remainingText.removeFirst(knownModifier.count)
+                    didStripModifier = true
+                    break
+                }
+            }
+        }
+
+        return displayPrefix + remainingText
+    }
+
+    private func normalizedActionDraftFromDisplayedText(_ displayedActionText: String) -> String {
+        var remainingText = displayedActionText
+        var rawPrefix = ""
+
+        var didStripModifier = true
+        while didStripModifier {
+            didStripModifier = false
+            for (index, displayModifier) in displayModifierPrefixes.enumerated() {
+                if remainingText.hasPrefix(displayModifier) {
+                    rawPrefix += orderedModifierPrefixes[index]
+                    remainingText.removeFirst(displayModifier.count)
+                    didStripModifier = true
+                    break
+                }
+            }
+        }
+
+        return rawPrefix + remainingText
     }
 
     private func helperInsertButton(systemImage: String, rotationDegrees: Double, insertedText: String) -> some View {
@@ -597,7 +638,14 @@ struct MainScreenSlotEditorOverlay: View {
     }
 
     private var actionTextBinding: Binding<String> {
-        $actionDraft
+        Binding(
+            get: {
+                displayedActionDraft(actionDraft)
+            },
+            set: { newValue in
+                actionDraft = normalizedActionDraftFromDisplayedText(newValue)
+            }
+        )
     }
 
     private var rightTextBinding: Binding<String> {
