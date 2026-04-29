@@ -235,7 +235,9 @@ struct MainScreenSlotEditorOverlay: View {
             if orderedModifierPrefixes.contains(insertedText) {
                 actionDraft = toggledModifierPrefix(insertedText)
                 activeEditorField = .action
-                actionInputController.focus()
+                DispatchQueue.main.async {
+                    actionInputController.focusAtStart()
+                }
             } else if actionFieldOnlyInsertions.contains(insertedText) {
                 actionInputController.insertText(insertedText)
                 activeEditorField = .action

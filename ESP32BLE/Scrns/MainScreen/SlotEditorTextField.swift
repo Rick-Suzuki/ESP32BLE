@@ -36,6 +36,18 @@ final class SlotEditorInputController {
     func focus() {
         textField?.becomeFirstResponder()
     }
+
+    func focusAtStart() {
+        guard let textField else { return }
+        textField.becomeFirstResponder()
+
+        let startPosition = textField.beginningOfDocument
+        guard let textRange = textField.textRange(from: startPosition, to: startPosition) else {
+            return
+        }
+
+        textField.selectedTextRange = textRange
+    }
 }
 
 struct SlotEditorTextField: UIViewRepresentable {

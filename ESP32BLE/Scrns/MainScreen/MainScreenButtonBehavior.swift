@@ -496,7 +496,14 @@ extension MainScreen {
             return nil
         }
 
-        let clipboardText = String(trimmedSendText.dropFirst(3)).trimmingCharacters(in: .whitespacesAndNewlines)
+        let quoteCharacters = CharacterSet(charactersIn: "'\"‘’“”`´")
+        let clipboardText = String(trimmedSendText.dropFirst(3))
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .unicodeScalars
+            .filter { !quoteCharacters.contains($0) }
+            .map(String.init)
+            .joined()
+            .trimmingCharacters(in: .whitespacesAndNewlines)
         return clipboardText.isEmpty ? nil : clipboardText
     }
 
