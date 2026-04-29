@@ -1539,20 +1539,23 @@ private struct MainGridStepDownCounterWidgetView: View {
 }
 
 final class MainGridSharedTimerState: ObservableObject {
-    @Published var activeWidgetID: String?
-    @Published var configuredDuration = 0
-    @Published var remainingSeconds = 0
-    @Published var isRunning = false
-    @Published var isCompletionSoundLooping = false
+    struct TimerSnapshot {
+        var configuredDuration = 0
+        var remainingSeconds = 0
+        var isRunning = false
+        var isCompletionSoundLooping = false
+    }
 
-    private var completionSoundFilename: String?
-    private var startCompletionSoundLoopCallback: ((String) -> Void)?
-    private var stopCompletionSoundLoopCallback: (() -> Void)?
-    private var endDate: Date?
-    private var tickTask: Task<Void, Never>?
+    @Published private var timerSnapshots: [String: TimerSnapshot] = [:]
+
+    private var completionSoundFilenames: [String: String?] = [:]
+    private var startCompletionSoundLoopCallbacks: [String: (String) -> Void] = [:]
+    private var stopCompletionSoundLoopCallbacks: [String: () -> Void] = [:]
+    private var endDates: [String: Date] = [:]
+    private var tickTasks: [String: Task<Void, Never>] = [:]
 
     deinit {
-        tickTask?.cancel()
+        tickTasks.values.forEach { $0.cancel() }
     }
 
     func startTimer(
@@ -1562,20 +1565,22 @@ final class MainGridSharedTimerState: ObservableObject {
         onPlayCompletionSound: @escaping (String) -> Void,
         onStopCompletionSound: @escaping () -> Void
     ) {
-        stopCompletionSoundLoop()
-        tickTask?.cancel()
-        tickTask = nil
+        stopCompletionSoundLoop(widgetID: widgetID)
+        cancelTickTask(widgetID: widgetID)
 
-        activeWidgetID = widgetID
-        configuredDuration = max(duration, 0)
-        remainingSeconds = configuredDuration
-        isRunning = configuredDuration > 0
-        endDate = isRunning ? Date().addingTimeInterval(TimeInterval(configuredDuration)) : nil
-        self.completionSoundFilename = normalizedCompletionSoundFilename(completionSoundFilename)
-        startCompletionSoundLoopCallback = onPlayCompletionSound
-        stopCompletionSoundLoopCallback = onStopCompletionSound
+        let resolvedDuration = max(duration, 0)
+        var snapshot = timerSnapshots[widgetID] ?? TimerSnapshot()
+        snapshot.configuredDuration = resolvedDuration
+        snapshot.remainingSeconds = resolvedDuration
+        snapshot.isRunning = resolvedDuration > 0
+        snapshot.isCompletionSoundLooping = false
+        timerSnapshots[widgetID] = snapshot
+        endDates[widgetID] = snapshot.isRunning ? Date().addingTimeInterval(TimeInterval(resolvedDuration)) : nil
+        completionSoundFilenames[widgetID] = normalizedCompletionSoundFilename(completionSoundFilename)
+        startCompletionSoundLoopCallbacks[widgetID] = onPlayCompletionSound
+        stopCompletionSoundLoopCallbacks[widgetID] = onStopCompletionSound
 
-        guard isRunning else {
+        guard snapshot.isRunning else {
             return
         }
 
@@ -1589,7 +1594,7 @@ final class MainGridSharedTimerState: ObservableObject {
         onPlayCompletionSound: @escaping (String) -> Void,
         onStopCompletionSound: @escaping () -> Void
     ) {
-        if activeWidgetID != widgetID {
+        guard timerSnapshots[widgetID] != nil else {
             startTimer(
                 widgetID: widgetID,
                 duration: duration,
@@ -1600,39 +1605,44 @@ final class MainGridSharedTimerState: ObservableObject {
             return
         }
 
-        stopCompletionSoundLoop()
+        stopCompletionSoundLoop(widgetID: widgetID)
 
-        if remainingSeconds <= 0 {
-            remainingSeconds = max(duration, 0)
+        var snapshot = timerSnapshots[widgetID] ?? TimerSnapshot()
+        if snapshot.remainingSeconds <= 0 {
+            snapshot.remainingSeconds = max(duration, 0)
         }
 
-        configuredDuration = max(duration, 0)
-        self.completionSoundFilename = normalizedCompletionSoundFilename(completionSoundFilename)
-        startCompletionSoundLoopCallback = onPlayCompletionSound
-        stopCompletionSoundLoopCallback = onStopCompletionSound
+        snapshot.configuredDuration = max(duration, 0)
+        snapshot.isCompletionSoundLooping = false
+        completionSoundFilenames[widgetID] = normalizedCompletionSoundFilename(completionSoundFilename)
+        startCompletionSoundLoopCallbacks[widgetID] = onPlayCompletionSound
+        stopCompletionSoundLoopCallbacks[widgetID] = onStopCompletionSound
 
-        guard remainingSeconds > 0 else {
-            isRunning = false
-            endDate = nil
+        guard snapshot.remainingSeconds > 0 else {
+            snapshot.isRunning = false
+            timerSnapshots[widgetID] = snapshot
+            endDates[widgetID] = nil
             return
         }
 
-        isRunning = true
-        endDate = Date().addingTimeInterval(TimeInterval(remainingSeconds))
+        snapshot.isRunning = true
+        timerSnapshots[widgetID] = snapshot
+        endDates[widgetID] = Date().addingTimeInterval(TimeInterval(snapshot.remainingSeconds))
         startTicking(for: widgetID)
     }
 
     func pauseTimer(widgetID: String) {
-        guard activeWidgetID == widgetID else {
+        guard timerSnapshots[widgetID] != nil else {
             return
         }
 
-        stopCompletionSoundLoop()
-        syncRemainingFromEndDate()
-        isRunning = false
-        endDate = nil
-        tickTask?.cancel()
-        tickTask = nil
+        stopCompletionSoundLoop(widgetID: widgetID)
+        syncRemainingFromEndDate(widgetID: widgetID)
+        var snapshot = timerSnapshots[widgetID] ?? TimerSnapshot()
+        snapshot.isRunning = false
+        timerSnapshots[widgetID] = snapshot
+        endDates[widgetID] = nil
+        cancelTickTask(widgetID: widgetID)
     }
 
     func resetAndPauseTimer(
@@ -1642,32 +1652,35 @@ final class MainGridSharedTimerState: ObservableObject {
         onPlayCompletionSound: @escaping (String) -> Void,
         onStopCompletionSound: @escaping () -> Void
     ) {
-        stopCompletionSoundLoop()
-        tickTask?.cancel()
-        tickTask = nil
+        stopCompletionSoundLoop(widgetID: widgetID)
+        cancelTickTask(widgetID: widgetID)
 
-        activeWidgetID = widgetID
-        configuredDuration = max(duration, 0)
-        remainingSeconds = configuredDuration
-        isRunning = false
-        endDate = nil
-        self.completionSoundFilename = normalizedCompletionSoundFilename(completionSoundFilename)
-        startCompletionSoundLoopCallback = onPlayCompletionSound
-        stopCompletionSoundLoopCallback = onStopCompletionSound
+        let resolvedDuration = max(duration, 0)
+        timerSnapshots[widgetID] = TimerSnapshot(
+            configuredDuration: resolvedDuration,
+            remainingSeconds: resolvedDuration,
+            isRunning: false,
+            isCompletionSoundLooping: false
+        )
+        endDates[widgetID] = nil
+        completionSoundFilenames[widgetID] = normalizedCompletionSoundFilename(completionSoundFilename)
+        startCompletionSoundLoopCallbacks[widgetID] = onPlayCompletionSound
+        stopCompletionSoundLoopCallbacks[widgetID] = onStopCompletionSound
     }
 
-    func stopCompletionSoundLoop() {
-        guard isCompletionSoundLooping else {
+    func stopCompletionSoundLoop(widgetID: String) {
+        guard var snapshot = timerSnapshots[widgetID], snapshot.isCompletionSoundLooping else {
             return
         }
 
-        stopCompletionSoundLoopCallback?()
-        isCompletionSoundLooping = false
+        stopCompletionSoundLoopCallbacks[widgetID]?()
+        snapshot.isCompletionSoundLooping = false
+        timerSnapshots[widgetID] = snapshot
     }
 
     private func startTicking(for widgetID: String) {
-        tickTask?.cancel()
-        tickTask = Task { [weak self] in
+        cancelTickTask(widgetID: widgetID)
+        let task = Task { [weak self] in
             guard let self else {
                 return
             }
@@ -1676,41 +1689,63 @@ final class MainGridSharedTimerState: ObservableObject {
                 try? await Task.sleep(for: .seconds(1))
 
                 await MainActor.run {
-                    guard self.activeWidgetID == widgetID, self.isRunning else {
+                    guard var snapshot = self.timerSnapshots[widgetID], snapshot.isRunning else {
                         return
                     }
 
-                    self.syncRemainingFromEndDate()
+                    self.syncRemainingFromEndDate(widgetID: widgetID)
+                    snapshot = self.timerSnapshots[widgetID] ?? TimerSnapshot()
 
-                    guard self.remainingSeconds == 0 else {
+                    guard snapshot.remainingSeconds == 0 else {
                         return
                     }
 
-                    self.isRunning = false
-                    self.endDate = nil
-                    self.tickTask?.cancel()
-                    self.tickTask = nil
+                    snapshot.isRunning = false
+                    self.timerSnapshots[widgetID] = snapshot
+                    self.endDates[widgetID] = nil
+                    self.cancelTickTask(widgetID: widgetID)
 
-                    if let completionSoundFilename = self.completionSoundFilename {
-                        self.startCompletionSoundLoopCallback?(completionSoundFilename)
-                        self.isCompletionSoundLooping = true
+                    if let completionSoundFilename = self.completionSoundFilenames[widgetID] ?? nil {
+                        self.startCompletionSoundLoopCallbacks[widgetID]?(completionSoundFilename)
+                        snapshot.isCompletionSoundLooping = true
+                        self.timerSnapshots[widgetID] = snapshot
                     }
                 }
             }
         }
+        tickTasks[widgetID] = task
     }
 
-    private func syncRemainingFromEndDate() {
-        guard let endDate else {
+    private func syncRemainingFromEndDate(widgetID: String) {
+        guard let endDate = endDates[widgetID] else {
             return
         }
 
-        remainingSeconds = max(Int(ceil(endDate.timeIntervalSinceNow)), 0)
+        var snapshot = timerSnapshots[widgetID] ?? TimerSnapshot()
+        snapshot.remainingSeconds = max(Int(ceil(endDate.timeIntervalSinceNow)), 0)
+        timerSnapshots[widgetID] = snapshot
+    }
+
+    private func cancelTickTask(widgetID: String) {
+        tickTasks[widgetID]?.cancel()
+        tickTasks[widgetID] = nil
     }
 
     private func normalizedCompletionSoundFilename(_ filename: String?) -> String? {
         let trimmedFilename = filename?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         return trimmedFilename.isEmpty ? nil : trimmedFilename
+    }
+
+    func remainingSeconds(for widgetID: String, default defaultValue: Int) -> Int {
+        timerSnapshots[widgetID]?.remainingSeconds ?? defaultValue
+    }
+
+    func isRunning(widgetID: String) -> Bool {
+        timerSnapshots[widgetID]?.isRunning ?? false
+    }
+
+    func isCompletionSoundLooping(widgetID: String) -> Bool {
+        timerSnapshots[widgetID]?.isCompletionSoundLooping ?? false
     }
 }
 
@@ -1831,7 +1866,7 @@ private struct MainGridTimerWidgetView: View {
     }
 
     private var displayedRemainingSeconds: Int {
-        isActiveTimer ? sharedTimer.remainingSeconds : configuredDuration
+        sharedTimer.remainingSeconds(for: widgetID, default: configuredDuration)
     }
 
     private var formattedRemainingTime: String {
@@ -1896,12 +1931,12 @@ private struct MainGridTimerWidgetView: View {
             return
         }
 
-        if isActiveTimer && sharedTimer.isCompletionSoundLooping {
-            sharedTimer.stopCompletionSoundLoop()
+        if sharedTimer.isCompletionSoundLooping(widgetID: widgetID) {
+            sharedTimer.stopCompletionSoundLoop(widgetID: widgetID)
             return
         }
 
-        if isActiveTimer && sharedTimer.isRunning {
+        if sharedTimer.isRunning(widgetID: widgetID) {
             sharedTimer.pauseTimer(widgetID: widgetID)
             return
         }
@@ -1923,10 +1958,6 @@ private struct MainGridTimerWidgetView: View {
             onPlayCompletionSound: onPlayCompletionSound,
             onStopCompletionSound: onStopCompletionSound
         )
-    }
-
-    private var isActiveTimer: Bool {
-        sharedTimer.activeWidgetID == widgetID
     }
 }
 
