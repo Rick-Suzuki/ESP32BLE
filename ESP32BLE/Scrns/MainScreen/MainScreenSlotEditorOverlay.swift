@@ -7,15 +7,20 @@ struct MainScreenSlotEditorOverlay: View {
     }
 
     @Binding var editingSlotText: String
+    let editingSlotIndex: Int?
+    let gridDimensions: GridDimensions
     let focusBinding: FocusState<Bool>.Binding
     let buttonSpacing: CGFloat
     let helperButtonWidth: CGFloat
     let onCancel: () -> Void
     let onCommit: () -> Void
+    let onSave: () -> Void
     let onTest: () -> Void
     let onCopy: () -> Void
     let onPaste: () -> Void
     let onVisibilityChange: (Bool) -> Void
+    let onSelectPreviousButton: () -> Void
+    let onSelectNextButton: () -> Void
     @State private var actionInputController = SlotEditorInputController()
     @State private var rightInputController = SlotEditorInputController()
     @State private var activeEditorField: ActiveEditorField = .action
@@ -33,6 +38,8 @@ struct MainScreenSlotEditorOverlay: View {
 	// MARK: - BM:🟦 SF symbols list
 	
     private let visibilityToggleSymbolToken = "__visibility_toggle__"
+    private let previousButtonSelectionSymbolToken = "__previous_button_selection__"
+    private let nextButtonSelectionSymbolToken = "__next_button_selection__"
     private let visibleEyeSymbolName = "eye"
     private let hiddenEyeSymbolName = "eye.slash"
     private let leftSymbolNames = [
@@ -40,7 +47,7 @@ struct MainScreenSlotEditorOverlay: View {
         "lightbulb.max.fill", "speaker.wave.2", "star", "heart", "bell"
     ]
     private let rightSymbolNames = [
-        "paperclip", "eye", "paperplane", "doc", "calendar", "camera",
+        "__previous_button_selection__", "__next_button_selection__", "paperplane", "doc", "calendar", "camera",
         "photo", "tray", "sun.max.fill", "link"
     ]
 	
@@ -123,21 +130,7 @@ struct MainScreenSlotEditorOverlay: View {
                         helperInsertButton("CA:")
                         helperBackspaceButton()
 
-                        Button("cancel") {
-                            ButtonClickFeedback.playIfEnabled()
-                            onCancel()
-                        }
-                        .buttonStyle(.plain)
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 14)
-                        .frame(width: 90)
-                        .frame(minHeight: 44)
-                        .background(Color.gray.opacity(0.45))
-                        .overlay {
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.gray.opacity(0.5), lineWidth: 1.5)
-                        }
-                        .clipShape(.rect(cornerRadius: 12))
+                        deleteButtonPlaceholder
                     }
 
                     HStack(alignment: .top, spacing: buttonSpacing) {
@@ -171,7 +164,7 @@ struct MainScreenSlotEditorOverlay: View {
                                 helperInsertButton(systemImage: "triangle.fill", rotationDegrees: 180, insertedText: "DOWN:")
                                 helperInsertButton(systemImage: "triangle.fill", rotationDegrees: -90, insertedText: "LEFT:")
                                 helperInsertButton(systemImage: "triangle.fill", rotationDegrees: 90, insertedText: "RIGHT:")
-                                deleteButton
+                                saveButton
                             }
 
                             HStack(spacing: buttonSpacing) {
@@ -180,7 +173,7 @@ struct MainScreenSlotEditorOverlay: View {
                                 helperInsertButton("spk")
                                 helperInsertButton("kp")
                                 newlineInsertButton
-                                saveButton
+                                closeButton
                             }
                         }
                     }
@@ -458,29 +451,30 @@ struct MainScreenSlotEditorOverlay: View {
         .clipShape(.rect(cornerRadius: 12))
     }
 
-    private var deleteButton: some View {
-        Button("del btn") {
-            ButtonClickFeedback.playIfEnabled()
-            actionDraft = ""
-            rightDraft = ""
-            editingSlotText = ""
-            onCommit()
+    private var deleteButtonPlaceholder: some View {
+        Button(slotPositionLabel) {
         }
         .buttonStyle(.plain)
         .foregroundStyle(.white)
         .frame(width: rightColumnButtonWidth, height: 44)
-        .background(Color(red: 0.6, green: 0, blue: 0))
-        .overlay {
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.red, lineWidth: 1.5)
-        }
+        .background(Color.black)
         .clipShape(.rect(cornerRadius: 12))
+    }
+
+    private var slotPositionLabel: String {
+        guard let editingSlotIndex, gridDimensions.columns > 0 else {
+            return ""
+        }
+
+        let column = (editingSlotIndex % gridDimensions.columns) + 1
+        let row = (editingSlotIndex / gridDimensions.columns) + 1
+        return "btn \(column) \(row)"
     }
 
     private var saveButton: some View {
         Button("save") {
             ButtonClickFeedback.playIfEnabled()
-            onCommit()
+            onSave()
         }
         .buttonStyle(.plain)
         .foregroundStyle(.white)
@@ -491,6 +485,24 @@ struct MainScreenSlotEditorOverlay: View {
         .overlay {
             RoundedRectangle(cornerRadius: 12)
                 .stroke(Color.blue, lineWidth: 1.5)
+        }
+        .clipShape(.rect(cornerRadius: 12))
+    }
+
+    private var closeButton: some View {
+        Button("close") {
+            ButtonClickFeedback.playIfEnabled()
+            onCancel()
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(.white)
+        .padding(.horizontal, 14)
+        .frame(width: 90)
+        .frame(minHeight: 44)
+        .background(Color.gray.opacity(0.45))
+        .overlay {
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.gray.opacity(0.5), lineWidth: 1.5)
         }
         .clipShape(.rect(cornerRadius: 12))
     }
@@ -543,6 +555,14 @@ struct MainScreenSlotEditorOverlay: View {
             return AnyView(visibilityToggleButton(width: width))
         }
 
+        if symbolName == previousButtonSelectionSymbolToken {
+            return AnyView(slotSelectionButton(width: width, systemImage: "arrow.left", action: onSelectPreviousButton))
+        }
+
+        if symbolName == nextButtonSelectionSymbolToken {
+            return AnyView(slotSelectionButton(width: width, systemImage: "arrow.right", action: onSelectNextButton))
+        }
+
         if symbolName == "square.and.arrow.up.on.square.fill" {
             return AnyView(copySlotButton(width: width))
         }
@@ -585,6 +605,26 @@ struct MainScreenSlotEditorOverlay: View {
                 focusBinding.wrappedValue = true
         } label: {
             Image(systemName: currentVisibilitySymbolName)
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundStyle(.green)
+                .frame(width: width, height: 44)
+                .background(Color.black)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.white.opacity(0.8), lineWidth: 1.5)
+                }
+                .clipShape(.rect(cornerRadius: 12))
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func slotSelectionButton(width: CGFloat, systemImage: String, action: @escaping () -> Void) -> some View {
+        Button {
+            ButtonClickFeedback.playIfEnabled()
+            action()
+        } label: {
+            Image(systemName: systemImage)
                 .font(.system(size: 20, weight: .semibold))
                 .foregroundStyle(.green)
                 .frame(width: width, height: 44)

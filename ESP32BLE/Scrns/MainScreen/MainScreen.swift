@@ -307,15 +307,20 @@ struct MainScreen: View {
     private var slotEditorSection: some View {
         MainScreenSlotEditorOverlay(
             editingSlotText: $editingSlotText,
+            editingSlotIndex: editingSlotIndex,
+            gridDimensions: visibleGridDimensions,
             focusBinding: $isSlotEditorFocused,
             buttonSpacing: slotEditorButtonSpacing,
             helperButtonWidth: slotEditorHelperButtonWidth,
             onCancel: cancelSlotEditing,
             onCommit: commitSlotEditing,
+            onSave: saveSlotEditing,
             onTest: testEditingSlotText,
             onCopy: showSlotCopiedPopup,
             onPaste: showSlotPastedPopup,
-            onVisibilityChange: showSlotVisibilityPopup
+            onVisibilityChange: showSlotVisibilityPopup,
+            onSelectPreviousButton: selectPreviousEditableSlot,
+            onSelectNextButton: selectNextEditableSlot
         )
     }
 
@@ -347,6 +352,11 @@ struct MainScreen: View {
     private func showSlotVisibilityPopup(isHidden: Bool) {
         alertTitle = ""
         renameAlertMessage = isHidden ? "btn will\nbe hidden" : "btn will\nbe visible"
+    }
+
+    private func showSlotSavedPopup() {
+        alertTitle = ""
+        renameAlertMessage = "saved to file"
     }
 
     var mainGridButtonSpacing: CGFloat {

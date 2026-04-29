@@ -115,19 +115,61 @@ extension MainScreen {
         isSlotEditorFocused = true
     }
 
+    func selectPreviousEditableSlot() {
+        selectAdjacentEditableSlot(step: -1)
+    }
+
+    func selectNextEditableSlot() {
+        selectAdjacentEditableSlot(step: 1)
+    }
+
     func commitSlotEditing() {
         guard let editingSlotIndex else {
             return
         }
 
         _ = updateFunctionKeySlot(editingSlotIndex, editingSlotText)
-        cancelSlotEditing()
+    }
+
+    func saveSlotEditing() {
+        commitSlotEditing()
+        alertTitle = ""
+        renameAlertMessage = "saved to file"
     }
 
     func cancelSlotEditing() {
         editingSlotIndex = nil
         editingSlotText = ""
         isSlotEditorFocused = false
+    }
+
+    private func selectAdjacentEditableSlot(step: Int) {
+        guard let editingSlotIndex,
+              !functionKeys.isEmpty,
+              step != 0 else {
+            return
+        }
+
+        let maximumIndex = min(visibleBoxCount, functionKeys.count)
+        guard maximumIndex > 0 else {
+            return
+        }
+
+        var candidateIndex = editingSlotIndex
+        for _ in 0..<maximumIndex {
+            candidateIndex = (candidateIndex + step + maximumIndex) % maximumIndex
+            let candidateEntry = functionKeys[candidateIndex]
+            guard !candidateEntry.isBlankPlaceholder,
+                  !isEmptyButtonEntry(candidateEntry) else {
+                continue
+            }
+
+            activeDragIndex = nil
+            self.editingSlotIndex = candidateIndex
+            editingSlotText = editableText(for: candidateEntry)
+            isSlotEditorFocused = true
+            return
+        }
     }
 
     func duplicateSlotIfPossible(entry: FunctionKeyEntry, index: Int, gridDimensions: GridDimensions) {
