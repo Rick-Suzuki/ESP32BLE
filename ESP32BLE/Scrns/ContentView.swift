@@ -51,6 +51,61 @@ struct FunctionKeyEntry {
     }
 }
 
+private let compactDisplayModifierTokens: [(symbol: Character, code: String)] = [
+    ("⌃", "ct"),
+    ("⌥", "op"),
+    ("⇧", "sh"),
+    ("⌘", "cm")
+]
+
+func parsedActionTokens(from text: String) -> [String] {
+    text
+        .components(separatedBy: ":")
+        .flatMap { component -> [String] in
+            if !component.isEmpty,
+               component.allSatisfy({ $0.isWhitespace && !$0.isNewline }) {
+                return [" "]
+            }
+
+            let trimmedComponent = component.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmedComponent.isEmpty else {
+                return []
+            }
+
+            return expandedCompactDisplayModifierToken(trimmedComponent) ?? [trimmedComponent]
+        }
+}
+
+private func expandedCompactDisplayModifierToken(_ token: String) -> [String]? {
+    let trimmedToken = token.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !trimmedToken.isEmpty else {
+        return nil
+    }
+
+    var remainingToken = trimmedToken[...]
+    var activeModifierCodes = Set<String>()
+
+    while let firstCharacter = remainingToken.first,
+          let matchingModifier = compactDisplayModifierTokens.first(where: { $0.symbol == firstCharacter }) {
+        activeModifierCodes.insert(matchingModifier.code)
+        remainingToken.removeFirst()
+    }
+
+    guard !activeModifierCodes.isEmpty else {
+        return nil
+    }
+
+    var expandedTokens = compactDisplayModifierTokens
+        .compactMap { activeModifierCodes.contains($0.code) ? $0.code : nil }
+
+    let remainingComponent = String(remainingToken).trimmingCharacters(in: .whitespacesAndNewlines)
+    if !remainingComponent.isEmpty {
+        expandedTokens.append(remainingComponent)
+    }
+
+    return expandedTokens
+}
+
 private struct StoredGridDimensions: Codable {
     let columns: Int
     let rows: Int
@@ -1067,17 +1122,7 @@ struct ContentView: View {
             return parsedWidgetSendTexts(from: trimmedLeftText)
         }
 
-        return leftText
-            .components(separatedBy: ":")
-            .compactMap { component in
-                if !component.isEmpty,
-                   component.allSatisfy({ $0.isWhitespace && !$0.isNewline }) {
-                    return " "
-                }
-
-                let trimmedComponent = component.trimmingCharacters(in: .whitespacesAndNewlines)
-                return trimmedComponent.isEmpty ? nil : trimmedComponent
-            }
+        return parsedActionTokens(from: leftText)
     }
 
     private func parsedWidgetSendTexts(from text: String) -> [String] {

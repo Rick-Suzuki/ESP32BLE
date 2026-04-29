@@ -326,17 +326,7 @@ struct MainScreen: View {
         }
 
         let actionText = editingSlotText.components(separatedBy: "::").first ?? editingSlotText
-        let actionTokens = actionText
-            .components(separatedBy: ":")
-            .compactMap { component -> String? in
-                if !component.isEmpty,
-                   component.allSatisfy({ $0.isWhitespace && !$0.isNewline }) {
-                    return " "
-                }
-
-                let trimmedComponent = component.trimmingCharacters(in: .whitespacesAndNewlines)
-                return trimmedComponent.isEmpty ? nil : trimmedComponent
-            }
+        let actionTokens = parsedActionTokens(from: actionText)
 
         for actionToken in actionTokens where targetDocumentNameForSendText(actionToken) == nil {
             ble.sendLine(normalizedBluetoothSendText(actionToken))
