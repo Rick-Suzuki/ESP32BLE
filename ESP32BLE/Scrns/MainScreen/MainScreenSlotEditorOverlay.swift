@@ -26,6 +26,7 @@ struct MainScreenSlotEditorOverlay: View {
     @AppStorage("slotEditorClipboardRight") private var clipboardRightDraft = ""
     private let rightColumnButtonWidth: CGFloat = 90
     private let orderedModifierPrefixes = ["ctl:", "op:", "sh:", "cm:"]
+    private let actionFieldOnlyInsertions = ["SP:"]
     private let displayModifierPrefixes = ["⌃", "⌥", "⇧", "⌘"]
     private let supportedColorCodes = "lwbgorpucya12345"
 		
@@ -156,7 +157,7 @@ struct MainScreenSlotEditorOverlay: View {
 
                         VStack(spacing: buttonSpacing) {
                             HStack(spacing: buttonSpacing) {
-                                helperInsertButton("+")
+                                helperInsertButton("SP:")
                                 helperInsertButton("-")
                                 helperInsertButton(label: "\\", insertedText: "\\")
                                 helperInsertButton("*")
@@ -223,8 +224,8 @@ struct MainScreenSlotEditorOverlay: View {
     }
 
     private func helperInsertButton(label: String, insertedText: String) -> some View {
-        let isModifierButton = orderedModifierPrefixes.contains(insertedText)
-        let isDisabled = isModifierButton && activeEditorField == .text
+        let insertsIntoActionField = orderedModifierPrefixes.contains(insertedText) || actionFieldOnlyInsertions.contains(insertedText)
+        let isDisabled = insertsIntoActionField && activeEditorField == .text
 
         return Button {
             guard !isDisabled else {
@@ -233,6 +234,10 @@ struct MainScreenSlotEditorOverlay: View {
             ButtonClickFeedback.playIfEnabled()
             if orderedModifierPrefixes.contains(insertedText) {
                 actionDraft = toggledModifierPrefix(insertedText)
+                activeEditorField = .action
+                actionInputController.focus()
+            } else if actionFieldOnlyInsertions.contains(insertedText) {
+                actionInputController.insertText(insertedText)
                 activeEditorField = .action
                 actionInputController.focus()
             } else {

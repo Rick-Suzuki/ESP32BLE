@@ -104,6 +104,7 @@ extension MainScreen {
         let targetURL = targetURLForGridEntry(entry)
         let targetSoundFilename = targetSoundFilenameForGridEntry(entry)
         let targetAppURL = targetAppURLForGridEntry(entry)
+        let targetClipboardText = targetClipboardTextForGridEntry(entry)
 
         if let targetURL {
             UIApplication.shared.open(targetURL)
@@ -120,6 +121,10 @@ extension MainScreen {
                 renameAlertMessage = "Couldn't open \(targetAppURL.absoluteString)."
             }
             return
+        }
+
+        if let targetClipboardText {
+            UIPasteboard.general.string = targetClipboardText
         }
 
         if let targetSoundFilename {
@@ -164,6 +169,7 @@ extension MainScreen {
                     targetSoundFilenameForSendText(sendText) == nil &&
                     targetSpokenTextForSendText(sendText) == nil &&
                     targetAppURLForSendText(sendText) == nil &&
+                    targetClipboardTextForSendText(sendText) == nil &&
                     targetWidgetDescriptorForSendText(sendText) == nil
             }
             .map(normalizedBluetoothSendText)
@@ -392,6 +398,10 @@ extension MainScreen {
         entry.sendTexts.compactMap(targetURLForSendText).first
     }
 
+    func targetClipboardTextForGridEntry(_ entry: FunctionKeyEntry) -> String? {
+        entry.sendTexts.compactMap(targetClipboardTextForSendText).first
+    }
+
     func targetAppURLForGridEntry(_ entry: FunctionKeyEntry) -> URL? {
         entry.sendTexts.compactMap(targetAppURLForSendText).first
     }
@@ -478,6 +488,18 @@ extension MainScreen {
         }
     }
 
+    func targetClipboardTextForSendText(_ sendText: String) -> String? {
+        let trimmedSendText = sendText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let loweredSendText = trimmedSendText.lowercased()
+
+        guard loweredSendText.hasPrefix("cb ") else {
+            return nil
+        }
+
+        let clipboardText = String(trimmedSendText.dropFirst(3)).trimmingCharacters(in: .whitespacesAndNewlines)
+        return clipboardText.isEmpty ? nil : clipboardText
+    }
+
     func targetSoundFilenameForSendText(_ sendText: String) -> String? {
         let trimmedSendText = sendText.trimmingCharacters(in: .whitespacesAndNewlines)
         let loweredSendText = trimmedSendText.lowercased()
@@ -485,6 +507,7 @@ extension MainScreen {
         guard !loweredSendText.hasPrefix("snd "),
               !loweredSendText.hasPrefix("amb "),
               !loweredSendText.hasPrefix("ambient "),
+              !loweredSendText.hasPrefix("cb "),
               !loweredSendText.hasPrefix("wid "),
               !loweredSendText.hasPrefix("widget ") else {
             return nil

@@ -1,43 +1,8 @@
 
 
+/Users/rick/00-Home/Xcode/Projects2
 
-Hi, I've stopped you searching because you're taking such a long time (a number of hours).
-
-Do you want me to switch to iOS 18 so you can see what compiles and what doesn't? That might be easier than going through all the code. Or is there any other way I can help you?
-
-
-1 2 3 4 5 6 7 8 9 0 a b c d e f g h i j k
-1 2 3 4 5 6 7 8 9 0 a b c d e f g h i j k
-1 2 3 4 5 6 7 8 9 0 a b c d e f g h i j k
-uio
-ui
-yu
-yu
+hellocb eeee
 
 
-
-ty
-
-/Users/rick/00-Home/Xcode/Projects2/100_IOS PROJECTS 🟩🟩/10_IN_PROG/ESP32_BLE✅
-/Users/rick/00-Home/Xcode/Projects2/100_IOS PROJECTS/10_IN_PROG/ESP32_BLE
-/Users/rick/00-Home/Xcode/Projects2/100_IOS PROJECTS/10_IN_PROG/ESP32_BLE
-/Users/rick/00-Home/Xcode/Projects2/100_IOS PROJECTS/10_IN_PROG/ESP32_BLE
-
-ff
-tpu=]don=]dt2
-o`=]dt=]d8e=]dtb1tpqth]th;
-
-🛠️⚙️🧰⚽️🅱️⭐️🍦🛜📸📻
-
-tpu=]don=]dt2
-o`=]dt=]d8e=]dtb1tpqth]th;
-
-change everything as suggested
-do not chg led code, comments are incorrect
-
-give me complete code
-
-
-
-
-
+eeee
