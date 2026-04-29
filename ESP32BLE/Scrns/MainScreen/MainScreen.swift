@@ -325,17 +325,44 @@ struct MainScreen: View {
     }
 
     private func testEditingSlotText() {
+        let actionText = editingSlotText.components(separatedBy: "::").first ?? editingSlotText
+        let actionTokens = parsedActionTokens(from: actionText)
+
+        for actionToken in actionTokens {
+            if let clipboardText = targetClipboardTextForSendText(actionToken) {
+                UIPasteboard.general.string = clipboardText
+            }
+        }
+
+        let bluetoothTokens = actionTokens
+            .filter { actionToken in
+                targetDocumentNameForSendText(actionToken) == nil &&
+                    targetURLForSendText(actionToken) == nil &&
+                    targetSoundFilenameForSendText(actionToken) == nil &&
+                    targetSpokenTextForSendText(actionToken) == nil &&
+                    targetAppURLForSendText(actionToken) == nil &&
+                    targetClipboardTextForSendText(actionToken) == nil &&
+                    targetWidgetDescriptorForSendText(actionToken) == nil
+            }
+            .map(normalizedBluetoothSendText)
+
+        guard !bluetoothTokens.isEmpty else {
+            return
+        }
+
         guard ble.isConnected else {
             alertTitle = "Bluetooth not connected"
             renameAlertMessage = "Bluetooth not connected. Bluetooth needs to be connected before sending data to the ESP32."
             return
         }
 
-        let actionText = editingSlotText.components(separatedBy: "::").first ?? editingSlotText
-        let actionTokens = parsedActionTokens(from: actionText)
+        guard bluetoothTokens.allSatisfy(isASCIIOnlyBluetoothText(_:)) else {
+            showBluetoothEmojiBlockedPopup()
+            return
+        }
 
-        for actionToken in actionTokens where targetDocumentNameForSendText(actionToken) == nil {
-            ble.sendLine(normalizedBluetoothSendText(actionToken))
+        for bluetoothToken in bluetoothTokens {
+            ble.sendLine(bluetoothToken)
         }
     }
 
