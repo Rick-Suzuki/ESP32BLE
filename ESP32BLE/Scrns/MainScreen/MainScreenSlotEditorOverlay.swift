@@ -15,6 +15,7 @@ struct MainScreenSlotEditorOverlay: View {
     let onTest: () -> Void
     let onCopy: () -> Void
     let onPaste: () -> Void
+    let onVisibilityChange: (Bool) -> Void
     @State private var actionInputController = SlotEditorInputController()
     @State private var rightInputController = SlotEditorInputController()
     @State private var activeEditorField: ActiveEditorField = .action
@@ -570,10 +571,11 @@ struct MainScreenSlotEditorOverlay: View {
     private func visibilityToggleButton(width: CGFloat) -> some View {
             Button {
                 ButtonClickFeedback.playIfEnabled()
-            isHiddenInNormalMode.toggle()
-            activeEditorField = .text
-            rightInputController.focus()
-            focusBinding.wrappedValue = true
+                isHiddenInNormalMode.toggle()
+                onVisibilityChange(isHiddenInNormalMode)
+                activeEditorField = .text
+                rightInputController.focus()
+                focusBinding.wrappedValue = true
         } label: {
             Image(systemName: currentVisibilitySymbolName)
                 .font(.system(size: 20, weight: .semibold))

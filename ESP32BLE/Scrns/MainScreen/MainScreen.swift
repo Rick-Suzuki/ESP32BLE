@@ -314,7 +314,8 @@ struct MainScreen: View {
             onCommit: commitSlotEditing,
             onTest: testEditingSlotText,
             onCopy: showSlotCopiedPopup,
-            onPaste: showSlotPastedPopup
+            onPaste: showSlotPastedPopup,
+            onVisibilityChange: showSlotVisibilityPopup
         )
     }
 
@@ -341,6 +342,11 @@ struct MainScreen: View {
     private func showSlotPastedPopup() {
         alertTitle = ""
         renameAlertMessage = "Pasted"
+    }
+
+    private func showSlotVisibilityPopup(isHidden: Bool) {
+        alertTitle = ""
+        renameAlertMessage = isHidden ? "btn will\nbe hidden" : "btn will\nbe visible"
     }
 
     var mainGridButtonSpacing: CGFloat {
