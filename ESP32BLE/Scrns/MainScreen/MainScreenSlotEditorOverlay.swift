@@ -30,6 +30,7 @@ struct MainScreenSlotEditorOverlay: View {
     @AppStorage("slotEditorClipboardAction") private var clipboardActionDraft = ""
     @AppStorage("slotEditorClipboardRight") private var clipboardRightDraft = ""
     private let rightColumnButtonWidth: CGFloat = 90
+    private let slotPositionFontSize: CGFloat = 25
     private let orderedModifierPrefixes = ["ctl:", "op:", "sh:", "cm:"]
     private let actionFieldOnlyInsertions = ["SP:"]
     private let displayModifierPrefixes = ["⌃", "⌥", "⇧", "⌘"]
@@ -452,23 +453,28 @@ struct MainScreenSlotEditorOverlay: View {
     }
 
     private var deleteButtonPlaceholder: some View {
-        Button(slotPositionLabel) {
-        }
-        .buttonStyle(.plain)
-        .foregroundStyle(.white)
-        .frame(width: rightColumnButtonWidth, height: 44)
-        .background(Color.black)
-        .clipShape(.rect(cornerRadius: 12))
+        slotPositionLabel
+            .frame(width: rightColumnButtonWidth, height: 44)
+            .background(Color.black)
+            .clipShape(.rect(cornerRadius: 12))
     }
 
-    private var slotPositionLabel: String {
-        guard let editingSlotIndex, gridDimensions.columns > 0 else {
-            return ""
-        }
+    @ViewBuilder
+    private var slotPositionLabel: some View {
+        if let editingSlotIndex, gridDimensions.columns > 0 {
+            let column = (editingSlotIndex % gridDimensions.columns) + 1
+            let row = (editingSlotIndex / gridDimensions.columns) + 1
 
-        let column = (editingSlotIndex % gridDimensions.columns) + 1
-        let row = (editingSlotIndex / gridDimensions.columns) + 1
-        return "btn \(column) \(row)"
+            HStack(spacing: 0) {
+				Text("\(column)")
+					.foregroundStyle(.green)
+                Text(" : ")
+                    .foregroundStyle(.white)
+				Text("\(row)")
+					.foregroundStyle(.red)
+            }
+            .font(.system(size: slotPositionFontSize, weight: .semibold))
+        }
     }
 
     private var saveButton: some View {
