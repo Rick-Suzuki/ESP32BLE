@@ -53,7 +53,7 @@ struct MainScreenSlotEditorOverlay: View {
 	
     // MARK: - BM:🟪 color keycodes
     private let colorKeyCodes: [(code: String?, label: String?, color: Color)] = [
-        ("l", "clr", Color(white: 0.22)),
+        ("l", "clr\ncol", Color(white: 0.22)),
         ("w", nil, Color.brown),
         ("b", nil, .blue),
         ("g", nil, .green),

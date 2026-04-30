@@ -217,7 +217,7 @@ struct MainScreenBottomBar: View {
         let speechRecognitionButtonWidth: CGFloat? = isPad ? toggleWidth : nil
         let usesCompactSpeechRecognitionButton = !isPad
         let effectiveSpeechBoxWidth = isPad ? speechBoxWidth : (speechBoxWidth * 0.5)
-        let toolbarButtonHeight: CGFloat = isPad ? 50 : 35
+        let toolbarButtonHeight: CGFloat = isPad ? 40 : 35
         let bottomToolbarButtonFont: Font = isPad ? .body : .system(size: 14, weight: .regular)
         let bottomToolbarMinimumScaleFactor: CGFloat = isPad ? 0.7 : 1
 
@@ -311,7 +311,7 @@ struct MainScreenBottomBar: View {
                 border: isSpeechRecognitionEnabled ? speechRecognitionActiveColor : inactiveButtonBorderColor,
                 isEnabled: !isGridEditModeEnabled,
                 usesCompactWidth: usesCompactSpeechRecognitionButton,
-                buttonHeight: toolbarButtonHeight,
+                buttonHeight: toolbarButtonHeight-5,
                 font: bottomToolbarButtonFont,
                 minimumScaleFactor: bottomToolbarMinimumScaleFactor,
                 action: onToggleSpeechRecognition
@@ -335,14 +335,14 @@ struct MainScreenBottomBar: View {
                 .clipShape(.rect(cornerRadius: 6))
 
             HStack(spacing: 8) {
-                stopSpeechButton(buttonHeight: toolbarButtonHeight)
+                stopSpeechButton(buttonHeight: toolbarButtonHeight-5)
 
                 toggleButton(
                     title: mainGridButtonMode.title,
                     background: mainGridButtonModeBackgroundColor,
                     border: mainGridButtonModeBorderColor,
                     isEnabled: !isGridEditModeEnabled,
-                    buttonHeight: toolbarButtonHeight,
+                    buttonHeight: toolbarButtonHeight-5,
                     font: bottomToolbarButtonFont,
                     minimumScaleFactor: bottomToolbarMinimumScaleFactor,
                     action: onCycleMainGridButtonMode

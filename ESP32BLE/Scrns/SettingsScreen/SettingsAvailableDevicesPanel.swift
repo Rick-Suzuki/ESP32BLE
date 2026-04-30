@@ -56,6 +56,8 @@ struct SettingsAvailableDevicesPanel: View {
 
                             if showsDeviceCheckmark(for: device) {
                                 Image(systemName: "checkmark.circle.fill")
+									.foregroundStyle(.green)
+
                             }
                         }
                         .padding(2)
@@ -101,7 +103,7 @@ struct SettingsAvailableDevicesPanel: View {
         .lineLimit(1)
         .minimumScaleFactor(0.7)
         .padding(.horizontal, 16)
-        .frame(width: settingsActionButtonWidth, height: settingsActionButtonHeight)
+        .frame(width: settingsActionButtonWidth, height: settingsActionButtonHeight-10)
         .background(sleepWakeButtonBackgroundColor)
         .clipShape(.rect(cornerRadius: 18))
         .disabled(!ble.isConnected)
@@ -170,7 +172,7 @@ struct SettingsAvailableDevicesPanel: View {
         .lineLimit(1)
         .minimumScaleFactor(0.7)
         .padding(.horizontal, 16)
-        .frame(width: settingsActionButtonWidth, height: settingsActionButtonHeight)
+        .frame(width: settingsActionButtonWidth, height: settingsActionButtonHeight-10)
         .background(isButtonClickEnabled ? Color.blue.opacity(0.5) : Color.gray.opacity(0.5))
         .clipShape(.rect(cornerRadius: 18))
     }

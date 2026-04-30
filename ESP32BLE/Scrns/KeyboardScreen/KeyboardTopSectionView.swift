@@ -72,9 +72,9 @@ struct KeyboardTopSectionView: View {
 
             HStack(spacing: 4) {
                 topControlButton(
-                    title: isSendImmediatelyEnabled.wrappedValue ? "Send Immediately" : "Send on Return",
+                    title: isSendImmediatelyEnabled.wrappedValue ? "Send instant" : "Send on Return",
                     background: isSendImmediatelyEnabled.wrappedValue ? .blue : Color.gray.opacity(0.45),
-                    width: topControlDoubleButtonWidth
+                    width: topControlDoubleButtonWidth-50
                 ) {
                     isSendImmediatelyEnabled.wrappedValue.toggle()
                 }
@@ -141,7 +141,7 @@ struct KeyboardTopSectionView: View {
         .font(.headline)
         .foregroundStyle(.white)
         .padding(.horizontal, 14)
-        .frame(minHeight: 44)
+        .frame(minHeight: 35)
         .background(background)
         .overlay {
             RoundedRectangle(cornerRadius: 12)

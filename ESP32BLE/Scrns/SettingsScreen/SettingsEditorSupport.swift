@@ -226,7 +226,7 @@ struct SettingsToolbarButton: View {
         .disabled(!isEnabled)
         .font(.headline)
         .foregroundStyle(isEnabled ? .white : Color(white: 0.8))
-        .padding(.horizontal, 14)
+        .padding(.horizontal, 5)
         .frame(minWidth: minWidth, minHeight: 44)
         .background(isEnabled ? backgroundColor : Color.gray.opacity(0.45))
         .overlay {

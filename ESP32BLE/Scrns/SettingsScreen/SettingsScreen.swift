@@ -12,11 +12,11 @@ struct SettingsScreen: View {
         var buttonTitle: String {
             switch self {
             case .files:
-                return "Files"
+                return "files"
             case .images:
-                return isPad ? "Images" : "imgs"
+                return "imgs"
             case .sounds:
-                return isPad ? "Sounds" : "snds"
+                return "snds"
             }
         }
 
