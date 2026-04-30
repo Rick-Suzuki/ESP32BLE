@@ -134,7 +134,7 @@ extension MainScreen {
     func saveSlotEditing() {
         commitSlotEditing()
         alertTitle = ""
-        renameAlertMessage = "saved to file"
+        renameAlertMessage = "btn has been\nsaved to file"
     }
 
     func cancelSlotEditing() {

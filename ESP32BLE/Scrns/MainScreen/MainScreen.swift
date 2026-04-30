@@ -122,9 +122,6 @@ struct MainScreen: View {
             .task {
                 await observeKeyboardFrameChanges()
             }
-            .overlay {
-                popupOverlay
-            }
             .onChange(of: renameAlertMessage) {
                 schedulePopupDismissIfNeeded()
             }
@@ -179,6 +176,11 @@ struct MainScreen: View {
                     slotEditorSection
                         .offset(y: topContentInset)
                 }
+
+                popupOverlay(
+                    isSlotEditorPresented: editingSlotIndex != nil,
+                    maskedScreenHeight: maskedScreenHeight
+                )
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         }
@@ -352,7 +354,7 @@ struct MainScreen: View {
 
         guard ble.isConnected else {
             alertTitle = "Bluetooth not connected"
-            renameAlertMessage = "Bluetooth not connected. Bluetooth needs to be connected before sending data to the ESP32."
+            renameAlertMessage = "Bluetooth needs to be connected\nbefore sending data to the ESP32."
             return
         }
 
@@ -383,7 +385,7 @@ struct MainScreen: View {
 
     private func showSlotSavedPopup() {
         alertTitle = ""
-        renameAlertMessage = "saved to file"
+        renameAlertMessage = "btn hasbeen\naved to file"
     }
 
     var mainGridButtonSpacing: CGFloat {
@@ -466,39 +468,64 @@ struct MainScreen: View {
     }
 
     @ViewBuilder
-    private var popupOverlay: some View {
+    private func popupOverlay(
+        isSlotEditorPresented: Bool,
+        maskedScreenHeight: CGFloat
+    ) -> some View {
         if let renameAlertMessage {
+            let isSlotEditorTopPopup = isSlotEditorPresented && (
+                alertTitle == "Bluetooth not connected" ||
+                renameAlertMessage == "btn has been\nsaved to file"
+            )
+
             VStack {
-                Spacer()
-
-                VStack(spacing: 8) {
-                    if !alertTitle.isEmpty, alertTitle != "Alert" {
-                        Text(alertTitle)
-                            .font(.headline)
-                            .foregroundStyle(.white)
-                    }
-
-                    Text(renameAlertMessage)
-                        .font(.body)
-                        .multilineTextAlignment(.center)
-                        .foregroundStyle(.white)
+                if isSlotEditorTopPopup {
+                    popupCard(message: renameAlertMessage)
+                        .padding(.top, max(72, maskedScreenHeight * 0.18))
+                } else if isSlotEditorPresented {
+                    Spacer(minLength: 0)
+                    popupCard(message: renameAlertMessage)
+                } else {
+                    Spacer()
+                    popupCard(message: renameAlertMessage)
                 }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 16)
-                .background(Color.black.opacity(0.88))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 14)
-                        .stroke(Color.white.opacity(0.25), lineWidth: 1)
-                }
-                .clipShape(RoundedRectangle(cornerRadius: 14))
-                .padding(.horizontal, 24)
 
-                Spacer()
+                if isSlotEditorTopPopup {
+                    Spacer(minLength: 0)
+                } else if isSlotEditorPresented {
+                    Spacer(minLength: max(32, maskedScreenHeight * 0.16))
+                } else {
+                    Spacer()
+                }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .transition(.opacity)
             .allowsHitTesting(false)
         }
+    }
+
+    private func popupCard(message: String) -> some View {
+        VStack(spacing: 8) {
+            if !alertTitle.isEmpty, alertTitle != "Alert" {
+                Text(alertTitle)
+                    .font(.headline)
+                    .foregroundStyle(.white)
+            }
+
+            Text(message)
+                .font(.body)
+                .multilineTextAlignment(.center)
+                .foregroundStyle(.white)
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 16)
+        .background(Color.black.opacity(0.88))
+        .overlay {
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(Color.white.opacity(0.25), lineWidth: 1)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .padding(.horizontal, 24)
     }
 
     private func schedulePopupDismissIfNeeded() {

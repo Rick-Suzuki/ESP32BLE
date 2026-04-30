@@ -2,7 +2,7 @@ import SwiftUI
 
 extension KeyboardScreen {
     private var bluetoothDisconnectedPopupMessage: String {
-        "Bluetooth not connected. Bluetooth needs to be connected before sending data to the ESP32."
+        "Bluetooth not connected.\nBluetooth needs to be connected before\nsending data to the ESP32."
     }
 
     func showBluetoothDisconnectedPopup() {
