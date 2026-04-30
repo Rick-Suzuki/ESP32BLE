@@ -1116,6 +1116,9 @@ struct SettingsScreen: View {
     }
 
     private func playSelectedSoundPreview(from soundURL: URL) {
+        soundPreviewPlayer?.stop()
+        soundPreviewPlayer = nil
+
         do {
             let player = try AVAudioPlayer(contentsOf: soundURL)
             player.prepareToPlay()
