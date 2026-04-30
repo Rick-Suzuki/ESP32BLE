@@ -82,6 +82,7 @@ struct MainScreen: View {
     let saveGridDimensions: (String, GridDimensions) -> Void
     let openKeyboardScreen: () -> Void
     let openSettingsScreen: () -> Void
+    let isSettingsScreenPresented: Bool
     @Binding var settingsBLEText: String
 
     var body: some View {
@@ -110,6 +111,10 @@ struct MainScreen: View {
             }
             .onChange(of: speechRecognition.latestRecognition) {
                 handleLatestRecognizedTextChange()
+            }
+            .onChange(of: isSettingsScreenPresented) {
+                guard !isSettingsScreenPresented else { return }
+                reloadSelectedDocumentIfAvailable()
             }
             .onDisappear {
                 handleMainScreenDisappear()

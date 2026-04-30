@@ -282,6 +282,7 @@ struct ContentView: View {
                             openSettingsScreen: {
                                 showSettingsScreen()
                             },
+                            isSettingsScreenPresented: isSettingsScreenPresented,
                             settingsBLEText: $settingsBLEText
                         )
                         .frame(width: containerWidth, height: containerHeight)

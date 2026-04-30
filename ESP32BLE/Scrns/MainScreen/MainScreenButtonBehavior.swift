@@ -4,7 +4,7 @@ import UIKit
 import Combine
 
 extension MainScreen {
-    private var defaultNewButtonEntryText: String { "F::" }
+    private var defaultNewButtonEntryText: String { "cb ::" }
     private var supportedMainScreenSFSymbolNames: Set<String> {
         [
             "folder", "eye", "magnifyingglass", "gearshape", "house",
