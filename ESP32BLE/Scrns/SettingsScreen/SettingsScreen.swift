@@ -424,6 +424,7 @@ struct SettingsScreen: View {
                 Button {
                     ButtonClickFeedback.playIfEnabled()
                     selectedTextToSpeechVoiceIdentifier = voice.identifier
+                    availableSpeechVoices = orderedSpeechVoices(availableSpeechVoices, selectedIdentifier: voice.identifier)
                     previewSpeechVoice(voice)
                 } label: {
                     if voice.identifier == resolvedTextToSpeechVoiceIdentifier {
@@ -1775,45 +1776,77 @@ struct SettingsScreen: View {
     private func loadSpeechVoicesIfNeeded() {
         guard availableSpeechVoices.isEmpty else { return }
 
-        availableSpeechVoices = AVSpeechSynthesisVoice.speechVoices()
+        let loadedVoices = AVSpeechSynthesisVoice.speechVoices()
             .map { voice in
                 let localeName = Locale.current.localizedString(forIdentifier: voice.language) ?? voice.language
                 return SpeechVoiceOption(
                     identifier: voice.identifier,
+                    localeIdentifier: voice.language,
                     languageCode: Locale(identifier: voice.language).language.languageCode?.identifier.lowercased() ?? "",
                     languageDisplayName: localeName,
                     name: voice.name,
                     menuTitle: "\(voice.name) (\(localeName))"
                 )
             }
-            .sorted {
-                let leftPriority = speechVoiceSortPriority(for: $0)
-                let rightPriority = speechVoiceSortPriority(for: $1)
 
-                if leftPriority != rightPriority {
-                    return leftPriority < rightPriority
-                }
-
-                if leftPriority == 2 {
-                    let languageComparison = $0.languageDisplayName.localizedCaseInsensitiveCompare($1.languageDisplayName)
-                    if languageComparison != .orderedSame {
-                        return languageComparison == .orderedAscending
-                    }
-                }
-
-                return $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
-            }
+        availableSpeechVoices = orderedSpeechVoices(
+            loadedVoices,
+            selectedIdentifier: selectedTextToSpeechVoiceIdentifier
+        )
     }
 
-    private func speechVoiceSortPriority(for voice: SpeechVoiceOption) -> Int {
-        switch voice.languageCode {
-        case "en":
-            return 0
-        case "ja":
-            return 1
-        default:
-            return 2
+    private func orderedSpeechVoices(_ voices: [SpeechVoiceOption], selectedIdentifier: String) -> [SpeechVoiceOption] {
+        let preferredVoices: [(name: String, localePrefix: String)] = [
+            ("Eddy", "en-US"),
+            ("Samantha", "en-US"),
+            ("Daniel", "en-GB"),
+            ("Shelley", "en-GB"),
+            ("Karen", "en-AU"),
+            ("Eddy", "ja-JP"),
+            ("Kyoko", "ja-JP")
+        ]
+
+        let sortedVoices = voices.sorted { leftVoice, rightVoice in
+            let leftPriority = preferredVoicePriority(for: leftVoice, preferredVoices: preferredVoices)
+            let rightPriority = preferredVoicePriority(for: rightVoice, preferredVoices: preferredVoices)
+
+            if leftPriority != rightPriority {
+                return leftPriority < rightPriority
+            }
+
+            if leftPriority == preferredVoices.count {
+                let languageComparison = leftVoice.languageDisplayName.localizedCaseInsensitiveCompare(rightVoice.languageDisplayName)
+                if languageComparison != .orderedSame {
+                    return languageComparison == .orderedAscending
+                }
+            }
+
+            let nameComparison = leftVoice.name.localizedCaseInsensitiveCompare(rightVoice.name)
+            if nameComparison != .orderedSame {
+                return nameComparison == .orderedAscending
+            }
+
+            return leftVoice.menuTitle.localizedCaseInsensitiveCompare(rightVoice.menuTitle) == .orderedAscending
         }
+
+        guard let selectedIndex = sortedVoices.firstIndex(where: { $0.identifier == selectedIdentifier }) else {
+            return sortedVoices
+        }
+
+        var reorderedVoices = sortedVoices
+        let selectedVoice = reorderedVoices.remove(at: selectedIndex)
+        reorderedVoices.insert(selectedVoice, at: 0)
+        return reorderedVoices
+    }
+
+    private func preferredVoicePriority(
+        for voice: SpeechVoiceOption,
+        preferredVoices: [(name: String, localePrefix: String)]
+    ) -> Int {
+        preferredVoices.firstIndex { preferredVoice in
+            voice.name.caseInsensitiveCompare(preferredVoice.name) == .orderedSame &&
+                voice.localeIdentifier.lowercased().hasPrefix(preferredVoice.localePrefix.lowercased())
+        } ?? preferredVoices.count
     }
 
     private func previewSpeechVoice(_ voice: SpeechVoiceOption) {
@@ -1869,6 +1902,7 @@ struct SettingsScreen: View {
 
 private struct SpeechVoiceOption: Identifiable, Equatable {
     let identifier: String
+    let localeIdentifier: String
     let languageCode: String
     let languageDisplayName: String
     let name: String
