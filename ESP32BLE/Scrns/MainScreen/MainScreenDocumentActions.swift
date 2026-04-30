@@ -150,6 +150,8 @@ extension MainScreen {
             return
         }
 
+        commitSlotEditing()
+
         let maximumIndex = min(visibleBoxCount, functionKeys.count)
         guard maximumIndex > 0 else {
             return
@@ -159,10 +161,6 @@ extension MainScreen {
         for _ in 0..<maximumIndex {
             candidateIndex = (candidateIndex + step + maximumIndex) % maximumIndex
             let candidateEntry = functionKeys[candidateIndex]
-            guard !candidateEntry.isBlankPlaceholder,
-                  !isEmptyButtonEntry(candidateEntry) else {
-                continue
-            }
 
             activeDragIndex = nil
             self.editingSlotIndex = candidateIndex
