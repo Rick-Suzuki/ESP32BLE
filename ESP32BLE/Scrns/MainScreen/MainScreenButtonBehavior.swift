@@ -105,6 +105,7 @@ extension MainScreen {
         let targetSoundFilename = targetSoundFilenameForGridEntry(entry)
         let targetAppURL = targetAppURLForGridEntry(entry)
         let targetClipboardText = targetClipboardTextForGridEntry(entry)
+        let targetSpokenFilename = targetSpokenFilenameForGridEntry(entry)
         let targetSpokenText = targetSpokenTextForGridEntry(entry)
 
         if let targetURL {
@@ -134,6 +135,9 @@ extension MainScreen {
 
         if let targetSpokenText {
             speakMainGridText(targetSpokenText)
+        } else if let targetSpokenFilename {
+            alertTitle = "File Not Found"
+            renameAlertMessage = "Couldn't find \(targetSpokenFilename.lowercased())."
         }
 
         if let targetDocumentName {
@@ -173,6 +177,7 @@ extension MainScreen {
                     targetURLForSendText(sendText) == nil &&
                     targetSoundFilenameForSendText(sendText) == nil &&
                     targetSpokenTextForSendText(sendText) == nil &&
+                    targetSpokenFilenameForSendText(sendText) == nil &&
                     targetAppURLForSendText(sendText) == nil &&
                     targetClipboardTextForSendText(sendText) == nil &&
                     targetWidgetDescriptorForSendText(sendText) == nil
@@ -396,7 +401,12 @@ extension MainScreen {
 
     func targetDocumentNameForSendText(_ sendText: String) -> String? {
         let trimmedSendText = sendText.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmedSendText.lowercased().hasSuffix(".txt") ? trimmedSendText : nil
+        let loweredSendText = trimmedSendText.lowercased()
+        guard !loweredSendText.hasPrefix("spk ") else {
+            return nil
+        }
+
+        return loweredSendText.hasSuffix(".txt") ? trimmedSendText : nil
     }
 
     func targetURLForGridEntry(_ entry: FunctionKeyEntry) -> URL? {
@@ -446,6 +456,10 @@ extension MainScreen {
 
     func targetSpokenTextForGridEntry(_ entry: FunctionKeyEntry) -> String? {
         entry.sendTexts.compactMap(targetSpokenTextForSendText).first
+    }
+
+    func targetSpokenFilenameForGridEntry(_ entry: FunctionKeyEntry) -> String? {
+        entry.sendTexts.compactMap(targetSpokenFilenameForSendText).first
     }
 
     func targetWidgetDescriptorForGridEntry(_ entry: FunctionKeyEntry) -> MainGridWidgetDescriptor? {
@@ -544,7 +558,55 @@ extension MainScreen {
 
         let spokenText = displayText(from: String(trimmedSendText.dropFirst(4)))
             .trimmingCharacters(in: .whitespacesAndNewlines)
-        return spokenText.isEmpty ? nil : spokenText
+        guard !spokenText.isEmpty else {
+            return nil
+        }
+
+        if let spokenFilename = targetSpokenFilenameForSendText(trimmedSendText) {
+            return spokenTextFileContents(named: spokenFilename)
+        }
+
+        return spokenText
+    }
+
+    func targetSpokenFilenameForSendText(_ sendText: String) -> String? {
+        let trimmedSendText = sendText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let loweredSendText = trimmedSendText.lowercased()
+
+        guard loweredSendText.hasPrefix("spk ") else {
+            return nil
+        }
+
+        let spokenFilename = displayText(from: String(trimmedSendText.dropFirst(4)))
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard spokenFilename.lowercased().hasSuffix(".txt") else {
+            return nil
+        }
+
+        return spokenFilename.isEmpty ? nil : spokenFilename
+    }
+
+    private func spokenTextFileContents(named filename: String) -> String? {
+        let trimmedFilename = filename.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedFilename.isEmpty else {
+            return nil
+        }
+
+        if let documentsDirectoryURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
+            let documentFileURL = documentsDirectoryURL.appendingPathComponent(trimmedFilename)
+            if FileManager.default.fileExists(atPath: documentFileURL.path),
+               let contents = try? String(contentsOf: documentFileURL, encoding: .utf8) {
+                return contents
+            }
+        }
+
+        if let bundledFileURL = Bundle.main.resourceURL?.appendingPathComponent(trimmedFilename),
+           FileManager.default.fileExists(atPath: bundledFileURL.path),
+           let contents = try? String(contentsOf: bundledFileURL, encoding: .utf8) {
+            return contents
+        }
+
+        return nil
     }
 
     func targetWidgetDescriptorForSendText(_ sendText: String) -> MainGridWidgetDescriptor? {
