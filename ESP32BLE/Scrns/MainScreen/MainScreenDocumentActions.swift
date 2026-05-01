@@ -203,6 +203,30 @@ extension MainScreen {
         _ = updateFunctionKeySlot(index, "_")
     }
 
+    func handleThreeTapEditAction(entry: FunctionKeyEntry, index: Int) {
+        guard isGridEditModeEnabled else {
+            return
+        }
+
+        if entry.isBlankPlaceholder || isEmptyButtonEntry(entry) {
+            let clipboardEntryText = mainGridEditClipboardText.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !clipboardEntryText.isEmpty else {
+                alertTitle = ""
+                renameAlertMessage = "no btn data available\nto create new btn"
+                return
+            }
+
+            _ = updateFunctionKeySlot(index, clipboardEntryText)
+            alertTitle = ""
+            renameAlertMessage = "btn pasted"
+            return
+        }
+
+        mainGridEditClipboardText = entry.rawLine
+        alertTitle = ""
+        renameAlertMessage = "Copied btn data\nto clipboard"
+    }
+
     func duplicateTargetIndex(from sourceIndex: Int, gridDimensions: GridDimensions) -> Int? {
         let sourceRow = sourceIndex / gridDimensions.columns
         let rightIndex = sourceIndex + 1

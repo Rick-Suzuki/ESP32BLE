@@ -52,6 +52,7 @@ struct MainScreen: View {
     @AppStorage("selectedBackgroundImageIndex") var selectedBackgroundImageIndex = 0
     @AppStorage("backgroundImageOpacity") var backgroundImageOpacity = 0.5
     @AppStorage("mainGridBackgroundOpacity") var mainGridBackgroundOpacity = 1.0
+    @AppStorage("mainGridEditClipboardText") var mainGridEditClipboardText = ""
     @FocusState var isDocumentNameFieldFocused: Bool
     @FocusState var isSlotEditorFocused: Bool
     let functionKeys: [FunctionKeyEntry]
@@ -258,6 +259,9 @@ struct MainScreen: View {
             },
             onDuplicateSlot: { entry, index, gridDimensions in
                 duplicateSlotIfPossible(entry: entry, index: index, gridDimensions: gridDimensions)
+            },
+            onTripleTapSlot: { entry, index in
+                handleThreeTapEditAction(entry: entry, index: index)
             },
             onDeleteSlot: { entry, index in
                 deleteSlotIfPossible(entry: entry, index: index)

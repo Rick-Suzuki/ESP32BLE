@@ -100,6 +100,7 @@ struct MainScreenGridSection: View {
     let buttonLabel: (FunctionKeyEntry, Int, CGFloat) -> AnyView
     let dragGesture: (FunctionKeyEntry, Int, GridDimensions) -> AnyGesture<DragGesture.Value>
     let onDuplicateSlot: (FunctionKeyEntry, Int, GridDimensions) -> Void
+    let onTripleTapSlot: (FunctionKeyEntry, Int) -> Void
     let onDeleteSlot: (FunctionKeyEntry, Int) -> Void
     @State private var pendingTapIndex: Int?
     @State private var pendingTapCount = 0
@@ -196,7 +197,7 @@ struct MainScreenGridSection: View {
             pendingTapCount = 1
         }
 
-        guard pendingTapCount < 3 else {
+        guard pendingTapCount < 4 else {
             pendingTapTask?.cancel()
             resetPendingTapState()
             onDeleteSlot(entry, index)
@@ -227,6 +228,8 @@ struct MainScreenGridSection: View {
 
                 if tapCount == 2 {
                     onDuplicateSlot(entry, index, gridDimensions)
+                } else if tapCount == 3 {
+                    onTripleTapSlot(entry, index)
                 }
 
                 resetPendingTapState()

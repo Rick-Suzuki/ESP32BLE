@@ -105,6 +105,7 @@ extension MainScreen {
         let targetSoundFilename = targetSoundFilenameForGridEntry(entry)
         let targetAppURL = targetAppURLForGridEntry(entry)
         let targetClipboardText = targetClipboardTextForGridEntry(entry)
+        let targetSpokenText = targetSpokenTextForGridEntry(entry)
 
         if let targetURL {
             UIApplication.shared.open(targetURL)
@@ -129,6 +130,10 @@ extension MainScreen {
 
         if let targetSoundFilename {
             playMainGridSound(named: targetSoundFilename)
+        }
+
+        if let targetSpokenText {
+            speakMainGridText(targetSpokenText)
         }
 
         if let targetDocumentName {
