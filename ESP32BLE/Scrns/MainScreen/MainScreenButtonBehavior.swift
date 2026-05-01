@@ -657,7 +657,41 @@ extension MainScreen {
 
         switch widgetName {
         case "clock":
-            return .clock
+            let cityLabel: String?
+            if components.count > 1 {
+                let resolvedCityLabel = components.dropFirst().joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
+                cityLabel = resolvedCityLabel.isEmpty ? nil : resolvedCityLabel
+            } else {
+                cityLabel = nil
+            }
+            return .clock(cityLabel: cityLabel)
+        case "day":
+            let cityLabel: String?
+            if components.count > 1 {
+                let resolvedCityLabel = components.dropFirst().joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
+                cityLabel = resolvedCityLabel.isEmpty ? nil : resolvedCityLabel
+            } else {
+                cityLabel = nil
+            }
+            return .day(cityLabel: cityLabel)
+        case "month":
+            let cityLabel: String?
+            if components.count > 1 {
+                let resolvedCityLabel = components.dropFirst().joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
+                cityLabel = resolvedCityLabel.isEmpty ? nil : resolvedCityLabel
+            } else {
+                cityLabel = nil
+            }
+            return .month(cityLabel: cityLabel)
+        case "year":
+            let cityLabel: String?
+            if components.count > 1 {
+                let resolvedCityLabel = components.dropFirst().joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
+                cityLabel = resolvedCityLabel.isEmpty ? nil : resolvedCityLabel
+            } else {
+                cityLabel = nil
+            }
+            return .year(cityLabel: cityLabel)
         case "sec":
             let cityLabel: String?
             if components.count > 1 {
@@ -1204,7 +1238,7 @@ struct MainScreenButtonLabelView: View {
     @ViewBuilder
     private func widgetContent(descriptor: MainGridWidgetDescriptor) -> some View {
         switch descriptor {
-        case .clock:
+        case .clock(let cityLabel):
             TimelineView(.periodic(from: .now, by: 1)) { context in
                 VStack(spacing: 4) {
                     if let widgetCityLabel {
@@ -1214,7 +1248,7 @@ struct MainScreenButtonLabelView: View {
                             .minimumScaleFactor(0.5)
                     }
 
-                    Text(clockText(for: context.date))
+                    Text(clockText(for: context.date, cityLabel: cityLabel))
                         .font(.system(size: boxFontSize, weight: .bold, design: .rounded))
                         .monospacedDigit()
                         .lineLimit(1)
@@ -1232,6 +1266,64 @@ struct MainScreenButtonLabelView: View {
                         .minimumScaleFactor(0.4)
 
                     Text(dateValueText(for: context.date))
+                        .font(.system(size: boxFontSize, weight: .bold, design: .rounded))
+                        .monospacedDigit()
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
+                }
+                .foregroundStyle(buttonTextColor)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        case .day(let cityLabel):
+            TimelineView(.periodic(from: .now, by: 60)) { context in
+                let headerText = dowHeaderText(for: context.date, cityLabel: cityLabel)
+                VStack(spacing: 4) {
+                    if !headerText.isEmpty {
+                        Text(headerText)
+                            .font(.system(size: boxFontSize, weight: .bold, design: .rounded))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.4)
+                    }
+
+                    Text(dayOfMonthOrdinalText(for: context.date, cityLabel: cityLabel))
+                        .font(.system(size: boxFontSize, weight: .bold, design: .rounded))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
+                }
+                .foregroundStyle(buttonTextColor)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        case .month(let cityLabel):
+            TimelineView(.periodic(from: .now, by: 60)) { context in
+                let headerText = dowHeaderText(for: context.date, cityLabel: cityLabel)
+                VStack(spacing: 4) {
+                    if !headerText.isEmpty {
+                        Text(headerText)
+                            .font(.system(size: boxFontSize, weight: .bold, design: .rounded))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.4)
+                    }
+
+                    Text(monthNameText(for: context.date, cityLabel: cityLabel))
+                        .font(.system(size: boxFontSize, weight: .bold, design: .rounded))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
+                }
+                .foregroundStyle(buttonTextColor)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        case .year(let cityLabel):
+            TimelineView(.periodic(from: .now, by: 60)) { context in
+                let headerText = dowHeaderText(for: context.date, cityLabel: cityLabel)
+                VStack(spacing: 4) {
+                    if !headerText.isEmpty {
+                        Text(headerText)
+                            .font(.system(size: boxFontSize, weight: .bold, design: .rounded))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.4)
+                    }
+
+                    Text(yearText(for: context.date, cityLabel: cityLabel))
                         .font(.system(size: boxFontSize, weight: .bold, design: .rounded))
                         .monospacedDigit()
                         .lineLimit(1)
@@ -1427,6 +1519,14 @@ struct MainScreenButtonLabelView: View {
         return formatter.string(from: date)
     }
 
+    private func clockText(for date: Date, cityLabel: String?) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale.current
+        formatter.timeZone = widgetTimeZone(for: cityLabel) ?? widgetTimeZone ?? .current
+        formatter.dateFormat = "HH:mm:ss"
+        return formatter.string(from: date)
+    }
+
     private func dateWeekdayText(for date: Date) -> String {
         let formatter = DateFormatter()
         formatter.locale = Locale.current
@@ -1448,6 +1548,41 @@ struct MainScreenButtonLabelView: View {
         formatter.locale = Locale.current
         formatter.timeZone = widgetTimeZone(for: cityLabel) ?? .current
         formatter.dateFormat = format
+        return formatter.string(from: date)
+    }
+
+    private func dayOfMonthOrdinalText(for date: Date, cityLabel: String?) -> String {
+        var calendar = Calendar.current
+        calendar.timeZone = widgetTimeZone(for: cityLabel) ?? .current
+        let day = calendar.component(.day, from: date)
+        let suffix: String
+        switch day % 100 {
+        case 11, 12, 13:
+            suffix = "th"
+        default:
+            switch day % 10 {
+            case 1: suffix = "st"
+            case 2: suffix = "nd"
+            case 3: suffix = "rd"
+            default: suffix = "th"
+            }
+        }
+        return "\(day)\(suffix)"
+    }
+
+    private func monthNameText(for date: Date, cityLabel: String?) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale.current
+        formatter.timeZone = widgetTimeZone(for: cityLabel) ?? .current
+        formatter.dateFormat = "LLLL"
+        return formatter.string(from: date)
+    }
+
+    private func yearText(for date: Date, cityLabel: String?) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale.current
+        formatter.timeZone = widgetTimeZone(for: cityLabel) ?? .current
+        formatter.dateFormat = "yyyy"
         return formatter.string(from: date)
     }
 
@@ -1704,7 +1839,10 @@ struct MainScreenButtonLabelView: View {
 }
 
 enum MainGridWidgetDescriptor {
-    case clock
+    case clock(cityLabel: String?)
+    case day(cityLabel: String?)
+    case month(cityLabel: String?)
+    case year(cityLabel: String?)
     case second(cityLabel: String?)
     case minute(cityLabel: String?)
     case hour(cityLabel: String?)
