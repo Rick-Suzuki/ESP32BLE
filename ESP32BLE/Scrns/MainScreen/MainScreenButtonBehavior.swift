@@ -57,7 +57,7 @@ extension MainScreen {
 
         let components = rawLineWithoutHiddenMetadata(entry).components(separatedBy: "::")
         guard components.count >= 2 else {
-            return rawLineWithoutHiddenMetadata(entry)
+            return ""
         }
 
         let rawRightText = components
@@ -658,14 +658,66 @@ extension MainScreen {
         switch widgetName {
         case "clock":
             return .clock
+        case "sec":
+            let cityLabel: String?
+            if components.count > 1 {
+                let resolvedCityLabel = components.dropFirst().joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
+                cityLabel = resolvedCityLabel.isEmpty ? nil : resolvedCityLabel
+            } else {
+                cityLabel = nil
+            }
+            return .second(cityLabel: cityLabel)
+        case "min":
+            let cityLabel: String?
+            if components.count > 1 {
+                let resolvedCityLabel = components.dropFirst().joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
+                cityLabel = resolvedCityLabel.isEmpty ? nil : resolvedCityLabel
+            } else {
+                cityLabel = nil
+            }
+            return .minute(cityLabel: cityLabel)
+        case "hour":
+            let cityLabel: String?
+            if components.count > 1 {
+                let resolvedCityLabel = components.dropFirst().joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
+                cityLabel = resolvedCityLabel.isEmpty ? nil : resolvedCityLabel
+            } else {
+                cityLabel = nil
+            }
+            return .hour(cityLabel: cityLabel)
+        case "dow":
+            let cityLabel: String?
+            if components.count > 1 {
+                let resolvedCityLabel = components.dropFirst().joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
+                cityLabel = resolvedCityLabel.isEmpty ? nil : resolvedCityLabel
+            } else {
+                cityLabel = nil
+            }
+            return .dow(cityLabel: cityLabel)
         case "date":
-            return .date
+            let cityLabel: String?
+            if components.count > 1 {
+                let resolvedCityLabel = components.dropFirst().joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
+                cityLabel = resolvedCityLabel.isEmpty ? nil : resolvedCityLabel
+            } else {
+                cityLabel = nil
+            }
+            return .date(cityLabel: cityLabel)
         case "power", "battery":
             return .power
         case "add":
             return .add
         case "minus":
-            return .minus
+            let initialCount: Int
+            if components.count > 1 {
+                guard let parsedInitialCount = Int(components[1]) else {
+                    return nil
+                }
+                initialCount = max(parsedInitialCount, 0)
+            } else {
+                initialCount = 0
+            }
+            return .minus(initialCount: initialCount)
         case "rnd", "random":
             let minimumValue: Int
             let maximumValue: Int
@@ -1171,18 +1223,99 @@ struct MainScreenButtonLabelView: View {
                 .foregroundStyle(buttonTextColor)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-        case .date:
+        case .date(let cityLabel):
             TimelineView(.periodic(from: .now, by: 60)) { context in
                 VStack(spacing: 4) {
-                    Text(dateWeekdayText(for: context.date))
-                    .font(.system(size: max(12, boxFontSize * 0.85), weight: .bold, design: .rounded))
+                    Text(dateHeaderText(for: context.date, cityLabel: cityLabel))
+                        .font(.system(size: boxFontSize, weight: .bold, design: .rounded))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.4)
 
                     Text(dateValueText(for: context.date))
-                    .font(.system(size: boxFontSize, weight: .bold, design: .rounded))
-                    .monospacedDigit()
+                        .font(.system(size: boxFontSize, weight: .bold, design: .rounded))
+                        .monospacedDigit()
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
                 }
-                .lineLimit(1)
-                .minimumScaleFactor(0.5)
+                .foregroundStyle(buttonTextColor)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        case .second(let cityLabel):
+            TimelineView(.periodic(from: .now, by: 1)) { context in
+                let headerText = dowHeaderText(for: context.date, cityLabel: cityLabel)
+                VStack(spacing: 4) {
+                    if !headerText.isEmpty {
+                        Text(headerText)
+                            .font(.system(size: boxFontSize, weight: .bold, design: .rounded))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.4)
+                    }
+
+                    Text(widgetTimeComponentText(for: context.date, cityLabel: cityLabel, format: "ss"))
+                        .font(.system(size: boxFontSize, weight: .bold, design: .rounded))
+                        .monospacedDigit()
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
+                }
+                .foregroundStyle(buttonTextColor)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        case .minute(let cityLabel):
+            TimelineView(.periodic(from: .now, by: 1)) { context in
+                let headerText = dowHeaderText(for: context.date, cityLabel: cityLabel)
+                VStack(spacing: 4) {
+                    if !headerText.isEmpty {
+                        Text(headerText)
+                            .font(.system(size: boxFontSize, weight: .bold, design: .rounded))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.4)
+                    }
+
+                    Text(widgetTimeComponentText(for: context.date, cityLabel: cityLabel, format: "mm"))
+                        .font(.system(size: boxFontSize, weight: .bold, design: .rounded))
+                        .monospacedDigit()
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
+                }
+                .foregroundStyle(buttonTextColor)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        case .hour(let cityLabel):
+            TimelineView(.periodic(from: .now, by: 1)) { context in
+                let headerText = dowHeaderText(for: context.date, cityLabel: cityLabel)
+                VStack(spacing: 4) {
+                    if !headerText.isEmpty {
+                        Text(headerText)
+                            .font(.system(size: boxFontSize, weight: .bold, design: .rounded))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.4)
+                    }
+
+                    Text(widgetTimeComponentText(for: context.date, cityLabel: cityLabel, format: "HH"))
+                        .font(.system(size: boxFontSize, weight: .bold, design: .rounded))
+                        .monospacedDigit()
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
+                }
+                .foregroundStyle(buttonTextColor)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        case .dow(let cityLabel):
+            TimelineView(.periodic(from: .now, by: 60)) { context in
+                let headerText = dowHeaderText(for: context.date, cityLabel: cityLabel)
+                VStack(spacing: 4) {
+                    if !headerText.isEmpty {
+                        Text(headerText)
+                            .font(.system(size: boxFontSize, weight: .bold, design: .rounded))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.4)
+                    }
+
+                    Text(dateFullWeekdayText(for: context.date))
+                        .font(.system(size: boxFontSize, weight: .bold, design: .rounded))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
+                }
                 .foregroundStyle(buttonTextColor)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
@@ -1197,9 +1330,10 @@ struct MainScreenButtonLabelView: View {
                 fontSize: boxFontSize,
                 foregroundColor: buttonTextColor
             )
-        case .minus:
+        case .minus(let initialCount):
             MainGridStepDownCounterWidgetView(
-                configurationText: rightTitleWithoutColorPrefix,
+                title: rightTitleWithoutColorPrefix,
+                initialCount: initialCount,
                 fontSize: boxFontSize,
                 foregroundColor: buttonTextColor
             )
@@ -1301,12 +1435,121 @@ struct MainScreenButtonLabelView: View {
         return formatter.string(from: date)
     }
 
+    private func dateFullWeekdayText(for date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale.current
+        formatter.timeZone = widgetTimeZone ?? .current
+        formatter.dateFormat = "EEEE"
+        return formatter.string(from: date)
+    }
+
+    private func widgetTimeComponentText(for date: Date, cityLabel: String?, format: String) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale.current
+        formatter.timeZone = widgetTimeZone(for: cityLabel) ?? .current
+        formatter.dateFormat = format
+        return formatter.string(from: date)
+    }
+
     private func dateValueText(for date: Date) -> String {
         let formatter = DateFormatter()
         formatter.locale = Locale.current
         formatter.timeZone = widgetTimeZone ?? .current
         formatter.dateFormat = "dd/MM/yy"
         return formatter.string(from: date)
+    }
+
+    private func dateHeaderText(for date: Date, cityLabel: String?) -> String {
+        let trimmedRightTitle = rightTitleWithoutColorPrefix.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedRightTitle.isEmpty {
+            return trimmedRightTitle
+        }
+
+        return widgetDateCityCode(for: date, cityLabel: cityLabel)
+    }
+
+    private func dowHeaderText(for date: Date, cityLabel: String?) -> String {
+        let trimmedRightTitle = rightTitleWithoutColorPrefix.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedRightTitle.isEmpty {
+            return trimmedRightTitle
+        }
+
+        return ""
+    }
+
+    private func widgetDateCityCode(for date: Date, cityLabel: String?) -> String {
+        let timeZone = widgetTimeZone(for: cityLabel) ?? .current
+        let cityKeyCandidates = [
+            cityLabel,
+            timeZone.identifier.components(separatedBy: "/").last
+        ]
+            .compactMap { $0 }
+            .map(normalizedWidgetLocation)
+
+        let manualCityCodes: [String: String] = [
+            "beijing": "BJD/PEK",
+            "tokyo": "TYO/HND",
+            "london": "LON",
+            "new york": "NYC",
+            "los angeles": "LAX",
+            "sydney": "SYD",
+            "melbourne": "MEL"
+        ]
+
+        for cityKey in cityKeyCandidates {
+            if let mappedCode = manualCityCodes[cityKey] {
+                return mappedCode.components(separatedBy: "/").first ?? mappedCode
+            }
+        }
+
+        if let abbreviation = timeZone.abbreviation(for: date)?
+            .components(separatedBy: "/")
+            .first?
+            .trimmingCharacters(in: .whitespacesAndNewlines),
+           !abbreviation.isEmpty,
+           !abbreviation.uppercased().hasPrefix("GMT") {
+            return abbreviation.uppercased()
+        }
+
+        let identifierTail = timeZone.identifier.components(separatedBy: "/").last ?? timeZone.identifier
+        let compactIdentifier = identifierTail
+            .replacingOccurrences(of: "_", with: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let words = compactIdentifier.split(separator: " ")
+        let initialism = words
+            .compactMap { $0.first.map { String($0).uppercased() } }
+            .joined()
+        if initialism.count >= 2 {
+            return initialism
+        }
+
+        let lettersOnly = compactIdentifier.filter(\.isLetter).uppercased()
+        if !lettersOnly.isEmpty {
+            return String(lettersOnly.prefix(3))
+        }
+
+        return "LOC"
+    }
+
+    private func widgetTimeZone(for cityLabel: String?) -> TimeZone? {
+        guard let cityLabel else {
+            return nil
+        }
+
+        if let directMatch = TimeZone(identifier: cityLabel) {
+            return directMatch
+        }
+
+        let normalizedQuery = normalizedWidgetLocation(cityLabel)
+        let matchingIdentifier = TimeZone.knownTimeZoneIdentifiers.first { identifier in
+            let normalizedIdentifier = normalizedWidgetLocation(identifier)
+            let normalizedLastComponent = normalizedWidgetLocation(identifier.components(separatedBy: "/").last ?? identifier)
+            return normalizedIdentifier == normalizedQuery ||
+                normalizedLastComponent == normalizedQuery ||
+                normalizedIdentifier.hasSuffix("/\(normalizedQuery)")
+        }
+
+        return matchingIdentifier.flatMap(TimeZone.init(identifier:))
     }
 
     private func normalizedWidgetLocation(_ text: String) -> String {
@@ -1317,10 +1560,6 @@ struct MainScreenButtonLabelView: View {
     }
 
     private var rightTitleWithoutColorPrefix: String {
-        if entry.buttonColorCode != nil {
-            return rightTitle
-        }
-
         let components = rightTitle.components(separatedBy: ":")
 
         if let firstComponent = components.first?.trimmingCharacters(in: .whitespacesAndNewlines),
@@ -1466,10 +1705,14 @@ struct MainScreenButtonLabelView: View {
 
 enum MainGridWidgetDescriptor {
     case clock
-    case date
+    case second(cityLabel: String?)
+    case minute(cityLabel: String?)
+    case hour(cityLabel: String?)
+    case dow(cityLabel: String?)
+    case date(cityLabel: String?)
     case power
     case add
-    case minus
+    case minus(initialCount: Int)
     case random(minimumValue: Int, maximumValue: Int)
     case textFileRandom(filename: String)
     case stopwatch
@@ -1600,13 +1843,12 @@ private struct MainGridStepUpCounterWidgetView: View {
 }
 
 private struct MainGridStepDownCounterWidgetView: View {
-    let configurationText: String
+    let title: String
+    let initialCount: Int
     let fontSize: Double
     let foregroundColor: Color
 
-    @State private var initialCount = 0
     @State private var currentCount = 0
-    @State private var title = ""
 
     var body: some View {
         VStack(spacing: 4) {
@@ -1634,30 +1876,11 @@ private struct MainGridStepDownCounterWidgetView: View {
             currentCount = initialCount
         }
         .onAppear {
-            applyConfiguration()
+            currentCount = max(initialCount, 0)
         }
-        .onChange(of: configurationText) {
-            applyConfiguration()
+        .onChange(of: initialCount) {
+            currentCount = max(initialCount, 0)
         }
-    }
-
-    private func applyConfiguration() {
-        let components = configurationText.split(separator: ":", maxSplits: 1, omittingEmptySubsequences: false)
-        let firstComponent = components.first?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        let parsedInitialCount = Int(firstComponent) ?? 0
-        let parsedTitle: String
-
-        if components.count > 1 {
-            parsedTitle = String(components[1]).trimmingCharacters(in: .whitespacesAndNewlines)
-        } else if Int(firstComponent) == nil {
-            parsedTitle = firstComponent
-        } else {
-            parsedTitle = ""
-        }
-
-        initialCount = max(parsedInitialCount, 0)
-        currentCount = initialCount
-        title = parsedTitle
     }
 }
 
