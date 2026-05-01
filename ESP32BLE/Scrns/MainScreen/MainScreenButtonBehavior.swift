@@ -609,6 +609,42 @@ extension MainScreen {
         return nil
     }
 
+    private func parseWidgetTimerDuration(_ durationText: String) -> Int {
+        let trimmedDurationText = durationText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedDurationText.isEmpty else {
+            return 0
+        }
+
+        if let durationInSeconds = Int(trimmedDurationText) {
+            return durationInSeconds
+        }
+
+        let loweredDurationText = trimmedDurationText.lowercased()
+        let numericPrefix = loweredDurationText.prefix { $0.isNumber }
+        guard let numericValue = Int(numericPrefix) else {
+            return 0
+        }
+
+        let suffix = loweredDurationText
+            .dropFirst(numericPrefix.count)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard let unit = suffix.first else {
+            return numericValue
+        }
+
+        switch unit {
+        case "m":
+            return numericValue * 60
+        case "h":
+            return numericValue * 3600
+        case "s":
+            return numericValue
+        default:
+            return numericValue
+        }
+    }
+
     func targetWidgetDescriptorForSendText(_ sendText: String) -> MainGridWidgetDescriptor? {
         let trimmedSendText = sendText.trimmingCharacters(in: .whitespacesAndNewlines)
         let loweredSendText = trimmedSendText.lowercased()
@@ -629,21 +665,6 @@ extension MainScreen {
         }
 
         let trimmedWidgetText = widgetText.trimmingCharacters(in: .whitespacesAndNewlines)
-        let loweredWidgetText = trimmedWidgetText.lowercased()
-
-        if loweredWidgetText.hasPrefix("timer:") {
-            let completionSoundFilename = normalizedSoundFilename(
-                String(trimmedWidgetText.dropFirst("timer:".count))
-            )
-            return .timer(completionSoundFilename: completionSoundFilename.isEmpty ? nil : completionSoundFilename)
-        }
-
-        if loweredWidgetText.hasPrefix("timer ") {
-            let completionSoundFilename = normalizedSoundFilename(
-                String(trimmedWidgetText.dropFirst("timer".count))
-            )
-            return .timer(completionSoundFilename: completionSoundFilename.isEmpty ? nil : completionSoundFilename)
-        }
 
         let components = trimmedWidgetText
             .split(separator: " ", omittingEmptySubsequences: true)
@@ -784,10 +805,16 @@ extension MainScreen {
                 : ""
             return filename.isEmpty ? nil : .ambientSound(filename: filename)
         case "timer":
-            let completionSoundFilename = components.count > 1
-                ? normalizedSoundFilename(String(components.dropFirst().joined(separator: " ")))
+            let initialDuration = components.count > 1
+                ? parseWidgetTimerDuration(String(components[1]))
+                : 0
+            let completionSoundFilename = components.count > 2
+                ? normalizedSoundFilename(String(components.dropFirst(2).joined(separator: " ")))
                 : ""
-            return .timer(completionSoundFilename: completionSoundFilename.isEmpty ? nil : completionSoundFilename)
+            return .timer(
+                initialDuration: max(initialDuration, 0),
+                completionSoundFilename: completionSoundFilename.isEmpty ? nil : completionSoundFilename
+            )
         default:
             return nil
         }
@@ -1469,11 +1496,12 @@ struct MainScreenButtonLabelView: View {
                 activateAudioSession: activateAudioSession,
                 reportSoundError: reportSoundError
             )
-        case .timer(let completionSoundFilename):
+        case .timer(let initialDuration, let completionSoundFilename):
             MainGridTimerWidgetView(
                 widgetID: widgetID,
                 entry: entry,
                 configurationText: rightTitleWithoutColorPrefix,
+                initialDuration: initialDuration,
                 completionSoundFilename: completionSoundFilename,
                 sharedTimer: sharedTimer,
                 fontSize: boxFontSize,
@@ -1549,6 +1577,42 @@ struct MainScreenButtonLabelView: View {
         formatter.timeZone = widgetTimeZone(for: cityLabel) ?? .current
         formatter.dateFormat = format
         return formatter.string(from: date)
+    }
+
+    private func parseWidgetTimerDuration(_ durationText: String) -> Int {
+        let trimmedDurationText = durationText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedDurationText.isEmpty else {
+            return 0
+        }
+
+        if let durationInSeconds = Int(trimmedDurationText) {
+            return durationInSeconds
+        }
+
+        let loweredDurationText = trimmedDurationText.lowercased()
+        let numericPrefix = loweredDurationText.prefix { $0.isNumber }
+        guard let numericValue = Int(numericPrefix) else {
+            return 0
+        }
+
+        let suffix = loweredDurationText
+            .dropFirst(numericPrefix.count)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard let unit = suffix.first else {
+            return numericValue
+        }
+
+        switch unit {
+        case "m":
+            return numericValue * 60
+        case "h":
+            return numericValue * 3600
+        case "s":
+            return numericValue
+        default:
+            return numericValue
+        }
     }
 
     private func dayOfMonthOrdinalText(for date: Date, cityLabel: String?) -> String {
@@ -1855,7 +1919,7 @@ enum MainGridWidgetDescriptor {
     case textFileRandom(filename: String)
     case stopwatch
     case ambientSound(filename: String)
-    case timer(completionSoundFilename: String?)
+    case timer(initialDuration: Int, completionSoundFilename: String?)
 }
 
 private struct MainGridBatteryWidgetView: View {
@@ -2316,6 +2380,7 @@ private struct MainGridTimerWidgetView: View {
     let widgetID: String
     let entry: FunctionKeyEntry
     let configurationText: String
+    let initialDuration: Int
     let completionSoundFilename: String?
     @ObservedObject var sharedTimer: MainGridSharedTimerState
     let fontSize: Double
@@ -2358,6 +2423,9 @@ private struct MainGridTimerWidgetView: View {
         .onChange(of: configurationText) {
             applyConfiguration()
         }
+        .onChange(of: initialDuration) {
+            applyConfiguration()
+        }
     }
 
     private var displayedRemainingSeconds: Int {
@@ -2378,15 +2446,8 @@ private struct MainGridTimerWidgetView: View {
     }
 
     private func applyConfiguration() {
-        let components = configurationText.split(separator: ":", maxSplits: 1, omittingEmptySubsequences: false)
-        let parsedDuration = components.first
-            .map { parseTimerDuration(String($0)) } ?? 0
-        let parsedTitle = components.count > 1
-            ? String(components[1]).trimmingCharacters(in: .whitespacesAndNewlines)
-            : ""
-
-        configuredDuration = max(parsedDuration, 0)
-        title = parsedTitle
+        configuredDuration = max(initialDuration, 0)
+        title = configurationText.trimmingCharacters(in: .whitespacesAndNewlines)
 
         guard !sharedTimer.isRunning(widgetID: widgetID),
               !sharedTimer.isCompletionSoundLooping(widgetID: widgetID) else {
@@ -2401,42 +2462,6 @@ private struct MainGridTimerWidgetView: View {
             onPlayCompletionSound: onPlayCompletionSound,
             onStopCompletionSound: onStopCompletionSound
         )
-    }
-
-    private func parseTimerDuration(_ durationText: String) -> Int {
-        let trimmedDurationText = durationText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedDurationText.isEmpty else {
-            return 0
-        }
-
-        if let durationInSeconds = Int(trimmedDurationText) {
-            return durationInSeconds
-        }
-
-        let loweredDurationText = trimmedDurationText.lowercased()
-        let numericPrefix = loweredDurationText.prefix { $0.isNumber }
-        guard let numericValue = Int(numericPrefix) else {
-            return 0
-        }
-
-        let suffix = loweredDurationText
-            .dropFirst(numericPrefix.count)
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-
-        guard let unit = suffix.first else {
-            return numericValue
-        }
-
-        switch unit {
-        case "m":
-            return numericValue * 60
-        case "h":
-            return numericValue * 3600
-        case "s":
-            return numericValue
-        default:
-            return numericValue
-        }
     }
 
     private func togglePlayback() {
