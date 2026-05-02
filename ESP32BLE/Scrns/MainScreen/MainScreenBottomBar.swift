@@ -222,27 +222,7 @@ struct MainScreenBottomBar: View {
         let bottomToolbarMinimumScaleFactor: CGFloat = isPad ? 0.7 : 1
 
         return HStack(spacing: isCompact ? 8 : 12) {
-            HStack(spacing: isCompact ? 8 : 12) {
-                singleStepTriangle(
-                    rotationDegrees: -90,
-                    foreground: rowControlColor,
-                    isEnabled: visibleGridDimensions.rows > 1,
-                    action: onDecreaseRows
-                )
-
-                Text("\(visibleGridDimensions.rows)")
-                    .font(.headline)
-                    .foregroundStyle(.white)
-                    .frame(minWidth: isCompact ? 28 : 32)
-
-                singleStepTriangle(
-                    rotationDegrees: 90,
-                    foreground: rowControlColor,
-                    isEnabled: visibleGridDimensions.rows < maxGridDimension,
-                    action: onIncreaseRows
-                )
-            }
-
+			// columns
             HStack(spacing: isCompact ? 8 : 12) {
                 singleStepTriangle(
                     rotationDegrees: -90,
@@ -264,7 +244,28 @@ struct MainScreenBottomBar: View {
                 )
             }
 
-            HStack(spacing: isCompact ? 8 : 12) {
+			HStack(spacing: isCompact ? 8 : 12) {
+				singleStepTriangle(
+					rotationDegrees: -90,
+					foreground: rowControlColor,
+					isEnabled: visibleGridDimensions.rows > 1,
+					action: onDecreaseRows
+				)
+				
+				Text("\(visibleGridDimensions.rows)")
+					.font(.headline)
+					.foregroundStyle(.white)
+					.frame(minWidth: isCompact ? 28 : 32)
+				
+				singleStepTriangle(
+					rotationDegrees: 90,
+					foreground: rowControlColor,
+					isEnabled: visibleGridDimensions.rows < maxGridDimension,
+					action: onIncreaseRows
+				)
+			}
+
+			HStack(spacing: isCompact ? 8 : 12) {
                 controlTriangle(
                     rotationDegrees: -90,
                     foreground: fontControlColor,
