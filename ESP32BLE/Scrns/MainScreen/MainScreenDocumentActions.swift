@@ -200,6 +200,7 @@ extension MainScreen {
             return
         }
 
+        mainGridEditClipboardText = entry.rawLine
         _ = updateFunctionKeySlot(index, "_")
     }
 
