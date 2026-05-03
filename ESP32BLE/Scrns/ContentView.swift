@@ -265,6 +265,9 @@ struct ContentView: View {
                             selectNextDocument: selectNextDocument,
                             goBackToPreviousDocument: goBackToPreviousDocument,
                             canGoBackToPreviousDocument: canGoBackToPreviousDocument,
+                            previousDocumentDisplayName: previousDocumentDisplayName,
+                            adjacentPreviousDocumentDisplayName: adjacentPreviousDocumentDisplayName,
+                            adjacentNextDocumentDisplayName: adjacentNextDocumentDisplayName,
                             selectDocumentNamedFromGrid: selectDocumentNamedFromGrid,
                             resizeVisibleBoxCount: resizeSelectedDocumentGrid,
                             moveFunctionKeySlot: moveSelectedDocumentSlot,
@@ -1429,6 +1432,37 @@ struct ContentView: View {
             previousName != selectedDocumentName &&
             documentFiles.contains(where: { $0.lastPathComponent == previousName })
         }
+    }
+
+    private var adjacentPreviousDocumentDisplayName: String? {
+        guard let currentIndex = documentFiles.firstIndex(where: { $0.lastPathComponent == selectedDocumentName }),
+              currentIndex > 0 else {
+            return nil
+        }
+
+        return displayName(for: documentFiles[currentIndex - 1].lastPathComponent)
+    }
+
+    private var adjacentNextDocumentDisplayName: String? {
+        guard let currentIndex = documentFiles.firstIndex(where: { $0.lastPathComponent == selectedDocumentName }),
+              currentIndex < documentFiles.count - 1 else {
+            return nil
+        }
+
+        return displayName(for: documentFiles[currentIndex + 1].lastPathComponent)
+    }
+
+    private var previousDocumentDisplayName: String? {
+        for previousName in documentNavigationHistory.reversed() {
+            guard previousName != selectedDocumentName,
+                  documentFiles.contains(where: { $0.lastPathComponent == previousName }) else {
+                continue
+            }
+
+            return displayName(for: previousName)
+        }
+
+        return nil
     }
 
     private func goBackToPreviousDocument() {

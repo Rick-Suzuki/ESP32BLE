@@ -74,6 +74,9 @@ struct MainScreen: View {
     let selectNextDocument: () -> Void
     let goBackToPreviousDocument: () -> Void
     let canGoBackToPreviousDocument: Bool
+    let previousDocumentDisplayName: String?
+    let adjacentPreviousDocumentDisplayName: String?
+    let adjacentNextDocumentDisplayName: String?
     let selectDocumentNamedFromGrid: (String) -> Bool
     let resizeVisibleBoxCount: (GridDimensions, GridDimensions) -> Bool
     let moveFunctionKeySlot: (Int, Int) -> Bool
@@ -209,11 +212,37 @@ struct MainScreen: View {
                 isHomeDocumentSelected: selectedDocumentName.caseInsensitiveCompare("home.txt") == .orderedSame,
                 isDocumentNameFieldFocused: $isDocumentNameFieldFocused,
                 openKeyboardScreen: openKeyboardScreen,
-                openHomeDocument: { _ = selectDocumentNamedFromGrid("home.txt") },
+                openHomeDocument: {
+                    if mainGridButtonMode == .speechActive {
+                        speakMainGridText("home")
+                    }
+                    _ = selectDocumentNamedFromGrid("home.txt")
+                },
                 canGoBackToPreviousDocument: canGoBackToPreviousDocument,
-                goBackToPreviousDocument: goBackToPreviousDocument,
-                selectPreviousDocument: selectPreviousDocument,
-                selectNextDocument: selectNextDocument,
+                goBackToPreviousDocument: {
+                    if mainGridButtonMode == .speechActive,
+                       let previousDocumentDisplayName,
+                       !previousDocumentDisplayName.isEmpty {
+                        speakMainGridText(previousDocumentDisplayName)
+                    }
+                    goBackToPreviousDocument()
+                },
+                selectPreviousDocument: {
+                    if mainGridButtonMode == .speechActive,
+                       let adjacentPreviousDocumentDisplayName,
+                       !adjacentPreviousDocumentDisplayName.isEmpty {
+                        speakMainGridText(adjacentPreviousDocumentDisplayName)
+                    }
+                    selectPreviousDocument()
+                },
+                selectNextDocument: {
+                    if mainGridButtonMode == .speechActive,
+                       let adjacentNextDocumentDisplayName,
+                       !adjacentNextDocumentDisplayName.isEmpty {
+                        speakMainGridText(adjacentNextDocumentDisplayName)
+                    }
+                    selectNextDocument()
+                },
                 toggleGridEditMode: { isGridEditModeEnabled.toggle() },
                 commitDocumentRename: commitDocumentRename,
                 openSettings: AnyView(
