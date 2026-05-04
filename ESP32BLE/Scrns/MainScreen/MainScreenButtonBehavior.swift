@@ -5,6 +5,8 @@ import Combine
 
 extension MainScreen {
     private var defaultNewButtonEntryText: String { "cb ::" }
+	
+	// MARK: - BM:🔳 main scrn SF symbols
     private var supportedMainScreenSFSymbolNames: Set<String> {
         [
             "folder", "eye", "magnifyingglass", "gearshape", "house",
@@ -160,7 +162,7 @@ extension MainScreen {
 
         logMainButtonPress(entry)
 
-        guard bluetoothSendTexts.allSatisfy(isASCIIOnlyBluetoothText(_:)) else {
+        guard bluetoothSendTexts.allSatisfy(isBluetoothSendableText(_:)) else {
             showBluetoothEmojiBlockedPopup()
             return
         }
@@ -224,6 +226,10 @@ extension MainScreen {
     }
 
     func spokenReplacementForEmoji(_ character: Character) -> String? {
+        guard db_emoji_parsing else {
+            return nil
+        }
+
         let configuration = emojiSpeechConfiguration()
 
         if let override = configuration.overrides[character] {
@@ -522,6 +528,7 @@ extension MainScreen {
             .filter { !quoteCharacters.contains($0) }
             .map(String.init)
             .joined()
+            .replacingOccurrences(of: "\\", with: "")
             .trimmingCharacters(in: .whitespacesAndNewlines)
         return clipboardText.isEmpty ? nil : clipboardText
     }
@@ -931,8 +938,21 @@ extension MainScreen {
         return loweredSendText
     }
 
-    func isASCIIOnlyBluetoothText(_ sendText: String) -> Bool {
-        sendText.unicodeScalars.allSatisfy(\.isASCII)
+    func isBluetoothSendableText(_ sendText: String) -> Bool {
+        !sendText.contains { character in
+            let scalars = character.unicodeScalars
+            let isPlainASCIIAlphaNumeric = scalars.allSatisfy { scalar in
+                scalar.isASCII && CharacterSet.alphanumerics.contains(scalar)
+            }
+
+            if isPlainASCIIAlphaNumeric {
+                return false
+            }
+
+            return scalars.contains { scalar in
+                scalar.properties.isEmojiPresentation || scalar.properties.isEmoji
+            }
+        }
     }
 
     func showBluetoothEmojiBlockedPopup() {
@@ -984,7 +1004,7 @@ extension MainScreen {
                 }
 
                 let bluetoothSendTexts = bluetoothSendTexts(for: entry)
-                guard bluetoothSendTexts.allSatisfy(isASCIIOnlyBluetoothText(_:)) else {
+                guard bluetoothSendTexts.allSatisfy(isBluetoothSendableText(_:)) else {
                     return
                 }
 
