@@ -147,9 +147,6 @@ struct ContentView: View {
 	// normal emoji map
 	static let emojiSpeechConfigFilename = "emoji_speech_map.cfg"
 	
-	// force emoji map to overwrite with array below
-	static let overwriteConfigFilename:Bool = true
-	
 	// default (start) emoji
 	static let defaultEmojiSpeechConfigContents = """
 
@@ -459,7 +456,7 @@ struct ContentView: View {
 
         let fileURL = documentsDirectoryURL.appendingPathComponent(Self.emojiSpeechConfigFilename)
 
-        guard Self.overwriteConfigFilename || !FileManager.default.fileExists(atPath: fileURL.path) else {
+        guard db_overwriteConfigFile || !FileManager.default.fileExists(atPath: fileURL.path) else {
             return
         }
 

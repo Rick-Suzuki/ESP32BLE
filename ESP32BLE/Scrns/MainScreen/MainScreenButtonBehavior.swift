@@ -5,6 +5,8 @@ import Combine
 
 extension MainScreen {
     private var defaultNewButtonEntryText: String { "cb ::" }
+	
+	// MARK: - BM:🔳 main scrn SF symbols
     private var supportedMainScreenSFSymbolNames: Set<String> {
         [
             "folder", "eye", "magnifyingglass", "gearshape", "house",
@@ -224,6 +226,10 @@ extension MainScreen {
     }
 
     func spokenReplacementForEmoji(_ character: Character) -> String? {
+        guard db_emoji_parsing else {
+            return nil
+        }
+
         let configuration = emojiSpeechConfiguration()
 
         if let override = configuration.overrides[character] {
@@ -522,6 +528,7 @@ extension MainScreen {
             .filter { !quoteCharacters.contains($0) }
             .map(String.init)
             .joined()
+            .replacingOccurrences(of: "\\", with: "")
             .trimmingCharacters(in: .whitespacesAndNewlines)
         return clipboardText.isEmpty ? nil : clipboardText
     }

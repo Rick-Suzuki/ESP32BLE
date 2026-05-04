@@ -498,6 +498,7 @@ struct MainScreenSlotEditorOverlay: View {
     private var closeButton: some View {
         Button("close") {
             ButtonClickFeedback.playIfEnabled()
+            onSave()
             onCancel()
         }
         .buttonStyle(.plain)
