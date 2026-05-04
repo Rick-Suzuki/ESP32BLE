@@ -675,15 +675,10 @@ private struct MainScreenFilePreviewOverlay: View {
                                     .resizable()
                                     .scaledToFit()
                                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                                    .padding(.horizontal, 20)
-                                    .padding(.top, 68)
-                                    .padding(.bottom, safeBottomInset + 20)
                             } else {
                                 ProgressView()
                                     .tint(.white)
                                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                                    .padding(.top, 68)
-                                    .padding(.bottom, safeBottomInset + 20)
                             }
                         }
                     }
