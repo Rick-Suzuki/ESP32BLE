@@ -697,7 +697,7 @@ private struct MainScreenFilePreviewOverlay: View {
                 .padding(.horizontal, 14)
                 .frame(minWidth: 88)
                 .frame(height: 44)
-                .background(Color.gray.opacity(0.45))
+                .background(Color.gray.opacity(0.8))
                 .overlay {
                     RoundedRectangle(cornerRadius: 12)
                         .stroke(Color.gray.opacity(0.5), lineWidth: 1.5)
