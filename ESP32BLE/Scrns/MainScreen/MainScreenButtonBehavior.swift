@@ -107,6 +107,7 @@ extension MainScreen {
         let targetSoundFilename = targetSoundFilenameForGridEntry(entry)
         let targetAppURL = targetAppURLForGridEntry(entry)
         let targetClipboardText = targetClipboardTextForGridEntry(entry)
+        let targetPreviewFilename = targetPreviewFilenameForGridEntry(entry)
         let targetSpokenFilename = targetSpokenFilenameForGridEntry(entry)
         let targetSpokenText = targetSpokenTextForGridEntry(entry)
 
@@ -129,6 +130,10 @@ extension MainScreen {
 
         if let targetClipboardText {
             UIPasteboard.general.string = targetClipboardText
+        }
+
+        if let targetPreviewFilename {
+            openPreviewFile(named: targetPreviewFilename)
         }
 
         if let targetSoundFilename {
@@ -177,12 +182,13 @@ extension MainScreen {
             .filter { sendText in
                 targetDocumentNameForSendText(sendText) == nil &&
                     targetURLForSendText(sendText) == nil &&
-                    targetSoundFilenameForSendText(sendText) == nil &&
-                    targetSpokenTextForSendText(sendText) == nil &&
-                    targetSpokenFilenameForSendText(sendText) == nil &&
-                    targetAppURLForSendText(sendText) == nil &&
-                    targetClipboardTextForSendText(sendText) == nil &&
-                    targetWidgetDescriptorForSendText(sendText) == nil
+                targetSoundFilenameForSendText(sendText) == nil &&
+                targetSpokenTextForSendText(sendText) == nil &&
+                targetSpokenFilenameForSendText(sendText) == nil &&
+                targetAppURLForSendText(sendText) == nil &&
+                targetClipboardTextForSendText(sendText) == nil &&
+                targetPreviewFilenameForSendText(sendText) == nil &&
+                targetWidgetDescriptorForSendText(sendText) == nil
             }
             .map(normalizedBluetoothSendText)
     }
@@ -411,6 +417,9 @@ extension MainScreen {
         guard !loweredSendText.hasPrefix("spk ") else {
             return nil
         }
+        guard !loweredSendText.hasPrefix("file ") else {
+            return nil
+        }
 
         return loweredSendText.hasSuffix(".txt") ? trimmedSendText : nil
     }
@@ -421,6 +430,10 @@ extension MainScreen {
 
     func targetClipboardTextForGridEntry(_ entry: FunctionKeyEntry) -> String? {
         entry.sendTexts.compactMap(targetClipboardTextForSendText).first
+    }
+
+    func targetPreviewFilenameForGridEntry(_ entry: FunctionKeyEntry) -> String? {
+        entry.sendTexts.compactMap(targetPreviewFilenameForSendText).first
     }
 
     func targetAppURLForGridEntry(_ entry: FunctionKeyEntry) -> URL? {
@@ -533,6 +546,19 @@ extension MainScreen {
         return clipboardText.isEmpty ? nil : clipboardText
     }
 
+    func targetPreviewFilenameForSendText(_ sendText: String) -> String? {
+        let trimmedSendText = sendText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let loweredSendText = trimmedSendText.lowercased()
+
+        guard loweredSendText.hasPrefix("file ") else {
+            return nil
+        }
+
+        let filename = String(trimmedSendText.dropFirst(5))
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return filename.isEmpty ? nil : filename
+    }
+
     func targetSoundFilenameForSendText(_ sendText: String) -> String? {
         let trimmedSendText = sendText.trimmingCharacters(in: .whitespacesAndNewlines)
         let loweredSendText = trimmedSendText.lowercased()
@@ -614,6 +640,73 @@ extension MainScreen {
         }
 
         return nil
+    }
+
+    func openPreviewFile(named filename: String) {
+        let trimmedFilename = filename.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedFilename.isEmpty else {
+            return
+        }
+
+        guard let fileURL = resolvedPreviewFileURL(named: trimmedFilename) else {
+            alertTitle = "File Not Found"
+            renameAlertMessage = "Couldn't find \(trimmedFilename.lowercased())."
+            return
+        }
+
+        if let contents = try? String(contentsOf: fileURL, encoding: .utf8) {
+            presentedPreviewFile = .text(filename: fileURL.lastPathComponent, contents: contents)
+            return
+        }
+
+        guard UIImage(contentsOfFile: fileURL.path) != nil else {
+            alertTitle = "Unsupported File"
+            renameAlertMessage = "Couldn't preview \(trimmedFilename.lowercased())."
+            return
+        }
+
+        presentedPreviewFile = .image(filename: fileURL.lastPathComponent, url: fileURL)
+    }
+
+    private func resolvedPreviewFileURL(named filename: String) -> URL? {
+        let trimmedFilename = filename.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedFilename.isEmpty else {
+            return nil
+        }
+
+        if let documentsDirectoryURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first,
+           let matchedDocumentFileURL = matchedRegularFileURL(in: documentsDirectoryURL, named: trimmedFilename) {
+            return matchedDocumentFileURL
+        }
+
+        if let bundleResourceURL = Bundle.main.resourceURL,
+           let matchedBundledFileURL = matchedRegularFileURL(in: bundleResourceURL, named: trimmedFilename) {
+            return matchedBundledFileURL
+        }
+
+        return nil
+    }
+
+    private func matchedRegularFileURL(in directoryURL: URL, named filename: String) -> URL? {
+        let exactFileURL = directoryURL.appendingPathComponent(filename)
+        if FileManager.default.fileExists(atPath: exactFileURL.path) {
+            return exactFileURL
+        }
+
+        let candidateURLs = (try? FileManager.default.contentsOfDirectory(
+            at: directoryURL,
+            includingPropertiesForKeys: [.isRegularFileKey],
+            options: [.skipsHiddenFiles]
+        )) ?? []
+
+        return candidateURLs.first { candidateURL in
+            let resourceValues = try? candidateURL.resourceValues(forKeys: [.isRegularFileKey])
+            guard resourceValues?.isRegularFile == true else {
+                return false
+            }
+
+            return candidateURL.lastPathComponent.caseInsensitiveCompare(filename) == .orderedSame
+        }
     }
 
     private func parseWidgetTimerDuration(_ durationText: String) -> Int {

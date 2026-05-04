@@ -47,9 +47,11 @@ extension MainScreen {
         unmatchedSpeechText = nil
 
         let bluetoothSendTexts = matchingEntry.sendTexts.filter { sendText in
-            targetDocumentNameForSendText(sendText) == nil
+            targetDocumentNameForSendText(sendText) == nil &&
+                targetPreviewFilenameForSendText(sendText) == nil
         }
         let targetDocumentName = targetDocumentNameForGridEntry(matchingEntry)
+        let targetPreviewFilename = targetPreviewFilenameForGridEntry(matchingEntry)
 
         if let targetDocumentName {
             guard selectDocumentNamedFromGrid(targetDocumentName) else {
@@ -57,6 +59,10 @@ extension MainScreen {
                 renameAlertMessage = "Couldn't find \(targetDocumentName.lowercased())."
                 return
             }
+        }
+
+        if let targetPreviewFilename {
+            openPreviewFile(named: targetPreviewFilename)
         }
 
         guard mainGridButtonMode.sendsBluetooth, !bluetoothSendTexts.isEmpty else {

@@ -5,6 +5,20 @@ import AVFoundation
 
 
 struct MainScreen: View {
+    enum PreviewedFile: Equatable, Identifiable {
+        case text(filename: String, contents: String)
+        case image(filename: String, url: URL)
+
+        var id: String {
+            switch self {
+            case let .text(filename, _):
+                return "text:\(filename)"
+            case let .image(filename, _):
+                return "image:\(filename)"
+            }
+        }
+    }
+
     // Easy-to-find styling controls for the main button grid.
     private let mainGridButtonSpacingMaximum: CGFloat = 10
     private let mainGridButtonSpacingMinimum: CGFloat = 4
@@ -48,6 +62,7 @@ struct MainScreen: View {
     @State var editingSlotText = ""
     @State private var keyboardMinY: CGFloat = .greatestFiniteMagnitude
     @State private var popupDismissTask: Task<Void, Never>?
+    @State var presentedPreviewFile: PreviewedFile?
     @AppStorage("selectedTextToSpeechVoiceIdentifier") var selectedTextToSpeechVoiceIdentifier = ""
     @AppStorage("textToSpeechRate") var textToSpeechRate = Double(AVSpeechUtteranceDefaultSpeechRate)
     @AppStorage("selectedBackgroundImageIndex") var selectedBackgroundImageIndex = 0
@@ -125,6 +140,7 @@ struct MainScreen: View {
                 handleMainScreenDisappear()
                 mainGridAmbientSoundState.stopPlayback()
                 popupDismissTask?.cancel()
+                presentedPreviewFile = nil
             }
             .task(id: definedFunctionKeyCount) {
                 updateVisibleBoxCountToFitDefinedButtons()
@@ -134,6 +150,15 @@ struct MainScreen: View {
             }
             .onChange(of: renameAlertMessage) {
                 schedulePopupDismissIfNeeded()
+            }
+            .fullScreenCover(item: $presentedPreviewFile) { previewedFile in
+                MainScreenFilePreviewOverlay(
+                    previewedFile: previewedFile,
+                    onClose: {
+                        ButtonClickFeedback.playIfEnabled()
+                        presentedPreviewFile = nil
+                    }
+                )
             }
     }
 
@@ -191,6 +216,7 @@ struct MainScreen: View {
                     isSlotEditorPresented: editingSlotIndex != nil,
                     maskedScreenHeight: maskedScreenHeight
                 )
+
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         }
@@ -383,6 +409,7 @@ struct MainScreen: View {
                     targetSpokenTextForSendText(actionToken) == nil &&
                     targetAppURLForSendText(actionToken) == nil &&
                     targetClipboardTextForSendText(actionToken) == nil &&
+                    targetPreviewFilenameForSendText(actionToken) == nil &&
                     targetWidgetDescriptorForSendText(actionToken) == nil
             }
             .map(normalizedBluetoothSendText)
@@ -611,5 +638,96 @@ struct MainScreen: View {
         }
 
         _ = moveFunctionKeySlot(sourceIndex, targetIndex)
+    }
+}
+
+private struct MainScreenFilePreviewOverlay: View {
+    let previewedFile: MainScreen.PreviewedFile
+    let onClose: () -> Void
+    @State private var previewImage: UIImage?
+
+    var body: some View {
+        GeometryReader { geometry in
+            let safeBottomInset = geometry.safeAreaInsets.bottom
+            let maxPixelDimension = max(geometry.size.width, geometry.size.height) * UIScreen.main.scale
+
+            ZStack(alignment: .bottomTrailing) {
+                Color.black
+                    .ignoresSafeArea()
+
+                Group {
+                    switch previewedFile {
+                    case let .text(_, contents):
+                        ScrollView(.vertical) {
+                            Text(contents)
+                                .font(.system(.body, design: .monospaced))
+                                .foregroundStyle(.white)
+                                .textSelection(.enabled)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.horizontal, 20)
+                                .padding(.top, 68)
+                                .padding(.bottom, safeBottomInset + 20)
+                        }
+                    case .image:
+                        Group {
+                            if let previewImage {
+                                Image(uiImage: previewImage)
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                    .padding(.horizontal, 20)
+                                    .padding(.top, 68)
+                                    .padding(.bottom, safeBottomInset + 20)
+                            } else {
+                                ProgressView()
+                                    .tint(.white)
+                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                    .padding(.top, 68)
+                                    .padding(.bottom, safeBottomInset + 20)
+                            }
+                        }
+                    }
+                }
+
+                Button("close") {
+                    onClose()
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.white)
+                .padding(.horizontal, 14)
+                .frame(minWidth: 88)
+                .frame(height: 44)
+                .background(Color.gray.opacity(0.45))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.gray.opacity(0.5), lineWidth: 1.5)
+                }
+                .clipShape(.rect(cornerRadius: 12))
+                .padding(.trailing, 16)
+                .padding(.bottom, safeBottomInset + 16)
+            }
+            .task(id: previewTaskID(maxPixelDimension: maxPixelDimension)) {
+                loadPreviewImage(maxPixelDimension: maxPixelDimension)
+            }
+        }
+        .ignoresSafeArea()
+    }
+
+    private func previewTaskID(maxPixelDimension: CGFloat) -> String {
+        switch previewedFile {
+        case let .text(filename, _):
+            return "\(filename):text"
+        case let .image(filename, _):
+            return "\(filename):\(Int(maxPixelDimension.rounded(.up)))"
+        }
+    }
+
+    private func loadPreviewImage(maxPixelDimension: CGFloat) {
+        guard case let .image(_, url) = previewedFile else {
+            previewImage = nil
+            return
+        }
+
+        previewImage = downsampledUIImage(at: url, maxPixelDimension: maxPixelDimension)
     }
 }
