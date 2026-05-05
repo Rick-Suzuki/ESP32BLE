@@ -645,6 +645,10 @@ private struct MainScreenFilePreviewOverlay: View {
     let previewedFile: MainScreen.PreviewedFile
     let onClose: () -> Void
     @State private var previewImage: UIImage?
+    @State private var imageScale: CGFloat = 1
+    @State private var lastImageScale: CGFloat = 1
+    @State private var imageOffset: CGSize = .zero
+    @State private var accumulatedImageOffset: CGSize = .zero
 
     var body: some View {
         GeometryReader { geometry in
@@ -675,6 +679,15 @@ private struct MainScreenFilePreviewOverlay: View {
                                     .resizable()
                                     .scaledToFit()
                                     .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                    .scaleEffect(imageScale)
+                                    .offset(imageOffset)
+                                    .contentShape(Rectangle())
+                                    .simultaneousGesture(imagePanGesture)
+                                    .simultaneousGesture(imageMagnificationGesture)
+                                    .highPriorityGesture(
+                                        TapGesture(count: 2)
+                                            .onEnded(resetImagePreviewTransform)
+                                    )
                             } else {
                                 ProgressView()
                                     .tint(.white)
@@ -720,9 +733,98 @@ private struct MainScreenFilePreviewOverlay: View {
     private func loadPreviewImage(maxPixelDimension: CGFloat) {
         guard case let .image(_, url) = previewedFile else {
             previewImage = nil
+            resetImagePreviewTransform()
             return
         }
 
         previewImage = downsampledUIImage(at: url, maxPixelDimension: maxPixelDimension)
+        resetImagePreviewTransform()
+    }
+
+    private var imageMagnificationGesture: some Gesture {
+        MagnificationGesture()
+            .onChanged { value in
+                imageScale = max(1, lastImageScale * value)
+                imageOffset = clampedImageOffset(imageOffset)
+            }
+            .onEnded { value in
+                imageScale = max(1, lastImageScale * value)
+                lastImageScale = imageScale
+                imageOffset = clampedImageOffset(imageOffset)
+                accumulatedImageOffset = imageOffset
+
+                if imageScale == 1 {
+                    imageOffset = .zero
+                    accumulatedImageOffset = .zero
+                }
+            }
+    }
+
+    private var imagePanGesture: some Gesture {
+        DragGesture(minimumDistance: 8)
+            .onChanged { value in
+                guard imageScale > 1 else {
+                    imageOffset = .zero
+                    accumulatedImageOffset = .zero
+                    return
+                }
+
+                imageOffset = clampedImageOffset(CGSize(
+                    width: accumulatedImageOffset.width + value.translation.width,
+                    height: accumulatedImageOffset.height + value.translation.height
+                ))
+            }
+            .onEnded { _ in
+                guard imageScale > 1 else {
+                    imageOffset = .zero
+                    accumulatedImageOffset = .zero
+                    return
+                }
+
+                accumulatedImageOffset = imageOffset
+            }
+    }
+
+    private func resetImagePreviewTransform() {
+        withAnimation(.easeInOut(duration: 0.2)) {
+            imageScale = 1
+            lastImageScale = 1
+            imageOffset = .zero
+            accumulatedImageOffset = .zero
+        }
+    }
+
+    private func clampedImageOffset(_ proposedOffset: CGSize) -> CGSize {
+        guard let previewImage else {
+            return .zero
+        }
+
+        let containerSize = UIScreen.main.bounds.size
+        let fittedSize = aspectFitSize(for: previewImage.size, in: containerSize)
+        let scaledWidth = fittedSize.width * imageScale
+        let scaledHeight = fittedSize.height * imageScale
+        let maximumHorizontalOffset = max(0, (scaledWidth - containerSize.width) / 2)
+        let maximumVerticalOffset = max(0, (scaledHeight - containerSize.height) / 2)
+
+        return CGSize(
+            width: min(max(proposedOffset.width, -maximumHorizontalOffset), maximumHorizontalOffset),
+            height: min(max(proposedOffset.height, -maximumVerticalOffset), maximumVerticalOffset)
+        )
+    }
+
+    private func aspectFitSize(for imageSize: CGSize, in containerSize: CGSize) -> CGSize {
+        guard imageSize.width > 0, imageSize.height > 0,
+              containerSize.width > 0, containerSize.height > 0 else {
+            return .zero
+        }
+
+        let widthScale = containerSize.width / imageSize.width
+        let heightScale = containerSize.height / imageSize.height
+        let fitScale = min(widthScale, heightScale)
+
+        return CGSize(
+            width: imageSize.width * fitScale,
+            height: imageSize.height * fitScale
+        )
     }
 }
