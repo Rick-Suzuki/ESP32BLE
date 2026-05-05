@@ -534,6 +534,10 @@ struct SettingsScreen: View {
         )
     }
 
+    private var pdfPreviewSection: some View {
+        SettingsPDFPreviewPanel(pdfURL: selectedPDFURL)
+    }
+
     private var imageControlButtons: some View {
         SettingsImageControlsSection(
             canGoPrevious: (selectedImagePosition ?? 0) > 0,
@@ -663,6 +667,10 @@ struct SettingsScreen: View {
     private var settingsTablePreviewSection: AnyView {
         if listMode == .images {
             return AnyView(imagePreviewSection)
+        }
+
+        if listMode == .pdfs {
+            return AnyView(pdfPreviewSection)
         }
 
         return AnyView(EmptyView())

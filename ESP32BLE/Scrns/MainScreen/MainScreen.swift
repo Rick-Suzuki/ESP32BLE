@@ -781,6 +781,18 @@ private struct MainScreenFilePreviewOverlay: View {
         location: CGPoint,
         containerSize: CGSize
     ) {
+        let pinchScaleTolerance: CGFloat = 0.01
+
+        if abs(gestureScale - 1) <= pinchScaleTolerance {
+            imageScale = pinchStartScale
+            imageOffset = clampedImageOffset(
+                accumulatedImageOffset,
+                containerSize: containerSize,
+                scale: pinchStartScale
+            )
+            return
+        }
+
         let newScale = max(1, pinchStartScale * gestureScale)
         let anchorPoint = CGPoint(
             x: location.x - (containerSize.width / 2),
