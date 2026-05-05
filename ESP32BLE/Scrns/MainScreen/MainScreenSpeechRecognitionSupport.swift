@@ -47,9 +47,11 @@ extension MainScreen {
         unmatchedSpeechText = nil
 
         let bluetoothSendTexts = matchingEntry.sendTexts.filter { sendText in
-            targetDocumentNameForSendText(sendText) == nil
+            targetDocumentNameForSendText(sendText) == nil &&
+                targetPreviewFilenameForSendText(sendText) == nil
         }
         let targetDocumentName = targetDocumentNameForGridEntry(matchingEntry)
+        let targetPreviewFilename = targetPreviewFilenameForGridEntry(matchingEntry)
 
         if let targetDocumentName {
             guard selectDocumentNamedFromGrid(targetDocumentName) else {
@@ -59,13 +61,17 @@ extension MainScreen {
             }
         }
 
+        if let targetPreviewFilename {
+            openPreviewFile(named: targetPreviewFilename)
+        }
+
         guard mainGridButtonMode.sendsBluetooth, !bluetoothSendTexts.isEmpty else {
             return
         }
 
         let normalizedBluetoothSendTexts = bluetoothSendTexts.map(normalizedBluetoothSendText)
         guard normalizedBluetoothSendTexts.allSatisfy(isBluetoothSendableText(_:)) else {
-            showBluetoothEmojiBlockedPopup()
+            showBluetoothUnsupportedTextBlockedPopup()
             return
         }
 
