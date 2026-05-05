@@ -71,7 +71,7 @@ extension MainScreen {
 
         let normalizedBluetoothSendTexts = bluetoothSendTexts.map(normalizedBluetoothSendText)
         guard normalizedBluetoothSendTexts.allSatisfy(isBluetoothSendableText(_:)) else {
-            showBluetoothEmojiBlockedPopup()
+            showBluetoothUnsupportedTextBlockedPopup()
             return
         }
 

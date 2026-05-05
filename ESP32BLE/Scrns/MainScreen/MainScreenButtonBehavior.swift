@@ -168,7 +168,7 @@ extension MainScreen {
         logMainButtonPress(entry)
 
         guard bluetoothSendTexts.allSatisfy(isBluetoothSendableText(_:)) else {
-            showBluetoothEmojiBlockedPopup()
+            showBluetoothUnsupportedTextBlockedPopup()
             return
         }
 
@@ -1032,29 +1032,16 @@ extension MainScreen {
     }
 
     func isBluetoothSendableText(_ sendText: String) -> Bool {
-        !sendText.contains { character in
-            let scalars = character.unicodeScalars
-            let isPlainASCIIAlphaNumeric = scalars.allSatisfy { scalar in
-                scalar.isASCII && CharacterSet.alphanumerics.contains(scalar)
-            }
-
-            if isPlainASCIIAlphaNumeric {
-                return false
-            }
-
-            return scalars.contains { scalar in
-                scalar.properties.isEmojiPresentation || scalar.properties.isEmoji
-            }
-        }
+        sendText.unicodeScalars.allSatisfy(\.isASCII)
     }
 
-    func showBluetoothEmojiBlockedPopup() {
+    func showBluetoothUnsupportedTextBlockedPopup() {
         alertTitle = ""
         renameAlertMessage = nil
 
         Task { @MainActor in
             alertTitle = ""
-            renameAlertMessage = "text couldn't be sent to bluetooth\nbecause it contains emoji"
+            renameAlertMessage = "text couldn't be sent to bluetooth\nbecause it contains emoji or non-English text"
         }
     }
 

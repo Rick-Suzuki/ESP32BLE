@@ -425,7 +425,7 @@ struct MainScreen: View {
         }
 
         guard bluetoothTokens.allSatisfy(isBluetoothSendableText(_:)) else {
-            showBluetoothEmojiBlockedPopup()
+            showBluetoothUnsupportedTextBlockedPopup()
             return
         }
 
