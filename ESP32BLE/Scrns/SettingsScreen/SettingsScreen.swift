@@ -8,15 +8,21 @@ struct SettingsScreen: View {
         case files
         case images
         case sounds
+        case pdfs
+        case all
 
         var buttonTitle: String {
             switch self {
             case .files:
-                return "files"
+                return "text"
             case .images:
                 return "imgs"
             case .sounds:
                 return "snds"
+            case .pdfs:
+                return "pdfs"
+            case .all:
+                return "all"
             }
         }
 
@@ -27,6 +33,10 @@ struct SettingsScreen: View {
             case .images:
                 self = .sounds
             case .sounds:
+                self = .pdfs
+            case .pdfs:
+                self = .all
+            case .all:
                 self = .files
             }
         }
@@ -36,6 +46,7 @@ struct SettingsScreen: View {
         case document
         case image
         case sound
+        case pdf
     }
 
     private struct PendingImportConflict {
@@ -52,9 +63,11 @@ struct SettingsScreen: View {
         var existingFileNames: Set<String>
         var existingImageNames: Set<String>
         var existingSoundNames: Set<String>
+        var existingPDFNames: Set<String>
         var firstImportedDocumentURL: URL?
         var firstImportedImageURL: URL?
         var firstImportedSoundURL: URL?
+        var firstImportedPDFURL: URL?
         var importedAnything = false
     }
 
@@ -97,6 +110,8 @@ struct SettingsScreen: View {
     @AppStorage("settingsFilesScrollPositionID") private var fileScrollPositionIDStorage = ""
     @AppStorage("settingsImagesScrollPositionID") private var imageScrollPositionIDStorage = ""
     @AppStorage("settingsSoundsScrollPositionID") private var soundScrollPositionIDStorage = ""
+    @AppStorage("settingsPDFsScrollPositionID") private var pdfScrollPositionIDStorage = ""
+    @AppStorage("settingsAllScrollPositionID") private var allScrollPositionIDStorage = ""
     @State private var pendingImportListMode: SettingsListMode?
     @State private var pendingImportSession: PendingImportSession?
     @State private var pendingImportConflict: PendingImportConflict?
@@ -114,6 +129,8 @@ struct SettingsScreen: View {
     @AppStorage("selectedBackgroundImagePath") var selectedImagePath = ""
     @AppStorage("selectedSoundName") var selectedSoundName = ""
     @AppStorage("selectedSoundPath") var selectedSoundPath = ""
+    @AppStorage("selectedPDFName") var selectedPDFName = ""
+    @AppStorage("selectedPDFPath") var selectedPDFPath = ""
     @AppStorage(ButtonClickFeedback.preferenceKey) private var isButtonClickEnabled = true
     @FocusState var focusedField: SettingsFocusField?
     @FocusState private var isDocumentNameFieldFocused: Bool
@@ -184,6 +201,7 @@ struct SettingsScreen: View {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
                     ButtonClickFeedback.playIfEnabled()
+                    guard listMode != .all else { return }
                     pendingImportListMode = listMode
                 } label: {
                     Image(systemName: "square.and.arrow.down")
@@ -192,6 +210,8 @@ struct SettingsScreen: View {
                 }
                 .contentShape(.rect)
                 .accessibilityLabel("Import \(listMode.buttonTitle) from iCloud")
+                .disabled(listMode == .all)
+                .opacity(listMode == .all ? 0.45 : 1)
             }
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
@@ -334,8 +354,22 @@ struct SettingsScreen: View {
         )
     }
 
+    private var pdfScrollPositionID: Binding<String?> {
+        Binding(
+            get: { pdfScrollPositionIDStorage.isEmpty ? nil : pdfScrollPositionIDStorage },
+            set: { pdfScrollPositionIDStorage = $0 ?? "" }
+        )
+    }
+
+    private var allScrollPositionID: Binding<String?> {
+        Binding(
+            get: { allScrollPositionIDStorage.isEmpty ? nil : allScrollPositionIDStorage },
+            set: { allScrollPositionIDStorage = $0 ?? "" }
+        )
+    }
+
     private var settingsModeEditResetKey: String {
-        "\(listModeRawValue)|\(selectedImagePath)|\(selectedSoundPath)"
+        "\(listModeRawValue)|\(selectedImagePath)|\(selectedSoundPath)|\(selectedPDFPath)"
     }
 
     private var isImporting: Binding<Bool> {
@@ -363,6 +397,10 @@ struct SettingsScreen: View {
         case .images:
             return [.image]
         case .sounds:
+            return [.data]
+        case .pdfs:
+            return [.pdf]
+        case .all:
             return [.data]
         case nil:
             return [.data]
@@ -584,9 +622,14 @@ struct SettingsScreen: View {
             selectedImageURL: selectedImageURL,
             soundURLs: availableSoundURLs,
             selectedSoundURL: selectedSoundURL,
+            pdfURLs: availablePDFURLs,
+            selectedPDFURL: selectedPDFURL,
+            allFileURLs: availableAllFileURLs,
             fileScrollPositionID: fileScrollPositionID,
             imageScrollPositionID: imageScrollPositionID,
             soundScrollPositionID: soundScrollPositionID,
+            pdfScrollPositionID: pdfScrollPositionID,
+            allScrollPositionID: allScrollPositionID,
             canDeleteDocuments: canDeleteDocuments,
             imagePreviewSection: settingsTablePreviewSection,
             loadFunctionKeys: loadFunctionKeys,
@@ -595,7 +638,9 @@ struct SettingsScreen: View {
             selectImage: selectImage,
             deleteImage: deleteImage,
             selectSound: selectSound,
-            deleteSound: deleteSound
+            deleteSound: deleteSound,
+            selectPDF: selectPDF,
+            deletePDF: deletePDF
         )
         .id(importRefreshID)
     }
@@ -608,6 +653,10 @@ struct SettingsScreen: View {
             return .images
         case .sounds:
             return .sounds
+        case .pdfs:
+            return .pdfs
+        case .all:
+            return .all
         }
     }
 
@@ -945,6 +994,44 @@ struct SettingsScreen: View {
             .sorted { $0.lastPathComponent.localizedCaseInsensitiveCompare($1.lastPathComponent) == .orderedAscending }
     }
 
+    private var availablePDFURLs: [URL] {
+        guard let directoryURL = currentDocumentsDirectoryURL else {
+            return []
+        }
+
+        let urls = (try? FileManager.default.contentsOfDirectory(
+            at: directoryURL,
+            includingPropertiesForKeys: [.isRegularFileKey],
+            options: [.skipsHiddenFiles]
+        )) ?? []
+
+        return urls
+            .filter { url in
+                let values = try? url.resourceValues(forKeys: [.isRegularFileKey])
+                return values?.isRegularFile == true && url.pathExtension.lowercased() == "pdf"
+            }
+            .sorted { $0.lastPathComponent.localizedCaseInsensitiveCompare($1.lastPathComponent) == .orderedAscending }
+    }
+
+    private var availableAllFileURLs: [URL] {
+        guard let directoryURL = currentDocumentsDirectoryURL else {
+            return []
+        }
+
+        let urls = (try? FileManager.default.contentsOfDirectory(
+            at: directoryURL,
+            includingPropertiesForKeys: [.isRegularFileKey],
+            options: [.skipsHiddenFiles]
+        )) ?? []
+
+        return urls
+            .filter { url in
+                let values = try? url.resourceValues(forKeys: [.isRegularFileKey])
+                return values?.isRegularFile == true
+            }
+            .sorted { $0.lastPathComponent.localizedCaseInsensitiveCompare($1.lastPathComponent) == .orderedAscending }
+    }
+
     private var selectedSoundURL: URL? {
         if !selectedSoundPath.isEmpty,
            let soundURL = availableSoundURLs.first(where: { $0.path == selectedSoundPath }) {
@@ -961,9 +1048,30 @@ struct SettingsScreen: View {
         return nil
     }
 
+    private var selectedPDFURL: URL? {
+        if !selectedPDFPath.isEmpty,
+           let pdfURL = availablePDFURLs.first(where: { $0.path == selectedPDFPath }) {
+            return pdfURL
+        }
+
+        if !selectedPDFName.isEmpty,
+           let pdfURL = availablePDFURLs.first(where: {
+               $0.lastPathComponent.caseInsensitiveCompare(selectedPDFName) == .orderedSame
+           }) {
+            return pdfURL
+        }
+
+        return nil
+    }
+
     private func persistSelectedSound(_ soundURL: URL?) {
         selectedSoundPath = soundURL?.path ?? ""
         selectedSoundName = soundURL?.lastPathComponent ?? ""
+    }
+
+    private func persistSelectedPDF(_ pdfURL: URL?) {
+        selectedPDFPath = pdfURL?.path ?? ""
+        selectedPDFName = pdfURL?.lastPathComponent ?? ""
     }
 
     private var selectedSoundDisplayName: String {
@@ -974,6 +1082,14 @@ struct SettingsScreen: View {
         return selectedSoundURL.deletingPathExtension().lastPathComponent
     }
 
+    private var selectedPDFDisplayName: String {
+        guard let selectedPDFURL else {
+            return "pdf"
+        }
+
+        return selectedPDFURL.deletingPathExtension().lastPathComponent
+    }
+
     private var currentTitleDisplayName: String {
         switch listMode {
         case .files:
@@ -982,6 +1098,10 @@ struct SettingsScreen: View {
             return selectedImageDisplayName
         case .sounds:
             return selectedSoundDisplayName
+        case .pdfs:
+            return selectedPDFDisplayName
+        case .all:
+            return "all files"
         }
     }
 
@@ -993,6 +1113,10 @@ struct SettingsScreen: View {
             return selectedImageURL != nil
         case .sounds:
             return selectedSoundURL != nil
+        case .pdfs:
+            return selectedPDFURL != nil
+        case .all:
+            return false
         }
     }
 
@@ -1018,6 +1142,10 @@ struct SettingsScreen: View {
             alertMessage = renameSelectedImage(to: proposedName)
         case .sounds:
             alertMessage = renameSelectedSound(to: proposedName)
+        case .pdfs:
+            alertMessage = renameSelectedPDF(to: proposedName)
+        case .all:
+            return
         }
 
         if let alertMessage {
@@ -1116,6 +1244,10 @@ struct SettingsScreen: View {
         playSelectedSoundPreview(from: soundURL)
     }
 
+    private func selectPDF(_ pdfURL: URL) {
+        persistSelectedPDF(pdfURL)
+    }
+
     private func playSelectedSoundPreview(from soundURL: URL) {
         soundPreviewPlayer?.stop()
         soundPreviewPlayer = nil
@@ -1162,6 +1294,35 @@ struct SettingsScreen: View {
             return nil
         } catch {
             return "Couldn't rename the image."
+        }
+    }
+
+    private func renameSelectedPDF(to proposedName: String) -> String? {
+        let trimmedName = proposedName.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard !trimmedName.isEmpty else {
+            return "Filename can't be blank."
+        }
+
+        guard let sourceURL = selectedPDFURL else {
+            return "Select a pdf first."
+        }
+
+        let targetFileName = "\(trimmedName).pdf"
+        let directoryURL = sourceURL.deletingLastPathComponent()
+
+        if availablePDFURLs.contains(where: { $0.lastPathComponent.caseInsensitiveCompare(targetFileName) == .orderedSame }) {
+            return "a file with that name already exists."
+        }
+
+        let targetURL = directoryURL.appendingPathComponent(targetFileName)
+
+        do {
+            try FileManager.default.moveItem(at: sourceURL, to: targetURL)
+            persistSelectedPDF(targetURL)
+            return nil
+        } catch {
+            return "Couldn't rename the pdf."
         }
     }
 
@@ -1248,6 +1409,31 @@ struct SettingsScreen: View {
         }
     }
 
+    private func deletePDF(_ pdfURL: URL) {
+        let previousSelectedPDFURL = selectedPDFURL
+
+        do {
+            try FileManager.default.removeItem(at: pdfURL)
+        } catch {
+            renameAlertMessage = "Couldn't delete the pdf."
+            return
+        }
+
+        let refreshedPDFURLs = availablePDFURLs
+
+        if let previousSelectedPDFURL,
+           previousSelectedPDFURL.lastPathComponent == pdfURL.lastPathComponent {
+            if let replacementURL = refreshedPDFURLs.first {
+                persistSelectedPDF(replacementURL)
+            } else {
+                persistSelectedPDF(nil)
+            }
+        } else if let previousSelectedPDFURL,
+                  let refreshedPDFIndex = refreshedPDFURLs.firstIndex(where: { $0.lastPathComponent == previousSelectedPDFURL.lastPathComponent }) {
+            persistSelectedPDF(refreshedPDFURLs[refreshedPDFIndex])
+        }
+    }
+
     private var plainTextImportType: UTType {
         UTType(filenameExtension: "txt") ?? .plainText
     }
@@ -1258,6 +1444,10 @@ struct SettingsScreen: View {
 
     var supportedImportedSoundExtensions: Set<String> {
         ["mp3", "wav", "m4a", "aiff", "aac", "caf"]
+    }
+
+    private var supportedImportedPDFExtensions: Set<String> {
+        ["pdf"]
     }
 
     private func handleImportedSelection(_ result: Result<[URL], Error>) {
@@ -1275,7 +1465,8 @@ struct SettingsScreen: View {
             remainingURLs: urls,
             existingFileNames: Set(availableDocumentURLs.map { $0.lastPathComponent.lowercased() }),
             existingImageNames: Set(availableImageURLs.map { $0.lastPathComponent.lowercased() }),
-            existingSoundNames: Set(availableSoundURLs.map { $0.lastPathComponent.lowercased() })
+            existingSoundNames: Set(availableSoundURLs.map { $0.lastPathComponent.lowercased() }),
+            existingPDFNames: Set(availablePDFURLs.map { $0.lastPathComponent.lowercased() })
         )
         processPendingImportSession(session)
     }
@@ -1368,6 +1559,33 @@ struct SettingsScreen: View {
                 } catch {
                     print("Failed to import sound \(targetFileName): \(error.localizedDescription)")
                 }
+                continue
+            }
+
+            if supportedImportedPDFExtensions.contains(pathExtension) {
+                if session.existingPDFNames.contains(targetFileNameKey) ||
+                    FileManager.default.fileExists(atPath: targetURL.path) {
+                    pendingImportSession = session
+                    pendingImportConflict = PendingImportConflict(
+                        sourceURL: sourceURL,
+                        targetURL: targetURL,
+                        fileName: targetFileName,
+                        contentKind: .pdf
+                    )
+                    return
+                }
+
+                do {
+                    try importFileData(from: sourceURL, to: targetURL)
+                    recordSuccessfulImport(
+                        targetURL: targetURL,
+                        fileNameKey: targetFileNameKey,
+                        contentKind: .pdf,
+                        session: &session
+                    )
+                } catch {
+                    print("Failed to import pdf \(targetFileName): \(error.localizedDescription)")
+                }
             }
         }
 
@@ -1397,6 +1615,11 @@ struct SettingsScreen: View {
             session.existingSoundNames.insert(fileNameKey)
             if session.firstImportedSoundURL == nil {
                 session.firstImportedSoundURL = targetURL
+            }
+        case .pdf:
+            session.existingPDFNames.insert(fileNameKey)
+            if session.firstImportedPDFURL == nil {
+                session.firstImportedPDFURL = targetURL
             }
         }
     }
@@ -1471,6 +1694,11 @@ struct SettingsScreen: View {
         if let firstImportedSoundURL = session.firstImportedSoundURL,
            session.importListMode == .sounds || selectedSoundURL == nil {
             persistSelectedSound(firstImportedSoundURL)
+        }
+
+        if let firstImportedPDFURL = session.firstImportedPDFURL,
+           session.importListMode == .pdfs || selectedPDFURL == nil {
+            persistSelectedPDF(firstImportedPDFURL)
         }
     }
 

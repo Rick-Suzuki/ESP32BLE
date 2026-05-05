@@ -5,6 +5,8 @@ struct SettingsDocumentTableSection: View {
         case files
         case images
         case sounds
+        case pdfs
+        case all
     }
 
     let listMode: ListMode
@@ -14,9 +16,14 @@ struct SettingsDocumentTableSection: View {
     let selectedImageURL: URL?
     let soundURLs: [URL]
     let selectedSoundURL: URL?
+    let pdfURLs: [URL]
+    let selectedPDFURL: URL?
+    let allFileURLs: [URL]
     @Binding var fileScrollPositionID: String?
     @Binding var imageScrollPositionID: String?
     @Binding var soundScrollPositionID: String?
+    @Binding var pdfScrollPositionID: String?
+    @Binding var allScrollPositionID: String?
     let canDeleteDocuments: Bool
     let imagePreviewSection: AnyView
     let loadFunctionKeys: (URL) -> Void
@@ -26,6 +33,8 @@ struct SettingsDocumentTableSection: View {
     let deleteImage: (URL) -> Void
     let selectSound: (URL) -> Void
     let deleteSound: (URL) -> Void
+    let selectPDF: (URL) -> Void
+    let deletePDF: (URL) -> Void
 
 	// set table font size for iphone
     private var tableRowFont: Font? {
@@ -49,6 +58,16 @@ struct SettingsDocumentTableSection: View {
                 case .sounds:
                     ForEach(soundURLs, id: \.path) { soundURL in
                         soundRow(for: soundURL)
+                    }
+                    .scrollTargetLayout()
+                case .pdfs:
+                    ForEach(pdfURLs, id: \.path) { pdfURL in
+                        pdfRow(for: pdfURL)
+                    }
+                    .scrollTargetLayout()
+                case .all:
+                    ForEach(allFileURLs, id: \.path) { fileURL in
+                        allFilesRow(for: fileURL)
                     }
                     .scrollTargetLayout()
                 }
@@ -77,6 +96,10 @@ struct SettingsDocumentTableSection: View {
             return $imageScrollPositionID
         case .sounds:
             return $soundScrollPositionID
+        case .pdfs:
+            return $pdfScrollPositionID
+        case .all:
+            return $allScrollPositionID
         }
     }
 
@@ -214,5 +237,73 @@ struct SettingsDocumentTableSection: View {
                 Label("Delete", systemImage: "trash")
             }
         }
+    }
+
+    private func pdfRow(for pdfURL: URL) -> some View {
+        let isSelected = selectedPDFURL?.lastPathComponent == pdfURL.lastPathComponent
+
+        return Button {
+            ButtonClickFeedback.playIfEnabled()
+            selectPDF(pdfURL)
+        } label: {
+            HStack {
+                Text(pdfURL.lastPathComponent)
+                    .font(tableRowFont)
+                    .fontWeight(isSelected ? .bold : .regular)
+                    .foregroundStyle(isSelected ? Color.green : .white)
+                    .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Spacer()
+            }
+            .padding(.leading, 10)
+            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            .background(Color.black)
+            .overlay {
+                Rectangle()
+                    .fill(Color.gray.opacity(0.6))
+                    .frame(height: 1)
+                    .frame(maxHeight: .infinity, alignment: .bottom)
+            }
+            .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .id(pdfURL.path)
+        .listRowInsets(EdgeInsets())
+        .listRowSeparator(.hidden)
+        .listRowBackground(Color.clear)
+        .swipeActions(edge: .leading, allowsFullSwipe: false) {
+            Button(role: .destructive) {
+                deletePDF(pdfURL)
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
+        }
+    }
+
+    private func allFilesRow(for fileURL: URL) -> some View {
+        HStack {
+            Text(fileURL.lastPathComponent)
+                .font(tableRowFont)
+                .foregroundStyle(.white)
+                .multilineTextAlignment(.leading)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Spacer()
+        }
+        .padding(.leading, 10)
+        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+        .background(Color.black)
+        .overlay {
+            Rectangle()
+                .fill(Color.gray.opacity(0.6))
+                .frame(height: 1)
+                .frame(maxHeight: .infinity, alignment: .bottom)
+        }
+        .contentShape(.rect)
+        .id(fileURL.path)
+        .listRowInsets(EdgeInsets())
+        .listRowSeparator(.hidden)
+        .listRowBackground(Color.clear)
     }
 }

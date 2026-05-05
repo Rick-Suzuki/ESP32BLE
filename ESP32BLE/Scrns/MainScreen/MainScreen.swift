@@ -2,12 +2,14 @@
 import SwiftUI
 import UIKit
 import AVFoundation
+import PDFKit
 
 
 struct MainScreen: View {
     enum PreviewedFile: Equatable, Identifiable {
         case text(filename: String, contents: String)
         case image(filename: String, url: URL)
+        case renderedImage(filename: String, image: UIImage)
 
         var id: String {
             switch self {
@@ -15,6 +17,8 @@ struct MainScreen: View {
                 return "text:\(filename)"
             case let .image(filename, _):
                 return "image:\(filename)"
+            case let .renderedImage(filename, _):
+                return "rendered-image:\(filename)"
             }
         }
     }
@@ -647,6 +651,7 @@ private struct MainScreenFilePreviewOverlay: View {
     @State private var previewImage: UIImage?
     @State private var imageScale: CGFloat = 1
     @State private var lastImageScale: CGFloat = 1
+    @State private var pinchStartScale: CGFloat = 1
     @State private var imageOffset: CGSize = .zero
     @State private var accumulatedImageOffset: CGSize = .zero
 
@@ -672,26 +677,51 @@ private struct MainScreenFilePreviewOverlay: View {
                                 .padding(.top, 68)
                                 .padding(.bottom, safeBottomInset + 20)
                         }
-                    case .image:
-                        Group {
-                            if let previewImage {
-                                Image(uiImage: previewImage)
-                                    .resizable()
-                                    .scaledToFit()
-                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                                    .scaleEffect(imageScale)
-                                    .offset(imageOffset)
-                                    .contentShape(Rectangle())
-                                    .simultaneousGesture(imagePanGesture)
-                                    .simultaneousGesture(imageMagnificationGesture)
-                                    .highPriorityGesture(
-                                        TapGesture(count: 2)
-                                            .onEnded(resetImagePreviewTransform)
-                                    )
-                            } else {
-                                ProgressView()
-                                    .tint(.white)
-                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    case .image, .renderedImage:
+                        GeometryReader { imageGeometry in
+                            Group {
+                                if let previewImage {
+                                    Image(uiImage: previewImage)
+                                        .resizable()
+                                        .scaledToFit()
+                                        .frame(width: imageGeometry.size.width, height: imageGeometry.size.height)
+                                        .scaleEffect(imageScale)
+                                        .offset(imageOffset)
+                                        .contentShape(Rectangle())
+                                        .overlay {
+                                            ImagePreviewGestureSurface(
+                                                onPinchBegan: {
+                                                    pinchStartScale = imageScale
+                                                    lastImageScale = imageScale
+                                                },
+                                                onPinchChanged: { scale, location, containerSize in
+                                                    updateImageMagnification(
+                                                        gestureScale: scale,
+                                                        location: location,
+                                                        containerSize: containerSize
+                                                    )
+                                                },
+                                                onPinchEnded: { scale, location, containerSize in
+                                                    finishImageMagnification(
+                                                        gestureScale: scale,
+                                                        location: location,
+                                                        containerSize: containerSize
+                                                    )
+                                                },
+                                                onPanChanged: { translation, containerSize in
+                                                    updateImagePan(translation: translation, containerSize: containerSize)
+                                                },
+                                                onPanEnded: { translation, containerSize in
+                                                    finishImagePan(translation: translation, containerSize: containerSize)
+                                                },
+                                                onDoubleTap: resetImagePreviewTransform
+                                            )
+                                        }
+                                } else {
+                                    ProgressView()
+                                        .tint(.white)
+                                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                }
                             }
                         }
                     }
@@ -727,62 +757,88 @@ private struct MainScreenFilePreviewOverlay: View {
             return "\(filename):text"
         case let .image(filename, _):
             return "\(filename):\(Int(maxPixelDimension.rounded(.up)))"
+        case let .renderedImage(filename, _):
+            return "\(filename):rendered"
         }
     }
 
     private func loadPreviewImage(maxPixelDimension: CGFloat) {
-        guard case let .image(_, url) = previewedFile else {
+        switch previewedFile {
+        case let .image(_, url):
+            previewImage = downsampledUIImage(at: url, maxPixelDimension: maxPixelDimension)
+            resetImagePreviewTransform()
+        case let .renderedImage(_, image):
+            previewImage = image
+            resetImagePreviewTransform()
+        default:
             previewImage = nil
             resetImagePreviewTransform()
+        }
+    }
+
+    private func updateImageMagnification(
+        gestureScale: CGFloat,
+        location: CGPoint,
+        containerSize: CGSize
+    ) {
+        let newScale = max(1, pinchStartScale * gestureScale)
+        let anchorPoint = CGPoint(
+            x: location.x - (containerSize.width / 2),
+            y: location.y - (containerSize.height / 2)
+        )
+        let scaleRatio = newScale / pinchStartScale
+        let proposedOffset = CGSize(
+            width: anchorPoint.x - (scaleRatio * (anchorPoint.x - accumulatedImageOffset.width)),
+            height: anchorPoint.y - (scaleRatio * (anchorPoint.y - accumulatedImageOffset.height))
+        )
+
+        imageScale = newScale
+        imageOffset = clampedImageOffset(
+            proposedOffset,
+            containerSize: containerSize,
+            scale: newScale
+        )
+    }
+
+    private func finishImageMagnification(
+        gestureScale: CGFloat,
+        location: CGPoint,
+        containerSize: CGSize
+    ) {
+        updateImageMagnification(
+            gestureScale: gestureScale,
+            location: location,
+            containerSize: containerSize
+        )
+        lastImageScale = imageScale
+        accumulatedImageOffset = imageOffset
+
+        if imageScale == 1 {
+            imageOffset = .zero
+            accumulatedImageOffset = .zero
+        }
+    }
+
+    private func updateImagePan(translation: CGSize, containerSize: CGSize) {
+        guard imageScale > 1 else {
+            imageOffset = .zero
+            accumulatedImageOffset = .zero
             return
         }
 
-        previewImage = downsampledUIImage(at: url, maxPixelDimension: maxPixelDimension)
-        resetImagePreviewTransform()
+        imageOffset = clampedImageOffset(
+            CGSize(
+                width: accumulatedImageOffset.width + translation.width,
+                height: accumulatedImageOffset.height + translation.height
+            ),
+            containerSize: containerSize,
+            scale: imageScale
+        )
     }
 
-    private var imageMagnificationGesture: some Gesture {
-        MagnificationGesture()
-            .onChanged { value in
-                imageScale = max(1, lastImageScale * value)
-                imageOffset = clampedImageOffset(imageOffset)
-            }
-            .onEnded { value in
-                imageScale = max(1, lastImageScale * value)
-                lastImageScale = imageScale
-                imageOffset = clampedImageOffset(imageOffset)
-                accumulatedImageOffset = imageOffset
-
-                if imageScale == 1 {
-                    imageOffset = .zero
-                    accumulatedImageOffset = .zero
-                }
-            }
-    }
-
-    private var imagePanGesture: some Gesture {
-        DragGesture(minimumDistance: 8)
-            .onChanged { value in
-                guard imageScale > 1 else {
-                    imageOffset = .zero
-                    accumulatedImageOffset = .zero
-                    return
-                }
-
-                imageOffset = clampedImageOffset(CGSize(
-                    width: accumulatedImageOffset.width + value.translation.width,
-                    height: accumulatedImageOffset.height + value.translation.height
-                ))
-            }
-            .onEnded { _ in
-                guard imageScale > 1 else {
-                    imageOffset = .zero
-                    accumulatedImageOffset = .zero
-                    return
-                }
-
-                accumulatedImageOffset = imageOffset
-            }
+    private func finishImagePan(translation: CGSize, containerSize: CGSize) {
+        updateImagePan(translation: translation, containerSize: containerSize)
+        accumulatedImageOffset = imageOffset
     }
 
     private func resetImagePreviewTransform() {
@@ -794,15 +850,18 @@ private struct MainScreenFilePreviewOverlay: View {
         }
     }
 
-    private func clampedImageOffset(_ proposedOffset: CGSize) -> CGSize {
+    private func clampedImageOffset(
+        _ proposedOffset: CGSize,
+        containerSize: CGSize,
+        scale: CGFloat
+    ) -> CGSize {
         guard let previewImage else {
             return .zero
         }
 
-        let containerSize = UIScreen.main.bounds.size
         let fittedSize = aspectFitSize(for: previewImage.size, in: containerSize)
-        let scaledWidth = fittedSize.width * imageScale
-        let scaledHeight = fittedSize.height * imageScale
+        let scaledWidth = fittedSize.width * scale
+        let scaledHeight = fittedSize.height * scale
         let maximumHorizontalOffset = max(0, (scaledWidth - containerSize.width) / 2)
         let maximumVerticalOffset = max(0, (scaledHeight - containerSize.height) / 2)
 
@@ -826,5 +885,109 @@ private struct MainScreenFilePreviewOverlay: View {
             width: imageSize.width * fitScale,
             height: imageSize.height * fitScale
         )
+    }
+}
+
+private struct ImagePreviewGestureSurface: UIViewRepresentable {
+    let onPinchBegan: () -> Void
+    let onPinchChanged: (_ scale: CGFloat, _ location: CGPoint, _ containerSize: CGSize) -> Void
+    let onPinchEnded: (_ scale: CGFloat, _ location: CGPoint, _ containerSize: CGSize) -> Void
+    let onPanChanged: (_ translation: CGSize, _ containerSize: CGSize) -> Void
+    let onPanEnded: (_ translation: CGSize, _ containerSize: CGSize) -> Void
+    let onDoubleTap: () -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+
+    func makeUIView(context: Context) -> UIView {
+        let view = UIView()
+        view.backgroundColor = .clear
+
+        let pinchGestureRecognizer = UIPinchGestureRecognizer(
+            target: context.coordinator,
+            action: #selector(Coordinator.handlePinch(_:))
+        )
+        let panGestureRecognizer = UIPanGestureRecognizer(
+            target: context.coordinator,
+            action: #selector(Coordinator.handlePan(_:))
+        )
+        panGestureRecognizer.minimumNumberOfTouches = 1
+        panGestureRecognizer.maximumNumberOfTouches = 1
+
+        let doubleTapGestureRecognizer = UITapGestureRecognizer(
+            target: context.coordinator,
+            action: #selector(Coordinator.handleDoubleTap(_:))
+        )
+        doubleTapGestureRecognizer.numberOfTapsRequired = 2
+        doubleTapGestureRecognizer.numberOfTouchesRequired = 1
+
+        pinchGestureRecognizer.delegate = context.coordinator
+        panGestureRecognizer.delegate = context.coordinator
+        doubleTapGestureRecognizer.delegate = context.coordinator
+
+        view.addGestureRecognizer(pinchGestureRecognizer)
+        view.addGestureRecognizer(panGestureRecognizer)
+        view.addGestureRecognizer(doubleTapGestureRecognizer)
+        return view
+    }
+
+    func updateUIView(_ uiView: UIView, context: Context) {
+        context.coordinator.parent = self
+    }
+
+    final class Coordinator: NSObject, UIGestureRecognizerDelegate {
+        var parent: ImagePreviewGestureSurface
+
+        init(_ parent: ImagePreviewGestureSurface) {
+            self.parent = parent
+        }
+
+        @objc func handlePinch(_ gestureRecognizer: UIPinchGestureRecognizer) {
+            let location = gestureRecognizer.location(in: gestureRecognizer.view)
+            let containerSize = gestureRecognizer.view?.bounds.size ?? .zero
+
+            switch gestureRecognizer.state {
+            case .began:
+                parent.onPinchBegan()
+                parent.onPinchChanged(gestureRecognizer.scale, location, containerSize)
+            case .changed:
+                parent.onPinchChanged(gestureRecognizer.scale, location, containerSize)
+            case .ended, .cancelled, .failed:
+                parent.onPinchEnded(gestureRecognizer.scale, location, containerSize)
+            default:
+                break
+            }
+        }
+
+        @objc func handlePan(_ gestureRecognizer: UIPanGestureRecognizer) {
+            let translation = gestureRecognizer.translation(in: gestureRecognizer.view)
+            let containerSize = gestureRecognizer.view?.bounds.size ?? .zero
+            let size = CGSize(width: translation.x, height: translation.y)
+
+            switch gestureRecognizer.state {
+            case .changed:
+                parent.onPanChanged(size, containerSize)
+            case .ended, .cancelled, .failed:
+                parent.onPanEnded(size, containerSize)
+            default:
+                break
+            }
+        }
+
+        @objc func handleDoubleTap(_ gestureRecognizer: UITapGestureRecognizer) {
+            guard gestureRecognizer.state == .ended else {
+                return
+            }
+
+            parent.onDoubleTap()
+        }
+
+        func gestureRecognizer(
+            _ gestureRecognizer: UIGestureRecognizer,
+            shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
+        ) -> Bool {
+            true
+        }
     }
 }

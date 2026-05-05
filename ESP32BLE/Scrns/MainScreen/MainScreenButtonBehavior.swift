@@ -2,6 +2,7 @@ import SwiftUI
 import AVFoundation
 import UIKit
 import Combine
+import PDFKit
 
 extension MainScreen {
     private var defaultNewButtonEntryText: String { "cb ::" }
@@ -659,6 +660,15 @@ extension MainScreen {
             return
         }
 
+        if fileURL.pathExtension.caseInsensitiveCompare("pdf") == .orderedSame,
+           let renderedPDFImage = renderedSinglePagePDFPreviewImage(from: fileURL) {
+            presentedPreviewFile = .renderedImage(
+                filename: fileURL.lastPathComponent,
+                image: renderedPDFImage
+            )
+            return
+        }
+
         guard UIImage(contentsOfFile: fileURL.path) != nil else {
             alertTitle = "Unsupported File"
             renameAlertMessage = "Couldn't preview \(trimmedFilename.lowercased())."
@@ -706,6 +716,34 @@ extension MainScreen {
             }
 
             return candidateURL.lastPathComponent.caseInsensitiveCompare(filename) == .orderedSame
+        }
+    }
+
+    private func renderedSinglePagePDFPreviewImage(from fileURL: URL) -> UIImage? {
+        guard let pdfDocument = PDFDocument(url: fileURL),
+              pdfDocument.pageCount == 1,
+              let pdfPage = pdfDocument.page(at: 0) else {
+            return nil
+        }
+
+        let pageBounds = pdfPage.bounds(for: .mediaBox)
+        guard pageBounds.width > 0, pageBounds.height > 0 else {
+            return nil
+        }
+
+        let rendererFormat = UIGraphicsImageRendererFormat.default()
+        rendererFormat.scale = UIScreen.main.scale
+        let renderer = UIGraphicsImageRenderer(size: pageBounds.size, format: rendererFormat)
+
+        return renderer.image { context in
+            UIColor.black.setFill()
+            context.fill(CGRect(origin: .zero, size: pageBounds.size))
+
+            context.cgContext.saveGState()
+            context.cgContext.translateBy(x: 0, y: pageBounds.height)
+            context.cgContext.scaleBy(x: 1, y: -1)
+            pdfPage.draw(with: .mediaBox, to: context.cgContext)
+            context.cgContext.restoreGState()
         }
     }
 
