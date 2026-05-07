@@ -27,6 +27,9 @@ struct MainScreenToolbarContent: ToolbarContent {
     let openSettings: AnyView
 
     var body: some ToolbarContent {
+		//
+		//----------------------------------------
+		//
         ToolbarItem(placement: .topBarLeading) {
             Button("KB") {
                 ButtonClickFeedback.playIfEnabled()
@@ -45,7 +48,9 @@ struct MainScreenToolbarContent: ToolbarContent {
             .contentShape(.rect)
             .disabled(isGridEditModeEnabled || editingSlotIndex != nil)
         }
-
+		//
+		//----------------------------------------
+		//
         ToolbarItem(placement: .principal) {
             HStack(spacing: 20) {
                 Button {
@@ -60,7 +65,9 @@ struct MainScreenToolbarContent: ToolbarContent {
                 .buttonStyle(.plain)
                 .foregroundStyle(toolbarPrincipalForegroundColor)
                 .disabled(isHomeDocumentSelected)
-
+				//
+				//----------------------------------------
+				//
                 Button {
                     ButtonClickFeedback.playIfEnabled()
                     goBackToPreviousDocument()
@@ -73,7 +80,9 @@ struct MainScreenToolbarContent: ToolbarContent {
                 .buttonStyle(.plain)
                 .foregroundStyle(toolbarPrincipalForegroundColor)
                 .disabled(!canGoBackToPreviousDocument)
-
+				//
+				//----------------------------------------
+				//
                 Button {
                     ButtonClickFeedback.playIfEnabled()
                     selectPreviousDocument()
