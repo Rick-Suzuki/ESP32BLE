@@ -30,27 +30,6 @@ struct MainScreenToolbarContent: ToolbarContent {
 		//
 		//----------------------------------------
 		//
-        ToolbarItem(placement: .topBarLeading) {
-            Button("KB") {
-                ButtonClickFeedback.playIfEnabled()
-                openKeyboardScreen()
-            }
-            .font(.headline)
-            .foregroundStyle(keyboardButtonForegroundColor)
-            .padding(.horizontal, 5)
-            .frame(minHeight: 44)
-            .background(toolbarButtonBackgroundColor(normalBackground: normalToolbarBackgroundColor))
-            .overlay {
-                RoundedRectangle(cornerRadius: 23)
-                    .stroke(toolbarButtonBorderColor, lineWidth: 1.5)
-            }
-            .clipShape(.rect(cornerRadius: 23))
-            .contentShape(.rect)
-            .disabled(isGridEditModeEnabled || editingSlotIndex != nil)
-        }
-		//
-		//----------------------------------------
-		//
         ToolbarItem(placement: .principal) {
             HStack(spacing: 20) {
                 Button {
@@ -146,6 +125,26 @@ struct MainScreenToolbarContent: ToolbarContent {
                     .frame(width: isPad ? 200 : 100)
                     .disabled(editingSlotIndex != nil)
 
+				
+				Button("KB") {
+					ButtonClickFeedback.playIfEnabled()
+					openKeyboardScreen()
+				}
+				.font(.headline)
+				.foregroundStyle(keyboardButtonForegroundColor)
+				.padding(.horizontal, 5)
+				.frame(minHeight: 44)
+				.background(toolbarButtonBackgroundColor(normalBackground: normalToolbarBackgroundColor))
+				.overlay {
+					RoundedRectangle(cornerRadius: 23)
+						.stroke(toolbarButtonBorderColor, lineWidth: 1.5)
+				}
+				.clipShape(.rect(cornerRadius: 23))
+				.contentShape(.rect)
+				.disabled(isGridEditModeEnabled || editingSlotIndex != nil)
+
+				
+				
                 Button {
                     ButtonClickFeedback.playIfEnabled()
                     toggleGridEditMode()
