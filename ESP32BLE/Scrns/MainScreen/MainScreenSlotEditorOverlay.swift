@@ -43,7 +43,8 @@ struct MainScreenSlotEditorOverlay: View {
     private let nextButtonSelectionSymbolToken = "__next_button_selection__"
     private let visibleEyeSymbolName = "eye"
     private let hiddenEyeSymbolName = "eye.slash"
-    private let leftSymbolNames = [
+  
+	private let leftSymbolNames = [
         "square.and.arrow.up.on.square.fill", "square.and.arrow.down.on.square.fill", "folder", "__visibility_toggle__", "magnifyingglass",
         "lightbulb.max.fill", "speaker.wave.2", "star", "heart", "bell"
     ]

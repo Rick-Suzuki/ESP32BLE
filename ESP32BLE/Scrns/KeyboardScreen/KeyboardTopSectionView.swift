@@ -80,19 +80,19 @@ struct KeyboardTopSectionView: View {
                 }
 
                 topOptionButton(
-                    title: "auto-caps",
+					title: isPad ? "auto-caps" : "acaps",
                     isOn: isAutoCapEnabled,
                     isEnabled: isSendOnReturnMode,
                     width: nil
                 )
                 topOptionButton(
-                    title: "cap 1st letter",
+					title: isPad ? "cap 1st letter" : "cap 1st",
                     isOn: isEachWordCapEnabled,
                     isEnabled: isSendOnReturnMode,
                     width: nil
                 )
                 topOptionButton(
-                    title: "auto-correct",
+					title: isPad ? "auto-correct" : "acorrect",
                     isOn: isAutoCorrectEnabled,
                     isEnabled: isSendOnReturnMode,
                     width: nil
