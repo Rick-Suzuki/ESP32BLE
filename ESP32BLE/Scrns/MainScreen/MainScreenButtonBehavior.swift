@@ -1163,18 +1163,27 @@ extension MainScreen {
             playLoopingSoundNamed: { playMainGridSound(named: $0, repeats: true) },
             stopSoundPlayback: stopMainGridSoundPlayback,
             sendTimerCompletionAction: { entry in
-                guard ble.isConnected else {
-                    return
+                let bluetoothSendTexts = bluetoothSendTexts(for: entry)
+                guard !bluetoothSendTexts.isEmpty else {
+                    return true
                 }
 
-                let bluetoothSendTexts = bluetoothSendTexts(for: entry)
+                guard ble.isConnected else {
+                    alertTitle = "Bluetooth not connected"
+                    renameAlertMessage = "Bluetooth needs to be connected\nin order to send data to the ESP32."
+                    return false
+                }
+
                 guard bluetoothSendTexts.allSatisfy(isBluetoothSendableText(_:)) else {
-                    return
+                    showBluetoothUnsupportedTextBlockedPopup()
+                    return false
                 }
 
                 for sendText in bluetoothSendTexts {
                     ble.sendLine(sendText)
                 }
+
+                return true
             },
             resolveSoundURL: { soundURL(named: $0) },
             activateAudioSession: activateAudioSessionForSpeechPlayback,
@@ -1361,7 +1370,7 @@ struct MainScreenButtonLabelView: View {
     let playSoundNamed: (String) -> Void
     let playLoopingSoundNamed: (String) -> Void
     let stopSoundPlayback: () -> Void
-    let sendTimerCompletionAction: (FunctionKeyEntry) -> Void
+    let sendTimerCompletionAction: (FunctionKeyEntry) -> Bool
     let resolveSoundURL: (String) -> URL?
     let activateAudioSession: () -> Void
     let reportSoundError: (String, String) -> Void
@@ -2290,7 +2299,7 @@ final class MainGridSharedTimerState: ObservableObject {
     private var startCompletionSoundLoopCallbacks: [String: (String) -> Void] = [:]
     private var stopCompletionSoundLoopCallbacks: [String: () -> Void] = [:]
     private var speakCompletionTextCallbacks: [String: (String) -> Void] = [:]
-    private var timerCompletionActionCallbacks: [String: () -> Void] = [:]
+    private var timerCompletionActionCallbacks: [String: () -> Bool] = [:]
     private var endDates: [String: Date] = [:]
     private var tickTasks: [String: Task<Void, Never>] = [:]
 
@@ -2302,7 +2311,7 @@ final class MainGridSharedTimerState: ObservableObject {
         widgetID: String,
         duration: Int,
         completion: MainGridTimerCompletion?,
-        onTimerCompletionAction: @escaping () -> Void,
+        onTimerCompletionAction: @escaping () -> Bool,
         onPlayCompletionSound: @escaping (String) -> Void,
         onStopCompletionSound: @escaping () -> Void,
         onSpeakCompletionText: @escaping (String) -> Void
@@ -2335,7 +2344,7 @@ final class MainGridSharedTimerState: ObservableObject {
         widgetID: String,
         duration: Int,
         completion: MainGridTimerCompletion?,
-        onTimerCompletionAction: @escaping () -> Void,
+        onTimerCompletionAction: @escaping () -> Bool,
         onPlayCompletionSound: @escaping (String) -> Void,
         onStopCompletionSound: @escaping () -> Void,
         onSpeakCompletionText: @escaping (String) -> Void
@@ -2399,7 +2408,7 @@ final class MainGridSharedTimerState: ObservableObject {
         widgetID: String,
         duration: Int,
         completion: MainGridTimerCompletion?,
-        onTimerCompletionAction: @escaping () -> Void,
+        onTimerCompletionAction: @escaping () -> Bool,
         onPlayCompletionSound: @escaping (String) -> Void,
         onStopCompletionSound: @escaping () -> Void,
         onSpeakCompletionText: @escaping (String) -> Void
@@ -2458,7 +2467,9 @@ final class MainGridSharedTimerState: ObservableObject {
                     self.timerSnapshots[widgetID] = snapshot
                     self.endDates[widgetID] = nil
                     self.cancelTickTask(widgetID: widgetID)
-                    self.timerCompletionActionCallbacks[widgetID]?()
+                    guard self.timerCompletionActionCallbacks[widgetID]?() ?? true else {
+                        return
+                    }
 
                     switch self.completions[widgetID] ?? nil {
                     case .sound(let filename):
@@ -2596,7 +2607,7 @@ private struct MainGridTimerWidgetView: View {
     @ObservedObject var sharedTimer: MainGridSharedTimerState
     let fontSize: Double
     let foregroundColor: Color
-    let onTimerCompletionAction: (FunctionKeyEntry) -> Void
+    let onTimerCompletionAction: (FunctionKeyEntry) -> Bool
     let onPlayCompletionSound: (String) -> Void
     let onStopCompletionSound: () -> Void
     let onSpeakCompletionText: (String) -> Void
