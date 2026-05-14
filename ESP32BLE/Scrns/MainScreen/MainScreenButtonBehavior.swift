@@ -111,6 +111,40 @@ extension MainScreen {
         let targetPreviewFilename = targetPreviewFilenameForGridEntry(entry)
         let targetSpokenFilename = targetSpokenFilenameForGridEntry(entry)
         let targetSpokenText = targetSpokenTextForGridEntry(entry)
+        let hasSoundOrSpeechChainCommand = targetSoundFilename != nil ||
+            targetSpokenText != nil ||
+            targetSpokenFilename != nil
+        var didSendBluetooth = false
+
+        func sendBluetoothIfNeeded() -> Bool {
+            guard !didSendBluetooth else {
+                return true
+            }
+
+            guard mainGridButtonMode.sendsBluetooth, !bluetoothSendTexts.isEmpty else {
+                return true
+            }
+
+            guard ble.isConnected else {
+                alertTitle = "Bluetooth not connected"
+                renameAlertMessage = "Bluetooth needs to be connected\nin order to send data to the ESP32."
+                return false
+            }
+
+            logMainButtonPress(entry)
+
+            guard bluetoothSendTexts.allSatisfy(isBluetoothSendableText(_:)) else {
+                showBluetoothUnsupportedTextBlockedPopup()
+                return false
+            }
+
+            for sendText in bluetoothSendTexts {
+                ble.sendLine(sendText)
+            }
+
+            didSendBluetooth = true
+            return true
+        }
 
         if let targetURL {
             UIApplication.shared.open(targetURL)
@@ -137,6 +171,12 @@ extension MainScreen {
             openPreviewFile(named: targetPreviewFilename)
         }
 
+        if hasSoundOrSpeechChainCommand {
+            guard sendBluetoothIfNeeded() else {
+                return
+            }
+        }
+
         if let targetSoundFilename {
             playMainGridSound(named: targetSoundFilename)
         }
@@ -156,26 +196,7 @@ extension MainScreen {
             }
         }
 
-        guard mainGridButtonMode.sendsBluetooth, !bluetoothSendTexts.isEmpty else {
-            return
-        }
-
-        guard ble.isConnected else {
-            alertTitle = "Bluetooth not connected"
-            renameAlertMessage = "Bluetooth needs to be connected\nin order to send data to the ESP32."
-            return
-        }
-
-        logMainButtonPress(entry)
-
-        guard bluetoothSendTexts.allSatisfy(isBluetoothSendableText(_:)) else {
-            showBluetoothUnsupportedTextBlockedPopup()
-            return
-        }
-
-        for sendText in bluetoothSendTexts {
-            ble.sendLine(sendText)
-        }
+        _ = sendBluetoothIfNeeded()
     }
 
     func bluetoothSendTexts(for entry: FunctionKeyEntry) -> [String] {
@@ -563,9 +584,9 @@ extension MainScreen {
     func targetSoundFilenameForSendText(_ sendText: String) -> String? {
         let trimmedSendText = sendText.trimmingCharacters(in: .whitespacesAndNewlines)
         let loweredSendText = trimmedSendText.lowercased()
+        let soundFilename: String
 
-        guard !loweredSendText.hasPrefix("snd "),
-              !loweredSendText.hasPrefix("amb "),
+        guard !loweredSendText.hasPrefix("amb "),
               !loweredSendText.hasPrefix("ambient "),
               !loweredSendText.hasPrefix("cb "),
               !loweredSendText.hasPrefix("wid "),
@@ -573,7 +594,13 @@ extension MainScreen {
             return nil
         }
 
-        let normalizedFilename = normalizedSoundFilename(trimmedSendText)
+        if loweredSendText.hasPrefix("snd ") {
+            soundFilename = String(trimmedSendText.dropFirst(4))
+        } else {
+            soundFilename = trimmedSendText
+        }
+
+        let normalizedFilename = normalizedSoundFilename(soundFilename)
         let pathExtension = URL(fileURLWithPath: normalizedFilename).pathExtension.lowercased()
         guard supportedSoundExtensions.contains(pathExtension) else {
             return nil
@@ -946,16 +973,31 @@ extension MainScreen {
             let initialDuration = components.count > 1
                 ? parseWidgetTimerDuration(String(components[1]))
                 : 0
-            let completionSoundFilename = components.count > 2
-                ? normalizedSoundFilename(String(components.dropFirst(2).joined(separator: " ")))
+            let completionText = components.count > 2
+                ? String(components.dropFirst(2).joined(separator: " ")).trimmingCharacters(in: .whitespacesAndNewlines)
                 : ""
             return .timer(
                 initialDuration: max(initialDuration, 0),
-                completionSoundFilename: completionSoundFilename.isEmpty ? nil : completionSoundFilename
+                completion: timerCompletion(from: completionText)
             )
         default:
             return nil
         }
+    }
+
+    private func timerCompletion(from text: String) -> MainGridTimerCompletion? {
+        let trimmedText = displayText(from: text).trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedText.isEmpty else {
+            return nil
+        }
+
+        let normalizedFilename = normalizedSoundFilename(trimmedText)
+        let pathExtension = URL(fileURLWithPath: normalizedFilename).pathExtension.lowercased()
+        if supportedSoundExtensions.contains(pathExtension) {
+            return .sound(filename: normalizedFilename)
+        }
+
+        return .speech(text: trimmedText)
     }
 
     func playMainGridSound(named filename: String, repeats: Bool = false) {
@@ -1638,19 +1680,20 @@ struct MainScreenButtonLabelView: View {
                 activateAudioSession: activateAudioSession,
                 reportSoundError: reportSoundError
             )
-        case .timer(let initialDuration, let completionSoundFilename):
+        case .timer(let initialDuration, let completion):
             MainGridTimerWidgetView(
                 widgetID: widgetID,
                 entry: entry,
                 configurationText: rightTitleWithoutColorPrefix,
                 initialDuration: initialDuration,
-                completionSoundFilename: completionSoundFilename,
+                completion: completion,
                 sharedTimer: sharedTimer,
                 fontSize: boxFontSize,
                 foregroundColor: buttonTextColor,
                 onTimerCompletionAction: sendTimerCompletionAction,
                 onPlayCompletionSound: playLoopingSoundNamed,
-                onStopCompletionSound: stopSoundPlayback
+                onStopCompletionSound: stopSoundPlayback,
+                onSpeakCompletionText: speakText
             )
         }
     }
@@ -2061,7 +2104,12 @@ enum MainGridWidgetDescriptor {
     case textFileRandom(filename: String)
     case stopwatch
     case ambientSound(filename: String)
-    case timer(initialDuration: Int, completionSoundFilename: String?)
+    case timer(initialDuration: Int, completion: MainGridTimerCompletion?)
+}
+
+enum MainGridTimerCompletion {
+    case sound(filename: String)
+    case speech(text: String)
 }
 
 private struct MainGridBatteryWidgetView: View {
@@ -2238,9 +2286,10 @@ final class MainGridSharedTimerState: ObservableObject {
 
     @Published private var timerSnapshots: [String: TimerSnapshot] = [:]
 
-    private var completionSoundFilenames: [String: String?] = [:]
+    private var completions: [String: MainGridTimerCompletion?] = [:]
     private var startCompletionSoundLoopCallbacks: [String: (String) -> Void] = [:]
     private var stopCompletionSoundLoopCallbacks: [String: () -> Void] = [:]
+    private var speakCompletionTextCallbacks: [String: (String) -> Void] = [:]
     private var timerCompletionActionCallbacks: [String: () -> Void] = [:]
     private var endDates: [String: Date] = [:]
     private var tickTasks: [String: Task<Void, Never>] = [:]
@@ -2252,10 +2301,11 @@ final class MainGridSharedTimerState: ObservableObject {
     func startTimer(
         widgetID: String,
         duration: Int,
-        completionSoundFilename: String?,
+        completion: MainGridTimerCompletion?,
         onTimerCompletionAction: @escaping () -> Void,
         onPlayCompletionSound: @escaping (String) -> Void,
-        onStopCompletionSound: @escaping () -> Void
+        onStopCompletionSound: @escaping () -> Void,
+        onSpeakCompletionText: @escaping (String) -> Void
     ) {
         stopCompletionSoundLoop(widgetID: widgetID)
         cancelTickTask(widgetID: widgetID)
@@ -2268,10 +2318,11 @@ final class MainGridSharedTimerState: ObservableObject {
         snapshot.isCompletionSoundLooping = false
         timerSnapshots[widgetID] = snapshot
         endDates[widgetID] = snapshot.isRunning ? Date().addingTimeInterval(TimeInterval(resolvedDuration)) : nil
-        completionSoundFilenames[widgetID] = normalizedCompletionSoundFilename(completionSoundFilename)
+        completions[widgetID] = normalizedCompletion(completion)
         timerCompletionActionCallbacks[widgetID] = onTimerCompletionAction
         startCompletionSoundLoopCallbacks[widgetID] = onPlayCompletionSound
         stopCompletionSoundLoopCallbacks[widgetID] = onStopCompletionSound
+        speakCompletionTextCallbacks[widgetID] = onSpeakCompletionText
 
         guard snapshot.isRunning else {
             return
@@ -2283,19 +2334,21 @@ final class MainGridSharedTimerState: ObservableObject {
     func resumeTimer(
         widgetID: String,
         duration: Int,
-        completionSoundFilename: String?,
+        completion: MainGridTimerCompletion?,
         onTimerCompletionAction: @escaping () -> Void,
         onPlayCompletionSound: @escaping (String) -> Void,
-        onStopCompletionSound: @escaping () -> Void
+        onStopCompletionSound: @escaping () -> Void,
+        onSpeakCompletionText: @escaping (String) -> Void
     ) {
         guard timerSnapshots[widgetID] != nil else {
             startTimer(
                 widgetID: widgetID,
                 duration: duration,
-                completionSoundFilename: completionSoundFilename,
+                completion: completion,
                 onTimerCompletionAction: onTimerCompletionAction,
                 onPlayCompletionSound: onPlayCompletionSound,
-                onStopCompletionSound: onStopCompletionSound
+                onStopCompletionSound: onStopCompletionSound,
+                onSpeakCompletionText: onSpeakCompletionText
             )
             return
         }
@@ -2309,10 +2362,11 @@ final class MainGridSharedTimerState: ObservableObject {
 
         snapshot.configuredDuration = max(duration, 0)
         snapshot.isCompletionSoundLooping = false
-        completionSoundFilenames[widgetID] = normalizedCompletionSoundFilename(completionSoundFilename)
+        completions[widgetID] = normalizedCompletion(completion)
         timerCompletionActionCallbacks[widgetID] = onTimerCompletionAction
         startCompletionSoundLoopCallbacks[widgetID] = onPlayCompletionSound
         stopCompletionSoundLoopCallbacks[widgetID] = onStopCompletionSound
+        speakCompletionTextCallbacks[widgetID] = onSpeakCompletionText
 
         guard snapshot.remainingSeconds > 0 else {
             snapshot.isRunning = false
@@ -2344,10 +2398,11 @@ final class MainGridSharedTimerState: ObservableObject {
     func resetAndPauseTimer(
         widgetID: String,
         duration: Int,
-        completionSoundFilename: String?,
+        completion: MainGridTimerCompletion?,
         onTimerCompletionAction: @escaping () -> Void,
         onPlayCompletionSound: @escaping (String) -> Void,
-        onStopCompletionSound: @escaping () -> Void
+        onStopCompletionSound: @escaping () -> Void,
+        onSpeakCompletionText: @escaping (String) -> Void
     ) {
         stopCompletionSoundLoop(widgetID: widgetID)
         cancelTickTask(widgetID: widgetID)
@@ -2360,10 +2415,11 @@ final class MainGridSharedTimerState: ObservableObject {
             isCompletionSoundLooping: false
         )
         endDates[widgetID] = nil
-        completionSoundFilenames[widgetID] = normalizedCompletionSoundFilename(completionSoundFilename)
+        completions[widgetID] = normalizedCompletion(completion)
         timerCompletionActionCallbacks[widgetID] = onTimerCompletionAction
         startCompletionSoundLoopCallbacks[widgetID] = onPlayCompletionSound
         stopCompletionSoundLoopCallbacks[widgetID] = onStopCompletionSound
+        speakCompletionTextCallbacks[widgetID] = onSpeakCompletionText
     }
 
     func stopCompletionSoundLoop(widgetID: String) {
@@ -2404,10 +2460,15 @@ final class MainGridSharedTimerState: ObservableObject {
                     self.cancelTickTask(widgetID: widgetID)
                     self.timerCompletionActionCallbacks[widgetID]?()
 
-                    if let completionSoundFilename = self.completionSoundFilenames[widgetID] ?? nil {
-                        self.startCompletionSoundLoopCallbacks[widgetID]?(completionSoundFilename)
+                    switch self.completions[widgetID] ?? nil {
+                    case .sound(let filename):
+                        self.startCompletionSoundLoopCallbacks[widgetID]?(filename)
                         snapshot.isCompletionSoundLooping = true
                         self.timerSnapshots[widgetID] = snapshot
+                    case .speech(let text):
+                        self.speakCompletionTextCallbacks[widgetID]?(text)
+                    case nil:
+                        break
                     }
                 }
             }
@@ -2430,9 +2491,17 @@ final class MainGridSharedTimerState: ObservableObject {
         tickTasks[widgetID] = nil
     }
 
-    private func normalizedCompletionSoundFilename(_ filename: String?) -> String? {
-        let trimmedFilename = filename?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        return trimmedFilename.isEmpty ? nil : trimmedFilename
+    private func normalizedCompletion(_ completion: MainGridTimerCompletion?) -> MainGridTimerCompletion? {
+        switch completion {
+        case .sound(let filename):
+            let trimmedFilename = filename.trimmingCharacters(in: .whitespacesAndNewlines)
+            return trimmedFilename.isEmpty ? nil : .sound(filename: trimmedFilename)
+        case .speech(let text):
+            let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            return trimmedText.isEmpty ? nil : .speech(text: trimmedText)
+        case nil:
+            return nil
+        }
     }
 
     func remainingSeconds(for widgetID: String, default defaultValue: Int) -> Int {
@@ -2523,13 +2592,14 @@ private struct MainGridTimerWidgetView: View {
     let entry: FunctionKeyEntry
     let configurationText: String
     let initialDuration: Int
-    let completionSoundFilename: String?
+    let completion: MainGridTimerCompletion?
     @ObservedObject var sharedTimer: MainGridSharedTimerState
     let fontSize: Double
     let foregroundColor: Color
     let onTimerCompletionAction: (FunctionKeyEntry) -> Void
     let onPlayCompletionSound: (String) -> Void
     let onStopCompletionSound: () -> Void
+    let onSpeakCompletionText: (String) -> Void
 
     @State private var configuredDuration = 0
     @State private var title = ""
@@ -2599,10 +2669,11 @@ private struct MainGridTimerWidgetView: View {
         sharedTimer.resetAndPauseTimer(
             widgetID: widgetID,
             duration: configuredDuration,
-            completionSoundFilename: completionSoundFilename,
+            completion: completion,
             onTimerCompletionAction: { onTimerCompletionAction(entry) },
             onPlayCompletionSound: onPlayCompletionSound,
-            onStopCompletionSound: onStopCompletionSound
+            onStopCompletionSound: onStopCompletionSound,
+            onSpeakCompletionText: onSpeakCompletionText
         )
     }
 
@@ -2624,10 +2695,11 @@ private struct MainGridTimerWidgetView: View {
         sharedTimer.resumeTimer(
             widgetID: widgetID,
             duration: configuredDuration,
-            completionSoundFilename: completionSoundFilename,
+            completion: completion,
             onTimerCompletionAction: { onTimerCompletionAction(entry) },
             onPlayCompletionSound: onPlayCompletionSound,
-            onStopCompletionSound: onStopCompletionSound
+            onStopCompletionSound: onStopCompletionSound,
+            onSpeakCompletionText: onSpeakCompletionText
         )
     }
 
@@ -2635,10 +2707,11 @@ private struct MainGridTimerWidgetView: View {
         sharedTimer.resetAndPauseTimer(
             widgetID: widgetID,
             duration: configuredDuration,
-            completionSoundFilename: completionSoundFilename,
+            completion: completion,
             onTimerCompletionAction: { onTimerCompletionAction(entry) },
             onPlayCompletionSound: onPlayCompletionSound,
-            onStopCompletionSound: onStopCompletionSound
+            onStopCompletionSound: onStopCompletionSound,
+            onSpeakCompletionText: onSpeakCompletionText
         )
     }
 }

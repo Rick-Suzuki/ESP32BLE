@@ -411,30 +411,43 @@ struct MainScreen: View {
                     targetURLForSendText(actionToken) == nil &&
                     targetSoundFilenameForSendText(actionToken) == nil &&
                     targetSpokenTextForSendText(actionToken) == nil &&
+                    targetSpokenFilenameForSendText(actionToken) == nil &&
                     targetAppURLForSendText(actionToken) == nil &&
                     targetClipboardTextForSendText(actionToken) == nil &&
                     targetPreviewFilenameForSendText(actionToken) == nil &&
                     targetWidgetDescriptorForSendText(actionToken) == nil
             }
             .map(normalizedBluetoothSendText)
+        let targetSoundFilename = actionTokens.compactMap(targetSoundFilenameForSendText).first
+        let targetSpokenFilename = actionTokens.compactMap(targetSpokenFilenameForSendText).first
+        let targetSpokenText = actionTokens.compactMap(targetSpokenTextForSendText).first
 
-        guard !bluetoothTokens.isEmpty else {
-            return
+        if !bluetoothTokens.isEmpty {
+            guard ble.isConnected else {
+                alertTitle = "Bluetooth not connected"
+                renameAlertMessage = "Bluetooth needs to be connected\nbefore sending data to the ESP32."
+                return
+            }
+
+            guard bluetoothTokens.allSatisfy(isBluetoothSendableText(_:)) else {
+                showBluetoothUnsupportedTextBlockedPopup()
+                return
+            }
+
+            for bluetoothToken in bluetoothTokens {
+                ble.sendLine(bluetoothToken)
+            }
         }
 
-        guard ble.isConnected else {
-            alertTitle = "Bluetooth not connected"
-            renameAlertMessage = "Bluetooth needs to be connected\nbefore sending data to the ESP32."
-            return
+        if let targetSoundFilename {
+            playMainGridSound(named: targetSoundFilename)
         }
 
-        guard bluetoothTokens.allSatisfy(isBluetoothSendableText(_:)) else {
-            showBluetoothUnsupportedTextBlockedPopup()
-            return
-        }
-
-        for bluetoothToken in bluetoothTokens {
-            ble.sendLine(bluetoothToken)
+        if let targetSpokenText {
+            speakMainGridText(targetSpokenText)
+        } else if let targetSpokenFilename {
+            alertTitle = "File Not Found"
+            renameAlertMessage = "Couldn't find \(targetSpokenFilename.lowercased())."
         }
     }
 

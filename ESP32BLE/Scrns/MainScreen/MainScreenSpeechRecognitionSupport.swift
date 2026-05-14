@@ -46,12 +46,41 @@ extension MainScreen {
 
         unmatchedSpeechText = nil
 
-        let bluetoothSendTexts = matchingEntry.sendTexts.filter { sendText in
-            targetDocumentNameForSendText(sendText) == nil &&
-                targetPreviewFilenameForSendText(sendText) == nil
-        }
+        let bluetoothSendTexts = bluetoothSendTexts(for: matchingEntry)
         let targetDocumentName = targetDocumentNameForGridEntry(matchingEntry)
         let targetPreviewFilename = targetPreviewFilenameForGridEntry(matchingEntry)
+        let targetSoundFilename = targetSoundFilenameForGridEntry(matchingEntry)
+        let targetSpokenFilename = targetSpokenFilenameForGridEntry(matchingEntry)
+        let targetSpokenText = targetSpokenTextForGridEntry(matchingEntry)
+        var didSendBluetooth = false
+
+        func sendBluetoothIfNeeded() -> Bool {
+            guard !didSendBluetooth else {
+                return true
+            }
+
+            guard mainGridButtonMode.sendsBluetooth, !bluetoothSendTexts.isEmpty else {
+                return true
+            }
+
+            guard ble.isConnected else {
+                alertTitle = "Bluetooth not connected"
+                renameAlertMessage = "Bluetooth needs to be connected\nin order to send data to the ESP32."
+                return false
+            }
+
+            guard bluetoothSendTexts.allSatisfy(isBluetoothSendableText(_:)) else {
+                showBluetoothUnsupportedTextBlockedPopup()
+                return false
+            }
+
+            for sendText in bluetoothSendTexts {
+                ble.sendLine(sendText)
+            }
+
+            didSendBluetooth = true
+            return true
+        }
 
         if let targetDocumentName {
             guard selectDocumentNamedFromGrid(targetDocumentName) else {
@@ -65,19 +94,25 @@ extension MainScreen {
             openPreviewFile(named: targetPreviewFilename)
         }
 
-        guard mainGridButtonMode.sendsBluetooth, !bluetoothSendTexts.isEmpty else {
+        if targetSoundFilename != nil || targetSpokenText != nil || targetSpokenFilename != nil {
+            guard sendBluetoothIfNeeded() else {
+                return
+            }
+        }
+
+        if let targetSoundFilename {
+            playMainGridSound(named: targetSoundFilename)
+        }
+
+        if let targetSpokenText {
+            speakMainGridText(targetSpokenText)
+        } else if let targetSpokenFilename {
+            alertTitle = "File Not Found"
+            renameAlertMessage = "Couldn't find \(targetSpokenFilename.lowercased())."
             return
         }
 
-        let normalizedBluetoothSendTexts = bluetoothSendTexts.map(normalizedBluetoothSendText)
-        guard normalizedBluetoothSendTexts.allSatisfy(isBluetoothSendableText(_:)) else {
-            showBluetoothUnsupportedTextBlockedPopup()
-            return
-        }
-
-        for sendText in normalizedBluetoothSendTexts {
-            ble.sendLine(sendText)
-        }
+        _ = sendBluetoothIfNeeded()
     }
 
     func normalizedSpeechMatchText(_ text: String) -> String {
