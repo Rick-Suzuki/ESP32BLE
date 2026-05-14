@@ -1123,7 +1123,8 @@ struct ContentView: View {
         }
 
         if loweredLeftText.hasPrefix("wid ") ||
-            loweredLeftText.hasPrefix("widget ") {
+            loweredLeftText.hasPrefix("widget ") ||
+            loweredLeftText.hasPrefix("timer ") {
             return parsedWidgetSendTexts(from: trimmedLeftText)
         }
 

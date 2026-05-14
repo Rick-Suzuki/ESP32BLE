@@ -589,6 +589,7 @@ extension MainScreen {
         guard !loweredSendText.hasPrefix("amb "),
               !loweredSendText.hasPrefix("ambient "),
               !loweredSendText.hasPrefix("cb "),
+              !loweredSendText.hasPrefix("timer "),
               !loweredSendText.hasPrefix("wid "),
               !loweredSendText.hasPrefix("widget ") else {
             return nil
@@ -825,6 +826,8 @@ extension MainScreen {
             widgetText = String(trimmedSendText.dropFirst(4))
         } else if loweredSendText.hasPrefix("widget ") {
             widgetText = String(trimmedSendText.dropFirst(7))
+        } else if loweredSendText.hasPrefix("timer ") {
+            widgetText = trimmedSendText
         } else {
             return nil
         }
