@@ -1061,6 +1061,10 @@ extension MainScreen {
         let trimmedSendText = sendText.trimmingCharacters(in: .whitespacesAndNewlines)
         let loweredSendText = trimmedSendText.lowercased()
 
+        if loweredSendText == "sp" {
+            return " "
+        }
+
         guard loweredSendText.first == "f",
               loweredSendText.dropFirst().allSatisfy({ $0.isNumber }) else {
             return sendText
