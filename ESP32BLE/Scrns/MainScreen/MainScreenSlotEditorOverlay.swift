@@ -153,8 +153,9 @@ struct MainScreenSlotEditorOverlay: View {
                         VStack(spacing: buttonSpacing) {
                             HStack(spacing: buttonSpacing) {
                                 helperInsertButton("SP:")
-                                helperInsertButton("-")
-                                helperInsertButton(label: "\\", insertedText: "\\")
+                                helperInsertButton("TAB:")
+								helperInsertButton("MA:")
+							//	helperInsertButton(label: "\\", insertedText: "\\")
                                 helperInsertButton("*")
                                 forwardDeleteButton
                                 testButton
