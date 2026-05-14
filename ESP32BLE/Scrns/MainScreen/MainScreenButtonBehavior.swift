@@ -589,9 +589,7 @@ extension MainScreen {
         guard !loweredSendText.hasPrefix("amb "),
               !loweredSendText.hasPrefix("ambient "),
               !loweredSendText.hasPrefix("cb "),
-              !loweredSendText.hasPrefix("timer "),
-              !loweredSendText.hasPrefix("wid "),
-              !loweredSendText.hasPrefix("widget ") else {
+              !isBareWidgetCommandText(loweredSendText) else {
             return nil
         }
 
@@ -822,11 +820,7 @@ extension MainScreen {
         } else if loweredSendText.hasPrefix("ambient ") {
             let filename = normalizedSoundFilename(String(trimmedSendText.dropFirst(8)))
             return filename.isEmpty ? nil : .ambientSound(filename: filename)
-        } else if loweredSendText.hasPrefix("wid ") {
-            widgetText = String(trimmedSendText.dropFirst(4))
-        } else if loweredSendText.hasPrefix("widget ") {
-            widgetText = String(trimmedSendText.dropFirst(7))
-        } else if loweredSendText.hasPrefix("timer ") {
+        } else if isBareWidgetCommandText(loweredSendText) {
             widgetText = trimmedSendText
         } else {
             return nil
@@ -942,6 +936,14 @@ extension MainScreen {
             }
             return .minus(initialCount: initialCount)
         case "rnd", "random":
+            if components.count > 1 {
+                let filename = String(components.dropFirst().joined(separator: " "))
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                if filename.lowercased().hasSuffix(".txt") {
+                    return .textFileRandom(filename: filename)
+                }
+            }
+
             let minimumValue: Int
             let maximumValue: Int
 
@@ -985,6 +987,18 @@ extension MainScreen {
             )
         default:
             return nil
+        }
+    }
+
+    private func isBareWidgetCommandText(_ loweredText: String) -> Bool {
+        let widgetCommands = [
+            "add", "minus", "power", "rnd", "random", "clock", "date",
+            "dow", "sec", "min", "hour", "day", "month", "year", "timer",
+            "stop", "stopwatch", "amb", "ambient"
+        ]
+
+        return widgetCommands.contains { command in
+            loweredText == command || loweredText.hasPrefix("\(command) ")
         }
     }
 

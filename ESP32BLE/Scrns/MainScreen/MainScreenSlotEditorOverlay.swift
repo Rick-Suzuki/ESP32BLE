@@ -170,10 +170,10 @@ struct MainScreenSlotEditorOverlay: View {
                             }
 
                             HStack(spacing: buttonSpacing) {
-                                helperInsertButton("wid")
-                                helperInsertButton("app")
-                                helperInsertButton("spk")
-                                helperInsertButton("kp")
+								helperInsertButton("spk ")
+								helperInsertButton("snd ")
+                                helperInsertButton("timer ")
+                                helperInsertButton("app ")
                                 newlineInsertButton
                                 closeButton
                             }

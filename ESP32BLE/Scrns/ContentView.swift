@@ -1122,13 +1122,23 @@ struct ContentView: View {
             return trimmedLeftText.isEmpty ? [] : [trimmedLeftText]
         }
 
-        if loweredLeftText.hasPrefix("wid ") ||
-            loweredLeftText.hasPrefix("widget ") ||
-            loweredLeftText.hasPrefix("timer ") {
+        if isBareWidgetCommandText(loweredLeftText) {
             return parsedWidgetSendTexts(from: trimmedLeftText)
         }
 
         return parsedActionTokens(from: leftText)
+    }
+
+    private func isBareWidgetCommandText(_ loweredText: String) -> Bool {
+        let widgetCommands = [
+            "add", "minus", "power", "rnd", "random", "clock", "date",
+            "dow", "sec", "min", "hour", "day", "month", "year", "timer",
+            "stop", "stopwatch", "amb", "ambient"
+        ]
+
+        return widgetCommands.contains { command in
+            loweredText == command || loweredText.hasPrefix("\(command) ")
+        }
     }
 
     private func parsedWidgetSendTexts(from text: String) -> [String] {
