@@ -9,6 +9,7 @@ let maxFunctionKeyCount = maxGridDimension * maxGridDimension
 private let defaultNamedFunctionKeyCount = 20
 let hiddenButtonMetadataToken = "@@hidden"
 let wideButtonContinuationToken = "@@wide"
+let blockButtonContinuationToken = "@@block"
 
 // True on iPad, false on iPhone.
 var isPad: Bool {
@@ -999,45 +1000,48 @@ struct ContentView: View {
             return false
         }
 
-        let boundedSpan = max(1, min(span, 3))
+        let boundedSpan = max(1, min(span, 4))
         var updatedLines = functionKeySlotLines
+        let gridDimensions = loadStoredGridDimensions(for: selectedDocumentName, requiredBoxCount: max(loadedFunctionKeySlotCount, 1))
+        let sourceShape = buttonShape(startingAt: sourceIndex, in: updatedLines, gridDimensions: gridDimensions)
+        let moveShape = boundedSpan == 4 ? sourceShape : ButtonStorageShape(width: max(1, min(boundedSpan, 3)), height: 1)
+        let targetIndexes = buttonIndexes(startingAt: targetIndex, shape: moveShape, gridDimensions: gridDimensions)
+        let sourceIndexes = Set(buttonIndexes(startingAt: sourceIndex, shape: moveShape, gridDimensions: gridDimensions))
 
-        if targetIndex + boundedSpan - 1 >= updatedLines.count {
-            updatedLines += Array(repeating: "_", count: targetIndex + boundedSpan - updatedLines.count)
+        if let maximumTargetIndex = targetIndexes.max(), maximumTargetIndex >= updatedLines.count {
+            updatedLines += Array(repeating: "_", count: maximumTargetIndex - updatedLines.count + 1)
         }
 
         let sourceLine = updatedLines[sourceIndex]
 
         guard !isBlankPlaceholderLine(sourceLine),
-              !isWideButtonContinuationLine(sourceLine) else {
+              !isButtonContinuationLine(sourceLine) else {
             return false
         }
 
-        for offset in 0..<boundedSpan {
-            let sourceSlotIndex = sourceIndex + offset
+        for sourceSlotIndex in sourceIndexes {
             guard sourceSlotIndex < updatedLines.count else {
                 return false
             }
 
-            if offset == 0 {
+            if sourceSlotIndex == sourceIndex {
                 guard !isBlankPlaceholderLine(updatedLines[sourceSlotIndex]),
-                      !isWideButtonContinuationLine(updatedLines[sourceSlotIndex]) else {
+                      !isButtonContinuationLine(updatedLines[sourceSlotIndex]) else {
                     return false
                 }
             } else {
-                guard isWideButtonContinuationLine(updatedLines[sourceSlotIndex]) else {
+                guard isButtonContinuationLine(updatedLines[sourceSlotIndex]) else {
                     return false
                 }
             }
         }
 
-        for offset in 0..<boundedSpan {
-            let targetSlotIndex = targetIndex + offset
+        for targetSlotIndex in targetIndexes {
             guard targetSlotIndex < updatedLines.count else {
                 return false
             }
 
-            if targetSlotIndex >= sourceIndex && targetSlotIndex < sourceIndex + boundedSpan {
+            if sourceIndexes.contains(targetSlotIndex) {
                 continue
             }
 
@@ -1046,23 +1050,23 @@ struct ContentView: View {
                 continue
             }
 
-            guard boundedSpan == 1,
+            guard moveShape.width == 1, moveShape.height == 1,
                   canSwapSingleCellSlot(at: targetSlotIndex, in: updatedLines) else {
                 return false
             }
         }
 
         let targetLine = updatedLines[targetIndex]
-        for offset in 0..<boundedSpan {
-            updatedLines[sourceIndex + offset] = "_"
+        for sourceSlotIndex in sourceIndexes {
+            updatedLines[sourceSlotIndex] = "_"
         }
 
         updatedLines[targetIndex] = sourceLine
-        if boundedSpan > 1 {
-            for offset in 1..<boundedSpan {
-                updatedLines[targetIndex + offset] = wideButtonContinuationToken
-            }
-        } else if !isBlankPlaceholderLine(targetLine) {
+        for continuation in continuationAssignments(startingAt: targetIndex, shape: moveShape) {
+            updatedLines[continuation.index] = continuation.token
+        }
+
+        if moveShape.width == 1, moveShape.height == 1, !isBlankPlaceholderLine(targetLine) {
             updatedLines[sourceIndex] = targetLine
         }
 
@@ -1073,7 +1077,7 @@ struct ContentView: View {
     private func canSwapSingleCellSlot(at index: Int, in lines: [String]) -> Bool {
         guard lines.indices.contains(index),
               !isBlankPlaceholderLine(lines[index]),
-              !isWideButtonContinuationLine(lines[index]) else {
+              !isButtonContinuationLine(lines[index]) else {
             return false
         }
 
@@ -1082,7 +1086,61 @@ struct ContentView: View {
             return true
         }
 
-        return !isWideButtonContinuationLine(lines[nextIndex])
+        return !isButtonContinuationLine(lines[nextIndex])
+    }
+
+    private struct ButtonStorageShape {
+        let width: Int
+        let height: Int
+    }
+
+    private func buttonShape(startingAt index: Int, in lines: [String], gridDimensions: GridDimensions) -> ButtonStorageShape {
+        let columns = max(gridDimensions.columns, 1)
+        let hasRight = lines.indices.contains(index + 1) && isWideButtonContinuationLine(lines[index + 1])
+        let hasBelow = lines.indices.contains(index + columns) && isBlockButtonContinuationLine(lines[index + columns])
+        let hasBelowRight = lines.indices.contains(index + columns + 1) && isBlockButtonContinuationLine(lines[index + columns + 1])
+
+        if hasRight && hasBelow && hasBelowRight {
+            return ButtonStorageShape(width: 2, height: 2)
+        }
+
+        if hasRight {
+            let hasSecondRight = lines.indices.contains(index + 2) && isWideButtonContinuationLine(lines[index + 2])
+            return ButtonStorageShape(width: hasSecondRight ? 3 : 2, height: 1)
+        }
+
+        return ButtonStorageShape(width: 1, height: 1)
+    }
+
+    private func buttonIndexes(startingAt index: Int, shape: ButtonStorageShape, gridDimensions: GridDimensions) -> [Int] {
+        let columns = max(gridDimensions.columns, 1)
+        var indexes: [Int] = []
+
+        for rowOffset in 0..<shape.height {
+            for columnOffset in 0..<shape.width {
+                indexes.append(index + (rowOffset * columns) + columnOffset)
+            }
+        }
+
+        return indexes
+    }
+
+    private func continuationAssignments(startingAt index: Int, shape: ButtonStorageShape) -> [(index: Int, token: String)] {
+        let columns = max(loadStoredGridDimensions(for: selectedDocumentName, requiredBoxCount: max(loadedFunctionKeySlotCount, 1)).columns, 1)
+        var assignments: [(index: Int, token: String)] = []
+
+        for rowOffset in 0..<shape.height {
+            for columnOffset in 0..<shape.width {
+                guard rowOffset != 0 || columnOffset != 0 else {
+                    continue
+                }
+
+                let token = rowOffset == 0 ? wideButtonContinuationToken : blockButtonContinuationToken
+                assignments.append((index + (rowOffset * columns) + columnOffset, token))
+            }
+        }
+
+        return assignments
     }
 
     @discardableResult
@@ -1141,6 +1199,14 @@ struct ContentView: View {
         line.trimmingCharacters(in: .whitespacesAndNewlines) == wideButtonContinuationToken
     }
 
+    private func isBlockButtonContinuationLine(_ line: String) -> Bool {
+        line.trimmingCharacters(in: .whitespacesAndNewlines) == blockButtonContinuationToken
+    }
+
+    private func isButtonContinuationLine(_ line: String) -> Bool {
+        isWideButtonContinuationLine(line) || isBlockButtonContinuationLine(line)
+    }
+
     private func isEmptyGridSlotLine(_ line: String) -> Bool {
         let trimmedLine = line.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmedLine.isEmpty || trimmedLine == "_"
@@ -1149,6 +1215,10 @@ struct ContentView: View {
     private func functionKeyEntry(from line: String) -> FunctionKeyEntry {
         if isWideButtonContinuationLine(line) {
             return FunctionKeyEntry(rawLine: wideButtonContinuationToken, sendTexts: [], alternateDisplayText: nil, buttonColorCode: nil, isBlankPlaceholder: true, isHiddenInNormalMode: false)
+        }
+
+        if isBlockButtonContinuationLine(line) {
+            return FunctionKeyEntry(rawLine: blockButtonContinuationToken, sendTexts: [], alternateDisplayText: nil, buttonColorCode: nil, isBlankPlaceholder: true, isHiddenInNormalMode: false)
         }
 
         if line == "_" || line.isEmpty {

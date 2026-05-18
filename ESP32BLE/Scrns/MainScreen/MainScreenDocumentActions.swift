@@ -209,12 +209,12 @@ extension MainScreen {
         guard isGridEditModeEnabled,
               !entry.isBlankPlaceholder,
               !isEmptyButtonEntry(entry),
-              !isWideButtonContinuationEntry(entry) else {
+              !isButtonContinuationEntry(entry) else {
             return
         }
 
         let currentSpan = slotSpan(startingAt: index, gridDimensions: gridDimensions)
-        let targetSpan = currentSpan >= 3 ? 1 : currentSpan + 1
+        let targetSpan = currentSpan >= 4 ? 1 : currentSpan + 1
 
         guard canSetSlotSpan(startingAt: index, from: currentSpan, to: targetSpan, gridDimensions: gridDimensions) else {
             alertTitle = "Resize btn"
@@ -251,8 +251,9 @@ extension MainScreen {
 
     func duplicateTargetIndex(from sourceIndex: Int, span: Int, gridDimensions: GridDimensions) -> Int? {
         let sourceRow = sourceIndex / gridDimensions.columns
-        let rightIndex = sourceIndex + span
-        let leftIndex = sourceIndex - span
+        let sourceShape = shape(for: span)
+        let rightIndex = sourceIndex + sourceShape.width
+        let leftIndex = sourceIndex - sourceShape.width
         let downIndex = sourceIndex + gridDimensions.columns
         let upIndex = sourceIndex - gridDimensions.columns
 
@@ -271,7 +272,7 @@ extension MainScreen {
             }
 
             let candidateRow = candidateIndex / gridDimensions.columns
-            let isHorizontalNeighbor = abs(candidateIndex - sourceIndex) == span
+            let isHorizontalNeighbor = abs(candidateIndex - sourceIndex) == sourceShape.width
             if isHorizontalNeighbor && candidateRow != sourceRow {
                 continue
             }
@@ -288,38 +289,107 @@ extension MainScreen {
         entry.rawLine.trimmingCharacters(in: .whitespacesAndNewlines) == wideButtonContinuationToken
     }
 
+    private func isBlockButtonContinuationEntry(_ entry: FunctionKeyEntry) -> Bool {
+        entry.rawLine.trimmingCharacters(in: .whitespacesAndNewlines) == blockButtonContinuationToken
+    }
+
+    private func isButtonContinuationEntry(_ entry: FunctionKeyEntry) -> Bool {
+        isWideButtonContinuationEntry(entry) || isBlockButtonContinuationEntry(entry)
+    }
+
     func slotSpan(startingAt index: Int, gridDimensions: GridDimensions) -> Int {
         guard functionKeys.indices.contains(index),
-              !isWideButtonContinuationEntry(functionKeys[index]) else {
+              !isButtonContinuationEntry(functionKeys[index]) else {
             return 1
         }
 
+        return shapeSpan(buttonShape(startingAt: index, gridDimensions: gridDimensions))
+    }
+
+    private struct ButtonGridShape {
+        let width: Int
+        let height: Int
+    }
+
+    private func shapeSpan(_ shape: ButtonGridShape) -> Int {
+        shape.width == 2 && shape.height == 2 ? 4 : shape.width
+    }
+
+    private func shape(for span: Int) -> ButtonGridShape {
+        span == 4 ? ButtonGridShape(width: 2, height: 2) : ButtonGridShape(width: max(1, min(span, 3)), height: 1)
+    }
+
+    private func buttonShape(startingAt index: Int, gridDimensions: GridDimensions) -> ButtonGridShape {
         let columns = max(gridDimensions.columns, 1)
-        let row = index / columns
-        var span = 1
+        let hasRight = functionKeys.indices.contains(index + 1) &&
+            index + 1 < visibleBoxCount &&
+            isWideButtonContinuationEntry(functionKeys[index + 1])
+        let hasBelow = functionKeys.indices.contains(index + columns) &&
+            index + columns < visibleBoxCount &&
+            isBlockButtonContinuationEntry(functionKeys[index + columns])
+        let hasBelowRight = functionKeys.indices.contains(index + columns + 1) &&
+            index + columns + 1 < visibleBoxCount &&
+            isBlockButtonContinuationEntry(functionKeys[index + columns + 1])
 
-        while span < 3 {
-            let nextIndex = index + span
-            guard functionKeys.indices.contains(nextIndex),
-                  nextIndex < visibleBoxCount,
-                  nextIndex / columns == row,
-                  isWideButtonContinuationEntry(functionKeys[nextIndex]) else {
-                break
-            }
-
-            span += 1
+        if hasRight && hasBelow && hasBelowRight {
+            return ButtonGridShape(width: 2, height: 2)
         }
 
-        return span
+        if hasRight {
+            let hasSecondRight = functionKeys.indices.contains(index + 2) &&
+                index + 2 < visibleBoxCount &&
+                isWideButtonContinuationEntry(functionKeys[index + 2])
+            return ButtonGridShape(width: hasSecondRight ? 3 : 2, height: 1)
+        }
+
+        return ButtonGridShape(width: 1, height: 1)
+    }
+
+    private func indexes(startingAt index: Int, shape: ButtonGridShape, gridDimensions: GridDimensions) -> [Int] {
+        let columns = max(gridDimensions.columns, 1)
+        var indexes: [Int] = []
+
+        for rowOffset in 0..<shape.height {
+            for columnOffset in 0..<shape.width {
+                indexes.append(index + (rowOffset * columns) + columnOffset)
+            }
+        }
+
+        return indexes
+    }
+
+    private func continuationAssignments(startingAt index: Int, shape: ButtonGridShape, gridDimensions: GridDimensions) -> [(index: Int, token: String)] {
+        let columns = max(gridDimensions.columns, 1)
+        var assignments: [(index: Int, token: String)] = []
+
+        for rowOffset in 0..<shape.height {
+            for columnOffset in 0..<shape.width {
+                guard rowOffset != 0 || columnOffset != 0 else {
+                    continue
+                }
+
+                let token = rowOffset == 0 ? wideButtonContinuationToken : blockButtonContinuationToken
+                assignments.append((index + (rowOffset * columns) + columnOffset, token))
+            }
+        }
+
+        return assignments
     }
 
     private func canSetSlotSpan(startingAt index: Int, from currentSpan: Int, to targetSpan: Int, gridDimensions: GridDimensions) -> Bool {
+        let currentShape = shape(for: currentSpan)
+        let targetShape = shape(for: targetSpan)
+        let currentIndexes = Set(indexes(startingAt: index, shape: currentShape, gridDimensions: gridDimensions))
+        let targetIndexes = indexes(startingAt: index, shape: targetShape, gridDimensions: gridDimensions)
         let columns = max(gridDimensions.columns, 1)
-        let row = index / columns
+        let startColumn = index % columns
+
         guard targetSpan >= 1,
-              targetSpan <= 3,
-              (index + targetSpan - 1) / columns == row,
-              index + targetSpan <= visibleBoxCount else {
+              targetSpan <= 4,
+              startColumn + targetShape.width <= columns,
+              (index / columns) + targetShape.height <= gridDimensions.rows,
+              let maximumTargetIndex = targetIndexes.max(),
+              maximumTargetIndex < visibleBoxCount else {
             return false
         }
 
@@ -327,7 +397,7 @@ extension MainScreen {
             return true
         }
 
-        for slotIndex in (index + currentSpan)..<(index + targetSpan) {
+        for slotIndex in targetIndexes where !currentIndexes.contains(slotIndex) {
             guard functionKeys.indices.contains(slotIndex) else {
                 return false
             }
@@ -346,28 +416,31 @@ extension MainScreen {
             return
         }
 
-        let normalizedCurrentSpan = max(1, min(currentSpan, 3))
-        let normalizedTargetSpan = max(1, min(targetSpan, 3))
-        let maximumSpan = max(normalizedCurrentSpan, normalizedTargetSpan)
+        let currentShape = shape(for: currentSpan)
+        let targetShape = shape(for: targetSpan)
+        let currentIndexes = Set(indexes(startingAt: index, shape: currentShape, gridDimensions: visibleGridDimensions))
+        let targetIndexes = Set(indexes(startingAt: index, shape: targetShape, gridDimensions: visibleGridDimensions))
 
-        for offset in 1..<maximumSpan {
-            let slotIndex = index + offset
+        for slotIndex in currentIndexes where slotIndex != index && !targetIndexes.contains(slotIndex) {
             guard slotIndex < visibleBoxCount else {
                 continue
             }
 
-            if offset < normalizedTargetSpan {
-                _ = updateFunctionKeySlot(slotIndex, wideButtonContinuationToken)
-            } else {
-                _ = updateFunctionKeySlot(slotIndex, "_")
+            _ = updateFunctionKeySlot(slotIndex, "_")
+        }
+
+        for assignment in continuationAssignments(startingAt: index, shape: targetShape, gridDimensions: visibleGridDimensions) {
+            guard assignment.index < visibleBoxCount else {
+                continue
             }
+
+            _ = updateFunctionKeySlot(assignment.index, assignment.token)
         }
     }
 
     private func clearWideSlot(startingAt index: Int, gridDimensions: GridDimensions) {
-        let span = slotSpan(startingAt: index, gridDimensions: gridDimensions)
-        for offset in 0..<span {
-            let slotIndex = index + offset
+        let shape = buttonShape(startingAt: index, gridDimensions: gridDimensions)
+        for slotIndex in indexes(startingAt: index, shape: shape, gridDimensions: gridDimensions) {
             guard slotIndex < visibleBoxCount else {
                 continue
             }
@@ -377,18 +450,20 @@ extension MainScreen {
     }
 
     private func hasAvailableBlankSpan(startingAt index: Int, span: Int, gridDimensions: GridDimensions) -> Bool {
-        let boundedSpan = max(1, min(span, 3))
+        let shape = shape(for: span)
         let columns = max(gridDimensions.columns, 1)
-        let row = index / columns
+        let startColumn = index % columns
+        let targetIndexes = indexes(startingAt: index, shape: shape, gridDimensions: gridDimensions)
 
         guard index >= 0,
-              index + boundedSpan <= visibleBoxCount,
-              (index + boundedSpan - 1) / columns == row else {
+              startColumn + shape.width <= columns,
+              (index / columns) + shape.height <= gridDimensions.rows,
+              let maximumTargetIndex = targetIndexes.max(),
+              maximumTargetIndex < visibleBoxCount else {
             return false
         }
 
-        for offset in 0..<boundedSpan {
-            let slotIndex = index + offset
+        for slotIndex in targetIndexes {
             guard functionKeys.indices.contains(slotIndex) else {
                 return false
             }
@@ -410,10 +485,8 @@ extension MainScreen {
 
         _ = updateFunctionKeySlot(targetIndex, functionKeys[sourceIndex].rawLine)
 
-        if span > 1 {
-            for offset in 1..<span {
-                _ = updateFunctionKeySlot(targetIndex + offset, wideButtonContinuationToken)
-            }
+        for assignment in continuationAssignments(startingAt: targetIndex, shape: shape(for: span), gridDimensions: visibleGridDimensions) {
+            _ = updateFunctionKeySlot(assignment.index, assignment.token)
         }
 
         return true
@@ -433,16 +506,16 @@ extension MainScreen {
 
         if abs(horizontalDistance) > abs(verticalDistance) {
             let sourceSpan = slotSpan(startingAt: sourceIndex, gridDimensions: gridDimensions)
+            let sourceShape = shape(for: sourceSpan)
             let step = horizontalDistance > 0 ? 1 : -1
             let targetIndex = sourceIndex + step
             let sourceRow = sourceIndex / gridDimensions.columns
-            let targetEndIndex = targetIndex + sourceSpan - 1
+            let targetColumn = targetIndex % max(gridDimensions.columns, 1)
 
             guard targetIndex >= 0,
                   targetIndex < visibleBoxCount,
-                  targetEndIndex < visibleBoxCount,
                   targetIndex / gridDimensions.columns == sourceRow,
-                  targetEndIndex / gridDimensions.columns == sourceRow,
+                  targetColumn + sourceShape.width <= gridDimensions.columns,
                   canMoveSlotSpan(
                     startingAt: targetIndex,
                     span: sourceSpan,
@@ -479,24 +552,26 @@ extension MainScreen {
         from sourceIndex: Int,
         gridDimensions: GridDimensions
     ) -> Bool {
-        let boundedSpan = max(1, min(span, 3))
+        let moveShape = shape(for: span)
         let columns = max(gridDimensions.columns, 1)
-        let targetRow = targetIndex / columns
-        let sourceRange = sourceIndex..<(sourceIndex + boundedSpan)
+        let targetIndexes = indexes(startingAt: targetIndex, shape: moveShape, gridDimensions: gridDimensions)
+        let sourceIndexes = Set(indexes(startingAt: sourceIndex, shape: moveShape, gridDimensions: gridDimensions))
+        let targetColumn = targetIndex % columns
 
         guard targetIndex >= 0,
-              targetIndex + boundedSpan <= visibleBoxCount,
-              (targetIndex + boundedSpan - 1) / columns == targetRow else {
+              targetColumn + moveShape.width <= columns,
+              (targetIndex / columns) + moveShape.height <= gridDimensions.rows,
+              let maximumTargetIndex = targetIndexes.max(),
+              maximumTargetIndex < visibleBoxCount else {
             return false
         }
 
-        for offset in 0..<boundedSpan {
-            let slotIndex = targetIndex + offset
+        for slotIndex in targetIndexes {
             guard functionKeys.indices.contains(slotIndex) else {
                 return false
             }
 
-            if sourceRange.contains(slotIndex) {
+            if sourceIndexes.contains(slotIndex) {
                 continue
             }
 
@@ -505,8 +580,9 @@ extension MainScreen {
                 continue
             }
 
-            if boundedSpan == 1,
+            if moveShape.width == 1 && moveShape.height == 1,
                !isWideButtonContinuationEntry(entry),
+               !isBlockButtonContinuationEntry(entry),
                slotSpan(startingAt: slotIndex, gridDimensions: gridDimensions) == 1 {
                 continue
             }

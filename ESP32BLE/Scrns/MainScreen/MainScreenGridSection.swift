@@ -117,80 +117,47 @@ struct MainScreenGridSection: View {
             let safeAvailableWidth = availableWidth.isFinite ? max(0, availableWidth) : 0
             let availableGridWidth = max(0, safeAvailableWidth - totalColumnSpacing)
             let buttonWidth = availableGridWidth / CGFloat(max(gridDimensions.columns, 1))
-            let rows = gridRows(gridDimensions: gridDimensions)
+            let visibleEntries = Array(functionKeys.prefix(visibleBoxCount).enumerated())
 
-            LazyVStack(spacing: mainGridButtonSpacing) {
-                ForEach(rows.indices, id: \.self) { rowIndex in
-                    HStack(spacing: mainGridButtonSpacing) {
-                        ForEach(rows[rowIndex], id: \.index) { gridCell in
-                            let index = gridCell.index
-                            let entry = gridCell.entry
-                            let buttonSpan = gridCell.span
+            ZStack(alignment: .topLeading) {
+                ForEach(visibleEntries, id: \.offset) { index, entry in
+                    if isButtonContinuationEntry(entry) {
+                        EmptyView()
+                    } else {
+                        let shape = buttonShape(startingAt: index, gridDimensions: gridDimensions)
                         let resolvedButtonWidth = resolvedWidth(
                             buttonWidth: buttonWidth,
                             spacing: mainGridButtonSpacing,
-                            span: buttonSpan
+                            span: shape.width
+                        )
+                        let resolvedButtonHeight = resolvedHeight(
+                            buttonHeight: buttonHeight,
+                            spacing: mainGridButtonSpacing,
+                            span: shape.height
+                        )
+                        let origin = buttonOrigin(
+                            index: index,
+                            buttonWidth: buttonWidth,
+                            buttonHeight: buttonHeight,
+                            spacing: mainGridButtonSpacing,
+                            gridDimensions: gridDimensions
                         )
 
-                            if isWideButtonContinuationEntry(entry) {
-                                Color.clear
-                                    .frame(width: resolvedButtonWidth, height: buttonHeight)
-                                    .allowsHitTesting(false)
-                            } else if !isGridEditModeEnabled && isInteractiveWidgetEntry(entry) {
-                                buttonLabel(entry, index, buttonHeight)
-                                    .frame(width: resolvedButtonWidth, height: buttonHeight)
-                                    .contentShape(Rectangle())
-                                    .simultaneousGesture(dragGesture(entry, index, gridDimensions))
-                            } else {
-                                Button {
-                                    guard !isGridEditModeEnabled else {
-                                        return
-                                    }
-
-                                    onButtonClick()
-
-                                    guard bleSendEnabled else {
-                                        return
-                                    }
-
-                                    sendLine(entry)
-                                } label: {
-                                    buttonLabel(entry, index, buttonHeight)
-                                }
-                                .buttonStyle(.plain)
-                                .frame(width: resolvedButtonWidth, height: buttonHeight)
-                                .contentShape(Rectangle())
-                                .simultaneousGesture(dragGesture(entry, index, gridDimensions))
-                                .simultaneousGesture(
-                                    TapGesture()
-                                        .onEnded {
-                                            guard isGridEditModeEnabled else {
-                                                return
-                                            }
-
-                                            registerEditTap(
-                                                entry: entry,
-                                                index: index,
-                                                gridDimensions: gridDimensions
-                                            )
-                                        }
-                                )
-                                .simultaneousGesture(
-                                    LongPressGesture(minimumDuration: 0.4)
-                                        .onEnded { _ in
-                                            guard isGridEditModeEnabled else {
-                                                return
-                                            }
-
-                                            onBeginSlotEditing(index)
-                                        }
-                                )
-                            }
-                        }
+                        gridButtonView(
+                            entry: entry,
+                            index: index,
+                            buttonHeight: resolvedButtonHeight,
+                            gridDimensions: gridDimensions
+                        )
+                        .frame(width: resolvedButtonWidth, height: resolvedButtonHeight)
+                        .position(
+                            x: origin.x + (resolvedButtonWidth / 2),
+                            y: origin.y + (resolvedButtonHeight / 2)
+                        )
                     }
                 }
             }
-            .frame(width: safeAvailableWidth, alignment: .center)
+            .frame(width: safeAvailableWidth, height: geometry.size.height, alignment: .topLeading)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onDisappear {
@@ -269,74 +236,131 @@ struct MainScreenGridSection: View {
         entry.rawLine.trimmingCharacters(in: .whitespacesAndNewlines) == wideButtonContinuationToken
     }
 
-    private func wideButtonSpan(startingAt index: Int, gridDimensions: GridDimensions) -> Int {
+    private func isBlockButtonContinuationEntry(_ entry: FunctionKeyEntry) -> Bool {
+        entry.rawLine.trimmingCharacters(in: .whitespacesAndNewlines) == blockButtonContinuationToken
+    }
+
+    private func isButtonContinuationEntry(_ entry: FunctionKeyEntry) -> Bool {
+        isWideButtonContinuationEntry(entry) || isBlockButtonContinuationEntry(entry)
+    }
+
+    private struct ButtonGridShape {
+        let width: Int
+        let height: Int
+    }
+
+    private func buttonShape(startingAt index: Int, gridDimensions: GridDimensions) -> ButtonGridShape {
         guard functionKeys.indices.contains(index),
-              !isWideButtonContinuationEntry(functionKeys[index]) else {
-            return 1
+              !isButtonContinuationEntry(functionKeys[index]) else {
+            return ButtonGridShape(width: 1, height: 1)
         }
 
-        let row = index / max(gridDimensions.columns, 1)
-        var span = 1
-
-        while span < 3 {
-            let nextIndex = index + span
-            guard functionKeys.indices.contains(nextIndex),
-                  nextIndex < visibleBoxCount,
-                  nextIndex / max(gridDimensions.columns, 1) == row,
-                  isWideButtonContinuationEntry(functionKeys[nextIndex]) else {
-                break
-            }
-
-            span += 1
-        }
-
-        return span
-    }
-
-    private struct GridCell {
-        let index: Int
-        let entry: FunctionKeyEntry
-        let span: Int
-    }
-
-    private func gridRows(gridDimensions: GridDimensions) -> [[GridCell]] {
         let columns = max(gridDimensions.columns, 1)
-        let rows = max(gridDimensions.rows, 1)
+        let hasRight = functionKeys.indices.contains(index + 1) &&
+            index + 1 < visibleBoxCount &&
+            isWideButtonContinuationEntry(functionKeys[index + 1])
+        let hasBelow = functionKeys.indices.contains(index + columns) &&
+            index + columns < visibleBoxCount &&
+            isBlockButtonContinuationEntry(functionKeys[index + columns])
+        let hasBelowRight = functionKeys.indices.contains(index + columns + 1) &&
+            index + columns + 1 < visibleBoxCount &&
+            isBlockButtonContinuationEntry(functionKeys[index + columns + 1])
 
-        return (0..<rows).map { rowIndex in
-            var rowCells: [GridCell] = []
-            var columnIndex = 0
-
-            while columnIndex < columns {
-                let index = (rowIndex * columns) + columnIndex
-                let entry: FunctionKeyEntry
-
-                if functionKeys.indices.contains(index), index < visibleBoxCount {
-                    entry = functionKeys[index]
-                } else {
-                    entry = FunctionKeyEntry(
-                        rawLine: "",
-                        sendTexts: [],
-                        alternateDisplayText: nil,
-                        buttonColorCode: nil,
-                        isBlankPlaceholder: true,
-                        isHiddenInNormalMode: false
-                    )
-                }
-
-                let span = isWideButtonContinuationEntry(entry)
-                    ? 1
-                    : min(wideButtonSpan(startingAt: index, gridDimensions: gridDimensions), columns - columnIndex)
-                rowCells.append(GridCell(index: index, entry: entry, span: span))
-                columnIndex += span
-            }
-
-            return rowCells
+        if hasRight && hasBelow && hasBelowRight {
+            return ButtonGridShape(width: 2, height: 2)
         }
+
+        if hasRight {
+            let hasSecondRight = functionKeys.indices.contains(index + 2) &&
+                index + 2 < visibleBoxCount &&
+                isWideButtonContinuationEntry(functionKeys[index + 2])
+            return ButtonGridShape(width: hasSecondRight ? 3 : 2, height: 1)
+        }
+
+        return ButtonGridShape(width: 1, height: 1)
     }
 
     private func resolvedWidth(buttonWidth: CGFloat, spacing: CGFloat, span: Int) -> CGFloat {
         let boundedSpan = max(1, min(span, 3))
         return (buttonWidth * CGFloat(boundedSpan)) + (spacing * CGFloat(boundedSpan - 1))
+    }
+
+    private func resolvedHeight(buttonHeight: CGFloat, spacing: CGFloat, span: Int) -> CGFloat {
+        let boundedSpan = max(1, min(span, 2))
+        return (buttonHeight * CGFloat(boundedSpan)) + (spacing * CGFloat(boundedSpan - 1))
+    }
+
+    private func buttonOrigin(
+        index: Int,
+        buttonWidth: CGFloat,
+        buttonHeight: CGFloat,
+        spacing: CGFloat,
+        gridDimensions: GridDimensions
+    ) -> CGPoint {
+        let columns = max(gridDimensions.columns, 1)
+        let row = index / columns
+        let column = index % columns
+
+        return CGPoint(
+            x: CGFloat(column) * (buttonWidth + spacing),
+            y: CGFloat(row) * (buttonHeight + spacing)
+        )
+    }
+
+    @ViewBuilder
+    private func gridButtonView(
+        entry: FunctionKeyEntry,
+        index: Int,
+        buttonHeight: CGFloat,
+        gridDimensions: GridDimensions
+    ) -> some View {
+        if !isGridEditModeEnabled && isInteractiveWidgetEntry(entry) {
+            buttonLabel(entry, index, buttonHeight)
+                .contentShape(Rectangle())
+                .simultaneousGesture(dragGesture(entry, index, gridDimensions))
+        } else {
+            Button {
+                guard !isGridEditModeEnabled else {
+                    return
+                }
+
+                onButtonClick()
+
+                guard bleSendEnabled else {
+                    return
+                }
+
+                sendLine(entry)
+            } label: {
+                buttonLabel(entry, index, buttonHeight)
+            }
+            .buttonStyle(.plain)
+            .contentShape(Rectangle())
+            .simultaneousGesture(dragGesture(entry, index, gridDimensions))
+            .simultaneousGesture(
+                TapGesture()
+                    .onEnded {
+                        guard isGridEditModeEnabled else {
+                            return
+                        }
+
+                        registerEditTap(
+                            entry: entry,
+                            index: index,
+                            gridDimensions: gridDimensions
+                        )
+                    }
+            )
+            .simultaneousGesture(
+                LongPressGesture(minimumDuration: 0.4)
+                    .onEnded { _ in
+                        guard isGridEditModeEnabled else {
+                            return
+                        }
+
+                        onBeginSlotEditing(index)
+                    }
+            )
+        }
     }
 }
