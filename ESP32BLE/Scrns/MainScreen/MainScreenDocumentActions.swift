@@ -205,6 +205,22 @@ extension MainScreen {
         clearWideSlot(startingAt: index, gridDimensions: visibleGridDimensions)
     }
 
+    func resetSlotSizeIfNeeded(entry: FunctionKeyEntry, index: Int, gridDimensions: GridDimensions) {
+        guard isGridEditModeEnabled,
+              !entry.isBlankPlaceholder,
+              !isEmptyButtonEntry(entry),
+              !isButtonContinuationEntry(entry) else {
+            return
+        }
+
+        let currentSpan = slotSpan(startingAt: index, gridDimensions: gridDimensions)
+        guard currentSpan != 1 else {
+            return
+        }
+
+        setSlotSpan(startingAt: index, from: currentSpan, to: 1)
+    }
+
     func resizeSlotIfPossible(entry: FunctionKeyEntry, index: Int, gridDimensions: GridDimensions) {
         guard isGridEditModeEnabled,
               !entry.isBlankPlaceholder,
@@ -216,19 +232,27 @@ extension MainScreen {
         let currentSpan = slotSpan(startingAt: index, gridDimensions: gridDimensions)
         let candidateSpans = resizeCandidateSpans(after: currentSpan)
 
-        guard let targetSpan = candidateSpans.first(where: { candidateSpan in
-            canSetSlotSpan(
-                startingAt: index,
-                from: currentSpan,
-                to: candidateSpan,
-                gridDimensions: gridDimensions
-            )
-        }) else {
+        guard let resizePlacement = resizePlacement(
+            startingAt: index,
+            from: currentSpan,
+            candidateSpans: candidateSpans,
+            gridDimensions: gridDimensions
+        ) else {
             setSlotSpan(startingAt: index, from: currentSpan, to: 1)
             return
         }
 
-        setSlotSpan(startingAt: index, from: currentSpan, to: targetSpan)
+        if resizePlacement.index == index {
+            setSlotSpan(startingAt: index, from: currentSpan, to: resizePlacement.span)
+        } else {
+            setShiftedSlotSpan(
+                from: index,
+                currentSpan: currentSpan,
+                to: resizePlacement.index,
+                targetSpan: resizePlacement.span,
+                gridDimensions: gridDimensions
+            )
+        }
     }
 
     private func resizeCandidateSpans(after currentSpan: Int) -> [Int] {
@@ -237,6 +261,64 @@ extension MainScreen {
         let nextSpans = Array(orderedSpans.dropFirst(currentIndex + 1))
 
         return nextSpans.isEmpty ? [1] : nextSpans
+    }
+
+    private func resizePlacement(
+        startingAt index: Int,
+        from currentSpan: Int,
+        candidateSpans: [Int],
+        gridDimensions: GridDimensions
+    ) -> (index: Int, span: Int)? {
+        for candidateSpan in candidateSpans {
+            let candidateIndexes = resizeAnchorCandidates(
+                currentIndex: index,
+                targetSpan: candidateSpan,
+                gridDimensions: gridDimensions
+            )
+
+            for candidateIndex in candidateIndexes {
+                if canSetSlotSpan(
+                    startingAt: candidateIndex,
+                    currentIndex: index,
+                    from: currentSpan,
+                    to: candidateSpan,
+                    gridDimensions: gridDimensions
+                ) {
+                    return (candidateIndex, candidateSpan)
+                }
+            }
+        }
+
+        return nil
+    }
+
+    private func resizeAnchorCandidates(
+        currentIndex: Int,
+        targetSpan: Int,
+        gridDimensions: GridDimensions
+    ) -> [Int] {
+        let targetShape = shape(for: targetSpan)
+        let columns = max(gridDimensions.columns, 1)
+        let currentRow = currentIndex / columns
+        let currentColumn = currentIndex % columns
+        var candidates: [Int] = []
+
+        for rowOffset in 0..<targetShape.height {
+            for columnOffset in 0..<targetShape.width {
+                let anchorRow = currentRow - rowOffset
+                let anchorColumn = currentColumn - columnOffset
+                guard anchorRow >= 0, anchorColumn >= 0 else {
+                    continue
+                }
+
+                let anchorIndex = (anchorRow * columns) + anchorColumn
+                if !candidates.contains(anchorIndex) {
+                    candidates.append(anchorIndex)
+                }
+            }
+        }
+
+        return candidates
     }
 
     func handleThreeTapEditAction(entry: FunctionKeyEntry, index: Int) {
@@ -419,9 +501,25 @@ extension MainScreen {
     }
 
     private func canSetSlotSpan(startingAt index: Int, from currentSpan: Int, to targetSpan: Int, gridDimensions: GridDimensions) -> Bool {
+        canSetSlotSpan(
+            startingAt: index,
+            currentIndex: index,
+            from: currentSpan,
+            to: targetSpan,
+            gridDimensions: gridDimensions
+        )
+    }
+
+    private func canSetSlotSpan(
+        startingAt index: Int,
+        currentIndex: Int,
+        from currentSpan: Int,
+        to targetSpan: Int,
+        gridDimensions: GridDimensions
+    ) -> Bool {
         let currentShape = shape(for: currentSpan)
         let targetShape = shape(for: targetSpan)
-        let currentIndexes = Set(indexes(startingAt: index, shape: currentShape, gridDimensions: gridDimensions))
+        let currentIndexes = Set(indexes(startingAt: currentIndex, shape: currentShape, gridDimensions: gridDimensions))
         let targetIndexes = indexes(startingAt: index, shape: targetShape, gridDimensions: gridDimensions)
         let columns = max(gridDimensions.columns, 1)
         let startColumn = index % columns
@@ -436,7 +534,7 @@ extension MainScreen {
         }
 
         guard targetSpan > currentSpan else {
-            return true
+            return index == currentIndex
         }
 
         for slotIndex in targetIndexes where !currentIndexes.contains(slotIndex) {
@@ -472,6 +570,38 @@ extension MainScreen {
         }
 
         for assignment in continuationAssignments(startingAt: index, shape: targetShape, gridDimensions: visibleGridDimensions) {
+            guard assignment.index < visibleBoxCount else {
+                continue
+            }
+
+            _ = updateFunctionKeySlot(assignment.index, assignment.token)
+        }
+    }
+
+    private func setShiftedSlotSpan(
+        from sourceIndex: Int,
+        currentSpan: Int,
+        to targetIndex: Int,
+        targetSpan: Int,
+        gridDimensions: GridDimensions
+    ) {
+        guard functionKeys.indices.contains(sourceIndex),
+              functionKeys.indices.contains(targetIndex) else {
+            return
+        }
+
+        let sourceLine = functionKeys[sourceIndex].rawLine
+        let sourceShape = shape(for: currentSpan)
+        let targetShape = shape(for: targetSpan)
+        let sourceIndexes = indexes(startingAt: sourceIndex, shape: sourceShape, gridDimensions: gridDimensions)
+
+        for slotIndex in sourceIndexes where slotIndex < visibleBoxCount {
+            _ = updateFunctionKeySlot(slotIndex, "_")
+        }
+
+        _ = updateFunctionKeySlot(targetIndex, sourceLine)
+
+        for assignment in continuationAssignments(startingAt: targetIndex, shape: targetShape, gridDimensions: gridDimensions) {
             guard assignment.index < visibleBoxCount else {
                 continue
             }

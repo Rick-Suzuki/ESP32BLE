@@ -326,6 +326,9 @@ struct MainScreen: View {
             onResizeSlot: { entry, index, gridDimensions in
                 resizeSlotIfPossible(entry: entry, index: index, gridDimensions: gridDimensions)
             },
+            onResetSlotSize: { entry, index, gridDimensions in
+                resetSlotSizeIfNeeded(entry: entry, index: index, gridDimensions: gridDimensions)
+            },
             onDeleteSlot: { entry, index in
                 deleteSlotIfPossible(entry: entry, index: index)
             }

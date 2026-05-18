@@ -102,6 +102,7 @@ struct MainScreenGridSection: View {
     let onDuplicateSlot: (FunctionKeyEntry, Int, GridDimensions) -> Void
     let onCopyPasteSlot: (FunctionKeyEntry, Int) -> Void
     let onResizeSlot: (FunctionKeyEntry, Int, GridDimensions) -> Void
+    let onResetSlotSize: (FunctionKeyEntry, Int, GridDimensions) -> Void
     let onDeleteSlot: (FunctionKeyEntry, Int) -> Void
     @State private var pendingTapIndex: Int?
     @State private var pendingTapCount = 0
@@ -217,6 +218,10 @@ struct MainScreenGridSection: View {
 
                 if tapCount == 3 {
                     onResizeSlot(entry, index, gridDimensions)
+                }
+
+                if tapCount == 4 {
+                    onResetSlotSize(entry, index, gridDimensions)
                 }
 
 				print("\(tapCount)")
