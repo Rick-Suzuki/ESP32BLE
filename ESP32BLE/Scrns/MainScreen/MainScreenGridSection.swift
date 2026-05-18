@@ -100,7 +100,8 @@ struct MainScreenGridSection: View {
     let buttonLabel: (FunctionKeyEntry, Int, CGFloat) -> AnyView
     let dragGesture: (FunctionKeyEntry, Int, GridDimensions) -> AnyGesture<DragGesture.Value>
     let onDuplicateSlot: (FunctionKeyEntry, Int, GridDimensions) -> Void
-    let onTripleTapSlot: (FunctionKeyEntry, Int) -> Void
+    let onCopyPasteSlot: (FunctionKeyEntry, Int) -> Void
+    let onResizeSlot: (FunctionKeyEntry, Int, GridDimensions) -> Void
     let onDeleteSlot: (FunctionKeyEntry, Int) -> Void
     @State private var pendingTapIndex: Int?
     @State private var pendingTapCount = 0
@@ -124,12 +125,31 @@ struct MainScreenGridSection: View {
 
             LazyVGrid(columns: columns, spacing: mainGridButtonSpacing) {
                 ForEach(visibleEntries, id: \.offset) { index, entry in
-                    if !isGridEditModeEnabled && isInteractiveWidgetEntry(entry) {
-                        buttonLabel(entry, index, buttonHeight)
+                    if isWideButtonContinuationEntry(entry) {
+                        Color.clear
                             .frame(width: buttonWidth, height: buttonHeight)
+                    } else if !isGridEditModeEnabled && isInteractiveWidgetEntry(entry) {
+                        let buttonSpan = wideButtonSpan(startingAt: index, gridDimensions: gridDimensions)
+                        let resolvedButtonWidth = resolvedWidth(
+                            buttonWidth: buttonWidth,
+                            spacing: mainGridButtonSpacing,
+                            span: buttonSpan
+                        )
+
+                        buttonLabel(entry, index, buttonHeight)
+                            .frame(width: resolvedButtonWidth, height: buttonHeight)
+                            .offset(x: wideButtonOffset(buttonWidth: buttonWidth, spacing: mainGridButtonSpacing, span: buttonSpan))
                             .contentShape(Rectangle())
                             .simultaneousGesture(dragGesture(entry, index, gridDimensions))
+                            .zIndex(buttonSpan > 1 ? 1 : 0)
                     } else {
+                        let buttonSpan = wideButtonSpan(startingAt: index, gridDimensions: gridDimensions)
+                        let resolvedButtonWidth = resolvedWidth(
+                            buttonWidth: buttonWidth,
+                            spacing: mainGridButtonSpacing,
+                            span: buttonSpan
+                        )
+
                         Button {
                             guard !isGridEditModeEnabled else {
                                 return
@@ -146,7 +166,8 @@ struct MainScreenGridSection: View {
                             buttonLabel(entry, index, buttonHeight)
                         }
                         .buttonStyle(.plain)
-                        .frame(width: buttonWidth, height: buttonHeight)
+                        .frame(width: resolvedButtonWidth, height: buttonHeight)
+                        .offset(x: wideButtonOffset(buttonWidth: buttonWidth, spacing: mainGridButtonSpacing, span: buttonSpan))
                         .contentShape(Rectangle())
                         .simultaneousGesture(dragGesture(entry, index, gridDimensions))
                         .simultaneousGesture(
@@ -173,6 +194,7 @@ struct MainScreenGridSection: View {
                                     onBeginSlotEditing(index)
                                 }
                         )
+                        .zIndex(buttonSpan > 1 ? 1 : 0)
                     }
                 }
             }
@@ -227,7 +249,7 @@ struct MainScreenGridSection: View {
                 }
 
 				if tapCount == 1 {
-					onTripleTapSlot(entry, index)
+					onCopyPasteSlot(entry, index)
 				}
 				
                 if tapCount == 2 {
@@ -235,7 +257,7 @@ struct MainScreenGridSection: View {
                 }
 
                 if tapCount == 3 {
-                    // resize
+                    onResizeSlot(entry, index, gridDimensions)
                 }
 
 				
@@ -249,5 +271,47 @@ struct MainScreenGridSection: View {
         pendingTapTask = nil
         pendingTapIndex = nil
         pendingTapCount = 0
+    }
+
+    private func isWideButtonContinuationEntry(_ entry: FunctionKeyEntry) -> Bool {
+        entry.rawLine.trimmingCharacters(in: .whitespacesAndNewlines) == wideButtonContinuationToken
+    }
+
+    private func wideButtonSpan(startingAt index: Int, gridDimensions: GridDimensions) -> Int {
+        guard functionKeys.indices.contains(index),
+              !isWideButtonContinuationEntry(functionKeys[index]) else {
+            return 1
+        }
+
+        let row = index / max(gridDimensions.columns, 1)
+        var span = 1
+
+        while span < 3 {
+            let nextIndex = index + span
+            guard functionKeys.indices.contains(nextIndex),
+                  nextIndex < visibleBoxCount,
+                  nextIndex / max(gridDimensions.columns, 1) == row,
+                  isWideButtonContinuationEntry(functionKeys[nextIndex]) else {
+                break
+            }
+
+            span += 1
+        }
+
+        return span
+    }
+
+    private func resolvedWidth(buttonWidth: CGFloat, spacing: CGFloat, span: Int) -> CGFloat {
+        let boundedSpan = max(1, min(span, 3))
+        return (buttonWidth * CGFloat(boundedSpan)) + (spacing * CGFloat(boundedSpan - 1))
+    }
+
+    private func wideButtonOffset(buttonWidth: CGFloat, spacing: CGFloat, span: Int) -> CGFloat {
+        let boundedSpan = max(1, min(span, 3))
+        guard boundedSpan > 1 else {
+            return 0
+        }
+
+        return ((buttonWidth + spacing) * CGFloat(boundedSpan - 1)) / 2
     }
 }

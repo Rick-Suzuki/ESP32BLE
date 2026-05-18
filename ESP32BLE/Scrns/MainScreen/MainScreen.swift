@@ -320,8 +320,11 @@ struct MainScreen: View {
             onDuplicateSlot: { entry, index, gridDimensions in
                 duplicateSlotIfPossible(entry: entry, index: index, gridDimensions: gridDimensions)
             },
-            onTripleTapSlot: { entry, index in
+            onCopyPasteSlot: { entry, index in
                 handleThreeTapEditAction(entry: entry, index: index)
+            },
+            onResizeSlot: { entry, index, gridDimensions in
+                resizeSlotIfPossible(entry: entry, index: index, gridDimensions: gridDimensions)
             },
             onDeleteSlot: { entry, index in
                 deleteSlotIfPossible(entry: entry, index: index)

@@ -8,6 +8,7 @@ let maxGridDimension = 20
 let maxFunctionKeyCount = maxGridDimension * maxGridDimension
 private let defaultNamedFunctionKeyCount = 20
 let hiddenButtonMetadataToken = "@@hidden"
+let wideButtonContinuationToken = "@@wide"
 
 // True on iPad, false on iPhone.
 var isPad: Bool {
@@ -1007,7 +1008,8 @@ struct ContentView: View {
         let sourceLine = updatedLines[sourceIndex]
         let targetLine = updatedLines[targetIndex]
 
-        guard !isBlankPlaceholderLine(sourceLine) else {
+        guard !isBlankPlaceholderLine(sourceLine),
+              !isWideButtonContinuationLine(sourceLine) else {
             return false
         }
 
@@ -1036,6 +1038,7 @@ struct ContentView: View {
         let targetLine = updatedLines[targetIndex]
 
         guard !isBlankPlaceholderLine(sourceLine),
+              !isWideButtonContinuationLine(sourceLine),
               isBlankPlaceholderLine(targetLine) else {
             return false
         }
@@ -1068,12 +1071,20 @@ struct ContentView: View {
         line.trimmingCharacters(in: .whitespacesAndNewlines) == "_"
     }
 
+    private func isWideButtonContinuationLine(_ line: String) -> Bool {
+        line.trimmingCharacters(in: .whitespacesAndNewlines) == wideButtonContinuationToken
+    }
+
     private func isEmptyGridSlotLine(_ line: String) -> Bool {
         let trimmedLine = line.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmedLine.isEmpty || trimmedLine == "_"
     }
 
     private func functionKeyEntry(from line: String) -> FunctionKeyEntry {
+        if isWideButtonContinuationLine(line) {
+            return FunctionKeyEntry(rawLine: wideButtonContinuationToken, sendTexts: [], alternateDisplayText: nil, buttonColorCode: nil, isBlankPlaceholder: true, isHiddenInNormalMode: false)
+        }
+
         if line == "_" || line.isEmpty {
             return FunctionKeyEntry(rawLine: "", sendTexts: [], alternateDisplayText: nil, buttonColorCode: nil, isBlankPlaceholder: true, isHiddenInNormalMode: false)
         }
