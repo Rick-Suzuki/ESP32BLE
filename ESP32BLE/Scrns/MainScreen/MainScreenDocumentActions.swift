@@ -214,15 +214,29 @@ extension MainScreen {
         }
 
         let currentSpan = slotSpan(startingAt: index, gridDimensions: gridDimensions)
-        let targetSpan = currentSpan >= 4 ? 1 : currentSpan + 1
+        let candidateSpans = resizeCandidateSpans(after: currentSpan)
 
-        guard canSetSlotSpan(startingAt: index, from: currentSpan, to: targetSpan, gridDimensions: gridDimensions) else {
-            alertTitle = "Resize btn"
-            renameAlertMessage = "no space to resize btn"
+        guard let targetSpan = candidateSpans.first(where: { candidateSpan in
+            canSetSlotSpan(
+                startingAt: index,
+                from: currentSpan,
+                to: candidateSpan,
+                gridDimensions: gridDimensions
+            )
+        }) else {
+            setSlotSpan(startingAt: index, from: currentSpan, to: 1)
             return
         }
 
         setSlotSpan(startingAt: index, from: currentSpan, to: targetSpan)
+    }
+
+    private func resizeCandidateSpans(after currentSpan: Int) -> [Int] {
+        let orderedSpans = [1, 2, 3, 4, 5]
+        let currentIndex = orderedSpans.firstIndex(of: currentSpan) ?? 0
+        let nextSpans = Array(orderedSpans.dropFirst(currentIndex + 1))
+
+        return nextSpans.isEmpty ? [1] : nextSpans
     }
 
     func handleThreeTapEditAction(entry: FunctionKeyEntry, index: Int) {
@@ -312,11 +326,27 @@ extension MainScreen {
     }
 
     private func shapeSpan(_ shape: ButtonGridShape) -> Int {
-        shape.width == 2 && shape.height == 2 ? 4 : shape.width
+        if shape.width == 3 && shape.height == 3 {
+            return 5
+        }
+
+        if shape.width == 2 && shape.height == 2 {
+            return 4
+        }
+
+        return shape.width
     }
 
     private func shape(for span: Int) -> ButtonGridShape {
-        span == 4 ? ButtonGridShape(width: 2, height: 2) : ButtonGridShape(width: max(1, min(span, 3)), height: 1)
+        if span == 5 {
+            return ButtonGridShape(width: 3, height: 3)
+        }
+
+        if span == 4 {
+            return ButtonGridShape(width: 2, height: 2)
+        }
+
+        return ButtonGridShape(width: max(1, min(span, 3)), height: 1)
     }
 
     private func buttonShape(startingAt index: Int, gridDimensions: GridDimensions) -> ButtonGridShape {
@@ -330,15 +360,27 @@ extension MainScreen {
         let hasBelowRight = functionKeys.indices.contains(index + columns + 1) &&
             index + columns + 1 < visibleBoxCount &&
             isBlockButtonContinuationEntry(functionKeys[index + columns + 1])
+        let hasSecondRight = functionKeys.indices.contains(index + 2) &&
+            index + 2 < visibleBoxCount &&
+            isWideButtonContinuationEntry(functionKeys[index + 2])
+        let hasThreeByThreeBlock = (1...2).allSatisfy { rowOffset in
+            (0...2).allSatisfy { columnOffset in
+                let blockIndex = index + (rowOffset * columns) + columnOffset
+                return functionKeys.indices.contains(blockIndex) &&
+                    blockIndex < visibleBoxCount &&
+                    isBlockButtonContinuationEntry(functionKeys[blockIndex])
+            }
+        }
+
+        if hasRight && hasSecondRight && hasThreeByThreeBlock {
+            return ButtonGridShape(width: 3, height: 3)
+        }
 
         if hasRight && hasBelow && hasBelowRight {
             return ButtonGridShape(width: 2, height: 2)
         }
 
         if hasRight {
-            let hasSecondRight = functionKeys.indices.contains(index + 2) &&
-                index + 2 < visibleBoxCount &&
-                isWideButtonContinuationEntry(functionKeys[index + 2])
             return ButtonGridShape(width: hasSecondRight ? 3 : 2, height: 1)
         }
 
@@ -385,7 +427,7 @@ extension MainScreen {
         let startColumn = index % columns
 
         guard targetSpan >= 1,
-              targetSpan <= 4,
+              targetSpan <= 5,
               startColumn + targetShape.width <= columns,
               (index / columns) + targetShape.height <= gridDimensions.rows,
               let maximumTargetIndex = targetIndexes.max(),

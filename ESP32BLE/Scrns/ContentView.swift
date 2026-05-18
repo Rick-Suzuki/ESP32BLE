@@ -1000,11 +1000,11 @@ struct ContentView: View {
             return false
         }
 
-        let boundedSpan = max(1, min(span, 4))
+        let boundedSpan = max(1, min(span, 5))
         var updatedLines = functionKeySlotLines
         let gridDimensions = loadStoredGridDimensions(for: selectedDocumentName, requiredBoxCount: max(loadedFunctionKeySlotCount, 1))
         let sourceShape = buttonShape(startingAt: sourceIndex, in: updatedLines, gridDimensions: gridDimensions)
-        let moveShape = boundedSpan == 4 ? sourceShape : ButtonStorageShape(width: max(1, min(boundedSpan, 3)), height: 1)
+        let moveShape = boundedSpan >= 4 ? sourceShape : ButtonStorageShape(width: max(1, min(boundedSpan, 3)), height: 1)
         let targetIndexes = buttonIndexes(startingAt: targetIndex, shape: moveShape, gridDimensions: gridDimensions)
         let sourceIndexes = Set(buttonIndexes(startingAt: sourceIndex, shape: moveShape, gridDimensions: gridDimensions))
 
@@ -1099,13 +1099,23 @@ struct ContentView: View {
         let hasRight = lines.indices.contains(index + 1) && isWideButtonContinuationLine(lines[index + 1])
         let hasBelow = lines.indices.contains(index + columns) && isBlockButtonContinuationLine(lines[index + columns])
         let hasBelowRight = lines.indices.contains(index + columns + 1) && isBlockButtonContinuationLine(lines[index + columns + 1])
+        let hasSecondRight = lines.indices.contains(index + 2) && isWideButtonContinuationLine(lines[index + 2])
+        let hasThreeByThreeBlock = (1...2).allSatisfy { rowOffset in
+            (0...2).allSatisfy { columnOffset in
+                let blockIndex = index + (rowOffset * columns) + columnOffset
+                return lines.indices.contains(blockIndex) && isBlockButtonContinuationLine(lines[blockIndex])
+            }
+        }
+
+        if hasRight && hasSecondRight && hasThreeByThreeBlock {
+            return ButtonStorageShape(width: 3, height: 3)
+        }
 
         if hasRight && hasBelow && hasBelowRight {
             return ButtonStorageShape(width: 2, height: 2)
         }
 
         if hasRight {
-            let hasSecondRight = lines.indices.contains(index + 2) && isWideButtonContinuationLine(lines[index + 2])
             return ButtonStorageShape(width: hasSecondRight ? 3 : 2, height: 1)
         }
 

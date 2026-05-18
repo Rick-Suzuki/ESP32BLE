@@ -265,15 +265,27 @@ struct MainScreenGridSection: View {
         let hasBelowRight = functionKeys.indices.contains(index + columns + 1) &&
             index + columns + 1 < visibleBoxCount &&
             isBlockButtonContinuationEntry(functionKeys[index + columns + 1])
+        let hasSecondRight = functionKeys.indices.contains(index + 2) &&
+            index + 2 < visibleBoxCount &&
+            isWideButtonContinuationEntry(functionKeys[index + 2])
+        let hasThreeByThreeBlock = (1...2).allSatisfy { rowOffset in
+            (0...2).allSatisfy { columnOffset in
+                let blockIndex = index + (rowOffset * columns) + columnOffset
+                return functionKeys.indices.contains(blockIndex) &&
+                    blockIndex < visibleBoxCount &&
+                    isBlockButtonContinuationEntry(functionKeys[blockIndex])
+            }
+        }
+
+        if hasRight && hasSecondRight && hasThreeByThreeBlock {
+            return ButtonGridShape(width: 3, height: 3)
+        }
 
         if hasRight && hasBelow && hasBelowRight {
             return ButtonGridShape(width: 2, height: 2)
         }
 
         if hasRight {
-            let hasSecondRight = functionKeys.indices.contains(index + 2) &&
-                index + 2 < visibleBoxCount &&
-                isWideButtonContinuationEntry(functionKeys[index + 2])
             return ButtonGridShape(width: hasSecondRight ? 3 : 2, height: 1)
         }
 
@@ -286,7 +298,7 @@ struct MainScreenGridSection: View {
     }
 
     private func resolvedHeight(buttonHeight: CGFloat, spacing: CGFloat, span: Int) -> CGFloat {
-        let boundedSpan = max(1, min(span, 2))
+        let boundedSpan = max(1, min(span, 3))
         return (buttonHeight * CGFloat(boundedSpan)) + (spacing * CGFloat(boundedSpan - 1))
     }
 
