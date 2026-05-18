@@ -501,9 +501,17 @@ extension MainScreen {
             }
 
             let entry = functionKeys[slotIndex]
-            guard entry.isBlankPlaceholder || isEmptyButtonEntry(entry) else {
-                return false
+            if entry.isBlankPlaceholder || isEmptyButtonEntry(entry) {
+                continue
             }
+
+            if boundedSpan == 1,
+               !isWideButtonContinuationEntry(entry),
+               slotSpan(startingAt: slotIndex, gridDimensions: gridDimensions) == 1 {
+                continue
+            }
+
+            return false
         }
 
         return true

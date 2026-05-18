@@ -1041,11 +1041,18 @@ struct ContentView: View {
                 continue
             }
 
-            guard isBlankPlaceholderLine(updatedLines[targetSlotIndex]) else {
+            let targetLine = updatedLines[targetSlotIndex]
+            if isBlankPlaceholderLine(targetLine) {
+                continue
+            }
+
+            guard boundedSpan == 1,
+                  canSwapSingleCellSlot(at: targetSlotIndex, in: updatedLines) else {
                 return false
             }
         }
 
+        let targetLine = updatedLines[targetIndex]
         for offset in 0..<boundedSpan {
             updatedLines[sourceIndex + offset] = "_"
         }
@@ -1055,10 +1062,27 @@ struct ContentView: View {
             for offset in 1..<boundedSpan {
                 updatedLines[targetIndex + offset] = wideButtonContinuationToken
             }
+        } else if !isBlankPlaceholderLine(targetLine) {
+            updatedLines[sourceIndex] = targetLine
         }
 
         persistSlotLines(updatedLines)
         return true
+    }
+
+    private func canSwapSingleCellSlot(at index: Int, in lines: [String]) -> Bool {
+        guard lines.indices.contains(index),
+              !isBlankPlaceholderLine(lines[index]),
+              !isWideButtonContinuationLine(lines[index]) else {
+            return false
+        }
+
+        let nextIndex = index + 1
+        guard lines.indices.contains(nextIndex) else {
+            return true
+        }
+
+        return !isWideButtonContinuationLine(lines[nextIndex])
     }
 
     @discardableResult
