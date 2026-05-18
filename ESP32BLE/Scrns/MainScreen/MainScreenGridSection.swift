@@ -178,7 +178,7 @@ struct MainScreenGridSection: View {
             pendingTapCount = 1
         }
 
-        guard pendingTapCount < 4 else {
+        guard pendingTapCount < 5 else {
             pendingTapTask?.cancel()
             resetPendingTapState()
             onDeleteSlot(entry, index)

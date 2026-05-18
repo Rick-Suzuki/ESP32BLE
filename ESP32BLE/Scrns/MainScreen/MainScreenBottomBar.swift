@@ -246,7 +246,7 @@ struct MainScreenBottomBar: View {
 
 			HStack(spacing: isCompact ? 8 : 12) {
 				singleStepTriangle(
-					rotationDegrees: 0,
+					rotationDegrees: 180,
 					foreground: rowControlColor,
 					isEnabled: visibleGridDimensions.rows > 1,
 					action: onDecreaseRows
@@ -258,7 +258,7 @@ struct MainScreenBottomBar: View {
 					.frame(minWidth: isCompact ? 28 : 32)
 				
 				singleStepTriangle(
-					rotationDegrees: 180,
+					rotationDegrees: 0,
 					foreground: rowControlColor,
 					isEnabled: visibleGridDimensions.rows < maxGridDimension,
 					action: onIncreaseRows
