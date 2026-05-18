@@ -623,7 +623,8 @@ struct MainScreen: View {
         }
 
         popupDismissTask = Task {
-            try? await Task.sleep(for: .seconds(2))
+			// popup alert timeout
+            try? await Task.sleep(for: .seconds(1))
             guard !Task.isCancelled else {
                 return
             }

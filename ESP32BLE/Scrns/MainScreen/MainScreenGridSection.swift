@@ -219,7 +219,7 @@ struct MainScreenGridSection: View {
                     onResizeSlot(entry, index, gridDimensions)
                 }
 
-				
+				print("\(tapCount)")
 				
                 resetPendingTapState()
             }
