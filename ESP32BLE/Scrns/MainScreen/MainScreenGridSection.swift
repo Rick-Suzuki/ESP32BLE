@@ -226,12 +226,20 @@ struct MainScreenGridSection: View {
                     return
                 }
 
+				if tapCount == 1 {
+					onTripleTapSlot(entry, index)
+				}
+				
                 if tapCount == 2 {
                     onDuplicateSlot(entry, index, gridDimensions)
-                } else if tapCount == 3 {
-                    onTripleTapSlot(entry, index)
                 }
 
+                if tapCount == 3 {
+                    // resize
+                }
+
+				
+				
                 resetPendingTapState()
             }
         }
