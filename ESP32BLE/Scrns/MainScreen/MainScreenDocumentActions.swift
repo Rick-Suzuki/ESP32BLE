@@ -288,7 +288,7 @@ extension MainScreen {
         entry.rawLine.trimmingCharacters(in: .whitespacesAndNewlines) == wideButtonContinuationToken
     }
 
-    private func slotSpan(startingAt index: Int, gridDimensions: GridDimensions) -> Int {
+    func slotSpan(startingAt index: Int, gridDimensions: GridDimensions) -> Int {
         guard functionKeys.indices.contains(index),
               !isWideButtonContinuationEntry(functionKeys[index]) else {
             return 1
@@ -432,27 +432,80 @@ extension MainScreen {
         }
 
         if abs(horizontalDistance) > abs(verticalDistance) {
+            let sourceSpan = slotSpan(startingAt: sourceIndex, gridDimensions: gridDimensions)
             let step = horizontalDistance > 0 ? 1 : -1
             let targetIndex = sourceIndex + step
             let sourceRow = sourceIndex / gridDimensions.columns
-            let targetRow = targetIndex / gridDimensions.columns
+            let targetEndIndex = targetIndex + sourceSpan - 1
 
             guard targetIndex >= 0,
                   targetIndex < visibleBoxCount,
-                  sourceRow == targetRow else {
+                  targetEndIndex < visibleBoxCount,
+                  targetIndex / gridDimensions.columns == sourceRow,
+                  targetEndIndex / gridDimensions.columns == sourceRow,
+                  canMoveSlotSpan(
+                    startingAt: targetIndex,
+                    span: sourceSpan,
+                    from: sourceIndex,
+                    gridDimensions: gridDimensions
+                  ) else {
                 return nil
             }
 
             return targetIndex
         }
 
+        let sourceSpan = slotSpan(startingAt: sourceIndex, gridDimensions: gridDimensions)
         let step = verticalDistance > 0 ? gridDimensions.columns : -gridDimensions.columns
         let targetIndex = sourceIndex + step
 
-        guard targetIndex >= 0, targetIndex < visibleBoxCount else {
+        guard targetIndex >= 0,
+              targetIndex < visibleBoxCount,
+              canMoveSlotSpan(
+                startingAt: targetIndex,
+                span: sourceSpan,
+                from: sourceIndex,
+                gridDimensions: gridDimensions
+              ) else {
             return nil
         }
 
         return targetIndex
+    }
+
+    private func canMoveSlotSpan(
+        startingAt targetIndex: Int,
+        span: Int,
+        from sourceIndex: Int,
+        gridDimensions: GridDimensions
+    ) -> Bool {
+        let boundedSpan = max(1, min(span, 3))
+        let columns = max(gridDimensions.columns, 1)
+        let targetRow = targetIndex / columns
+        let sourceRange = sourceIndex..<(sourceIndex + boundedSpan)
+
+        guard targetIndex >= 0,
+              targetIndex + boundedSpan <= visibleBoxCount,
+              (targetIndex + boundedSpan - 1) / columns == targetRow else {
+            return false
+        }
+
+        for offset in 0..<boundedSpan {
+            let slotIndex = targetIndex + offset
+            guard functionKeys.indices.contains(slotIndex) else {
+                return false
+            }
+
+            if sourceRange.contains(slotIndex) {
+                continue
+            }
+
+            let entry = functionKeys[slotIndex]
+            guard entry.isBlankPlaceholder || isEmptyButtonEntry(entry) else {
+                return false
+            }
+        }
+
+        return true
     }
 }

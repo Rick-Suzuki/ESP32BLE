@@ -991,7 +991,7 @@ struct ContentView: View {
     }
 
     @discardableResult
-    private func moveSelectedDocumentSlot(from sourceIndex: Int, to targetIndex: Int) -> Bool {
+    private func moveSelectedDocumentSlot(from sourceIndex: Int, to targetIndex: Int, span: Int) -> Bool {
         guard sourceIndex != targetIndex,
               functionKeySlotLines.indices.contains(sourceIndex),
               targetIndex >= 0,
@@ -999,22 +999,64 @@ struct ContentView: View {
             return false
         }
 
+        let boundedSpan = max(1, min(span, 3))
         var updatedLines = functionKeySlotLines
 
-        if targetIndex >= updatedLines.count {
-            updatedLines += Array(repeating: "_", count: targetIndex - updatedLines.count + 1)
+        if targetIndex + boundedSpan - 1 >= updatedLines.count {
+            updatedLines += Array(repeating: "_", count: targetIndex + boundedSpan - updatedLines.count)
         }
 
         let sourceLine = updatedLines[sourceIndex]
-        let targetLine = updatedLines[targetIndex]
 
         guard !isBlankPlaceholderLine(sourceLine),
               !isWideButtonContinuationLine(sourceLine) else {
             return false
         }
 
+        for offset in 0..<boundedSpan {
+            let sourceSlotIndex = sourceIndex + offset
+            guard sourceSlotIndex < updatedLines.count else {
+                return false
+            }
+
+            if offset == 0 {
+                guard !isBlankPlaceholderLine(updatedLines[sourceSlotIndex]),
+                      !isWideButtonContinuationLine(updatedLines[sourceSlotIndex]) else {
+                    return false
+                }
+            } else {
+                guard isWideButtonContinuationLine(updatedLines[sourceSlotIndex]) else {
+                    return false
+                }
+            }
+        }
+
+        for offset in 0..<boundedSpan {
+            let targetSlotIndex = targetIndex + offset
+            guard targetSlotIndex < updatedLines.count else {
+                return false
+            }
+
+            if targetSlotIndex >= sourceIndex && targetSlotIndex < sourceIndex + boundedSpan {
+                continue
+            }
+
+            guard isBlankPlaceholderLine(updatedLines[targetSlotIndex]) else {
+                return false
+            }
+        }
+
+        for offset in 0..<boundedSpan {
+            updatedLines[sourceIndex + offset] = "_"
+        }
+
         updatedLines[targetIndex] = sourceLine
-        updatedLines[sourceIndex] = targetLine
+        if boundedSpan > 1 {
+            for offset in 1..<boundedSpan {
+                updatedLines[targetIndex + offset] = wideButtonContinuationToken
+            }
+        }
+
         persistSlotLines(updatedLines)
         return true
     }

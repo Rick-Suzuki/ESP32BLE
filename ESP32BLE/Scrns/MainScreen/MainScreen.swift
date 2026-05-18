@@ -99,7 +99,7 @@ struct MainScreen: View {
     let adjacentNextDocumentDisplayName: String?
     let selectDocumentNamedFromGrid: (String) -> Bool
     let resizeVisibleBoxCount: (GridDimensions, GridDimensions) -> Bool
-    let moveFunctionKeySlot: (Int, Int) -> Bool
+    let moveFunctionKeySlot: (Int, Int, Int) -> Bool
     let duplicateFunctionKeySlot: (Int, Int) -> Bool
     let updateFunctionKeySlot: (Int, String) -> Bool
     let loadGridDimensions: (String, Int) -> GridDimensions
@@ -657,7 +657,8 @@ struct MainScreen: View {
             return
         }
 
-        _ = moveFunctionKeySlot(sourceIndex, targetIndex)
+        let sourceSpan = slotSpan(startingAt: sourceIndex, gridDimensions: gridDimensions)
+        _ = moveFunctionKeySlot(sourceIndex, targetIndex, sourceSpan)
     }
 }
 
