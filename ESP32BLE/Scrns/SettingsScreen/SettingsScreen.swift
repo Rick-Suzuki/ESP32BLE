@@ -71,6 +71,16 @@ struct SettingsScreen: View {
         var importedAnything = false
     }
 
+    private struct SettingsStoredGridDimensions: Codable {
+        let columns: Int
+        let rows: Int
+    }
+
+    private struct SettingsButtonStorageShape {
+        let width: Int
+        let height: Int
+    }
+
     private let ttsControlColor = Color(red: 0.0, green: 0.2, blue: 0.45)
     private let defaultTextToSpeechRate = Double(AVSpeechUtteranceDefaultSpeechRate)
     private let minimumTextToSpeechPercentage = 40.0
@@ -131,6 +141,7 @@ struct SettingsScreen: View {
     @AppStorage("selectedSoundPath") var selectedSoundPath = ""
     @AppStorage("selectedPDFName") var selectedPDFName = ""
     @AppStorage("selectedPDFPath") var selectedPDFPath = ""
+    @AppStorage("documentGridDimensionsData") private var documentGridDimensionsData = ""
     @AppStorage(ButtonClickFeedback.preferenceKey) private var isButtonClickEnabled = true
     @FocusState var focusedField: SettingsFocusField?
     @FocusState private var isDocumentNameFieldFocused: Bool
@@ -236,6 +247,12 @@ struct SettingsScreen: View {
                     listMode.toggle()
                 }
             }
+            ToolbarItem(placement: .topBarTrailing) {
+                SettingsToolbarButton(title: "repair", backgroundColor: Color.red.opacity(0.5), minWidth: 64.4, isEnabled: listMode == .files) {
+                    repairDocument()
+                }
+            }
+
             ToolbarItem(placement: .topBarTrailing) {
                 SettingsToolbarButton(title: "new", backgroundColor: Color.green.opacity(0.5), minWidth: 64.4, isEnabled: listMode == .files) {
                     createNewDocument()
@@ -932,6 +949,212 @@ struct SettingsScreen: View {
         } catch {
             print("Failed to save document: \(fileURL.lastPathComponent)")
         }
+    }
+
+    private func repairDocument() {
+        guard listMode == .files, let fileURL = selectedDocumentFileURL else {
+            renameAlertMessage = "Select a text file to repair"
+            return
+        }
+
+        saveCurrentDocumentText()
+        let repairedText = repairedDocumentText(from: documentEditorText, documentName: fileURL.lastPathComponent)
+        let didRepair = repairedText != documentEditorText
+
+        do {
+            try repairedText.write(to: fileURL, atomically: true, encoding: .utf8)
+            isLoadingDocumentText = true
+            documentEditorText = repairedText
+            savedDocumentEditorText = repairedText
+            loadedDocumentName = fileURL.lastPathComponent
+            isLoadingDocumentText = false
+            loadFunctionKeys(fileURL)
+            renameAlertMessage = didRepair ? "Document repaired" : "Document checked"
+        } catch {
+            isLoadingDocumentText = false
+            renameAlertMessage = "Could not repair \(fileURL.lastPathComponent)."
+        }
+    }
+
+    private func repairedDocumentText(from text: String, documentName: String) -> String {
+        let lines = normalizedRepairLines(from: text)
+        let gridDimensions = repairGridDimensions(for: documentName, requiredBoxCount: lines.count)
+        var repairedLines = Array(repeating: "_", count: lines.count)
+        var claimedIndexes = Set<Int>()
+
+        for index in lines.indices {
+            guard !claimedIndexes.contains(index),
+                  !isRepairBlankLine(lines[index]),
+                  !isRepairContinuationLine(lines[index]) else {
+                continue
+            }
+
+            let shape = validRepairShape(
+                startingAt: index,
+                in: lines,
+                gridDimensions: gridDimensions,
+                claimedIndexes: claimedIndexes
+            )
+            let indexes = repairIndexes(startingAt: index, shape: shape, gridDimensions: gridDimensions)
+
+            repairedLines[index] = lines[index]
+            claimedIndexes.formUnion(indexes)
+
+            for assignment in repairContinuationAssignments(
+                startingAt: index,
+                shape: shape,
+                gridDimensions: gridDimensions
+            ) where repairedLines.indices.contains(assignment.index) {
+                repairedLines[assignment.index] = assignment.token
+            }
+        }
+
+        return repairedLines.joined(separator: "\n")
+    }
+
+    private func normalizedRepairLines(from text: String) -> [String] {
+        let normalizedText = text
+            .replacingOccurrences(of: "\r\n", with: "\n")
+            .replacingOccurrences(of: "\r", with: "\n")
+        let lines = normalizedText
+            .split(separator: "\n", omittingEmptySubsequences: false)
+            .map(String.init)
+
+        let boundedLines = Array(lines.prefix(maxFunctionKeyCount))
+        return boundedLines.isEmpty ? ["_"] : boundedLines
+    }
+
+    private func repairGridDimensions(for documentName: String, requiredBoxCount: Int) -> GridDimensions {
+        let minimumRequiredCount = max(requiredBoxCount, 1)
+        let trimmedDocumentName = documentName.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if !trimmedDocumentName.isEmpty,
+           let data = documentGridDimensionsData.data(using: .utf8),
+           let mappings = try? JSONDecoder().decode([String: SettingsStoredGridDimensions].self, from: data),
+           let storedDimensions = mappings[trimmedDocumentName] {
+            let columns = max(storedDimensions.columns, 1)
+            let rows = max(storedDimensions.rows, 1)
+            if columns * rows >= minimumRequiredCount, columns * rows <= maxFunctionKeyCount {
+                return (columns: columns, rows: rows)
+            }
+        }
+
+        return functionKeyGridDimensions(for: minimumRequiredCount)
+    }
+
+    private func validRepairShape(
+        startingAt index: Int,
+        in lines: [String],
+        gridDimensions: GridDimensions,
+        claimedIndexes: Set<Int>
+    ) -> SettingsButtonStorageShape {
+        let candidateShapes = [
+            SettingsButtonStorageShape(width: 3, height: 3),
+            SettingsButtonStorageShape(width: 2, height: 2),
+            SettingsButtonStorageShape(width: 3, height: 1),
+            SettingsButtonStorageShape(width: 2, height: 1),
+            SettingsButtonStorageShape(width: 1, height: 1)
+        ]
+
+        for shape in candidateShapes where repairShapeTokensMatch(
+            startingAt: index,
+            shape: shape,
+            in: lines,
+            gridDimensions: gridDimensions
+        ) && canPlaceRepairShape(
+            startingAt: index,
+            shape: shape,
+            lineCount: lines.count,
+            gridDimensions: gridDimensions,
+            claimedIndexes: claimedIndexes
+        ) {
+            return shape
+        }
+
+        return SettingsButtonStorageShape(width: 1, height: 1)
+    }
+
+    private func repairShapeTokensMatch(
+        startingAt index: Int,
+        shape: SettingsButtonStorageShape,
+        in lines: [String],
+        gridDimensions: GridDimensions
+    ) -> Bool {
+        repairContinuationAssignments(startingAt: index, shape: shape, gridDimensions: gridDimensions)
+            .allSatisfy { assignment in
+                lines.indices.contains(assignment.index) &&
+                    lines[assignment.index].trimmingCharacters(in: .whitespacesAndNewlines) == assignment.token
+            }
+    }
+
+    private func canPlaceRepairShape(
+        startingAt index: Int,
+        shape: SettingsButtonStorageShape,
+        lineCount: Int,
+        gridDimensions: GridDimensions,
+        claimedIndexes: Set<Int>
+    ) -> Bool {
+        let columns = max(gridDimensions.columns, 1)
+        let startColumn = index % columns
+        let startRow = index / columns
+        guard startColumn + shape.width <= columns,
+              startRow + shape.height <= max(gridDimensions.rows, 1) else {
+            return false
+        }
+
+        return repairIndexes(startingAt: index, shape: shape, gridDimensions: gridDimensions)
+            .allSatisfy { slotIndex in
+                slotIndex < lineCount && !claimedIndexes.contains(slotIndex)
+            }
+    }
+
+    private func repairIndexes(
+        startingAt index: Int,
+        shape: SettingsButtonStorageShape,
+        gridDimensions: GridDimensions
+    ) -> [Int] {
+        let columns = max(gridDimensions.columns, 1)
+        var indexes: [Int] = []
+
+        for rowOffset in 0..<shape.height {
+            for columnOffset in 0..<shape.width {
+                indexes.append(index + (rowOffset * columns) + columnOffset)
+            }
+        }
+
+        return indexes
+    }
+
+    private func repairContinuationAssignments(
+        startingAt index: Int,
+        shape: SettingsButtonStorageShape,
+        gridDimensions: GridDimensions
+    ) -> [(index: Int, token: String)] {
+        let columns = max(gridDimensions.columns, 1)
+        var assignments: [(index: Int, token: String)] = []
+
+        for rowOffset in 0..<shape.height {
+            for columnOffset in 0..<shape.width {
+                guard rowOffset != 0 || columnOffset != 0 else {
+                    continue
+                }
+
+                let token = rowOffset == 0 ? wideButtonContinuationToken : blockButtonContinuationToken
+                assignments.append((index + (rowOffset * columns) + columnOffset, token))
+            }
+        }
+
+        return assignments
+    }
+
+    private func isRepairBlankLine(_ line: String) -> Bool {
+        let trimmedLine = line.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmedLine.isEmpty || trimmedLine == "_"
+    }
+
+    private func isRepairContinuationLine(_ line: String) -> Bool {
+        let trimmedLine = line.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmedLine == wideButtonContinuationToken || trimmedLine == blockButtonContinuationToken
     }
 
     private var selectedDocumentFileURL: URL? {
