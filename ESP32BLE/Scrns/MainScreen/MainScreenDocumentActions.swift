@@ -543,7 +543,7 @@ extension MainScreen {
             }
 
             let entry = functionKeys[slotIndex]
-            guard entry.isBlankPlaceholder || isEmptyButtonEntry(entry) else {
+            guard isEmptyButtonEntry(entry) else {
                 return false
             }
         }
