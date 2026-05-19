@@ -732,8 +732,9 @@ extension MainScreen {
         let sourceOnlyIndexes = Set(indexes(startingAt: sourceIndex, shape: moveShape, gridDimensions: gridDimensions))
             .subtracting(targetIndexSet)
         let targetColumn = targetIndex % columns
+        let displacedMoveOffset = displacedMoveOffset(from: sourceIndex, to: targetIndex, shape: moveShape, gridDimensions: gridDimensions)
         var checkedTargetIndexes = Set<Int>()
-        var targetOccupiedShapes: [ButtonGridShape] = []
+        var displacedDestinationIndexes = Set<Int>()
 
         guard targetIndex >= 0,
               targetColumn + moveShape.width <= columns,
@@ -771,60 +772,61 @@ extension MainScreen {
                 return false
             }
 
+            let displacedIndex = slotIndex + displacedMoveOffset
+            guard canPlaceDisplacedShape(
+                occupiedShape,
+                startingAt: displacedIndex,
+                inside: sourceOnlyIndexes,
+                occupiedDestinationIndexes: displacedDestinationIndexes,
+                gridDimensions: gridDimensions
+            ) else {
+                return false
+            }
+
             checkedTargetIndexes.formUnion(occupiedIndexes)
-            targetOccupiedShapes.append(occupiedShape)
+            displacedDestinationIndexes.formUnion(indexes(startingAt: displacedIndex, shape: occupiedShape, gridDimensions: gridDimensions))
         }
 
-        return canPackShapes(targetOccupiedShapes, into: sourceOnlyIndexes, gridDimensions: gridDimensions)
+        return true
     }
 
-    private func canPackShapes(_ shapes: [ButtonGridShape], into availableIndexes: Set<Int>, gridDimensions: GridDimensions) -> Bool {
-        guard !shapes.isEmpty else {
-            return true
+    private func displacedMoveOffset(
+        from sourceIndex: Int,
+        to targetIndex: Int,
+        shape: ButtonGridShape,
+        gridDimensions: GridDimensions
+    ) -> Int {
+        let columns = max(gridDimensions.columns, 1)
+        let sourceRow = sourceIndex / columns
+        let targetRow = targetIndex / columns
+
+        if sourceRow == targetRow {
+            return targetIndex > sourceIndex ? -shape.width : shape.width
         }
 
-        let sortedShapes = shapes.sorted { lhs, rhs in
-            (lhs.width * lhs.height) > (rhs.width * rhs.height)
-        }
-
-        return canPackShapes(sortedShapes, at: 0, into: availableIndexes, gridDimensions: gridDimensions)
+        return targetIndex > sourceIndex ? -(shape.height * columns) : (shape.height * columns)
     }
 
-    private func canPackShapes(
-        _ shapes: [ButtonGridShape],
-        at shapeIndex: Int,
-        into availableIndexes: Set<Int>,
+    private func canPlaceDisplacedShape(
+        _ shape: ButtonGridShape,
+        startingAt index: Int,
+        inside availableIndexes: Set<Int>,
+        occupiedDestinationIndexes: Set<Int>,
         gridDimensions: GridDimensions
     ) -> Bool {
-        guard shapeIndex < shapes.count else {
-            return true
+        let columns = max(gridDimensions.columns, 1)
+        let column = index % columns
+        let destinationIndexes = Set(indexes(startingAt: index, shape: shape, gridDimensions: gridDimensions))
+
+        guard index >= 0,
+              column + shape.width <= columns,
+              (index / columns) + shape.height <= gridDimensions.rows,
+              !destinationIndexes.isEmpty,
+              destinationIndexes.isSubset(of: availableIndexes),
+              destinationIndexes.isDisjoint(with: occupiedDestinationIndexes) else {
+            return false
         }
 
-        let shape = shapes[shapeIndex]
-        for candidateIndex in availableIndexes.sorted() {
-            let columns = max(gridDimensions.columns, 1)
-            let candidateColumn = candidateIndex % columns
-            guard candidateColumn + shape.width <= columns,
-                  (candidateIndex / columns) + shape.height <= gridDimensions.rows else {
-                continue
-            }
-
-            let candidateIndexes = Set(indexes(startingAt: candidateIndex, shape: shape, gridDimensions: gridDimensions))
-            guard !candidateIndexes.isEmpty,
-                  candidateIndexes.isSubset(of: availableIndexes) else {
-                continue
-            }
-
-            if canPackShapes(
-                shapes,
-                at: shapeIndex + 1,
-                into: availableIndexes.subtracting(candidateIndexes),
-                gridDimensions: gridDimensions
-            ) {
-                return true
-            }
-        }
-
-        return false
+        return true
     }
 }

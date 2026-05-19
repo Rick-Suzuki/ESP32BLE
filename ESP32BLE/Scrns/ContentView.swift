@@ -1010,6 +1010,7 @@ struct ContentView: View {
         let sourceIndexes = Set(sourceIndexList)
         let targetIndexSet = Set(targetIndexes)
         let sourceOnlyIndexes = Set(sourceIndexList.filter { !targetIndexSet.contains($0) })
+        let displacedMoveOffset = displacedMoveOffset(from: sourceIndex, to: targetIndex, shape: moveShape, gridDimensions: gridDimensions)
         var checkedTargetIndexes = Set<Int>()
         var targetOccupants: [MovedTargetOccupant] = []
 
@@ -1070,12 +1071,13 @@ struct ContentView: View {
             }
 
             checkedTargetIndexes.formUnion(occupiedIndexes)
-            targetOccupants.append(MovedTargetOccupant(line: targetLine, shape: targetShape))
+            targetOccupants.append(MovedTargetOccupant(index: targetSlotIndex, line: targetLine, shape: targetShape))
         }
 
-        guard let targetPlacements = packedTargetOccupantPlacements(
+        guard let targetPlacements = displacedTargetOccupantPlacements(
             targetOccupants,
             into: sourceOnlyIndexes,
+            moveOffset: displacedMoveOffset,
             gridDimensions: gridDimensions
         ) else {
             return false
@@ -1107,73 +1109,56 @@ struct ContentView: View {
     }
 
     private struct MovedTargetOccupant {
+        let index: Int
         let line: String
         let shape: ButtonStorageShape
     }
 
-    private func packedTargetOccupantPlacements(
-        _ occupants: [MovedTargetOccupant],
-        into availableIndexes: Set<Int>,
+    private func displacedMoveOffset(
+        from sourceIndex: Int,
+        to targetIndex: Int,
+        shape: ButtonStorageShape,
         gridDimensions: GridDimensions
-    ) -> [(occupant: MovedTargetOccupant, index: Int)]? {
-        guard !occupants.isEmpty else {
-            return []
+    ) -> Int {
+        let columns = max(gridDimensions.columns, 1)
+        let sourceRow = sourceIndex / columns
+        let targetRow = targetIndex / columns
+
+        if sourceRow == targetRow {
+            return targetIndex > sourceIndex ? -shape.width : shape.width
         }
 
-        let sortedOccupants = occupants.sorted { lhs, rhs in
-            (lhs.shape.width * lhs.shape.height) > (rhs.shape.width * rhs.shape.height)
-        }
-
-        return packedTargetOccupantPlacements(
-            sortedOccupants,
-            at: 0,
-            into: availableIndexes,
-            gridDimensions: gridDimensions,
-            placements: []
-        )
+        return targetIndex > sourceIndex ? -(shape.height * columns) : (shape.height * columns)
     }
 
-    private func packedTargetOccupantPlacements(
+    private func displacedTargetOccupantPlacements(
         _ occupants: [MovedTargetOccupant],
-        at occupantIndex: Int,
         into availableIndexes: Set<Int>,
-        gridDimensions: GridDimensions,
-        placements: [(occupant: MovedTargetOccupant, index: Int)]
+        moveOffset: Int,
+        gridDimensions: GridDimensions
     ) -> [(occupant: MovedTargetOccupant, index: Int)]? {
-        guard occupantIndex < occupants.count else {
-            return placements
-        }
+        var placements: [(occupant: MovedTargetOccupant, index: Int)] = []
+        var occupiedDestinationIndexes = Set<Int>()
 
-        let occupant = occupants[occupantIndex]
-        for candidateIndex in availableIndexes.sorted() {
+        for occupant in occupants {
+            let destinationIndex = occupant.index + moveOffset
             let columns = max(gridDimensions.columns, 1)
-            let candidateColumn = candidateIndex % columns
-            guard candidateColumn + occupant.shape.width <= columns,
-                  (candidateIndex / columns) + occupant.shape.height <= gridDimensions.rows else {
-                continue
+            let destinationColumn = destinationIndex % columns
+            let destinationIndexes = Set(buttonIndexes(startingAt: destinationIndex, shape: occupant.shape, gridDimensions: gridDimensions))
+            guard destinationIndex >= 0,
+                  destinationColumn + occupant.shape.width <= columns,
+                  (destinationIndex / columns) + occupant.shape.height <= gridDimensions.rows,
+                  !destinationIndexes.isEmpty,
+                  destinationIndexes.isSubset(of: availableIndexes),
+                  destinationIndexes.isDisjoint(with: occupiedDestinationIndexes) else {
+                return nil
             }
 
-            let candidateIndexes = Set(buttonIndexes(startingAt: candidateIndex, shape: occupant.shape, gridDimensions: gridDimensions))
-            guard !candidateIndexes.isEmpty,
-                  candidateIndexes.isSubset(of: availableIndexes) else {
-                continue
-            }
-
-            var updatedPlacements = placements
-            updatedPlacements.append((occupant, candidateIndex))
-
-            if let packedPlacements = packedTargetOccupantPlacements(
-                occupants,
-                at: occupantIndex + 1,
-                into: availableIndexes.subtracting(candidateIndexes),
-                gridDimensions: gridDimensions,
-                placements: updatedPlacements
-            ) {
-                return packedPlacements
-            }
+            occupiedDestinationIndexes.formUnion(destinationIndexes)
+            placements.append((occupant, destinationIndex))
         }
 
-        return nil
+        return placements
     }
 
     private func buttonShape(startingAt index: Int, in lines: [String], gridDimensions: GridDimensions) -> ButtonStorageShape {
