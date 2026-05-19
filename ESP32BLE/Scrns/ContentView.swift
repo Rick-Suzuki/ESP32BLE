@@ -1081,12 +1081,7 @@ struct ContentView: View {
             return false
         }
 
-        let nextIndex = index + 1
-        guard lines.indices.contains(nextIndex) else {
-            return true
-        }
-
-        return !isButtonContinuationLine(lines[nextIndex])
+        return true
     }
 
     private struct ButtonStorageShape {

@@ -680,6 +680,16 @@ extension MainScreen {
             let sourceSpan = slotSpan(startingAt: sourceIndex, gridDimensions: gridDimensions)
             let sourceShape = shape(for: sourceSpan)
             let step = horizontalDistance > 0 ? 1 : -1
+            if sourceSpan == 1,
+               let singleCellTargetIndex = singleCellTargetIndexForEditDrag(
+                from: sourceIndex,
+                step: step,
+                isHorizontalMove: true,
+                gridDimensions: gridDimensions
+               ) {
+                return singleCellTargetIndex
+            }
+
             let targetIndex = sourceIndex + step
             let sourceRow = sourceIndex / gridDimensions.columns
             let targetColumn = targetIndex % max(gridDimensions.columns, 1)
@@ -702,6 +712,16 @@ extension MainScreen {
 
         let sourceSpan = slotSpan(startingAt: sourceIndex, gridDimensions: gridDimensions)
         let step = verticalDistance > 0 ? gridDimensions.columns : -gridDimensions.columns
+        if sourceSpan == 1,
+           let singleCellTargetIndex = singleCellTargetIndexForEditDrag(
+            from: sourceIndex,
+            step: step,
+            isHorizontalMove: false,
+            gridDimensions: gridDimensions
+           ) {
+            return singleCellTargetIndex
+        }
+
         let targetIndex = sourceIndex + step
 
         guard targetIndex >= 0,
@@ -716,6 +736,69 @@ extension MainScreen {
         }
 
         return targetIndex
+    }
+
+    private func singleCellTargetIndexForEditDrag(
+        from sourceIndex: Int,
+        step: Int,
+        isHorizontalMove: Bool,
+        gridDimensions: GridDimensions
+    ) -> Int? {
+        let columns = max(gridDimensions.columns, 1)
+        let sourceRow = sourceIndex / columns
+        var candidateIndex = sourceIndex + step
+
+        while candidateIndex >= 0 && candidateIndex < visibleBoxCount {
+            if isHorizontalMove && candidateIndex / columns != sourceRow {
+                return nil
+            }
+
+            if isSingleCellMoveTarget(candidateIndex, gridDimensions: gridDimensions) {
+                return candidateIndex
+            }
+
+            guard isIslandCell(candidateIndex, gridDimensions: gridDimensions) else {
+                return nil
+            }
+
+            candidateIndex += step
+        }
+
+        return nil
+    }
+
+    private func isSingleCellMoveTarget(_ index: Int, gridDimensions: GridDimensions) -> Bool {
+        guard functionKeys.indices.contains(index) else {
+            return false
+        }
+
+        let entry = functionKeys[index]
+        guard !isButtonContinuationEntry(entry) else {
+            return false
+        }
+
+        if entry.isBlankPlaceholder || isEmptyButtonEntry(entry) {
+            return true
+        }
+
+        return slotSpan(startingAt: index, gridDimensions: gridDimensions) == 1
+    }
+
+    private func isIslandCell(_ index: Int, gridDimensions: GridDimensions) -> Bool {
+        guard functionKeys.indices.contains(index) else {
+            return false
+        }
+
+        let entry = functionKeys[index]
+        if isButtonContinuationEntry(entry) {
+            return true
+        }
+
+        guard !entry.isBlankPlaceholder, !isEmptyButtonEntry(entry) else {
+            return false
+        }
+
+        return slotSpan(startingAt: index, gridDimensions: gridDimensions) > 1
     }
 
     private func canMoveSlotSpan(
