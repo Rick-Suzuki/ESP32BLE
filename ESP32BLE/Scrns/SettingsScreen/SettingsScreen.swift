@@ -116,6 +116,7 @@ struct SettingsScreen: View {
     @State private var isEditingDocumentName = false
     @State private var documentNameDraft = ""
     @State private var renameAlertMessage: String?
+    @State private var repairAlertMessage: String?
     @AppStorage("settingsListMode") private var listModeRawValue = SettingsListMode.files.rawValue
     @AppStorage("settingsFilesScrollPositionID") private var fileScrollPositionIDStorage = ""
     @AppStorage("settingsImagesScrollPositionID") private var imageScrollPositionIDStorage = ""
@@ -306,6 +307,9 @@ struct SettingsScreen: View {
         } message: {
             Text(renameAlertMessage ?? "")
         }
+        .overlay {
+            repairDocumentAlertOverlay
+        }
         .confirmationDialog(
             "a file with that name already exists.",
             isPresented: importConflictIsPresented,
@@ -439,6 +443,50 @@ struct SettingsScreen: View {
             savedText: savedDocumentEditorText,
             onUndo: { documentEditorText = savedDocumentEditorText }
         )
+    }
+
+    @ViewBuilder
+    private var repairDocumentAlertOverlay: some View {
+        if let repairAlertMessage {
+            GeometryReader { proxy in
+                ZStack {
+                    Color.black.opacity(0.001)
+                        .ignoresSafeArea()
+
+                    VStack(spacing: 16) {
+                        VStack(spacing: 8) {
+                            Text("repair document")
+                                .font(.title2.bold())
+                                .foregroundStyle(.white)
+                                .frame(maxWidth: .infinity)
+                                .multilineTextAlignment(.center)
+
+                            Text(repairAlertMessage)
+                                .font(.headline.weight(.semibold))
+                                .foregroundStyle(.green)
+                                .frame(maxWidth: .infinity)
+                                .multilineTextAlignment(.center)
+                        }
+
+                        Button {
+                            self.repairAlertMessage = nil
+                        } label: {
+                            Text("OK")
+                                .font(.headline.bold())
+                                .foregroundStyle(.green)
+                                .frame(width: 100)
+                                .padding(.vertical, 11)
+                                .padding(.horizontal, 50)
+                                .background(Color.green.opacity(0.2), in: Capsule())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .padding(10)
+					.frame(width: 300, height:140)
+                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 26, style: .continuous))
+                }
+            }
+        }
     }
 
     private var settingsTitleControl: some View {
@@ -953,7 +1001,7 @@ struct SettingsScreen: View {
 
     private func repairDocument() {
         guard listMode == .files, let fileURL = selectedDocumentFileURL else {
-            renameAlertMessage = "Select a text file to repair"
+            repairAlertMessage = "Select a text file to repair"
             return
         }
 
@@ -969,10 +1017,10 @@ struct SettingsScreen: View {
             loadedDocumentName = fileURL.lastPathComponent
             isLoadingDocumentText = false
             loadFunctionKeys(fileURL)
-            renameAlertMessage = didRepair ? "Document repaired" : "Document checked"
+            repairAlertMessage = didRepair ? "Document repaired" : "Document checked"
         } catch {
             isLoadingDocumentText = false
-            renameAlertMessage = "Could not repair \(fileURL.lastPathComponent)."
+            repairAlertMessage = "Could not repair \(fileURL.lastPathComponent)."
         }
     }
 
