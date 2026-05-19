@@ -1006,7 +1006,12 @@ struct ContentView: View {
         let sourceShape = buttonShape(startingAt: sourceIndex, in: updatedLines, gridDimensions: gridDimensions)
         let moveShape = boundedSpan >= 4 ? sourceShape : ButtonStorageShape(width: max(1, min(boundedSpan, 3)), height: 1)
         let targetIndexes = buttonIndexes(startingAt: targetIndex, shape: moveShape, gridDimensions: gridDimensions)
-        let sourceIndexes = Set(buttonIndexes(startingAt: sourceIndex, shape: moveShape, gridDimensions: gridDimensions))
+        let sourceIndexList = buttonIndexes(startingAt: sourceIndex, shape: moveShape, gridDimensions: gridDimensions)
+        let sourceIndexes = Set(sourceIndexList)
+        let targetIndexSet = Set(targetIndexes)
+        let sourceOnlyIndexes = Set(sourceIndexList.filter { !targetIndexSet.contains($0) })
+        var checkedTargetIndexes = Set<Int>()
+        var targetOccupants: [MovedTargetOccupant] = []
 
         if let maximumTargetIndex = targetIndexes.max(), maximumTargetIndex >= updatedLines.count {
             updatedLines += Array(repeating: "_", count: maximumTargetIndex - updatedLines.count + 1)
@@ -1037,6 +1042,10 @@ struct ContentView: View {
         }
 
         for targetSlotIndex in targetIndexes {
+            if checkedTargetIndexes.contains(targetSlotIndex) {
+                continue
+            }
+
             guard targetSlotIndex < updatedLines.count else {
                 return false
             }
@@ -1050,13 +1059,28 @@ struct ContentView: View {
                 continue
             }
 
-            guard moveShape.width == 1, moveShape.height == 1,
-                  canSwapSingleCellSlot(at: targetSlotIndex, in: updatedLines) else {
+            guard !isButtonContinuationLine(targetLine) else {
                 return false
             }
+
+            let targetShape = buttonShape(startingAt: targetSlotIndex, in: updatedLines, gridDimensions: gridDimensions)
+            let occupiedIndexes = Set(buttonIndexes(startingAt: targetSlotIndex, shape: targetShape, gridDimensions: gridDimensions))
+            guard occupiedIndexes.isSubset(of: targetIndexSet) else {
+                return false
+            }
+
+            checkedTargetIndexes.formUnion(occupiedIndexes)
+            targetOccupants.append(MovedTargetOccupant(line: targetLine, shape: targetShape))
         }
 
-        let targetLine = updatedLines[targetIndex]
+        guard let targetPlacements = packedTargetOccupantPlacements(
+            targetOccupants,
+            into: sourceOnlyIndexes,
+            gridDimensions: gridDimensions
+        ) else {
+            return false
+        }
+
         for sourceSlotIndex in sourceIndexes {
             updatedLines[sourceSlotIndex] = "_"
         }
@@ -1066,32 +1090,90 @@ struct ContentView: View {
             updatedLines[continuation.index] = continuation.token
         }
 
-        if moveShape.width == 1, moveShape.height == 1, !isBlankPlaceholderLine(targetLine) {
-            updatedLines[sourceIndex] = targetLine
+        for placement in targetPlacements {
+            updatedLines[placement.index] = placement.occupant.line
+            for continuation in continuationAssignments(startingAt: placement.index, shape: placement.occupant.shape) {
+                updatedLines[continuation.index] = continuation.token
+            }
         }
 
         persistSlotLines(updatedLines)
         return true
     }
 
-    private func canSwapSingleCellSlot(at index: Int, in lines: [String]) -> Bool {
-        guard lines.indices.contains(index),
-              !isBlankPlaceholderLine(lines[index]),
-              !isButtonContinuationLine(lines[index]) else {
-            return false
-        }
-
-        let nextIndex = index + 1
-        guard lines.indices.contains(nextIndex) else {
-            return true
-        }
-
-        return !isButtonContinuationLine(lines[nextIndex])
-    }
-
     private struct ButtonStorageShape {
         let width: Int
         let height: Int
+    }
+
+    private struct MovedTargetOccupant {
+        let line: String
+        let shape: ButtonStorageShape
+    }
+
+    private func packedTargetOccupantPlacements(
+        _ occupants: [MovedTargetOccupant],
+        into availableIndexes: Set<Int>,
+        gridDimensions: GridDimensions
+    ) -> [(occupant: MovedTargetOccupant, index: Int)]? {
+        guard !occupants.isEmpty else {
+            return []
+        }
+
+        let sortedOccupants = occupants.sorted { lhs, rhs in
+            (lhs.shape.width * lhs.shape.height) > (rhs.shape.width * rhs.shape.height)
+        }
+
+        return packedTargetOccupantPlacements(
+            sortedOccupants,
+            at: 0,
+            into: availableIndexes,
+            gridDimensions: gridDimensions,
+            placements: []
+        )
+    }
+
+    private func packedTargetOccupantPlacements(
+        _ occupants: [MovedTargetOccupant],
+        at occupantIndex: Int,
+        into availableIndexes: Set<Int>,
+        gridDimensions: GridDimensions,
+        placements: [(occupant: MovedTargetOccupant, index: Int)]
+    ) -> [(occupant: MovedTargetOccupant, index: Int)]? {
+        guard occupantIndex < occupants.count else {
+            return placements
+        }
+
+        let occupant = occupants[occupantIndex]
+        for candidateIndex in availableIndexes.sorted() {
+            let columns = max(gridDimensions.columns, 1)
+            let candidateColumn = candidateIndex % columns
+            guard candidateColumn + occupant.shape.width <= columns,
+                  (candidateIndex / columns) + occupant.shape.height <= gridDimensions.rows else {
+                continue
+            }
+
+            let candidateIndexes = Set(buttonIndexes(startingAt: candidateIndex, shape: occupant.shape, gridDimensions: gridDimensions))
+            guard !candidateIndexes.isEmpty,
+                  candidateIndexes.isSubset(of: availableIndexes) else {
+                continue
+            }
+
+            var updatedPlacements = placements
+            updatedPlacements.append((occupant, candidateIndex))
+
+            if let packedPlacements = packedTargetOccupantPlacements(
+                occupants,
+                at: occupantIndex + 1,
+                into: availableIndexes.subtracting(candidateIndexes),
+                gridDimensions: gridDimensions,
+                placements: updatedPlacements
+            ) {
+                return packedPlacements
+            }
+        }
+
+        return nil
     }
 
     private func buttonShape(startingAt index: Int, in lines: [String], gridDimensions: GridDimensions) -> ButtonStorageShape {

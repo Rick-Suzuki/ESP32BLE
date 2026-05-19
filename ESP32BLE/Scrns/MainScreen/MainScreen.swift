@@ -651,6 +651,7 @@ struct MainScreen: View {
             activeDragIndex = nil
         }
 
+        let isMoveAttempt = max(abs(translation.width), abs(translation.height)) >= 24
         guard isGridEditModeEnabled,
               editingSlotIndex == nil,
               let targetIndex = targetIndexForEditDrag(
@@ -658,11 +659,19 @@ struct MainScreen: View {
                 translation: translation,
                 gridDimensions: gridDimensions
               ) else {
+            if isGridEditModeEnabled, editingSlotIndex == nil, isMoveAttempt {
+                alertTitle = "Move btn"
+                renameAlertMessage = "can't move btn"
+            }
             return
         }
 
         let sourceSpan = slotSpan(startingAt: sourceIndex, gridDimensions: gridDimensions)
-        _ = moveFunctionKeySlot(sourceIndex, targetIndex, sourceSpan)
+        guard moveFunctionKeySlot(sourceIndex, targetIndex, sourceSpan) else {
+            alertTitle = "Move btn"
+            renameAlertMessage = "can't move btn"
+            return
+        }
     }
 }
 

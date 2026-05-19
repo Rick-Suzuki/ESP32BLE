@@ -728,7 +728,12 @@ extension MainScreen {
         let columns = max(gridDimensions.columns, 1)
         let targetIndexes = indexes(startingAt: targetIndex, shape: moveShape, gridDimensions: gridDimensions)
         let sourceIndexes = Set(indexes(startingAt: sourceIndex, shape: moveShape, gridDimensions: gridDimensions))
+        let targetIndexSet = Set(targetIndexes)
+        let sourceOnlyIndexes = Set(indexes(startingAt: sourceIndex, shape: moveShape, gridDimensions: gridDimensions))
+            .subtracting(targetIndexSet)
         let targetColumn = targetIndex % columns
+        var checkedTargetIndexes = Set<Int>()
+        var targetOccupiedShapes: [ButtonGridShape] = []
 
         guard targetIndex >= 0,
               targetColumn + moveShape.width <= columns,
@@ -739,6 +744,10 @@ extension MainScreen {
         }
 
         for slotIndex in targetIndexes {
+            if checkedTargetIndexes.contains(slotIndex) {
+                continue
+            }
+
             guard functionKeys.indices.contains(slotIndex) else {
                 return false
             }
@@ -748,20 +757,74 @@ extension MainScreen {
             }
 
             let entry = functionKeys[slotIndex]
-            if entry.isBlankPlaceholder || isEmptyButtonEntry(entry) {
+            if isEmptyButtonEntry(entry) {
                 continue
             }
 
-            if moveShape.width == 1 && moveShape.height == 1,
-               !isWideButtonContinuationEntry(entry),
-               !isBlockButtonContinuationEntry(entry),
-               slotSpan(startingAt: slotIndex, gridDimensions: gridDimensions) == 1 {
-                continue
+            if isButtonContinuationEntry(entry) {
+                return false
             }
 
-            return false
+            let occupiedShape = buttonShape(startingAt: slotIndex, gridDimensions: gridDimensions)
+            let occupiedIndexes = Set(indexes(startingAt: slotIndex, shape: occupiedShape, gridDimensions: gridDimensions))
+            guard occupiedIndexes.isSubset(of: targetIndexSet) else {
+                return false
+            }
+
+            checkedTargetIndexes.formUnion(occupiedIndexes)
+            targetOccupiedShapes.append(occupiedShape)
         }
 
-        return true
+        return canPackShapes(targetOccupiedShapes, into: sourceOnlyIndexes, gridDimensions: gridDimensions)
+    }
+
+    private func canPackShapes(_ shapes: [ButtonGridShape], into availableIndexes: Set<Int>, gridDimensions: GridDimensions) -> Bool {
+        guard !shapes.isEmpty else {
+            return true
+        }
+
+        let sortedShapes = shapes.sorted { lhs, rhs in
+            (lhs.width * lhs.height) > (rhs.width * rhs.height)
+        }
+
+        return canPackShapes(sortedShapes, at: 0, into: availableIndexes, gridDimensions: gridDimensions)
+    }
+
+    private func canPackShapes(
+        _ shapes: [ButtonGridShape],
+        at shapeIndex: Int,
+        into availableIndexes: Set<Int>,
+        gridDimensions: GridDimensions
+    ) -> Bool {
+        guard shapeIndex < shapes.count else {
+            return true
+        }
+
+        let shape = shapes[shapeIndex]
+        for candidateIndex in availableIndexes.sorted() {
+            let columns = max(gridDimensions.columns, 1)
+            let candidateColumn = candidateIndex % columns
+            guard candidateColumn + shape.width <= columns,
+                  (candidateIndex / columns) + shape.height <= gridDimensions.rows else {
+                continue
+            }
+
+            let candidateIndexes = Set(indexes(startingAt: candidateIndex, shape: shape, gridDimensions: gridDimensions))
+            guard !candidateIndexes.isEmpty,
+                  candidateIndexes.isSubset(of: availableIndexes) else {
+                continue
+            }
+
+            if canPackShapes(
+                shapes,
+                at: shapeIndex + 1,
+                into: availableIndexes.subtracting(candidateIndexes),
+                gridDimensions: gridDimensions
+            ) {
+                return true
+            }
+        }
+
+        return false
     }
 }
