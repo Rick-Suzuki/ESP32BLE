@@ -676,8 +676,20 @@ extension MainScreen {
             return nil
         }
 
+        let sourceSpan = slotSpan(startingAt: sourceIndex, gridDimensions: gridDimensions)
+        if sourceSpan == 1,
+           abs(horizontalDistance) >= 24,
+           abs(verticalDistance) >= 24,
+           let diagonalTargetIndex = singleCellDiagonalTargetIndexForEditDrag(
+            from: sourceIndex,
+            columnStep: horizontalDistance > 0 ? 1 : -1,
+            rowStep: verticalDistance > 0 ? 1 : -1,
+            gridDimensions: gridDimensions
+           ) {
+            return diagonalTargetIndex
+        }
+
         if abs(horizontalDistance) > abs(verticalDistance) {
-            let sourceSpan = slotSpan(startingAt: sourceIndex, gridDimensions: gridDimensions)
             let sourceShape = shape(for: sourceSpan)
             let step = horizontalDistance > 0 ? 1 : -1
             if sourceSpan == 1,
@@ -710,7 +722,6 @@ extension MainScreen {
             return targetIndex
         }
 
-        let sourceSpan = slotSpan(startingAt: sourceIndex, gridDimensions: gridDimensions)
         let step = verticalDistance > 0 ? gridDimensions.columns : -gridDimensions.columns
         if sourceSpan == 1,
            let singleCellTargetIndex = singleCellTargetIndexForEditDrag(
@@ -762,6 +773,40 @@ extension MainScreen {
             }
 
             candidateIndex += step
+        }
+
+        return nil
+    }
+
+    private func singleCellDiagonalTargetIndexForEditDrag(
+        from sourceIndex: Int,
+        columnStep: Int,
+        rowStep: Int,
+        gridDimensions: GridDimensions
+    ) -> Int? {
+        let columns = max(gridDimensions.columns, 1)
+        var candidateRow = (sourceIndex / columns) + rowStep
+        var candidateColumn = (sourceIndex % columns) + columnStep
+
+        while candidateRow >= 0,
+              candidateRow < gridDimensions.rows,
+              candidateColumn >= 0,
+              candidateColumn < columns {
+            let candidateIndex = (candidateRow * columns) + candidateColumn
+            guard candidateIndex < visibleBoxCount else {
+                return nil
+            }
+
+            if isSingleCellMoveTarget(candidateIndex, gridDimensions: gridDimensions) {
+                return candidateIndex
+            }
+
+            guard isIslandCell(candidateIndex, gridDimensions: gridDimensions) else {
+                return nil
+            }
+
+            candidateRow += rowStep
+            candidateColumn += columnStep
         }
 
         return nil
