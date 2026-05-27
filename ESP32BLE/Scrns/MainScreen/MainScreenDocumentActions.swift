@@ -709,17 +709,15 @@ extension MainScreen {
             guard targetIndex >= 0,
                   targetIndex < visibleBoxCount,
                   targetIndex / gridDimensions.columns == sourceRow,
-                  targetColumn + sourceShape.width <= gridDimensions.columns,
-                  canMoveSlotSpan(
-                    startingAt: targetIndex,
-                    span: sourceSpan,
-                    from: sourceIndex,
-                    gridDimensions: gridDimensions
-                  ) else {
+                  targetColumn + sourceShape.width <= gridDimensions.columns else {
                 return nil
             }
 
             return targetIndex
+        }
+
+        guard sourceSpan == 1 || abs(horizontalDistance) < 24 else {
+            return nil
         }
 
         let step = verticalDistance > 0 ? gridDimensions.columns : -gridDimensions.columns
@@ -735,14 +733,11 @@ extension MainScreen {
 
         let targetIndex = sourceIndex + step
 
+        let sourceShape = shape(for: sourceSpan)
+        let targetRow = targetIndex / max(gridDimensions.columns, 1)
         guard targetIndex >= 0,
               targetIndex < visibleBoxCount,
-              canMoveSlotSpan(
-                startingAt: targetIndex,
-                span: sourceSpan,
-                from: sourceIndex,
-                gridDimensions: gridDimensions
-              ) else {
+              targetRow + sourceShape.height <= gridDimensions.rows else {
             return nil
         }
 

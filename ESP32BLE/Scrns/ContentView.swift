@@ -1000,93 +1000,410 @@ struct ContentView: View {
             return false
         }
 
-        let boundedSpan = max(1, min(span, 5))
         var updatedLines = functionKeySlotLines
         let gridDimensions = loadStoredGridDimensions(for: selectedDocumentName, requiredBoxCount: max(loadedFunctionKeySlotCount, 1))
-        let sourceShape = buttonShape(startingAt: sourceIndex, in: updatedLines, gridDimensions: gridDimensions)
-        let moveShape = boundedSpan >= 4 ? sourceShape : ButtonStorageShape(width: max(1, min(boundedSpan, 3)), height: 1)
-        let targetIndexes = buttonIndexes(startingAt: targetIndex, shape: moveShape, gridDimensions: gridDimensions)
-        let sourceIndexes = Set(buttonIndexes(startingAt: sourceIndex, shape: moveShape, gridDimensions: gridDimensions))
+        let gridCellCount = gridDimensions.columns * gridDimensions.rows
+        let requiredLineCount = max(gridCellCount, targetIndex + 1, sourceIndex + 1)
 
-        if let maximumTargetIndex = targetIndexes.max(), maximumTargetIndex >= updatedLines.count {
-            updatedLines += Array(repeating: "_", count: maximumTargetIndex - updatedLines.count + 1)
+        if requiredLineCount > updatedLines.count {
+            updatedLines += Array(repeating: "_", count: requiredLineCount - updatedLines.count)
         }
 
-        let sourceLine = updatedLines[sourceIndex]
-
-        guard !isBlankPlaceholderLine(sourceLine),
-              !isButtonContinuationLine(sourceLine) else {
+        guard let movePlan = resolvedTileMovePlan(
+            sourceIndex: sourceIndex,
+            targetIndex: targetIndex,
+            lines: updatedLines,
+            gridDimensions: gridDimensions
+        ) else {
             return false
         }
 
-        for sourceSlotIndex in sourceIndexes {
-            guard sourceSlotIndex < updatedLines.count else {
-                return false
-            }
+        let affectedIndexes = Set(movePlan.flatMap { placement in
+            buttonIndexes(startingAt: placement.tile.anchor, shape: placement.tile.shape, gridDimensions: gridDimensions)
+        })
 
-            if sourceSlotIndex == sourceIndex {
-                guard !isBlankPlaceholderLine(updatedLines[sourceSlotIndex]),
-                      !isButtonContinuationLine(updatedLines[sourceSlotIndex]) else {
-                    return false
-                }
-            } else {
-                guard isButtonContinuationLine(updatedLines[sourceSlotIndex]) else {
-                    return false
-                }
-            }
+        for index in affectedIndexes where index < updatedLines.count {
+            updatedLines[index] = "_"
         }
 
-        for targetSlotIndex in targetIndexes {
-            guard targetSlotIndex < updatedLines.count else {
-                return false
+        for placement in movePlan {
+            let targetIndexes = buttonIndexes(startingAt: placement.anchor, shape: placement.tile.shape, gridDimensions: gridDimensions)
+            if let maximumTargetIndex = targetIndexes.max(), maximumTargetIndex >= updatedLines.count {
+                updatedLines += Array(repeating: "_", count: maximumTargetIndex - updatedLines.count + 1)
             }
 
-            if sourceIndexes.contains(targetSlotIndex) {
-                continue
+            updatedLines[placement.anchor] = placement.tile.line
+            for continuation in continuationAssignments(startingAt: placement.anchor, shape: placement.tile.shape) {
+                updatedLines[continuation.index] = continuation.token
             }
-
-            let targetLine = updatedLines[targetSlotIndex]
-            if isBlankPlaceholderLine(targetLine) {
-                continue
-            }
-
-            guard moveShape.width == 1, moveShape.height == 1,
-                  canSwapSingleCellSlot(at: targetSlotIndex, in: updatedLines) else {
-                return false
-            }
-        }
-
-        let targetLine = updatedLines[targetIndex]
-        for sourceSlotIndex in sourceIndexes {
-            updatedLines[sourceSlotIndex] = "_"
-        }
-
-        updatedLines[targetIndex] = sourceLine
-        for continuation in continuationAssignments(startingAt: targetIndex, shape: moveShape) {
-            updatedLines[continuation.index] = continuation.token
-        }
-
-        if moveShape.width == 1, moveShape.height == 1, !isBlankPlaceholderLine(targetLine) {
-            updatedLines[sourceIndex] = targetLine
         }
 
         persistSlotLines(updatedLines)
         return true
     }
 
-    private func canSwapSingleCellSlot(at index: Int, in lines: [String]) -> Bool {
-        guard lines.indices.contains(index),
-              !isBlankPlaceholderLine(lines[index]),
-              !isButtonContinuationLine(lines[index]) else {
-            return false
+    private struct StoredTileMove {
+        let tile: StoredGridTile
+        let anchor: Int
+    }
+
+    private struct StoredGridTile {
+        let anchor: Int
+        let line: String
+        let shape: ButtonStorageShape
+
+        var area: Int {
+            shape.width * shape.height
+        }
+    }
+
+    private struct ButtonStorageShape: Equatable {
+        let width: Int
+        let height: Int
+    }
+
+    private func resolvedTileMovePlan(
+        sourceIndex: Int,
+        targetIndex: Int,
+        lines: [String],
+        gridDimensions: GridDimensions
+    ) -> [StoredTileMove]? {
+        let tiles = storedGridTiles(in: lines, gridDimensions: gridDimensions)
+        let tilesByAnchor = Dictionary(uniqueKeysWithValues: tiles.map { ($0.anchor, $0) })
+        let occupancy = tileOccupancy(for: tiles, gridDimensions: gridDimensions)
+
+        guard let sourceTile = tilesByAnchor[sourceIndex] else {
+            return nil
+        }
+
+        let columns = max(gridDimensions.columns, 1)
+        let sourceRow = sourceIndex / columns
+        let sourceColumn = sourceIndex % columns
+        let targetRow = targetIndex / columns
+        let targetColumn = targetIndex % columns
+        let rowDelta = targetRow - sourceRow
+        let columnDelta = targetColumn - sourceColumn
+        let rowStep = rowDelta == 0 ? 0 : (rowDelta > 0 ? 1 : -1)
+        let columnStep = columnDelta == 0 ? 0 : (columnDelta > 0 ? 1 : -1)
+
+        guard rowStep != 0 || columnStep != 0 else {
+            return nil
+        }
+
+        if rowStep != 0, columnStep != 0, sourceTile.shape != ButtonStorageShape(width: 1, height: 1) {
+            return nil
+        }
+
+        guard shapeFits(sourceTile.shape, startingAt: targetIndex, gridDimensions: gridDimensions) else {
+            return nil
+        }
+
+        let destinationIndexes = Set(buttonIndexes(startingAt: targetIndex, shape: sourceTile.shape, gridDimensions: gridDimensions))
+        let blockingAnchors = Set(destinationIndexes.compactMap { occupancy[$0] }.filter { $0 != sourceIndex })
+
+        if let swapMoves = directionalCompatibleSwapMoves(
+            from: sourceTile,
+            rowStep: rowStep,
+            columnStep: columnStep,
+            tilesByAnchor: tilesByAnchor,
+            occupancy: occupancy,
+            gridDimensions: gridDimensions
+        ) {
+            return swapMoves
+        }
+
+        guard !blockingAnchors.isEmpty else {
+            return [StoredTileMove(tile: sourceTile, anchor: targetIndex)]
+        }
+
+        if blockingAnchors.count == 1,
+           let blockingAnchor = blockingAnchors.first,
+           let blockingTile = tilesByAnchor[blockingAnchor],
+           blockingTile.shape == sourceTile.shape {
+            return [
+                StoredTileMove(tile: sourceTile, anchor: blockingTile.anchor),
+                StoredTileMove(tile: blockingTile, anchor: sourceIndex)
+            ]
+        }
+
+        var displacedMoves: [StoredTileMove] = []
+        let columnShift = columnStep == 0 ? 0 : -columnStep * sourceTile.shape.width
+        let rowShift = rowStep == 0 ? 0 : -rowStep * sourceTile.shape.height
+
+        for blockingAnchor in blockingAnchors {
+            guard let blockingTile = tilesByAnchor[blockingAnchor],
+                  blockingTile.area < sourceTile.area else {
+                return nil
+            }
+
+            let newRow = (blockingTile.anchor / columns) + rowShift
+            let newColumn = (blockingTile.anchor % columns) + columnShift
+            guard newRow >= 0, newColumn >= 0 else {
+                return nil
+            }
+
+            let newAnchor = (newRow * columns) + newColumn
+            guard shapeFits(blockingTile.shape, startingAt: newAnchor, gridDimensions: gridDimensions) else {
+                return nil
+            }
+
+            displacedMoves.append(StoredTileMove(tile: blockingTile, anchor: newAnchor))
+        }
+
+        let movingAnchors = Set(displacedMoves.map(\.tile.anchor)).union([sourceIndex])
+        var occupiedByUnaffectedTiles: [Int: Int] = [:]
+        for (index, anchor) in occupancy where !movingAnchors.contains(anchor) {
+            occupiedByUnaffectedTiles[index] = anchor
+        }
+
+        var plannedOccupancy: [Int: Int] = [:]
+        let plannedMoves = [StoredTileMove(tile: sourceTile, anchor: targetIndex)] + displacedMoves
+
+        for move in plannedMoves {
+            for index in buttonIndexes(startingAt: move.anchor, shape: move.tile.shape, gridDimensions: gridDimensions) {
+                if occupiedByUnaffectedTiles[index] != nil || plannedOccupancy[index] != nil {
+                    return nil
+                }
+
+                plannedOccupancy[index] = move.tile.anchor
+            }
+        }
+
+        return plannedMoves
+    }
+
+    private func directionalCompatibleSwapMoves(
+        from sourceTile: StoredGridTile,
+        rowStep: Int,
+        columnStep: Int,
+        tilesByAnchor: [Int: StoredGridTile],
+        occupancy: [Int: Int],
+        gridDimensions: GridDimensions
+    ) -> [StoredTileMove]? {
+        let columns = max(gridDimensions.columns, 1)
+        let sourceRow = sourceTile.anchor / columns
+        let sourceColumn = sourceTile.anchor % columns
+
+        if columnStep != 0, rowStep == 0 {
+            let scanRow = sourceRow
+            var scanColumn = columnStep > 0 ? sourceColumn + sourceTile.shape.width : sourceColumn - 1
+
+            while scanColumn >= 0, scanColumn < columns {
+                let index = (scanRow * columns) + scanColumn
+                if let anchor = occupancy[index], anchor != sourceTile.anchor {
+                    guard let tile = tilesByAnchor[anchor],
+                          tile.shape.height == sourceTile.shape.height,
+                          tile.anchor / columns == sourceRow,
+                          let moves = horizontalCompatibleSwapMoves(
+                            sourceTile,
+                            tile,
+                            occupancy: occupancy,
+                            gridDimensions: gridDimensions
+                          ) else {
+                        return nil
+                    }
+
+                    return moves
+                }
+
+                scanColumn += columnStep
+            }
+
+            return nil
+        }
+
+        if rowStep != 0, columnStep == 0 {
+            let scanColumn = sourceColumn
+            var scanRow = rowStep > 0 ? sourceRow + sourceTile.shape.height : sourceRow - 1
+
+            while scanRow >= 0, scanRow < gridDimensions.rows {
+                let index = (scanRow * columns) + scanColumn
+                if let anchor = occupancy[index], anchor != sourceTile.anchor {
+                    guard let tile = tilesByAnchor[anchor],
+                          tile.shape.width == sourceTile.shape.width,
+                          tile.anchor % columns == sourceColumn,
+                          let moves = verticalCompatibleSwapMoves(
+                            sourceTile,
+                            tile,
+                            occupancy: occupancy,
+                            gridDimensions: gridDimensions
+                          ) else {
+                        return nil
+                    }
+
+                    return moves
+                }
+
+                scanRow += rowStep
+            }
+        }
+
+        return nil
+    }
+
+    private func horizontalCompatibleSwapMoves(
+        _ sourceTile: StoredGridTile,
+        _ targetTile: StoredGridTile,
+        occupancy: [Int: Int],
+        gridDimensions: GridDimensions
+    ) -> [StoredTileMove]? {
+        let columns = max(gridDimensions.columns, 1)
+        let sourceColumn = sourceTile.anchor % columns
+        let targetColumn = targetTile.anchor % columns
+        let leftAnchor = min(sourceTile.anchor, targetTile.anchor)
+        let sourceIsLeft = sourceColumn < targetColumn
+        let sourceAnchor = sourceIsLeft ? leftAnchor + targetTile.shape.width : leftAnchor
+        let targetAnchor = sourceIsLeft ? leftAnchor : leftAnchor + sourceTile.shape.width
+        let moves = [
+            StoredTileMove(tile: sourceTile, anchor: sourceAnchor),
+            StoredTileMove(tile: targetTile, anchor: targetAnchor)
+        ]
+
+        return movePlanFits(moves, occupancy: occupancy, gridDimensions: gridDimensions) ? moves : nil
+    }
+
+    private func verticalCompatibleSwapMoves(
+        _ sourceTile: StoredGridTile,
+        _ targetTile: StoredGridTile,
+        occupancy: [Int: Int],
+        gridDimensions: GridDimensions
+    ) -> [StoredTileMove]? {
+        let columns = max(gridDimensions.columns, 1)
+        let sourceRow = sourceTile.anchor / columns
+        let targetRow = targetTile.anchor / columns
+        let topAnchor = min(sourceTile.anchor, targetTile.anchor)
+        let sourceIsTop = sourceRow < targetRow
+        let sourceAnchor = sourceIsTop ? topAnchor + (targetTile.shape.height * columns) : topAnchor
+        let targetAnchor = sourceIsTop ? topAnchor : topAnchor + (sourceTile.shape.height * columns)
+        let moves = [
+            StoredTileMove(tile: sourceTile, anchor: sourceAnchor),
+            StoredTileMove(tile: targetTile, anchor: targetAnchor)
+        ]
+
+        return movePlanFits(moves, occupancy: occupancy, gridDimensions: gridDimensions) ? moves : nil
+    }
+
+    private func movePlanFits(
+        _ moves: [StoredTileMove],
+        occupancy: [Int: Int],
+        gridDimensions: GridDimensions
+    ) -> Bool {
+        let movingAnchors = Set(moves.map(\.tile.anchor))
+        var plannedOccupancy = Set<Int>()
+
+        for move in moves {
+            guard shapeFits(move.tile.shape, startingAt: move.anchor, gridDimensions: gridDimensions) else {
+                return false
+            }
+
+            for index in buttonIndexes(startingAt: move.anchor, shape: move.tile.shape, gridDimensions: gridDimensions) {
+                if let anchor = occupancy[index], !movingAnchors.contains(anchor) {
+                    return false
+                }
+
+                guard plannedOccupancy.insert(index).inserted else {
+                    return false
+                }
+            }
         }
 
         return true
     }
 
-    private struct ButtonStorageShape {
-        let width: Int
-        let height: Int
+    private func storedGridTiles(in lines: [String], gridDimensions: GridDimensions) -> [StoredGridTile] {
+        let gridCellCount = gridDimensions.columns * gridDimensions.rows
+        var claimedIndexes = Set<Int>()
+        var tiles: [StoredGridTile] = []
+
+        for index in 0..<gridCellCount {
+            guard lines.indices.contains(index),
+                  !claimedIndexes.contains(index),
+                  !isBlankPlaceholderLine(lines[index]),
+                  !isButtonContinuationLine(lines[index]) else {
+                continue
+            }
+
+            let shape = buttonShape(startingAt: index, in: lines, gridDimensions: gridDimensions, claimedIndexes: claimedIndexes)
+            let tileIndexes = buttonIndexes(startingAt: index, shape: shape, gridDimensions: gridDimensions)
+            claimedIndexes.formUnion(tileIndexes)
+            tiles.append(StoredGridTile(anchor: index, line: lines[index], shape: shape))
+        }
+
+        return tiles
+    }
+
+    private func tileOccupancy(for tiles: [StoredGridTile], gridDimensions: GridDimensions) -> [Int: Int] {
+        var occupancy: [Int: Int] = [:]
+
+        for tile in tiles {
+            for index in buttonIndexes(startingAt: tile.anchor, shape: tile.shape, gridDimensions: gridDimensions) {
+                occupancy[index] = tile.anchor
+            }
+        }
+
+        return occupancy
+    }
+
+    private func shapeFits(_ shape: ButtonStorageShape, startingAt index: Int, gridDimensions: GridDimensions) -> Bool {
+        let columns = max(gridDimensions.columns, 1)
+        let row = index / columns
+        let column = index % columns
+
+        return index >= 0 &&
+            column + shape.width <= columns &&
+            row + shape.height <= gridDimensions.rows
+    }
+
+    private func buttonShape(
+        startingAt index: Int,
+        in lines: [String],
+        gridDimensions: GridDimensions,
+        claimedIndexes: Set<Int>
+    ) -> ButtonStorageShape {
+        let columns = max(gridDimensions.columns, 1)
+        let column = index % columns
+        let rightIndex = index + 1
+        let secondRightIndex = index + 2
+        let belowIndex = index + columns
+        let belowRightIndex = index + columns + 1
+        let hasRight = column + 1 < columns &&
+            lines.indices.contains(rightIndex) &&
+            !claimedIndexes.contains(rightIndex) &&
+            isWideButtonContinuationLine(lines[rightIndex])
+        let hasSecondRight = column + 2 < columns &&
+            lines.indices.contains(secondRightIndex) &&
+            !claimedIndexes.contains(secondRightIndex) &&
+            isWideButtonContinuationLine(lines[secondRightIndex])
+        let hasBelow = lines.indices.contains(belowIndex) &&
+            !claimedIndexes.contains(belowIndex) &&
+            isBlockButtonContinuationLine(lines[belowIndex])
+        let hasBelowRight = column + 1 < columns &&
+            lines.indices.contains(belowRightIndex) &&
+            !claimedIndexes.contains(belowRightIndex) &&
+            isBlockButtonContinuationLine(lines[belowRightIndex])
+        let hasThreeByThreeBlock = (1...2).allSatisfy { rowOffset in
+            (0...2).allSatisfy { columnOffset in
+                let blockIndex = index + (rowOffset * columns) + columnOffset
+                return column + columnOffset < columns &&
+                    lines.indices.contains(blockIndex) &&
+                    !claimedIndexes.contains(blockIndex) &&
+                    isBlockButtonContinuationLine(lines[blockIndex])
+            }
+        }
+
+        if hasRight && hasSecondRight && hasThreeByThreeBlock {
+            return ButtonStorageShape(width: 3, height: 3)
+        }
+
+        if hasRight && hasBelow && hasBelowRight {
+            return ButtonStorageShape(width: 2, height: 2)
+        }
+
+        if hasRight {
+            return ButtonStorageShape(width: hasSecondRight ? 3 : 2, height: 1)
+        }
+
+        return ButtonStorageShape(width: 1, height: 1)
     }
 
     private func buttonShape(startingAt index: Int, in lines: [String], gridDimensions: GridDimensions) -> ButtonStorageShape {

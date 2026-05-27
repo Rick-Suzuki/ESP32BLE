@@ -662,7 +662,11 @@ struct MainScreen: View {
         }
 
         let sourceSpan = slotSpan(startingAt: sourceIndex, gridDimensions: gridDimensions)
-        _ = moveFunctionKeySlot(sourceIndex, targetIndex, sourceSpan)
+        guard moveFunctionKeySlot(sourceIndex, targetIndex, sourceSpan) else {
+            alertTitle = ""
+            renameAlertMessage = "can't move btn"
+            return
+        }
     }
 }
 
