@@ -244,7 +244,7 @@ struct SettingsScreen: View {
                 .accessibilityLabel("Export to iCloud")
             }
             ToolbarItem(placement: .topBarTrailing) {
-                SettingsToolbarButton(title: listMode.buttonTitle, backgroundColor: Color.gray.opacity(0.45), minWidth: 92, isEnabled: true) {
+				SettingsToolbarButton(title: listMode.buttonTitle, backgroundColor: Color.gray.opacity(0.45), minWidth: 64.4, isEnabled: true) {
                     listMode.toggle()
                 }
             }

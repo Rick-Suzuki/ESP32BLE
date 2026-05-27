@@ -117,7 +117,7 @@ struct MainScreenToolbarContent: ToolbarContent {
                 .disabled(currentFileNumber >= totalFileCount)
             }
         }
-
+		
         ToolbarItem(placement: .topBarTrailing) {
             HStack(spacing: 12) {
                 Slider(value: $gridBackgroundOpacity, in: 0...1)
