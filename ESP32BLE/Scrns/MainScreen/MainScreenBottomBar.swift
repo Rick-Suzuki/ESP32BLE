@@ -6,6 +6,21 @@ enum MainGridButtonMode {
     case speech
     case speechActive
 
+    init?(persistedValue: String) {
+        switch persistedValue.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+        case "active", "btn active":
+            self = .active
+        case "disabled":
+            self = .disabled
+        case "speech":
+            self = .speech
+        case "spk/active", "spk active", "speech active":
+            self = .speechActive
+        default:
+            return nil
+        }
+    }
+
     var title: String {
         switch self {
         case .active:
@@ -17,6 +32,10 @@ enum MainGridButtonMode {
         case .speechActive:
             return "spk/active"
         }
+    }
+
+    var persistedValue: String {
+        title
     }
 
     func next() -> MainGridButtonMode {

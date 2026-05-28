@@ -68,6 +68,7 @@
 		1D590E652F61350F00E430E0 /* SettingsScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsScreen.swift; sourceTree = "<group>"; };
 		1D611EA32FC7E2B000B750AE /* msfs-ds-cam.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "msfs-ds-cam.txt"; sourceTree = "<group>"; };
 		1D611EA42FC7E2B000B750AE /* msfs-ds-main.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "msfs-ds-main.txt"; sourceTree = "<group>"; };
+		1D611EA52FC7E62100B750AE /* msfs-ds-home.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "msfs-ds-home.txt"; sourceTree = "<group>"; };
 		1D8F47D62FC7BBE2004EE319 /* msfs-hotas.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "msfs-hotas.txt"; sourceTree = "<group>"; };
 		1D8F47D92FC7BC71004EE319 /* msfs-vr.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "msfs-vr.txt"; sourceTree = "<group>"; };
 		1DDE39C82F7A51E6001A65E7 /* KeyboardScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardScreen.swift; sourceTree = "<group>"; };
@@ -190,6 +191,7 @@
 			children = (
 				1D8F47D62FC7BBE2004EE319 /* msfs-hotas.txt */,
 				1D8F47D92FC7BC71004EE319 /* msfs-vr.txt */,
+				1D611EA52FC7E62100B750AE /* msfs-ds-home.txt */,
 				1D611EA42FC7E2B000B750AE /* msfs-ds-main.txt */,
 				1D611EA32FC7E2B000B750AE /* msfs-ds-cam.txt */,
 			);
