@@ -245,6 +245,8 @@ struct SettingsEditorSectionView: View {
     @Binding var isFocused: Bool
     let savedText: String
     let onUndo: () -> Void
+    @State private var clipboardStatusMessage: String?
+    @State private var clipboardStatusMessageID = UUID()
 
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
@@ -254,12 +256,20 @@ struct SettingsEditorSectionView: View {
                 isFocused: $isFocused
             )
 
-            HStack(spacing: 10) {
-                fontSizeControls
-                undoButton
+            clipboardStatusOverlay
+
+				VStack(spacing:0) {
+					fontSizeControls
+					HStack(spacing: 10) {
+					undoButton
+					cpyToCbButton
+					pasteButton
+				}
+				.padding(.trailing, 8)
+				.padding(.bottom, 8)
             }
-            .padding(.trailing, 8)
-            .padding(.bottom, 8)
+
+			
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .overlay {
@@ -304,6 +314,41 @@ struct SettingsEditorSectionView: View {
         .opacity(text == savedText ? 0.5 : 1)
     }
 
+    private var cpyToCbButton: some View {
+        Button("cpy all") {
+            ButtonClickFeedback.playIfEnabled()
+            UIPasteboard.general.string = text
+            showClipboardStatus("text copied\nto clipboard")
+        }
+        .buttonStyle(.plain)
+        .font(.headline)
+        .foregroundStyle(.white)
+        .padding(.horizontal, 12)
+        .frame(minHeight: 44)
+        .background(Color.gray.opacity(0.25))
+        .clipShape(.rect(cornerRadius: 12))
+        .opacity(1)
+    }
+
+    private var pasteButton: some View {
+        Button("paste all") {
+            ButtonClickFeedback.playIfEnabled()
+            if let clipboardText = UIPasteboard.general.string {
+                text = clipboardText
+                showClipboardStatus("text pasted\nfrom clipboard")
+            }
+        }
+        .buttonStyle(.plain)
+        .font(.headline)
+        .foregroundStyle(.white)
+        .padding(.horizontal, 12)
+        .frame(minHeight: 44)
+        .background(Color.gray.opacity(0.25))
+        .clipShape(.rect(cornerRadius: 12))
+        .opacity(1)
+    }
+
+
     private func fontTriangleButton(rotationDegrees: Double, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: "triangle.fill")
@@ -314,5 +359,37 @@ struct SettingsEditorSectionView: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+    }
+
+    @ViewBuilder
+    private var clipboardStatusOverlay: some View {
+        if let clipboardStatusMessage {
+            Text(clipboardStatusMessage)
+                .font(.headline)
+                .foregroundStyle(.white)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .background(Color.black.opacity(0.8))
+                .clipShape(.rect(cornerRadius: 12))
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+                .padding(.bottom, 74)
+                .transition(.opacity)
+        }
+    }
+
+    private func showClipboardStatus(_ message: String) {
+        let messageID = UUID()
+        clipboardStatusMessageID = messageID
+
+        withAnimation(.easeInOut(duration: 0.15)) {
+            clipboardStatusMessage = message
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.4) {
+            guard clipboardStatusMessageID == messageID else { return }
+            withAnimation(.easeInOut(duration: 0.15)) {
+                clipboardStatusMessage = nil
+            }
+        }
     }
 }

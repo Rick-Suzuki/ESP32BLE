@@ -1101,6 +1101,21 @@ struct ContentView: View {
         let destinationIndexes = Set(buttonIndexes(startingAt: targetIndex, shape: sourceTile.shape, gridDimensions: gridDimensions))
         let blockingAnchors = Set(destinationIndexes.compactMap { occupancy[$0] }.filter { $0 != sourceIndex })
 
+        guard !blockingAnchors.isEmpty else {
+            return [StoredTileMove(tile: sourceTile, anchor: targetIndex)]
+        }
+
+        if let groupSwapMoves = directionalGroupSwapMoves(
+            from: sourceTile,
+            rowStep: rowStep,
+            columnStep: columnStep,
+            occupancy: occupancy,
+            tilesByAnchor: tilesByAnchor,
+            gridDimensions: gridDimensions
+        ) {
+            return groupSwapMoves
+        }
+
         if let swapMoves = directionalCompatibleSwapMoves(
             from: sourceTile,
             rowStep: rowStep,
@@ -1110,10 +1125,6 @@ struct ContentView: View {
             gridDimensions: gridDimensions
         ) {
             return swapMoves
-        }
-
-        guard !blockingAnchors.isEmpty else {
-            return [StoredTileMove(tile: sourceTile, anchor: targetIndex)]
         }
 
         if blockingAnchors.count == 1,
@@ -1170,6 +1181,102 @@ struct ContentView: View {
         }
 
         return plannedMoves
+    }
+
+    private func directionalGroupSwapMoves(
+        from sourceTile: StoredGridTile,
+        rowStep: Int,
+        columnStep: Int,
+        occupancy: [Int: Int],
+        tilesByAnchor: [Int: StoredGridTile],
+        gridDimensions: GridDimensions
+    ) -> [StoredTileMove]? {
+        let columns = max(gridDimensions.columns, 1)
+        let sourceRow = sourceTile.anchor / columns
+        let sourceColumn = sourceTile.anchor % columns
+
+        if columnStep != 0, rowStep == 0 {
+            var scanColumn = columnStep > 0 ? sourceColumn + sourceTile.shape.width : sourceColumn - sourceTile.shape.width
+
+            while scanColumn >= 0, scanColumn + sourceTile.shape.width <= columns {
+                let targetAnchor = (sourceRow * columns) + scanColumn
+                if let moves = groupSwapMoves(
+                    sourceTile: sourceTile,
+                    targetAnchor: targetAnchor,
+                    occupancy: occupancy,
+                    tilesByAnchor: tilesByAnchor,
+                    gridDimensions: gridDimensions
+                ) {
+                    return moves
+                }
+
+                scanColumn += columnStep
+            }
+
+            return nil
+        }
+
+        if rowStep != 0, columnStep == 0 {
+            var scanRow = rowStep > 0 ? sourceRow + sourceTile.shape.height : sourceRow - sourceTile.shape.height
+
+            while scanRow >= 0, scanRow + sourceTile.shape.height <= gridDimensions.rows {
+                let targetAnchor = (scanRow * columns) + sourceColumn
+                if let moves = groupSwapMoves(
+                    sourceTile: sourceTile,
+                    targetAnchor: targetAnchor,
+                    occupancy: occupancy,
+                    tilesByAnchor: tilesByAnchor,
+                    gridDimensions: gridDimensions
+                ) {
+                    return moves
+                }
+
+                scanRow += rowStep
+            }
+        }
+
+        return nil
+    }
+
+    private func groupSwapMoves(
+        sourceTile: StoredGridTile,
+        targetAnchor: Int,
+        occupancy: [Int: Int],
+        tilesByAnchor: [Int: StoredGridTile],
+        gridDimensions: GridDimensions
+    ) -> [StoredTileMove]? {
+        guard shapeFits(sourceTile.shape, startingAt: targetAnchor, gridDimensions: gridDimensions) else {
+            return nil
+        }
+
+        let targetIndexes = Set(buttonIndexes(startingAt: targetAnchor, shape: sourceTile.shape, gridDimensions: gridDimensions))
+        let blockingAnchors = Set(targetIndexes.compactMap { occupancy[$0] }.filter { $0 != sourceTile.anchor })
+
+        guard !blockingAnchors.isEmpty else {
+            return nil
+        }
+
+        let targetRow = targetAnchor / max(gridDimensions.columns, 1)
+        let targetColumn = targetAnchor % max(gridDimensions.columns, 1)
+        var moves = [StoredTileMove(tile: sourceTile, anchor: targetAnchor)]
+
+        for anchor in blockingAnchors {
+            guard let tile = tilesByAnchor[anchor] else {
+                return nil
+            }
+
+            let tileIndexes = Set(buttonIndexes(startingAt: tile.anchor, shape: tile.shape, gridDimensions: gridDimensions))
+            guard tileIndexes.isSubset(of: targetIndexes) else {
+                return nil
+            }
+
+            let relativeRow = (tile.anchor / max(gridDimensions.columns, 1)) - targetRow
+            let relativeColumn = (tile.anchor % max(gridDimensions.columns, 1)) - targetColumn
+            let newAnchor = sourceTile.anchor + (relativeRow * max(gridDimensions.columns, 1)) + relativeColumn
+            moves.append(StoredTileMove(tile: tile, anchor: newAnchor))
+        }
+
+        return movePlanFits(moves, occupancy: occupancy, gridDimensions: gridDimensions) ? moves : nil
     }
 
     private func directionalCompatibleSwapMoves(

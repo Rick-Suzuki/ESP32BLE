@@ -1,0 +1,18 @@
+go back - menu::u:L1
+show target::u:L1
+toggle autopilot::u:R3
+X button::u:R1
+manage flight plan::u:L3
+brakes::u:L3
+decrease Flaps::u:R2
+increase flaps::u:L2
+toggle landing gear::u:⭕️
+menu back::u:⭕️
+menu details::u:🟥
+menu next::u:L2
+menu previous::u:R2
+speed brake:u::🟥
+My_reverse thrust::u:🔺
+toggle parking brakes::u:R1 + ⭕️
+reply quickly::u:R1 + R2
+menu, plain stats::u:🟥
