@@ -1,0 +1,45 @@
+settings (top right)::2:R3
+move / adjust::2:left stick/d-pad
+select stuff::2:⭕️ and ❌
+release notes::2:🔺
+switch VR/flat screen::2:R1 + R2 + opt
+d-pad::2: ◀️▶️🔼🔽
+career quick reply::2:◀️
+gear toggle::2:▶️
+raise flaps::2:🔼
+lower flaps::2:🔽
+start engine maybe::2:hold L1 + R3
+misson toggle::2:🔺
+(eg:smoke, Spray, Scoop, Hook)
+decrease throttle::2:⭕️
+increase throttle::2:❌
+brakes::2:🟥
+aircraft controls::2:L-stick
+toggle visual assistances::2:L3
+camera controls::2:right stick
+reset camera::2:R3
+controls rudders::2:R1,R2
+zoom in/out in EFB::2:R1,R2
+activate cursor mode::2:R1+L1
+throttle next detent::2: R1+❌
+throttle previous detent::2:R1+⭕️
+spoilers::2:R1+🔺
+toggle parking brake::2:R1+🟥
+disengage autopilot::2:R1+🔼
+engine shut down::2:R1+🔽
+toggle water rudder::2:R1+▶️
+toggle gyroscope mode::2:L1+L3
+toggle smart camera::2:L1+❌
+enter/exit aircraft::2:L1+⭕️
+pause sim::2:L1+🔺
+Open EFB::2:L1+TP
+quick view up position::2:L1+🔼
+external moves camera::2:L1+dPad 
+quick close up views::2:L1+🔽
+quick view left::2:L1+◀️
+quick view right::2:L1+▶️
+move FBLR::2:L1+Left Stick
+look around::2:L1+Right Stick
+lower camera::2:L1+L2
+raise camera::2:L1+R2
+
