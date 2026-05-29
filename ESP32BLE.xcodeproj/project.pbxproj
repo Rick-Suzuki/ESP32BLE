@@ -26,17 +26,12 @@
 		1D9E1CFE2FC92DC600DB3621 /* KB_NavigationSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D9E1CD32FC92DC600DB3621 /* KB_NavigationSupport.swift */; };
 		1D9E1CFF2FC92DC600DB3621 /* Set_ImagePreviewPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D9E1CEC2FC92DC600DB3621 /* Set_ImagePreviewPanel.swift */; };
 		1D9E1D002FC92DC600DB3621 /* Set_DocumentTableSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D9E1CEA2FC92DC600DB3621 /* Set_DocumentTableSection.swift */; };
-		1D9E1D012FC92DC600DB3621 /* SettingsEditorChrome.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D9E1CF22FC92DC600DB3621 /* SettingsEditorChrome.swift */; };
 		1D9E1D022FC92DC600DB3621 /* KB_LayoutSelection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D9E1CCF2FC92DC600DB3621 /* KB_LayoutSelection.swift */; };
-		1D9E1D032FC92DC600DB3621 /* KB_TopToolbar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D9E1CD52FC92DC600DB3621 /* KB_TopToolbar.swift */; };
 		1D9E1D042FC92DC600DB3621 /* KB_Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D9E1CD02FC92DC600DB3621 /* KB_Models.swift */; };
 		1D9E1D052FC92DC600DB3621 /* Set_ImgCtlsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D9E1CED2FC92DC600DB3621 /* Set_ImgCtlsSection.swift */; };
-		1D9E1D062FC92DC600DB3621 /* MainScreenButtonLabelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D9E1CE62FC92DC600DB3621 /* MainScreenButtonLabelView.swift */; };
 		1D9E1D072FC92DC600DB3621 /* Main_GridSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D9E1CE42FC92DC600DB3621 /* Main_GridSection.swift */; };
 		1D9E1D082FC92DC600DB3621 /* SlotEditor_TextField.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D9E1CD82FC92DC600DB3621 /* SlotEditor_TextField.swift */; };
 		1D9E1D092FC92DC600DB3621 /* KB_ModifierSendSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D9E1CD22FC92DC600DB3621 /* KB_ModifierSendSupport.swift */; };
-		1D9E1D0A2FC92DC600DB3621 /* KB_Screen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D9E1CD42FC92DC600DB3621 /* KB_Screen.swift */; };
-		1D9E1D0B2FC92DC600DB3621 /* KB_InputField.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D9E1CCE2FC92DC600DB3621 /* KB_InputField.swift */; };
 		1D9E1D0C2FC92DC600DB3621 /* Set_ImgSelectionSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D9E1CEE2FC92DC600DB3621 /* Set_ImgSelectionSupport.swift */; };
 		1D9E1D0D2FC92DC600DB3621 /* Set_EditorSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D9E1CEB2FC92DC600DB3621 /* Set_EditorSupport.swift */; };
 		1D9E1D0E2FC92DC600DB3621 /* Main_BtmToolbar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D9E1CDE2FC92DC600DB3621 /* Main_BtmToolbar.swift */; };
@@ -76,14 +71,11 @@
 		1D9E1CCA2FC92DC600DB3621 /* KB_Screen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KB_Screen.swift; sourceTree = "<group>"; };
 		1D9E1CCB2FC92DC600DB3621 /* KB_TopToolbar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KB_TopToolbar.swift; sourceTree = "<group>"; };
 		1D9E1CCD2FC92DC600DB3621 /* KB_InputBehavior.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KB_InputBehavior.swift; sourceTree = "<group>"; };
-		1D9E1CCE2FC92DC600DB3621 /* KB_InputField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KB_InputField.swift; sourceTree = "<group>"; };
 		1D9E1CCF2FC92DC600DB3621 /* KB_LayoutSelection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KB_LayoutSelection.swift; sourceTree = "<group>"; };
 		1D9E1CD02FC92DC600DB3621 /* KB_Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KB_Models.swift; sourceTree = "<group>"; };
 		1D9E1CD12FC92DC600DB3621 /* KB_ModeRows.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KB_ModeRows.swift; sourceTree = "<group>"; };
 		1D9E1CD22FC92DC600DB3621 /* KB_ModifierSendSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KB_ModifierSendSupport.swift; sourceTree = "<group>"; };
 		1D9E1CD32FC92DC600DB3621 /* KB_NavigationSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KB_NavigationSupport.swift; sourceTree = "<group>"; };
-		1D9E1CD42FC92DC600DB3621 /* KB_Screen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KB_Screen.swift; sourceTree = "<group>"; };
-		1D9E1CD52FC92DC600DB3621 /* KB_TopToolbar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KB_TopToolbar.swift; sourceTree = "<group>"; };
 		1D9E1CD72FC92DC600DB3621 /* SlotEditor_Overlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlotEditor_Overlay.swift; sourceTree = "<group>"; };
 		1D9E1CD82FC92DC600DB3621 /* SlotEditor_TextField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlotEditor_TextField.swift; sourceTree = "<group>"; };
 		1D9E1CDA2FC92DC600DB3621 /* SR_Manager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SR_Manager.swift; sourceTree = "<group>"; };
@@ -96,7 +88,6 @@
 		1D9E1CE32FC92DC600DB3621 /* Main_DocumentActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Main_DocumentActions.swift; sourceTree = "<group>"; };
 		1D9E1CE42FC92DC600DB3621 /* Main_GridSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Main_GridSection.swift; sourceTree = "<group>"; };
 		1D9E1CE52FC92DC600DB3621 /* Main_Screen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Main_Screen.swift; sourceTree = "<group>"; };
-		1D9E1CE62FC92DC600DB3621 /* MainScreenButtonLabelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainScreenButtonLabelView.swift; sourceTree = "<group>"; };
 		1D9E1CE82FC92DC600DB3621 /* Set_AvailableDevicesPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Set_AvailableDevicesPanel.swift; sourceTree = "<group>"; };
 		1D9E1CE92FC92DC600DB3621 /* Set_BtmCtlsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Set_BtmCtlsSection.swift; sourceTree = "<group>"; };
 		1D9E1CEA2FC92DC600DB3621 /* Set_DocumentTableSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Set_DocumentTableSection.swift; sourceTree = "<group>"; };
@@ -107,7 +98,6 @@
 		1D9E1CEF2FC92DC600DB3621 /* Set_KB_TimingSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Set_KB_TimingSection.swift; sourceTree = "<group>"; };
 		1D9E1CF02FC92DC600DB3621 /* Set_Screen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Set_Screen.swift; sourceTree = "<group>"; };
 		1D9E1CF12FC92DC600DB3621 /* Set_SendTextSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Set_SendTextSupport.swift; sourceTree = "<group>"; };
-		1D9E1CF22FC92DC600DB3621 /* SettingsEditorChrome.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsEditorChrome.swift; sourceTree = "<group>"; };
 		1D9E1D192FC92DD900DB3621 /* BLE_ConnectionStatusSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BLE_ConnectionStatusSection.swift; sourceTree = "<group>"; };
 		1D9E1D1A2FC92DD900DB3621 /* BLE_DiscoveredDevice.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BLE_DiscoveredDevice.swift; sourceTree = "<group>"; };
 		1D9E1D1B2FC92DD900DB3621 /* BLE_KeyboardManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BLE_KeyboardManager.swift; sourceTree = "<group>"; };
@@ -138,8 +128,8 @@
 			isa = PBXGroup;
 			children = (
 				1D590E4F2F61206100E430E0 /* ContentView.swift */,
-				1D9E1CD62FC92DC600DB3621 /* KB_Screen */,
 				1D9E1CE72FC92DC600DB3621 /* Main_Screen */,
+				1D9E1CD62FC92DC600DB3621 /* KB_Screen */,
 				1D9E1CF32FC92DC600DB3621 /* Set_Screen */,
 				1D590E542F61206100E430E0 /* TestArea.swift */,
 				1D9E1D1C2FC92DD900DB3621 /* BLE */,
@@ -198,7 +188,7 @@
 			path = MSFS;
 			sourceTree = "<group>";
 		};
-		1D9E1CCC2FC92DC600DB3621 /* Main_Screen */ = {
+		1D9E1CCC2FC92DC600DB3621 /* Top_Screen */ = {
 			isa = PBXGroup;
 			children = (
 				1D9E1CC82FC92DC600DB3621 /* KB_GridView.swift */,
@@ -206,22 +196,19 @@
 				1D9E1CCA2FC92DC600DB3621 /* KB_Screen.swift */,
 				1D9E1CCB2FC92DC600DB3621 /* KB_TopToolbar.swift */,
 			);
-			path = Main_Screen;
+			path = Top_Screen;
 			sourceTree = "<group>";
 		};
 		1D9E1CD62FC92DC600DB3621 /* KB_Screen */ = {
 			isa = PBXGroup;
 			children = (
-				1D9E1CCC2FC92DC600DB3621 /* Main_Screen */,
+				1D9E1CCC2FC92DC600DB3621 /* Top_Screen */,
 				1D9E1CCD2FC92DC600DB3621 /* KB_InputBehavior.swift */,
-				1D9E1CCE2FC92DC600DB3621 /* KB_InputField.swift */,
 				1D9E1CCF2FC92DC600DB3621 /* KB_LayoutSelection.swift */,
 				1D9E1CD02FC92DC600DB3621 /* KB_Models.swift */,
 				1D9E1CD12FC92DC600DB3621 /* KB_ModeRows.swift */,
 				1D9E1CD22FC92DC600DB3621 /* KB_ModifierSendSupport.swift */,
 				1D9E1CD32FC92DC600DB3621 /* KB_NavigationSupport.swift */,
-				1D9E1CD42FC92DC600DB3621 /* KB_Screen.swift */,
-				1D9E1CD52FC92DC600DB3621 /* KB_TopToolbar.swift */,
 			);
 			path = KB_Screen;
 			sourceTree = "<group>";
@@ -265,7 +252,6 @@
 				1D9E1CE32FC92DC600DB3621 /* Main_DocumentActions.swift */,
 				1D9E1CE42FC92DC600DB3621 /* Main_GridSection.swift */,
 				1D9E1CE52FC92DC600DB3621 /* Main_Screen.swift */,
-				1D9E1CE62FC92DC600DB3621 /* MainScreenButtonLabelView.swift */,
 			);
 			path = Main_Screen;
 			sourceTree = "<group>";
@@ -283,7 +269,6 @@
 				1D9E1CEF2FC92DC600DB3621 /* Set_KB_TimingSection.swift */,
 				1D9E1CF02FC92DC600DB3621 /* Set_Screen.swift */,
 				1D9E1CF12FC92DC600DB3621 /* Set_SendTextSupport.swift */,
-				1D9E1CF22FC92DC600DB3621 /* SettingsEditorChrome.swift */,
 			);
 			path = Set_Screen;
 			sourceTree = "<group>";
@@ -389,17 +374,12 @@
 				1D9E1CFE2FC92DC600DB3621 /* KB_NavigationSupport.swift in Sources */,
 				1D9E1CFF2FC92DC600DB3621 /* Set_ImagePreviewPanel.swift in Sources */,
 				1D9E1D002FC92DC600DB3621 /* Set_DocumentTableSection.swift in Sources */,
-				1D9E1D012FC92DC600DB3621 /* SettingsEditorChrome.swift in Sources */,
 				1D9E1D022FC92DC600DB3621 /* KB_LayoutSelection.swift in Sources */,
-				1D9E1D032FC92DC600DB3621 /* KB_TopToolbar.swift in Sources */,
 				1D9E1D042FC92DC600DB3621 /* KB_Models.swift in Sources */,
 				1D9E1D052FC92DC600DB3621 /* Set_ImgCtlsSection.swift in Sources */,
-				1D9E1D062FC92DC600DB3621 /* MainScreenButtonLabelView.swift in Sources */,
 				1D9E1D072FC92DC600DB3621 /* Main_GridSection.swift in Sources */,
 				1D9E1D082FC92DC600DB3621 /* SlotEditor_TextField.swift in Sources */,
 				1D9E1D092FC92DC600DB3621 /* KB_ModifierSendSupport.swift in Sources */,
-				1D9E1D0A2FC92DC600DB3621 /* KB_Screen.swift in Sources */,
-				1D9E1D0B2FC92DC600DB3621 /* KB_InputField.swift in Sources */,
 				1D9E1D0C2FC92DC600DB3621 /* Set_ImgSelectionSupport.swift in Sources */,
 				1D9E1D0D2FC92DC600DB3621 /* Set_EditorSupport.swift in Sources */,
 				1D9E1D0E2FC92DC600DB3621 /* Main_BtmToolbar.swift in Sources */,
