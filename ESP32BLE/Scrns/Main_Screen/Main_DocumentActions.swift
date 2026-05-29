@@ -1,5 +1,10 @@
+//
+//-----------------------------------------------------------------------------------------------
+//
 import SwiftUI
-
+//
+//-----------------------------------------------------------------------------------------------
+//
 extension MainScreen {
     func updateVisibleBoxCountToFitDefinedButtons() {
         let requiredBoxCount = max(definedFunctionKeyCount, 1)
@@ -9,13 +14,18 @@ extension MainScreen {
 
         restoreVisibleGridState(requiredBoxCount: requiredBoxCount)
     }
-
+	//
+	//----------------------------------------
+	//
     func restoreVisibleGridState(requiredBoxCount: Int? = nil) {
         let resolvedRequiredBoxCount = max(requiredBoxCount ?? definedFunctionKeyCount, 1)
         let restoredGridDimensions = loadGridDimensions(selectedDocumentName, resolvedRequiredBoxCount)
         visibleGridDimensions = restoredGridDimensions
         visibleBoxCount = max(resolvedRequiredBoxCount, restoredGridDimensions.columns * restoredGridDimensions.rows)
     }
+	//
+	//----------------------------------------
+	//
 
     func decreaseGridRows() {
         guard visibleGridDimensions.rows > 1 else {
@@ -24,7 +34,9 @@ extension MainScreen {
 
         _ = applyGridDimensions(columns: visibleGridDimensions.columns, rows: visibleGridDimensions.rows - 1)
     }
-
+	//
+	//----------------------------------------
+	//
     func increaseGridRows() {
         let nextRows = visibleGridDimensions.rows + 1
         guard nextRows <= maxGridDimension else {
@@ -33,7 +45,9 @@ extension MainScreen {
 
         _ = applyGridDimensions(columns: visibleGridDimensions.columns, rows: nextRows)
     }
-
+	//
+	//----------------------------------------
+	//
     func decreaseGridColumns() {
         guard visibleGridDimensions.columns > 1 else {
             return
@@ -41,7 +55,9 @@ extension MainScreen {
 
         _ = applyGridDimensions(columns: visibleGridDimensions.columns - 1, rows: visibleGridDimensions.rows)
     }
-
+	//
+	//----------------------------------------
+	//
     func increaseGridColumns() {
         let nextColumns = visibleGridDimensions.columns + 1
         guard nextColumns <= maxGridDimension else {
@@ -50,19 +66,27 @@ extension MainScreen {
 
         _ = applyGridDimensions(columns: nextColumns, rows: visibleGridDimensions.rows)
     }
-
+	//
+	//----------------------------------------
+	//
     func decreaseBoxFontSize() {
         boxFontSize = max(minimumBoxFontSize, boxFontSize - 1)
     }
-
+	//
+	//----------------------------------------
+	//
     func increaseBoxFontSize() {
         boxFontSize = min(maximumBoxFontSize, boxFontSize + 1)
     }
-
+	//
+	//----------------------------------------
+	//
     func resetBoxFontSize() {
         boxFontSize = min(maximumBoxFontSize, max(minimumBoxFontSize, 24))
     }
-
+	//
+	//----------------------------------------
+	//
     @discardableResult
     func applyGridDimensions(columns: Int, rows: Int) -> Bool {
         let sanitizedColumns = max(columns, 1)
@@ -85,7 +109,9 @@ extension MainScreen {
         saveGridDimensions(selectedDocumentName, updatedGridDimensions)
         return true
     }
-
+	//
+	//----------------------------------------
+	//
     func commitDocumentRename() {
         let proposedName = documentNameDraft
 
@@ -97,13 +123,17 @@ extension MainScreen {
         documentNameDraft = selectedDocumentDisplayName
         isEditingDocumentName = false
     }
-
+	//
+	//----------------------------------------
+	//
     func cancelDocumentRename() {
         documentNameDraft = selectedDocumentDisplayName
         isEditingDocumentName = false
         isDocumentNameFieldFocused = false
     }
-
+	//
+	//----------------------------------------
+	//
     func beginSlotEditing(at index: Int) {
         guard index >= 0, index < visibleBoxCount else {
             return
@@ -114,15 +144,21 @@ extension MainScreen {
         editingSlotText = editableText(for: functionKeys[index])
         isSlotEditorFocused = true
     }
-
+	//
+	//----------------------------------------
+	//
     func selectPreviousEditableSlot() {
         selectAdjacentEditableSlot(step: -1)
     }
-
+	//
+	//----------------------------------------
+	//
     func selectNextEditableSlot() {
         selectAdjacentEditableSlot(step: 1)
     }
-
+	//
+	//----------------------------------------
+	//
     func commitSlotEditing() {
         guard let editingSlotIndex else {
             return
@@ -130,18 +166,25 @@ extension MainScreen {
 
         _ = updateFunctionKeySlot(editingSlotIndex, editingSlotText)
     }
-
+	//
+	//----------------------------------------
+	//
     func saveSlotEditing() {
         commitSlotEditing()
         alertTitle = ""
         renameAlertMessage = "btn has been\nsaved to file"
     }
-
+	//
+	//----------------------------------------
+	//
     func cancelSlotEditing() {
         editingSlotIndex = nil
         editingSlotText = ""
         isSlotEditorFocused = false
     }
+	//
+	//----------------------------------------
+	//
 
     private func selectAdjacentEditableSlot(step: Int) {
         guard let editingSlotIndex,
@@ -169,7 +212,9 @@ extension MainScreen {
             return
         }
     }
-
+	//
+	//----------------------------------------
+	//
     func duplicateSlotIfPossible(entry: FunctionKeyEntry, index: Int, gridDimensions: GridDimensions) {
         guard isGridEditModeEnabled else {
             return
@@ -193,7 +238,9 @@ extension MainScreen {
             return
         }
     }
-
+	//
+	//----------------------------------------
+	//
     func deleteSlotIfPossible(entry: FunctionKeyEntry, index: Int) {
         guard isGridEditModeEnabled,
               !entry.isBlankPlaceholder,
@@ -204,7 +251,9 @@ extension MainScreen {
         mainGridEditClipboardText = entry.rawLine
         clearWideSlot(startingAt: index, gridDimensions: visibleGridDimensions)
     }
-
+	//
+	//----------------------------------------
+	//
     func resetSlotSizeIfNeeded(entry: FunctionKeyEntry, index: Int, gridDimensions: GridDimensions) {
         guard isGridEditModeEnabled,
               !entry.isBlankPlaceholder,
@@ -220,7 +269,9 @@ extension MainScreen {
 
         setSlotSpan(startingAt: index, from: currentSpan, to: 1)
     }
-
+	//
+	//----------------------------------------
+	//
     func resizeSlotIfPossible(entry: FunctionKeyEntry, index: Int, gridDimensions: GridDimensions) {
         guard isGridEditModeEnabled,
               !entry.isBlankPlaceholder,
@@ -254,7 +305,9 @@ extension MainScreen {
             )
         }
     }
-
+	//
+	//----------------------------------------
+	//
     private func resizeCandidateSpans(after currentSpan: Int) -> [Int] {
         let orderedSpans = [1, 2, 3, 4, 5]
         let currentIndex = orderedSpans.firstIndex(of: currentSpan) ?? 0
@@ -262,7 +315,9 @@ extension MainScreen {
 
         return nextSpans.isEmpty ? [1] : nextSpans
     }
-
+	//
+	//----------------------------------------
+	//
     private func resizePlacement(
         startingAt index: Int,
         from currentSpan: Int,
@@ -291,7 +346,9 @@ extension MainScreen {
 
         return nil
     }
-
+	//
+	//----------------------------------------
+	//
     private func resizeAnchorCandidates(
         currentIndex: Int,
         targetSpan: Int,
@@ -320,7 +377,9 @@ extension MainScreen {
 
         return candidates
     }
-
+	//
+	//----------------------------------------
+	//
     func handleThreeTapEditAction(entry: FunctionKeyEntry, index: Int) {
         guard isGridEditModeEnabled else {
             return
@@ -344,7 +403,9 @@ extension MainScreen {
         alertTitle = ""
         renameAlertMessage = "Copied btn data\nto clipboard"
     }
-
+	//
+	//----------------------------------------
+	//
     func duplicateTargetIndex(from sourceIndex: Int, span: Int, gridDimensions: GridDimensions) -> Int? {
         let sourceRow = sourceIndex / gridDimensions.columns
         let sourceShape = shape(for: span)
@@ -380,19 +441,27 @@ extension MainScreen {
 
         return nil
     }
-
+	//
+	//----------------------------------------
+	//
     private func isWideButtonContinuationEntry(_ entry: FunctionKeyEntry) -> Bool {
         entry.rawLine.trimmingCharacters(in: .whitespacesAndNewlines) == wideButtonContinuationToken
     }
-
+	//
+	//----------------------------------------
+	//
     private func isBlockButtonContinuationEntry(_ entry: FunctionKeyEntry) -> Bool {
         entry.rawLine.trimmingCharacters(in: .whitespacesAndNewlines) == blockButtonContinuationToken
     }
-
+	//
+	//----------------------------------------
+	//
     private func isButtonContinuationEntry(_ entry: FunctionKeyEntry) -> Bool {
         isWideButtonContinuationEntry(entry) || isBlockButtonContinuationEntry(entry)
     }
-
+	//
+	//----------------------------------------
+	//
     func slotSpan(startingAt index: Int, gridDimensions: GridDimensions) -> Int {
         guard functionKeys.indices.contains(index),
               !isButtonContinuationEntry(functionKeys[index]) else {
@@ -401,12 +470,16 @@ extension MainScreen {
 
         return shapeSpan(buttonShape(startingAt: index, gridDimensions: gridDimensions))
     }
-
+	//
+	//----------------------------------------
+	//
     private struct ButtonGridShape {
         let width: Int
         let height: Int
     }
-
+	//
+	//----------------------------------------
+	//
     private func shapeSpan(_ shape: ButtonGridShape) -> Int {
         if shape.width == 3 && shape.height == 3 {
             return 5
@@ -418,7 +491,9 @@ extension MainScreen {
 
         return shape.width
     }
-
+	//
+	//----------------------------------------
+	//
     private func shape(for span: Int) -> ButtonGridShape {
         if span == 5 {
             return ButtonGridShape(width: 3, height: 3)
@@ -430,22 +505,29 @@ extension MainScreen {
 
         return ButtonGridShape(width: max(1, min(span, 3)), height: 1)
     }
-
+	//
+	//----------------------------------------
+	//
     private func buttonShape(startingAt index: Int, gridDimensions: GridDimensions) -> ButtonGridShape {
         let columns = max(gridDimensions.columns, 1)
-        let hasRight = functionKeys.indices.contains(index + 1) &&
+      
+		let hasRight = functionKeys.indices.contains(index + 1) &&
             index + 1 < visibleBoxCount &&
             isWideButtonContinuationEntry(functionKeys[index + 1])
-        let hasBelow = functionKeys.indices.contains(index + columns) &&
+        
+		let hasBelow = functionKeys.indices.contains(index + columns) &&
             index + columns < visibleBoxCount &&
             isBlockButtonContinuationEntry(functionKeys[index + columns])
-        let hasBelowRight = functionKeys.indices.contains(index + columns + 1) &&
+        
+		let hasBelowRight = functionKeys.indices.contains(index + columns + 1) &&
             index + columns + 1 < visibleBoxCount &&
             isBlockButtonContinuationEntry(functionKeys[index + columns + 1])
-        let hasSecondRight = functionKeys.indices.contains(index + 2) &&
+        
+		let hasSecondRight = functionKeys.indices.contains(index + 2) &&
             index + 2 < visibleBoxCount &&
             isWideButtonContinuationEntry(functionKeys[index + 2])
-        let hasThreeByThreeBlock = (1...2).allSatisfy { rowOffset in
+        
+		let hasThreeByThreeBlock = (1...2).allSatisfy { rowOffset in
             (0...2).allSatisfy { columnOffset in
                 let blockIndex = index + (rowOffset * columns) + columnOffset
                 return functionKeys.indices.contains(blockIndex) &&
@@ -468,7 +550,9 @@ extension MainScreen {
 
         return ButtonGridShape(width: 1, height: 1)
     }
-
+	//
+	//----------------------------------------
+	//
     private func indexes(startingAt index: Int, shape: ButtonGridShape, gridDimensions: GridDimensions) -> [Int] {
         let columns = max(gridDimensions.columns, 1)
         var indexes: [Int] = []
@@ -481,7 +565,9 @@ extension MainScreen {
 
         return indexes
     }
-
+	//
+	//----------------------------------------
+	//
     private func continuationAssignments(startingAt index: Int, shape: ButtonGridShape, gridDimensions: GridDimensions) -> [(index: Int, token: String)] {
         let columns = max(gridDimensions.columns, 1)
         var assignments: [(index: Int, token: String)] = []
@@ -499,7 +585,9 @@ extension MainScreen {
 
         return assignments
     }
-
+	//
+	//----------------------------------------
+	//
     private func canSetSlotSpan(startingAt index: Int, from currentSpan: Int, to targetSpan: Int, gridDimensions: GridDimensions) -> Bool {
         canSetSlotSpan(
             startingAt: index,
@@ -509,7 +597,9 @@ extension MainScreen {
             gridDimensions: gridDimensions
         )
     }
-
+	//
+	//----------------------------------------
+	//
     private func canSetSlotSpan(
         startingAt index: Int,
         currentIndex: Int,
@@ -550,7 +640,9 @@ extension MainScreen {
 
         return true
     }
-
+	//
+	//----------------------------------------
+	//
     private func setSlotSpan(startingAt index: Int, from currentSpan: Int, to targetSpan: Int) {
         guard functionKeys.indices.contains(index) else {
             return
@@ -577,7 +669,9 @@ extension MainScreen {
             _ = updateFunctionKeySlot(assignment.index, assignment.token)
         }
     }
-
+	//
+	//----------------------------------------
+	//
     private func setShiftedSlotSpan(
         from sourceIndex: Int,
         currentSpan: Int,
@@ -609,7 +703,9 @@ extension MainScreen {
             _ = updateFunctionKeySlot(assignment.index, assignment.token)
         }
     }
-
+	//
+	//----------------------------------------
+	//
     private func clearWideSlot(startingAt index: Int, gridDimensions: GridDimensions) {
         let shape = buttonShape(startingAt: index, gridDimensions: gridDimensions)
         for slotIndex in indexes(startingAt: index, shape: shape, gridDimensions: gridDimensions) {
@@ -620,7 +716,9 @@ extension MainScreen {
             _ = updateFunctionKeySlot(slotIndex, "_")
         }
     }
-
+	//
+	//----------------------------------------
+	//
     private func hasAvailableBlankSpan(startingAt index: Int, span: Int, gridDimensions: GridDimensions) -> Bool {
         let shape = shape(for: span)
         let columns = max(gridDimensions.columns, 1)
@@ -648,7 +746,9 @@ extension MainScreen {
 
         return true
     }
-
+	//
+	//----------------------------------------
+	//
     private func duplicateWideSlot(from sourceIndex: Int, to targetIndex: Int, span: Int) -> Bool {
         guard functionKeys.indices.contains(sourceIndex),
               hasAvailableBlankSpan(startingAt: targetIndex, span: span, gridDimensions: visibleGridDimensions) else {
@@ -663,7 +763,53 @@ extension MainScreen {
 
         return true
     }
-
+	//
+	//-----------------------------------------------------------------------------------------------
+	// MARK: - BM:😎 FUNCS Dragging Code
+	//
+	// Supports:
+	//
+	// • Normal horizontal and vertical dragging of buttons
+	// • Single-cell buttons can "jump" over larger buttons ("islands")
+	// • Single-cell buttons can move diagonally
+	// • Multi-cell buttons can only move one grid step at a time
+	// • Prevents moves outside grid boundaries
+	// • Allows swapping with other single-cell buttons
+	// • Allows moving into blank or empty slots
+	//
+	// Terminology:
+	//
+	// Target Cell
+	//     A valid destination:
+	//         - Blank placeholder
+	//         - Empty button slot
+	//         - Another single-cell button
+	//
+	// Island Cell
+	//     A cell occupied by a larger multi-cell button.
+	//     Single-cell buttons may jump across islands while dragging.
+	//
+	// Examples:
+	//
+	// [1][###][ ][ ]
+	//      ↑
+	//   island
+	//
+	// Dragging button 1 right will skip over the island
+	// and land on the first valid target cell.
+	//
+	// [1][###][2][ ]
+	//             ↑
+	//          target
+	//
+	// Diagonal movement:
+	//
+	// [1][###]
+	// [###][ ]
+	//
+	// Dragging diagonally down-right allows button 1
+	// to reach the empty destination.
+	//
     func targetIndexForEditDrag(
         from sourceIndex: Int,
         translation: CGSize,
@@ -672,12 +818,25 @@ extension MainScreen {
         let horizontalDistance = translation.width
         let verticalDistance = translation.height
 
-        guard max(abs(horizontalDistance), abs(verticalDistance)) >= 24 else {
+		// Ignore very short drags to avoid accidental movement.
+		guard max(abs(horizontalDistance), abs(verticalDistance)) >= 24 else {
             return nil
         }
 
         let sourceSpan = slotSpan(startingAt: sourceIndex, gridDimensions: gridDimensions)
-        if sourceSpan == 1,
+		//
+		//----------------------------------------
+		// MARK: - BM:⬇️ DRAG MOVES
+		//
+		// Diagonal movement
+		//
+		// Only single-cell buttons may move diagonally.
+		// The move continues until:
+		//   • a valid target is found
+		//   • a non-island obstacle is encountered
+		//   • the edge of the grid is reached
+		//
+		if sourceSpan == 1,
            abs(horizontalDistance) >= 24,
            abs(verticalDistance) >= 24,
            let diagonalTargetIndex = singleCellDiagonalTargetIndexForEditDrag(
@@ -688,11 +847,15 @@ extension MainScreen {
            ) {
             return diagonalTargetIndex
         }
-
+		// MARK: - Horizontal movement
         if abs(horizontalDistance) > abs(verticalDistance) {
             let sourceShape = shape(for: sourceSpan)
             let step = horizontalDistance > 0 ? 1 : -1
-            if sourceSpan == 1,
+			//
+			//----------------------------------------
+			// Single-cell buttons may jump across islands.
+			//
+			if sourceSpan == 1,
                let singleCellTargetIndex = singleCellTargetIndexForEditDrag(
                 from: sourceIndex,
                 step: step,
@@ -701,7 +864,11 @@ extension MainScreen {
                ) {
                 return singleCellTargetIndex
             }
+			//
+			//----------------------------------------
+			// Multi-cell buttons move one cell at a time.
 
+			//
             let targetIndex = sourceIndex + step
             let sourceRow = sourceIndex / gridDimensions.columns
             let targetColumn = targetIndex % max(gridDimensions.columns, 1)
@@ -715,13 +882,23 @@ extension MainScreen {
 
             return targetIndex
         }
-
+		//
+		//----------------------------------------
+		// Vertical movement
+		//
+		// Multi-cell buttons cannot move vertically if
+		// the drag contains a significant horizontal component.
+		//
         guard sourceSpan == 1 || abs(horizontalDistance) < 24 else {
             return nil
         }
 
         let step = verticalDistance > 0 ? gridDimensions.columns : -gridDimensions.columns
-        if sourceSpan == 1,
+		//
+		//----------------------------------------
+		// Single-cell jump movement.
+		//
+		if sourceSpan == 1,
            let singleCellTargetIndex = singleCellTargetIndexForEditDrag(
             from: sourceIndex,
             step: step,
@@ -730,8 +907,11 @@ extension MainScreen {
            ) {
             return singleCellTargetIndex
         }
-
-        let targetIndex = sourceIndex + step
+		//
+		//----------------------------------------
+		// Multi-cell movement.
+		//
+		let targetIndex = sourceIndex + step
 
         let sourceShape = shape(for: sourceSpan)
         let targetRow = targetIndex / max(gridDimensions.columns, 1)
@@ -743,7 +923,26 @@ extension MainScreen {
 
         return targetIndex
     }
-
+	//
+	//----------------------------------------
+	// private funcs for dragging
+	//
+	// Single-cell jump movement
+	//
+	// Searches along a row or column looking for the first
+	// valid destination.
+	//
+	// Can jump over:
+	//
+	//     • Continuation cells
+	//     • Large button regions ("islands")
+	//
+	// Stops when:
+	//
+	//     • A valid target is found
+	//     • A blocking cell is encountered
+	//     • Grid edge is reached
+	//
     private func singleCellTargetIndexForEditDrag(
         from sourceIndex: Int,
         step: Int,
@@ -755,7 +954,9 @@ extension MainScreen {
         var candidateIndex = sourceIndex + step
 
         while candidateIndex >= 0 && candidateIndex < visibleBoxCount {
-            if isHorizontalMove && candidateIndex / columns != sourceRow {
+          
+			// Prevent horizontal wrap-around.
+			if isHorizontalMove && candidateIndex / columns != sourceRow {
                 return nil
             }
 
@@ -772,7 +973,13 @@ extension MainScreen {
 
         return nil
     }
-
+	//
+	//----------------------------------------
+	// Diagonal jump movement
+	//
+	// Same idea as singleCellTargetIndexForEditDrag()
+	// but walks diagonally through the grid.
+	//
     private func singleCellDiagonalTargetIndexForEditDrag(
         from sourceIndex: Int,
         columnStep: Int,
@@ -806,8 +1013,20 @@ extension MainScreen {
 
         return nil
     }
-
-    private func isSingleCellMoveTarget(_ index: Int, gridDimensions: GridDimensions) -> Bool {
+	//
+	//----------------------------------------
+	// Valid destination test
+	//
+	// Returns true when the cell can receive a moved
+	// single-cell button.
+	//
+	// Valid targets:
+	//
+	//     • Blank placeholder
+	//     • Empty button
+	//     • Another single-cell button
+	//
+	private func isSingleCellMoveTarget(_ index: Int, gridDimensions: GridDimensions) -> Bool {
         guard functionKeys.indices.contains(index) else {
             return false
         }
@@ -823,8 +1042,14 @@ extension MainScreen {
 
         return slotSpan(startingAt: index, gridDimensions: gridDimensions) == 1
     }
-
-    private func isIslandCell(_ index: Int, gridDimensions: GridDimensions) -> Bool {
+	//
+	//----------------------------------------
+	// Island detection
+	//
+	// Island cells are areas occupied by larger buttons.
+	// Single-cell buttons may jump over islands.
+	//
+	private func isIslandCell(_ index: Int, gridDimensions: GridDimensions) -> Bool {
         guard functionKeys.indices.contains(index) else {
             return false
         }
@@ -840,7 +1065,24 @@ extension MainScreen {
 
         return slotSpan(startingAt: index, gridDimensions: gridDimensions) > 1
     }
-
+	//
+	//----------------------------------------
+	// Multi-cell collision check
+	//
+	// Determines whether a button occupying multiple cells
+	// can legally move into a target location.
+	//
+	// Allows:
+	//
+	//     • Overlap with its own current cells
+	//     • Blank placeholders
+	//     • Empty slots
+	//     • Single-cell buttons (for swapping)
+	//
+	// Rejects:
+	//     • Other large buttons
+	//     • Out-of-bounds placement
+	//
     private func canMoveSlotSpan(
         startingAt targetIndex: Int,
         span: Int,
@@ -887,4 +1129,11 @@ extension MainScreen {
 
         return true
     }
+	//
+	//-----------------------------------------------------------------------------------------------
+	//
 }
+//
+//-----------------------------------------------------------------------------------------------
+//
+

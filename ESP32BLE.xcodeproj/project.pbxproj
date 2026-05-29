@@ -234,9 +234,9 @@
 		1D9E1CE02FC92DC600DB3621 /* Toolbars */ = {
 			isa = PBXGroup;
 			children = (
-				1D9E1CDD2FC92DC600DB3621 /* Main_BtmRightTxt.swift */,
-				1D9E1CDE2FC92DC600DB3621 /* Main_BtmToolbar.swift */,
 				1D9E1CDF2FC92DC600DB3621 /* Main_TopToolbar.swift */,
+				1D9E1CDE2FC92DC600DB3621 /* Main_BtmToolbar.swift */,
+				1D9E1CDD2FC92DC600DB3621 /* Main_BtmRightTxt.swift */,
 			);
 			path = Toolbars;
 			sourceTree = "<group>";
