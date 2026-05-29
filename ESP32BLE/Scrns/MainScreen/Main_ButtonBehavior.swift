@@ -1,3 +1,13 @@
+
+/*
+ This contains most of the button behavior logic:
+ tap handling,
+ edit-mode actions,
+ resizing,
+ duplicate/delete behavior,
+ movement rules/helpers.
+ */
+
 import SwiftUI
 import AVFoundation
 import UIKit
@@ -203,7 +213,7 @@ extension MainScreen {
         entry.sendTexts
             .filter { sendText in
                 targetDocumentNameForSendText(sendText) == nil &&
-                    targetURLForSendText(sendText) == nil &&
+				targetURLForSendText(sendText) == nil &&
                 targetSoundFilenameForSendText(sendText) == nil &&
                 targetSpokenTextForSendText(sendText) == nil &&
                 targetSpokenFilenameForSendText(sendText) == nil &&
@@ -1471,7 +1481,10 @@ struct MainScreenButtonLabelView: View {
             textLabel(title: title)
         }
     }
-
+	//
+	//-----------------------------------------------------------------------------------------------
+	// MARK: - BM:😎 FUNCS widgetContent
+	//
     @ViewBuilder
     private func widgetContent(descriptor: MainGridWidgetDescriptor) -> some View {
         switch descriptor {

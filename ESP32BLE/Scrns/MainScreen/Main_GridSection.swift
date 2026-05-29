@@ -1,3 +1,14 @@
+/*
+ This is the UI layer for the grid.
+ It attaches the drag/swipe gestures to each button and
+ calls the move handler when a drag direction is detected.
+ */
+
+/*
+ MainScreenGridSection.swift for gesture detection,
+ then follow the move call into MainScreenButtonBehavior.swift
+ then into ContentView.swift where the data is actually changed.
+ */
 import SwiftUI
 
 typealias GridDimensions = (columns: Int, rows: Int)
