@@ -1135,6 +1135,18 @@ struct ContentView: View {
             return [StoredTileMove(tile: sourceTile, anchor: targetIndex)]
         }
 
+        if let localSlideMoves = directionalLocalSlideMoves(
+            from: sourceTile,
+            targetIndex: targetIndex,
+            rowStep: rowStep,
+            columnStep: columnStep,
+            occupancy: occupancy,
+            tilesByAnchor: tilesByAnchor,
+            gridDimensions: gridDimensions
+        ) {
+            return localSlideMoves
+        }
+
         if let crossingMoves = crossingPushMoves(
             from: sourceTile,
             blockingAnchors: blockingAnchors,
@@ -1171,6 +1183,17 @@ struct ContentView: View {
             return groupSwapMoves
         }
 
+        if let footprintSwapMoves = directionalFootprintGroupSwapMoves(
+            from: sourceTile,
+            rowStep: rowStep,
+            columnStep: columnStep,
+            occupancy: occupancy,
+            tilesByAnchor: tilesByAnchor,
+            gridDimensions: gridDimensions
+        ) {
+            return footprintSwapMoves
+        }
+
         if let swapMoves = directionalCompatibleSwapMoves(
             from: sourceTile,
             rowStep: rowStep,
@@ -1192,34 +1215,78 @@ struct ContentView: View {
             ]
         }
 
-        // Last fallback for a larger tile moving into smaller tiles.
+        // The named movement helpers above are intentionally exhaustive. If a
+        // blocked move reaches this point, allowing a generic fallback would let
+        // tiles jump through islands or move more than one logical step.
+        return nil
+    }
+
+    private func directionalLocalSlideMoves(
+        from sourceTile: StoredGridTile,
+        targetIndex: Int,
+        rowStep: Int,
+        columnStep: Int,
+        occupancy: [Int: Int],
+        tilesByAnchor: [Int: StoredGridTile],
+        gridDimensions: GridDimensions
+    ) -> [StoredTileMove]? {
+        // Local slide rule:
+        // - the dragged tile moves exactly one cell in the drag direction
+        // - only tiles on the newly-entered edge are displaced
+        // - those displaced tiles move into the edge strip just vacated
         //
-        // The source tile always moves one grid cell. Any smaller tile caught in the leading
-        // edge of that move is shifted into the strip that the source just vacated.
-        //
-        // Example: a 2x2 tile moving left vacates its right column pair. A 2-wide blocker at
-        // the left edge must therefore move right by 2 columns, not by 1, or it would still
-        // overlap the source's new footprint.
-        //
-        // This keeps large-tile moves local and predictable while still allowing grouped small
-        // tiles, such as stacked 2-wide buttons, to slide out of the way.
-        var displacedMoves: [StoredTileMove] = []
+        // This is what lets a 3x3 tile move right one cell while the small
+        // tiles on its right edge move into the 3x3 tile's old left edge.
+        let sourceIndexes = Set(buttonIndexes(
+            startingAt: sourceTile.anchor,
+            shape: sourceTile.shape,
+            gridDimensions: gridDimensions
+        ))
+        let destinationIndexes = Set(buttonIndexes(
+            startingAt: targetIndex,
+            shape: sourceTile.shape,
+            gridDimensions: gridDimensions
+        ))
+        let enteringIndexes = destinationIndexes.subtracting(sourceIndexes)
+        let enteringBlockers = Set(enteringIndexes.compactMap { occupancy[$0] }.filter { $0 != sourceTile.anchor })
+
+        guard !enteringBlockers.isEmpty else {
+            return nil
+        }
+
+        let columns = max(gridDimensions.columns, 1)
         let columnShift = columnStep == 0 ? 0 : -columnStep * sourceTile.shape.width
         let rowShift = rowStep == 0 ? 0 : -rowStep * sourceTile.shape.height
+        var displacedMoves: [StoredTileMove] = []
 
-        for blockingAnchor in blockingAnchors {
+        for blockingAnchor in enteringBlockers {
             guard let blockingTile = tilesByAnchor[blockingAnchor],
                   blockingTile.area < sourceTile.area else {
                 return nil
             }
 
+            let blockingIndexes = Set(buttonIndexes(
+                startingAt: blockingTile.anchor,
+                shape: blockingTile.shape,
+                gridDimensions: gridDimensions
+            ))
+
+            // The whole blocking tile must sit on the entered strip. If only
+            // part of a tile is on that edge, moving it would drag an island
+            // from outside the affected lane and create hard-to-predict jumps.
+            guard blockingIndexes.isSubset(of: enteringIndexes) else {
+                return nil
+            }
+
             let newRow = (blockingTile.anchor / columns) + rowShift
             let newColumn = (blockingTile.anchor % columns) + columnShift
+
             guard newRow >= 0, newColumn >= 0 else {
                 return nil
             }
 
             let newAnchor = (newRow * columns) + newColumn
+
             guard shapeFits(blockingTile.shape, startingAt: newAnchor, gridDimensions: gridDimensions) else {
                 return nil
             }
@@ -1227,26 +1294,8 @@ struct ContentView: View {
             displacedMoves.append(StoredTileMove(tile: blockingTile, anchor: newAnchor))
         }
 
-        let movingAnchors = Set(displacedMoves.map(\.tile.anchor)).union([sourceIndex])
-        var occupiedByUnaffectedTiles: [Int: Int] = [:]
-        for (index, anchor) in occupancy where !movingAnchors.contains(anchor) {
-            occupiedByUnaffectedTiles[index] = anchor
-        }
-
-        var plannedOccupancy: [Int: Int] = [:]
         let plannedMoves = [StoredTileMove(tile: sourceTile, anchor: targetIndex)] + displacedMoves
-
-        for move in plannedMoves {
-            for index in buttonIndexes(startingAt: move.anchor, shape: move.tile.shape, gridDimensions: gridDimensions) {
-                if occupiedByUnaffectedTiles[index] != nil || plannedOccupancy[index] != nil {
-                    return nil
-                }
-
-                plannedOccupancy[index] = move.tile.anchor
-            }
-        }
-
-        return plannedMoves
+        return movePlanFits(plannedMoves, occupancy: occupancy, gridDimensions: gridDimensions) ? plannedMoves : nil
     }
 
     private func edgePushMoves(
@@ -1414,6 +1463,57 @@ struct ContentView: View {
 
         if rowStep != 0, columnStep == 0 {
             let targetRow = sourceRow + rowStep
+            guard targetRow >= 0, targetRow + sourceTile.shape.height <= gridDimensions.rows else {
+                return nil
+            }
+
+            return groupSwapMoves(
+                sourceTile: sourceTile,
+                targetAnchor: (targetRow * columns) + sourceColumn,
+                occupancy: occupancy,
+                tilesByAnchor: tilesByAnchor,
+                gridDimensions: gridDimensions
+            )
+        }
+
+        return nil
+    }
+
+    private func directionalFootprintGroupSwapMoves(
+        from sourceTile: StoredGridTile,
+        rowStep: Int,
+        columnStep: Int,
+        occupancy: [Int: Int],
+        tilesByAnchor: [Int: StoredGridTile],
+        gridDimensions: GridDimensions
+    ) -> [StoredTileMove]? {
+        let columns = max(gridDimensions.columns, 1)
+        let sourceRow = sourceTile.anchor / columns
+        let sourceColumn = sourceTile.anchor % columns
+
+        // Footprint swaps handle a large tile exchanging places with a same-sized
+        // rectangular group of smaller tiles. Example: a 2x2 tile can move left into
+        // two stacked 2-wide tiles, while those two tiles move into the 2x2's old space.
+        //
+        // This is deliberately different from a one-cell slide. The target rectangle starts
+        // one full source-width/height away, so the exchanged footprints do not overlap.
+        if columnStep != 0, rowStep == 0 {
+            let targetColumn = sourceColumn + (columnStep * sourceTile.shape.width)
+            guard targetColumn >= 0, targetColumn + sourceTile.shape.width <= columns else {
+                return nil
+            }
+
+            return groupSwapMoves(
+                sourceTile: sourceTile,
+                targetAnchor: (sourceRow * columns) + targetColumn,
+                occupancy: occupancy,
+                tilesByAnchor: tilesByAnchor,
+                gridDimensions: gridDimensions
+            )
+        }
+
+        if rowStep != 0, columnStep == 0 {
+            let targetRow = sourceRow + (rowStep * sourceTile.shape.height)
             guard targetRow >= 0, targetRow + sourceTile.shape.height <= gridDimensions.rows else {
                 return nil
             }
