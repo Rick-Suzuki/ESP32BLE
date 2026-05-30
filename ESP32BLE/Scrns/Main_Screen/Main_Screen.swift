@@ -418,8 +418,9 @@ struct MainScreen: View {
 
         let bluetoothTokens = actionTokens
             .filter { actionToken in
-                targetDocumentNameForSendText(actionToken) == nil &&
+                    targetDocumentNameForSendText(actionToken) == nil &&
                     targetURLForSendText(actionToken) == nil &&
+                    targetShortcutURLForSendText(actionToken) == nil &&
                     targetSoundFilenameForSendText(actionToken) == nil &&
                     targetSpokenTextForSendText(actionToken) == nil &&
                     targetSpokenFilenameForSendText(actionToken) == nil &&
@@ -432,6 +433,7 @@ struct MainScreen: View {
         let targetSoundFilename = actionTokens.compactMap(targetSoundFilenameForSendText).first
         let targetSpokenFilename = actionTokens.compactMap(targetSpokenFilenameForSendText).first
         let targetSpokenText = actionTokens.compactMap(targetSpokenTextForSendText).first
+        let targetShortcutURL = actionTokens.compactMap(targetShortcutURLForSendText).first
 
         if !bluetoothTokens.isEmpty {
             guard ble.isConnected else {
@@ -459,6 +461,10 @@ struct MainScreen: View {
         } else if let targetSpokenFilename {
             alertTitle = "File Not Found"
             renameAlertMessage = "Couldn't find \(targetSpokenFilename.lowercased())."
+        }
+
+        if let targetShortcutURL {
+            UIApplication.shared.open(targetShortcutURL)
         }
     }
 

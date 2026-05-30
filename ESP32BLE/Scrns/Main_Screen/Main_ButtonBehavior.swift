@@ -121,9 +121,11 @@ extension MainScreen {
         let targetPreviewFilename = targetPreviewFilenameForGridEntry(entry)
         let targetSpokenFilename = targetSpokenFilenameForGridEntry(entry)
         let targetSpokenText = targetSpokenTextForGridEntry(entry)
-        let hasSoundOrSpeechChainCommand = targetSoundFilename != nil ||
+        let targetShortcutURL = targetShortcutURLForGridEntry(entry)
+        let hasPostBluetoothChainCommand = targetSoundFilename != nil ||
             targetSpokenText != nil ||
-            targetSpokenFilename != nil
+            targetSpokenFilename != nil ||
+            targetShortcutURL != nil
         var didSendBluetooth = false
 
         func sendBluetoothIfNeeded() -> Bool {
@@ -181,7 +183,7 @@ extension MainScreen {
             openPreviewFile(named: targetPreviewFilename)
         }
 
-        if hasSoundOrSpeechChainCommand {
+        if hasPostBluetoothChainCommand {
             guard sendBluetoothIfNeeded() else {
                 return
             }
@@ -196,6 +198,10 @@ extension MainScreen {
         } else if let targetSpokenFilename {
             alertTitle = "File Not Found"
             renameAlertMessage = "Couldn't find \(targetSpokenFilename.lowercased())."
+        }
+
+        if let targetShortcutURL {
+            UIApplication.shared.open(targetShortcutURL)
         }
 
         if let targetDocumentName {
@@ -213,7 +219,8 @@ extension MainScreen {
         entry.sendTexts
             .filter { sendText in
                 targetDocumentNameForSendText(sendText) == nil &&
-				targetURLForSendText(sendText) == nil &&
+                targetURLForSendText(sendText) == nil &&
+                targetShortcutURLForSendText(sendText) == nil &&
                 targetSoundFilenameForSendText(sendText) == nil &&
                 targetSpokenTextForSendText(sendText) == nil &&
                 targetSpokenFilenameForSendText(sendText) == nil &&
@@ -449,6 +456,9 @@ extension MainScreen {
         guard !loweredSendText.hasPrefix("spk ") else {
             return nil
         }
+        guard !isShortcutCommandText(loweredSendText) else {
+            return nil
+        }
         guard !loweredSendText.hasPrefix("file ") else {
             return nil
         }
@@ -470,6 +480,10 @@ extension MainScreen {
 
     func targetAppURLForGridEntry(_ entry: FunctionKeyEntry) -> URL? {
         entry.sendTexts.compactMap(targetAppURLForSendText).first
+    }
+
+    func targetShortcutURLForGridEntry(_ entry: FunctionKeyEntry) -> URL? {
+        entry.sendTexts.compactMap(targetShortcutURLForSendText).first
     }
 
     func targetURLForSendText(_ sendText: String) -> URL? {
@@ -558,6 +572,36 @@ extension MainScreen {
         }
     }
 
+    func targetShortcutURLForSendText(_ sendText: String) -> URL? {
+        let trimmedSendText = sendText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let loweredSendText = trimmedSendText.lowercased()
+        let shortcutName: String
+
+        if loweredSendText.hasPrefix("sc ") {
+            shortcutName = String(trimmedSendText.dropFirst(3))
+        } else if loweredSendText.hasPrefix("shortcut ") {
+            shortcutName = String(trimmedSendText.dropFirst(9))
+        } else {
+            return nil
+        }
+
+        let trimmedShortcutName = shortcutName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedShortcutName.isEmpty else {
+            return nil
+        }
+
+        // Shortcuts expects the shortcut name in the URL query. Keep normal
+        // letters readable, but encode spaces as %20 and protect query
+        // separators so names like "hello & bye" remain one shortcut name.
+        var allowedCharacters = CharacterSet.urlQueryAllowed
+        allowedCharacters.remove(charactersIn: "&=+?")
+        guard let encodedShortcutName = trimmedShortcutName.addingPercentEncoding(withAllowedCharacters: allowedCharacters) else {
+            return nil
+        }
+
+        return URL(string: "shortcuts://run-shortcut?name=\(encodedShortcutName)")
+    }
+
     func targetClipboardTextForSendText(_ sendText: String) -> String? {
         let trimmedSendText = sendText.trimmingCharacters(in: .whitespacesAndNewlines)
         let loweredSendText = trimmedSendText.lowercased()
@@ -599,6 +643,7 @@ extension MainScreen {
         guard !loweredSendText.hasPrefix("amb "),
               !loweredSendText.hasPrefix("ambient "),
               !loweredSendText.hasPrefix("cb "),
+              !isShortcutCommandText(loweredSendText),
               !isBareWidgetCommandText(loweredSendText) else {
             return nil
         }
@@ -1010,6 +1055,13 @@ extension MainScreen {
         return widgetCommands.contains { command in
             loweredText == command || loweredText.hasPrefix("\(command) ")
         }
+    }
+
+    private func isShortcutCommandText(_ loweredText: String) -> Bool {
+        loweredText == "sc" ||
+            loweredText.hasPrefix("sc ") ||
+            loweredText == "shortcut" ||
+            loweredText.hasPrefix("shortcut ")
     }
 
     private func timerCompletion(from text: String) -> MainGridTimerCompletion? {
