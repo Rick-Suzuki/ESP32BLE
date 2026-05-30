@@ -4,6 +4,7 @@ import AudioToolbox
 import UIKit
 import ImageIO
 
+
 let maxGridDimension = 20
 let maxFunctionKeyCount = maxGridDimension * maxGridDimension
 private let defaultNamedFunctionKeyCount = 20
