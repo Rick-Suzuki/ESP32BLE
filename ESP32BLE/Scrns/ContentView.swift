@@ -274,7 +274,14 @@ struct ContentView: View {
                             adjacentNextDocumentDisplayName: adjacentNextDocumentDisplayName,
                             selectDocumentNamedFromGrid: selectDocumentNamedFromGrid,
                             resizeVisibleBoxCount: resizeSelectedDocumentGrid,
-                            moveFunctionKeySlot: moveSelectedDocumentSlot,
+                            moveFunctionKeySlot: { sourceIndex, targetIndex, span, gridDimensions in
+                                moveSelectedDocumentSlot(
+                                    from: sourceIndex,
+                                    to: targetIndex,
+                                    span: span,
+                                    gridDimensions: gridDimensions
+                                )
+                            },
                             duplicateFunctionKeySlot: duplicateSelectedDocumentSlot,
                             updateFunctionKeySlot: updateSelectedDocumentSlot,
                             loadGridDimensions: loadStoredGridDimensions,
@@ -993,7 +1000,12 @@ struct ContentView: View {
     }
 
     @discardableResult
-    private func moveSelectedDocumentSlot(from sourceIndex: Int, to targetIndex: Int, span: Int) -> Bool {
+    private func moveSelectedDocumentSlot(
+        from sourceIndex: Int,
+        to targetIndex: Int,
+        span: Int,
+        gridDimensions: GridDimensions
+    ) -> Bool {
         guard sourceIndex != targetIndex,
               functionKeySlotLines.indices.contains(sourceIndex),
               targetIndex >= 0,
@@ -1002,8 +1014,14 @@ struct ContentView: View {
         }
 
         var updatedLines = functionKeySlotLines
-        let gridDimensions = loadStoredGridDimensions(for: selectedDocumentName, requiredBoxCount: max(loadedFunctionKeySlotCount, 1))
-        let gridCellCount = gridDimensions.columns * gridDimensions.rows
+        // The drag target was calculated from the grid currently on screen. Reusing those
+        // dimensions here keeps large-tile movement from being planned against stale saved
+        // dimensions after a document resize or repair.
+        let moveGridDimensions = (
+            columns: max(gridDimensions.columns, 1),
+            rows: max(gridDimensions.rows, 1)
+        )
+        let gridCellCount = moveGridDimensions.columns * moveGridDimensions.rows
         let requiredLineCount = max(gridCellCount, targetIndex + 1, sourceIndex + 1)
 
         if requiredLineCount > updatedLines.count {
@@ -1014,27 +1032,38 @@ struct ContentView: View {
             sourceIndex: sourceIndex,
             targetIndex: targetIndex,
             lines: updatedLines,
-            gridDimensions: gridDimensions
+            gridDimensions: moveGridDimensions
         ) else {
             return false
         }
 
-        let affectedIndexes = Set(movePlan.flatMap { placement in
-            buttonIndexes(startingAt: placement.tile.anchor, shape: placement.tile.shape, gridDimensions: gridDimensions)
-        })
+        // Clear both the old footprints and the new footprints before writing anchors and
+        // continuation markers. Without clearing the destination cells, stale wide/block
+        // markers can survive and later make blank-looking cells behave as blocked cells.
+        let oldIndexes = movePlan.flatMap { placement in
+            buttonIndexes(startingAt: placement.tile.anchor, shape: placement.tile.shape, gridDimensions: moveGridDimensions)
+        }
+        let newIndexes = movePlan.flatMap { placement in
+            buttonIndexes(startingAt: placement.anchor, shape: placement.tile.shape, gridDimensions: moveGridDimensions)
+        }
+        let affectedIndexes = Set(oldIndexes + newIndexes)
 
         for index in affectedIndexes where index < updatedLines.count {
             updatedLines[index] = "_"
         }
 
         for placement in movePlan {
-            let targetIndexes = buttonIndexes(startingAt: placement.anchor, shape: placement.tile.shape, gridDimensions: gridDimensions)
+            let targetIndexes = buttonIndexes(startingAt: placement.anchor, shape: placement.tile.shape, gridDimensions: moveGridDimensions)
             if let maximumTargetIndex = targetIndexes.max(), maximumTargetIndex >= updatedLines.count {
                 updatedLines += Array(repeating: "_", count: maximumTargetIndex - updatedLines.count + 1)
             }
 
             updatedLines[placement.anchor] = placement.tile.line
-            for continuation in continuationAssignments(startingAt: placement.anchor, shape: placement.tile.shape) {
+            for continuation in continuationAssignments(
+                startingAt: placement.anchor,
+                shape: placement.tile.shape,
+                gridDimensions: moveGridDimensions
+            ) {
                 updatedLines[continuation.index] = continuation.token
             }
         }
@@ -1091,7 +1120,7 @@ struct ContentView: View {
             return nil
         }
 
-        if rowStep != 0, columnStep != 0, sourceTile.shape != ButtonStorageShape(width: 1, height: 1) {
+        guard rowStep == 0 || columnStep == 0 else {
             return nil
         }
 
@@ -1104,6 +1133,31 @@ struct ContentView: View {
 
         guard !blockingAnchors.isEmpty else {
             return [StoredTileMove(tile: sourceTile, anchor: targetIndex)]
+        }
+
+        if let crossingMoves = crossingPushMoves(
+            from: sourceTile,
+            blockingAnchors: blockingAnchors,
+            rowStep: rowStep,
+            columnStep: columnStep,
+            occupancy: occupancy,
+            tilesByAnchor: tilesByAnchor,
+            gridDimensions: gridDimensions
+        ) {
+            return crossingMoves
+        }
+
+        if let edgePushMoves = edgePushMoves(
+            from: sourceTile,
+            targetIndex: targetIndex,
+            blockingAnchors: blockingAnchors,
+            rowStep: rowStep,
+            columnStep: columnStep,
+            occupancy: occupancy,
+            tilesByAnchor: tilesByAnchor,
+            gridDimensions: gridDimensions
+        ) {
+            return edgePushMoves
         }
 
         if let groupSwapMoves = directionalGroupSwapMoves(
@@ -1138,6 +1192,17 @@ struct ContentView: View {
             ]
         }
 
+        // Last fallback for a larger tile moving into smaller tiles.
+        //
+        // The source tile always moves one grid cell. Any smaller tile caught in the leading
+        // edge of that move is shifted into the strip that the source just vacated.
+        //
+        // Example: a 2x2 tile moving left vacates its right column pair. A 2-wide blocker at
+        // the left edge must therefore move right by 2 columns, not by 1, or it would still
+        // overlap the source's new footprint.
+        //
+        // This keeps large-tile moves local and predictable while still allowing grouped small
+        // tiles, such as stacked 2-wide buttons, to slide out of the way.
         var displacedMoves: [StoredTileMove] = []
         let columnShift = columnStep == 0 ? 0 : -columnStep * sourceTile.shape.width
         let rowShift = rowStep == 0 ? 0 : -rowStep * sourceTile.shape.height
@@ -1184,6 +1249,142 @@ struct ContentView: View {
         return plannedMoves
     }
 
+    private func edgePushMoves(
+        from sourceTile: StoredGridTile,
+        targetIndex: Int,
+        blockingAnchors: Set<Int>,
+        rowStep: Int,
+        columnStep: Int,
+        occupancy: [Int: Int],
+        tilesByAnchor: [Int: StoredGridTile],
+        gridDimensions: GridDimensions
+    ) -> [StoredTileMove]? {
+        guard blockingAnchors.count == 1,
+              let blockingAnchor = blockingAnchors.first,
+              let blockingTile = tilesByAnchor[blockingAnchor],
+              sourceTile.area > blockingTile.area else {
+            return nil
+        }
+
+        let columns = max(gridDimensions.columns, 1)
+        let sourceRow = sourceTile.anchor / columns
+        let sourceColumn = sourceTile.anchor % columns
+        let blockingRow = blockingTile.anchor / columns
+        let blockingColumn = blockingTile.anchor % columns
+        let sourceRowRange = sourceRow..<(sourceRow + sourceTile.shape.height)
+        let sourceColumnRange = sourceColumn..<(sourceColumn + sourceTile.shape.width)
+        let blockingRowRange = blockingRow..<(blockingRow + blockingTile.shape.height)
+        let blockingColumnRange = blockingColumn..<(blockingColumn + blockingTile.shape.width)
+
+        let blockingNewAnchor: Int
+
+        if columnStep != 0, rowStep == 0 {
+            guard sourceRowRange.overlaps(blockingRowRange) else {
+                return nil
+            }
+
+            let blockingNewColumn = blockingColumn - columnStep
+            guard blockingNewColumn >= 0 else {
+                return nil
+            }
+
+            blockingNewAnchor = blockingRow * columns + blockingNewColumn
+        } else if rowStep != 0, columnStep == 0 {
+            guard sourceColumnRange.overlaps(blockingColumnRange) else {
+                return nil
+            }
+
+            let blockingNewRow = blockingRow - rowStep
+            guard blockingNewRow >= 0 else {
+                return nil
+            }
+
+            blockingNewAnchor = blockingNewRow * columns + blockingColumn
+        } else {
+            return nil
+        }
+
+        let moves = [
+            StoredTileMove(tile: sourceTile, anchor: targetIndex),
+            StoredTileMove(tile: blockingTile, anchor: blockingNewAnchor)
+        ]
+
+        return movePlanFits(moves, occupancy: occupancy, gridDimensions: gridDimensions) ? moves : nil
+    }
+
+    private func crossingPushMoves(
+        from sourceTile: StoredGridTile,
+        blockingAnchors: Set<Int>,
+        rowStep: Int,
+        columnStep: Int,
+        occupancy: [Int: Int],
+        tilesByAnchor: [Int: StoredGridTile],
+        gridDimensions: GridDimensions
+    ) -> [StoredTileMove]? {
+        guard blockingAnchors.count == 1,
+              let blockingAnchor = blockingAnchors.first,
+              let blockingTile = tilesByAnchor[blockingAnchor],
+              blockingTile.area > sourceTile.area else {
+            return nil
+        }
+
+        let columns = max(gridDimensions.columns, 1)
+        let sourceRow = sourceTile.anchor / columns
+        let sourceColumn = sourceTile.anchor % columns
+        let blockingRow = blockingTile.anchor / columns
+        let blockingColumn = blockingTile.anchor % columns
+        let sourceRowRange = sourceRow..<(sourceRow + sourceTile.shape.height)
+        let sourceColumnRange = sourceColumn..<(sourceColumn + sourceTile.shape.width)
+        let blockingRowRange = blockingRow..<(blockingRow + blockingTile.shape.height)
+        let blockingColumnRange = blockingColumn..<(blockingColumn + blockingTile.shape.width)
+
+        let sourceNewAnchor: Int
+        let blockingNewAnchor: Int
+
+        if columnStep != 0, rowStep == 0 {
+            guard sourceRowRange.overlaps(blockingRowRange) else {
+                return nil
+            }
+
+            let blockingNewColumn = blockingColumn - (columnStep * sourceTile.shape.width)
+            let sourceNewColumn = columnStep > 0
+                ? blockingNewColumn + blockingTile.shape.width
+                : blockingNewColumn - sourceTile.shape.width
+
+            guard blockingNewColumn >= 0, sourceNewColumn >= 0 else {
+                return nil
+            }
+
+            blockingNewAnchor = blockingRow * columns + blockingNewColumn
+            sourceNewAnchor = sourceRow * columns + sourceNewColumn
+        } else if rowStep != 0, columnStep == 0 {
+            guard sourceColumnRange.overlaps(blockingColumnRange) else {
+                return nil
+            }
+
+            let blockingNewRow = blockingRow - (rowStep * sourceTile.shape.height)
+            let sourceNewRow = rowStep > 0
+                ? blockingNewRow + blockingTile.shape.height
+                : blockingNewRow - sourceTile.shape.height
+
+            guard blockingNewRow >= 0, sourceNewRow >= 0 else {
+                return nil
+            }
+
+            blockingNewAnchor = blockingNewRow * columns + blockingColumn
+            sourceNewAnchor = sourceNewRow * columns + sourceColumn
+        } else {
+            return nil
+        }
+
+        let moves = [
+            StoredTileMove(tile: sourceTile, anchor: sourceNewAnchor),
+            StoredTileMove(tile: blockingTile, anchor: blockingNewAnchor)
+        ]
+
+        return movePlanFits(moves, occupancy: occupancy, gridDimensions: gridDimensions) ? moves : nil
+    }
+
     private func directionalGroupSwapMoves(
         from sourceTile: StoredGridTile,
         rowStep: Int,
@@ -1197,43 +1398,33 @@ struct ContentView: View {
         let sourceColumn = sourceTile.anchor % columns
 
         if columnStep != 0, rowStep == 0 {
-            var scanColumn = columnStep > 0 ? sourceColumn + sourceTile.shape.width : sourceColumn - sourceTile.shape.width
-
-            while scanColumn >= 0, scanColumn + sourceTile.shape.width <= columns {
-                let targetAnchor = (sourceRow * columns) + scanColumn
-                if let moves = groupSwapMoves(
-                    sourceTile: sourceTile,
-                    targetAnchor: targetAnchor,
-                    occupancy: occupancy,
-                    tilesByAnchor: tilesByAnchor,
-                    gridDimensions: gridDimensions
-                ) {
-                    return moves
-                }
-
-                scanColumn += columnStep
+            let targetColumn = sourceColumn + columnStep
+            guard targetColumn >= 0, targetColumn + sourceTile.shape.width <= columns else {
+                return nil
             }
 
-            return nil
+            return groupSwapMoves(
+                sourceTile: sourceTile,
+                targetAnchor: (sourceRow * columns) + targetColumn,
+                occupancy: occupancy,
+                tilesByAnchor: tilesByAnchor,
+                gridDimensions: gridDimensions
+            )
         }
 
         if rowStep != 0, columnStep == 0 {
-            var scanRow = rowStep > 0 ? sourceRow + sourceTile.shape.height : sourceRow - sourceTile.shape.height
-
-            while scanRow >= 0, scanRow + sourceTile.shape.height <= gridDimensions.rows {
-                let targetAnchor = (scanRow * columns) + sourceColumn
-                if let moves = groupSwapMoves(
-                    sourceTile: sourceTile,
-                    targetAnchor: targetAnchor,
-                    occupancy: occupancy,
-                    tilesByAnchor: tilesByAnchor,
-                    gridDimensions: gridDimensions
-                ) {
-                    return moves
-                }
-
-                scanRow += rowStep
+            let targetRow = sourceRow + rowStep
+            guard targetRow >= 0, targetRow + sourceTile.shape.height <= gridDimensions.rows else {
+                return nil
             }
+
+            return groupSwapMoves(
+                sourceTile: sourceTile,
+                targetAnchor: (targetRow * columns) + sourceColumn,
+                occupancy: occupancy,
+                tilesByAnchor: tilesByAnchor,
+                gridDimensions: gridDimensions
+            )
         }
 
         return nil
@@ -1555,8 +1746,12 @@ struct ContentView: View {
         return indexes
     }
 
-    private func continuationAssignments(startingAt index: Int, shape: ButtonStorageShape) -> [(index: Int, token: String)] {
-        let columns = max(loadStoredGridDimensions(for: selectedDocumentName, requiredBoxCount: max(loadedFunctionKeySlotCount, 1)).columns, 1)
+    private func continuationAssignments(
+        startingAt index: Int,
+        shape: ButtonStorageShape,
+        gridDimensions: GridDimensions
+    ) -> [(index: Int, token: String)] {
+        let columns = max(gridDimensions.columns, 1)
         var assignments: [(index: Int, token: String)] = []
 
         for rowOffset in 0..<shape.height {

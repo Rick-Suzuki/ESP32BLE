@@ -103,7 +103,7 @@ struct MainScreen: View {
     let adjacentNextDocumentDisplayName: String?
     let selectDocumentNamedFromGrid: (String) -> Bool
     let resizeVisibleBoxCount: (GridDimensions, GridDimensions) -> Bool
-    let moveFunctionKeySlot: (Int, Int, Int) -> Bool
+    let moveFunctionKeySlot: (Int, Int, Int, GridDimensions) -> Bool
     let duplicateFunctionKeySlot: (Int, Int) -> Bool
     let updateFunctionKeySlot: (Int, String) -> Bool
     let loadGridDimensions: (String, Int) -> GridDimensions
@@ -756,7 +756,7 @@ struct MainScreen: View {
         }
 
         let sourceSpan = slotSpan(startingAt: sourceIndex, gridDimensions: gridDimensions)
-        guard moveFunctionKeySlot(sourceIndex, targetIndex, sourceSpan) else {
+        guard moveFunctionKeySlot(sourceIndex, targetIndex, sourceSpan, gridDimensions) else {
             alertTitle = ""
             renameAlertMessage = "can't move btn"
             return

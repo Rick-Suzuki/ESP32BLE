@@ -767,48 +767,15 @@ extension MainScreen {
 	//-----------------------------------------------------------------------------------------------
 	// MARK: - BM:😎 FUNCS Dragging Code
 	//
-	// Supports:
-	//
-	// • Normal horizontal and vertical dragging of buttons
-	// • Single-cell buttons can "jump" over larger buttons ("islands")
-	// • Single-cell buttons can move diagonally
-	// • Multi-cell buttons can only move one grid step at a time
-	// • Prevents moves outside grid boundaries
-	// • Allows swapping with other single-cell buttons
-	// • Allows moving into blank or empty slots
-	//
-	// Terminology:
-	//
-	// Target Cell
-	//     A valid destination:
-	//         - Blank placeholder
-	//         - Empty button slot
-	//         - Another single-cell button
-	//
-	// Island Cell
-	//     A cell occupied by a larger multi-cell button.
-	//     Single-cell buttons may jump across islands while dragging.
-	//
-	// Examples:
-	//
-	// [1][###][ ][ ]
-	//      ↑
-	//   island
-	//
-	// Dragging button 1 right will skip over the island
-	// and land on the first valid target cell.
-	//
-	// [1][###][2][ ]
-	//             ↑
-	//          target
-	//
-	// Diagonal movement:
-	//
-	// [1][###]
-	// [###][ ]
-	//
-	// Dragging diagonally down-right allows button 1
-	// to reach the empty destination.
+		// Supports:
+		//
+		// • Horizontal and vertical dragging only
+		// • One grid-step movement requests
+		// • No diagonal movement
+		// • Prevents target anchors outside grid boundaries
+		//
+		// The stored document move planner decides whether the requested
+		// one-step move becomes a plain move, same-size swap, or legal push.
 	//
     func targetIndexForEditDrag(
         from sourceIndex: Int,
@@ -818,57 +785,17 @@ extension MainScreen {
         let horizontalDistance = translation.width
         let verticalDistance = translation.height
 
-		// Ignore very short drags to avoid accidental movement.
-		guard max(abs(horizontalDistance), abs(verticalDistance)) >= 24 else {
+			// Ignore very short drags to avoid accidental movement.
+			guard max(abs(horizontalDistance), abs(verticalDistance)) >= 24 else {
             return nil
         }
 
         let sourceSpan = slotSpan(startingAt: sourceIndex, gridDimensions: gridDimensions)
-		//
-		//----------------------------------------
-		// MARK: - BM:⬇️ DRAG MOVES
-		//
-		// Diagonal movement
-		//
-		// Only single-cell buttons may move diagonally.
-		// The move continues until:
-		//   • a valid target is found
-		//   • a non-island obstacle is encountered
-		//   • the edge of the grid is reached
-		//
-		if sourceSpan == 1,
-           abs(horizontalDistance) >= 24,
-           abs(verticalDistance) >= 24,
-           let diagonalTargetIndex = singleCellDiagonalTargetIndexForEditDrag(
-            from: sourceIndex,
-            columnStep: horizontalDistance > 0 ? 1 : -1,
-            rowStep: verticalDistance > 0 ? 1 : -1,
-            gridDimensions: gridDimensions
-           ) {
-            return diagonalTargetIndex
-        }
-		// MARK: - Horizontal movement
-        if abs(horizontalDistance) > abs(verticalDistance) {
-            let sourceShape = shape(for: sourceSpan)
-            let step = horizontalDistance > 0 ? 1 : -1
-			//
-			//----------------------------------------
-			// Single-cell buttons may jump across islands.
-			//
-			if sourceSpan == 1,
-               let singleCellTargetIndex = singleCellTargetIndexForEditDrag(
-                from: sourceIndex,
-                step: step,
-                isHorizontalMove: true,
-                gridDimensions: gridDimensions
-               ) {
-                return singleCellTargetIndex
-            }
-			//
-			//----------------------------------------
-			// Multi-cell buttons move one cell at a time.
+        let sourceShape = shape(for: sourceSpan)
 
-			//
+			// MARK: - Horizontal movement
+        if abs(horizontalDistance) > abs(verticalDistance) {
+            let step = horizontalDistance > 0 ? 1 : -1
             let targetIndex = sourceIndex + step
             let sourceRow = sourceIndex / gridDimensions.columns
             let targetColumn = targetIndex % max(gridDimensions.columns, 1)
@@ -882,38 +809,11 @@ extension MainScreen {
 
             return targetIndex
         }
-		//
-		//----------------------------------------
-		// Vertical movement
-		//
-		// Multi-cell buttons cannot move vertically if
-		// the drag contains a significant horizontal component.
-		//
-        guard sourceSpan == 1 || abs(horizontalDistance) < 24 else {
-            return nil
-        }
 
+			// MARK: - Vertical movement
         let step = verticalDistance > 0 ? gridDimensions.columns : -gridDimensions.columns
-		//
-		//----------------------------------------
-		// Single-cell jump movement.
-		//
-		if sourceSpan == 1,
-           let singleCellTargetIndex = singleCellTargetIndexForEditDrag(
-            from: sourceIndex,
-            step: step,
-            isHorizontalMove: false,
-            gridDimensions: gridDimensions
-           ) {
-            return singleCellTargetIndex
-        }
-		//
-		//----------------------------------------
-		// Multi-cell movement.
-		//
-		let targetIndex = sourceIndex + step
+			let targetIndex = sourceIndex + step
 
-        let sourceShape = shape(for: sourceSpan)
         let targetRow = targetIndex / max(gridDimensions.columns, 1)
         guard targetIndex >= 0,
               targetIndex < visibleBoxCount,
@@ -1136,4 +1036,3 @@ extension MainScreen {
 //
 //-----------------------------------------------------------------------------------------------
 //
-
