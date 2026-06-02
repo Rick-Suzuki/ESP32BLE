@@ -410,6 +410,17 @@ struct MainScreen: View {
         let actionText = editingSlotText.components(separatedBy: "::").first ?? editingSlotText
         let actionTokens = parsedActionTokens(from: actionText)
 
+        if containsWaitCommand(in: actionTokens) {
+            Task { @MainActor in
+                await runWaitChainCommandTokens(
+                    actionTokens,
+                    sourceEntry: nil,
+                    respectsBluetoothMode: false
+                )
+            }
+            return
+        }
+
         for actionToken in actionTokens {
             if let clipboardText = targetClipboardTextForSendText(actionToken) {
                 UIPasteboard.general.string = clipboardText
@@ -427,6 +438,7 @@ struct MainScreen: View {
                     targetAppURLForSendText(actionToken) == nil &&
                     targetClipboardTextForSendText(actionToken) == nil &&
                     targetPreviewFilenameForSendText(actionToken) == nil &&
+                    !isWaitCommandText(actionToken.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()) &&
                     targetWidgetDescriptorForSendText(actionToken) == nil
             }
             .map(normalizedBluetoothSendText)

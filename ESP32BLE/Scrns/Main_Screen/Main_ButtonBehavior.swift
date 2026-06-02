@@ -112,6 +112,17 @@ extension MainScreen {
             return
         }
 
+        if containsWaitCommand(in: entry.sendTexts) {
+            Task { @MainActor in
+                await runWaitChainCommandTokens(
+                    entry.sendTexts,
+                    sourceEntry: entry,
+                    respectsBluetoothMode: true
+                )
+            }
+            return
+        }
+
         let bluetoothSendTexts = bluetoothSendTexts(for: entry)
         let targetDocumentName = targetDocumentNameForGridEntry(entry)
         let targetURL = targetURLForGridEntry(entry)
@@ -227,9 +238,148 @@ extension MainScreen {
                 targetAppURLForSendText(sendText) == nil &&
                 targetClipboardTextForSendText(sendText) == nil &&
                 targetPreviewFilenameForSendText(sendText) == nil &&
+                !isWaitCommandText(sendText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()) &&
                 targetWidgetDescriptorForSendText(sendText) == nil
             }
             .map(normalizedBluetoothSendText)
+    }
+
+    func containsWaitCommand(in actionTokens: [String]) -> Bool {
+        actionTokens.contains { actionToken in
+            isWaitCommandText(actionToken.trimmingCharacters(in: .whitespacesAndNewlines).lowercased())
+        }
+    }
+
+    @MainActor
+    func runWaitChainCommandTokens(
+        _ actionTokens: [String],
+        sourceEntry: FunctionKeyEntry?,
+        respectsBluetoothMode: Bool
+    ) async {
+        var didLogBluetoothPress = false
+
+        for actionToken in actionTokens {
+            let trimmedActionToken = actionToken.trimmingCharacters(in: .whitespacesAndNewlines)
+            let loweredActionToken = trimmedActionToken.lowercased()
+            guard !trimmedActionToken.isEmpty else {
+                continue
+            }
+
+            if isWaitCommandText(loweredActionToken) {
+                guard let waitDuration = waitDurationForSendText(trimmedActionToken) else {
+                    alertTitle = "Invalid wait"
+                    renameAlertMessage = "Use wait followed by seconds,\nfor example wait 1 or wait 0.5."
+                    return
+                }
+
+                let nanoseconds = min(waitDuration * 1_000_000_000, Double(UInt64.max))
+                try? await Task.sleep(nanoseconds: UInt64(nanoseconds.rounded()))
+                continue
+            }
+
+            if let targetURL = targetURLForSendText(trimmedActionToken) {
+                await UIApplication.shared.open(targetURL)
+                continue
+            }
+
+            if let targetAppURL = targetAppURLForSendText(trimmedActionToken) {
+                UIApplication.shared.open(targetAppURL) { success in
+                    guard !success else {
+                        return
+                    }
+
+                    alertTitle = "App Not Available"
+                    renameAlertMessage = "Couldn't open \(targetAppURL.absoluteString)."
+                }
+                continue
+            }
+
+            if let targetClipboardText = targetClipboardTextForSendText(trimmedActionToken) {
+                UIPasteboard.general.string = targetClipboardText
+                continue
+            }
+
+            if let targetPreviewFilename = targetPreviewFilenameForSendText(trimmedActionToken) {
+                openPreviewFile(named: targetPreviewFilename)
+                continue
+            }
+
+            if let targetSoundFilename = targetSoundFilenameForSendText(trimmedActionToken) {
+                playMainGridSound(named: targetSoundFilename)
+                continue
+            }
+
+            if let targetSpokenText = targetSpokenTextForSendText(trimmedActionToken) {
+                speakMainGridText(targetSpokenText)
+                continue
+            } else if let targetSpokenFilename = targetSpokenFilenameForSendText(trimmedActionToken) {
+                alertTitle = "File Not Found"
+                renameAlertMessage = "Couldn't find \(targetSpokenFilename.lowercased())."
+                return
+            }
+
+            if let targetShortcutURL = targetShortcutURLForSendText(trimmedActionToken) {
+                await UIApplication.shared.open(targetShortcutURL)
+                continue
+            }
+
+            if let targetDocumentName = targetDocumentNameForSendText(trimmedActionToken) {
+                guard selectDocumentNamedFromGrid(targetDocumentName) else {
+                    alertTitle = "File Not Found"
+                    renameAlertMessage = "Couldn't find \(targetDocumentName.lowercased())."
+                    return
+                }
+                continue
+            }
+
+            if targetWidgetDescriptorForSendText(trimmedActionToken) != nil {
+                continue
+            }
+
+            guard sendBluetoothCommandToken(
+                trimmedActionToken,
+                sourceEntry: sourceEntry,
+                respectsBluetoothMode: respectsBluetoothMode,
+                didLogBluetoothPress: &didLogBluetoothPress
+            ) else {
+                return
+            }
+        }
+    }
+
+    private func sendBluetoothCommandToken(
+        _ actionToken: String,
+        sourceEntry: FunctionKeyEntry?,
+        respectsBluetoothMode: Bool,
+        didLogBluetoothPress: inout Bool
+    ) -> Bool {
+        guard !respectsBluetoothMode || mainGridButtonMode.sendsBluetooth else {
+            return true
+        }
+
+        let bluetoothSendText = normalizedBluetoothSendText(actionToken)
+        guard !bluetoothSendText.isEmpty else {
+            return true
+        }
+
+        guard ble.isConnected else {
+            alertTitle = "Bluetooth not connected"
+            renameAlertMessage = "Bluetooth needs to be connected\nin order to send data to the ESP32."
+            return false
+        }
+
+        if let sourceEntry, !didLogBluetoothPress {
+            logMainButtonPress(sourceEntry)
+            didLogBluetoothPress = true
+        }
+
+        guard isBluetoothSendableText(bluetoothSendText) else {
+            showBluetoothUnsupportedTextBlockedPopup()
+            return false
+        }
+
+        ble.sendLine(bluetoothSendText)
+        return true
     }
 
     func speakMainGridEntry(_ entry: FunctionKeyEntry) {
@@ -456,6 +606,9 @@ extension MainScreen {
         guard !loweredSendText.hasPrefix("spk ") else {
             return nil
         }
+        guard !isWaitCommandText(loweredSendText) else {
+            return nil
+        }
         guard !isShortcutCommandText(loweredSendText) else {
             return nil
         }
@@ -643,6 +796,7 @@ extension MainScreen {
         guard !loweredSendText.hasPrefix("amb "),
               !loweredSendText.hasPrefix("ambient "),
               !loweredSendText.hasPrefix("cb "),
+              !isWaitCommandText(loweredSendText),
               !isShortcutCommandText(loweredSendText),
               !isBareWidgetCommandText(loweredSendText) else {
             return nil
@@ -1062,6 +1216,26 @@ extension MainScreen {
             loweredText.hasPrefix("sc ") ||
             loweredText == "shortcut" ||
             loweredText.hasPrefix("shortcut ")
+    }
+
+    private func waitDurationForSendText(_ sendText: String) -> TimeInterval? {
+        let trimmedSendText = sendText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let parts = trimmedSendText.split(maxSplits: 1, whereSeparator: { $0.isWhitespace })
+        guard parts.count == 2,
+              parts[0].lowercased() == "wait" else {
+            return nil
+        }
+
+        let durationText = String(parts[1]).trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let seconds = Double(durationText), seconds.isFinite else {
+            return nil
+        }
+
+        return max(seconds, 0)
+    }
+
+    func isWaitCommandText(_ loweredText: String) -> Bool {
+        loweredText == "wait" || loweredText.hasPrefix("wait ")
     }
 
     private func timerCompletion(from text: String) -> MainGridTimerCompletion? {
