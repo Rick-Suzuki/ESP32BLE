@@ -1360,12 +1360,47 @@ extension MainScreen {
             return " "
         }
 
+        if let outputCommand = normalizedNumericBluetoothCommand(
+            from: trimmedSendText,
+            command: "out",
+            expectedArgumentCount: 2
+        ) {
+            return outputCommand
+        }
+
+        if let pwmCommand = normalizedNumericBluetoothCommand(
+            from: trimmedSendText,
+            command: "pwm",
+            expectedArgumentCount: 3
+        ) {
+            return pwmCommand
+        }
+
         guard loweredSendText.first == "f",
               loweredSendText.dropFirst().allSatisfy({ $0.isNumber }) else {
             return sendText
         }
 
         return loweredSendText
+    }
+
+    private func normalizedNumericBluetoothCommand(
+        from sendText: String,
+        command: String,
+        expectedArgumentCount: Int
+    ) -> String? {
+        let parts = sendText.split(whereSeparator: { $0.isWhitespace })
+        guard parts.count == expectedArgumentCount + 1,
+              parts[0].lowercased() == command else {
+            return nil
+        }
+
+        let arguments = parts.dropFirst().map(String.init)
+        guard arguments.allSatisfy({ Int($0) != nil }) else {
+            return nil
+        }
+
+        return ([command] + arguments).joined(separator: ":")
     }
 
     func isBluetoothSendableText(_ sendText: String) -> Bool {
