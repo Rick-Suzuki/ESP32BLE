@@ -79,6 +79,7 @@ struct MainScreen: View {
     @AppStorage("mainGridEditClipboardText") var mainGridEditClipboardText = ""
     @FocusState var isDocumentNameFieldFocused: Bool
     @FocusState var isSlotEditorFocused: Bool
+    @FocusState private var isMainScreenKeyboardFocused: Bool
     let functionKeys: [FunctionKeyEntry]
     let documentFiles: [URL]
     let selectedDocumentName: String
@@ -115,6 +116,11 @@ struct MainScreen: View {
 
     var body: some View {
         mainScreenContent
+            .focusable()
+            .focused($isMainScreenKeyboardFocused)
+            .onKeyPress(keys: [.upArrow, .downArrow, .leftArrow, .rightArrow], phases: [.down, .repeat]) { keyPress in
+                handleExternalArrowKeyPress(keyPress.key)
+            }
             .task(id: isEditingDocumentName) {
                 guard isEditingDocumentName else { return }
                 isDocumentNameFieldFocused = true
@@ -122,6 +128,7 @@ struct MainScreen: View {
             .onAppear {
                 restorePersistedMainScreenModes()
                 reloadSelectedDocumentIfAvailable()
+                refreshMainScreenKeyboardFocus()
             }
             .onChange(of: selectedDocumentDisplayName) {
                 handleSelectedDocumentDisplayNameChange()
@@ -144,6 +151,9 @@ struct MainScreen: View {
             .onChange(of: isSettingsScreenPresented) {
                 guard !isSettingsScreenPresented else { return }
                 reloadSelectedDocumentIfAvailable()
+            }
+            .onChange(of: areExternalKeyboardCommandsDisabled) {
+                refreshMainScreenKeyboardFocus()
             }
             .onDisappear {
                 handleMainScreenDisappear()
@@ -230,6 +240,9 @@ struct MainScreen: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         }
         .padding(.horizontal, 2)
+        .overlay(alignment: .topLeading) {
+            externalKeyboardShortcutLayer
+        }
         .navigationTitle("")
         .toolbarTitleDisplayMode(.inline)
         .compatibleNavigationBarVisibility(.visible)
@@ -245,40 +258,14 @@ struct MainScreen: View {
                 isEditingDocumentName: $isEditingDocumentName,
                 documentNameDraft: $documentNameDraft,
                 selectedDocumentDisplayName: selectedDocumentDisplayName,
-                isHomeDocumentSelected: selectedDocumentName.caseInsensitiveCompare("home.txt") == .orderedSame,
+                isHomeDocumentSelected: isHomeDocumentSelected,
                 isDocumentNameFieldFocused: $isDocumentNameFieldFocused,
                 openKeyboardScreen: openKeyboardScreen,
-                openHomeDocument: {
-                    if mainGridButtonMode == .speechActive {
-                        speakMainGridText("home")
-                    }
-                    _ = selectDocumentNamedFromGrid("home.txt")
-                },
+                openHomeDocument: openHomeDocumentFromMainScreenControl,
                 canGoBackToPreviousDocument: canGoBackToPreviousDocument,
-                goBackToPreviousDocument: {
-                    if mainGridButtonMode == .speechActive,
-                       let previousDocumentDisplayName,
-                       !previousDocumentDisplayName.isEmpty {
-                        speakMainGridText(previousDocumentDisplayName)
-                    }
-                    goBackToPreviousDocument()
-                },
-                selectPreviousDocument: {
-                    if mainGridButtonMode == .speechActive,
-                       let adjacentPreviousDocumentDisplayName,
-                       !adjacentPreviousDocumentDisplayName.isEmpty {
-                        speakMainGridText(adjacentPreviousDocumentDisplayName)
-                    }
-                    selectPreviousDocument()
-                },
-                selectNextDocument: {
-                    if mainGridButtonMode == .speechActive,
-                       let adjacentNextDocumentDisplayName,
-                       !adjacentNextDocumentDisplayName.isEmpty {
-                        speakMainGridText(adjacentNextDocumentDisplayName)
-                    }
-                    selectNextDocument()
-                },
+                goBackToPreviousDocument: goBackToPreviousDocumentFromMainScreenControl,
+                selectPreviousDocument: selectPreviousDocumentFromMainScreenControl,
+                selectNextDocument: selectNextDocumentFromMainScreenControl,
                 toggleGridEditMode: { isGridEditModeEnabled.toggle() },
                 commitDocumentRename: commitDocumentRename,
                 openSettings: AnyView(
@@ -352,6 +339,158 @@ struct MainScreen: View {
             }
             .clipShape(.rect(cornerRadius: 23))
             .contentShape(.rect)
+    }
+	//
+	//----------------------------------------
+	// MARK: - BM:😎 EXT KEYBOARD
+	//
+	
+    private var externalKeyboardShortcutLayer: some View {
+        ZStack {
+            Group {
+                externalKeyboardShortcutButton("f", isEnabled: boxFontSize < maximumBoxFontSize) {
+                    increaseBoxFontSize()
+                }
+                externalKeyboardShortcutButton("d", isEnabled: boxFontSize > minimumBoxFontSize) {
+                    decreaseBoxFontSize()
+                }
+                externalKeyboardShortcutButton("r") {
+                    isSpkRecEnabled.toggle()
+                }
+                externalKeyboardShortcutButton("h", isEnabled: !isHomeDocumentSelected) {
+                    openHomeDocumentFromMainScreenControl()
+                }
+                externalKeyboardShortcutButton("b", isEnabled: canGoBackToPreviousDocument) {
+                    goBackToPreviousDocumentFromMainScreenControl()
+                }
+                externalKeyboardShortcutButton("m") {
+                    advanceDisplayMode()
+                }
+            }
+
+            Group {
+                externalKeyboardShortcutButton("n") {
+                    cycleMainGridButtonMode()
+                }
+                externalKeyboardShortcutButton(",", isEnabled: currentFileNumber > 1) {
+                    selectPreviousDocumentFromMainScreenControl()
+                }
+                externalKeyboardShortcutButton(".", isEnabled: currentFileNumber < totalFileCount) {
+                    selectNextDocumentFromMainScreenControl()
+                }
+            }
+        }
+        .frame(width: 1, height: 1)
+        .clipped()
+        .accessibilityHidden(true)
+    }
+
+    private func externalKeyboardShortcutButton(
+        _ key: KeyEquivalent,
+        isEnabled: Bool = true,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button {
+            runExternalKeyboardCommand(isEnabled: isEnabled, action: action)
+        } label: {
+            Color.clear
+                .frame(width: 1, height: 1)
+        }
+        .buttonStyle(.plain)
+        .keyboardShortcut(key, modifiers: [])
+        .disabled(areExternalKeyboardCommandsDisabled || !isEnabled)
+        .accessibilityHidden(true)
+    }
+
+    private func runExternalKeyboardCommand(isEnabled: Bool = true, action: () -> Void) {
+        guard isEnabled, !areExternalKeyboardCommandsDisabled else {
+            return
+        }
+
+        ButtonClickFeedback.playIfEnabled()
+        action()
+    }
+
+    private func refreshMainScreenKeyboardFocus() {
+        // Letter shortcuts use hidden Buttons, but arrow keys need a focused SwiftUI view.
+        // Drop focus while text editors, previews, or settings are active so arrows keep their normal editor behavior.
+        isMainScreenKeyboardFocused = !areExternalKeyboardCommandsDisabled
+    }
+
+    private func handleExternalArrowKeyPress(_ key: KeyEquivalent) -> KeyPress.Result {
+        guard !areExternalKeyboardCommandsDisabled else {
+            return .ignored
+        }
+
+        switch key {
+        case .downArrow:
+            runExternalKeyboardCommand(isEnabled: visibleGridDimensions.rows < maxGridDimension) {
+                increaseGridRows()
+            }
+        case .upArrow:
+            runExternalKeyboardCommand(isEnabled: visibleGridDimensions.rows > 1) {
+                decreaseGridRows()
+            }
+        case .leftArrow:
+            runExternalKeyboardCommand(isEnabled: visibleGridDimensions.columns > 1) {
+                decreaseGridColumns()
+            }
+        case .rightArrow:
+            runExternalKeyboardCommand(isEnabled: visibleGridDimensions.columns < maxGridDimension) {
+                increaseGridColumns()
+            }
+        default:
+            return .ignored
+        }
+
+        return .handled
+    }
+
+    private var areExternalKeyboardCommandsDisabled: Bool {
+        isSettingsScreenPresented ||
+        presentedPreviewFile != nil ||
+        isEditingDocumentName ||
+        isDocumentNameFieldFocused ||
+        isSlotEditorFocused ||
+        editingSlotIndex != nil
+    }
+
+    private var isHomeDocumentSelected: Bool {
+        selectedDocumentName.caseInsensitiveCompare("home.txt") == .orderedSame
+    }
+
+    private func openHomeDocumentFromMainScreenControl() {
+        if mainGridButtonMode == .speechActive {
+            speakMainGridText("home")
+        }
+        _ = selectDocumentNamedFromGrid("home.txt")
+    }
+
+    private func goBackToPreviousDocumentFromMainScreenControl() {
+        if mainGridButtonMode == .speechActive,
+           let previousDocumentDisplayName,
+           !previousDocumentDisplayName.isEmpty {
+            speakMainGridText(previousDocumentDisplayName)
+        }
+        goBackToPreviousDocument()
+    }
+
+    private func selectPreviousDocumentFromMainScreenControl() {
+        if mainGridButtonMode == .speechActive,
+           let adjacentPreviousDocumentDisplayName,
+           !adjacentPreviousDocumentDisplayName.isEmpty {
+            speakMainGridText(adjacentPreviousDocumentDisplayName)
+        }
+        selectPreviousDocument()
+    }
+
+    private func selectNextDocumentFromMainScreenControl() {
+        if mainGridButtonMode == .speechActive,
+           let adjacentNextDocumentDisplayName,
+           !adjacentNextDocumentDisplayName.isEmpty {
+            speakMainGridText(adjacentNextDocumentDisplayName)
+        }
+        selectNextDocument()
     }
 
     private func displayModeButtonSection(availableWidth: CGFloat) -> some View {

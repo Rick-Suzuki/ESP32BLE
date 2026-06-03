@@ -159,8 +159,10 @@ private struct RepeatingToolbarButton<Label: View>: View {
     }
 }
 
+//
+//----------------------------------------
 // MARK: - BM:🟩 btm toolbar
-
+//
 struct MainScreenBottomBar: View {
     private let inactiveButtonBackgroundColor = Color(red: 0.22, green: 0.22, blue: 0.24)
     private let inactiveButtonBorderColor = Color(red: 0.30, green: 0.30, blue: 0.32)
@@ -241,7 +243,10 @@ struct MainScreenBottomBar: View {
         let bottomToolbarMinimumScaleFactor: CGFloat = isPad ? 0.7 : 1
 
         return HStack(spacing: isCompact ? 8 : 12) {
+			//
+			//----------------------------------------
 			// columns
+			//
             HStack(spacing: isCompact ? 8 : 12) {
                 singleStepTriangle(
                     rotationDegrees: -90,
@@ -262,10 +267,13 @@ struct MainScreenBottomBar: View {
                     action: onIncreaseColumns
                 )
             }
-
+			//
+			//----------------------------------------
+			// rows
+			//
 			HStack(spacing: isCompact ? 8 : 12) {
 				singleStepTriangle(
-					rotationDegrees: 180,
+					rotationDegrees: 0,
 					foreground: rowControlColor,
 					isEnabled: visibleGridDimensions.rows > 1,
 					action: onDecreaseRows
@@ -277,7 +285,7 @@ struct MainScreenBottomBar: View {
 					.frame(minWidth: isCompact ? 28 : 32)
 				
 				singleStepTriangle(
-					rotationDegrees: 0,
+					rotationDegrees: 180,
 					foreground: rowControlColor,
 					isEnabled: visibleGridDimensions.rows < maxGridDimension,
 					action: onIncreaseRows
