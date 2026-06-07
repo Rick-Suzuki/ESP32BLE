@@ -113,6 +113,7 @@ struct SettingsScreen: View {
     @State private var soundPreviewPlayer: AVAudioPlayer?
     @State private var loadedDocumentName = ""
     @State private var savedDocumentEditorText = ""
+    @AppStorage("settingsBluetoothMonitorMode") private var isBluetoothMonitorMode = false
     @State private var isEditingDocumentName = false
     @State private var documentNameDraft = ""
     @State private var renameAlertMessage: String?
@@ -435,14 +436,19 @@ struct SettingsScreen: View {
         return min(max(safeWidth * widthRatio, 140), maximumWidth)
     }
 
+    @ViewBuilder
     private var editableDocumentSection: some View {
-        SettingsEditorSectionView(
-            text: $documentEditorText,
-            fontSize: $documentEditorFontSize,
-            isFocused: $isDocumentEditorFocused,
-            savedText: savedDocumentEditorText,
-            onUndo: { documentEditorText = savedDocumentEditorText }
-        )
+        if isBluetoothMonitorMode {
+            SettingsBluetoothMonitorView(monitorText: ble.bluetoothMonitorText)
+        } else {
+            SettingsEditorSectionView(
+                text: $documentEditorText,
+                fontSize: $documentEditorFontSize,
+                isFocused: $isDocumentEditorFocused,
+                savedText: savedDocumentEditorText,
+                onUndo: { documentEditorText = savedDocumentEditorText }
+            )
+        }
     }
 
     @ViewBuilder
@@ -587,6 +593,7 @@ struct SettingsScreen: View {
             ble: ble,
             keepScreenAwake: $keepScreenAwake,
             isButtonClickEnabled: $isButtonClickEnabled,
+            isBluetoothMonitorMode: $isBluetoothMonitorMode,
             opacitySliderValue: $opacitySliderValue,
             imageControlButtons: AnyView(imageControlButtons)
         )

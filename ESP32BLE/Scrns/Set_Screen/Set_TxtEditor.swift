@@ -393,3 +393,35 @@ struct SettingsEditorSectionView: View {
         }
     }
 }
+
+struct SettingsBluetoothMonitorView: View {
+    let monitorText: String
+    // Bluetooth monitor panel font. Edit this value to tune monitor text size.
+    private let monitorFontSize: CGFloat = 16.2
+
+    var body: some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                Text(displayText)
+                    .font(.system(size: monitorFontSize, design: .monospaced))
+                    .foregroundStyle(monitorText.isEmpty ? Color.gray : .green)
+                    .frame(maxWidth: .infinity, alignment: .topLeading)
+                    .padding(8)
+                    .id("monitor-bottom")
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .background(Color.black)
+            .overlay {
+                Rectangle()
+                    .stroke(Color.white, lineWidth: 1)
+            }
+            .onChange(of: monitorText) {
+                proxy.scrollTo("monitor-bottom", anchor: .bottom)
+            }
+        }
+    }
+
+    private var displayText: String {
+        monitorText.isEmpty ? "Bluetooth monitor waiting for ESP32 input..." : monitorText
+    }
+}

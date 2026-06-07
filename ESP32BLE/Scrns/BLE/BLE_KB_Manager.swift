@@ -32,13 +32,14 @@ final class BLEKeyboardManager: NSObject, ObservableObject {
 	// Published state for the SwiftUI interface.
 	//
 	@Published var bluetoothStateText = "Starting Bluetooth..."
-	@Published var connectionText = "Not connected"
-	@Published var isConnected = false
-	@Published var lastMessage = "None"
-	
-	@Published var discoveredDevices: [BLEDiscoveredDevice] = []
-	@Published var selectedPeripheralID: UUID?
-	@Published var connectedDeviceID: String = "Unknown"
+		@Published var connectionText = "Not connected"
+		@Published var isConnected = false
+		@Published var lastMessage = "None"
+		@Published var bluetoothMonitorText = ""
+		
+		@Published var discoveredDevices: [BLEDiscoveredDevice] = []
+		@Published var selectedPeripheralID: UUID?
+		@Published var connectedDeviceID: String = "Unknown"
 	
 	//
 	// BLE central manager.
@@ -54,8 +55,9 @@ final class BLEKeyboardManager: NSObject, ObservableObject {
 	// RX characteristic on the ESP32.
 	// This is the one we WRITE TO.
 	//
-	private var rxCharacteristic: CBCharacteristic?
-	private var idCharacteristic: CBCharacteristic?
+		private var rxCharacteristic: CBCharacteristic?
+		private var txCharacteristic: CBCharacteristic?
+		private var idCharacteristic: CBCharacteristic?
 		private var outgoingLines: [QueuedBLELine] = []
 		private var sendQueueTask: Task<Void, Never>?
 		private let sendInterval: Duration = .milliseconds(25)
@@ -324,9 +326,10 @@ extension BLEKeyboardManager: CBCentralManagerDelegate {
 		
 		if esp32Peripheral?.identifier == peripheral.identifier {
 			connectionText = "Disconnected"
-			isConnected = false
-			rxCharacteristic = nil
-			idCharacteristic = nil
+				isConnected = false
+				rxCharacteristic = nil
+				txCharacteristic = nil
+				idCharacteristic = nil
 			connectedDeviceID = "Unknown"
 			esp32Peripheral = nil
 				outgoingLines.removeAll()
@@ -384,11 +387,16 @@ extension BLEKeyboardManager: CBPeripheralDelegate {
 		guard let characteristics = service.characteristics else { return }
 		
 		for characteristic in characteristics {
-			if peripheral.identifier == esp32Peripheral?.identifier, characteristic.uuid == rxUUID {
-				rxCharacteristic = characteristic
-			}
-			
-			if characteristic.uuid == deviceIDUUID {
+				if peripheral.identifier == esp32Peripheral?.identifier, characteristic.uuid == rxUUID {
+					rxCharacteristic = characteristic
+				}
+
+				if peripheral.identifier == esp32Peripheral?.identifier, characteristic.uuid == txUUID {
+					txCharacteristic = characteristic
+					peripheral.setNotifyValue(true, for: characteristic)
+				}
+				
+				if characteristic.uuid == deviceIDUUID {
 				if peripheral.identifier == esp32Peripheral?.identifier {
 					idCharacteristic = characteristic
 				}
@@ -409,10 +417,10 @@ extension BLEKeyboardManager: CBPeripheralDelegate {
 	) {
 		guard error == nil else { return }
 		
-		if characteristic.uuid == deviceIDUUID,
-		   let data = characteristic.value,
-		   let value = String(data: data, encoding: .utf8)?
-			.trimmingCharacters(in: .whitespacesAndNewlines) {
+			if characteristic.uuid == deviceIDUUID,
+			   let data = characteristic.value,
+			   let value = String(data: data, encoding: .utf8)?
+				.trimmingCharacters(in: .whitespacesAndNewlines) {
 			
 			print("** Device ID read: \(value) for \(peripheral.identifier.uuidString)")
 			
@@ -431,12 +439,36 @@ extension BLEKeyboardManager: CBPeripheralDelegate {
 			if probePeripheralIDs.contains(peripheral.identifier),
 			   peripheral.identifier != esp32Peripheral?.identifier {
 				probePeripheralIDs.remove(peripheral.identifier)
-				centralManager.cancelPeripheralConnection(peripheral)
+					centralManager.cancelPeripheralConnection(peripheral)
+				}
+			}
+
+			if characteristic.uuid == txUUID,
+			   peripheral.identifier == esp32Peripheral?.identifier,
+			   let data = characteristic.value,
+			   let value = String(data: data, encoding: .utf8) {
+				appendBluetoothMonitorMessage(value)
 			}
 		}
-	}
 
-	private func sendStoredKeyboardTiming() {
+		private func appendBluetoothMonitorMessage(_ message: String) {
+			let trimmedMessage = message.trimmingCharacters(in: .newlines)
+			guard !trimmedMessage.isEmpty else {
+				return
+			}
+
+			if bluetoothMonitorText.isEmpty {
+				bluetoothMonitorText = trimmedMessage
+			} else {
+				bluetoothMonitorText += "\n" + trimmedMessage
+			}
+
+			if bluetoothMonitorText.count > 12_000 {
+				bluetoothMonitorText = String(bluetoothMonitorText.suffix(12_000))
+			}
+		}
+	
+		private func sendStoredKeyboardTiming() {
 		let defaults = UserDefaults.standard
 		let onMs = Int(defaults.double(forKey: StoredTimingKey.onMs))
 		let offMs = Int(defaults.double(forKey: StoredTimingKey.offMs))

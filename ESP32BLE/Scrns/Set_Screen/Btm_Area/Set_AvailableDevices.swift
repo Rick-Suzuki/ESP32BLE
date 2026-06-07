@@ -4,6 +4,7 @@ struct SettingsAvailableDevicesPanel: View {
     @ObservedObject var ble: BLEKeyboardManager
     @Binding var keepScreenAwake: Bool
     @Binding var isButtonClickEnabled: Bool
+    @Binding var isBluetoothMonitorMode: Bool
     @Binding var opacitySliderValue: Double
     let imageControlButtons: AnyView
 
@@ -78,12 +79,21 @@ struct SettingsAvailableDevicesPanel: View {
             VStack(spacing: 12) {
                 imageControlButtons
                 settingsPlaceholderSlider(title: "opacity: 0.5", value: $opacitySliderValue)
-
-                HStack(spacing: 18) {
-                    sleepWakeButton
-                    buttonClickToggleButton
-                }
+				
+					HStack(spacing: 18) {
+						VStack(spacing:10) {
+							sleepWakeButton
+							bluetoothMonitorToggleButton
+						}
+						VStack(spacing:10) {
+							buttonClickToggleButton
+							spareButtonPlaceholder
+						}
+						.frame(maxWidth: .infinity, alignment: .leading)
+					}
                 .frame(maxWidth: .infinity, alignment: .leading)
+				
+
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .fixedSize(horizontal: false, vertical: true)
@@ -107,6 +117,29 @@ struct SettingsAvailableDevicesPanel: View {
         .background(sleepWakeButtonBackgroundColor)
         .clipShape(.rect(cornerRadius: 18))
         .disabled(!ble.isConnected)
+    }
+
+    private var bluetoothMonitorToggleButton: some View {
+		Button(isBluetoothMonitorMode ? "mon" : "edit") {
+            ButtonClickFeedback.playIfEnabled()
+            isBluetoothMonitorMode.toggle()
+        }
+        .buttonStyle(.plain)
+        .font(.headline)
+        .foregroundStyle(.white)
+        .lineLimit(1)
+        .minimumScaleFactor(0.7)
+        .padding(.horizontal, 16)
+        .frame(width: settingsActionButtonWidth, height: settingsActionButtonHeight-10)
+        .background(isBluetoothMonitorMode ? Color.green.opacity(0.5) : Color.blue.opacity(0.5))
+        .clipShape(.rect(cornerRadius: 18))
+        .accessibilityLabel(isBluetoothMonitorMode ? "Show settings editor" : "Show Bluetooth monitor")
+    }
+
+    private var spareButtonPlaceholder: some View {
+        Color.clear
+            .frame(width: settingsActionButtonWidth, height: settingsActionButtonHeight-10)
+            .accessibilityHidden(true)
     }
 
     private func settingsDeviceName(for device: BLEDiscoveredDevice) -> String {
