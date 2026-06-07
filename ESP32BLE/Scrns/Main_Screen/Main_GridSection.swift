@@ -118,6 +118,7 @@ struct MainScreenGridSection: View {
     @State private var pendingTapIndex: Int?
     @State private var pendingTapCount = 0
     @State private var pendingTapTask: Task<Void, Never>?
+    @State private var longPressedEditIndex: Int?
 
     var body: some View {
         GeometryReader { geometry in
@@ -174,6 +175,7 @@ struct MainScreenGridSection: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onDisappear {
             pendingTapTask?.cancel()
+            longPressedEditIndex = nil
         }
     }
 
@@ -346,8 +348,14 @@ struct MainScreenGridSection: View {
             buttonLabel(entry, index, buttonHeight)
                 .contentShape(Rectangle())
                 .simultaneousGesture(dragGesture(entry, index, gridDimensions))
+                .simultaneousGesture(slotEditorLongPressGesture(index: index))
         } else {
             Button {
+                guard longPressedEditIndex != index else {
+                    longPressedEditIndex = nil
+                    return
+                }
+
                 guard !isGridEditModeEnabled else {
                     return
                 }
@@ -380,15 +388,16 @@ struct MainScreenGridSection: View {
                     }
             )
             .simultaneousGesture(
-                LongPressGesture(minimumDuration: 0.4)
-                    .onEnded { _ in
-                        guard isGridEditModeEnabled else {
-                            return
-                        }
-
-                        onBeginSlotEditing(index)
-                    }
+                slotEditorLongPressGesture(index: index)
             )
         }
+    }
+
+    private func slotEditorLongPressGesture(index: Int) -> some Gesture {
+        LongPressGesture(minimumDuration: 0.4)
+            .onEnded { _ in
+                longPressedEditIndex = index
+                onBeginSlotEditing(index)
+            }
     }
 }

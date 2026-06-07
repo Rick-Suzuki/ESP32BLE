@@ -226,7 +226,7 @@ struct MainScreen: View {
                         .allowsHitTesting(false)
                 }
 
-                if isGridEditModeEnabled, editingSlotIndex != nil {
+                if editingSlotIndex != nil {
                     slotEditorSection
                         .offset(y: topContentInset)
                 }
