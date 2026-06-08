@@ -224,6 +224,7 @@ struct ContentView: View {
     @State private var didPresentInitialSettingsScreen = false
     @State private var hasLoggedDeviceType = false
     @State private var lastLoggedOrientationState: Bool?
+    @AppStorage("settingsStatusBarVisible") private var isStatusBarVisible = true
 
     var body: some View {
         NavigationStack(path: $rootNavigationPath) {
@@ -322,6 +323,8 @@ struct ContentView: View {
                 }
             }
         }
+        .id(isStatusBarVisible)
+        .statusBarHidden(!isStatusBarVisible)
         .onAppear {
             presentInitialSettingsScreenIfNeeded()
         }

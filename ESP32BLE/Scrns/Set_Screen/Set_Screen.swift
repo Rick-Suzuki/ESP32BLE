@@ -145,6 +145,7 @@ struct SettingsScreen: View {
     @AppStorage("selectedPDFPath") var selectedPDFPath = ""
     @AppStorage("documentGridDimensionsData") private var documentGridDimensionsData = ""
     @AppStorage(ButtonClickFeedback.preferenceKey) private var isButtonClickEnabled = true
+    @AppStorage("settingsStatusBarVisible") private var isStatusBarVisible = true
     @FocusState var focusedField: SettingsFocusField?
     @FocusState private var isDocumentNameFieldFocused: Bool
 
@@ -193,6 +194,10 @@ struct SettingsScreen: View {
                 }
             }
         }
+			//
+			//----------------------------------------
+			// top toolbar
+		//
         .navigationTitle("")
         .toolbar {
             if isPad {
@@ -594,6 +599,7 @@ struct SettingsScreen: View {
             keepScreenAwake: $keepScreenAwake,
             isButtonClickEnabled: $isButtonClickEnabled,
             isBluetoothMonitorMode: $isBluetoothMonitorMode,
+            isStatusBarVisible: $isStatusBarVisible,
             opacitySliderValue: $opacitySliderValue,
             imageControlButtons: AnyView(imageControlButtons)
         )

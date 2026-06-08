@@ -5,6 +5,7 @@ struct SettingsBottomControlsSection: View {
     @Binding var keepScreenAwake: Bool
     @Binding var isButtonClickEnabled: Bool
     @Binding var isBluetoothMonitorMode: Bool
+    @Binding var isStatusBarVisible: Bool
     @Binding var opacitySliderValue: Double
     let imageControlButtons: AnyView
 
@@ -14,6 +15,7 @@ struct SettingsBottomControlsSection: View {
             keepScreenAwake: $keepScreenAwake,
             isButtonClickEnabled: $isButtonClickEnabled,
             isBluetoothMonitorMode: $isBluetoothMonitorMode,
+            isStatusBarVisible: $isStatusBarVisible,
             opacitySliderValue: $opacitySliderValue,
             imageControlButtons: imageControlButtons
         )

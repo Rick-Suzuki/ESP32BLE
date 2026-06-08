@@ -5,6 +5,7 @@ struct SettingsAvailableDevicesPanel: View {
     @Binding var keepScreenAwake: Bool
     @Binding var isButtonClickEnabled: Bool
     @Binding var isBluetoothMonitorMode: Bool
+    @Binding var isStatusBarVisible: Bool
     @Binding var opacitySliderValue: Double
     let imageControlButtons: AnyView
 
@@ -118,7 +119,10 @@ struct SettingsAvailableDevicesPanel: View {
         .clipShape(.rect(cornerRadius: 18))
         .disabled(!ble.isConnected)
     }
-
+	//
+	//----------------------------------------
+	// monitor/editor btn
+	//
     private var bluetoothMonitorToggleButton: some View {
 		Button(isBluetoothMonitorMode ? "mon" : "edit") {
             ButtonClickFeedback.playIfEnabled()
@@ -137,9 +141,20 @@ struct SettingsAvailableDevicesPanel: View {
     }
 
     private var spareButtonPlaceholder: some View {
-        Color.clear
-            .frame(width: settingsActionButtonWidth, height: settingsActionButtonHeight-10)
-            .accessibilityHidden(true)
+        Button("stat") {
+            ButtonClickFeedback.playIfEnabled()
+            isStatusBarVisible.toggle()
+        }
+        .buttonStyle(.plain)
+        .font(.headline)
+        .foregroundStyle(.white)
+        .lineLimit(1)
+        .minimumScaleFactor(0.7)
+        .padding(.horizontal, 16)
+        .frame(width: settingsActionButtonWidth, height: settingsActionButtonHeight-10)
+        .background(isStatusBarVisible ? Color.green.opacity(0.5) : Color.gray.opacity(0.5))
+        .clipShape(.rect(cornerRadius: 18))
+        .accessibilityLabel(isStatusBarVisible ? "Hide status bar" : "Show status bar")
     }
 
     private func settingsDeviceName(for device: BLEDiscoveredDevice) -> String {
