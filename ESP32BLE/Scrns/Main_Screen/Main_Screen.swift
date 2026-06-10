@@ -74,6 +74,8 @@ struct MainScreen: View {
     @AppStorage("selectedTextToSpeechVoiceIdentifier") var selectedTextToSpeechVoiceIdentifier = ""
     @AppStorage("textToSpeechRate") var textToSpeechRate = Double(AVSpeechUtteranceDefaultSpeechRate)
     @AppStorage("selectedBackgroundImageIndex") var selectedBackgroundImageIndex = 0
+    @AppStorage("selectedBackgroundImageName") var selectedBackgroundImageName = ""
+    @AppStorage("selectedBackgroundImagePath") var selectedBackgroundImagePath = ""
     @AppStorage("backgroundImageOpacity") var backgroundImageOpacity = 0.5
     @AppStorage("mainGridBackgroundOpacity") var mainGridBackgroundOpacity = 1.0
     @AppStorage("mainGridEditClipboardText") var mainGridEditClipboardText = ""
@@ -254,6 +256,8 @@ struct MainScreen: View {
                 editingSlotIndex: editingSlotIndex,
                 currentFileNumber: currentFileNumber,
                 totalFileCount: totalFileCount,
+                currentBackgroundImageNumber: selectedBackgroundImageIndex,
+                totalBackgroundImageCount: availableBackgroundImageURLs.count,
                 gridBackgroundOpacity: $mainGridBackgroundOpacity,
                 isEditingDocumentName: $isEditingDocumentName,
                 documentNameDraft: $documentNameDraft,
@@ -266,6 +270,8 @@ struct MainScreen: View {
                 goBackToPreviousDocument: goBackToPreviousDocumentFromMainScreenControl,
                 selectPreviousDocument: selectPreviousDocumentFromMainScreenControl,
                 selectNextDocument: selectNextDocumentFromMainScreenControl,
+                selectPreviousBackgroundImage: selectPreviousBackgroundImage,
+                selectNextBackgroundImage: selectNextBackgroundImage,
                 toggleGridEditMode: { isGridEditModeEnabled.toggle() },
                 commitDocumentRename: commitDocumentRename,
                 openSettings: AnyView(
@@ -491,6 +497,35 @@ struct MainScreen: View {
             speakMainGridText(adjacentNextDocumentDisplayName)
         }
         selectNextDocument()
+    }
+
+    private func selectPreviousBackgroundImage() {
+        let imageURLs = availableBackgroundImageURLs
+        guard selectedBackgroundImageIndex > 1,
+              imageURLs.indices.contains(selectedBackgroundImageIndex - 2) else {
+            return
+        }
+
+        persistMainBackgroundImage(imageURLs[selectedBackgroundImageIndex - 2])
+    }
+
+    private func selectNextBackgroundImage() {
+        let imageURLs = availableBackgroundImageURLs
+        let nextIndex = max(selectedBackgroundImageIndex, 0)
+        guard nextIndex < imageURLs.count,
+              imageURLs.indices.contains(nextIndex) else {
+            return
+        }
+
+        persistMainBackgroundImage(imageURLs[nextIndex])
+    }
+
+    private func persistMainBackgroundImage(_ imageURL: URL) {
+        selectedBackgroundImagePath = imageURL.path
+        selectedBackgroundImageName = imageURL.lastPathComponent
+        if let imageIndex = availableBackgroundImageURLs.firstIndex(where: { $0.path == imageURL.path }) {
+            selectedBackgroundImageIndex = imageIndex + 1
+        }
     }
 
     private func displayModeButtonSection(availableWidth: CGFloat) -> some View {

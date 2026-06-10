@@ -10,6 +10,8 @@ struct MainScreenToolbarContent: ToolbarContent {
     let editingSlotIndex: Int?
     let currentFileNumber: Int
     let totalFileCount: Int
+    let currentBackgroundImageNumber: Int
+    let totalBackgroundImageCount: Int
     @Binding var gridBackgroundOpacity: Double
     @Binding var isEditingDocumentName: Bool
     @Binding var documentNameDraft: String
@@ -22,6 +24,8 @@ struct MainScreenToolbarContent: ToolbarContent {
     let goBackToPreviousDocument: () -> Void
     let selectPreviousDocument: () -> Void
     let selectNextDocument: () -> Void
+    let selectPreviousBackgroundImage: () -> Void
+    let selectNextBackgroundImage: () -> Void
     let toggleGridEditMode: () -> Void
     let commitDocumentRename: () -> Void
     let openSettings: AnyView
@@ -31,7 +35,7 @@ struct MainScreenToolbarContent: ToolbarContent {
 		//----------------------------------------
 		//
         ToolbarItem(placement: .principal) {
-            HStack(spacing: 20) {
+            HStack(spacing: 10) {
                 Button {
                     ButtonClickFeedback.playIfEnabled()
 					openHomeDocument()
@@ -102,9 +106,46 @@ struct MainScreenToolbarContent: ToolbarContent {
                 }
                 .frame(maxWidth: .infinity)
 
+				Button {
+					ButtonClickFeedback.playIfEnabled()
+					selectNextDocument()
+				} label: {
+					Image(systemName: "triangle.fill")
+						.font(.system(size: 20))
+						.rotationEffect(.degrees(90))
+						.frame(width: 44, height: 44)
+						.contentShape(.rect)
+				}
+				.buttonStyle(.plain)
+				.foregroundStyle(toolbarPrincipalForegroundColor)
+				.disabled(currentFileNumber >= totalFileCount)
+				//
+				//----------------------------------------
+				// select images
+				//
+				Button {
+					ButtonClickFeedback.playIfEnabled()
+					selectPreviousBackgroundImage()
+				} label: {
+					Image(systemName: "triangle.fill")
+						.font(.system(size: 20))
+						.rotationEffect(.degrees(-90))
+						.frame(width: 44, height: 44)
+						.contentShape(.rect)
+				}
+				.buttonStyle(.plain)
+				.foregroundStyle(toolbarPrincipalForegroundColor)
+				.disabled(currentBackgroundImageNumber <= 1)
+				
+				// show img number
+				Text("\(currentBackgroundImageNumber)")
+					.font(.headline.weight(.semibold))
+					.foregroundStyle(toolbarPrincipalForegroundColor)
+					.frame(width: 33)
+				
                 Button {
                     ButtonClickFeedback.playIfEnabled()
-                    selectNextDocument()
+					selectNextBackgroundImage()
                 } label: {
                     Image(systemName: "triangle.fill")
                         .font(.system(size: 20))
@@ -114,7 +155,7 @@ struct MainScreenToolbarContent: ToolbarContent {
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(toolbarPrincipalForegroundColor)
-                .disabled(currentFileNumber >= totalFileCount)
+                .disabled(currentBackgroundImageNumber >= totalBackgroundImageCount)
             }
         }
 		
