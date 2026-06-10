@@ -82,7 +82,8 @@ extension MainScreen {
         if let firstComponent = rightComponents.first,
            firstComponent.count == 1,
            let manualColorCode = firstComponent.lowercased().first,
-           "lwbgorpucya12345".contains(manualColorCode) {
+		   // MARK: - BM:🟪 color keycodes-available
+           "0123456789abcde".contains(manualColorCode) {
             let remainingText = rightComponents
                 .dropFirst()
                 .joined(separator: ":")
@@ -2249,7 +2250,7 @@ struct MainScreenButtonLabelView: View {
         if let firstComponent = components.first?.trimmingCharacters(in: .whitespacesAndNewlines),
            firstComponent.count == 1,
            let existingCode = firstComponent.lowercased().first,
-           "lwbgorpucya12345".contains(existingCode) {
+           "lwbgortpucya12345".contains(existingCode) {
             return components.dropFirst().joined(separator: ":")
         }
 
@@ -2315,47 +2316,41 @@ struct MainScreenButtonLabelView: View {
         }
     }
 
-	// MARK: - BM:🟩 main scrn btn colors
+	// MARK: - BM:🟪 color keycodes-btn
     private var buttonBackgroundColor: Color {
         guard !isEmptyButtonEntry else {
             return Color.black.opacity(backgroundOpacity)
         }
 
         switch (entry.buttonColorCode ?? "").lowercased() {
-        case "l":
-            return .clear
-        case "w":
-            return Color.brown.opacity(backgroundOpacity)
-        case "b":
-            return Color(red: 0.0, green: 0.2, blue: 0.45).opacity(backgroundOpacity)
-        case "g":
-            return Color(red: 0.05, green: 0.33, blue: 0.18).opacity(backgroundOpacity)
-        case "o":
-            return Color(red: 0.5, green: 0.28, blue: 0.0).opacity(backgroundOpacity)
-        case "r":
-            return Color(red: 0.42, green: 0.12, blue: 0.12).opacity(backgroundOpacity)
-        case "p":
-            return Color(red: 0.82, green: 0.42, blue: 0.58).opacity(backgroundOpacity)
-        case "u":
-            return Color(red: 0.42, green: 0.18, blue: 0.52).opacity(backgroundOpacity)
-        case "c":
-            return Color.cyan.opacity(backgroundOpacity)
-        case "y":
-            return Color(red: 0.55, green: 0.45, blue: 0.08).opacity(backgroundOpacity)
-        case "a":
-            return Color(red: 0.25, green: 0.25, blue: 0.25).opacity(backgroundOpacity)
-        case "1":
-            return Color(red: 0.20, green: 0.22, blue: 0.30).opacity(backgroundOpacity)
-        case "2":
-            return Color(red: 0.14, green: 0.3, blue: 0.25).opacity(backgroundOpacity)
-        case "3":
-            return Color(red: 0.38, green: 0.14, blue: 0.24).opacity(backgroundOpacity)
-        case "4":
-            return Color(red: 0.23, green: 0.26, blue: 0.08).opacity(backgroundOpacity)
-        case "5":
-            return Color(red: 0.14, green: 0.16, blue: 0.38).opacity(backgroundOpacity)
-        default:
-            return Color.black.opacity(backgroundOpacity)
+			
+			case "0":	return .clear
+			
+			case "1": return Color(red: 0.80, green: 0.12, blue: 0.12)	.opacity(backgroundOpacity) // red
+			case "2": return Color(red: 0.05, green: 0.70, blue: 0.18)	.opacity(backgroundOpacity) // green
+			case "3": return Color(red: 0.00, green: 0.20, blue: 1.00)	.opacity(backgroundOpacity) // blue
+		
+			case "4": return Color(red: 0.40, green: 0.12, blue: 0.12)	.opacity(backgroundOpacity) // dred
+			case "5": return Color(red: 0.05, green: 0.30, blue: 0.18)	.opacity(backgroundOpacity) // dgreen
+			case "6": return Color(red: 0.00, green: 0.20, blue: 0.40)	.opacity(backgroundOpacity) // dblue
+			
+			case "7": return Color(red: 0.20, green: 0.12, blue: 0.12)	.opacity(backgroundOpacity) // ddred
+			case "8": return Color(red: 0.00, green: 0.20, blue: 0.00)	.opacity(backgroundOpacity) // ddgreen
+			case "9": return Color(red: 0.00, green: 0.10, blue: 0.26)	.opacity(backgroundOpacity) // ddblue
+
+			case "a": return Color(red: 0.65, green: 0.35, blue: 0.08)	.opacity(backgroundOpacity) // orange
+			case "b": return Color(red: 0.00, green: 0.45, blue: 0.50)	.opacity(backgroundOpacity) // cyan
+			case "c": return Color(red: 0.48, green: 0.16, blue: 0.32)	.opacity(backgroundOpacity) // pink
+			case "d": return Color(red: 0.28, green: 0.28, blue: 0.52)	.opacity(backgroundOpacity) // vilet
+			case "e": return Color(red: 0.32, green: 0.28, blue: 0.18)	.opacity(backgroundOpacity) // plad
+			
+//			case "f": return Color(red: 0.65, green: 0.35, blue: 0.08)	.opacity(backgroundOpacity) // orange
+//			case "g": return Color(red: 0.00, green: 0.45, blue: 0.50)	.opacity(backgroundOpacity) // cyan
+//			case "h": return Color(red: 0.48, green: 0.16, blue: 0.32)	.opacity(backgroundOpacity) // pink
+//			case "i": return Color(red: 0.28, green: 0.28, blue: 0.52)	.opacity(backgroundOpacity) // vilet
+//			case "j": return Color(red: 0.32, green: 0.28, blue: 0.18)	.opacity(backgroundOpacity) // plad
+			
+			default:  return Color.black.opacity(backgroundOpacity)
         }
     }
 

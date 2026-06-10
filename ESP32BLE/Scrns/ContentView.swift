@@ -2061,7 +2061,9 @@ struct ContentView: View {
         if let firstComponent = components.first,
            firstComponent.count == 1,
            let manualColorCode = firstComponent.lowercased().first,
-           "lwbgorpucya12345".contains(manualColorCode) {
+
+			// MARK: - BM:🟪 color keycodes-available
+           "0123456789abcde".contains(manualColorCode) {
             let remainingText = components.dropFirst().joined(separator: ":").trimmingCharacters(in: .whitespacesAndNewlines)
             return (remainingText.isEmpty ? rightText : remainingText, String(manualColorCode))
         }

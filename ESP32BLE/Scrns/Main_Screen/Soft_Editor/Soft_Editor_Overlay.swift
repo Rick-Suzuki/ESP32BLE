@@ -34,7 +34,7 @@ struct MainScreenSlotEditorOverlay: View {
     private let orderedModifierPrefixes = ["ctl:", "op:", "sh:", "cm:"]
     private let actionFieldOnlyInsertions = ["SP:"]
     private let displayModifierPrefixes = ["⌃", "⌥", "⇧", "⌘"]
-    private let supportedColorCodes = "lwbgorpucya12345"
+    private let supportedColorCodes = "lwbgortpucya12345"
 		
 	// MARK: - BM:🟦 SF symbols list
 	
@@ -53,23 +53,34 @@ struct MainScreenSlotEditorOverlay: View {
         "photo", "tray", "sun.max.fill", "link"
     ]
 	
-    // MARK: - BM:🟪 color keycodes
+    // MARK: - BM:🟪 color keycodes-insert
     private let colorKeyCodes: [(code: String?, label: String?, color: Color)] = [
-        ("l", "clr\ncol", Color(white: 0.22)),
-        ("w", nil, Color.brown),
-        ("b", nil, .blue),
-        ("g", nil, .green),
-        ("o", nil, .orange),
-        ("r", nil, .red),
-        ("c", nil, .cyan),
-        ("u", nil, .purple),
-        ("y", nil, .yellow),
-        ("a", nil, Color(red: 0.25, green: 0.25, blue: 0.25)),// was .gray
-        ("1", nil, Color(red: 0.20, green: 0.22, blue: 0.30)),
-        ("2", nil, Color(red: 0.14, green: 0.30, blue: 0.25)),
-        ("3", nil, Color(red: 0.38, green: 0.14, blue: 0.24)),
-        ("4", nil, Color(red: 0.23, green: 0.26, blue: 0.08)),
-        ("5", nil, Color(red: 0.14, green: 0.16, blue: 0.38))
+        
+		("0", "clr\ncol", Color(white: 0.22)),
+		
+		("1", nil, Color(red: 0.80, green: 0.12, blue: 0.12)	),
+		("2", nil, Color(red: 0.05, green: 0.70, blue: 0.18)	),
+		("3", nil, Color(red: 0.00, green: 0.20, blue: 1.00)	),
+		
+		("4", nil, Color(red: 0.40, green: 0.12, blue: 0.12)	),
+		("5", nil, Color(red: 0.05, green: 0.30, blue: 0.18)	),
+		("6", nil, Color(red: 0.00, green: 0.20, blue: 0.40)	),
+		
+		("7", nil, Color(red: 0.20, green: 0.12, blue: 0.12)	),
+		("8", nil, Color(red: 0.00, green: 0.20, blue: 0.00)	),
+		("9", nil, Color(red: 0.00, green: 0.10, blue: 0.26)	),
+
+		("a", nil, Color(red: 0.65, green: 0.35, blue: 0.08)	),
+		("b", nil, Color(red: 0.00, green: 0.45, blue: 0.50)	),
+		("c", nil, Color(red: 0.48, green: 0.16, blue: 0.32)	),
+		("d", nil, Color(red: 0.28, green: 0.28, blue: 0.52)	),
+		("e", nil, Color(red: 0.32, green: 0.28, blue: 0.18)	),
+	
+//		("f", nil, Color(red: 0.65, green: 0.35, blue: 0.08)	),
+//		("g", nil, Color(red: 0.00, green: 0.45, blue: 0.50)	),
+//		("h", nil, Color(red: 0.48, green: 0.16, blue: 0.32)	),
+//		("i", nil, Color(red: 0.28, green: 0.28, blue: 0.52)	),
+//		("j", nil, Color(red: 0.32, green: 0.28, blue: 0.18)	)
     ]
 
     var body: some View {
@@ -516,6 +527,7 @@ struct MainScreenSlotEditorOverlay: View {
         .clipShape(.rect(cornerRadius: 12))
     }
 
+	// MARK: - BM:🟥 color insert btns - soft kb
     private func colorInsertButton(code: String?, label: String?, background: Color) -> some View {
         Button {
             ButtonClickFeedback.playIfEnabled()
@@ -572,7 +584,8 @@ struct MainScreenSlotEditorOverlay: View {
             return AnyView(slotSelectionButton(width: width, systemImage: "arrow.right", action: onSelectNextButton))
         }
 
-        if symbolName == "square.and.arrow.up.on.square.fill" {
+		// MARK: - BM:🟪 cpy/paste btns
+		if symbolName == "square.and.arrow.up.on.square.fill" {
             return AnyView(copySlotButton(width: width))
         }
 
