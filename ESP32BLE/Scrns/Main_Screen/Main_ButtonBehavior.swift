@@ -2326,29 +2326,22 @@ struct MainScreenButtonLabelView: View {
 			
 			case "0":	return .clear
 			
-			case "1": return Color(red: 0.80, green: 0.12, blue: 0.12)	.opacity(backgroundOpacity) // red
-			case "2": return Color(red: 0.05, green: 0.70, blue: 0.18)	.opacity(backgroundOpacity) // green
-			case "3": return Color(red: 0.00, green: 0.20, blue: 1.00)	.opacity(backgroundOpacity) // blue
-		
-			case "4": return Color(red: 0.40, green: 0.12, blue: 0.12)	.opacity(backgroundOpacity) // dred
-			case "5": return Color(red: 0.05, green: 0.30, blue: 0.18)	.opacity(backgroundOpacity) // dgreen
-			case "6": return Color(red: 0.00, green: 0.20, blue: 0.40)	.opacity(backgroundOpacity) // dblue
-			
-			case "7": return Color(red: 0.20, green: 0.12, blue: 0.12)	.opacity(backgroundOpacity) // ddred
-			case "8": return Color(red: 0.00, green: 0.20, blue: 0.00)	.opacity(backgroundOpacity) // ddgreen
-			case "9": return Color(red: 0.00, green: 0.10, blue: 0.26)	.opacity(backgroundOpacity) // ddblue
-
-			case "a": return Color(red: 0.65, green: 0.35, blue: 0.08)	.opacity(backgroundOpacity) // orange
-			case "b": return Color(red: 0.00, green: 0.45, blue: 0.50)	.opacity(backgroundOpacity) // cyan
-			case "c": return Color(red: 0.48, green: 0.16, blue: 0.32)	.opacity(backgroundOpacity) // pink
-			case "d": return Color(red: 0.28, green: 0.28, blue: 0.52)	.opacity(backgroundOpacity) // vilet
-			case "e": return Color(red: 0.32, green: 0.28, blue: 0.18)	.opacity(backgroundOpacity) // plad
-			
-//			case "f": return Color(red: 0.65, green: 0.35, blue: 0.08)	.opacity(backgroundOpacity) // orange
-//			case "g": return Color(red: 0.00, green: 0.45, blue: 0.50)	.opacity(backgroundOpacity) // cyan
-//			case "h": return Color(red: 0.48, green: 0.16, blue: 0.32)	.opacity(backgroundOpacity) // pink
-//			case "i": return Color(red: 0.28, green: 0.28, blue: 0.52)	.opacity(backgroundOpacity) // vilet
-//			case "j": return Color(red: 0.32, green: 0.28, blue: 0.18)	.opacity(backgroundOpacity) // plad
+			case "1": return Color(hex: "FF0000").opacity(backgroundOpacity) // red
+			case "2": return Color(hex: "910000").opacity(backgroundOpacity) // green
+			case "3": return Color(hex: "C97827").opacity(backgroundOpacity) // blue
+			case "4": return Color(hex: "5E3812").opacity(backgroundOpacity) // dred
+				
+			case "5": return Color(hex: "8A8A8A").opacity(backgroundOpacity) // dgreen
+			case "6": return Color(hex: "0000FF").opacity(backgroundOpacity) // dblue
+			case "7": return Color(hex: "171775").opacity(backgroundOpacity) // ddred
+			case "8": return Color(hex: "919100").opacity(backgroundOpacity) // ddgreen
+			case "9": return Color(hex: "595900").opacity(backgroundOpacity) // ddblue
+				
+			case "a": return Color(hex: "424242").opacity(backgroundOpacity) // orange
+			case "b": return Color(hex: "00A600").opacity(backgroundOpacity) // cyan
+			case "c": return Color(hex: "004F00").opacity(backgroundOpacity) // pink
+			case "d": return Color(hex: "D42AD4").opacity(backgroundOpacity) // violet
+			case "e": return Color(hex: "870087").opacity(backgroundOpacity) // plaid
 			
 			default:  return Color.black.opacity(backgroundOpacity)
         }

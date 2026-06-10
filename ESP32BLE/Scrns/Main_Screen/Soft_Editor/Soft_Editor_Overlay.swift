@@ -45,36 +45,34 @@ struct MainScreenSlotEditorOverlay: View {
     private let hiddenEyeSymbolName = "eye.slash"
   
 	private let leftSymbolNames = [
-        "square.and.arrow.up.on.square.fill", "square.and.arrow.down.on.square.fill", "folder", "__visibility_toggle__", "magnifyingglass",
-        "lightbulb.max.fill", "speaker.wave.2", "star", "heart", "bell"
+        "folder", "__visibility_toggle__", "magnifyingglass", "lightbulb.max.fill", "speaker.wave.2",
+        "star", "heart", "bell", "house", "gearshape"
     ]
     private let rightSymbolNames = [
         "__previous_button_selection__", "__next_button_selection__", "paperplane", "doc", "calendar", "camera",
         "photo", "tray", "sun.max.fill", "link"
     ]
 	
-    // MARK: - BM:🟪 color keycodes-insert
+    // MARK: - BM:🟪 color "keycodes-insert"
     private let colorKeyCodes: [(code: String?, label: String?, color: Color)] = [
         
-		("0", "clr\ncol", Color(white: 0.22)),
-		
-		("1", nil, Color(red: 0.80, green: 0.12, blue: 0.12)	),
-		("2", nil, Color(red: 0.05, green: 0.70, blue: 0.18)	),
-		("3", nil, Color(red: 0.00, green: 0.20, blue: 1.00)	),
-		
-		("4", nil, Color(red: 0.40, green: 0.12, blue: 0.12)	),
-		("5", nil, Color(red: 0.05, green: 0.30, blue: 0.18)	),
-		("6", nil, Color(red: 0.00, green: 0.20, blue: 0.40)	),
-		
-		("7", nil, Color(red: 0.20, green: 0.12, blue: 0.12)	),
-		("8", nil, Color(red: 0.00, green: 0.20, blue: 0.00)	),
-		("9", nil, Color(red: 0.00, green: 0.10, blue: 0.26)	),
+		("0", "clr\ncolor", 	Color(white: 0.22)),
+		("1", "high\npriorty",	Color(hex: "FF0000")	),
+		("2", "sample\ntxt",	Color(hex: "910000")	),
+		("3", "open\nfile",		Color(hex: "C97827")	),
+		("4", "folder", 		Color(hex: "5E3812")	),
 
-		("a", nil, Color(red: 0.65, green: 0.35, blue: 0.08)	),
-		("b", nil, Color(red: 0.00, green: 0.45, blue: 0.50)	),
-		("c", nil, Color(red: 0.48, green: 0.16, blue: 0.32)	),
-		("d", nil, Color(red: 0.28, green: 0.28, blue: 0.52)	),
-		("e", nil, Color(red: 0.32, green: 0.28, blue: 0.18)	),
+		("5", "info", 			Color(hex: "8A8A8A")	),
+		("6", "sample\ntxt",	Color(hex: "0000FF")	),
+		("7", "sample\ntxt", 	Color(hex: "171775")	),
+		("8", "sample\ntxt", 	Color(hex: "919100")	),
+		("9", "utility",	 	Color(hex: "595900")	),
+
+		("a", "sample\ntxt", 	Color(hex: "424242")	),
+		("b", "open\napp", 		Color(hex: "00A600")	),
+		("c", "sample\ntxt", 	Color(hex: "004F00")	),
+		("d", "sample\ntxt", 	Color(hex: "D42AD4")	),
+		("e", "sample\ntxt", 	Color(hex: "870087")	),
 	
 //		("f", nil, Color(red: 0.65, green: 0.35, blue: 0.08)	),
 //		("g", nil, Color(red: 0.00, green: 0.45, blue: 0.50)	),
@@ -542,7 +540,7 @@ struct MainScreenSlotEditorOverlay: View {
                 .overlay {
                     if let label {
                         Text(label)
-                            .font(.system(size: 14, weight: .bold))
+                            .font(.system(size: 12, weight: .bold))
                             .multilineTextAlignment(.center)
                             .foregroundStyle(.white)
                     }
