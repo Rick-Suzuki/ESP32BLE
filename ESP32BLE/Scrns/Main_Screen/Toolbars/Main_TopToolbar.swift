@@ -25,6 +25,7 @@ struct MainScreenToolbarContent: ToolbarContent {
     let selectPreviousDocument: () -> Void
     let selectNextDocument: () -> Void
     let selectPreviousBackgroundImage: () -> Void
+    let selectRandomBackgroundImage: () -> Void
     let selectNextBackgroundImage: () -> Void
     let toggleGridEditMode: () -> Void
     let commitDocumentRename: () -> Void
@@ -121,7 +122,7 @@ struct MainScreenToolbarContent: ToolbarContent {
 				.disabled(currentFileNumber >= totalFileCount)
 				//
 				//----------------------------------------
-				// select images
+				// MARK: - BM:🟧 select images
 				//
 				Button {
 					ButtonClickFeedback.playIfEnabled()
@@ -137,11 +138,18 @@ struct MainScreenToolbarContent: ToolbarContent {
 				.foregroundStyle(toolbarPrincipalForegroundColor)
 				.disabled(currentBackgroundImageNumber <= 1)
 				
-				// show img number
-				Text("\(currentBackgroundImageNumber)")
-					.font(.headline.weight(.semibold))
+					Button {
+						ButtonClickFeedback.playIfEnabled()
+						selectRandomBackgroundImage()
+					} label: {
+						Image(systemName: "photo.fill")
+							.font(.system(size: 18, weight: .semibold))
+							.frame(width: 33, height: 44)
+							.contentShape(.rect)
+					}
+					.buttonStyle(.plain)
 					.foregroundStyle(toolbarPrincipalForegroundColor)
-					.frame(width: 33)
+					.disabled(totalBackgroundImageCount == 0)
 				
                 Button {
                     ButtonClickFeedback.playIfEnabled()

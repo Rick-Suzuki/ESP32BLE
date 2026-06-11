@@ -271,6 +271,7 @@ struct MainScreen: View {
                 selectPreviousDocument: selectPreviousDocumentFromMainScreenControl,
                 selectNextDocument: selectNextDocumentFromMainScreenControl,
                 selectPreviousBackgroundImage: selectPreviousBackgroundImage,
+                selectRandomBackgroundImage: selectRandomBackgroundImage,
                 selectNextBackgroundImage: selectNextBackgroundImage,
                 toggleGridEditMode: { isGridEditModeEnabled.toggle() },
                 commitDocumentRename: commitDocumentRename,
@@ -518,6 +519,24 @@ struct MainScreen: View {
         }
 
         persistMainBackgroundImage(imageURLs[nextIndex])
+    }
+
+    private func selectRandomBackgroundImage() {
+        let imageURLs = availableBackgroundImageURLs
+        guard !imageURLs.isEmpty else {
+            return
+        }
+
+        let currentIndex = selectedBackgroundImageIndex - 1
+        let candidateURLs = imageURLs.count > 1
+            ? imageURLs.enumerated().compactMap { index, imageURL in
+                index == currentIndex ? nil : imageURL
+            }
+            : imageURLs
+
+        if let randomImageURL = candidateURLs.randomElement() {
+            persistMainBackgroundImage(randomImageURL)
+        }
     }
 
     private func persistMainBackgroundImage(_ imageURL: URL) {
