@@ -164,7 +164,7 @@ extension MainScreen {
             return
         }
 
-        _ = updateFunctionKeySlot(editingSlotIndex, editingSlotText)
+        _ = updateFunctionKeySlot(editingSlotIndex, normalizedSlotEditorTextForCommit(editingSlotText))
     }
 	//
 	//----------------------------------------
@@ -212,9 +212,20 @@ extension MainScreen {
             return
         }
     }
-	//
-	//----------------------------------------
-	//
+
+    private func normalizedSlotEditorTextForCommit(_ text: String) -> String {
+        let components = text
+            .components(separatedBy: "::")
+            .filter { $0 != hiddenButtonMetadataToken }
+        let hasUserVisibleText = components.contains { component in
+            !component.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        }
+
+        return hasUserVisibleText ? text : ""
+    }
+		//
+		//----------------------------------------
+		//
     func duplicateSlotIfPossible(entry: FunctionKeyEntry, index: Int, gridDimensions: GridDimensions) {
         guard isGridEditModeEnabled else {
             return

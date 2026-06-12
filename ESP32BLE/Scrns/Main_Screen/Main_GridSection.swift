@@ -202,6 +202,7 @@ struct MainScreenGridSection: View {
         schedulePendingTapResolution(entry: entry, index: index, gridDimensions: gridDimensions)
     }
 
+	// MARK: - BM:🟨 taps 1,2,3,4,5: main scrn
     private func schedulePendingTapResolution(
         entry: FunctionKeyEntry,
         index: Int,

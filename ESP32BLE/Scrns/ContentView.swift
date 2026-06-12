@@ -149,7 +149,7 @@ private enum ContentViewLaunchDestination: Hashable {
 struct ContentView: View {
 	//
 	//-----------------------------------------------------------------------------------------------
-	// MARK: - BM:🔆 EMOJI LIST
+	// MARK: - BM:🔆 EMOJI LIST-not used
 	//
 	// normal emoji map
 	static let emojiSpeechConfigFilename = "emoji_speech_map.cfg"
@@ -2058,14 +2058,15 @@ struct ContentView: View {
     private func parsedRightTextAndColor(from rightText: String) -> (text: String, colorCode: String?) {
         let components = rightText.components(separatedBy: ":")
 
-        if let firstComponent = components.first,
+        if components.count > 1,
+           let firstComponent = components.first,
            firstComponent.count == 1,
            let manualColorCode = firstComponent.lowercased().first,
 
 			// MARK: - BM:🟪 color keycodes-available
            "0123456789abcde".contains(manualColorCode) {
             let remainingText = components.dropFirst().joined(separator: ":").trimmingCharacters(in: .whitespacesAndNewlines)
-            return (remainingText.isEmpty ? rightText : remainingText, String(manualColorCode))
+            return (remainingText, String(manualColorCode))
         }
 
         return (rightText, nil)

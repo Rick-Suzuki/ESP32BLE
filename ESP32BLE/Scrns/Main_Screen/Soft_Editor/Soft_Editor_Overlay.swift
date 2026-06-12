@@ -34,7 +34,7 @@ struct MainScreenSlotEditorOverlay: View {
     private let orderedModifierPrefixes = ["ctl:", "op:", "sh:", "cm:"]
     private let actionFieldOnlyInsertions = ["SP:"]
     private let displayModifierPrefixes = ["⌃", "⌥", "⇧", "⌘"]
-    private let supportedColorCodes = "lwbgortpucya12345"
+    private let supportedColorCodes = "0123456789abcde"
 		
 	// MARK: - BM:🟦 SF symbols list
 	
@@ -56,23 +56,23 @@ struct MainScreenSlotEditorOverlay: View {
     // MARK: - BM:🟪 color "keycodes-insert"
     private let colorKeyCodes: [(code: String?, label: String?, color: Color)] = [
         
-		("0", "clr\ncolor", 	Color(white: 0.22)),
-		("1", "high\npriorty",	Color(hex: "FF0000")	),
-		("2", "sample\ntxt",	Color(hex: "910000")	),
-		("3", "open\nfile",		Color(hex: "C97827")	),
-		("4", "folder", 		Color(hex: "5E3812")	),
+		("0", "0\nclr\ncolor", 		Color(white: 0.22)),
+		("1", "1\nhigh\npriorty",	Color(hex: "FF0000")	),
+		("2", "2\nsample\ntxt",		Color(hex: "910000")	),
+		("3", "3\nopen\nfile",		Color(hex: "C97827")	),
+		("4", "4\nfolder\n", 			Color(hex: "5E3812")	),
 
-		("5", "info", 			Color(hex: "8A8A8A")	),
-		("6", "sample\ntxt",	Color(hex: "0000FF")	),
-		("7", "sample\ntxt", 	Color(hex: "171775")	),
-		("8", "sample\ntxt", 	Color(hex: "919100")	),
-		("9", "utility",	 	Color(hex: "595900")	),
+		("5", "5\ninfo\n", 			Color(hex: "8A8A8A")	),
+		("6", "6\nsample\ntxt",		Color(hex: "0000FF")	),
+		("7", "7\nsample\ntxt", 	Color(hex: "171775")	),
+		("8", "8\nsample\ntxt", 	Color(hex: "919100")	),
+		("9", "9\nutility\n",	 		Color(hex: "595900")	),
 
-		("a", "sample\ntxt", 	Color(hex: "424242")	),
-		("b", "open\napp", 		Color(hex: "00A600")	),
-		("c", "sample\ntxt", 	Color(hex: "004F00")	),
-		("d", "sample\ntxt", 	Color(hex: "D42AD4")	),
-		("e", "sample\ntxt", 	Color(hex: "870087")	),
+		("a", "a\nsample\ntxt", 	Color(hex: "424242")	),
+		("b", "b\nopen\napp", 		Color(hex: "00A600")	),
+		("c", "c\nsample\ntxt", 	Color(hex: "004F00")	),
+		("d", "d\nsample\ntxt", 	Color(hex: "D42AD4")	),
+		("e", "e\nsample\ntxt", 	Color(hex: "870087")	),
 	
 //		("f", nil, Color(red: 0.65, green: 0.35, blue: 0.08)	),
 //		("g", nil, Color(red: 0.00, green: 0.45, blue: 0.50)	),
@@ -100,7 +100,7 @@ struct MainScreenSlotEditorOverlay: View {
                             SlotEditorTextField(
                                 text: actionTextBinding,
                                 inputController: actionInputController,
-                                placeholder: "action",
+                                placeholder: "Action(s)",
                                 joinPosition: .left,
                                 onBeginEditing: { activeEditorField = .action }
                             ) {
@@ -112,7 +112,7 @@ struct MainScreenSlotEditorOverlay: View {
                             SlotEditorTextField(
                                 text: rightTextBinding,
                                 inputController: rightInputController,
-                                placeholder: "text",
+                                placeholder: "ColorCode:text",
                                 joinPosition: .right,
                                 onBeginEditing: { activeEditorField = .text }
                             ) {
@@ -787,7 +787,8 @@ struct MainScreenSlotEditorOverlay: View {
         let trimmedRightDraft = rightDraft.trimmingCharacters(in: .whitespacesAndNewlines)
         let components = trimmedRightDraft.components(separatedBy: ":")
 
-        if let firstComponent = components.first,
+        if components.count > 1,
+           let firstComponent = components.first,
            firstComponent.count == 1,
            let existingCode = firstComponent.lowercased().first,
            supportedColorCodes.contains(existingCode) {
@@ -802,7 +803,8 @@ struct MainScreenSlotEditorOverlay: View {
         let trimmedRightDraft = rightDraft.trimmingCharacters(in: .whitespacesAndNewlines)
         let components = trimmedRightDraft.components(separatedBy: ":")
 
-        if let firstComponent = components.first,
+        if components.count > 1,
+           let firstComponent = components.first,
            firstComponent.count == 1,
            let existingCode = firstComponent.lowercased().first,
            supportedColorCodes.contains(existingCode) {
@@ -817,7 +819,8 @@ struct MainScreenSlotEditorOverlay: View {
         let components = trimmedRightDraft.components(separatedBy: ":")
         let insertedText = "\(symbolName):"
 
-        if let firstComponent = components.first,
+        if components.count > 1,
+           let firstComponent = components.first,
            firstComponent.count == 1,
            let existingCode = firstComponent.lowercased().first,
            supportedColorCodes.contains(existingCode) {

@@ -15,9 +15,7 @@ import Combine
 import PDFKit
 
 extension MainScreen {
-    private var defaultNewButtonEntryText: String { "cb ::" }
-	
-	// MARK: - BM:🔳 main scrn SF symbols
+		// MARK: - BM:🔳 main scrn SF symbols
     private var supportedMainScreenSFSymbolNames: Set<String> {
         [
             "folder", "eye", "magnifyingglass", "gearshape", "house",
@@ -79,7 +77,8 @@ extension MainScreen {
             .trimmingCharacters(in: .whitespacesAndNewlines)
         let rightComponents = rawRightText.components(separatedBy: ":")
 
-        if let firstComponent = rightComponents.first,
+        if rightComponents.count > 1,
+           let firstComponent = rightComponents.first,
            firstComponent.count == 1,
            let manualColorCode = firstComponent.lowercased().first,
 		   // MARK: - BM:🟪 color keycodes-available
@@ -88,7 +87,7 @@ extension MainScreen {
                 .dropFirst()
                 .joined(separator: ":")
                 .trimmingCharacters(in: .whitespacesAndNewlines)
-            return remainingText.isEmpty ? rawRightText : remainingText
+            return remainingText
         }
 
         return rawRightText
@@ -1551,7 +1550,7 @@ extension MainScreen {
 
     func editableText(for entry: FunctionKeyEntry) -> String {
         if entry.isBlankPlaceholder || isEmptyButtonEntry(entry) {
-            return defaultNewButtonEntryText
+            return ""
         }
 
         return entry.rawLine
@@ -2247,10 +2246,11 @@ struct MainScreenButtonLabelView: View {
     private var rightTitleWithoutColorPrefix: String {
         let components = rightTitle.components(separatedBy: ":")
 
-        if let firstComponent = components.first?.trimmingCharacters(in: .whitespacesAndNewlines),
+        if components.count > 1,
+           let firstComponent = components.first?.trimmingCharacters(in: .whitespacesAndNewlines),
            firstComponent.count == 1,
            let existingCode = firstComponent.lowercased().first,
-           "lwbgortpucya12345".contains(existingCode) {
+           "0123456789abcde".contains(existingCode) {
             return components.dropFirst().joined(separator: ":")
         }
 
