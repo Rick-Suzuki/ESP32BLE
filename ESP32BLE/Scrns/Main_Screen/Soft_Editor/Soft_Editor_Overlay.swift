@@ -45,13 +45,30 @@ struct MainScreenSlotEditorOverlay: View {
     private let hiddenEyeSymbolName = "eye.slash"
   
 	private let leftSymbolNames = [
-        "folder", "__visibility_toggle__", "magnifyingglass", "lightbulb.max.fill", "speaker.wave.2",
-        "star", "heart", "bell", "house", "gearshape"
-    ]
+        "folder", 			"__visibility_toggle__",
+		"magnifyingglass", 	"lightbulb.max.fill",
+		"speaker.wave.2",	"star",
+		"heart",			"bell",
+		"house",			"gearshape",
+		"airplane",			"book",
+		"camera",			"cart",
+		"cloud",			"envelope",
+		"flag",				"leaf",
+		"moon",				"wrench"
+	]
+	
     private let rightSymbolNames = [
-        "__previous_button_selection__", "__next_button_selection__", "paperplane", "doc", "calendar", "camera",
-        "photo", "tray", "sun.max.fill", "link"
-    ]
+        "__previous_button_selection__", "__next_button_selection__",
+		"paperplane", 	"doc",
+		"calendar", 	"paintbrush",
+        "photo", 		"tray",
+		"sun.max.fill", "link",
+		"person",		"person.2",
+		"car",			"bicycle",
+		"map",			"globe",
+		"location",		"wifi",
+		"battery.100",	"music.note"
+	]
 	
     // MARK: - BM:🟪 color "keycodes-insert"
     private let colorKeyCodes: [(code: String?, label: String?, color: Color)] = [
@@ -60,13 +77,13 @@ struct MainScreenSlotEditorOverlay: View {
 		("1", "1\nhigh\npriorty",	Color(hex: "FF0000")	),
 		("2", "2\nsample\ntxt",		Color(hex: "910000")	),
 		("3", "3\nopen\nfile",		Color(hex: "C97827")	),
-		("4", "4\nfolder\n", 			Color(hex: "5E3812")	),
+		("4", "4\nfolder\n", 		Color(hex: "5E3812")	),
 
 		("5", "5\ninfo\n", 			Color(hex: "8A8A8A")	),
 		("6", "6\nsample\ntxt",		Color(hex: "0000FF")	),
 		("7", "7\nsample\ntxt", 	Color(hex: "171775")	),
 		("8", "8\nsample\ntxt", 	Color(hex: "919100")	),
-		("9", "9\nutility\n",	 		Color(hex: "595900")	),
+		("9", "9\nutility\n",	 	Color(hex: "595900")	),
 
 		("a", "a\nsample\ntxt", 	Color(hex: "424242")	),
 		("b", "b\nopen\napp", 		Color(hex: "00A600")	),
@@ -74,11 +91,29 @@ struct MainScreenSlotEditorOverlay: View {
 		("d", "d\nsample\ntxt", 	Color(hex: "D42AD4")	),
 		("e", "e\nsample\ntxt", 	Color(hex: "870087")	),
 	
-//		("f", nil, Color(red: 0.65, green: 0.35, blue: 0.08)	),
-//		("g", nil, Color(red: 0.00, green: 0.45, blue: 0.50)	),
-//		("h", nil, Color(red: 0.48, green: 0.16, blue: 0.32)	),
-//		("i", nil, Color(red: 0.28, green: 0.28, blue: 0.52)	),
-//		("j", nil, Color(red: 0.32, green: 0.28, blue: 0.18)	)
+		("f", "f\nsample\ntxt", 	Color(hex: "21A3A3")	),
+		("g", "g\nsample\ntxt", 	Color(hex: "CC1451")	),
+		("h", "h\nsample\ntxt", 	Color(hex: "CC7AA3")	),
+		("i", "i\nsample\ntxt", 	Color(hex: "CCCC00")	),
+		("j", "j\nsample\ntxt", 	Color(hex: "103954")	),
+	
+		("k", "k\nsample\ntxt", 	Color(hex: "FF6666")	),
+		("l", "l\nsample\ntxt", 	Color(hex: "00CC66")	),
+		("m", "m\nsample\ntxt", 	Color(hex: "492545")	),
+		("n", "n\nsample\ntxt", 	Color(hex: "007FFF")	),
+		("o", "o\nsample\ntxt", 	Color(hex: "99004D")	),
+	
+		("p", "p\nsample\ntxt", 	Color(hex: "FFB366")	),
+		("q", "q\nsample\ntxt", 	Color(hex: "009999")	),
+		("r", "r\nsample\ntxt", 	Color(hex: "994C00")	),
+		("s", "s\nsample\ntxt", 	Color(hex: "134CD4")	),
+		("t", "t\nsample\ntxt", 	Color(hex: "4E877B")	),
+	
+		("u", "u\nsample\ntxt", 	Color(hex: "42151F")	),
+		("v", "v\nsample\ntxt", 	Color(hex: "FF8000")	),
+		("w", "w\nsample\ntxt", 	Color(hex: "635387")	),
+		("x", "x\nsample\ntxt", 	Color(hex: "9999FF")	),
+		("y", "y\nsample\ntxt", 	Color(hex: "20A663")	),
     ]
 
     var body: some View {
@@ -165,27 +200,64 @@ struct MainScreenSlotEditorOverlay: View {
                                 helperInsertButton("TAB:")
 								helperInsertButton("MA:")
 							//	helperInsertButton(label: "\\", insertedText: "\\")
-                                helperInsertButton("*")
+								newlineInsertButton
+                                //helperInsertButton("*")
                                 forwardDeleteButton
                                 testButton
                             }
 
                             HStack(spacing: buttonSpacing) {
                                 helperInsertButton(":")
-                                helperInsertButton(systemImage: "triangle.fill", rotationDegrees: 0, insertedText: "UP:")
-                                helperInsertButton(systemImage: "triangle.fill", rotationDegrees: 180, insertedText: "DOWN:")
-                                helperInsertButton(systemImage: "triangle.fill", rotationDegrees: -90, insertedText: "LEFT:")
-                                helperInsertButton(systemImage: "triangle.fill", rotationDegrees: 90, insertedText: "RIGHT:")
+                                helperInsertButton(systemImage: "triangle.fill", rotationDegrees: 0, 	insertedText: "UP:")
+                                helperInsertButton(systemImage: "triangle.fill", rotationDegrees: 180, 	insertedText: "DOWN:")
+                                helperInsertButton(systemImage: "triangle.fill", rotationDegrees: -90, 	insertedText: "LEFT:")
+                                helperInsertButton(systemImage: "triangle.fill", rotationDegrees: 90,	insertedText: "RIGHT:")
                                 saveButton
                             }
 
                             HStack(spacing: buttonSpacing) {
-								helperInsertButton("spk ")
-								helperInsertButton("snd ")
-                                helperInsertButton("timer ")
-                                helperInsertButton("app ")
-                                newlineInsertButton
+								helperInsertButton("add ")
+								helperInsertButton("amb ")
+								helperInsertButton("app ")
+								helperInsertButton("clock ")
+								helperInsertButton("date ")
                                 closeButton
+                            }
+
+							HStack(spacing: buttonSpacing) {
+								helperInsertButton("day ")
+								helperInsertButton("dow ")
+								helperInsertButton("file ")
+								helperInsertButton("hour ")
+								helperInsertButton("min ")
+                                dumbButton
+                            }
+
+							HStack(spacing: buttonSpacing) {
+								helperInsertButton("minus ")
+								helperInsertButton("month ")
+								helperInsertButton("power ")
+								helperInsertButton("pwm ")
+								helperInsertButton("out ")
+								dumbButton
+                            }
+
+							HStack(spacing: buttonSpacing) {
+								helperInsertButton("sc ")
+								helperInsertButton("sec ")
+								helperInsertButton("snd ")
+								helperInsertButton("spk ")
+								helperInsertButton("rnd ")
+								dumbButton
+                            }
+
+							HStack(spacing: buttonSpacing) {
+								helperInsertButton("timer ")
+                                helperInsertButton("wait ")
+								helperInsertButton("year ")
+                                helperInsertButton("")
+                                helperInsertButton("")
+								dumbButton
                             }
                         }
                     }
@@ -525,6 +597,25 @@ struct MainScreenSlotEditorOverlay: View {
         .clipShape(.rect(cornerRadius: 12))
     }
 
+    private var dumbButton: some View {
+        Button(" ") {
+//            ButtonClickFeedback.playIfEnabled()
+//            onSave()
+//            onCancel()
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(.white)
+        .padding(.horizontal, 14)
+        .frame(width: 90)
+        .frame(minHeight: 44)
+        .background(Color.black.opacity(0.45))
+        .overlay {
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.gray.opacity(0.0), lineWidth: 1.5)
+        }
+        .clipShape(.rect(cornerRadius: 12))
+    }
+
 	// MARK: - BM:🟥 color insert btns - soft kb
     private func colorInsertButton(code: String?, label: String?, background: Color) -> some View {
         Button {
@@ -556,7 +647,7 @@ struct MainScreenSlotEditorOverlay: View {
 
     private func sfSymbolPanel(symbolNames: [String], buttonWidth: CGFloat) -> some View {
         VStack(spacing: buttonSpacing) {
-            ForEach(0..<5, id: \.self) { row in
+            ForEach(0..<9, id: \.self) { row in
                 HStack(spacing: buttonSpacing) {
                     ForEach(0..<2, id: \.self) { column in
                         let symbolIndex = (row * 2) + column

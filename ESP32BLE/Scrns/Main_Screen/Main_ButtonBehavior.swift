@@ -2362,11 +2362,12 @@ struct MainScreenButtonLabelView: View {
 			case "t": return Color(hex: "4E877B").opacity(backgroundOpacity)
 			
 			case "u": return Color(hex: "42151F").opacity(backgroundOpacity)
-			case "w": return Color(hex: "FF8000").opacity(backgroundOpacity)
-			case "x": return Color(hex: "635387").opacity(backgroundOpacity)
-			case "y": return Color(hex: "9999FF").opacity(backgroundOpacity)
-			case "z": return Color(hex: "20A663").opacity(backgroundOpacity)
-			
+			case "v": return Color(hex: "FF8000").opacity(backgroundOpacity)
+			case "w": return Color(hex: "635387").opacity(backgroundOpacity)
+			case "x": return Color(hex: "9999FF").opacity(backgroundOpacity)
+			case "y": return Color(hex: "20A663").opacity(backgroundOpacity)
+
+			case "z": return Color(hex: "FFFFFF").opacity(backgroundOpacity)
 				
 			default:  return Color.black.opacity(backgroundOpacity)
         }
