@@ -73,47 +73,47 @@ struct MainScreenSlotEditorOverlay: View {
     // MARK: - BM:🟪 color "keycodes-insert"
     private let colorKeyCodes: [(code: String?, label: String?, color: Color)] = [
         
-		("0", "0\nclr\ncolor", 		Color(white: 0.22)),
-		("1", "1\nhigh\npriorty",	Color(hex: "FF0000")	),
-		("2", "2\nsample\ntxt",		Color(hex: "910000")	),
-		("3", "3\nopen\nfile",		Color(hex: "C97827")	),
-		("4", "4\nfolder\n", 		Color(hex: "5E3812")	),
+		("0", "0:\nclr\ncolor", 	Color(white: 0.22)),
+		("1", "1:\nhigh\npriorty",	Color(hex: "FF0000")	),
+		("2", "2:\nsample\ntxt",	Color(hex: "910000")	),
+		("3", "3:\nopen\nfile",		Color(hex: "C97827")	),
+		("4", "4:\nfolder\n", 		Color(hex: "5E3812")	),
 
-		("5", "5\ninfo\n", 			Color(hex: "8A8A8A")	),
-		("6", "6\nsample\ntxt",		Color(hex: "0000FF")	),
-		("7", "7\nsample\ntxt", 	Color(hex: "171775")	),
-		("8", "8\nsample\ntxt", 	Color(hex: "919100")	),
-		("9", "9\nutility\n",	 	Color(hex: "595900")	),
+		("5", "5:\ninfo\n", 		Color(hex: "8A8A8A")	),
+		("6", "6:\nsample\ntxt",	Color(hex: "0000FF")	),
+		("7", "7:\nsample\ntxt", 	Color(hex: "171775")	),
+		("8", "8:\nsample\ntxt", 	Color(hex: "919100")	),
+		("9", "9:\nutility\n",	 	Color(hex: "595900")	),
 
-		("a", "a\nsample\ntxt", 	Color(hex: "424242")	),
-		("b", "b\nopen\napp", 		Color(hex: "00A600")	),
-		("c", "c\nsample\ntxt", 	Color(hex: "004F00")	),
-		("d", "d\nsample\ntxt", 	Color(hex: "D42AD4")	),
-		("e", "e\nsample\ntxt", 	Color(hex: "870087")	),
+		("a", "a:\nsample\ntxt", 	Color(hex: "424242")	),
+		("b", "b:\nopen\napp", 		Color(hex: "00A600")	),
+		("c", "c:\nsample\ntxt", 	Color(hex: "004F00")	),
+		("d", "d:\nsample\ntxt", 	Color(hex: "D42AD4")	),
+		("e", "e:\nsample\ntxt", 	Color(hex: "870087")	),
 	
-		("f", "f\nsample\ntxt", 	Color(hex: "21A3A3")	),
-		("g", "g\nsample\ntxt", 	Color(hex: "CC1451")	),
-		("h", "h\nsample\ntxt", 	Color(hex: "CC7AA3")	),
-		("i", "i\nsample\ntxt", 	Color(hex: "CCCC00")	),
-		("j", "j\nsample\ntxt", 	Color(hex: "103954")	),
+		("f", "f:\nsample\ntxt", 	Color(hex: "21A3A3")	),
+		("g", "g:\nsample\ntxt", 	Color(hex: "CC1451")	),
+		("h", "h:\nsample\ntxt", 	Color(hex: "CC7AA3")	),
+		("i", "i:\nsample\ntxt", 	Color(hex: "CCCC00")	),
+		("j", "j:\nsample\ntxt", 	Color(hex: "103954")	),
 	
-		("k", "k\nsample\ntxt", 	Color(hex: "FF6666")	),
-		("l", "l\nsample\ntxt", 	Color(hex: "00CC66")	),
-		("m", "m\nsample\ntxt", 	Color(hex: "492545")	),
-		("n", "n\nsample\ntxt", 	Color(hex: "007FFF")	),
-		("o", "o\nsample\ntxt", 	Color(hex: "99004D")	),
+		("k", "k:\nsample\ntxt", 	Color(hex: "FF6666")	),
+		("l", "l:\nsample\ntxt", 	Color(hex: "00CC66")	),
+		("m", "m:\nsample\ntxt", 	Color(hex: "492545")	),
+		("n", "n:\nsample\ntxt", 	Color(hex: "007FFF")	),
+		("o", "o:\nsample\ntxt", 	Color(hex: "99004D")	),
 	
-		("p", "p\nsample\ntxt", 	Color(hex: "FFB366")	),
-		("q", "q\nsample\ntxt", 	Color(hex: "009999")	),
-		("r", "r\nsample\ntxt", 	Color(hex: "994C00")	),
-		("s", "s\nsample\ntxt", 	Color(hex: "134CD4")	),
-		("t", "t\nsample\ntxt", 	Color(hex: "4E877B")	),
+		("p", "p:\nsample\ntxt", 	Color(hex: "FFB366")	),
+		("q", "q:\nsample\ntxt", 	Color(hex: "009999")	),
+		("r", "r:\nsample\ntxt", 	Color(hex: "994C00")	),
+		("s", "s:\nsample\ntxt", 	Color(hex: "134CD4")	),
+		("t", "t:\nsample\ntxt", 	Color(hex: "4E877B")	),
 	
-		("u", "u\nsample\ntxt", 	Color(hex: "42151F")	),
-		("v", "v\nsample\ntxt", 	Color(hex: "FF8000")	),
-		("w", "w\nsample\ntxt", 	Color(hex: "635387")	),
-		("x", "x\nsample\ntxt", 	Color(hex: "9999FF")	),
-		("y", "y\nsample\ntxt", 	Color(hex: "20A663")	),
+		("u", "u:\nsample\ntxt", 	Color(hex: "42151F")	),
+		("v", "v:\nsample\ntxt", 	Color(hex: "FF8000")	),
+		("w", "w:\nsample\ntxt", 	Color(hex: "635387")	),
+		("x", "x:\nsample\ntxt", 	Color(hex: "9999FF")	),
+		("y", "y:\nsample\ntxt", 	Color(hex: "20A663")	),
     ]
 
     var body: some View {
@@ -199,9 +199,7 @@ struct MainScreenSlotEditorOverlay: View {
                                 helperInsertButton("SP:")
                                 helperInsertButton("TAB:")
 								helperInsertButton("MA:")
-							//	helperInsertButton(label: "\\", insertedText: "\\")
 								newlineInsertButton
-                                //helperInsertButton("*")
                                 forwardDeleteButton
                                 testButton
                             }
@@ -216,9 +214,9 @@ struct MainScreenSlotEditorOverlay: View {
                             }
 
                             HStack(spacing: buttonSpacing) {
-								helperInsertButton("add ")
-								helperInsertButton("amb ")
-								helperInsertButton("app ")
+								helperInsertButton(label: "tap\nadd",	insertedText: "add ")
+								helperInsertButton(label: "amd\nsnd", 	insertedText: "amb ")
+								helperInsertButton(label: "open\napp", 	insertedText: "app ")
 								helperInsertButton("clock ")
 								helperInsertButton("date ")
                                 closeButton
@@ -226,34 +224,34 @@ struct MainScreenSlotEditorOverlay: View {
 
 							HStack(spacing: buttonSpacing) {
 								helperInsertButton("day ")
-								helperInsertButton("dow ")
-								helperInsertButton("file ")
-								helperInsertButton("hour ")
-								helperInsertButton("min ")
-                                dumbButton
-                            }
-
-							HStack(spacing: buttonSpacing) {
-								helperInsertButton("minus ")
-								helperInsertButton("month ")
-								helperInsertButton("power ")
-								helperInsertButton("pwm ")
-								helperInsertButton("out ")
+								helperInsertButton(label: "day of\nweek", 	insertedText: "dow ")
+								helperInsertButton(label: "preview\nfile", 	insertedText: "file ")
+								helperInsertButton(label: "hours", 			insertedText: "hour ")
+								helperInsertButton(label: "mins", 			insertedText: "min ")
 								dumbButton
                             }
 
 							HStack(spacing: buttonSpacing) {
-								helperInsertButton("sc ")
-								helperInsertButton("sec ")
-								helperInsertButton("snd ")
-								helperInsertButton("spk ")
-								helperInsertButton("rnd ")
+								helperInsertButton(label: "tap\nminus", insertedText: "minus ")
+								helperInsertButton("month ")
+								helperInsertButton(label: "device\npower", insertedText: "power ")
+								helperInsertButton(label: "Esp32\npwm", insertedText: "pwm ")
+								helperInsertButton(label: "Esp32\nout", insertedText: "out ")
+								dumbButton
+                            }
+
+							HStack(spacing: buttonSpacing) {
+								helperInsertButton(label: "run\nshort", insertedText: "sc ")
+								helperInsertButton(label: "secs", 		insertedText: "sec ")
+								helperInsertButton(label: "play\nsnd", 	insertedText: "snd ")
+								helperInsertButton(label: "spk\ntext", 	insertedText: "spk ")
+								helperInsertButton(label: "rnd\nnum", 	insertedText: "rnd ")
 								dumbButton
                             }
 
 							HStack(spacing: buttonSpacing) {
 								helperInsertButton("timer ")
-                                helperInsertButton("wait ")
+								helperInsertButton(label: "wait\ntime", insertedText: "wait ")
 								helperInsertButton("year ")
                                 helperInsertButton("")
                                 helperInsertButton("")
@@ -326,6 +324,8 @@ struct MainScreenSlotEditorOverlay: View {
             focusBinding.wrappedValue = true
         } label: {
             Text(label)
+				.font(.system(size: 12, weight: .semibold))
+
                 .foregroundStyle(isDisabled ? Color.gray : .white)
                 .multilineTextAlignment(.center)
                 .frame(width: helperButtonWidth, height: 44)
@@ -480,6 +480,8 @@ struct MainScreenSlotEditorOverlay: View {
             focusBinding.wrappedValue = true
         } label: {
             Text("NL")
+				.font(.system(size: 12, weight: .semibold))
+
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
                 .frame(width: helperButtonWidth, height: 44)
