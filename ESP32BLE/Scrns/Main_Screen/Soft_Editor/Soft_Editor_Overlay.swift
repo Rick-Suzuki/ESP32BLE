@@ -227,34 +227,34 @@ struct MainScreenSlotEditorOverlay: View {
 								helperInsertButton(label: "hours", 		insertedText: "hour ",color:.blue.opacity(0.3))
 								helperInsertButton(label: "mins", 		insertedText: "min ",color:.blue.opacity(0.3))
 								helperInsertButton(label: "secs", 		insertedText: "sec ",color:.blue.opacity(0.3))
-								helperInsertButton("")
+								helperInsertButton(label: "device\npower",insertedText: "power ")
 								dumbButton
                             }
 
 							HStack(spacing: buttonSpacing) {
-								helperInsertButton(label: "amd\nsnd", 	insertedText: "amb ",color:.purple.opacity(0.3))
-								helperInsertButton(label: "play\nsnd", 	insertedText: "snd ",color:.purple.opacity(0.3))
-								helperInsertButton(label: "spk\ntext", 	insertedText: "spk ",color:.purple.opacity(0.3))
-								helperInsertButton(label: "Esp32\nout", insertedText: "out ",color:.orange.opacity(0.3))
-								helperInsertButton(label: "Esp32\npwm", insertedText: "pwm ",color:.orange.opacity(0.3))
+								helperInsertButton(label: "amb\nsnd", 	insertedText: "amb snd.mp3",color:.purple.opacity(0.3))
+								helperInsertButton(label: "play\nsnd", 	insertedText: "snd snd mp3",color:.purple.opacity(0.3))
+								helperInsertButton(label: "spk\ntext", 	insertedText: "spk hello",color:.purple.opacity(0.3))
+								helperInsertButton(label: "Esp32\nout", insertedText: "out 32 1",color:.orange.opacity(0.3))
+								helperInsertButton(label: "Esp32\npwm", insertedText: "pwm 32 5 4",color:.orange.opacity(0.3))
 								dumbButton
                             }
 
 							HStack(spacing: buttonSpacing) {
-								helperInsertButton(label: "tap\nminus", insertedText: "minus ",color:.cyan.opacity(0.3))
+								helperInsertButton(label: "wait\ntime", insertedText: "wait 5")
+								helperInsertButton(label: "tap\nminus", insertedText: "minus 10",color:.cyan.opacity(0.3))
 								helperInsertButton(label: "tap\nadd",	insertedText: "add ",color:.cyan.opacity(0.3))
-								helperInsertButton(label: "rnd\nnum", 	insertedText: "rnd ",color:.cyan.opacity(0.3))
-								helperInsertButton("timer ")
-								helperInsertButton(label: "wait\ntime", insertedText: "wait ")
+								helperInsertButton(label: "rnd\nnum", 	insertedText: "rnd 0 100",color:.cyan.opacity(0.3))
+								helperInsertButton(label: "rnd\nline", 	insertedText: "rnd file.txt",color:.cyan.opacity(0.3))
 								dumbButton
-                            }
+							}
 
 							HStack(spacing: buttonSpacing) {
-								helperInsertButton(label: "run\nshort", 	insertedText: "sc ",color:.green.opacity(0.3))
-								helperInsertButton(label: "open\napp", 		insertedText: "app ",color:.green.opacity(0.3))
-								helperInsertButton(label: "device\npower", 	insertedText: "power ",color:.green.opacity(0.3))
-								helperInsertButton(label: "preview\nfile", 	insertedText: "file ",color:.green.opacity(0.3))
-                                helperInsertButton("")
+								helperInsertButton(label: "timer snd",	insertedText: "timer 60 snd.wav")
+								helperInsertButton(label: "timer spk",	insertedText: "timer 10 hello")
+								helperInsertButton(label: "run\nshort\ncut",insertedText: "sc shortcutName",color:.green.opacity(0.3))
+								helperInsertButton(label: "open\napp", 		insertedText: "app mail",color:.green.opacity(0.3))
+								helperInsertButton(label: "preview\nfile", 	insertedText: "file file.txt",color:.green.opacity(0.3))
 								dumbButton
                             }
                         }
@@ -274,6 +274,7 @@ struct MainScreenSlotEditorOverlay: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         }
         .frame(height: 320)
+        .ignoresSafeArea(.keyboard)
         .onAppear {
             syncDraftsFromCombinedText()
         }

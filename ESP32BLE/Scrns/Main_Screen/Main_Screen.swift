@@ -240,8 +240,10 @@ struct MainScreen: View {
 
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .ignoresSafeArea(.keyboard)
         }
         .padding(.horizontal, 2)
+        .ignoresSafeArea(.keyboard)
         .overlay(alignment: .topLeading) {
             externalKeyboardShortcutLayer
         }
@@ -597,6 +599,7 @@ struct MainScreen: View {
             onSelectPreviousButton: selectPreviousEditableSlot,
             onSelectNextButton: selectNextEditableSlot
         )
+        .ignoresSafeArea(.keyboard)
     }
 
     private func testEditingSlotText() {
@@ -740,11 +743,17 @@ struct MainScreen: View {
                 continue
             }
 
-            let screenHeight = UIApplication.shared.connectedScenes
+            let screenBounds = UIApplication.shared.connectedScenes
                 .compactMap { $0 as? UIWindowScene }
-                .first?.screen.bounds.height ?? 0
+                .first?.screen.bounds ?? .zero
+            let screenWidth = screenBounds.width
+            let screenHeight = screenBounds.height
+            let isFloatingKeyboard = screenWidth > 0 && (
+                endFrame.width < (screenWidth * 0.9) ||
+                endFrame.maxY < (screenHeight - 1)
+            )
 
-            if screenHeight > 0, endFrame.minY >= screenHeight {
+            if isFloatingKeyboard || (screenHeight > 0 && endFrame.minY >= screenHeight) {
                 keyboardMinY = .greatestFiniteMagnitude
             } else {
                 keyboardMinY = endFrame.minY

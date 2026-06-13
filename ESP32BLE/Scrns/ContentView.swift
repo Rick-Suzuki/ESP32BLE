@@ -301,15 +301,19 @@ struct ContentView: View {
                             settingsBLEText: $settingsBLEText
                         )
                         .frame(width: containerWidth, height: containerHeight)
+                        .ignoresSafeArea(.keyboard)
                         .offset(x: isKeyboardScreenPresented ? containerWidth : 0)
                     }
                     .frame(width: containerWidth, height: containerHeight)
                     .clipped()
+                    .ignoresSafeArea(.keyboard)
                     .onAppear {
                         logDeviceTypeIfNeeded()
                     }
                 }
+                .ignoresSafeArea(.keyboard)
             }
+            .ignoresSafeArea(.keyboard)
             .background { 
                 mainScreenBackgroundView
             }
@@ -324,6 +328,7 @@ struct ContentView: View {
             }
         }
         .id(isStatusBarVisible)
+        .ignoresSafeArea(.keyboard)
         .statusBarHidden(!isStatusBarVisible)
         .onAppear {
             presentInitialSettingsScreenIfNeeded()
