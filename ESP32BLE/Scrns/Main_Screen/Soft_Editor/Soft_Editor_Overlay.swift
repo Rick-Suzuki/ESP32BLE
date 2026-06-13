@@ -206,7 +206,7 @@ struct MainScreenSlotEditorOverlay: View {
 
                             HStack(spacing: buttonSpacing) {
                                 helperInsertButton(":")
-                                helperInsertButton(systemImage: "triangle.fill", rotationDegrees: 0, 	insertedText: "UP:")
+								helperInsertButton(systemImage: "triangle.fill", rotationDegrees: 0, 	insertedText: "UP:")
                                 helperInsertButton(systemImage: "triangle.fill", rotationDegrees: 180, 	insertedText: "DOWN:")
                                 helperInsertButton(systemImage: "triangle.fill", rotationDegrees: -90, 	insertedText: "LEFT:")
                                 helperInsertButton(systemImage: "triangle.fill", rotationDegrees: 90,	insertedText: "RIGHT:")
@@ -214,46 +214,46 @@ struct MainScreenSlotEditorOverlay: View {
                             }
 
                             HStack(spacing: buttonSpacing) {
-								helperInsertButton(label: "tap\nadd",	insertedText: "add ")
-								helperInsertButton(label: "amd\nsnd", 	insertedText: "amb ")
-								helperInsertButton(label: "open\napp", 	insertedText: "app ")
-								helperInsertButton("clock ")
-								helperInsertButton("date ")
+								helperInsertButton("clock ",color:.blue.opacity(0.3))
+								helperInsertButton("date ",color:.blue.opacity(0.3))
+								helperInsertButton("day ",color:.blue.opacity(0.3))
+								helperInsertButton(label: "day of\nweek",insertedText: "dow ",color:.blue.opacity(0.3))
+								helperInsertButton("year ",color:.blue.opacity(0.3))
                                 closeButton
                             }
 
 							HStack(spacing: buttonSpacing) {
-								helperInsertButton("day ")
-								helperInsertButton(label: "day of\nweek", 	insertedText: "dow ")
-								helperInsertButton(label: "preview\nfile", 	insertedText: "file ")
-								helperInsertButton(label: "hours", 			insertedText: "hour ")
-								helperInsertButton(label: "mins", 			insertedText: "min ")
+								helperInsertButton("month ",color:.blue.opacity(0.3))
+								helperInsertButton(label: "hours", 		insertedText: "hour ",color:.blue.opacity(0.3))
+								helperInsertButton(label: "mins", 		insertedText: "min ",color:.blue.opacity(0.3))
+								helperInsertButton(label: "secs", 		insertedText: "sec ",color:.blue.opacity(0.3))
+								helperInsertButton("")
 								dumbButton
                             }
 
 							HStack(spacing: buttonSpacing) {
-								helperInsertButton(label: "tap\nminus", insertedText: "minus ")
-								helperInsertButton("month ")
-								helperInsertButton(label: "device\npower", insertedText: "power ")
-								helperInsertButton(label: "Esp32\npwm", insertedText: "pwm ")
-								helperInsertButton(label: "Esp32\nout", insertedText: "out ")
+								helperInsertButton(label: "amd\nsnd", 	insertedText: "amb ",color:.purple.opacity(0.3))
+								helperInsertButton(label: "play\nsnd", 	insertedText: "snd ",color:.purple.opacity(0.3))
+								helperInsertButton(label: "spk\ntext", 	insertedText: "spk ",color:.purple.opacity(0.3))
+								helperInsertButton(label: "Esp32\nout", insertedText: "out ",color:.orange.opacity(0.3))
+								helperInsertButton(label: "Esp32\npwm", insertedText: "pwm ",color:.orange.opacity(0.3))
 								dumbButton
                             }
 
 							HStack(spacing: buttonSpacing) {
-								helperInsertButton(label: "run\nshort", insertedText: "sc ")
-								helperInsertButton(label: "secs", 		insertedText: "sec ")
-								helperInsertButton(label: "play\nsnd", 	insertedText: "snd ")
-								helperInsertButton(label: "spk\ntext", 	insertedText: "spk ")
-								helperInsertButton(label: "rnd\nnum", 	insertedText: "rnd ")
-								dumbButton
-                            }
-
-							HStack(spacing: buttonSpacing) {
+								helperInsertButton(label: "tap\nminus", insertedText: "minus ",color:.cyan.opacity(0.3))
+								helperInsertButton(label: "tap\nadd",	insertedText: "add ",color:.cyan.opacity(0.3))
+								helperInsertButton(label: "rnd\nnum", 	insertedText: "rnd ",color:.cyan.opacity(0.3))
 								helperInsertButton("timer ")
 								helperInsertButton(label: "wait\ntime", insertedText: "wait ")
-								helperInsertButton("year ")
-                                helperInsertButton("")
+								dumbButton
+                            }
+
+							HStack(spacing: buttonSpacing) {
+								helperInsertButton(label: "run\nshort", 	insertedText: "sc ",color:.green.opacity(0.3))
+								helperInsertButton(label: "open\napp", 		insertedText: "app ",color:.green.opacity(0.3))
+								helperInsertButton(label: "device\npower", 	insertedText: "power ",color:.green.opacity(0.3))
+								helperInsertButton(label: "preview\nfile", 	insertedText: "file ",color:.green.opacity(0.3))
                                 helperInsertButton("")
 								dumbButton
                             }
@@ -294,11 +294,11 @@ struct MainScreenSlotEditorOverlay: View {
         }
     }
 
-    private func helperInsertButton(_ text: String) -> some View {
-        helperInsertButton(label: text, insertedText: text)
+    private func helperInsertButton(_ text: String, color: Color = .black) -> some View {
+        helperInsertButton(label: text, insertedText: text, color: color)
     }
 
-    private func helperInsertButton(label: String, insertedText: String) -> some View {
+    private func helperInsertButton(label: String, insertedText: String, color: Color = .black) -> some View {
         let insertsIntoActionField = orderedModifierPrefixes.contains(insertedText) || actionFieldOnlyInsertions.contains(insertedText)
         let isDisabled = insertsIntoActionField && activeEditorField == .text
 
@@ -329,7 +329,7 @@ struct MainScreenSlotEditorOverlay: View {
                 .foregroundStyle(isDisabled ? Color.gray : .white)
                 .multilineTextAlignment(.center)
                 .frame(width: helperButtonWidth, height: 44)
-                .background(Color.black)
+                .background(color)
                 .overlay {
                     RoundedRectangle(cornerRadius: 12)
                         .stroke(isDisabled ? Color.gray : Color.white, lineWidth: 2)
@@ -416,7 +416,7 @@ struct MainScreenSlotEditorOverlay: View {
         return rawPrefix + remainingText
     }
 
-    private func helperInsertButton(systemImage: String, rotationDegrees: Double, insertedText: String) -> some View {
+    private func helperInsertButton(systemImage: String, rotationDegrees: Double, insertedText: String, color: Color = .black) -> some View {
         Button {
             ButtonClickFeedback.playIfEnabled()
             activeInputController.insertText(insertedText)
@@ -428,7 +428,7 @@ struct MainScreenSlotEditorOverlay: View {
                 .rotationEffect(.degrees(rotationDegrees))
                 .foregroundStyle(.white)
                 .frame(width: helperButtonWidth, height: 44)
-                .background(Color.black)
+                .background(color)
                 .overlay {
                     RoundedRectangle(cornerRadius: 12)
                         .stroke(Color.white, lineWidth: 2)
