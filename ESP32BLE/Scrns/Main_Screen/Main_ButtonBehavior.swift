@@ -2514,12 +2514,18 @@ private struct MainGridStepUpCounterWidgetView: View {
         .foregroundStyle(foregroundColor)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .contentShape(Rectangle())
-        .onTapGesture {
-            currentCount += 1
-        }
-        .onLongPressGesture(minimumDuration: 0.5) {
-            currentCount = 0
-        }
+        .gesture(
+            TapGesture(count: 2)
+                .onEnded {
+                    currentCount = 0
+                }
+                .exclusively(before:
+                    TapGesture()
+                        .onEnded {
+                            currentCount += 1
+                        }
+                )
+        )
         .onAppear {
             applyConfiguration()
         }
@@ -2575,12 +2581,18 @@ private struct MainGridStepDownCounterWidgetView: View {
         .foregroundStyle(foregroundColor)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .contentShape(Rectangle())
-        .onTapGesture {
-            currentCount = max(0, currentCount - 1)
-        }
-        .onLongPressGesture(minimumDuration: 0.5) {
-            currentCount = initialCount
-        }
+        .gesture(
+            TapGesture(count: 2)
+                .onEnded {
+                    currentCount = initialCount
+                }
+                .exclusively(before:
+                    TapGesture()
+                        .onEnded {
+                            currentCount = max(0, currentCount - 1)
+                        }
+                )
+        )
         .onAppear {
             currentCount = max(initialCount, 0)
         }
@@ -2939,12 +2951,18 @@ private struct MainGridTimerWidgetView: View {
         .foregroundStyle(foregroundColor)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .contentShape(Rectangle())
-        .onTapGesture {
-            togglePlayback()
-        }
-        .onLongPressGesture(minimumDuration: 0.5) {
-            resetAndPause()
-        }
+        .gesture(
+            TapGesture(count: 2)
+                .onEnded {
+                    resetAndPause()
+                }
+                .exclusively(before:
+                    TapGesture()
+                        .onEnded {
+                            togglePlayback()
+                        }
+                )
+        )
         .onAppear {
             applyConfiguration()
         }
@@ -3054,35 +3072,38 @@ private struct MainGridAmbientSoundWidgetView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .contentShape(Rectangle())
             .gesture(
-                TapGesture(count: 2)
+                TapGesture(count: 3)
                     .onEnded {
                         guard isInteractionEnabled else {
                             return
                         }
-                        sharedState.adjustVolume(widgetID: widgetID, by: 0.05)
+                        sharedState.togglePlayback(
+                            widgetID: widgetID,
+                            filename: filename,
+                            resolveSoundURL: resolveSoundURL,
+                            activateAudioSession: activateAudioSession,
+                            reportSoundError: reportSoundError
+                        )
                     }
                     .exclusively(before:
-                        TapGesture()
+                        TapGesture(count: 2)
                             .onEnded {
                                 guard isInteractionEnabled else {
                                     return
                                 }
-                                sharedState.adjustVolume(widgetID: widgetID, by: -0.05)
+                                sharedState.adjustVolume(widgetID: widgetID, by: 0.05)
                             }
+                            .exclusively(before:
+                                TapGesture()
+                                    .onEnded {
+                                        guard isInteractionEnabled else {
+                                            return
+                                        }
+                                        sharedState.adjustVolume(widgetID: widgetID, by: -0.05)
+                                    }
+                            )
                     )
             )
-            .onLongPressGesture(minimumDuration: 0.5) {
-                guard isInteractionEnabled else {
-                    return
-                }
-                sharedState.togglePlayback(
-                    widgetID: widgetID,
-                    filename: filename,
-                    resolveSoundURL: resolveSoundURL,
-                    activateAudioSession: activateAudioSession,
-                    reportSoundError: reportSoundError
-                )
-            }
     }
 
     private var displayTitle: String {
