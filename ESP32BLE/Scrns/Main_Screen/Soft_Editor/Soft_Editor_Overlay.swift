@@ -131,6 +131,8 @@ struct MainScreenSlotEditorOverlay: View {
                     HStack(spacing: buttonSpacing) {
                         clearActionButton
 
+						// MARK: - BM:🟧 soft KB: SlotEditorTextFields
+
                         HStack(spacing: 0) {
                             SlotEditorTextField(
                                 text: actionTextBinding,
@@ -141,6 +143,7 @@ struct MainScreenSlotEditorOverlay: View {
                             ) {
                                 onCommit()
                             }
+							//.frame(width: geometry.size.width * 0.35)
                             .frame(minWidth: helperButtonWidth * 2.5, maxWidth: .infinity)
                             .frame(height: 44)
 
@@ -177,97 +180,104 @@ struct MainScreenSlotEditorOverlay: View {
                         helperBackspaceButton()
 
                         deleteButtonPlaceholder
-                    }
-
-                    HStack(alignment: .top, spacing: buttonSpacing) {
-                        VStack(spacing: buttonSpacing) {
-                            ForEach(Array(colorRows.enumerated()), id: \.offset) { row in
-                                HStack(spacing: buttonSpacing) {
-                                    ForEach(Array(row.element.enumerated()), id: \.offset) { colorKey in
-                                        colorInsertButton(
-                                            code: colorKey.element.code,
-                                            label: colorKey.element.label,
-                                            background: colorKey.element.color
-                                        )
-                                    }
-                                }
-                            }
-                        }
-
-                        VStack(spacing: buttonSpacing) {
-                            HStack(spacing: buttonSpacing) {
-                                helperInsertButton("SP:")
-                                helperInsertButton("TAB:")
+					}
+					
+					HStack(alignment: .top, spacing: buttonSpacing) {
+						VStack(spacing: buttonSpacing) {
+							ForEach(Array(colorRows.enumerated()), id: \.offset) { row in
+								HStack(spacing: buttonSpacing) {
+									ForEach(Array(row.element.enumerated()), id: \.offset) { colorKey in
+										colorInsertButton(
+											code: colorKey.element.code,
+											label: colorKey.element.label,
+											background: colorKey.element.color
+										)
+									}
+								}
+							}
+						}
+						
+						VStack(spacing: buttonSpacing) {
+							HStack(spacing: buttonSpacing) {
+								helperInsertButton("SP:")
+								helperInsertButton("TAB:")
 								helperInsertButton("MA:")
 								newlineInsertButton
-                                forwardDeleteButton
-                                testButton
-                            }
-
-                            HStack(spacing: buttonSpacing) {
-                                helperInsertButton(":")
+								forwardDeleteButton
+								testButton
+							}
+							
+							// MARK: - BM:🟧 soft KB: arrows
+							HStack(spacing: buttonSpacing) {
+								helperInsertButton(":")
 								helperInsertButton(systemImage: "triangle.fill", rotationDegrees: 0, 	insertedText: "UP:")
-                                helperInsertButton(systemImage: "triangle.fill", rotationDegrees: 180, 	insertedText: "DOWN:")
-                                helperInsertButton(systemImage: "triangle.fill", rotationDegrees: -90, 	insertedText: "LEFT:")
-                                helperInsertButton(systemImage: "triangle.fill", rotationDegrees: 90,	insertedText: "RIGHT:")
-                                saveButton
-                            }
-
-                            HStack(spacing: buttonSpacing) {
+								helperInsertButton(systemImage: "triangle.fill", rotationDegrees: 180, 	insertedText: "DOWN:")
+								helperInsertButton(systemImage: "triangle.fill", rotationDegrees: -90, 	insertedText: "LEFT:")
+								helperInsertButton(systemImage: "triangle.fill", rotationDegrees: 90,	insertedText: "RIGHT:")
+								saveButton
+							}
+							
+							// MARK: - BM:🟧 soft KB: Widgets
+							HStack(spacing: buttonSpacing) {
 								helperInsertButton("clock ",color:.blue.opacity(0.3))
 								helperInsertButton("date ",color:.blue.opacity(0.3))
 								helperInsertButton("day ",color:.blue.opacity(0.3))
 								helperInsertButton(label: "day of\nweek",insertedText: "dow ",color:.blue.opacity(0.3))
 								helperInsertButton("year ",color:.blue.opacity(0.3))
-                                closeButton
-                            }
-
+								closeButton
+							}
+							
 							HStack(spacing: buttonSpacing) {
 								helperInsertButton("month ",color:.blue.opacity(0.3))
 								helperInsertButton(label: "hours", 		insertedText: "hour ",color:.blue.opacity(0.3))
 								helperInsertButton(label: "mins", 		insertedText: "min ",color:.blue.opacity(0.3))
 								helperInsertButton(label: "secs", 		insertedText: "sec ",color:.blue.opacity(0.3))
 								helperInsertButton(label: "device\npower",insertedText: "power ")
-								dumbButton
-                            }
-
+								helperInsertButton(label: "", 	insertedText: "",color:.cyan.opacity(0.0))
+								helperInsertButton(label: "", 	insertedText: "",color:.cyan.opacity(0.0))
+							//	dumbButton
+							}
+							
 							HStack(spacing: buttonSpacing) {
 								helperInsertButton(label: "amb\nsnd", 	insertedText: "amb snd.mp3",color:.purple.opacity(0.3))
 								helperInsertButton(label: "play\nsnd", 	insertedText: "snd snd mp3",color:.purple.opacity(0.3))
 								helperInsertButton(label: "spk\ntext", 	insertedText: "spk hello",color:.purple.opacity(0.3))
 								helperInsertButton(label: "Esp32\nout", insertedText: "out 32 1",color:.orange.opacity(0.3))
 								helperInsertButton(label: "Esp32\npwm", insertedText: "pwm 32 5 4",color:.orange.opacity(0.3))
-								dumbButton
-                            }
-
+								helperInsertButton(label: "", 	insertedText: "",color:.cyan.opacity(0.0))
+								helperInsertButton(label: "", 	insertedText: "",color:.cyan.opacity(0.0))
+							}
+							
 							HStack(spacing: buttonSpacing) {
 								helperInsertButton(label: "wait\ntime", insertedText: "wait 5")
 								helperInsertButton(label: "tap\nminus", insertedText: "minus 10",color:.cyan.opacity(0.3))
 								helperInsertButton(label: "tap\nadd",	insertedText: "add ",color:.cyan.opacity(0.3))
 								helperInsertButton(label: "rnd\nnum", 	insertedText: "rnd 0 100",color:.cyan.opacity(0.3))
-				helperInsertButton(label: "rnd\nline", 	insertedText: "rnd file.txt",color:.cyan.opacity(0.3))
-				helperInsertButton("back", color:.green.opacity(0.3))
+								helperInsertButton(label: "rnd\nline", 	insertedText: "rnd file.txt",color:.cyan.opacity(0.3))
+								helperInsertButton("back", color:.red.opacity(0.5))
+								helperInsertButton(label: "", 	insertedText: "",color:.cyan.opacity(0.0))
+							}
+							
+							HStack(spacing: buttonSpacing) {
+								helperInsertButton(label: "timer snd",	insertedText: "timer 60 snd.wav")
+								helperInsertButton(label: "timer spk",	insertedText: "timer 10 hello")
+								helperInsertButton(label: "run\nshort\ncut",insertedText: "sc shortcutName",color:.green.opacity(0.3))
+								helperInsertButton(label: "open\napp", 		insertedText: "app mail",color:.green.opacity(0.3))
+								helperInsertButton(label: "preview\nfile", 	insertedText: "file file.txt",color:.green.opacity(0.3))
+								helperInsertButton("home", color:.red.opacity(0.5))
+								helperInsertButton(label: "", 	insertedText: "",color:.cyan.opacity(0.0))
+							}
+						}
+					}
 				}
-
-				HStack(spacing: buttonSpacing) {
-				helperInsertButton(label: "timer snd",	insertedText: "timer 60 snd.wav")
-				helperInsertButton(label: "timer spk",	insertedText: "timer 10 hello")
-				helperInsertButton(label: "run\nshort\ncut",insertedText: "sc shortcutName",color:.green.opacity(0.3))
-				helperInsertButton(label: "open\napp", 		insertedText: "app mail",color:.green.opacity(0.3))
-				helperInsertButton(label: "preview\nfile", 	insertedText: "file file.txt",color:.green.opacity(0.3))
-				helperInsertButton("home", color:.green.opacity(0.3))
-                            }
-                        }
-                    }
-                }
-
-                sfSymbolPanel(symbolNames: rightSymbolNames, buttonWidth: symbolButtonWidth)
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 4)
-            .background(Color.black.opacity(0.7))
-            .overlay {
-                RoundedRectangle(cornerRadius: 12)
+				
+				sfSymbolPanel(symbolNames: rightSymbolNames, buttonWidth: symbolButtonWidth)
+			}
+			.padding(.horizontal, 12)
+			.padding(.vertical, 4)
+			.background(Color.black.opacity(0.7))
+			.overlay {
+				RoundedRectangle(cornerRadius: 12)
                     .stroke(Color.gray.opacity(0.35), lineWidth: 1)
             }
             .clipShape(.rect(cornerRadius: 12))
@@ -528,7 +538,7 @@ struct MainScreenSlotEditorOverlay: View {
         .buttonStyle(.plain)
         .foregroundStyle(.white)
         .padding(.horizontal, 14)
-        .frame(width: 90)
+        .frame(width: 120)
         .frame(minHeight: 44)
         .background(Color(red: 0.0, green: 0.5, blue: 0.0))
         .overlay {
@@ -540,7 +550,7 @@ struct MainScreenSlotEditorOverlay: View {
 
     private var deleteButtonPlaceholder: some View {
         slotPositionLabel
-            .frame(width: rightColumnButtonWidth, height: 44)
+            .frame(width: 120/*rightColumnButtonWidth*/, height: 44)
             .background(Color.black)
             .clipShape(.rect(cornerRadius: 12))
     }
@@ -571,7 +581,7 @@ struct MainScreenSlotEditorOverlay: View {
         .buttonStyle(.plain)
         .foregroundStyle(.white)
         .padding(.horizontal, 14)
-        .frame(width: 90)
+        .frame(width: 120)
         .frame(minHeight: 44)
         .background(Color.blue)
         .overlay {
@@ -590,7 +600,7 @@ struct MainScreenSlotEditorOverlay: View {
         .buttonStyle(.plain)
         .foregroundStyle(.white)
         .padding(.horizontal, 14)
-        .frame(width: 90)
+        .frame(width: 120)
         .frame(minHeight: 44)
         .background(Color.gray.opacity(0.45))
         .overlay {
@@ -949,7 +959,7 @@ struct MainScreenSlotEditorOverlay: View {
 				Text("del")
                 .font(.system(size: 14, weight: .bold))
                 .foregroundStyle(.white)
-                .frame(width: helperButtonWidth, height: 44)
+				.frame(width: helperButtonWidth, height: 44)
 					.background(
 						RoundedRectangle(cornerRadius: 12)
 							.fill(Color(red: 0.42, green: 0.12, blue: 0.12))
@@ -969,7 +979,7 @@ struct MainScreenSlotEditorOverlay: View {
 					Text("del")
                 .font(.system(size: 14, weight: .bold))
                 .foregroundStyle(.white)
-					.frame(width: rightColumnButtonWidth, height: 44)
+					.frame(width: helperButtonWidth, height: 44)
 					.background(
 						RoundedRectangle(cornerRadius: 12)
 							.fill(Color(red: 0.42, green: 0.12, blue: 0.12))
