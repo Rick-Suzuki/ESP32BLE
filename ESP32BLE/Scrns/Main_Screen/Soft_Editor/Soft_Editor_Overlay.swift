@@ -32,7 +32,7 @@ struct MainScreenSlotEditorOverlay: View {
     private let rightColumnButtonWidth: CGFloat = 90
     private let slotPositionFontSize: CGFloat = 25
     private let orderedModifierPrefixes = ["ctl:", "op:", "sh:", "cm:"]
-    private let actionFieldOnlyInsertions = ["SP:"]
+    private let actionFieldOnlyInsertions = ["SP:", "home", "back"]
     private let displayModifierPrefixes = ["⌃", "⌥", "⇧", "⌘"]
     private let supportedColorCodes = "0123456789abcde"
 		
@@ -245,17 +245,17 @@ struct MainScreenSlotEditorOverlay: View {
 								helperInsertButton(label: "tap\nminus", insertedText: "minus 10",color:.cyan.opacity(0.3))
 								helperInsertButton(label: "tap\nadd",	insertedText: "add ",color:.cyan.opacity(0.3))
 								helperInsertButton(label: "rnd\nnum", 	insertedText: "rnd 0 100",color:.cyan.opacity(0.3))
-								helperInsertButton(label: "rnd\nline", 	insertedText: "rnd file.txt",color:.cyan.opacity(0.3))
-								dumbButton
-							}
+				helperInsertButton(label: "rnd\nline", 	insertedText: "rnd file.txt",color:.cyan.opacity(0.3))
+				helperInsertButton("back", color:.green.opacity(0.3))
+				}
 
-							HStack(spacing: buttonSpacing) {
-								helperInsertButton(label: "timer snd",	insertedText: "timer 60 snd.wav")
-								helperInsertButton(label: "timer spk",	insertedText: "timer 10 hello")
-								helperInsertButton(label: "run\nshort\ncut",insertedText: "sc shortcutName",color:.green.opacity(0.3))
-								helperInsertButton(label: "open\napp", 		insertedText: "app mail",color:.green.opacity(0.3))
-								helperInsertButton(label: "preview\nfile", 	insertedText: "file file.txt",color:.green.opacity(0.3))
-								dumbButton
+				HStack(spacing: buttonSpacing) {
+				helperInsertButton(label: "timer snd",	insertedText: "timer 60 snd.wav")
+				helperInsertButton(label: "timer spk",	insertedText: "timer 10 hello")
+				helperInsertButton(label: "run\nshort\ncut",insertedText: "sc shortcutName",color:.green.opacity(0.3))
+				helperInsertButton(label: "open\napp", 		insertedText: "app mail",color:.green.opacity(0.3))
+				helperInsertButton(label: "preview\nfile", 	insertedText: "file file.txt",color:.green.opacity(0.3))
+				helperInsertButton("home", color:.green.opacity(0.3))
                             }
                         }
                     }

@@ -133,6 +133,7 @@ extension MainScreen {
         let targetSpokenFilename = targetSpokenFilenameForGridEntry(entry)
         let targetSpokenText = targetSpokenTextForGridEntry(entry)
         let targetShortcutURL = targetShortcutURLForGridEntry(entry)
+        let shouldGoBackToPreviousDocument = targetBackDocumentCommandForGridEntry(entry)
         let hasPostBluetoothChainCommand = targetSoundFilename != nil ||
             targetSpokenText != nil ||
             targetSpokenFilename != nil ||
@@ -215,6 +216,10 @@ extension MainScreen {
             UIApplication.shared.open(targetShortcutURL)
         }
 
+        if shouldGoBackToPreviousDocument {
+            goBackToPreviousDocument()
+        }
+
         if let targetDocumentName {
             guard selectDocumentNamedFromGrid(targetDocumentName) else {
                 alertTitle = "File Not Found"
@@ -238,6 +243,7 @@ extension MainScreen {
                 targetAppURLForSendText(sendText) == nil &&
                 targetClipboardTextForSendText(sendText) == nil &&
                 targetPreviewFilenameForSendText(sendText) == nil &&
+                !isBackDocumentCommandText(sendText) &&
                 !isWaitCommandText(sendText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()) &&
                 targetWidgetDescriptorForSendText(sendText) == nil
             }
@@ -320,6 +326,11 @@ extension MainScreen {
 
             if let targetShortcutURL = targetShortcutURLForSendText(trimmedActionToken) {
                 await UIApplication.shared.open(targetShortcutURL)
+                continue
+            }
+
+            if isBackDocumentCommandText(trimmedActionToken) {
+                goBackToPreviousDocument()
                 continue
             }
 
@@ -600,6 +611,14 @@ extension MainScreen {
         entry.sendTexts.first(where: { targetDocumentNameForSendText($0) != nil })
     }
 
+    func targetBackDocumentCommandForGridEntry(_ entry: FunctionKeyEntry) -> Bool {
+        entry.sendTexts.contains(where: isBackDocumentCommandText)
+    }
+
+    func isBackDocumentCommandText(_ sendText: String) -> Bool {
+        sendText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == "back"
+    }
+
     func targetDocumentNameForSendText(_ sendText: String) -> String? {
         let trimmedSendText = sendText.trimmingCharacters(in: .whitespacesAndNewlines)
         let loweredSendText = trimmedSendText.lowercased()
@@ -614,6 +633,10 @@ extension MainScreen {
         }
         guard !loweredSendText.hasPrefix("file ") else {
             return nil
+        }
+
+        if loweredSendText == "home" {
+            return "home.txt"
         }
 
         return loweredSendText.hasSuffix(".txt") ? trimmedSendText : nil
