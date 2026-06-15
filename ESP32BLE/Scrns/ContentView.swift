@@ -21,6 +21,16 @@ private enum AppRuntimeFlags {
     static var orientationState = false
 }
 
+private struct DocumentBackgroundImageConfig: Codable {
+    var imageNames: [String: String] = [:]
+    var imagePaths: [String: String] = [:]
+    var opacities: [String: Double] = [:]
+
+    var isEmpty: Bool {
+        imageNames.isEmpty && imagePaths.isEmpty && opacities.isEmpty
+    }
+}
+
 // True when horizontal, false when vertical.
 var orientationState: Bool {
     AppRuntimeFlags.orientationState
@@ -338,6 +348,7 @@ struct ContentView: View {
             ensureDefaultEmojiSpeechConfigFile()
             refreshDocumentFiles()
             refreshBackgroundImageFiles()
+            synchronizeDocumentBackgroundConfigFile()
             selectInitialDocument()
             updateLoadedBackgroundImageForVisibleScreen()
             logDeviceTypeIfNeeded()
@@ -769,6 +780,99 @@ struct ContentView: View {
         documentBackgroundImageOpacitiesData = encoded
     }
 
+    private var documentBackgroundImageConfigURL: URL? {
+        documentsDirectoryURL()?.appendingPathComponent("document-backgrounds.json")
+    }
+
+    private var legacyDocumentBackgroundImageConfigURL: URL? {
+        documentsDirectoryURL()?.appendingPathComponent(".document-backgrounds.json")
+    }
+
+    private func loadDocumentBackgroundImageConfigFile() -> DocumentBackgroundImageConfig? {
+        let candidateURLs = [
+            documentBackgroundImageConfigURL,
+            legacyDocumentBackgroundImageConfigURL
+        ].compactMap { $0 }
+
+        guard let configURL = candidateURLs.first(where: { FileManager.default.fileExists(atPath: $0.path) }),
+              let data = try? Data(contentsOf: configURL) else {
+            return nil
+        }
+
+        guard !data.isEmpty else {
+            return DocumentBackgroundImageConfig()
+        }
+
+        return try? JSONDecoder().decode(DocumentBackgroundImageConfig.self, from: data)
+    }
+
+    private var visibleDocumentBackgroundImageConfigIsEmpty: Bool {
+        guard let configURL = documentBackgroundImageConfigURL,
+              FileManager.default.fileExists(atPath: configURL.path),
+              let data = try? Data(contentsOf: configURL) else {
+            return true
+        }
+
+        guard !data.isEmpty else {
+            return true
+        }
+
+        return (try? JSONDecoder().decode(DocumentBackgroundImageConfig.self, from: data).isEmpty) ?? true
+    }
+
+    private func saveDocumentBackgroundImageConfigFile(_ config: DocumentBackgroundImageConfig) {
+        guard let configURL = documentBackgroundImageConfigURL else {
+            return
+        }
+
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        guard let data = try? encoder.encode(config) else {
+            return
+        }
+
+        try? data.write(to: configURL, options: [.atomic])
+    }
+
+    private var hasDocumentBackgroundMappingsInAppStorage: Bool {
+        !loadDocumentBackgroundImageNames().isEmpty ||
+        !loadDocumentBackgroundImagePaths().isEmpty ||
+        !loadDocumentBackgroundImageOpacities().isEmpty
+    }
+
+    private func documentBackgroundImageConfigFromAppStorage() -> DocumentBackgroundImageConfig {
+        DocumentBackgroundImageConfig(
+            imageNames: loadDocumentBackgroundImageNames(),
+            imagePaths: loadDocumentBackgroundImagePaths(),
+            opacities: loadDocumentBackgroundImageOpacities()
+        )
+    }
+
+    private func writeDocumentBackgroundImageConfigFileFromAppStorage() {
+        saveDocumentBackgroundImageConfigFile(documentBackgroundImageConfigFromAppStorage())
+    }
+
+    private func synchronizeDocumentBackgroundConfigFile() {
+        let storedConfig = loadDocumentBackgroundImageConfigFile()
+
+        // A non-empty document-backgrounds.json is the portable source of truth.
+        // This lets copied config files replace stale AppStorage values on another iPad.
+        if let storedConfig, !storedConfig.isEmpty {
+            saveDocumentBackgroundImageNames(storedConfig.imageNames)
+            saveDocumentBackgroundImagePaths(storedConfig.imagePaths)
+            saveDocumentBackgroundImageOpacities(storedConfig.opacities)
+
+            if visibleDocumentBackgroundImageConfigIsEmpty {
+                saveDocumentBackgroundImageConfigFile(storedConfig)
+            }
+            return
+        }
+
+        if hasDocumentBackgroundMappingsInAppStorage, visibleDocumentBackgroundImageConfigIsEmpty {
+            writeDocumentBackgroundImageConfigFileFromAppStorage()
+        }
+    }
+
     private func loadDocumentGridDimensions() -> [String: StoredGridDimensions] {
         guard let data = documentGridDimensionsData.data(using: .utf8),
               let decoded = try? JSONDecoder().decode([String: StoredGridDimensions].self, from: data) else {
@@ -831,6 +935,7 @@ struct ContentView: View {
         var opacityMappings = loadDocumentBackgroundImageOpacities()
         opacityMappings[trimmedDocumentName] = backgroundImageOpacity
         saveDocumentBackgroundImageOpacities(opacityMappings)
+        writeDocumentBackgroundImageConfigFileFromAppStorage()
     }
 
     private func restoreBackgroundImageOpacity(for documentName: String) {
@@ -865,6 +970,7 @@ struct ContentView: View {
         }
         saveDocumentBackgroundImageNames(nameMappings)
         saveDocumentBackgroundImagePaths(pathMappings)
+        writeDocumentBackgroundImageConfigFileFromAppStorage()
     }
 
     private func restoreBackgroundImageSelection(for documentName: String) {
