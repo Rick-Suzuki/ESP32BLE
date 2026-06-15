@@ -134,6 +134,8 @@ extension MainScreen {
         let targetSpokenText = targetSpokenTextForGridEntry(entry)
         let targetShortcutURL = targetShortcutURLForGridEntry(entry)
         let shouldGoBackToPreviousDocument = targetBackDocumentCommandForGridEntry(entry)
+        let shouldSelectPreviousDocument = targetPreviousDocumentCommandForGridEntry(entry)
+        let shouldSelectNextDocument = targetNextDocumentCommandForGridEntry(entry)
         let hasPostBluetoothChainCommand = targetSoundFilename != nil ||
             targetSpokenText != nil ||
             targetSpokenFilename != nil ||
@@ -220,6 +222,14 @@ extension MainScreen {
             goBackToPreviousDocument()
         }
 
+        if shouldSelectPreviousDocument {
+            selectPreviousDocument()
+        }
+
+        if shouldSelectNextDocument {
+            selectNextDocument()
+        }
+
         if let targetDocumentName {
             guard selectDocumentNamedFromGrid(targetDocumentName) else {
                 alertTitle = "File Not Found"
@@ -244,6 +254,8 @@ extension MainScreen {
                 targetClipboardTextForSendText(sendText) == nil &&
                 targetPreviewFilenameForSendText(sendText) == nil &&
                 !isBackDocumentCommandText(sendText) &&
+                !isPreviousDocumentCommandText(sendText) &&
+                !isNextDocumentCommandText(sendText) &&
                 !isWaitCommandText(sendText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()) &&
                 targetWidgetDescriptorForSendText(sendText) == nil
             }
@@ -331,6 +343,16 @@ extension MainScreen {
 
             if isBackDocumentCommandText(trimmedActionToken) {
                 goBackToPreviousDocument()
+                continue
+            }
+
+            if isPreviousDocumentCommandText(trimmedActionToken) {
+                selectPreviousDocument()
+                continue
+            }
+
+            if isNextDocumentCommandText(trimmedActionToken) {
+                selectNextDocument()
                 continue
             }
 
@@ -615,8 +637,24 @@ extension MainScreen {
         entry.sendTexts.contains(where: isBackDocumentCommandText)
     }
 
+    func targetPreviousDocumentCommandForGridEntry(_ entry: FunctionKeyEntry) -> Bool {
+        entry.sendTexts.contains(where: isPreviousDocumentCommandText)
+    }
+
+    func targetNextDocumentCommandForGridEntry(_ entry: FunctionKeyEntry) -> Bool {
+        entry.sendTexts.contains(where: isNextDocumentCommandText)
+    }
+
     func isBackDocumentCommandText(_ sendText: String) -> Bool {
         sendText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == "back"
+    }
+
+    func isPreviousDocumentCommandText(_ sendText: String) -> Bool {
+        sendText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == "prev"
+    }
+
+    func isNextDocumentCommandText(_ sendText: String) -> Bool {
+        sendText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == "next"
     }
 
     func targetDocumentNameForSendText(_ sendText: String) -> String? {

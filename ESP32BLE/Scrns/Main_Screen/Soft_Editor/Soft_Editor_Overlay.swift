@@ -32,7 +32,7 @@ struct MainScreenSlotEditorOverlay: View {
     private let rightColumnButtonWidth: CGFloat = 90
     private let slotPositionFontSize: CGFloat = 25
     private let orderedModifierPrefixes = ["ctl:", "op:", "sh:", "cm:"]
-    private let actionFieldOnlyInsertions = ["SP:", "home", "back"]
+    private let actionFieldOnlyInsertions = ["SP:", "home", "back", "prev", "next"]
     private let displayModifierPrefixes = ["⌃", "⌥", "⇧", "⌘"]
     private let supportedColorCodes = "0123456789abcde"
 		
@@ -254,9 +254,9 @@ struct MainScreenSlotEditorOverlay: View {
 								helperInsertButton(label: "tap\nadd",	insertedText: "add ",color:.cyan.opacity(0.3))
 								helperInsertButton(label: "rnd\nnum", 	insertedText: "rnd 0 100",color:.cyan.opacity(0.3))
 								helperInsertButton(label: "rnd\nline", 	insertedText: "rnd file.txt",color:.cyan.opacity(0.3))
-								helperInsertButton("back", color:.red.opacity(0.5))
-								helperInsertButton(label: "", 	insertedText: "",color:.cyan.opacity(0.0))
-							}
+								helperInsertButton("prev", color:.blue.opacity(0.5))
+								helperInsertButton("next", color:.blue.opacity(0.5))
+				}
 							
 							HStack(spacing: buttonSpacing) {
 								helperInsertButton(label: "timer snd",	insertedText: "timer 60 snd.wav")
@@ -265,7 +265,7 @@ struct MainScreenSlotEditorOverlay: View {
 								helperInsertButton(label: "open\napp", 		insertedText: "app mail",color:.green.opacity(0.3))
 								helperInsertButton(label: "preview\nfile", 	insertedText: "file file.txt",color:.green.opacity(0.3))
 								helperInsertButton("home", color:.red.opacity(0.5))
-								helperInsertButton(label: "", 	insertedText: "",color:.cyan.opacity(0.0))
+								helperInsertButton("back", color:.red.opacity(0.5))
 							}
 						}
 					}
