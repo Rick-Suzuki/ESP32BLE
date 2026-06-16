@@ -402,7 +402,11 @@ struct SettingsScreen: View {
     private var isImporting: Binding<Bool> {
         Binding(
             get: { pendingImportListMode != nil },
-            set: { _ in }
+            set: { isPresented in
+                if !isPresented {
+                    pendingImportListMode = nil
+                }
+            }
         )
     }
 
