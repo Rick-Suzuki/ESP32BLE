@@ -100,6 +100,7 @@ struct MainScreen: View {
     let selectPreviousDocument: () -> Void
     let selectNextDocument: () -> Void
     let goBackToPreviousDocument: () -> Void
+    let goForwardToNextDocument: () -> Void
     let canGoBackToPreviousDocument: Bool
     let previousDocumentDisplayName: String?
     let adjacentPreviousDocumentDisplayName: String?

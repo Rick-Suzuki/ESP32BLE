@@ -17,6 +17,8 @@ var isPad: Bool {
     UIDevice.current.userInterfaceIdiom == .pad
 }
 
+private let maxDocumentNavigationHistoryCount = 50
+
 private enum AppRuntimeFlags {
     static var orientationState = false
 }
@@ -225,6 +227,7 @@ struct ContentView: View {
     @State private var backgroundImageFiles: [URL] = []
     @State private var loadedBackgroundImage: UIImage?
     @State private var documentNavigationHistory: [String] = []
+    @State private var documentForwardNavigationHistory: [String] = []
     @AppStorage("selectedDocumentName") private var selectedDocumentName = "fnkeys.txt"
     @AppStorage("documentFontSizesData") private var documentFontSizesData = ""
     @State private var settingsBLEText = ""
@@ -279,6 +282,7 @@ struct ContentView: View {
                             selectPreviousDocument: selectPreviousDocument,
                             selectNextDocument: selectNextDocument,
                             goBackToPreviousDocument: goBackToPreviousDocument,
+                            goForwardToNextDocument: goForwardToNextDocument,
                             canGoBackToPreviousDocument: canGoBackToPreviousDocument,
                             previousDocumentDisplayName: previousDocumentDisplayName,
                             adjacentPreviousDocumentDisplayName: adjacentPreviousDocumentDisplayName,
@@ -2202,9 +2206,23 @@ struct ContentView: View {
             return
         }
 
-        if documentNavigationHistory.last != selectedDocumentName {
-            documentNavigationHistory.append(selectedDocumentName)
+        documentNavigationHistory = appendingDocumentHistoryName(
+            selectedDocumentName,
+            to: documentNavigationHistory
+        )
+    }
+
+    private func appendingDocumentHistoryName(_ documentName: String, to history: [String]) -> [String] {
+        guard history.last != documentName else {
+            return history
         }
+
+        var updatedHistory = history
+        updatedHistory.append(documentName)
+        if updatedHistory.count > maxDocumentNavigationHistoryCount {
+            updatedHistory.removeFirst(updatedHistory.count - maxDocumentNavigationHistoryCount)
+        }
+        return updatedHistory
     }
 
     private func canonicalDocumentFileName(from rawName: String) -> String {
@@ -2372,6 +2390,7 @@ struct ContentView: View {
 
             if let fallbackFileURL {
                 documentNavigationHistory.removeAll { $0 == fileURL.lastPathComponent }
+                documentForwardNavigationHistory.removeAll { $0 == fileURL.lastPathComponent }
                 selectDocument(fallbackFileURL)
             }
         } catch {
@@ -2473,6 +2492,30 @@ struct ContentView: View {
                 continue
             }
 
+            if !selectedDocumentName.isEmpty {
+                documentForwardNavigationHistory = appendingDocumentHistoryName(
+                    selectedDocumentName,
+                    to: documentForwardNavigationHistory
+                )
+            }
+            selectDocument(fileURL)
+            return
+        }
+    }
+
+    private func goForwardToNextDocument() {
+        while let nextName = documentForwardNavigationHistory.popLast() {
+            guard nextName != selectedDocumentName,
+                  let fileURL = documentFiles.first(where: { $0.lastPathComponent == nextName }) else {
+                continue
+            }
+
+            if !selectedDocumentName.isEmpty {
+                documentNavigationHistory = appendingDocumentHistoryName(
+                    selectedDocumentName,
+                    to: documentNavigationHistory
+                )
+            }
             selectDocument(fileURL)
             return
         }

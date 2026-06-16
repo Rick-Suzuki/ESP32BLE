@@ -134,6 +134,7 @@ extension MainScreen {
         let targetSpokenText = targetSpokenTextForGridEntry(entry)
         let targetShortcutURL = targetShortcutURLForGridEntry(entry)
         let shouldGoBackToPreviousDocument = targetBackDocumentCommandForGridEntry(entry)
+        let shouldGoForwardToNextDocument = targetForwardDocumentCommandForGridEntry(entry)
         let shouldSelectPreviousDocument = targetPreviousDocumentCommandForGridEntry(entry)
         let shouldSelectNextDocument = targetNextDocumentCommandForGridEntry(entry)
         let hasPostBluetoothChainCommand = targetSoundFilename != nil ||
@@ -222,6 +223,10 @@ extension MainScreen {
             goBackToPreviousDocument()
         }
 
+        if shouldGoForwardToNextDocument {
+            goForwardToNextDocument()
+        }
+
         if shouldSelectPreviousDocument {
             selectPreviousDocument()
         }
@@ -254,6 +259,7 @@ extension MainScreen {
                 targetClipboardTextForSendText(sendText) == nil &&
                 targetPreviewFilenameForSendText(sendText) == nil &&
                 !isBackDocumentCommandText(sendText) &&
+                !isForwardDocumentCommandText(sendText) &&
                 !isPreviousDocumentCommandText(sendText) &&
                 !isNextDocumentCommandText(sendText) &&
                 !isWaitCommandText(sendText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()) &&
@@ -343,6 +349,11 @@ extension MainScreen {
 
             if isBackDocumentCommandText(trimmedActionToken) {
                 goBackToPreviousDocument()
+                continue
+            }
+
+            if isForwardDocumentCommandText(trimmedActionToken) {
+                goForwardToNextDocument()
                 continue
             }
 
@@ -637,6 +648,10 @@ extension MainScreen {
         entry.sendTexts.contains(where: isBackDocumentCommandText)
     }
 
+    func targetForwardDocumentCommandForGridEntry(_ entry: FunctionKeyEntry) -> Bool {
+        entry.sendTexts.contains(where: isForwardDocumentCommandText)
+    }
+
     func targetPreviousDocumentCommandForGridEntry(_ entry: FunctionKeyEntry) -> Bool {
         entry.sendTexts.contains(where: isPreviousDocumentCommandText)
     }
@@ -647,6 +662,10 @@ extension MainScreen {
 
     func isBackDocumentCommandText(_ sendText: String) -> Bool {
         sendText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == "back"
+    }
+
+    func isForwardDocumentCommandText(_ sendText: String) -> Bool {
+        sendText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == "forw"
     }
 
     func isPreviousDocumentCommandText(_ sendText: String) -> Bool {

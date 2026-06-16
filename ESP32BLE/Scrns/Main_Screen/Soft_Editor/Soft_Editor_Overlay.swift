@@ -32,7 +32,7 @@ struct MainScreenSlotEditorOverlay: View {
     private let rightColumnButtonWidth: CGFloat = 90
     private let slotPositionFontSize: CGFloat = 25
     private let orderedModifierPrefixes = ["ctl:", "op:", "sh:", "cm:"]
-    private let actionFieldOnlyInsertions = ["SP:", "home", "back", "prev", "next"]
+    private let actionFieldOnlyInsertions = ["SP:", "home", "back", "forw", "prev", "next"]
     private let displayModifierPrefixes = ["⌃", "⌥", "⇧", "⌘"]
     private let supportedColorCodes = "0123456789abcde"
 		
@@ -244,8 +244,8 @@ struct MainScreenSlotEditorOverlay: View {
 								helperInsertButton(label: "spk\ntext", 	insertedText: "spk hello",color:.purple.opacity(0.3))
 								helperInsertButton(label: "Esp32\nout", insertedText: "out 32 1",color:.orange.opacity(0.3))
 								helperInsertButton(label: "Esp32\npwm", insertedText: "pwm 32 5 4",color:.orange.opacity(0.3))
-								helperInsertButton(label: "", 	insertedText: "",color:.cyan.opacity(0.0))
-								helperInsertButton(label: "", 	insertedText: "",color:.cyan.opacity(0.0))
+								helperInsertButton("< prev", color:.blue.opacity(0.5))
+								helperInsertButton("next >", color:.blue.opacity(0.5))
 							}
 							
 							HStack(spacing: buttonSpacing) {
@@ -254,8 +254,8 @@ struct MainScreenSlotEditorOverlay: View {
 								helperInsertButton(label: "tap\nadd",	insertedText: "add ",color:.cyan.opacity(0.3))
 								helperInsertButton(label: "rnd\nnum", 	insertedText: "rnd 0 100",color:.cyan.opacity(0.3))
 								helperInsertButton(label: "rnd\nline", 	insertedText: "rnd file.txt",color:.cyan.opacity(0.3))
-								helperInsertButton("prev", color:.blue.opacity(0.5))
-								helperInsertButton("next", color:.blue.opacity(0.5))
+								helperInsertButton("< back", color:.red.opacity(0.5))
+								helperInsertButton(label: "fwd >", 	insertedText: "forw", color:.red.opacity(0.5))
 				}
 							
 							HStack(spacing: buttonSpacing) {
@@ -264,8 +264,8 @@ struct MainScreenSlotEditorOverlay: View {
 								helperInsertButton(label: "run\nshort\ncut",insertedText: "sc shortcutName",color:.green.opacity(0.3))
 								helperInsertButton(label: "open\napp", 		insertedText: "app mail",color:.green.opacity(0.3))
 								helperInsertButton(label: "preview\nfile", 	insertedText: "file file.txt",color:.green.opacity(0.3))
-								helperInsertButton("home", color:.red.opacity(0.5))
-								helperInsertButton("back", color:.red.opacity(0.5))
+								helperInsertButton("home", color:.green.opacity(0.5))
+								helperInsertButton(label: "", 			insertedText: "",color:.cyan.opacity(0.0))
 							}
 						}
 					}
