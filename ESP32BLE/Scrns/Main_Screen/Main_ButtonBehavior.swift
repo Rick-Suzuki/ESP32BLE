@@ -108,7 +108,20 @@ extension MainScreen {
             speakMainGridEntry(entry)
         }
 
-        guard !entry.sendTexts.isEmpty else {
+        let shouldGoBackToPreviousDocument = targetBackDocumentCommandForGridEntry(entry)
+        let shouldGoForwardToNextDocument = targetForwardDocumentCommandForGridEntry(entry)
+        let shouldSelectPreviousDocument = targetPreviousDocumentCommandForGridEntry(entry)
+        let shouldSelectNextDocument = targetNextDocumentCommandForGridEntry(entry)
+
+        print("Main button pressed. left: [\(entry.sendTexts.joined(separator: ":"))] right: [\(entry.alternateDisplayText ?? "")] nav back:\(shouldGoBackToPreviousDocument) forw:\(shouldGoForwardToNextDocument) prev:\(shouldSelectPreviousDocument) next:\(shouldSelectNextDocument)")
+
+        if entry.sendTexts.isEmpty {
+            runDocumentNavigationCommandIfNeeded(
+                shouldGoBackToPreviousDocument: shouldGoBackToPreviousDocument,
+                shouldGoForwardToNextDocument: shouldGoForwardToNextDocument,
+                shouldSelectPreviousDocument: shouldSelectPreviousDocument,
+                shouldSelectNextDocument: shouldSelectNextDocument
+            )
             return
         }
 
@@ -133,10 +146,6 @@ extension MainScreen {
         let targetSpokenFilename = targetSpokenFilenameForGridEntry(entry)
         let targetSpokenText = targetSpokenTextForGridEntry(entry)
         let targetShortcutURL = targetShortcutURLForGridEntry(entry)
-        let shouldGoBackToPreviousDocument = targetBackDocumentCommandForGridEntry(entry)
-        let shouldGoForwardToNextDocument = targetForwardDocumentCommandForGridEntry(entry)
-        let shouldSelectPreviousDocument = targetPreviousDocumentCommandForGridEntry(entry)
-        let shouldSelectNextDocument = targetNextDocumentCommandForGridEntry(entry)
         let hasPostBluetoothChainCommand = targetSoundFilename != nil ||
             targetSpokenText != nil ||
             targetSpokenFilename != nil ||
@@ -219,6 +228,30 @@ extension MainScreen {
             UIApplication.shared.open(targetShortcutURL)
         }
 
+        runDocumentNavigationCommandIfNeeded(
+            shouldGoBackToPreviousDocument: shouldGoBackToPreviousDocument,
+            shouldGoForwardToNextDocument: shouldGoForwardToNextDocument,
+            shouldSelectPreviousDocument: shouldSelectPreviousDocument,
+            shouldSelectNextDocument: shouldSelectNextDocument
+        )
+
+        if let targetDocumentName {
+            guard selectDocumentNamedFromGrid(targetDocumentName) else {
+                alertTitle = "File Not Found"
+                renameAlertMessage = "Couldn't find \(targetDocumentName.lowercased())."
+                return
+            }
+        }
+
+        _ = sendBluetoothIfNeeded()
+    }
+
+    private func runDocumentNavigationCommandIfNeeded(
+        shouldGoBackToPreviousDocument: Bool,
+        shouldGoForwardToNextDocument: Bool,
+        shouldSelectPreviousDocument: Bool,
+        shouldSelectNextDocument: Bool
+    ) {
         if shouldGoBackToPreviousDocument {
             goBackToPreviousDocument()
         }
@@ -234,16 +267,6 @@ extension MainScreen {
         if shouldSelectNextDocument {
             selectNextDocument()
         }
-
-        if let targetDocumentName {
-            guard selectDocumentNamedFromGrid(targetDocumentName) else {
-                alertTitle = "File Not Found"
-                renameAlertMessage = "Couldn't find \(targetDocumentName.lowercased())."
-                return
-            }
-        }
-
-        _ = sendBluetoothIfNeeded()
     }
 
     func bluetoothSendTexts(for entry: FunctionKeyEntry) -> [String] {
@@ -645,19 +668,23 @@ extension MainScreen {
     }
 
     func targetBackDocumentCommandForGridEntry(_ entry: FunctionKeyEntry) -> Bool {
-        entry.sendTexts.contains(where: isBackDocumentCommandText)
+        documentNavigationCommandTexts(for: entry).contains(where: isBackDocumentCommandText)
     }
 
     func targetForwardDocumentCommandForGridEntry(_ entry: FunctionKeyEntry) -> Bool {
-        entry.sendTexts.contains(where: isForwardDocumentCommandText)
+        documentNavigationCommandTexts(for: entry).contains(where: isForwardDocumentCommandText)
     }
 
     func targetPreviousDocumentCommandForGridEntry(_ entry: FunctionKeyEntry) -> Bool {
-        entry.sendTexts.contains(where: isPreviousDocumentCommandText)
+        documentNavigationCommandTexts(for: entry).contains(where: isPreviousDocumentCommandText)
     }
 
     func targetNextDocumentCommandForGridEntry(_ entry: FunctionKeyEntry) -> Bool {
-        entry.sendTexts.contains(where: isNextDocumentCommandText)
+        documentNavigationCommandTexts(for: entry).contains(where: isNextDocumentCommandText)
+    }
+
+    func documentNavigationCommandTexts(for entry: FunctionKeyEntry) -> [String] {
+        entry.sendTexts
     }
 
     func isBackDocumentCommandText(_ sendText: String) -> Bool {

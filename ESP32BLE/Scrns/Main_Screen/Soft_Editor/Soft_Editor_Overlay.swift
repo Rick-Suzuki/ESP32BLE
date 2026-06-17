@@ -224,7 +224,8 @@ struct MainScreenSlotEditorOverlay: View {
 								helperInsertButton("day ",color:.blue.opacity(0.3))
 								helperInsertButton(label: "day of\nweek",insertedText: "dow ",color:.blue.opacity(0.3))
 								helperInsertButton("year ",color:.blue.opacity(0.3))
-								closeButton
+								helperInsertButton(label: "prev", insertedText: "prev", color:.blue.opacity(0.5))
+								helperInsertButton(label: "next", insertedText: "next", color:.blue.opacity(0.5))
 							}
 							
 							HStack(spacing: buttonSpacing) {
@@ -233,8 +234,8 @@ struct MainScreenSlotEditorOverlay: View {
 								helperInsertButton(label: "mins", 		insertedText: "min ",color:.blue.opacity(0.3))
 								helperInsertButton(label: "secs", 		insertedText: "sec ",color:.blue.opacity(0.3))
 								helperInsertButton(label: "device\npower",insertedText: "power ")
-								helperInsertButton(label: "", 	insertedText: "",color:.cyan.opacity(0.0))
-								helperInsertButton(label: "", 	insertedText: "",color:.cyan.opacity(0.0))
+								helperInsertButton(label: "back", insertedText: "back", color:.red.opacity(0.5))
+								helperInsertButton(label: "forw", 	insertedText: "forw", color:.red.opacity(0.5))
 							//	dumbButton
 							}
 							
@@ -244,8 +245,8 @@ struct MainScreenSlotEditorOverlay: View {
 								helperInsertButton(label: "spk\ntext", 	insertedText: "spk hello",color:.purple.opacity(0.3))
 								helperInsertButton(label: "Esp32\nout", insertedText: "out 32 1",color:.orange.opacity(0.3))
 								helperInsertButton(label: "Esp32\npwm", insertedText: "pwm 32 5 4",color:.orange.opacity(0.3))
-								helperInsertButton("< prev", color:.blue.opacity(0.5))
-								helperInsertButton("next >", color:.blue.opacity(0.5))
+								helperInsertButton("home", color:.green.opacity(0.5))
+								helperInsertButton(label: "", 			insertedText: "",color:.cyan.opacity(0.0))
 							}
 							
 							HStack(spacing: buttonSpacing) {
@@ -254,9 +255,9 @@ struct MainScreenSlotEditorOverlay: View {
 								helperInsertButton(label: "tap\nadd",	insertedText: "add ",color:.cyan.opacity(0.3))
 								helperInsertButton(label: "rnd\nnum", 	insertedText: "rnd 0 100",color:.cyan.opacity(0.3))
 								helperInsertButton(label: "rnd\nline", 	insertedText: "rnd file.txt",color:.cyan.opacity(0.3))
-								helperInsertButton("< back", color:.red.opacity(0.5))
-								helperInsertButton(label: "fwd >", 	insertedText: "forw", color:.red.opacity(0.5))
-				}
+								helperInsertButton(label: "", 	insertedText: "",color:.cyan.opacity(0.0))
+								helperInsertButton(label: "", 	insertedText: "",color:.cyan.opacity(0.0))
+							}
 							
 							HStack(spacing: buttonSpacing) {
 								helperInsertButton(label: "timer snd",	insertedText: "timer 60 snd.wav")
@@ -264,8 +265,7 @@ struct MainScreenSlotEditorOverlay: View {
 								helperInsertButton(label: "run\nshort\ncut",insertedText: "sc shortcutName",color:.green.opacity(0.3))
 								helperInsertButton(label: "open\napp", 		insertedText: "app mail",color:.green.opacity(0.3))
 								helperInsertButton(label: "preview\nfile", 	insertedText: "file file.txt",color:.green.opacity(0.3))
-								helperInsertButton("home", color:.green.opacity(0.5))
-								helperInsertButton(label: "", 			insertedText: "",color:.cyan.opacity(0.0))
+								closeButton
 							}
 						}
 					}

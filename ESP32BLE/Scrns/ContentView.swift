@@ -2201,8 +2201,10 @@ struct ContentView: View {
     }
 
     private func recordDocumentHistory(beforeSwitchingTo targetDocumentName: String) {
+        printDocumentNavigationStacks("record requested -> \(targetDocumentName)")
         guard !selectedDocumentName.isEmpty,
               selectedDocumentName != targetDocumentName else {
+            printDocumentNavigationStacks("record skipped")
             return
         }
 
@@ -2210,6 +2212,11 @@ struct ContentView: View {
             selectedDocumentName,
             to: documentNavigationHistory
         )
+        printDocumentNavigationStacks("record stored -> \(targetDocumentName)")
+    }
+
+    private func printDocumentNavigationStacks(_ label: String) {
+        print("Doc nav \(label). current: [\(selectedDocumentName)] back: \(documentNavigationHistory) forw: \(documentForwardNavigationHistory)")
     }
 
     private func appendingDocumentHistoryName(_ documentName: String, to history: [String]) -> [String] {
@@ -2486,9 +2493,11 @@ struct ContentView: View {
     }
 
     private func goBackToPreviousDocument() {
+        printDocumentNavigationStacks("back requested")
         while let previousName = documentNavigationHistory.popLast() {
             guard previousName != selectedDocumentName,
                   let fileURL = documentFiles.first(where: { $0.lastPathComponent == previousName }) else {
+                print("Doc nav back skipped: [\(previousName)]")
                 continue
             }
 
@@ -2498,15 +2507,20 @@ struct ContentView: View {
                     to: documentForwardNavigationHistory
                 )
             }
+            printDocumentNavigationStacks("back selecting -> \(previousName)")
             selectDocument(fileURL)
+            printDocumentNavigationStacks("back finished")
             return
         }
+        printDocumentNavigationStacks("back no target")
     }
 
     private func goForwardToNextDocument() {
+        printDocumentNavigationStacks("forw requested")
         while let nextName = documentForwardNavigationHistory.popLast() {
             guard nextName != selectedDocumentName,
                   let fileURL = documentFiles.first(where: { $0.lastPathComponent == nextName }) else {
+                print("Doc nav forw skipped: [\(nextName)]")
                 continue
             }
 
@@ -2516,9 +2530,44 @@ struct ContentView: View {
                     to: documentNavigationHistory
                 )
             }
+            printDocumentNavigationStacks("forw selecting -> \(nextName)")
             selectDocument(fileURL)
+            printDocumentNavigationStacks("forw finished")
             return
         }
+
+        if let (nextName, fileURL) = nextDocumentFromNavigationHistory() {
+            printDocumentNavigationStacks("forw selecting from history -> \(nextName)")
+            selectDocument(fileURL)
+            printDocumentNavigationStacks("forw history finished")
+            return
+        }
+
+        printDocumentNavigationStacks("forw no target")
+    }
+
+    private func nextDocumentFromNavigationHistory() -> (name: String, fileURL: URL)? {
+        guard !selectedDocumentName.isEmpty else {
+            return nil
+        }
+
+        for currentIndex in documentNavigationHistory.indices.reversed()
+            where documentNavigationHistory[currentIndex] == selectedDocumentName {
+            var nextIndex = documentNavigationHistory.index(after: currentIndex)
+            while nextIndex < documentNavigationHistory.endIndex {
+                let nextName = documentNavigationHistory[nextIndex]
+                guard nextName != selectedDocumentName,
+                      let fileURL = documentFiles.first(where: { $0.lastPathComponent == nextName }) else {
+                    print("Doc nav forw history skipped: [\(nextName)]")
+                    nextIndex = documentNavigationHistory.index(after: nextIndex)
+                    continue
+                }
+
+                return (nextName, fileURL)
+            }
+        }
+
+        return nil
     }
 }
 
