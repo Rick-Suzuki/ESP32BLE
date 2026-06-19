@@ -219,49 +219,49 @@ struct MainScreenSlotEditorOverlay: View {
 							
 							// MARK: - BM:🟧 soft KB: Widgets
 							HStack(spacing: buttonSpacing) {
-								helperInsertButton("clock ",color:.blue.opacity(0.3))
-								helperInsertButton("date ",color:.blue.opacity(0.3))
-								helperInsertButton("day ",color:.blue.opacity(0.3))
-								helperInsertButton(label: "day of\nweek",insertedText: "dow ",color:.blue.opacity(0.3))
-								helperInsertButton("year ",color:.blue.opacity(0.3))
-								helperInsertButton(label: "prev", insertedText: "prev", color:.blue.opacity(0.5))
-								helperInsertButton(label: "next", insertedText: "next", color:.blue.opacity(0.5))
+								helperInsertButton(label: "clock",			insertedText: "clock ",color:.blue.opacity(0.3))
+								helperInsertButton(label: "date",			insertedText: "date ",color:.blue.opacity(0.3))
+								helperInsertButton(label: "day",			insertedText: "day ",color:.blue.opacity(0.3))
+								helperInsertButton(label: "day of\nweek",	insertedText: "dow ",color:.blue.opacity(0.3))
+								helperInsertButton(label: "year", 			insertedText: "year ", color:.blue.opacity(0.5))
+								helperInsertButton(label: "prev", 			insertedText: "prev", color:.blue.opacity(0.5))
+								helperInsertButton(label: "next", 			insertedText: "next", color:.blue.opacity(0.5))
 							}
 							
 							HStack(spacing: buttonSpacing) {
-								helperInsertButton("month ",color:.blue.opacity(0.3))
-								helperInsertButton(label: "hours", 		insertedText: "hour ",color:.blue.opacity(0.3))
-								helperInsertButton(label: "mins", 		insertedText: "min ",color:.blue.opacity(0.3))
-								helperInsertButton(label: "secs", 		insertedText: "sec ",color:.blue.opacity(0.3))
-								helperInsertButton(label: "device\npower",insertedText: "power ")
-								helperInsertButton(label: "back", insertedText: "back", color:.red.opacity(0.5))
-								helperInsertButton(label: "forw", 	insertedText: "forw", color:.red.opacity(0.5))
+								helperInsertButton(label: "month", 			insertedText: "month ",color:.blue.opacity(0.3))
+								helperInsertButton(label: "hour", 			insertedText: "hour ",color:.blue.opacity(0.3))
+								helperInsertButton(label: "mins", 			insertedText: "min ",color:.blue.opacity(0.3))
+								helperInsertButton(label: "secs", 			insertedText: "sec ",color:.blue.opacity(0.3))
+								helperInsertButton(label: "device\npower",	insertedText: "power ")
+								helperInsertButton(label: "back", 			insertedText: "back", color:.red.opacity(0.5))
+								helperInsertButton(label: "forw", 			insertedText: "forw", color:.red.opacity(0.5))
 							//	dumbButton
 							}
 							
 							HStack(spacing: buttonSpacing) {
-								helperInsertButton(label: "amb\nsnd", 	insertedText: "amb snd.mp3",color:.purple.opacity(0.3))
-								helperInsertButton(label: "play\nsnd", 	insertedText: "snd snd mp3",color:.purple.opacity(0.3))
-								helperInsertButton(label: "spk\ntext", 	insertedText: "spk hello",color:.purple.opacity(0.3))
-								helperInsertButton(label: "Esp32\nout", insertedText: "out 32 1",color:.orange.opacity(0.3))
-								helperInsertButton(label: "Esp32\npwm", insertedText: "pwm 32 5 4",color:.orange.opacity(0.3))
-								helperInsertButton("home", color:.green.opacity(0.5))
-								helperInsertButton(label: "", 			insertedText: "",color:.cyan.opacity(0.0))
+								helperInsertButton(label: "amb\nsnd", 		insertedText: "amb snd.mp3",color:.purple.opacity(0.3))
+								helperInsertButton(label: "play\nsnd", 		insertedText: "snd snd mp3",color:.purple.opacity(0.3))
+								helperInsertButton(label: "spk\ntext", 		insertedText: "spk hello",color:.purple.opacity(0.3))
+								helperInsertButton(label: "Esp32\nout", 	insertedText: "out 32 1",color:.orange.opacity(0.3))
+								helperInsertButton(label: "Esp32\npwm", 	insertedText: "pwm 32 5 4",color:.orange.opacity(0.3))
+								helperInsertButton(label: "home", 			insertedText: "home",color:.green.opacity(0.0))
+								helperInsertButton(label: "", 				insertedText: "",color:.cyan.opacity(0.0))
 							}
 							
 							HStack(spacing: buttonSpacing) {
-								helperInsertButton(label: "wait\ntime", insertedText: "wait 5")
-								helperInsertButton(label: "tap\nminus", insertedText: "minus 10",color:.cyan.opacity(0.3))
-								helperInsertButton(label: "tap\nadd",	insertedText: "add ",color:.cyan.opacity(0.3))
-								helperInsertButton(label: "rnd\nnum", 	insertedText: "rnd 0 100",color:.cyan.opacity(0.3))
-								helperInsertButton(label: "rnd\nline", 	insertedText: "rnd file.txt",color:.cyan.opacity(0.3))
-								helperInsertButton(label: "", 	insertedText: "",color:.cyan.opacity(0.0))
-								helperInsertButton(label: "", 	insertedText: "",color:.cyan.opacity(0.0))
+								helperInsertButton(label: "wait\ntime", 	insertedText: "wait 5")
+								helperInsertButton(label: "tap\nminus", 	insertedText: "minus 10",color:.cyan.opacity(0.3))
+								helperInsertButton(label: "tap\nadd",		insertedText: "add ",color:.cyan.opacity(0.3))
+								helperInsertButton(label: "rnd\nnum", 		insertedText: "rnd 0 100",color:.cyan.opacity(0.3))
+								helperInsertButton(label: "rnd\nline", 		insertedText: "rnd file.txt",color:.cyan.opacity(0.3))
+								helperInsertButton(label: "", 				insertedText: "",color:.cyan.opacity(0.0))
+								helperInsertButton(label: "", 				insertedText: "",color:.cyan.opacity(0.0))
 							}
 							
 							HStack(spacing: buttonSpacing) {
-								helperInsertButton(label: "timer snd",	insertedText: "timer 60 snd.wav")
-								helperInsertButton(label: "timer spk",	insertedText: "timer 10 hello")
+								helperInsertButton(label: "timer snd",		insertedText: "timer 60 snd.wav")
+								helperInsertButton(label: "timer spk",		insertedText: "timer 10 hello")
 								helperInsertButton(label: "run\nshort\ncut",insertedText: "sc shortcutName",color:.green.opacity(0.3))
 								helperInsertButton(label: "open\napp", 		insertedText: "app mail",color:.green.opacity(0.3))
 								helperInsertButton(label: "preview\nfile", 	insertedText: "file file.txt",color:.green.opacity(0.3))

@@ -96,10 +96,13 @@ extension MainScreen {
     func logMainButtonPress(_ entry: FunctionKeyEntry) {
         let leftText = entry.sendTexts.joined(separator: ":")
         let rightText = entry.alternateDisplayText ?? ""
-        print("Main button pressed. left: [\(leftText)] right: [\(rightText)]")
+		print("")
+        print("** GRID_BTN ** [\(leftText)]::[\(rightText)]")
     }
 
     func sendMainGridEntry(_ entry: FunctionKeyEntry) {
+		logMainButtonPress(entry)
+		
         guard mainGridButtonMode != .disabled else {
             return
         }
@@ -112,8 +115,6 @@ extension MainScreen {
         let shouldGoForwardToNextDocument = targetForwardDocumentCommandForGridEntry(entry)
         let shouldSelectPreviousDocument = targetPreviousDocumentCommandForGridEntry(entry)
         let shouldSelectNextDocument = targetNextDocumentCommandForGridEntry(entry)
-
-        print("Main button pressed. left: [\(entry.sendTexts.joined(separator: ":"))] right: [\(entry.alternateDisplayText ?? "")] nav back:\(shouldGoBackToPreviousDocument) forw:\(shouldGoForwardToNextDocument) prev:\(shouldSelectPreviousDocument) next:\(shouldSelectNextDocument)")
 
         if entry.sendTexts.isEmpty {
             runDocumentNavigationCommandIfNeeded(
