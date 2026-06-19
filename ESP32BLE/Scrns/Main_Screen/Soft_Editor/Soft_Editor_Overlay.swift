@@ -197,6 +197,7 @@ struct MainScreenSlotEditorOverlay: View {
 							}
 						}
 						
+						
 						VStack(spacing: buttonSpacing) {
 							HStack(spacing: buttonSpacing) {
 								helperInsertButton("SP:")
