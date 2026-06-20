@@ -34,7 +34,7 @@ struct MainScreenSlotEditorOverlay: View {
     private let orderedModifierPrefixes = ["ctl:", "op:", "sh:", "cm:"]
     private let actionFieldOnlyInsertions = ["SP:", "home", "back", "forw", "prev", "next"]
     private let displayModifierPrefixes = ["⌃", "⌥", "⇧", "⌘"]
-    private let supportedColorCodes = "0123456789abcde"
+    private let supportedColorCodes = "0123456789abcdefghijklmnopqrstuvwxyz"
 		
 	// MARK: - BM:🟦 SF symbols list
 	

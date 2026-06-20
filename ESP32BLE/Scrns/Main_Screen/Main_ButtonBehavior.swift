@@ -2358,7 +2358,7 @@ struct MainScreenButtonLabelView: View {
            let firstComponent = components.first?.trimmingCharacters(in: .whitespacesAndNewlines),
            firstComponent.count == 1,
            let existingCode = firstComponent.lowercased().first,
-           "0123456789abcde".contains(existingCode) {
+           "0123456789abcdefghijklmnopqrstuvwxyz".contains(existingCode) {
             return components.dropFirst().joined(separator: ":")
         }
 
