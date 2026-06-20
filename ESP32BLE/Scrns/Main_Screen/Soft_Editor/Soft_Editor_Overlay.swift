@@ -34,7 +34,6 @@ struct MainScreenSlotEditorOverlay: View {
     private let orderedModifierPrefixes = ["ctl:", "op:", "sh:", "cm:"]
     private let actionFieldOnlyInsertions = ["SP:", "home", "back", "forw", "prev", "next"]
     private let displayModifierPrefixes = ["⌃", "⌥", "⇧", "⌘"]
-    private let supportedColorCodes = "0123456789abcdefghijklmnopqrstuvwxyz"
 		
 	// MARK: - BM:🟦 SF symbols list
 	
@@ -72,48 +71,48 @@ struct MainScreenSlotEditorOverlay: View {
 	
     // MARK: - BM:🟪 color "keycodes-insert"
     private let colorKeyCodes: [(code: String?, label: String?, color: Color)] = [
-        
-		("0", "0:\nclr\ncolor", 	Color(white: 0.22)),
-		("1", "1:\nhigh\npriorty",	Color(hex: "FF0000")	),
-		("2", "2:\nsample\ntxt",	Color(hex: "910000")	),
-		("3", "3:\nopen\nfile",		Color(hex: "C97827")	),
-		("4", "4:\nfolder\n", 		Color(hex: "5E3812")	),
 
-		("5", "5:\ninfo\n", 		Color(hex: "8A8A8A")	),
-		("6", "6:\nsample\ntxt",	Color(hex: "0000FF")	),
-		("7", "7:\nsample\ntxt", 	Color(hex: "171775")	),
-		("8", "8:\nsample\ntxt", 	Color(hex: "919100")	),
-		("9", "9:\nutility\n",	 	Color(hex: "595900")	),
+			(nil,      "clr\ncolor",      Color(white: 0.22)),
+			("FF0000", "high\npriorty",   Color(hex: "FF0000")),
+			("910000", "sample\ntxt",     Color(hex: "910000")),
+			("C97827", "open\nfile",      Color(hex: "C97827")),
+			("5E3812", "folder",          Color(hex: "5E3812")),
 
-		("a", "a:\nsample\ntxt", 	Color(hex: "424242")	),
-		("b", "b:\nopen\napp", 		Color(hex: "00A600")	),
-		("c", "c:\nsample\ntxt", 	Color(hex: "004F00")	),
-		("d", "d:\nsample\ntxt", 	Color(hex: "D42AD4")	),
-		("e", "e:\nsample\ntxt", 	Color(hex: "870087")	),
-	
-		("f", "f:\nsample\ntxt", 	Color(hex: "21A3A3")	),
-		("g", "g:\nsample\ntxt", 	Color(hex: "CC1451")	),
-		("h", "h:\nsample\ntxt", 	Color(hex: "CC7AA3")	),
-		("i", "i:\nsample\ntxt", 	Color(hex: "CCCC00")	),
-		("j", "j:\nsample\ntxt", 	Color(hex: "103954")	),
-	
-		("k", "k:\nsample\ntxt", 	Color(hex: "FF6666")	),
-		("l", "l:\nsample\ntxt", 	Color(hex: "00CC66")	),
-		("m", "m:\nsample\ntxt", 	Color(hex: "492545")	),
-		("n", "n:\nsample\ntxt", 	Color(hex: "007FFF")	),
-		("o", "o:\nsample\ntxt", 	Color(hex: "99004D")	),
-	
-		("p", "p:\nsample\ntxt", 	Color(hex: "FFB366")	),
-		("q", "q:\nsample\ntxt", 	Color(hex: "009999")	),
-		("r", "r:\nsample\ntxt", 	Color(hex: "994C00")	),
-		("s", "s:\nsample\ntxt", 	Color(hex: "134CD4")	),
-		("t", "t:\nsample\ntxt", 	Color(hex: "4E877B")	),
-	
-		("u", "u:\nsample\ntxt", 	Color(hex: "42151F")	),
-		("v", "v:\nsample\ntxt", 	Color(hex: "FF8000")	),
-		("w", "w:\nsample\ntxt", 	Color(hex: "635387")	),
-		("x", "x:\nsample\ntxt", 	Color(hex: "9999FF")	),
-		("y", "y:\nsample\ntxt", 	Color(hex: "20A663")	),
+			("8A8A8A", "info",            Color(hex: "8A8A8A")),
+			("0000FF", "sample\ntxt",     Color(hex: "0000FF")),
+			("171775", "sample\ntxt",     Color(hex: "171775")),
+			("919100", "sample\ntxt",     Color(hex: "919100")),
+			("595900", "utility",         Color(hex: "595900")),
+
+			("424242", "sample\ntxt",     Color(hex: "424242")),
+			("00A600", "open\napp",       Color(hex: "00A600")),
+			("004F00", "sample\ntxt",     Color(hex: "004F00")),
+			("D42AD4", "sample\ntxt",     Color(hex: "D42AD4")),
+			("870087", "sample\ntxt",     Color(hex: "870087")),
+
+			("21A3A3", "sample\ntxt",     Color(hex: "21A3A3")),
+			("CC1451", "sample\ntxt",     Color(hex: "CC1451")),
+			("CC7AA3", "sample\ntxt",     Color(hex: "CC7AA3")),
+			("CCCC00", "sample\ntxt",     Color(hex: "CCCC00")),
+			("103954", "sample\ntxt",     Color(hex: "103954")),
+
+			("FF6666", "sample\ntxt",     Color(hex: "FF6666")),
+			("00CC66", "sample\ntxt",     Color(hex: "00CC66")),
+			("492545", "sample\ntxt",     Color(hex: "492545")),
+			("007FFF", "sample\ntxt",     Color(hex: "007FFF")),
+			("99004D", "sample\ntxt",     Color(hex: "99004D")),
+
+			("FFB366", "sample\ntxt",     Color(hex: "FFB366")),
+			("009999", "sample\ntxt",     Color(hex: "009999")),
+			("994C00", "sample\ntxt",     Color(hex: "994C00")),
+			("134CD4", "sample\ntxt",     Color(hex: "134CD4")),
+			("4E877B", "sample\ntxt",     Color(hex: "4E877B")),
+
+			("42151F", "sample\ntxt",     Color(hex: "42151F")),
+			("FF8000", "sample\ntxt",     Color(hex: "FF8000")),
+			("635387", "sample\ntxt",     Color(hex: "635387")),
+			("9999FF", "sample\ntxt",     Color(hex: "9999FF")),
+			("20A663", "sample\ntxt",     Color(hex: "20A663")),
     ]
 
     var body: some View {
@@ -889,19 +888,18 @@ struct MainScreenSlotEditorOverlay: View {
     }
 
     private func prefixedRightText(with code: String) -> String {
+        let normalizedCode = code.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
         let trimmedRightDraft = rightDraft.trimmingCharacters(in: .whitespacesAndNewlines)
         let components = trimmedRightDraft.components(separatedBy: ":")
 
         if components.count > 1,
            let firstComponent = components.first,
-           firstComponent.count == 1,
-           let existingCode = firstComponent.lowercased().first,
-           supportedColorCodes.contains(existingCode) {
+           isEditableColorPrefix(firstComponent) {
             let remainingText = components.dropFirst().joined(separator: ":").trimmingCharacters(in: .whitespacesAndNewlines)
-            return remainingText.isEmpty ? "\(code):" : "\(code):\(remainingText)"
+            return remainingText.isEmpty ? "\(normalizedCode):" : "\(normalizedCode):\(remainingText)"
         }
 
-        return trimmedRightDraft.isEmpty ? "\(code):" : "\(code):\(trimmedRightDraft)"
+        return trimmedRightDraft.isEmpty ? "\(normalizedCode):" : "\(normalizedCode):\(trimmedRightDraft)"
     }
 
     private func rightTextWithoutColorPrefix() -> String {
@@ -910,9 +908,7 @@ struct MainScreenSlotEditorOverlay: View {
 
         if components.count > 1,
            let firstComponent = components.first,
-           firstComponent.count == 1,
-           let existingCode = firstComponent.lowercased().first,
-           supportedColorCodes.contains(existingCode) {
+           isEditableColorPrefix(firstComponent) {
             return components.dropFirst().joined(separator: ":").trimmingCharacters(in: .whitespacesAndNewlines)
         }
 
@@ -926,9 +922,8 @@ struct MainScreenSlotEditorOverlay: View {
 
         if components.count > 1,
            let firstComponent = components.first,
-           firstComponent.count == 1,
-           let existingCode = firstComponent.lowercased().first,
-           supportedColorCodes.contains(existingCode) {
+           isHexColorPrefix(firstComponent) {
+            let existingCode = firstComponent.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
             let trailingComponents = Array(components.dropFirst())
             let remainingComponents = droppingLeadingEditorSymbol(from: trailingComponents)
             let remainingText = remainingComponents.joined(separator: ":").trimmingCharacters(in: .whitespacesAndNewlines)
@@ -938,6 +933,30 @@ struct MainScreenSlotEditorOverlay: View {
         let remainingComponents = droppingLeadingEditorSymbol(from: components)
         let remainingText = remainingComponents.joined(separator: ":").trimmingCharacters(in: .whitespacesAndNewlines)
         return remainingText.isEmpty ? insertedText : "\(insertedText)\(remainingText)"
+    }
+
+    private func isHexColorPrefix(_ text: String) -> Bool {
+        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmedText.count == 6 else {
+            return false
+        }
+
+        let hexDigits = "0123456789abcdefABCDEF"
+        return trimmedText.allSatisfy { hexDigits.contains($0) }
+    }
+
+    private func isEditableColorPrefix(_ text: String) -> Bool {
+        isHexColorPrefix(text) || isLegacyColorPrefix(text)
+    }
+
+    private func isLegacyColorPrefix(_ text: String) -> Bool {
+        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmedText.count == 1 else {
+            return false
+        }
+
+        let legacyDigits = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        return trimmedText.allSatisfy { legacyDigits.contains($0) }
     }
 
     private func droppingLeadingEditorSymbol(from components: [String]) -> [String] {

@@ -79,10 +79,7 @@ extension MainScreen {
 
         if rightComponents.count > 1,
            let firstComponent = rightComponents.first,
-           firstComponent.count == 1,
-           let manualColorCode = firstComponent.lowercased().first,
-		   // MARK: - BM:🟪 color keycodes-available
-           "0123456789abcdefghijklmnopqrstuvwxyz".contains(manualColorCode) {
+           isHexColorPrefix(firstComponent) {
             let remainingText = rightComponents
                 .dropFirst()
                 .joined(separator: ":")
@@ -91,6 +88,16 @@ extension MainScreen {
         }
 
         return rawRightText
+    }
+
+    func isHexColorPrefix(_ text: String) -> Bool {
+        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmedText.count == 6 else {
+            return false
+        }
+
+        let hexDigits = "0123456789abcdefABCDEF"
+        return trimmedText.allSatisfy { hexDigits.contains($0) }
     }
 
     func logMainButtonPress(_ entry: FunctionKeyEntry) {
@@ -1776,6 +1783,16 @@ struct MainScreenButtonLabelView: View {
     // Adjust emojiScaleMultiplier to tune how much larger emoji should render than text.
     private let emojiScaleMultiplier: CGFloat = 1.5
 
+    private func isHexColorPrefix(_ text: String) -> Bool {
+        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmedText.count == 6 else {
+            return false
+        }
+
+        let hexDigits = "0123456789abcdefABCDEF"
+        return trimmedText.allSatisfy { hexDigits.contains($0) }
+    }
+
     var body: some View {
         Group {
             if entry.isBlankPlaceholder || isEmptyButtonEntry {
@@ -2356,9 +2373,7 @@ struct MainScreenButtonLabelView: View {
 
         if components.count > 1,
            let firstComponent = components.first?.trimmingCharacters(in: .whitespacesAndNewlines),
-           firstComponent.count == 1,
-           let existingCode = firstComponent.lowercased().first,
-           "0123456789abcdefghijklmnopqrstuvwxyz".contains(existingCode) {
+           isHexColorPrefix(firstComponent) {
             return components.dropFirst().joined(separator: ":")
         }
 
@@ -2430,55 +2445,12 @@ struct MainScreenButtonLabelView: View {
             return Color.black.opacity(backgroundOpacity)
         }
 
-        switch (entry.buttonColorCode ?? "").lowercased() {
-			
-			case "0":	return .clear
-			
-			case "1": return Color(hex: "FF0000").opacity(backgroundOpacity)
-			case "2": return Color(hex: "910000").opacity(backgroundOpacity)
-			case "3": return Color(hex: "C97827").opacity(backgroundOpacity)
-			case "4": return Color(hex: "5E3812").opacity(backgroundOpacity)
-				
-			case "5": return Color(hex: "8A8A8A").opacity(backgroundOpacity)
-			case "6": return Color(hex: "0000FF").opacity(backgroundOpacity)
-			case "7": return Color(hex: "171775").opacity(backgroundOpacity)
-			case "8": return Color(hex: "919100").opacity(backgroundOpacity)
-			case "9": return Color(hex: "595900").opacity(backgroundOpacity)
-				
-			case "a": return Color(hex: "424242").opacity(backgroundOpacity)
-			case "b": return Color(hex: "00A600").opacity(backgroundOpacity)
-			case "c": return Color(hex: "004F00").opacity(backgroundOpacity)
-			case "d": return Color(hex: "D42AD4").opacity(backgroundOpacity)
-			case "e": return Color(hex: "870087").opacity(backgroundOpacity)
-			
-			case "f": return Color(hex: "21A3A3").opacity(backgroundOpacity)
-			case "g": return Color(hex: "CC1451").opacity(backgroundOpacity)
-			case "h": return Color(hex: "CC7AA3").opacity(backgroundOpacity)
-			case "i": return Color(hex: "CCCC00").opacity(backgroundOpacity)
-			case "j": return Color(hex: "103954").opacity(backgroundOpacity)
-			
-			case "k": return Color(hex: "FF6666").opacity(backgroundOpacity)
-			case "l": return Color(hex: "00CC66").opacity(backgroundOpacity)
-			case "m": return Color(hex: "492545").opacity(backgroundOpacity)
-			case "n": return Color(hex: "007FFF").opacity(backgroundOpacity)
-			case "o": return Color(hex: "99004D").opacity(backgroundOpacity)
-			
-			case "p": return Color(hex: "FFB366").opacity(backgroundOpacity)
-			case "q": return Color(hex: "009999").opacity(backgroundOpacity)
-			case "r": return Color(hex: "994C00").opacity(backgroundOpacity)
-			case "s": return Color(hex: "134CD4").opacity(backgroundOpacity)
-			case "t": return Color(hex: "4E877B").opacity(backgroundOpacity)
-			
-			case "u": return Color(hex: "42151F").opacity(backgroundOpacity)
-			case "v": return Color(hex: "FF8000").opacity(backgroundOpacity)
-			case "w": return Color(hex: "635387").opacity(backgroundOpacity)
-			case "x": return Color(hex: "9999FF").opacity(backgroundOpacity)
-			case "y": return Color(hex: "20A663").opacity(backgroundOpacity)
-
-			case "z": return Color(hex: "FFFFFF").opacity(backgroundOpacity)
-				
-			default:  return Color.black.opacity(backgroundOpacity)
+        guard let colorCode = entry.buttonColorCode,
+              isHexColorPrefix(colorCode) else {
+            return Color.black.opacity(backgroundOpacity)
         }
+
+        return Color(hex: colorCode).opacity(backgroundOpacity)
     }
 
     private var buttonTextColor: Color {

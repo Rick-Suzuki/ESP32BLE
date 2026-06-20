@@ -2175,16 +2175,23 @@ struct ContentView: View {
 
         if components.count > 1,
            let firstComponent = components.first,
-           firstComponent.count == 1,
-           let manualColorCode = firstComponent.lowercased().first,
-
-			// MARK: - BM:🟪 color keycodes-available
-           "0123456789abcdefghijklmnopqrstuvwxyz".contains(manualColorCode) {
+           isHexColorPrefix(firstComponent) {
             let remainingText = components.dropFirst().joined(separator: ":").trimmingCharacters(in: .whitespacesAndNewlines)
-            return (remainingText, String(manualColorCode))
+            let colorCode = firstComponent.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+            return (remainingText, colorCode)
         }
 
         return (rightText, nil)
+    }
+
+    private func isHexColorPrefix(_ text: String) -> Bool {
+        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmedText.count == 6 else {
+            return false
+        }
+
+        let hexDigits = "0123456789abcdefABCDEF"
+        return trimmedText.allSatisfy { hexDigits.contains($0) }
     }
 
     private func selectDocument(_ fileURL: URL) {
