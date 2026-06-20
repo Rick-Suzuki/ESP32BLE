@@ -72,6 +72,7 @@ struct MainScreenSlotEditorOverlay: View {
     // MARK: - BM:🟪 color "keycodes-insert"
     private let colorKeyCodes: [(code: String?, label: String?, color: Color)] = [
 
+		
 			(nil,      "clr\ncolor",      Color(white: 0.22)),
 			("FF0000", "high\npriorty",   Color(hex: "FF0000")),
 			("910000", "sample\ntxt",     Color(hex: "910000")),
@@ -631,7 +632,7 @@ struct MainScreenSlotEditorOverlay: View {
 
 	// MARK: - BM:🟥 color insert btns - soft kb
     private func colorInsertButton(code: String?, label: String?, background: Color) -> some View {
-        Button {
+        return Button {
             ButtonClickFeedback.playIfEnabled()
             rightDraft = code.map(prefixedRightText(with:)) ?? rightTextWithoutColorPrefix()
             activeEditorField = .text
@@ -913,6 +914,19 @@ struct MainScreenSlotEditorOverlay: View {
         }
 
         return trimmedRightDraft
+    }
+
+    private var rightDraftHasEditableColorPrefix: Bool {
+        let components = rightDraft
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .components(separatedBy: ":")
+
+        guard components.count > 1,
+              let firstComponent = components.first else {
+            return false
+        }
+
+        return isEditableColorPrefix(firstComponent)
     }
 
     private func insertingRightTextPreservingColorPrefix(_ symbolName: String) -> String {

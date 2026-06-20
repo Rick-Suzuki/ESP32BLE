@@ -2447,7 +2447,7 @@ struct MainScreenButtonLabelView: View {
 
         guard let colorCode = entry.buttonColorCode,
               isHexColorPrefix(colorCode) else {
-            return Color.black.opacity(backgroundOpacity)
+            return .clear
         }
 
         return Color(hex: colorCode).opacity(backgroundOpacity)
