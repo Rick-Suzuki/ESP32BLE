@@ -139,9 +139,10 @@ extension MainScreen {
             return
         }
 
+        let editableIndex = editableAnchorIndex(containing: index) ?? index
         activeDragIndex = nil
         editingSlotIndex = index
-        editingSlotText = editableText(for: functionKeys[index])
+        editingSlotText = editableText(for: functionKeys[editableIndex])
         isSlotEditorFocused = true
     }
 	//
@@ -164,7 +165,13 @@ extension MainScreen {
             return
         }
 
-        _ = updateFunctionKeySlot(editingSlotIndex, normalizedSlotEditorTextForCommit(editingSlotText))
+        let editableIndex = editableAnchorIndex(containing: editingSlotIndex) ?? editingSlotIndex
+        let currentSpan = slotSpan(startingAt: editableIndex, gridDimensions: visibleGridDimensions)
+        _ = updateFunctionKeySlot(editableIndex, normalizedSlotEditorTextForCommit(editingSlotText))
+
+        if currentSpan > 1 {
+            setSlotSpan(startingAt: editableIndex, from: currentSpan, to: currentSpan)
+        }
     }
 	//
 	//----------------------------------------
@@ -203,7 +210,8 @@ extension MainScreen {
         var candidateIndex = editingSlotIndex
         for _ in 0..<maximumIndex {
             candidateIndex = (candidateIndex + step + maximumIndex) % maximumIndex
-            let candidateEntry = functionKeys[candidateIndex]
+            let editableIndex = editableAnchorIndex(containing: candidateIndex) ?? candidateIndex
+            let candidateEntry = functionKeys[editableIndex]
 
             activeDragIndex = nil
             self.editingSlotIndex = candidateIndex
@@ -211,6 +219,31 @@ extension MainScreen {
             isSlotEditorFocused = true
             return
         }
+    }
+
+    private func editableAnchorIndex(containing index: Int) -> Int? {
+        guard functionKeys.indices.contains(index) else {
+            return nil
+        }
+
+        guard isButtonContinuationEntry(functionKeys[index]) else {
+            return index
+        }
+
+        let maximumIndex = min(visibleBoxCount, functionKeys.count)
+        for anchorIndex in 0..<maximumIndex {
+            guard functionKeys.indices.contains(anchorIndex),
+                  !isButtonContinuationEntry(functionKeys[anchorIndex]) else {
+                continue
+            }
+
+            let shape = buttonShape(startingAt: anchorIndex, gridDimensions: visibleGridDimensions)
+            if indexes(startingAt: anchorIndex, shape: shape, gridDimensions: visibleGridDimensions).contains(index) {
+                return anchorIndex
+            }
+        }
+
+        return nil
     }
 
     private func normalizedSlotEditorTextForCommit(_ text: String) -> String {
