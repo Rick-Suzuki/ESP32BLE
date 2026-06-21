@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		1D2B666F2FE78E0400F10733 /* color.png in Resources */ = {isa = PBXBuildFile; fileRef = 1D2B666E2FE78E0400F10733 /* color.png */; };
 		1D590E582F61206100E430E0 /* CommandButtonsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D590E4D2F61206100E430E0 /* CommandButtonsSection.swift */; };
 		1D590E5A2F61206100E430E0 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D590E4F2F61206100E430E0 /* ContentView.swift */; };
 		1D590E5C2F61206100E430E0 /* ESP32BLEApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D590E512F61206100E430E0 /* ESP32BLEApp.swift */; };
@@ -52,6 +53,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		1D2B666E2FE78E0400F10733 /* color.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = color.png; sourceTree = "<group>"; };
 		1D33C2D12F6145DC0098FD5C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		1D590E292F611FB700E430E0 /* ESP32BLE.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ESP32BLE.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		1D590E4A2F61206100E430E0 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -137,6 +139,14 @@
 			path = Scrns;
 			sourceTree = "<group>";
 		};
+		1D2B666D2FE78DF600F10733 /* resources */ = {
+			isa = PBXGroup;
+			children = (
+				1D2B666E2FE78E0400F10733 /* color.png */,
+			);
+			path = resources;
+			sourceTree = "<group>";
+		};
 		1D590E202F611FB700E430E0 = {
 			isa = PBXGroup;
 			children = (
@@ -159,6 +169,7 @@
 				1D33C2D12F6145DC0098FD5C /* Info.plist */,
 				1D590E4A2F61206100E430E0 /* Assets.xcassets */,
 				1D590E512F61206100E430E0 /* ESP32BLEApp.swift */,
+				1D2B666D2FE78DF600F10733 /* resources */,
 				1DDFB8102F87C64000776ED6 /* debug.swift */,
 				1D590E532F61206100E430E0 /* scratchpad.txt */,
 				1D8F47D52FC7BB8D004EE319 /* MY_ESPS */,
@@ -361,6 +372,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				1D590E5F2F61206100E430E0 /* Assets.xcassets in Resources */,
+				1D2B666F2FE78E0400F10733 /* color.png in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -131,6 +131,7 @@ struct MainScreen: View {
     @State var activeDragIndex: Int?
     @State var editingSlotIndex: Int?
     @State var editingSlotText = ""
+    @State private var smartCommandDescription = "command description"
     @State private var keyboardMinY: CGFloat = .greatestFiniteMagnitude
     @State private var popupDismissTask: Task<Void, Never>?
     @State var presentedPreviewFile: PreviewedFile?
@@ -671,7 +672,7 @@ struct MainScreen: View {
             smartCommandPanel
                 .frame(width: 256)
 
-            smartPanel(title: "color panel")
+            smartColorPanel
                 .frame(width: 224)
 
             smartPanel(title: "btn panel")
@@ -745,6 +746,7 @@ struct MainScreen: View {
                         ForEach(smartCommandRows, id: \.english) { commandRow in
                             smartCommandTableButton(commandRow.english) {
                                 smartActionTextBinding.wrappedValue = commandRow.shortcut
+                                smartCommandDescription = commandRow.description
                             }
                             .accessibilityHint(commandRow.description)
                         }
@@ -782,6 +784,168 @@ struct MainScreen: View {
                 }
             }
         )
+    }
+
+    private var smartRightTextBinding: Binding<String> {
+        Binding(
+            get: {
+                let components = editingSlotText.components(separatedBy: "::")
+                return components.dropFirst().joined(separator: "::")
+            },
+            set: { newRightText in
+                let actionText = editingSlotText.components(separatedBy: "::").first ?? ""
+
+                if newRightText.isEmpty {
+                    editingSlotText = actionText
+                } else {
+                    editingSlotText = "\(actionText)::\(newRightText)"
+                }
+            }
+        )
+    }
+
+    private var smartColorPanel: some View {
+        VStack(spacing: 0) {
+            GeometryReader { geometry in
+                smartColorImage
+                    .frame(width: geometry.size.width, height: geometry.size.height)
+                    .clipped()
+                    .contentShape(Rectangle())
+                    .gesture(
+                        DragGesture(minimumDistance: 0)
+                            .onChanged { dragValue in
+                                applySmartColorSelection(
+                                    at: dragValue.location,
+                                    in: geometry.size
+                                )
+                            }
+                    )
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: smartViewHeight / 2)
+            .background(Color.black)
+            .overlay {
+                Rectangle()
+                    .stroke(Color.white, lineWidth: 1)
+            }
+
+            ScrollView(.vertical) {
+                Text(smartCommandDescription)
+                    .font(.system(size: 16, weight: .regular))
+                    .foregroundStyle(.cyan)
+                    .multilineTextAlignment(.center)
+                    .padding(10)
+                    .frame(maxWidth: .infinity)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color.black)
+            .overlay {
+                Rectangle()
+                    .stroke(Color.white, lineWidth: 1)
+            }
+        }
+        .background(Color.black)
+        .overlay {
+            Rectangle()
+                .stroke(Color.white, lineWidth: 1)
+        }
+    }
+
+    @ViewBuilder
+    private var smartColorImage: some View {
+        if let colorImage = UIImage(named: "color") ?? bundledColorImage() {
+            Image(uiImage: colorImage)
+                .resizable()
+                .scaledToFill()
+        } else {
+            Color.black
+        }
+    }
+
+    private func bundledColorImage() -> UIImage? {
+        guard let imageURL = Bundle.main.url(forResource: "color", withExtension: "png") else {
+            return nil
+        }
+
+        return UIImage(contentsOfFile: imageURL.path)
+    }
+
+    private func applySmartColorSelection(at location: CGPoint, in containerSize: CGSize) {
+        guard let colorImage = UIImage(named: "color") ?? bundledColorImage(),
+              let hexColor = hexColorFromImage(colorImage, at: location, in: containerSize) else {
+            return
+        }
+
+        smartRightTextBinding.wrappedValue = rightTextReplacingColorPrefix(with: hexColor)
+    }
+
+    private func hexColorFromImage(_ image: UIImage, at location: CGPoint, in containerSize: CGSize) -> String? {
+        guard let cgImage = image.cgImage,
+              containerSize.width > 0,
+              containerSize.height > 0 else {
+            return nil
+        }
+
+        let imageWidth = CGFloat(cgImage.width)
+        let imageHeight = CGFloat(cgImage.height)
+        let scale = max(containerSize.width / imageWidth, containerSize.height / imageHeight)
+        let displayedWidth = imageWidth * scale
+        let displayedHeight = imageHeight * scale
+        let originX = (containerSize.width - displayedWidth) / 2
+        let originY = (containerSize.height - displayedHeight) / 2
+        let imageX = min(max((location.x - originX) / scale, 0), imageWidth - 1)
+        let imageY = min(max((location.y - originY) / scale, 0), imageHeight - 1)
+
+        return hexColorFromPixel(
+            x: Int(imageX.rounded(.down)),
+            y: Int(imageY.rounded(.down)),
+            in: cgImage
+        )
+    }
+
+    private func hexColorFromPixel(x: Int, y: Int, in cgImage: CGImage) -> String? {
+        guard let croppedImage = cgImage.cropping(to: CGRect(x: x, y: y, width: 1, height: 1)) else {
+            return nil
+        }
+
+        var pixel = [UInt8](repeating: 0, count: 4)
+        guard let context = CGContext(
+            data: &pixel,
+            width: 1,
+            height: 1,
+            bitsPerComponent: 8,
+            bytesPerRow: 4,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue | CGBitmapInfo.byteOrder32Big.rawValue
+        ) else {
+            return nil
+        }
+
+        context.draw(croppedImage, in: CGRect(x: 0, y: 0, width: 1, height: 1))
+        return String(format: "%02X%02X%02X", pixel[0], pixel[1], pixel[2])
+    }
+
+    private func rightTextReplacingColorPrefix(with hexColor: String) -> String {
+        "\(hexColor):\(rightTextWithoutColorPrefix(smartRightTextBinding.wrappedValue))"
+    }
+
+    private func rightTextWithoutColorPrefix(_ rightText: String) -> String {
+        let components = rightText.components(separatedBy: ":")
+        guard let firstComponent = components.first,
+              isSixDigitHexColor(firstComponent) else {
+            return rightText
+        }
+
+        return components.dropFirst().joined(separator: ":")
+    }
+
+    private func isSixDigitHexColor(_ text: String) -> Bool {
+        guard text.count == 6 else {
+            return false
+        }
+
+        let hexDigits = "0123456789abcdefABCDEF"
+        return text.allSatisfy { hexDigits.contains($0) }
     }
 
     private func smartModifierButton(systemName: String, accessibilityLabel: String, prefix: String) -> some View {
