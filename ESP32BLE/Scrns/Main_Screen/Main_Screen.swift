@@ -67,7 +67,31 @@ struct MainScreen: View {
         "gamecontroller", "headphones", "mic", "waveform",
         "antenna.radiowaves.left.and.right", "network", "server.rack", "desktopcomputer",
         "laptopcomputer", "ipad", "iphone", "apple.logo",
-        "app", "square.grid.2x2", "list.bullet", "slider.horizontal.3"
+        "app", "square.grid.2x2", "list.bullet", "slider.horizontal.3",
+        "moon.fill", "moon.stars", "moon.stars.fill", "sunrise", "sunset", "cloud.sun",
+        "cloud.moon", "cloud.rain", "cloud.snow", "umbrella", "tornado", "hare",
+        "tortoise", "pawprint", "fish", "bird", "ladybug", "ant",
+        "bed.double", "sofa", "chair", "table.furniture", "lamp.desk", "fan",
+        "lightbulb", "flashlight.on.fill", "cup.and.saucer", "fork.knife", "takeoutbag.and.cup.and.straw", "birthday.cake",
+        "gift", "creditcard", "banknote", "dollarsign.circle", "eurosign.circle", "sterlingsign.circle",
+        "cart.fill", "bag", "basket", "shippingbox", "archivebox", "briefcase",
+        "printer", "scanner", "externaldrive", "memorychip", "cpu", "display",
+        "tv", "radio", "hifispeaker", "video", "video.fill", "camera.fill",
+        "photo.on.rectangle", "rectangle.stack", "doc.text", "doc.richtext", "clipboard", "note.text",
+        "bookmark", "bookmark.fill", "tag", "tag.fill", "pin", "mappin",
+        "location.fill", "safari", "network.badge.shield.half.filled", "wifi.router", "antenna.radiowaves.left.and.right.circle", "dot.radiowaves.left.and.right",
+        "bell.fill", "bell.slash", "speaker.slash", "speaker.wave.3", "mic.fill", "mic.slash",
+        "waveform.circle", "music.mic", "music.quarternote.3", "guitars", "pianokeys", "metronome",
+        "play.circle", "pause.circle", "stop.circle", "record.circle.fill", "shuffle", "repeat",
+        "arrow.clockwise", "arrow.counterclockwise", "arrow.up.left", "arrow.up.right", "arrow.down.left", "arrow.down.right",
+        "arrowshape.left", "arrowshape.right", "arrowshape.turn.up.left", "arrowshape.turn.up.right", "u-turn.left", "u-turn.right"
+    ]
+    private let smartButtonSwatchHexColors = [
+        "0000FF", "171775", "000000",
+        "00A600", "004F00", "D42AD4",
+        "21A3A3", "CC1451", "CC7AA3", "CCCC00",
+        "FF6666", "00CC66", "492545", "007FFF",
+        "C97827"
     ]
     private let smartCommandRows: [(english: String, shortcut: String, description: String)] = [
         ("clock", "clock ", "Inserts the current time."),
@@ -132,6 +156,9 @@ struct MainScreen: View {
     @State var editingSlotIndex: Int?
     @State var editingSlotText = ""
     @State private var smartCommandDescription = "command description"
+    @State private var smartButtonBrightness = 0.5
+    @State private var smartButtonBrightnessBaseHex: String?
+    @State private var smartButtonPreviewFontSize = 34.0
     @State private var keyboardMinY: CGFloat = .greatestFiniteMagnitude
     @State private var popupDismissTask: Task<Void, Never>?
     @State var presentedPreviewFile: PreviewedFile?
@@ -199,6 +226,10 @@ struct MainScreen: View {
             }
             .onChange(of: selectedDocumentDisplayName) {
                 handleSelectedDocumentDisplayNameChange()
+            }
+            .onChange(of: editingSlotIndex) {
+                smartButtonBrightness = 0.5
+                smartButtonBrightnessBaseHex = smartButtonColorHex
             }
             .onChange(of: definedFunctionKeyCount) {
                 updateVisibleBoxCountToFitDefinedButtons()
@@ -675,7 +706,7 @@ struct MainScreen: View {
             smartColorPanel
                 .frame(width: 224)
 
-            smartPanel(title: "btn panel")
+            smartButtonPanel
                 .frame(width: 280)
 
             smartSFPanel
@@ -790,18 +821,54 @@ struct MainScreen: View {
         Binding(
             get: {
                 let components = editingSlotText.components(separatedBy: "::")
-                return components.dropFirst().joined(separator: "::")
+                return components
+                    .dropFirst()
+                    .filter { $0 != hiddenButtonMetadataToken }
+                    .joined(separator: "::")
             },
             set: { newRightText in
                 let actionText = editingSlotText.components(separatedBy: "::").first ?? ""
+                let isHidden = smartIsButtonHidden
 
-                if newRightText.isEmpty {
+                if newRightText.isEmpty && !isHidden {
                     editingSlotText = actionText
                 } else {
-                    editingSlotText = "\(actionText)::\(newRightText)"
+                    let rightComponents = newRightText.isEmpty ? [] : [newRightText]
+                    let metadataComponents = isHidden ? [hiddenButtonMetadataToken] : []
+                    editingSlotText = ([actionText] + rightComponents + metadataComponents).joined(separator: "::")
                 }
             }
         )
+    }
+
+    private var smartButtonTextBinding: Binding<String> {
+        Binding(
+            get: {
+                rightTextWithoutColorPrefix(smartRightTextBinding.wrappedValue)
+            },
+            set: { newButtonText in
+                if let colorPrefix = smartButtonColorHex {
+                    smartRightTextBinding.wrappedValue = newButtonText.isEmpty ? "\(colorPrefix):" : "\(colorPrefix):\(newButtonText)"
+                } else {
+                    smartRightTextBinding.wrappedValue = newButtonText
+                }
+            }
+        )
+    }
+
+    private var smartButtonVisibilityBinding: Binding<Bool> {
+        Binding(
+            get: {
+                !smartIsButtonHidden
+            },
+            set: { isVisible in
+                setSmartButtonHidden(!isVisible)
+            }
+        )
+    }
+
+    private var smartIsButtonHidden: Bool {
+        editingSlotText.components(separatedBy: "::").contains(hiddenButtonMetadataToken)
     }
 
     private var smartColorPanel: some View {
@@ -851,12 +918,220 @@ struct MainScreen: View {
         }
     }
 
+    private var smartButtonPanel: some View {
+        VStack(spacing: 8) {
+            HStack(alignment: .top, spacing: 10) {
+                VStack(spacing: 10) {
+                    smartVerticalSliderLabel("bright")
+                    Slider(value: $smartButtonBrightness, in: 0...1)
+                        .rotationEffect(.degrees(-90))
+                        .frame(width: 120, height: 28)
+                        .tint(.yellow)
+                        .onChange(of: smartButtonBrightness) {
+                            applySmartButtonBrightness()
+                        }
+                }
+                .frame(width: 76)
+
+                VStack(spacing: 8) {
+                    smartButtonPreview
+                }
+                .frame(maxWidth: .infinity)
+            }
+
+            LazyVGrid(
+                columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 4),
+                spacing: 0
+            ) {
+                smartVisibilityButton
+                smartClearColorButton
+                ForEach(Array(smartButtonSwatchHexColors.prefix(14)), id: \.self) { hexColor in
+                    smartButtonColorSwatch(hexColor)
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        }
+        .background(Color.black)
+        .overlay {
+            Rectangle()
+                .stroke(Color.white, lineWidth: 1)
+        }
+    }
+
+    private var smartButtonPreview: some View {
+        Group {
+            if let symbolDisplay = smartButtonSFSymbolDisplay {
+                VStack(spacing: 4) {
+                    Image(systemName: symbolDisplay.name)
+                        .font(.system(size: max(18, CGFloat(boxFontSize) * 0.9), weight: .semibold))
+
+                    TextField("", text: smartButtonEditablePreviewTextBinding, axis: .vertical)
+                        .font(.system(size: max(14, CGFloat(boxFontSize) * 0.55), weight: .semibold))
+                        .foregroundStyle(.white)
+                        .accentColor(.white)
+                        .multilineTextAlignment(.center)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .lineLimit(1...2)
+                        .padding(.horizontal, 8)
+                }
+                .foregroundStyle(.white)
+                .padding(.horizontal, 8)
+            } else {
+                TextField("", text: smartButtonEditablePreviewTextBinding, axis: .vertical)
+                    .font(.system(size: CGFloat(boxFontSize), weight: .semibold))
+                    .foregroundStyle(.white)
+                    .accentColor(.white)
+                    .multilineTextAlignment(.center)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .lineLimit(1...3)
+                    .padding(.horizontal, 8)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: 112)
+        .background(smartButtonPreviewColor)
+        .clipShape(.rect(cornerRadius: 18))
+        .overlay {
+            RoundedRectangle(cornerRadius: 18)
+                .stroke(Color.white, lineWidth: 1.5)
+        }
+    }
+
+    private var smartButtonSFSymbolDisplay: (name: String, subtitle: String?)? {
+        let rightText = smartButtonTextBinding.wrappedValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        let components = rightText.components(separatedBy: ":")
+        let candidateName = components.first?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+
+        guard !candidateName.isEmpty,
+              !candidateName.contains(where: \.isWhitespace),
+              UIImage(systemName: candidateName) != nil else {
+            return nil
+        }
+
+        let subtitle = components
+            .dropFirst()
+            .joined(separator: ":")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        return (candidateName, subtitle.isEmpty ? nil : subtitle)
+    }
+
+    private var smartButtonEditablePreviewTextBinding: Binding<String> {
+        Binding(
+            get: {
+                if let symbolDisplay = smartButtonSFSymbolDisplay {
+                    return symbolDisplay.subtitle ?? ""
+                }
+
+                return smartButtonTextBinding.wrappedValue
+            },
+            set: { newText in
+                if let symbolDisplay = smartButtonSFSymbolDisplay {
+                    smartButtonTextBinding.wrappedValue = "\(symbolDisplay.name):\(newText)"
+                } else {
+                    smartButtonTextBinding.wrappedValue = newText
+                }
+            }
+        )
+    }
+
+    private func setSmartButtonSFSymbol(_ symbolName: String) {
+        let currentText = smartButtonTextBinding.wrappedValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        let symbolText = smartButtonSymbolTextComponents(from: currentText)
+
+        if let symbolText {
+            smartButtonTextBinding.wrappedValue = "\(symbolName):\(symbolText.subtitle)"
+        } else if currentText.isEmpty {
+            smartButtonTextBinding.wrappedValue = "\(symbolName):"
+        } else {
+            smartButtonTextBinding.wrappedValue = "\(symbolName):\(currentText)"
+        }
+    }
+
+    private func smartButtonSymbolTextComponents(from text: String) -> (name: String, subtitle: String)? {
+        let components = text.components(separatedBy: ":")
+        let candidateName = components.first?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+
+        guard !candidateName.isEmpty,
+              !candidateName.contains(where: \.isWhitespace),
+              UIImage(systemName: candidateName) != nil else {
+            return nil
+        }
+
+        return (
+            candidateName,
+            components.dropFirst().joined(separator: ":").trimmingCharacters(in: .whitespacesAndNewlines)
+        )
+    }
+
+    private var smartVisibilityButton: some View {
+        Button {
+            ButtonClickFeedback.playIfEnabled()
+            smartButtonVisibilityBinding.wrappedValue.toggle()
+        } label: {
+            Image(systemName: smartButtonVisibilityBinding.wrappedValue ? "eye" : "eye.slash")
+                .font(.system(size: 32, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity, minHeight: 49)
+                .background(Color.black)
+                .overlay {
+                    Rectangle()
+                        .stroke(Color.white, lineWidth: 1)
+                }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(smartButtonVisibilityBinding.wrappedValue ? "Hide button" : "Show button")
+    }
+
+    private var smartClearColorButton: some View {
+        Button {
+            ButtonClickFeedback.playIfEnabled()
+            smartButtonBrightnessBaseHex = nil
+            smartButtonBrightness = 0.5
+            smartRightTextBinding.wrappedValue = rightTextWithoutColorPrefix(smartRightTextBinding.wrappedValue)
+        } label: {
+            Text("clr")
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity, minHeight: 49)
+                .background(Color.gray)
+                .overlay {
+                    Rectangle()
+                        .stroke(Color.white, lineWidth: 1)
+                }
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func smartButtonColorSwatch(_ hexColor: String) -> some View {
+        Button {
+            ButtonClickFeedback.playIfEnabled()
+            setSmartButtonColor(hexColor)
+        } label: {
+            Color(hex: hexColor)
+                .frame(maxWidth: .infinity, minHeight: 49)
+                .overlay {
+                    Rectangle()
+                        .stroke(Color.white, lineWidth: 1)
+                }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Set button color \(hexColor)")
+    }
+
+    private func smartVerticalSliderLabel(_ text: String) -> some View {
+        Text(text)
+            .font(.system(size: 14, weight: .semibold))
+            .foregroundStyle(.white)
+    }
+
     @ViewBuilder
     private var smartColorImage: some View {
         if let colorImage = UIImage(named: "color") ?? bundledColorImage() {
             Image(uiImage: colorImage)
                 .resizable()
-                .scaledToFill()
         } else {
             Color.black
         }
@@ -876,7 +1151,7 @@ struct MainScreen: View {
             return
         }
 
-        smartRightTextBinding.wrappedValue = rightTextReplacingColorPrefix(with: hexColor)
+        setSmartButtonColor(hexColor)
     }
 
     private func hexColorFromImage(_ image: UIImage, at location: CGPoint, in containerSize: CGSize) -> String? {
@@ -888,13 +1163,8 @@ struct MainScreen: View {
 
         let imageWidth = CGFloat(cgImage.width)
         let imageHeight = CGFloat(cgImage.height)
-        let scale = max(containerSize.width / imageWidth, containerSize.height / imageHeight)
-        let displayedWidth = imageWidth * scale
-        let displayedHeight = imageHeight * scale
-        let originX = (containerSize.width - displayedWidth) / 2
-        let originY = (containerSize.height - displayedHeight) / 2
-        let imageX = min(max((location.x - originX) / scale, 0), imageWidth - 1)
-        let imageY = min(max((location.y - originY) / scale, 0), imageHeight - 1)
+        let imageX = min(max(location.x / containerSize.width * imageWidth, 0), imageWidth - 1)
+        let imageY = min(max(location.y / containerSize.height * imageHeight, 0), imageHeight - 1)
 
         return hexColorFromPixel(
             x: Int(imageX.rounded(.down)),
@@ -929,6 +1199,85 @@ struct MainScreen: View {
         "\(hexColor):\(rightTextWithoutColorPrefix(smartRightTextBinding.wrappedValue))"
     }
 
+    private var smartButtonColorHex: String? {
+        let rightText = smartRightTextBinding.wrappedValue
+        let components = rightText.components(separatedBy: ":")
+
+        guard let firstComponent = components.first,
+              isSixDigitHexColor(firstComponent) else {
+            return nil
+        }
+
+        return firstComponent.uppercased()
+    }
+
+    private var smartButtonPreviewColor: Color {
+        guard let colorHex = smartButtonColorHex else {
+            return Color.blue
+        }
+
+        return Color(hex: colorHex)
+    }
+
+    private func setSmartButtonColor(_ hexColor: String) {
+        smartButtonBrightness = 0.5
+        let normalizedHex = hexColor.uppercased()
+        smartButtonBrightnessBaseHex = normalizedHex
+        smartRightTextBinding.wrappedValue = rightTextReplacingColorPrefix(with: normalizedHex)
+    }
+
+    private func applySmartButtonBrightness() {
+        guard let colorHex = smartButtonBrightnessBaseHex ?? smartButtonColorHex,
+              let adjustedHex = adjustedHexColor(colorHex, brightness: smartButtonBrightness) else {
+            return
+        }
+
+        if smartButtonBrightnessBaseHex == nil {
+            smartButtonBrightnessBaseHex = colorHex
+        }
+        smartRightTextBinding.wrappedValue = rightTextReplacingColorPrefix(with: adjustedHex)
+    }
+
+    private func adjustedHexColor(_ hexColor: String, brightness: Double) -> String? {
+        guard let rgb = rgbComponents(from: hexColor) else {
+            return nil
+        }
+
+        let clampedBrightness = min(max(brightness, 0), 1)
+        let adjusted: (Double) -> Int = { component in
+            let value: Double
+            if clampedBrightness < 0.5 {
+                value = component * (clampedBrightness / 0.5)
+            } else {
+                value = component + ((255 - component) * ((clampedBrightness - 0.5) / 0.5))
+            }
+
+            return Int(min(max(value.rounded(), 0), 255))
+        }
+
+        return String(
+            format: "%02X%02X%02X",
+            adjusted(rgb.red),
+            adjusted(rgb.green),
+            adjusted(rgb.blue)
+        )
+    }
+
+    private func rgbComponents(from hexColor: String) -> (red: Double, green: Double, blue: Double)? {
+        let trimmedHex = hexColor.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard isSixDigitHexColor(trimmedHex) else {
+            return nil
+        }
+
+        var intValue: UInt64 = 0
+        Scanner(string: trimmedHex).scanHexInt64(&intValue)
+        return (
+            Double((intValue >> 16) & 0xFF),
+            Double((intValue >> 8) & 0xFF),
+            Double(intValue & 0xFF)
+        )
+    }
+
     private func rightTextWithoutColorPrefix(_ rightText: String) -> String {
         let components = rightText.components(separatedBy: ":")
         guard let firstComponent = components.first,
@@ -946,6 +1295,18 @@ struct MainScreen: View {
 
         let hexDigits = "0123456789abcdefABCDEF"
         return text.allSatisfy { hexDigits.contains($0) }
+    }
+
+    private func setSmartButtonHidden(_ isHidden: Bool) {
+        let components = editingSlotText
+            .components(separatedBy: "::")
+            .filter { $0 != hiddenButtonMetadataToken }
+
+        if isHidden {
+            editingSlotText = (components + [hiddenButtonMetadataToken]).joined(separator: "::")
+        } else {
+            editingSlotText = components.joined(separator: "::")
+        }
     }
 
     private func smartModifierButton(systemName: String, accessibilityLabel: String, prefix: String) -> some View {
@@ -1118,17 +1479,23 @@ struct MainScreen: View {
     }
 
     private func smartSFSymbolCell(_ symbolName: String) -> some View {
-        Image(systemName: symbolName)
-            .font(.system(size: 22, weight: .semibold))
-            .foregroundStyle(.yellow)
-            .frame(maxWidth: .infinity)
-            .frame(height: 44)
-            .background(Color.black)
-            .overlay {
-                Rectangle()
-                    .stroke(Color.white, lineWidth: 1)
-            }
-            .accessibilityLabel(symbolName)
+        Button {
+            ButtonClickFeedback.playIfEnabled()
+            setSmartButtonSFSymbol(symbolName)
+        } label: {
+            Image(systemName: symbolName)
+                .font(.system(size: 22, weight: .semibold))
+                .foregroundStyle(.yellow)
+                .frame(maxWidth: .infinity)
+                .frame(height: 44)
+                .background(Color.black)
+                .overlay {
+                    Rectangle()
+                        .stroke(Color.white, lineWidth: 1)
+                }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(symbolName)
     }
 
     @ViewBuilder

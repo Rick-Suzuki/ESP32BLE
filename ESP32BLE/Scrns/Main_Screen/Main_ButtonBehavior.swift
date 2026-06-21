@@ -1685,7 +1685,6 @@ extension MainScreen {
 
         guard !candidateName.isEmpty,
               !candidateName.contains(where: \.isWhitespace),
-              supportedMainScreenSFSymbolNames.contains(candidateName),
               UIImage(systemName: candidateName) != nil else {
             return nil
         }

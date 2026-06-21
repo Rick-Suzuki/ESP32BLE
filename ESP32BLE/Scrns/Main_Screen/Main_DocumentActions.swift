@@ -141,8 +141,8 @@ extension MainScreen {
 
         let editableIndex = editableAnchorIndex(containing: index) ?? index
         activeDragIndex = nil
-        editingSlotIndex = index
         editingSlotText = editableText(for: functionKeys[editableIndex])
+        editingSlotIndex = index
         isSlotEditorFocused = true
     }
 	//
@@ -214,8 +214,8 @@ extension MainScreen {
             let candidateEntry = functionKeys[editableIndex]
 
             activeDragIndex = nil
-            self.editingSlotIndex = candidateIndex
             editingSlotText = editableText(for: candidateEntry)
+            self.editingSlotIndex = candidateIndex
             isSlotEditorFocused = true
             return
         }
