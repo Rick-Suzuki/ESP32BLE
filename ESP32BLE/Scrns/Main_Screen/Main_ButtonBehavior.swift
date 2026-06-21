@@ -1877,10 +1877,7 @@ struct MainScreenButtonLabelView: View {
             TimelineView(.periodic(from: .now, by: 1)) { context in
                 VStack(spacing: 4) {
                     if let widgetCityLabel {
-                        Text(widgetCityLabel)
-                            .font(.system(size: boxFontSize, weight: .semibold, design: .rounded))
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.5)
+                        widgetHeaderContent(fallbackTitle: widgetCityLabel)
                     }
 
                     Text(clockText(for: context.date, cityLabel: cityLabel))
@@ -1895,10 +1892,7 @@ struct MainScreenButtonLabelView: View {
         case .date(let cityLabel):
             TimelineView(.periodic(from: .now, by: 60)) { context in
                 VStack(spacing: 4) {
-                    Text(dateHeaderText(for: context.date, cityLabel: cityLabel))
-                        .font(.system(size: boxFontSize, weight: .bold, design: .rounded))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.4)
+                    widgetHeaderContent(fallbackTitle: dateHeaderText(for: context.date, cityLabel: cityLabel))
 
                     Text(dateValueText(for: context.date))
                         .font(.system(size: boxFontSize, weight: .bold, design: .rounded))
@@ -1914,10 +1908,7 @@ struct MainScreenButtonLabelView: View {
                 let headerText = dowHeaderText(for: context.date, cityLabel: cityLabel)
                 VStack(spacing: 4) {
                     if !headerText.isEmpty {
-                        Text(headerText)
-                            .font(.system(size: boxFontSize, weight: .bold, design: .rounded))
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.4)
+                        widgetHeaderContent(fallbackTitle: headerText)
                     }
 
                     Text(dayOfMonthOrdinalText(for: context.date, cityLabel: cityLabel))
@@ -1933,10 +1924,7 @@ struct MainScreenButtonLabelView: View {
                 let headerText = dowHeaderText(for: context.date, cityLabel: cityLabel)
                 VStack(spacing: 4) {
                     if !headerText.isEmpty {
-                        Text(headerText)
-                            .font(.system(size: boxFontSize, weight: .bold, design: .rounded))
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.4)
+                        widgetHeaderContent(fallbackTitle: headerText)
                     }
 
                     Text(monthNameText(for: context.date, cityLabel: cityLabel))
@@ -1952,10 +1940,7 @@ struct MainScreenButtonLabelView: View {
                 let headerText = dowHeaderText(for: context.date, cityLabel: cityLabel)
                 VStack(spacing: 4) {
                     if !headerText.isEmpty {
-                        Text(headerText)
-                            .font(.system(size: boxFontSize, weight: .bold, design: .rounded))
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.4)
+                        widgetHeaderContent(fallbackTitle: headerText)
                     }
 
                     Text(yearText(for: context.date, cityLabel: cityLabel))
@@ -1972,10 +1957,7 @@ struct MainScreenButtonLabelView: View {
                 let headerText = dowHeaderText(for: context.date, cityLabel: cityLabel)
                 VStack(spacing: 4) {
                     if !headerText.isEmpty {
-                        Text(headerText)
-                            .font(.system(size: boxFontSize, weight: .bold, design: .rounded))
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.4)
+                        widgetHeaderContent(fallbackTitle: headerText)
                     }
 
                     Text(widgetTimeComponentText(for: context.date, cityLabel: cityLabel, format: "ss"))
@@ -1992,10 +1974,7 @@ struct MainScreenButtonLabelView: View {
                 let headerText = dowHeaderText(for: context.date, cityLabel: cityLabel)
                 VStack(spacing: 4) {
                     if !headerText.isEmpty {
-                        Text(headerText)
-                            .font(.system(size: boxFontSize, weight: .bold, design: .rounded))
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.4)
+                        widgetHeaderContent(fallbackTitle: headerText)
                     }
 
                     Text(widgetTimeComponentText(for: context.date, cityLabel: cityLabel, format: "mm"))
@@ -2012,10 +1991,7 @@ struct MainScreenButtonLabelView: View {
                 let headerText = dowHeaderText(for: context.date, cityLabel: cityLabel)
                 VStack(spacing: 4) {
                     if !headerText.isEmpty {
-                        Text(headerText)
-                            .font(.system(size: boxFontSize, weight: .bold, design: .rounded))
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.4)
+                        widgetHeaderContent(fallbackTitle: headerText)
                     }
 
                     Text(widgetTimeComponentText(for: context.date, cityLabel: cityLabel, format: "HH"))
@@ -2032,10 +2008,7 @@ struct MainScreenButtonLabelView: View {
                 let headerText = dowHeaderText(for: context.date, cityLabel: cityLabel)
                 VStack(spacing: 4) {
                     if !headerText.isEmpty {
-                        Text(headerText)
-                            .font(.system(size: boxFontSize, weight: .bold, design: .rounded))
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.4)
+                        widgetHeaderContent(fallbackTitle: headerText)
                     }
 
                     Text(dateFullWeekdayText(for: context.date))
@@ -2119,6 +2092,18 @@ struct MainScreenButtonLabelView: View {
                 onStopCompletionSound: stopSoundPlayback,
                 onSpeakCompletionText: speakText
             )
+        }
+    }
+
+    @ViewBuilder
+    private func widgetHeaderContent(fallbackTitle: String) -> some View {
+        if let rightSymbolDisplay {
+            symbolContent(name: rightSymbolDisplay.name, subtitle: rightSymbolDisplay.subtitle)
+        } else {
+            Text(fallbackTitle)
+                .font(.system(size: boxFontSize, weight: .bold, design: .rounded))
+                .lineLimit(1)
+                .minimumScaleFactor(0.4)
         }
     }
 
