@@ -254,7 +254,7 @@ extension MainScreen {
             !component.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         }
 
-        return hasUserVisibleText ? text : ""
+        return hasUserVisibleText ? commandTextReplacingDisplayModifierSymbols(text) : ""
     }
 		//
 		//----------------------------------------

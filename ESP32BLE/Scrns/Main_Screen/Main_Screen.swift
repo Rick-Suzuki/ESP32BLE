@@ -38,6 +38,69 @@ struct MainScreen: View {
     private let slotEditorButtonSpacing: CGFloat = 5
     // Easy-to-find width for all slot editor helper buttons.
     private let slotEditorHelperButtonWidth: CGFloat = 58
+    private let smartViewWidth: CGFloat = 1024
+    private let smartViewHeight: CGFloat = 320
+    private let smartSFPanelSymbols = [
+        "folder", "eye", "magnifyingglass", "lightbulb.max.fill",
+        "speaker.wave.2", "star", "heart", "bell",
+        "house", "gearshape", "airplane", "book",
+        "camera", "cart", "cloud", "envelope",
+        "flag", "leaf", "moon", "wrench",
+        "paperplane", "doc", "calendar", "paintbrush",
+        "photo", "tray", "sun.max.fill", "link",
+        "person", "person.2", "car", "bicycle",
+        "map", "globe", "location", "wifi",
+        "battery.100", "music.note", "phone", "message",
+        "mail", "trash", "pencil", "square.and.pencil",
+        "plus", "minus", "checkmark", "xmark",
+        "arrow.left", "arrow.right", "arrow.up", "arrow.down",
+        "chevron.left", "chevron.right", "chevron.up", "chevron.down",
+        "play.fill", "pause.fill", "stop.fill", "record.circle",
+        "forward.fill", "backward.fill", "gobackward", "goforward",
+        "clock", "timer", "stopwatch", "alarm",
+        "calendar.badge.clock", "textformat", "keyboard", "command",
+        "option", "shift", "control", "escape",
+        "return", "delete.left", "space", "tab",
+        "lock", "lock.open", "key", "power",
+        "bolt", "bolt.fill", "flame", "drop",
+        "thermometer", "humidity", "wind", "snowflake",
+        "gamecontroller", "headphones", "mic", "waveform",
+        "antenna.radiowaves.left.and.right", "network", "server.rack", "desktopcomputer",
+        "laptopcomputer", "ipad", "iphone", "apple.logo",
+        "app", "square.grid.2x2", "list.bullet", "slider.horizontal.3"
+    ]
+    private let smartCommandRows: [(english: String, shortcut: String, description: String)] = [
+        ("clock", "clock ", "Inserts the current time."),
+        ("date", "date ", "Inserts the current date."),
+        ("day", "day ", "Inserts the current day."),
+        ("day of week", "dow ", "Inserts the day of the week."),
+        ("year", "year ", "Inserts the current year."),
+        ("prev", "prev", "Goes to the previous document in the file list."),
+        ("next", "next", "Goes to the next document in the file list."),
+        ("month", "month ", "Inserts the current month."),
+        ("hour", "hour ", "Inserts the current hour."),
+        ("mins", "min ", "Inserts the current minutes."),
+        ("secs", "sec ", "Inserts the current seconds."),
+        ("device power", "power ", "Sends a device power command."),
+        ("back", "back", "Goes back in the loaded page stack."),
+        ("forward", "forw", "Goes forward in the loaded page stack."),
+        ("ambient sound", "amb snd.mp3", "Starts ambient sound playback."),
+        ("play sounnd", "snd snd mp3", "Plays a sound file."),
+        ("speak text", "spk hello", "Speaks text aloud."),
+        ("Esp32 out", "out 32 1", "Sends an ESP32 output command."),
+        ("Esp32 pwm", "pwm 32 5 4", "Sends an ESP32 PWM command."),
+        ("home", "home", "Goes to the home page."),
+        ("wait time", "wait 5", "Waits before continuing a command chain."),
+        ("tap minus", "minus 10", "Subtracts from a tap counter."),
+        ("tap add", "add ", "Adds to a tap counter."),
+        ("random number", "rnd 0 100", "Generates a random number."),
+        ("random line", "rnd file.txt", "Uses a random line from a file."),
+        ("timer sound", "timer 60 snd.wav", "Runs a timer that plays sound."),
+        ("timer speak", "timer 10 hello", "Runs a timer that speaks text."),
+        ("run shortcut", "sc shortcutName", "Runs an iOS shortcut."),
+        ("open app", "app mail", "Opens an app."),
+        ("preview file", "file file.txt", "Previews a file.")
+    ]
 
     @AppStorage("speechRecognitionAutoOffMinutes") var speechRecognitionAutoOffMinutes = 5
 	
@@ -230,7 +293,7 @@ struct MainScreen: View {
                 }
 
                 if editingSlotIndex != nil {
-                    slotEditorSection
+                    smartView
                         .offset(y: topContentInset)
                 }
 
@@ -603,8 +666,385 @@ struct MainScreen: View {
         .ignoresSafeArea(.keyboard)
     }
 
+    private var smartView: some View {
+        HStack(spacing: 0) {
+            smartCommandPanel
+                .frame(width: 256)
+
+            smartPanel(title: "color panel")
+                .frame(width: 224)
+
+            smartPanel(title: "btn panel")
+                .frame(width: 280)
+
+            smartSFPanel
+                .frame(maxWidth: .infinity)
+        }
+        .frame(width: smartViewWidth, height: smartViewHeight)
+        .ignoresSafeArea(.keyboard)
+    }
+
+    private func smartPanel(title: String) -> some View {
+        Rectangle()
+            .fill(Color.black)
+            .overlay {
+                Rectangle()
+                    .stroke(Color.white, lineWidth: 1)
+            }
+            .overlay {
+                Text(title)
+                    .font(.headline)
+                    .foregroundStyle(.white)
+            }
+    }
+
+    private var smartCommandPanel: some View {
+        VStack(spacing: 0) {
+            TextField("left command - editable", text: smartActionTextBinding)
+                .font(.system(size: 22, weight: .semibold))
+                .foregroundStyle(.white)
+                .multilineTextAlignment(.center)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .padding(.horizontal, 8)
+                .frame(maxWidth: .infinity)
+                .frame(height: 58)
+                .background(Color.black)
+                .overlay {
+                    Rectangle()
+                        .stroke(Color.white, lineWidth: 1)
+                }
+
+            HStack(spacing: 0) {
+                smartModifierButton(systemName: "control", accessibilityLabel: "Control", prefix: "⌃")
+                smartModifierButton(systemName: "option", accessibilityLabel: "Option", prefix: "⌥")
+                smartModifierButton(systemName: "shift", accessibilityLabel: "Shift", prefix: "⇧")
+                smartModifierButton(systemName: "command", accessibilityLabel: "Command", prefix: "⌘")
+            }
+            .frame(height: 50)
+
+            HStack(spacing: 0) {
+                ScrollView(.vertical) {
+                    LazyVStack(spacing: 0) {
+                        ForEach(1...20, id: \.self) { functionKeyNumber in
+                            smartCommandTableButton("F\(functionKeyNumber)", foreground: .yellow) {
+                                smartActionTextBinding.wrappedValue = "F\(functionKeyNumber)"
+                            }
+                        }
+                    }
+                }
+                .frame(width: 72)
+                .background(Color.black)
+                .overlay {
+                    Rectangle()
+                        .stroke(Color.white, lineWidth: 1)
+                }
+
+                ScrollView(.vertical) {
+                    LazyVStack(spacing: 0) {
+                        ForEach(smartCommandRows, id: \.english) { commandRow in
+                            smartCommandTableButton(commandRow.english) {
+                                smartActionTextBinding.wrappedValue = commandRow.shortcut
+                            }
+                            .accessibilityHint(commandRow.description)
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color.black)
+                .overlay {
+                    Rectangle()
+                        .stroke(Color.white, lineWidth: 1)
+                }
+            }
+        }
+        .background(Color.black)
+        .overlay {
+            Rectangle()
+                .stroke(Color.white, lineWidth: 1)
+        }
+    }
+
+    private var smartActionTextBinding: Binding<String> {
+        Binding(
+            get: {
+                let actionText = editingSlotText.components(separatedBy: "::").first ?? editingSlotText
+                return displayActionTextReplacingModifierCodes(actionText)
+            },
+            set: { newActionText in
+                let components = editingSlotText.components(separatedBy: "::")
+                let rightSideText = components.dropFirst().joined(separator: "::")
+
+                if rightSideText.isEmpty {
+                    editingSlotText = newActionText
+                } else {
+                    editingSlotText = "\(newActionText)::\(rightSideText)"
+                }
+            }
+        )
+    }
+
+    private func smartModifierButton(systemName: String, accessibilityLabel: String, prefix: String) -> some View {
+        Button {
+            ButtonClickFeedback.playIfEnabled()
+            toggleSmartModifierPrefix(prefix)
+        } label: {
+            Image(systemName: systemName)
+                .font(.system(size: 24, weight: .semibold))
+                .foregroundStyle(.yellow)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color.black)
+                .overlay {
+                    Rectangle()
+                        .stroke(Color.white, lineWidth: 1)
+                }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(accessibilityLabel)
+    }
+
+    private func smartCommandTableButton(
+        _ title: String,
+        foreground: Color = .white,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button {
+            ButtonClickFeedback.playIfEnabled()
+            action()
+        } label: {
+            Text(title)
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundStyle(foreground)
+                .lineLimit(1)
+                .minimumScaleFactor(0.65)
+                .padding(.horizontal, 6)
+                .frame(maxWidth: .infinity)
+                .frame(height: 28)
+                .background(Color.black)
+                .overlay {
+                    Rectangle()
+                        .stroke(Color.white.opacity(0.55), lineWidth: 1)
+                }
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func toggleSmartModifierPrefix(_ prefix: String) {
+        let orderedPrefixes = ["⌃", "⌥", "⇧", "⌘"]
+        var actionText = smartActionTextBinding.wrappedValue
+        var enabledPrefixes = Set<String>()
+        var didRemovePrefix = true
+
+        while didRemovePrefix {
+            didRemovePrefix = false
+            for knownPrefix in orderedPrefixes where actionText.hasPrefix(knownPrefix) {
+                enabledPrefixes.insert(knownPrefix)
+                actionText.removeFirst(knownPrefix.count)
+                didRemovePrefix = true
+                break
+            }
+        }
+
+        if enabledPrefixes.contains(prefix) {
+            enabledPrefixes.remove(prefix)
+        } else {
+            enabledPrefixes.insert(prefix)
+        }
+
+        smartActionTextBinding.wrappedValue = orderedPrefixes
+            .filter { enabledPrefixes.contains($0) }
+            .joined() + actionText
+    }
+
+    private func displayActionTextReplacingModifierCodes(_ actionText: String) -> String {
+        let mappings = [("ctl:", "⌃"), ("op:", "⌥"), ("sh:", "⇧"), ("cm:", "⌘")]
+        var remainingText = actionText
+        var displayPrefixText = ""
+        var didRemovePrefix = true
+
+        while didRemovePrefix {
+            didRemovePrefix = false
+            for (commandPrefix, displayPrefix) in mappings where remainingText.hasPrefix(commandPrefix) {
+                remainingText.removeFirst(commandPrefix.count)
+                displayPrefixText += displayPrefix
+                didRemovePrefix = true
+                break
+            }
+        }
+
+        return displayPrefixText + remainingText
+    }
+
+    func commandTextReplacingDisplayModifierSymbols(_ text: String) -> String {
+        let components = text.components(separatedBy: "::")
+        guard let actionText = components.first else {
+            return text
+        }
+
+        var remainingText = actionText
+        var commandPrefixText = ""
+        let mappings = [("⌃", "ctl:"), ("⌥", "op:"), ("⇧", "sh:"), ("⌘", "cm:")]
+        var didRemovePrefix = true
+
+        while didRemovePrefix {
+            didRemovePrefix = false
+            for (displayPrefix, commandPrefix) in mappings where remainingText.hasPrefix(displayPrefix) {
+                remainingText.removeFirst(displayPrefix.count)
+                commandPrefixText += commandPrefix
+                didRemovePrefix = true
+                break
+            }
+        }
+
+        let commandActionText = commandPrefixText + remainingText
+
+        if components.count == 1 {
+            return commandActionText
+        }
+
+        return ([commandActionText] + components.dropFirst()).joined(separator: "::")
+    }
+
+    private var smartSFPanel: some View {
+        VStack(spacing: 0) {
+            ScrollView(.vertical) {
+                LazyVGrid(
+                    columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 4),
+                    spacing: 0
+                ) {
+                    ForEach(smartSFPanelSymbols, id: \.self) { symbolName in
+                        smartSFSymbolCell(symbolName)
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            HStack(spacing: 0) {
+                smartSlotPositionLabel
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                smartArrowButton(systemName: "arrow.left") {
+                    selectPreviousEditableSlot()
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                smartArrowButton(systemName: "arrow.right") {
+                    selectNextEditableSlot()
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+            .frame(height: 48)
+
+            HStack(spacing: 0) {
+                smartControlButton("test btn", background: Color(red: 0.0, green: 0.5, blue: 0.0)) {
+                    testEditingSlotText()
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                smartControlButton("close", background: Color.gray.opacity(0.45)) {
+                    saveSlotEditing()
+                    cancelSlotEditing()
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+            .frame(height: 48)
+        }
+        .background(Color.black)
+        .overlay {
+            Rectangle()
+                .stroke(Color.white, lineWidth: 1)
+        }
+    }
+
+    private func smartSFSymbolCell(_ symbolName: String) -> some View {
+        Image(systemName: symbolName)
+            .font(.system(size: 22, weight: .semibold))
+            .foregroundStyle(.yellow)
+            .frame(maxWidth: .infinity)
+            .frame(height: 44)
+            .background(Color.black)
+            .overlay {
+                Rectangle()
+                    .stroke(Color.white, lineWidth: 1)
+            }
+            .accessibilityLabel(symbolName)
+    }
+
+    @ViewBuilder
+    private var smartSlotPositionLabel: some View {
+        if let editingSlotIndex, visibleGridDimensions.columns > 0 {
+            let column = (editingSlotIndex % visibleGridDimensions.columns) + 1
+            let row = (editingSlotIndex / visibleGridDimensions.columns) + 1
+
+            HStack(spacing: 0) {
+                Text("\(column)")
+                    .foregroundStyle(.green)
+                Text(" : ")
+                    .foregroundStyle(.white)
+                Text("\(row)")
+                    .foregroundStyle(.red)
+            }
+            .font(.system(size: 28, weight: .semibold))
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color.black)
+            .overlay {
+                Rectangle()
+                    .stroke(Color.white, lineWidth: 1)
+            }
+        } else {
+            Rectangle()
+                .fill(Color.black)
+                .overlay {
+                    Rectangle()
+                        .stroke(Color.white, lineWidth: 1)
+                }
+        }
+    }
+
+    private func smartControlButton(
+        _ title: String,
+        foreground: Color = .white,
+        background: Color = .black,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button {
+            ButtonClickFeedback.playIfEnabled()
+            action()
+        } label: {
+            Text(title)
+                .font(.system(size: 24, weight: .semibold))
+                .foregroundStyle(foreground)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(background)
+                .overlay {
+                    Rectangle()
+                        .stroke(Color.white, lineWidth: 1)
+                }
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func smartArrowButton(
+        systemName: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button {
+            ButtonClickFeedback.playIfEnabled()
+            action()
+        } label: {
+            Image(systemName: systemName)
+                .font(.system(size: 32, weight: .bold))
+                .foregroundStyle(.green)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color.black)
+                .overlay {
+                    Rectangle()
+                        .stroke(Color.white, lineWidth: 1)
+                }
+        }
+        .buttonStyle(.plain)
+    }
+
     private func testEditingSlotText() {
-        let actionText = editingSlotText.components(separatedBy: "::").first ?? editingSlotText
+        let normalizedEditingSlotText = commandTextReplacingDisplayModifierSymbols(editingSlotText)
+        let actionText = normalizedEditingSlotText.components(separatedBy: "::").first ?? normalizedEditingSlotText
         let actionTokens = parsedActionTokens(from: actionText)
 
         if containsWaitCommand(in: actionTokens) {

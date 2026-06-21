@@ -262,9 +262,9 @@ struct MainScreenSlotEditorOverlay: View {
 							HStack(spacing: buttonSpacing) {
 								helperInsertButton(label: "timer snd",		insertedText: "timer 60 snd.wav")
 								helperInsertButton(label: "timer spk",		insertedText: "timer 10 hello")
-								helperInsertButton(label: "run\nshort\ncut",insertedText: "sc shortcutName",color:.green.opacity(0.3))
-								helperInsertButton(label: "open\napp", 		insertedText: "app mail",color:.green.opacity(0.3))
-								helperInsertButton(label: "preview\nfile", 	insertedText: "file file.txt",color:.green.opacity(0.3))
+								helperInsertButton(label: "run shortcut",	insertedText: "sc shortcutName",color:.green.opacity(0.3))
+								helperInsertButton(label: "open app", 		insertedText: "app mail",color:.green.opacity(0.3))
+								helperInsertButton(label: "preview file", 	insertedText: "file file.txt",color:.green.opacity(0.3))
 								closeButton
 							}
 						}
