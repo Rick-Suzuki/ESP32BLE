@@ -96,6 +96,27 @@ struct MainScreen: View {
         "FF6666", "00CC66", "492545", "007FFF",
         "C97827"
     ]
+    private let smartEscapeCodeRows: [(english: String, command: String, description: String)] = [
+        ("escape key", "ESC:", "sends the escape key"),
+        ("send return", "RET:", "sends the return key"),
+        ("backspace key", "BS:", "sends a backspace key"),
+        ("sends space", "SP:", "sends the space character."),
+        ("tab key", "TAB:", "sends the tab key"),
+        ("new line", "NL:", "sends a newline character."),
+        ("colon", ":", "a colon is used to separate keyboard presses"),
+        ("up key", "UP:", "sends up arrow"),
+        ("down key", "DOWN:", "sends down arrow"),
+        ("left key", "LEFT:", "sends left arrow"),
+        ("right key", "RIGHT:", "sends right arrow"),
+        ("select all (ctl-a)", "CA:", "sends control-a"),
+        ("copy (ctl-c)", "CC:", "sends control-c"),
+        ("paste (ctl-v)", "CV:", "sends control-v"),
+        ("cut (ctl-x)", "CX:", "sends control-x"),
+        ("select all (cmd-a)", "MA:", "sends command-a"),
+        ("copy (cmd-c)", "MC:", "sends command-c"),
+        ("paste (cmd-v)", "MV:", "sends command-v"),
+        ("cut (cmd-x)", "MX:", "sends command-x")
+    ]
     private let smartCommandRows: [(english: String, shortcut: String, description: String)] = [
 		//
 		//----------------------------------------
@@ -336,6 +357,8 @@ Previews a file.
     @State var editingSlotIndex: Int?
     @State var editingSlotText = ""
     @State private var smartCommandDescription = "command description"
+    @State private var isSmartEscapeCodeTableVisible = false
+    @State private var smartActionTextSelectionRange = NSRange(location: 0, length: 0)
     @State private var smartButtonBrightness = 0.5
     @State private var smartButtonBrightnessBaseHex: String?
     @State private var smartButtonPreviewFontSize = 34.0
@@ -912,14 +935,12 @@ Previews a file.
 
     private var smartCommandPanel: some View {
         VStack(spacing: 0) {
-            TextField("left command - editable", text: smartActionTextBinding)
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(.white)
-                .multilineTextAlignment(.center)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-                .lineLimit(1)
-                .minimumScaleFactor(0.55)
+            SmartActionTextField(
+                placeholder: "left command - editable",
+                text: smartActionTextBinding,
+                selectedRange: $smartActionTextSelectionRange,
+                fontSize: 15
+            )
                 .padding(.horizontal, 3)
                 .frame(maxWidth: .infinity)
                 .frame(height: 46)
@@ -934,6 +955,7 @@ Previews a file.
                 smartModifierButton(systemName: "option", accessibilityLabel: "Option", prefix: "⌥")
                 smartModifierButton(systemName: "shift", accessibilityLabel: "Shift", prefix: "⇧")
                 smartModifierButton(systemName: "command", accessibilityLabel: "Command", prefix: "⌘")
+                smartEscapeCodeToggleButton
             }
             .frame(height: 44)
 
@@ -956,12 +978,22 @@ Previews a file.
 
                 ScrollView(.vertical) {
                     LazyVStack(spacing: 0) {
-                        ForEach(smartCommandRows, id: \.english) { commandRow in
-                            smartCommandTableButton(commandRow.english) {
-                                smartActionTextBinding.wrappedValue = commandRow.shortcut
-                                smartCommandDescription = commandRow.description
+                        if isSmartEscapeCodeTableVisible {
+                            ForEach(smartEscapeCodeRows, id: \.english) { escapeCodeRow in
+                                smartCommandTableButton(escapeCodeRow.english, foreground: .green) {
+                                    insertSmartActionTextAtSelection(escapeCodeRow.command)
+                                    smartCommandDescription = escapeCodeRow.description
+                                }
+                                .accessibilityHint(escapeCodeRow.description)
                             }
-                            .accessibilityHint(commandRow.description)
+                        } else {
+                            ForEach(smartCommandRows, id: \.english) { commandRow in
+                                smartCommandTableButton(commandRow.english, foreground: .white) {
+                                    smartActionTextBinding.wrappedValue = commandRow.shortcut
+                                    smartCommandDescription = commandRow.description
+                                }
+                                .accessibilityHint(commandRow.description)
+                            }
                         }
                     }
                 }
@@ -1104,10 +1136,10 @@ Previews a file.
         VStack(spacing: 6) {
             HStack(alignment: .top, spacing: 8) {
                 VStack(spacing: 4) {
-                    smartVerticalSliderLabel("bright")
+                    smartVerticalSliderLabel("")
                     Slider(value: $smartButtonBrightness, in: 0...1)
                         .rotationEffect(.degrees(-90))
-                        .frame(width: 104, height: 26)
+                        .frame(width: 140, height: 26)
                         .tint(.yellow)
                         .onChange(of: smartButtonBrightness) {
                             applySmartButtonBrightness()
@@ -1462,12 +1494,28 @@ Previews a file.
 
     private func rightTextWithoutColorPrefix(_ rightText: String) -> String {
         let components = rightText.components(separatedBy: ":")
-        guard let firstComponent = components.first,
-              isSixDigitHexColor(firstComponent) else {
+        guard components.count > 1,
+              let firstComponent = components.first,
+              isColorPrefix(firstComponent) else {
             return rightText
         }
 
         return components.dropFirst().joined(separator: ":")
+    }
+
+    private func isColorPrefix(_ text: String) -> Bool {
+        isSixDigitHexColor(text) || isLegacyColorPrefix(text)
+    }
+
+    // Old button files used a single character color code, for example "c:calendar:draw".
+    private func isLegacyColorPrefix(_ text: String) -> Bool {
+        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmedText.count == 1,
+              let scalar = trimmedText.unicodeScalars.first else {
+            return false
+        }
+
+        return CharacterSet.alphanumerics.contains(scalar)
     }
 
     private func isSixDigitHexColor(_ text: String) -> Bool {
@@ -1510,6 +1558,25 @@ Previews a file.
         .accessibilityLabel(accessibilityLabel)
     }
 
+    private var smartEscapeCodeToggleButton: some View {
+        Button {
+            ButtonClickFeedback.playIfEnabled()
+            isSmartEscapeCodeTableVisible.toggle()
+        } label: {
+            Image(systemName: "rectangle.split.2x1")
+                .font(.system(size: 24, weight: .semibold))
+                .foregroundStyle(isSmartEscapeCodeTableVisible ? .green : .white)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color.black)
+                .overlay {
+                    Rectangle()
+                        .stroke(Color.white, lineWidth: 1)
+                }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(isSmartEscapeCodeTableVisible ? "Show widgets table" : "Show escape code table")
+    }
+
     private func smartCommandTableButton(
         _ title: String,
         foreground: Color = .white,
@@ -1534,6 +1601,18 @@ Previews a file.
                 }
         }
         .buttonStyle(.plain)
+    }
+
+    private func insertSmartActionTextAtSelection(_ insertedText: String) {
+        var actionText = smartActionTextBinding.wrappedValue
+        let replacementRange = Range(smartActionTextSelectionRange, in: actionText) ?? actionText.endIndex..<actionText.endIndex
+
+        let insertionStart = replacementRange.lowerBound
+        actionText.replaceSubrange(replacementRange, with: insertedText)
+        let insertionEnd = actionText.index(insertionStart, offsetBy: insertedText.count)
+
+        smartActionTextBinding.wrappedValue = actionText
+        smartActionTextSelectionRange = NSRange(insertionEnd..<insertionEnd, in: actionText)
     }
 
     private func toggleSmartModifierPrefix(_ prefix: String) {
@@ -2134,6 +2213,82 @@ Previews a file.
             alertTitle = ""
             renameAlertMessage = "can't move btn"
             return
+        }
+    }
+}
+
+private struct SmartActionTextField: UIViewRepresentable {
+    let placeholder: String
+    @Binding var text: String
+    @Binding var selectedRange: NSRange
+    let fontSize: CGFloat
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+
+    func makeUIView(context: Context) -> UITextField {
+        let textField = UITextField()
+        textField.delegate = context.coordinator
+        textField.placeholder = placeholder
+        textField.textColor = .white
+        textField.tintColor = .white
+        textField.textAlignment = .center
+        textField.backgroundColor = .clear
+        textField.borderStyle = .none
+        textField.font = .systemFont(ofSize: fontSize, weight: .semibold)
+        textField.adjustsFontSizeToFitWidth = true
+        textField.minimumFontSize = fontSize * 0.55
+        textField.autocorrectionType = .no
+        textField.autocapitalizationType = .none
+        textField.addTarget(context.coordinator, action: #selector(Coordinator.textDidChange(_:)), for: .editingChanged)
+        return textField
+    }
+
+    func updateUIView(_ uiView: UITextField, context: Context) {
+        context.coordinator.parent = self
+
+        if uiView.text != text {
+            uiView.text = text
+        }
+
+        context.coordinator.applySelectedRange(to: uiView)
+    }
+
+    final class Coordinator: NSObject, UITextFieldDelegate {
+        var parent: SmartActionTextField
+
+        init(_ parent: SmartActionTextField) {
+            self.parent = parent
+        }
+
+        @objc func textDidChange(_ textField: UITextField) {
+            parent.text = textField.text ?? ""
+            updateSelectedRange(from: textField)
+        }
+
+        func textFieldDidChangeSelection(_ textField: UITextField) {
+            updateSelectedRange(from: textField)
+        }
+
+        func updateSelectedRange(from textField: UITextField) {
+            guard let selectedTextRange = textField.selectedTextRange else {
+                return
+            }
+
+            let location = textField.offset(from: textField.beginningOfDocument, to: selectedTextRange.start)
+            let length = textField.offset(from: selectedTextRange.start, to: selectedTextRange.end)
+            parent.selectedRange = NSRange(location: location, length: length)
+        }
+
+        func applySelectedRange(to textField: UITextField) {
+            guard let start = textField.position(from: textField.beginningOfDocument, offset: parent.selectedRange.location),
+                  let end = textField.position(from: start, offset: parent.selectedRange.length),
+                  textField.selectedTextRange?.start != start || textField.selectedTextRange?.end != end else {
+                return
+            }
+
+            textField.selectedTextRange = textField.textRange(from: start, to: end)
         }
     }
 }
