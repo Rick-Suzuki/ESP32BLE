@@ -434,6 +434,10 @@ Previews a file.
                 smartButtonBrightness = 0.5
                 smartButtonBrightnessBaseHex = smartButtonColorHex
             }
+            .onChange(of: editingSlotText) {
+                guard editingSlotIndex != nil else { return }
+                print("Button code changed -> \(editingSlotText)")
+            }
             .onChange(of: definedFunctionKeyCount) {
                 updateVisibleBoxCountToFitDefinedButtons()
             }
