@@ -39,7 +39,9 @@ struct MainScreen: View {
     // Easy-to-find width for all slot editor helper buttons.
     private let slotEditorHelperButtonWidth: CGFloat = 58
     private let smartViewWidth: CGFloat = 1024
-    private let smartViewHeight: CGFloat = 320
+    private let smartViewHeight: CGFloat = 294
+    // Adjust this to tune the height of the 16 color/visibility cells in the smart button panel.
+    private let smartButtonPanelColorCellHeight: CGFloat = 46
     private let smartSFPanelSymbols = [
         "folder", "eye", "magnifyingglass", "lightbulb.max.fill",
         "speaker.wave.2", "star", "heart", "bell",
@@ -60,7 +62,7 @@ struct MainScreen: View {
         "clock", "timer", "stopwatch", "alarm",
         "calendar.badge.clock", "textformat", "keyboard", "command",
         "option", "shift", "control", "escape",
-        "return", "delete.left", "space", "tab",
+        "return", "delete.left", "spacebar", "arrow.right.to.line",
         "lock", "lock.open", "key", "power",
         "bolt", "bolt.fill", "flame", "drop",
         "thermometer", "humidity", "wind", "snowflake",
@@ -84,7 +86,8 @@ struct MainScreen: View {
         "waveform.circle", "music.mic", "music.quarternote.3", "guitars", "pianokeys", "metronome",
         "play.circle", "pause.circle", "stop.circle", "record.circle.fill", "shuffle", "repeat",
         "arrow.clockwise", "arrow.counterclockwise", "arrow.up.left", "arrow.up.right", "arrow.down.left", "arrow.down.right",
-        "arrowshape.left", "arrowshape.right", "arrowshape.turn.up.left", "arrowshape.turn.up.right", "u-turn.left", "u-turn.right"
+        "arrowshape.left", "arrowshape.right", "arrowshape.turn.up.left", "arrowshape.turn.up.right",
+        "arrow.uturn.left", "arrow.uturn.right", "arrow.turn.up.left", "arrow.turn.up.right"
     ]
     private let smartButtonSwatchHexColors = [
         "0000FF", "171775", "000000",
@@ -94,37 +97,214 @@ struct MainScreen: View {
         "C97827"
     ]
     private let smartCommandRows: [(english: String, shortcut: String, description: String)] = [
-        ("clock", "clock ", "Inserts the current time."),
-        ("date", "date ", "Inserts the current date."),
-        ("day", "day ", "Inserts the current day."),
-        ("day of week", "dow ", "Inserts the day of the week."),
-        ("year", "year ", "Inserts the current year."),
-        ("prev", "prev", "Goes to the previous document in the file list."),
-        ("next", "next", "Goes to the next document in the file list."),
-        ("month", "month ", "Inserts the current month."),
-        ("hour", "hour ", "Inserts the current hour."),
-        ("mins", "min ", "Inserts the current minutes."),
-        ("secs", "sec ", "Inserts the current seconds."),
-        ("device power", "power ", "Sends a device power command."),
-        ("back", "back", "Goes back in the loaded page stack."),
-        ("forward", "forw", "Goes forward in the loaded page stack."),
-        ("ambient sound", "amb snd.mp3", "Starts ambient sound playback."),
-        ("play sounnd", "snd snd mp3", "Plays a sound file."),
-        ("speak text", "spk hello", "Speaks text aloud."),
-        ("Esp32 out", "out 32 1", "Sends an ESP32 output command."),
-        ("Esp32 pwm", "pwm 32 5 4", "Sends an ESP32 PWM command."),
-        ("home", "home", "Goes to the home page."),
-        ("wait time", "wait 5", "Waits before continuing a command chain."),
-        ("tap minus", "minus 10", "Subtracts from a tap counter."),
-        ("tap add", "add ", "Adds to a tap counter."),
-        ("random number", "rnd 0 100", "Generates a random number."),
-        ("random line", "rnd file.txt", "Uses a random line from a file."),
-        ("timer sound", "timer 60 snd.wav", "Runs a timer that plays sound."),
-        ("timer speak", "timer 10 hello", "Runs a timer that speaks text."),
-        ("run shortcut", "sc shortcutName", "Runs an iOS shortcut."),
-        ("open app", "app mail", "Opens an app."),
-        ("preview file", "file file.txt", "Previews a file.")
-    ]
+		//
+		//----------------------------------------
+		//
+		("clock", "clock","""
+Inserts the current time.
+	
+Optionally specify a city:
+	
+clock Paris
+clock Tokyo
+"""),
+		//
+		//----------------------------------------
+		//
+		("date", "date ", """
+Inserts the current date.
+ 
+Optionally specify a city:
+ 
+date Paris
+date Tokyo
+"""),
+		//
+		//----------------------------------------
+		//
+		("day", "day ", """
+Inserts the current day.
+"""),
+		//
+		//----------------------------------------
+		//
+		("day of week", "dow ", """
+Inserts the day of the week.
+"""),
+		//
+		//----------------------------------------
+		//
+		("year", "year ", """
+Inserts the current year.
+"""),
+		//
+		//----------------------------------------
+		//
+		("prev", "prev", """
+Goes to the previous document
+in the file list.
+"""),
+		//
+		//----------------------------------------
+		//
+		("next", "next", """
+Goes to the next document
+in the file list.
+"""),
+		//
+		//----------------------------------------
+		//
+		("month", "month ", """
+Inserts the current month.
+"""),
+		//
+		//----------------------------------------
+		//
+		("hour", "hour ", """
+Inserts the current hour.
+"""),
+		//
+		//----------------------------------------
+		//
+		("mins", "min ", """
+Inserts the current minutes.
+"""),
+		//
+		//----------------------------------------
+		//
+		("secs", "sec ", """
+Inserts the current seconds.
+"""),
+		//
+		//----------------------------------------
+		//
+		("device power", "power ", """
+Shows the device
+power state.
+"""),
+		//
+		//----------------------------------------
+		//
+		("back", "back", """
+Goes back in the
+loaded page stack.
+"""),
+		//
+		//----------------------------------------
+		//
+		("forward", "forw", """
+Goes forward in the
+loaded page stack.
+"""),
+		//
+		//----------------------------------------
+		//
+		("ambient sound", "amb snd.mp3", """
+Starts ambient sound
+playback.
+"""),
+		//
+		//----------------------------------------
+		//
+		("play sound", "snd snd.mp3", """
+Plays a sound file.
+"""),
+		//
+		//----------------------------------------
+		//
+		("speak text", "spk hello", """
+Speaks text aloud.
+"""),
+		//
+		//----------------------------------------
+		//
+		("Esp32 out", "out 32 1", """
+Sends an ESP32
+output command.
+"""),
+		//
+		//----------------------------------------
+		//
+		("Esp32 pwm", "pwm 32 5 4", """
+Sends an ESP32
+PWM command.
+"""),
+		//
+		//----------------------------------------
+		//
+		("home", "home", """
+Goes to the
+home page.
+"""),
+		//
+		//----------------------------------------
+		//
+		("wait time", "wait 5", """
+Waits before continuing
+a command chain.
+"""),
+		//
+		//----------------------------------------
+		//
+		("tap minus", "minus 10", """
+Subtracts from a
+tap counter.
+"""),
+		//
+		//----------------------------------------
+		//
+		("tap add", "add ", """
+Adds to a
+tap counter.
+"""),
+		//
+		//----------------------------------------
+		//
+		("random number", "rnd 0 100", """
+Generates a random
+number.
+"""),
+		//
+		//----------------------------------------
+		//
+		("random line", "rnd file.txt", """
+Uses a random line
+from a file.
+"""),
+		//
+		//----------------------------------------
+		//
+		("timer sound", "timer 60 snd.wav", """
+Runs a timer that
+plays sound.
+"""),
+		//
+		//----------------------------------------
+		//
+		("timer speak", "timer 10 hello", """
+Runs a timer that
+speaks text.
+"""),
+		//
+		//----------------------------------------
+		//
+		("run shortcut", "sc shortcutName", """
+Runs an iOS
+shortcut.
+"""),
+		//
+		//----------------------------------------
+		//
+		("open app", "app mail", """
+Opens an app.
+"""),
+		//
+		//----------------------------------------
+		//
+		("preview file", "file file.txt", """
+Previews a file.
+""")
+	]
 
     @AppStorage("speechRecognitionAutoOffMinutes") var speechRecognitionAutoOffMinutes = 5
 	
@@ -325,8 +505,7 @@ struct MainScreen: View {
                 }
 
                 if editingSlotIndex != nil {
-                    smartView
-                        .offset(y: topContentInset)
+                    smartView(availableWidth: contentWidth)
                 }
 
                 popupOverlay(
@@ -698,21 +877,22 @@ struct MainScreen: View {
         .ignoresSafeArea(.keyboard)
     }
 
-    private var smartView: some View {
+    private func smartView(availableWidth: CGFloat) -> some View {
         HStack(spacing: 0) {
             smartCommandPanel
-                .frame(width: 256)
+                .frame(width: 256, height: smartViewHeight)
 
             smartColorPanel
-                .frame(width: 224)
+                .frame(width: 224, height: smartViewHeight)
 
             smartButtonPanel
-                .frame(width: 280)
+                .frame(width: 280, height: smartViewHeight)
 
             smartSFPanel
                 .frame(maxWidth: .infinity)
+                .frame(height: smartViewHeight)
         }
-        .frame(width: smartViewWidth, height: smartViewHeight)
+        .frame(width: min(smartViewWidth, availableWidth), height: smartViewHeight)
         .ignoresSafeArea(.keyboard)
     }
 
@@ -733,14 +913,16 @@ struct MainScreen: View {
     private var smartCommandPanel: some View {
         VStack(spacing: 0) {
             TextField("left command - editable", text: smartActionTextBinding)
-                .font(.system(size: 22, weight: .semibold))
+                .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
-                .padding(.horizontal, 8)
+                .lineLimit(1)
+                .minimumScaleFactor(0.55)
+                .padding(.horizontal, 3)
                 .frame(maxWidth: .infinity)
-                .frame(height: 58)
+                .frame(height: 46)
                 .background(Color.black)
                 .overlay {
                     Rectangle()
@@ -753,7 +935,7 @@ struct MainScreen: View {
                 smartModifierButton(systemName: "shift", accessibilityLabel: "Shift", prefix: "⇧")
                 smartModifierButton(systemName: "command", accessibilityLabel: "Command", prefix: "⌘")
             }
-            .frame(height: 50)
+            .frame(height: 44)
 
             HStack(spacing: 0) {
                 ScrollView(.vertical) {
@@ -889,7 +1071,7 @@ struct MainScreen: View {
                     )
             }
             .frame(maxWidth: .infinity)
-            .frame(height: smartViewHeight / 2)
+            .frame(height: 132)
             .background(Color.black)
             .overlay {
                 Rectangle()
@@ -901,7 +1083,7 @@ struct MainScreen: View {
                     .font(.system(size: 16, weight: .regular))
                     .foregroundStyle(.cyan)
                     .multilineTextAlignment(.center)
-                    .padding(10)
+                    .padding(6)
                     .frame(maxWidth: .infinity)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -919,19 +1101,19 @@ struct MainScreen: View {
     }
 
     private var smartButtonPanel: some View {
-        VStack(spacing: 8) {
-            HStack(alignment: .top, spacing: 10) {
-                VStack(spacing: 10) {
+        VStack(spacing: 6) {
+            HStack(alignment: .top, spacing: 8) {
+                VStack(spacing: 4) {
                     smartVerticalSliderLabel("bright")
                     Slider(value: $smartButtonBrightness, in: 0...1)
                         .rotationEffect(.degrees(-90))
-                        .frame(width: 120, height: 28)
+                        .frame(width: 104, height: 26)
                         .tint(.yellow)
                         .onChange(of: smartButtonBrightness) {
                             applySmartButtonBrightness()
                         }
                 }
-                .frame(width: 76)
+                .frame(width: 64)
 
                 VStack(spacing: 8) {
                     smartButtonPreview
@@ -990,7 +1172,7 @@ struct MainScreen: View {
             }
         }
         .frame(maxWidth: .infinity)
-        .frame(height: 112)
+        .frame(height: 104)
         .background(smartButtonPreviewColor)
         .clipShape(.rect(cornerRadius: 18))
         .overlay {
@@ -1074,7 +1256,7 @@ struct MainScreen: View {
             Image(systemName: smartButtonVisibilityBinding.wrappedValue ? "eye" : "eye.slash")
                 .font(.system(size: 32, weight: .semibold))
                 .foregroundStyle(.white)
-                .frame(maxWidth: .infinity, minHeight: 49)
+                .frame(maxWidth: .infinity, minHeight: smartButtonPanelColorCellHeight)
                 .background(Color.black)
                 .overlay {
                     Rectangle()
@@ -1095,7 +1277,7 @@ struct MainScreen: View {
             Text("clr")
                 .font(.system(size: 20, weight: .semibold))
                 .foregroundStyle(.white)
-                .frame(maxWidth: .infinity, minHeight: 49)
+                .frame(maxWidth: .infinity, minHeight: smartButtonPanelColorCellHeight)
                 .background(Color.gray)
                 .overlay {
                     Rectangle()
@@ -1111,7 +1293,7 @@ struct MainScreen: View {
             setSmartButtonColor(hexColor)
         } label: {
             Color(hex: hexColor)
-                .frame(maxWidth: .infinity, minHeight: 49)
+                .frame(maxWidth: .infinity, minHeight: smartButtonPanelColorCellHeight)
                 .overlay {
                     Rectangle()
                         .stroke(Color.white, lineWidth: 1)
@@ -1338,13 +1520,13 @@ struct MainScreen: View {
             action()
         } label: {
             Text(title)
-                .font(.system(size: 20, weight: .semibold))
+                .font(.system(size: 18, weight: .semibold))
                 .foregroundStyle(foreground)
                 .lineLimit(1)
                 .minimumScaleFactor(0.65)
                 .padding(.horizontal, 6)
                 .frame(maxWidth: .infinity)
-                .frame(height: 28)
+                .frame(height: 26)
                 .background(Color.black)
                 .overlay {
                     Rectangle()
@@ -1456,7 +1638,7 @@ struct MainScreen: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            .frame(height: 48)
+            .frame(height: 46)
 
             HStack(spacing: 0) {
                 smartControlButton("test btn", background: Color(red: 0.0, green: 0.5, blue: 0.0)) {
@@ -1469,7 +1651,7 @@ struct MainScreen: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            .frame(height: 48)
+            .frame(height: 46)
         }
         .background(Color.black)
         .overlay {
@@ -1487,7 +1669,7 @@ struct MainScreen: View {
                 .font(.system(size: 22, weight: .semibold))
                 .foregroundStyle(.yellow)
                 .frame(maxWidth: .infinity)
-                .frame(height: 44)
+                .frame(height: 42)
                 .background(Color.black)
                 .overlay {
                     Rectangle()
