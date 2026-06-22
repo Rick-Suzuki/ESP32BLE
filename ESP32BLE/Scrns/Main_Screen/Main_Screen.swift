@@ -2257,17 +2257,26 @@ private struct SmartActionTextField: UIViewRepresentable {
 
     final class Coordinator: NSObject, UITextFieldDelegate {
         var parent: SmartActionTextField
+        private var isApplyingSelectedRange = false
 
         init(_ parent: SmartActionTextField) {
             self.parent = parent
         }
 
         @objc func textDidChange(_ textField: UITextField) {
+            guard !isApplyingSelectedRange else {
+                return
+            }
+
             parent.text = textField.text ?? ""
             updateSelectedRange(from: textField)
         }
 
         func textFieldDidChangeSelection(_ textField: UITextField) {
+            guard !isApplyingSelectedRange else {
+                return
+            }
+
             updateSelectedRange(from: textField)
         }
 
@@ -2288,7 +2297,9 @@ private struct SmartActionTextField: UIViewRepresentable {
                 return
             }
 
+            isApplyingSelectedRange = true
             textField.selectedTextRange = textField.textRange(from: start, to: end)
+            isApplyingSelectedRange = false
         }
     }
 }
