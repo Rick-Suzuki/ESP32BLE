@@ -434,9 +434,10 @@ Previews a file.
                 smartButtonBrightness = 0.5
                 smartButtonBrightnessBaseHex = smartButtonColorHex
             }
-            .onChange(of: editingSlotText) {
+            .onChange(of: editingSlotText) { oldButtonCode, newButtonCode in
                 guard editingSlotIndex != nil else { return }
-                print("Button code changed -> \(editingSlotText)")
+                print("Button code before change -> \(oldButtonCode)")
+                print("Button code changed -> \(newButtonCode)")
             }
             .onChange(of: definedFunctionKeyCount) {
                 updateVisibleBoxCountToFitDefinedButtons()
@@ -1037,18 +1038,15 @@ Previews a file.
     private var smartActionTextBinding: Binding<String> {
         Binding(
             get: {
-                let actionText = editingSlotText.components(separatedBy: "::").first ?? editingSlotText
-                return displayActionTextReplacingModifierCodes(actionText)
+                return displayActionTextReplacingModifierCodes(smartEditingTextParts.action)
             },
             set: { newActionText in
-                let components = editingSlotText.components(separatedBy: "::")
-                let rightSideText = components.dropFirst().joined(separator: "::")
-
-                if rightSideText.isEmpty {
-                    editingSlotText = newActionText
-                } else {
-                    editingSlotText = "\(newActionText)::\(rightSideText)"
-                }
+                let parts = smartEditingTextParts
+                editingSlotText = composeSmartEditingText(
+                    action: newActionText,
+                    right: parts.right,
+                    isHidden: parts.isHidden
+                )
             }
         )
     }
@@ -1056,23 +1054,15 @@ Previews a file.
     private var smartRightTextBinding: Binding<String> {
         Binding(
             get: {
-                let components = editingSlotText.components(separatedBy: "::")
-                return components
-                    .dropFirst()
-                    .filter { $0 != hiddenButtonMetadataToken }
-                    .joined(separator: "::")
+                smartEditingTextParts.right
             },
             set: { newRightText in
-                let actionText = editingSlotText.components(separatedBy: "::").first ?? ""
-                let isHidden = smartIsButtonHidden
-
-                if newRightText.isEmpty && !isHidden {
-                    editingSlotText = actionText
-                } else {
-                    let rightComponents = newRightText.isEmpty ? [] : [newRightText]
-                    let metadataComponents = isHidden ? [hiddenButtonMetadataToken] : []
-                    editingSlotText = ([actionText] + rightComponents + metadataComponents).joined(separator: "::")
-                }
+                let parts = smartEditingTextParts
+                editingSlotText = composeSmartEditingText(
+                    action: parts.action,
+                    right: newRightText,
+                    isHidden: parts.isHidden
+                )
             }
         )
     }
@@ -1104,7 +1094,43 @@ Previews a file.
     }
 
     private var smartIsButtonHidden: Bool {
-        editingSlotText.components(separatedBy: "::").contains(hiddenButtonMetadataToken)
+        smartEditingTextParts.isHidden
+    }
+
+    private var smartEditingTextParts: (action: String, right: String, isHidden: Bool) {
+        var textWithoutMetadata = editingSlotText
+        var isHidden = false
+        let hiddenSuffix = "::\(hiddenButtonMetadataToken)"
+
+        if textWithoutMetadata == hiddenButtonMetadataToken {
+            textWithoutMetadata = ""
+            isHidden = true
+        } else if textWithoutMetadata.hasSuffix(hiddenSuffix) {
+            textWithoutMetadata.removeLast(hiddenSuffix.count)
+            isHidden = true
+        }
+
+        guard let separatorRange = textWithoutMetadata.range(of: "::", options: .backwards) else {
+            return (textWithoutMetadata, "", isHidden)
+        }
+
+        let actionText = String(textWithoutMetadata[..<separatorRange.lowerBound])
+        let rightText = String(textWithoutMetadata[separatorRange.upperBound...])
+        return (actionText, rightText, isHidden)
+    }
+
+    private func composeSmartEditingText(action: String, right: String, isHidden: Bool) -> String {
+        var components = [action]
+
+        if !right.isEmpty {
+            components.append(right)
+        }
+
+        if isHidden {
+            components.append(hiddenButtonMetadataToken)
+        }
+
+        return components.joined(separator: "::")
     }
 
     private var smartColorPanel: some View {
@@ -1550,15 +1576,12 @@ Previews a file.
     }
 
     private func setSmartButtonHidden(_ isHidden: Bool) {
-        let components = editingSlotText
-            .components(separatedBy: "::")
-            .filter { $0 != hiddenButtonMetadataToken }
-
-        if isHidden {
-            editingSlotText = (components + [hiddenButtonMetadataToken]).joined(separator: "::")
-        } else {
-            editingSlotText = components.joined(separator: "::")
-        }
+        let parts = smartEditingTextParts
+        editingSlotText = composeSmartEditingText(
+            action: parts.action,
+            right: parts.right,
+            isHidden: isHidden
+        )
     }
 
     private func smartModifierButton(systemName: String, accessibilityLabel: String, prefix: String) -> some View {
