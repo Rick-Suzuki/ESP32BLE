@@ -1255,10 +1255,30 @@ Previews a file.
         .frame(height: 104)
         .background(smartButtonPreviewColor)
         .clipShape(.rect(cornerRadius: 18))
+        .overlay(alignment: .topLeading) {
+            smartButtonPreviewClearButton
+        }
         .overlay {
             RoundedRectangle(cornerRadius: 18)
                 .stroke(Color.white, lineWidth: 1.5)
         }
+    }
+
+    private var smartButtonPreviewClearButton: some View {
+        Button {
+            ButtonClickFeedback.playIfEnabled()
+            smartButtonTextBinding.wrappedValue = ""
+        } label: {
+            Text("x")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.8))
+                .frame(width: 46, height: 46, alignment: .topLeading)
+                .padding(.top, 7)
+                .padding(.leading, 10)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Clear button symbol and text")
     }
 
     private var smartButtonSFSymbolDisplay: (name: String, subtitle: String?)? {
