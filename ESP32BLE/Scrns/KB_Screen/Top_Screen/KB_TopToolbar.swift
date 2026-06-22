@@ -59,7 +59,7 @@ struct KeyboardTopSectionView: View {
                     onClear()
                 }
                 .buttonStyle(.plain)
-                .font(.headline)
+                .font(.callout)
                 .foregroundStyle(.white)
                 .frame(width: 34, height: 34)
                 .background(Color.red)

@@ -935,20 +935,38 @@ Previews a file.
 
     private var smartCommandPanel: some View {
         VStack(spacing: 0) {
-            SmartActionTextField(
-                placeholder: "left command - editable",
-                text: smartActionTextBinding,
-                selectedRange: $smartActionTextSelectionRange,
-                fontSize: 15
-            )
-                .padding(.horizontal, 3)
-                .frame(maxWidth: .infinity)
-                .frame(height: 46)
-                .background(Color.black)
-                .overlay {
-                    Rectangle()
-                        .stroke(Color.white, lineWidth: 1)
+            HStack(spacing: 0) {
+                Button {
+                    ButtonClickFeedback.playIfEnabled()
+                    smartActionTextBinding.wrappedValue = ""
+                    smartActionTextSelectionRange = NSRange(location: 0, length: 0)
+                } label: {
+                    Text("X")
+                        .font(.system(size: 16, weight: .regular))
+                        .foregroundStyle(.gray)
+                        .frame(width: 46, height: 46)
+                        .background(Color.black)
                 }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Clear command text")
+
+                SmartActionTextField(
+                    placeholder: "command",
+                    text: smartActionTextBinding,
+                    selectedRange: $smartActionTextSelectionRange,
+                    fontSize: 20
+                )
+                    .padding(.horizontal, 3)
+                    .frame(minWidth: 0)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 46)
+            }
+            .frame(height: 46)
+            .background(Color.black)
+            .overlay {
+                Rectangle()
+                    .stroke(Color.white, lineWidth: 1)
+            }
 
             HStack(spacing: 0) {
                 smartModifierButton(systemName: "control", accessibilityLabel: "Control", prefix: "⌃")
@@ -2238,7 +2256,9 @@ private struct SmartActionTextField: UIViewRepresentable {
         textField.borderStyle = .none
         textField.font = .systemFont(ofSize: fontSize, weight: .semibold)
         textField.adjustsFontSizeToFitWidth = true
-        textField.minimumFontSize = fontSize * 0.55
+        textField.minimumFontSize = fontSize * 0.35
+        textField.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        textField.setContentHuggingPriority(.defaultLow, for: .horizontal)
         textField.autocorrectionType = .no
         textField.autocapitalizationType = .none
         textField.addTarget(context.coordinator, action: #selector(Coordinator.textDidChange(_:)), for: .editingChanged)
@@ -2247,6 +2267,10 @@ private struct SmartActionTextField: UIViewRepresentable {
 
     func updateUIView(_ uiView: UITextField, context: Context) {
         context.coordinator.parent = self
+        context.coordinator.isUpdatingView = true
+        defer {
+            context.coordinator.isUpdatingView = false
+        }
 
         if uiView.text != text {
             uiView.text = text
@@ -2257,6 +2281,7 @@ private struct SmartActionTextField: UIViewRepresentable {
 
     final class Coordinator: NSObject, UITextFieldDelegate {
         var parent: SmartActionTextField
+        var isUpdatingView = false
         private var isApplyingSelectedRange = false
 
         init(_ parent: SmartActionTextField) {
@@ -2264,30 +2289,39 @@ private struct SmartActionTextField: UIViewRepresentable {
         }
 
         @objc func textDidChange(_ textField: UITextField) {
-            guard !isApplyingSelectedRange else {
+            guard !isUpdatingView, !isApplyingSelectedRange else {
                 return
             }
 
-            parent.text = textField.text ?? ""
-            updateSelectedRange(from: textField)
+            let newText = textField.text ?? ""
+            let newSelectedRange = selectedRange(from: textField)
+            DispatchQueue.main.async {
+                self.parent.text = newText
+                if let newSelectedRange {
+                    self.parent.selectedRange = newSelectedRange
+                }
+            }
         }
 
         func textFieldDidChangeSelection(_ textField: UITextField) {
-            guard !isApplyingSelectedRange else {
+            guard !isUpdatingView, !isApplyingSelectedRange,
+                  let newSelectedRange = selectedRange(from: textField) else {
                 return
             }
 
-            updateSelectedRange(from: textField)
+            DispatchQueue.main.async {
+                self.parent.selectedRange = newSelectedRange
+            }
         }
 
-        func updateSelectedRange(from textField: UITextField) {
+        func selectedRange(from textField: UITextField) -> NSRange? {
             guard let selectedTextRange = textField.selectedTextRange else {
-                return
+                return nil
             }
 
             let location = textField.offset(from: textField.beginningOfDocument, to: selectedTextRange.start)
             let length = textField.offset(from: selectedTextRange.start, to: selectedTextRange.end)
-            parent.selectedRange = NSRange(location: location, length: length)
+            return NSRange(location: location, length: length)
         }
 
         func applySelectedRange(to textField: UITextField) {
