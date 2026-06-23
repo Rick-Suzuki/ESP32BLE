@@ -89,12 +89,24 @@ struct MainScreen: View {
         "arrowshape.left", "arrowshape.right", "arrowshape.turn.up.left", "arrowshape.turn.up.right",
         "arrow.uturn.left", "arrow.uturn.right", "arrow.turn.up.left", "arrow.turn.up.right"
     ]
-    private let smartButtonSwatchHexColors = [
-        "FF0000", "00A600", "0000FF", "FFFF00",
-        "00FFFF", "FF00FF", "FF8000", "8000FF",
-        "0080FF", "00FF80", "80FF00", "FF0080",
-        "800000", "008000", "000080", "808080"
-    ]
+private let smartButtonSwatchHexColors = [
+    "000000",	// black
+	"FF0000",	// red
+	"00A600",	// green
+	"0000FF",	// blue
+    "FFFF00",	// yellow
+	"00FFFF",	// cyan
+	"FF00FF",	// purple
+	"FF8000",	// orange
+    "8000FF",	// dark purple
+	"0080FF",	// light blue
+	"FFCC99",	// light orange
+	"FF0080",	// pink
+    "800000",	// red/brown
+	"005C5C",	// off green
+	"666600",	// dark yellow
+	"808080"	// gray
+]
     private let smartEscapeCodeRows: [(english: String, command: String, description: String)] = [
         ("escape key", "ESC:", "sends the escape key"),
         ("send return", "RET:", "sends the return key"),
@@ -360,6 +372,7 @@ Previews a file.
     @State private var smartActionTextSelectionRange = NSRange(location: 0, length: 0)
     @State private var smartButtonBrightness = 0.5
     @State private var smartButtonBrightnessBaseHex: String?
+    @State private var smartButtonClearPreviewFallbackImageURL: URL?
     @State private var smartButtonPreviewFontSize = 34.0
     @State private var keyboardMinY: CGFloat = .greatestFiniteMagnitude
     @State private var popupDismissTask: Task<Void, Never>?
@@ -1199,6 +1212,9 @@ Previews a file.
                 }
                 .frame(maxWidth: .infinity)
             }
+            .background {
+                smartButtonClearPreviewBackground
+            }
 
             LazyVGrid(
                 columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 5),
@@ -1260,7 +1276,7 @@ Previews a file.
             }
             .frame(maxWidth: .infinity)
             .frame(height: 104)
-            .background(smartButtonPreviewColor)
+            .background(smartButtonPreviewBackground)
             .clipShape(.rect(cornerRadius: 18))
             .overlay(alignment: .topLeading) {
                 smartButtonPreviewClearButton
@@ -1380,6 +1396,7 @@ Previews a file.
             ButtonClickFeedback.playIfEnabled()
             smartButtonBrightnessBaseHex = nil
             smartButtonBrightness = 0.5
+            smartButtonClearPreviewFallbackImageURL = availableBackgroundImageURLs.randomElement()
             smartRightTextBinding.wrappedValue = rightTextWithoutColorPrefix(smartRightTextBinding.wrappedValue)
         } label: {
             Text("clr")
@@ -1544,16 +1561,57 @@ Previews a file.
 
     private var smartButtonPreviewColor: Color {
         guard let colorHex = smartButtonColorHex else {
-            return Color.blue
+            return Color.clear
         }
 
         return Color(hex: colorHex)
+    }
+
+    @ViewBuilder
+    private var smartButtonPreviewBackground: some View {
+        if smartButtonColorHex == nil {
+            Color.clear
+        } else {
+            smartButtonPreviewColor
+        }
+    }
+
+    @ViewBuilder
+    private var smartButtonClearPreviewBackground: some View {
+        if smartButtonColorHex == nil,
+           let image = smartButtonClearPreviewImage {
+            Image(uiImage: image)
+                .resizable()
+                .scaledToFill()
+                .opacity(0.5)
+                .clipped()
+        } else {
+            Color.black
+        }
+    }
+
+    private var smartButtonClearPreviewImage: UIImage? {
+        if let mainBackgroundImage {
+            return mainBackgroundImage
+        }
+
+        if let smartButtonClearPreviewFallbackImageURL,
+           let image = UIImage(contentsOfFile: smartButtonClearPreviewFallbackImageURL.path) {
+            return image
+        }
+
+        guard let randomImageURL = availableBackgroundImageURLs.randomElement() else {
+            return nil
+        }
+
+        return UIImage(contentsOfFile: randomImageURL.path)
     }
 
     private func setSmartButtonColor(_ hexColor: String) {
         smartButtonBrightness = 0.5
         let normalizedHex = hexColor.uppercased()
         smartButtonBrightnessBaseHex = normalizedHex
+        smartButtonClearPreviewFallbackImageURL = nil
         smartRightTextBinding.wrappedValue = rightTextReplacingColorPrefix(with: normalizedHex)
     }
 
