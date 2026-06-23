@@ -90,11 +90,10 @@ struct MainScreen: View {
         "arrow.uturn.left", "arrow.uturn.right", "arrow.turn.up.left", "arrow.turn.up.right"
     ]
     private let smartButtonSwatchHexColors = [
-        "0000FF", "171775", "000000",
-        "00A600", "004F00", "D42AD4",
-        "21A3A3", "CC1451", "CC7AA3", "CCCC00",
-        "FF6666", "00CC66", "492545", "007FFF",
-        "C97827"
+        "000000", "0000FF", "FF0000", "00A600", "FFFF00",
+        "00FFFF", "FF00FF", "FF8000", "8000FF", "0080FF",
+        "00FF80", "80FF00", "FF0080", "800000", "008000",
+        "000080", "808080"
     ]
     private let smartEscapeCodeRows: [(english: String, command: String, description: String)] = [
         ("escape key", "ESC:", "sends the escape key"),
@@ -956,7 +955,7 @@ Previews a file.
                 .accessibilityLabel("Clear command text")
 
                 SmartActionTextField(
-                    placeholder: "command",
+                    placeholder: "characters/command(s)",
                     text: smartActionTextBinding,
                     selectedRange: $smartActionTextSelectionRange,
                     fontSize: 20
@@ -1202,12 +1201,13 @@ Previews a file.
             }
 
             LazyVGrid(
-                columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 4),
+                columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 5),
                 spacing: 0
             ) {
                 smartVisibilityButton
                 smartClearColorButton
-                ForEach(Array(smartButtonSwatchHexColors.prefix(14)), id: \.self) { hexColor in
+                smartColonButton
+                ForEach(Array(smartButtonSwatchHexColors.prefix(17)), id: \.self) { hexColor in
                     smartButtonColorSwatch(hexColor)
                 }
             }
@@ -1378,13 +1378,32 @@ Previews a file.
                 .font(.system(size: 20, weight: .semibold))
                 .foregroundStyle(.white)
                 .frame(maxWidth: .infinity, minHeight: smartButtonPanelColorCellHeight)
-                .background(Color.gray)
+                .background(Color.black)
                 .overlay {
                     Rectangle()
                         .stroke(Color.white, lineWidth: 1)
                 }
         }
         .buttonStyle(.plain)
+    }
+
+    private var smartColonButton: some View {
+        Button {
+            ButtonClickFeedback.playIfEnabled()
+            smartButtonEditablePreviewTextBinding.wrappedValue += ":"
+        } label: {
+            Text(":")
+                .font(.system(size: 28, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity, minHeight: smartButtonPanelColorCellHeight)
+                .background(Color.black)
+                .overlay {
+                    Rectangle()
+                        .stroke(Color.white, lineWidth: 1)
+                }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Insert colon")
     }
 
     private func smartButtonColorSwatch(_ hexColor: String) -> some View {
