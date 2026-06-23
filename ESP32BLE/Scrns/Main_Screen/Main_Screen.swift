@@ -90,10 +90,10 @@ struct MainScreen: View {
         "arrow.uturn.left", "arrow.uturn.right", "arrow.turn.up.left", "arrow.turn.up.right"
     ]
     private let smartButtonSwatchHexColors = [
-        "000000", "0000FF", "FF0000", "00A600", "FFFF00",
-        "00FFFF", "FF00FF", "FF8000", "8000FF", "0080FF",
-        "00FF80", "80FF00", "FF0080", "800000", "008000",
-        "000080", "808080"
+        "FF0000", "00A600", "0000FF", "FFFF00",
+        "00FFFF", "FF00FF", "FF8000", "8000FF",
+        "0080FF", "00FF80", "80FF00", "FF0080",
+        "800000", "008000", "000080", "808080"
     ]
     private let smartEscapeCodeRows: [(english: String, command: String, description: String)] = [
         ("escape key", "ESC:", "sends the escape key"),
@@ -1206,8 +1206,9 @@ Previews a file.
             ) {
                 smartVisibilityButton
                 smartClearColorButton
+                smartRandomColorButton
                 smartColonButton
-                ForEach(Array(smartButtonSwatchHexColors.prefix(17)), id: \.self) { hexColor in
+                ForEach(Array(smartButtonSwatchHexColors.prefix(16)), id: \.self) { hexColor in
                     smartButtonColorSwatch(hexColor)
                 }
             }
@@ -1385,6 +1386,28 @@ Previews a file.
                 }
         }
         .buttonStyle(.plain)
+    }
+
+    private var smartRandomColorButton: some View {
+        Button {
+            ButtonClickFeedback.playIfEnabled()
+            let red = Int.random(in: 0...255)
+            let green = Int.random(in: 0...255)
+            let blue = Int.random(in: 0...255)
+            setSmartButtonColor(String(format: "%02X%02X%02X", red, green, blue))
+        } label: {
+            Text("rnd")
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity, minHeight: smartButtonPanelColorCellHeight)
+                .background(Color.black)
+                .overlay {
+                    Rectangle()
+                        .stroke(Color.white, lineWidth: 1)
+                }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Set random button color")
     }
 
     private var smartColonButton: some View {
