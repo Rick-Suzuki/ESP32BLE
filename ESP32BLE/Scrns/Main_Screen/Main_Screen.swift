@@ -1221,47 +1221,54 @@ Previews a file.
         }
     }
 
+    @ViewBuilder
     private var smartButtonPreview: some View {
-        Group {
-            if let symbolDisplay = smartButtonSFSymbolDisplay {
-                VStack(spacing: 4) {
-                    Image(systemName: symbolDisplay.name)
-                        .font(.system(size: max(18, CGFloat(boxFontSize) * 0.9), weight: .semibold))
+        if smartIsButtonHidden {
+            Color.black
+                .frame(maxWidth: .infinity)
+                .frame(height: 104)
+        } else {
+            Group {
+                if let symbolDisplay = smartButtonSFSymbolDisplay {
+                    VStack(spacing: 4) {
+                        Image(systemName: symbolDisplay.name)
+                            .font(.system(size: max(18, CGFloat(boxFontSize) * 0.9), weight: .semibold))
 
+                        TextField("", text: smartButtonEditablePreviewTextBinding, axis: .vertical)
+                            .font(.system(size: max(14, CGFloat(boxFontSize) * 0.55), weight: .semibold))
+                            .foregroundStyle(.white)
+                            .accentColor(.white)
+                            .multilineTextAlignment(.center)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                            .lineLimit(1...2)
+                            .padding(.horizontal, 8)
+                    }
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 8)
+                } else {
                     TextField("", text: smartButtonEditablePreviewTextBinding, axis: .vertical)
-                        .font(.system(size: max(14, CGFloat(boxFontSize) * 0.55), weight: .semibold))
+                        .font(.system(size: CGFloat(boxFontSize), weight: .semibold))
                         .foregroundStyle(.white)
                         .accentColor(.white)
                         .multilineTextAlignment(.center)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
-                        .lineLimit(1...2)
+                        .lineLimit(1...3)
                         .padding(.horizontal, 8)
                 }
-                .foregroundStyle(.white)
-                .padding(.horizontal, 8)
-            } else {
-                TextField("", text: smartButtonEditablePreviewTextBinding, axis: .vertical)
-                    .font(.system(size: CGFloat(boxFontSize), weight: .semibold))
-                    .foregroundStyle(.white)
-                    .accentColor(.white)
-                    .multilineTextAlignment(.center)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .lineLimit(1...3)
-                    .padding(.horizontal, 8)
             }
-        }
-        .frame(maxWidth: .infinity)
-        .frame(height: 104)
-        .background(smartButtonPreviewColor)
-        .clipShape(.rect(cornerRadius: 18))
-        .overlay(alignment: .topLeading) {
-            smartButtonPreviewClearButton
-        }
-        .overlay {
-            RoundedRectangle(cornerRadius: 18)
-                .stroke(Color.white, lineWidth: 1.5)
+            .frame(maxWidth: .infinity)
+            .frame(height: 104)
+            .background(smartButtonPreviewColor)
+            .clipShape(.rect(cornerRadius: 18))
+            .overlay(alignment: .topLeading) {
+                smartButtonPreviewClearButton
+            }
+            .overlay {
+                RoundedRectangle(cornerRadius: 18)
+                    .stroke(Color.white, lineWidth: 1.5)
+            }
         }
     }
 
