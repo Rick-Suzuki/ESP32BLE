@@ -73,6 +73,7 @@ struct MainScreenToolbarContent: ToolbarContent {
 				//
 				//----------------------------------------
 				//
+				// MARK: - BM:⬇️⬆️ main scrn: triangles, filename
                 Button {
                     ButtonClickFeedback.playIfEnabled()
                     selectPreviousDocument()
@@ -87,10 +88,10 @@ struct MainScreenToolbarContent: ToolbarContent {
                 .foregroundStyle(toolbarPrincipalForegroundColor)
                 .disabled(currentFileNumber <= 1)
 
-                Group {
+				Group {
                     if isEditingDocumentName {
                         TextField("Filename", text: $documentNameDraft)
-                            .font(.title2.weight(.semibold))
+                            .font(.headline)
                             .multilineTextAlignment(.center)
                             .textFieldStyle(.roundedBorder)
                             .submitLabel(.done)
@@ -103,7 +104,7 @@ struct MainScreenToolbarContent: ToolbarContent {
                             isEditingDocumentName = true
                         } label: {
                             Text(selectedDocumentDisplayName)
-                                .font(.title2.weight(.semibold))
+                                .font(.headline)
                                 .foregroundStyle(toolbarPrincipalForegroundColor)
                                 .frame(maxWidth: .infinity)
                         }

@@ -117,7 +117,7 @@ private let smartButtonSwatchHexColors = [
 		("escape key", "ESC:", "sends the escape key"),
 		("send return", "RET:", "sends the return key"),
 		("backspace key", "BS:", "sends a backspace key"),
-		("sends space", "SP:", "sends the space character."),
+		("space key", "SP:", "sends the space character."),
 		("tab key", "TAB:", "sends the tab key"),
 		("new line", "NL:", "sends a newline character."),
 		("colon", ":", "a colon is used to separate keyboard presses"),
@@ -391,8 +391,62 @@ sends F1, waits one send then sends sp(space)
     @State var activeDragIndex: Int?
     @State var editingSlotIndex: Int?
     @State var editingSlotText = ""
+	//
+	//----------------------------------------
+	// MARK: - BM:👨‍👩‍👧‍👦 commands help text area
+	//
     @State private var smartCommandDescription = "command description"
-    @State private var isSmartEscapeCodeTableVisible = false
+   
+	private let smartHelpButtonColor = """
+Sets the button background color. 
+"""
+	
+	private let smartHelpButtonColon = """
+Inserts a colon at the cursor in the button text.
+emojis can be added just the same as any other character. however colon can be used to zoom the emoji:
+😄 hello  - gives emoji + hello
+😄:hello  - gives double size emoji - above the word  hello
+"""
+	
+	private let smartHelpButtonClearColor = """
+Clears the button color.
+The preview becomes transparent and shows a background image.
+"""
+	
+	private let smartHelpButtonRandomColor = """
+Sets a random button color.
+"""
+	
+	private let smartHelpButtonVisibility = """
+Toggles whether this button is visible on the main screen.
+On the main screen, the button is invisible, but the hit area still exists. 
+This is so you can place some buttons on an image, 
+and the image is basically showing you where the hit areas are.
+"""
+	
+	private let smartHelpSFArrows = """
+Moves to the previous or next button while staying in the smart editor.
+"""
+	
+	private let smartHelpSFTestButton = """
+Runs the command text (top-left) without closing the smart editor.
+This only sends keys to the ESP32 via bluetooth.
+"""
+	
+	private let smartHelpCommandSwitchWidgets = """
+Shows the widget command table.
+Widgets are small commands: for example, displaying a clock, tap counters, stopwatches, etc.
+Tapping a row replaces the left command text.
+"""
+	
+	private let smartHelpCommandSwitchSpecialKeys = """
+Shows the special-key table.
+Tapping a row inserts the key code at the cursor.
+"""
+	//
+	//----------------------------------------
+	//
+	@State private var isSmartEscapeCodeTableVisible = false
     @State private var smartActionTextSelectionRange = NSRange(location: 0, length: 0)
     @State private var smartButtonBrightness = 0.5
     @State private var smartButtonBrightnessBaseHex: String?
@@ -1400,6 +1454,8 @@ sends F1, waits one send then sends sp(space)
         Button {
             ButtonClickFeedback.playIfEnabled()
             smartButtonVisibilityBinding.wrappedValue.toggle()
+            // Help text location: btn panel eye button.
+            smartCommandDescription = smartHelpButtonVisibility
         } label: {
             Image(systemName: smartButtonVisibilityBinding.wrappedValue ? "eye" : "eye.slash")
                 .font(.system(size: 32, weight: .semibold))
@@ -1422,6 +1478,8 @@ sends F1, waits one send then sends sp(space)
             smartButtonBrightness = 0.5
             smartButtonClearPreviewFallbackImageURL = availableBackgroundImageURLs.randomElement()
             smartRightTextBinding.wrappedValue = rightTextWithoutColorPrefix(smartRightTextBinding.wrappedValue)
+            // Help text location: btn panel clr button.
+            smartCommandDescription = smartHelpButtonClearColor
         } label: {
             Text("clr")
                 .font(.system(size: 20, weight: .semibold))
@@ -1443,6 +1501,8 @@ sends F1, waits one send then sends sp(space)
             let green = Int.random(in: 0...255)
             let blue = Int.random(in: 0...255)
             setSmartButtonColor(String(format: "%02X%02X%02X", red, green, blue))
+            // Help text location: btn panel rnd button.
+            smartCommandDescription = smartHelpButtonRandomColor
         } label: {
             Text("rnd")
                 .font(.system(size: 20, weight: .semibold))
@@ -1462,6 +1522,8 @@ sends F1, waits one send then sends sp(space)
         Button {
             ButtonClickFeedback.playIfEnabled()
             smartButtonEditablePreviewTextBinding.wrappedValue += ":"
+            // Help text location: btn panel colon button.
+            smartCommandDescription = smartHelpButtonColon
         } label: {
             Text(":")
                 .font(.system(size: 28, weight: .semibold))
@@ -1481,6 +1543,8 @@ sends F1, waits one send then sends sp(space)
         Button {
             ButtonClickFeedback.playIfEnabled()
             setSmartButtonColor(hexColor)
+            // Help text location: btn panel color swatches.
+            smartCommandDescription = smartHelpButtonColor
         } label: {
             Color(hex: hexColor)
                 .frame(maxWidth: .infinity, minHeight: smartButtonPanelColorCellHeight)
@@ -1758,6 +1822,10 @@ sends F1, waits one send then sends sp(space)
         Button {
             ButtonClickFeedback.playIfEnabled()
             isSmartEscapeCodeTableVisible.toggle()
+            // Help text location: command panel widgets/special-keys switch.
+            smartCommandDescription = isSmartEscapeCodeTableVisible
+                ? smartHelpCommandSwitchSpecialKeys
+                : smartHelpCommandSwitchWidgets
         } label: {
             Image(systemName: "rectangle.split.2x1")
                 .font(.system(size: 24, weight: .semibold))
@@ -1906,10 +1974,14 @@ sends F1, waits one send then sends sp(space)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 smartArrowButton(systemName: "arrow.left") {
                     selectPreviousEditableSlot()
+                    // Help text location: SF panel left arrow.
+                    smartCommandDescription = smartHelpSFArrows
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 smartArrowButton(systemName: "arrow.right") {
                     selectNextEditableSlot()
+                    // Help text location: SF panel right arrow.
+                    smartCommandDescription = smartHelpSFArrows
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
@@ -1918,6 +1990,8 @@ sends F1, waits one send then sends sp(space)
             HStack(spacing: 0) {
                 smartControlButton("test btn", background: Color(red: 0.0, green: 0.5, blue: 0.0)) {
                     testEditingSlotText()
+                    // Help text location: SF panel test button.
+                    smartCommandDescription = smartHelpSFTestButton
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 smartControlButton("close", background: Color.gray.opacity(0.45)) {
