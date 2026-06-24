@@ -6,7 +6,13 @@ struct MainScreenToolbarContent: ToolbarContent {
     private let inactiveToolbarBorderColor = Color(red: 0.30, green: 0.30, blue: 0.32)
     private let normalToolbarBorderColor = Color(red: 0.46, green: 0.46, blue: 0.48)
     private let inactiveToolbarForegroundColor = Color(red: 0.55, green: 0.55, blue: 0.57)
-    let isGridEditModeEnabled: Bool
+   
+	// Larger touch target for the opacity slider so drags reliably hit the control.
+    private let opacitySliderHitHeight: CGFloat = 60
+    // Extra horizontal touch area on each side of the opacity slider.
+    private let opacitySliderHitHorizontalPadding: CGFloat = 60
+    
+	let isGridEditModeEnabled: Bool
     let editingSlotIndex: Int?
     let currentFileNumber: Int
     let totalFileCount: Int
@@ -169,10 +175,14 @@ struct MainScreenToolbarContent: ToolbarContent {
 		
         ToolbarItem(placement: .topBarTrailing) {
             HStack(spacing: 12) {
-                Slider(value: $gridBackgroundOpacity, in: 0...1)
-                    .tint(.white)
-                    .frame(width: isPad ? 200 : 100)
-                    .disabled(editingSlotIndex != nil)
+                WideHitSlider(
+                    value: $gridBackgroundOpacity,
+                    range: 0...1,
+                    visualWidth: isPad ? 150 : 100,
+                    hitHorizontalPadding: opacitySliderHitHorizontalPadding,
+                    hitHeight: opacitySliderHitHeight,
+                    isDisabled: editingSlotIndex != nil
+                )
 
 				
 				Button("KB") {
@@ -241,5 +251,37 @@ struct MainScreenToolbarContent: ToolbarContent {
 
     private var toolbarPrincipalForegroundColor: Color {
         isGridEditModeEnabled ? inactiveToolbarForegroundColor : .white
+    }
+}
+
+private struct WideHitSlider: View {
+    @Binding var value: Double
+
+    let range: ClosedRange<Double>
+    let visualWidth: CGFloat
+    let hitHorizontalPadding: CGFloat
+    let hitHeight: CGFloat
+    let isDisabled: Bool
+
+    var body: some View {
+        Slider(value: $value, in: range)
+            .tint(.white)
+            .frame(width: visualWidth)
+            .frame(width: visualWidth + hitHorizontalPadding * 2, height: hitHeight)
+            .contentShape(.rect)
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { gesture in
+                        guard !isDisabled else { return }
+                        updateValue(for: gesture.location.x)
+                    }
+            )
+            .disabled(isDisabled)
+    }
+
+    private func updateValue(for locationX: CGFloat) {
+        let clampedX = min(max(locationX - hitHorizontalPadding, 0), visualWidth)
+        let percent = Double(clampedX / visualWidth)
+        value = range.lowerBound + (range.upperBound - range.lowerBound) * percent
     }
 }

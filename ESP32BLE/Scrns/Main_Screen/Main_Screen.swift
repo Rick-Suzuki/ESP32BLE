@@ -42,7 +42,10 @@ struct MainScreen: View {
     private let smartViewHeight: CGFloat = 294
     // Adjust this to tune the height of the 16 color/visibility cells in the smart button panel.
     private let smartButtonPanelColorCellHeight: CGFloat = 46
-    private let smartSFPanelSymbols = [
+	
+	// MARK: - BM:🟥 smart SF symbols
+    
+	private let smartSFPanelSymbols = [
         "folder", "eye", "magnifyingglass", "lightbulb.max.fill",
         "speaker.wave.2", "star", "heart", "bell",
         "house", "gearshape", "airplane", "book",
@@ -89,6 +92,8 @@ struct MainScreen: View {
         "arrowshape.left", "arrowshape.right", "arrowshape.turn.up.left", "arrowshape.turn.up.right",
         "arrow.uturn.left", "arrow.uturn.right", "arrow.turn.up.left", "arrow.turn.up.right"
     ]
+	
+	// MARK: - BM:🟥 btn colors
 private let smartButtonSwatchHexColors = [
     "000000",	// black
 	"FF0000",	// red
@@ -107,31 +112,35 @@ private let smartButtonSwatchHexColors = [
 	"666600",	// dark yellow
 	"808080"	// gray
 ]
+	// MARK: - BM:🟥 smart keycodes
     private let smartEscapeCodeRows: [(english: String, command: String, description: String)] = [
-        ("escape key", "ESC:", "sends the escape key"),
-        ("send return", "RET:", "sends the return key"),
-        ("backspace key", "BS:", "sends a backspace key"),
-        ("sends space", "SP:", "sends the space character."),
-        ("tab key", "TAB:", "sends the tab key"),
-        ("new line", "NL:", "sends a newline character."),
-        ("colon", ":", "a colon is used to separate keyboard presses"),
-        ("up key", "UP:", "sends up arrow"),
-        ("down key", "DOWN:", "sends down arrow"),
-        ("left key", "LEFT:", "sends left arrow"),
-        ("right key", "RIGHT:", "sends right arrow"),
-        ("select all (ctl-a)", "CA:", "sends control-a"),
-        ("copy (ctl-c)", "CC:", "sends control-c"),
-        ("paste (ctl-v)", "CV:", "sends control-v"),
-        ("cut (ctl-x)", "CX:", "sends control-x"),
-        ("select all (cmd-a)", "MA:", "sends command-a"),
-        ("copy (cmd-c)", "MC:", "sends command-c"),
-        ("paste (cmd-v)", "MV:", "sends command-v"),
-        ("cut (cmd-x)", "MX:", "sends command-x")
-    ]
-    private let smartCommandRows: [(english: String, shortcut: String, description: String)] = [
+		("escape key", "ESC:", "sends the escape key"),
+		("send return", "RET:", "sends the return key"),
+		("backspace key", "BS:", "sends a backspace key"),
+		("sends space", "SP:", "sends the space character."),
+		("tab key", "TAB:", "sends the tab key"),
+		("new line", "NL:", "sends a newline character."),
+		("colon", ":", "a colon is used to separate keyboard presses"),
+		("up key", "UP:", "sends up arrow"),
+		("down key", "DOWN:", "sends down arrow"),
+		("left key", "LEFT:", "sends left arrow"),
+		("right key", "RIGHT:", "sends right arrow"),
+		("select all (ctl-a)", "CA:", "sends control-a"),
+		("copy (ctl-c)", "CC:", "sends control-c"),
+		("paste (ctl-v)", "CV:", "sends control-v"),
+		("cut (ctl-x)", "CX:", "sends control-x"),
+		("select all (cmd-a)", "MA:", "sends command-a"),
+		("copy (cmd-c)", "MC:", "sends command-c"),
+		("paste (cmd-v)", "MV:", "sends command-v"),
+		("cut (cmd-x)", "MX:", "sends command-x")
+	]
+	private let smartCommandRows: [(english: String, shortcut: String, description: String)] = [
 		//
 		//----------------------------------------
 		//
+		
+		// MARK: - BM:🟥 smart widgets
+		
 		("clock", "clock","""
 Inserts the current time.
 	
@@ -335,7 +344,22 @@ Opens an app.
 		//
 		("preview file", "file file.txt", """
 Previews a file.
-""")
+"""),
+		//
+		//----------------------------------------
+		//
+		("wait", "wait 1", """
+format: wait number
+number can be int like 1 or a fraction 0.5 = half a second
+
+This is a chain command, so
+
+F1:wait 10:hello.txt
+sends F1 then waits 10 secs, the opens hello.txt
+
+F1:wait 1:sp
+sends F1, waits one send then sends sp(space)
+"""),
 	]
 
     @AppStorage("speechRecognitionAutoOffMinutes") var speechRecognitionAutoOffMinutes = 5
