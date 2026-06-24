@@ -200,6 +200,7 @@ extension MainScreen {
             return
         }
 
+        let currentAnchorIndex = editableAnchorIndex(containing: editingSlotIndex) ?? editingSlotIndex
         commitSlotEditing()
 
         let maximumIndex = min(visibleBoxCount, functionKeys.count)
@@ -207,18 +208,38 @@ extension MainScreen {
             return
         }
 
-        var candidateIndex = editingSlotIndex
+        let candidateStartIndex: Int
+        if step > 0 {
+            let currentShape = buttonShape(startingAt: currentAnchorIndex, gridDimensions: visibleGridDimensions)
+            candidateStartIndex = currentAnchorIndex + max(currentShape.width, 1)
+        } else {
+            candidateStartIndex = currentAnchorIndex - 1
+        }
+
+        var candidateIndex = wrappedEditableIndex(candidateStartIndex, maximumIndex: maximumIndex)
         for _ in 0..<maximumIndex {
-            candidateIndex = (candidateIndex + step + maximumIndex) % maximumIndex
             let editableIndex = editableAnchorIndex(containing: candidateIndex) ?? candidateIndex
+            guard functionKeys.indices.contains(editableIndex) else {
+                candidateIndex = wrappedEditableIndex(candidateIndex + step, maximumIndex: maximumIndex)
+                continue
+            }
+
             let candidateEntry = functionKeys[editableIndex]
 
             activeDragIndex = nil
             editingSlotText = editableText(for: candidateEntry)
-            self.editingSlotIndex = candidateIndex
+            self.editingSlotIndex = editableIndex
             isSlotEditorFocused = true
             return
         }
+    }
+
+    private func wrappedEditableIndex(_ index: Int, maximumIndex: Int) -> Int {
+        guard maximumIndex > 0 else {
+            return 0
+        }
+
+        return (index % maximumIndex + maximumIndex) % maximumIndex
     }
 
     private func editableAnchorIndex(containing index: Int) -> Int? {
