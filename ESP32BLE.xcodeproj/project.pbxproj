@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		1D1E289D2FEE45AC009C1312 /* scratch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D1E289C2FEE45A3009C1312 /* scratch.swift */; };
 		1D2B666F2FE78E0400F10733 /* color.png in Resources */ = {isa = PBXBuildFile; fileRef = 1D2B666E2FE78E0400F10733 /* color.png */; };
 		1D590E582F61206100E430E0 /* CommandButtonsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D590E4D2F61206100E430E0 /* CommandButtonsSection.swift */; };
 		1D590E5A2F61206100E430E0 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D590E4F2F61206100E430E0 /* ContentView.swift */; };
@@ -54,7 +53,6 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		1D1E289C2FEE45A3009C1312 /* scratch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = scratch.swift; sourceTree = "<group>"; };
 		1D2B666E2FE78E0400F10733 /* color.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = color.png; sourceTree = "<group>"; };
 		1D33C2D12F6145DC0098FD5C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		1D590E292F611FB700E430E0 /* ESP32BLE.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ESP32BLE.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -65,11 +63,6 @@
 		1D590E522F61206100E430E0 /* PhraseButtonsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhraseButtonsSection.swift; sourceTree = "<group>"; };
 		1D590E532F61206100E430E0 /* scratchpad.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = scratchpad.txt; sourceTree = "<group>"; };
 		1D590E542F61206100E430E0 /* TestArea.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestArea.swift; sourceTree = "<group>"; };
-		1D611EA32FC7E2B000B750AE /* msfs-ds-cam.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "msfs-ds-cam.txt"; sourceTree = "<group>"; };
-		1D611EA42FC7E2B000B750AE /* msfs-ds-main.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "msfs-ds-main.txt"; sourceTree = "<group>"; };
-		1D611EA52FC7E62100B750AE /* msfs-ds-home.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "msfs-ds-home.txt"; sourceTree = "<group>"; };
-		1D8F47D62FC7BBE2004EE319 /* msfs-hotas.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "msfs-hotas.txt"; sourceTree = "<group>"; };
-		1D8F47D92FC7BC71004EE319 /* msfs-vr.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "msfs-vr.txt"; sourceTree = "<group>"; };
 		1D9E1CC82FC92DC600DB3621 /* KB_GridView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KB_GridView.swift; sourceTree = "<group>"; };
 		1D9E1CC92FC92DC600DB3621 /* KB_InputField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KB_InputField.swift; sourceTree = "<group>"; };
 		1D9E1CCA2FC92DC600DB3621 /* KB_Screen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KB_Screen.swift; sourceTree = "<group>"; };
@@ -141,14 +134,6 @@
 			path = Scrns;
 			sourceTree = "<group>";
 		};
-		1D1E28A62FEE4B65009C1312 /* Test Group */ = {
-			isa = PBXGroup;
-			children = (
-				1D1E289C2FEE45A3009C1312 /* scratch.swift */,
-			);
-			path = "Test Group";
-			sourceTree = "<group>";
-		};
 		1D2B666D2FE78DF600F10733 /* resources */ = {
 			isa = PBXGroup;
 			children = (
@@ -182,32 +167,10 @@
 				1D2B666D2FE78DF600F10733 /* resources */,
 				1DDFB8102F87C64000776ED6 /* debug.swift */,
 				1D590E532F61206100E430E0 /* scratchpad.txt */,
-				1D1E28A62FEE4B65009C1312 /* Test Group */,
-				1D8F47D52FC7BB8D004EE319 /* MY_ESPS */,
 				1D1B29CD2F63AC3D004733D7 /* Scrns */,
 				1D1B29CB2F63ABE7004733D7 /* btns */,
 			);
 			path = ESP32BLE;
-			sourceTree = "<group>";
-		};
-		1D8F47D52FC7BB8D004EE319 /* MY_ESPS */ = {
-			isa = PBXGroup;
-			children = (
-				1D8F47D82FC7BBF3004EE319 /* MSFS */,
-			);
-			path = MY_ESPS;
-			sourceTree = "<group>";
-		};
-		1D8F47D82FC7BBF3004EE319 /* MSFS */ = {
-			isa = PBXGroup;
-			children = (
-				1D8F47D62FC7BBE2004EE319 /* msfs-hotas.txt */,
-				1D8F47D92FC7BC71004EE319 /* msfs-vr.txt */,
-				1D611EA52FC7E62100B750AE /* msfs-ds-home.txt */,
-				1D611EA42FC7E2B000B750AE /* msfs-ds-main.txt */,
-				1D611EA32FC7E2B000B750AE /* msfs-ds-cam.txt */,
-			);
-			path = MSFS;
 			sourceTree = "<group>";
 		};
 		1D9E1CCC2FC92DC600DB3621 /* Top_Screen */ = {
@@ -418,7 +381,6 @@
 				1D9E1D052FC92DC600DB3621 /* Set_ImgCtlsSection.swift in Sources */,
 				1D9E1D072FC92DC600DB3621 /* Main_GridSection.swift in Sources */,
 				1D9E1D082FC92DC600DB3621 /* Soft_Editor_TextField.swift in Sources */,
-				1D1E289D2FEE45AC009C1312 /* scratch.swift in Sources */,
 				1D9E1D092FC92DC600DB3621 /* KB_ModifierSend.swift in Sources */,
 				1D9E1D0C2FC92DC600DB3621 /* Set_ImgSelectionSupport.swift in Sources */,
 				1D9E1D0D2FC92DC600DB3621 /* Set_TxtEditor.swift in Sources */,
