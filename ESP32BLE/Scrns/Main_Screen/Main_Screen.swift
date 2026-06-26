@@ -1318,7 +1318,7 @@ Tapping a row inserts the key code at the cursor.
     @ViewBuilder
     private var smartButtonPreview: some View {
         if smartIsButtonHidden {
-            Color.black
+            Color.clear
                 .frame(maxWidth: .infinity)
                 .frame(height: 104)
         } else {
@@ -1474,6 +1474,7 @@ Tapping a row inserts the key code at the cursor.
     private var smartClearColorButton: some View {
         Button {
             ButtonClickFeedback.playIfEnabled()
+            setSmartButtonHidden(false)
             smartButtonBrightnessBaseHex = nil
             smartButtonBrightness = 0.5
             smartButtonClearPreviewFallbackImageURL = availableBackgroundImageURLs.randomElement()
@@ -1546,7 +1547,7 @@ Tapping a row inserts the key code at the cursor.
             // Help text location: btn panel color swatches.
             smartCommandDescription = smartHelpButtonColor
         } label: {
-            Color(hex: hexColor)
+            Color(hex: adjustedSmartButtonColorHex(for: hexColor) ?? hexColor)
                 .frame(maxWidth: .infinity, minHeight: smartButtonPanelColorCellHeight)
                 .overlay {
                     Rectangle()
@@ -1652,7 +1653,7 @@ Tapping a row inserts the key code at the cursor.
             return Color.clear
         }
 
-        return Color(hex: colorHex)
+        return Color(hex: colorHex).opacity(mainGridBackgroundOpacity)
     }
 
     @ViewBuilder
@@ -1666,12 +1667,11 @@ Tapping a row inserts the key code at the cursor.
 
     @ViewBuilder
     private var smartButtonClearPreviewBackground: some View {
-        if smartButtonColorHex == nil,
-           let image = smartButtonClearPreviewImage {
+        if let image = smartButtonClearPreviewImage {
             Image(uiImage: image)
                 .resizable()
                 .scaledToFill()
-                .opacity(0.5)
+                .opacity(backgroundImageOpacity)
                 .clipped()
         } else {
             Color.black
@@ -1696,16 +1696,18 @@ Tapping a row inserts the key code at the cursor.
     }
 
     private func setSmartButtonColor(_ hexColor: String) {
-        smartButtonBrightness = 0.5
+        setSmartButtonHidden(false)
         let normalizedHex = hexColor.uppercased()
         smartButtonBrightnessBaseHex = normalizedHex
         smartButtonClearPreviewFallbackImageURL = nil
-        smartRightTextBinding.wrappedValue = rightTextReplacingColorPrefix(with: normalizedHex)
+        smartRightTextBinding.wrappedValue = rightTextReplacingColorPrefix(
+            with: adjustedSmartButtonColorHex(for: normalizedHex) ?? normalizedHex
+        )
     }
 
     private func applySmartButtonBrightness() {
         guard let colorHex = smartButtonBrightnessBaseHex ?? smartButtonColorHex,
-              let adjustedHex = adjustedHexColor(colorHex, brightness: smartButtonBrightness) else {
+              let adjustedHex = adjustedSmartButtonColorHex(for: colorHex) else {
             return
         }
 
@@ -1713,6 +1715,10 @@ Tapping a row inserts the key code at the cursor.
             smartButtonBrightnessBaseHex = colorHex
         }
         smartRightTextBinding.wrappedValue = rightTextReplacingColorPrefix(with: adjustedHex)
+    }
+
+    private func adjustedSmartButtonColorHex(for hexColor: String) -> String? {
+        adjustedHexColor(hexColor, brightness: smartButtonBrightness)
     }
 
     private func adjustedHexColor(_ hexColor: String, brightness: Double) -> String? {
