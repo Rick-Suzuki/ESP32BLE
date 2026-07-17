@@ -644,6 +644,14 @@ struct ContentView: View {
             }
     }
 
+    private func escapedSlotLineForPersistence(_ line: String) -> String {
+        line
+            .replacingOccurrences(of: "\r\n", with: "\\n")
+            .replacingOccurrences(of: "\r", with: "\\n")
+            .replacingOccurrences(of: "\n", with: "\\n")
+            .replacingOccurrences(of: "\t", with: "\\t")
+    }
+
     private func applySlotLines(_ slotLines: [String]) {
         functionKeySlotLines = Array(slotLines.prefix(maxFunctionKeyCount))
         let parsedFunctionKeys = normalizedFunctionKeys(from: functionKeySlotLines)
@@ -680,6 +688,7 @@ struct ContentView: View {
         }
 
         let normalizedLines = Array(slotLines.prefix(maxFunctionKeyCount))
+            .map(escapedSlotLineForPersistence)
         let contents = normalizedLines.joined(separator: "\n")
 
         do {

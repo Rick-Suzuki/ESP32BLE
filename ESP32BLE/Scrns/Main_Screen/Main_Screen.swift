@@ -1406,19 +1406,28 @@ Tapping a row inserts the key code at the cursor.
         Binding(
             get: {
                 if let symbolDisplay = smartButtonSFSymbolDisplay {
-                    return symbolDisplay.subtitle ?? ""
+                    return displayText(from: symbolDisplay.subtitle ?? "")
                 }
 
-                return smartButtonTextBinding.wrappedValue
+                return displayText(from: smartButtonTextBinding.wrappedValue)
             },
             set: { newText in
+                let storedText = escapedPreviewTextForStorage(newText)
                 if let symbolDisplay = smartButtonSFSymbolDisplay {
-                    smartButtonTextBinding.wrappedValue = "\(symbolDisplay.name):\(newText)"
+                    smartButtonTextBinding.wrappedValue = "\(symbolDisplay.name):\(storedText)"
                 } else {
-                    smartButtonTextBinding.wrappedValue = newText
+                    smartButtonTextBinding.wrappedValue = storedText
                 }
             }
         )
+    }
+
+    private func escapedPreviewTextForStorage(_ text: String) -> String {
+        text
+            .replacingOccurrences(of: "\r\n", with: "\\n")
+            .replacingOccurrences(of: "\r", with: "\\n")
+            .replacingOccurrences(of: "\n", with: "\\n")
+            .replacingOccurrences(of: "\t", with: "\\t")
     }
 
     private func setSmartButtonSFSymbol(_ symbolName: String) {

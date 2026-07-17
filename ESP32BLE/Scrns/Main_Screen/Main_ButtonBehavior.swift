@@ -2248,7 +2248,7 @@ struct MainScreenButtonLabelView: View {
         let formatter = DateFormatter()
         formatter.locale = Locale.current
         formatter.timeZone = widgetTimeZone ?? .current
-        formatter.dateFormat = "dd/MM/yy"
+        formatter.dateFormat = "yy.MM.dd"
         return formatter.string(from: date)
     }
 
