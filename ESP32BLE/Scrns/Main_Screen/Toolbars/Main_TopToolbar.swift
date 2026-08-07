@@ -1,6 +1,12 @@
+//
+//-----------------------------------------------------------------------------------------------
+//
 import SwiftUI
-
-struct MainScreenToolbarContent: ToolbarContent {
+//
+//-----------------------------------------------------------------------------------------------
+// MARK: - BM:🟧 main screen - top toolbar
+//
+struct MainScreenToolbarContent: View {
     private let inactiveToolbarBackgroundColor = Color(red: 0.22, green: 0.22, blue: 0.24)
     private let normalToolbarBackgroundColor = Color(red: 0.32, green: 0.32, blue: 0.34)
     private let inactiveToolbarBorderColor = Color(red: 0.30, green: 0.30, blue: 0.32)
@@ -8,7 +14,7 @@ struct MainScreenToolbarContent: ToolbarContent {
     private let inactiveToolbarForegroundColor = Color(red: 0.55, green: 0.55, blue: 0.57)
    
 	// Larger touch target for the opacity slider so drags reliably hit the control.
-    private let opacitySliderHitHeight: CGFloat = 60
+    private let opacitySliderHitHeight: CGFloat = 44
     // Extra horizontal touch area on each side of the opacity slider.
     private let opacitySliderHitHorizontalPadding: CGFloat = 60
     
@@ -36,259 +42,253 @@ struct MainScreenToolbarContent: ToolbarContent {
     let toggleGridEditMode: () -> Void
     let commitDocumentRename: () -> Void
     let openSettings: AnyView
-
-    var body: some ToolbarContent {
+	//
+	//-----------------------------------------------------------------------------------------------
+	//
+    var body: some View {
 		//
 		//----------------------------------------
 		//
-        ToolbarItem(placement: .principal) {
-            HStack(spacing: 10) {
-                Button {
-                    ButtonClickFeedback.playIfEnabled()
-					openHomeDocument()
-                } label: {
-                    Image(systemName: "house")
-                        .font(.system(size: 22))
-                        .frame(width: 44, height: 44)
-                        .contentShape(.rect)
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle(toolbarPrincipalForegroundColor)
-                .disabled(isHomeDocumentSelected)
-				//
-				//----------------------------------------
-				//
-                Button {
-                    ButtonClickFeedback.playIfEnabled()
-                    goBackToPreviousDocument()
-                } label: {
-                    Image(systemName: "arrow.uturn.backward.circle")
-                        .font(.system(size: 22))
-                        .frame(width: 44, height: 44)
-                        .contentShape(.rect)
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle(toolbarPrincipalForegroundColor)
-                .disabled(!canGoBackToPreviousDocument)
-				//
-				//----------------------------------------
-				//
-				// MARK: - BM:⬇️⬆️ main scrn: triangles, filename
-                Button {
-                    ButtonClickFeedback.playIfEnabled()
-                    selectPreviousDocument()
-                } label: {
-                    Image(systemName: "triangle.fill")
-                        .font(.system(size: 20))
-                        .rotationEffect(.degrees(-90))
-                        .frame(width: 44, height: 44)
-                        .contentShape(.rect)
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle(toolbarPrincipalForegroundColor)
-                .disabled(currentFileNumber <= 1)
-
-				Group {
-                    if isEditingDocumentName {
-                        TextField("Filename", text: $documentNameDraft)
-                            .font(.headline)
-                            .multilineTextAlignment(.center)
-                            .textFieldStyle(.roundedBorder)
-                            .submitLabel(.done)
-                            .focused(isDocumentNameFieldFocused)
-                            .onSubmit(commitDocumentRename)
-                    } else {
-                        Button {
-                            ButtonClickFeedback.playIfEnabled()
-                            documentNameDraft = selectedDocumentDisplayName
-                            isEditingDocumentName = true
-                        } label: {
-                            Text(selectedDocumentDisplayName)
-                                .font(.headline)
-                                .foregroundStyle(toolbarPrincipalForegroundColor)
-                                .frame(maxWidth: .infinity)
-                        }
-                        .buttonStyle(.plain)
-                        .disabled(isGridEditModeEnabled)
-                    }
-                }
-                .frame(maxWidth: .infinity)
-
-				Button {
-					ButtonClickFeedback.playIfEnabled()
-					selectNextDocument()
-				} label: {
-					Image(systemName: "triangle.fill")
-						.font(.system(size: 20))
-						.rotationEffect(.degrees(90))
-						.frame(width: 44, height: 44)
-						.contentShape(.rect)
-				}
-				.buttonStyle(.plain)
-				.foregroundStyle(toolbarPrincipalForegroundColor)
-				.disabled(currentFileNumber >= totalFileCount)
-				//
-				//----------------------------------------
-				// MARK: - BM:🟧 select images
-				//
-				Button {
-					ButtonClickFeedback.playIfEnabled()
-					selectPreviousBackgroundImage()
-				} label: {
-					Image(systemName: "triangle.fill")
-						.font(.system(size: 20))
-						.rotationEffect(.degrees(-90))
-						.frame(width: 44, height: 44)
-						.contentShape(.rect)
-				}
-				.buttonStyle(.plain)
-				.foregroundStyle(toolbarPrincipalForegroundColor)
-				.disabled(currentBackgroundImageNumber <= 1)
-				
-					Button {
-						ButtonClickFeedback.playIfEnabled()
-						selectRandomBackgroundImage()
-					} label: {
-						Image(systemName: "photo.fill")
-							.font(.system(size: 18, weight: .semibold))
-							.frame(width: 33, height: 44)
-							.contentShape(.rect)
-					}
-					.buttonStyle(.plain)
-					.foregroundStyle(toolbarPrincipalForegroundColor)
-					.disabled(totalBackgroundImageCount == 0)
-				
-                Button {
-                    ButtonClickFeedback.playIfEnabled()
-					selectNextBackgroundImage()
-                } label: {
-                    Image(systemName: "triangle.fill")
-                        .font(.system(size: 20))
-                        .rotationEffect(.degrees(90))
-                        .frame(width: 44, height: 44)
-                        .contentShape(.rect)
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle(toolbarPrincipalForegroundColor)
-                .disabled(currentBackgroundImageNumber >= totalBackgroundImageCount)
-            }
-        }
-		
-        ToolbarItem(placement: .topBarTrailing) {
-            HStack(spacing: 12) {
-                WideHitSlider(
-                    value: $gridBackgroundOpacity,
-                    range: 0...1,
-                    visualWidth: isPad ? 30 : 100,
-                    hitHorizontalPadding: opacitySliderHitHorizontalPadding,
-                    hitHeight: opacitySliderHitHeight,
-                    isDisabled: editingSlotIndex != nil
-                )
-
-				
-				Button("KB") {
-					ButtonClickFeedback.playIfEnabled()
-					openKeyboardScreen()
-				}
+		HStack() {
+			//
+			//----------------------------------------
+			// home btn
+			//
+			Button {
+				ButtonClickFeedback.playIfEnabled()
+				openHomeDocument()
+			} label: {
+				Image(systemName: "house")
+					.font(.system(size: 22))
+					.frame(width: 44, height: 44)
+					.contentShape(.rect)
+			}
+			.buttonStyle(.plain)
+			.foregroundStyle(toolbarPrincipalForegroundColor)
+			.disabled(isHomeDocumentSelected)
+			//
+			//----------------------------------------
+			// go back btn
+			//
+			Button {
+				ButtonClickFeedback.playIfEnabled()
+				goBackToPreviousDocument()
+			} label: {
+				Image(systemName: "arrow.uturn.backward.circle")
+					.font(.system(size: 22))
+					.frame(width: 44, height: 44)
+					.contentShape(.rect)
+			}
+			.buttonStyle(.plain)
+			.foregroundStyle(toolbarPrincipalForegroundColor)
+			.disabled(!canGoBackToPreviousDocument)
+			//
+			//----------------------------------------
+			// previous btn
+			//
+			Button {
+				ButtonClickFeedback.playIfEnabled()
+				selectPreviousDocument()
+			} label: {
+				Image(systemName: "triangle.fill")
+					.font(.system(size: 20))
+					.rotationEffect(.degrees(-90))
+					.frame(width: 44, height: 44)
+					.contentShape(.rect)
+			}
+			.buttonStyle(.plain)
+			.foregroundStyle(toolbarPrincipalForegroundColor)
+			.disabled(currentFileNumber <= 1)
+			//
+			//----------------------------------------
+			// document name
+			//
+			Text(selectedDocumentDisplayName)
 				.font(.headline)
-				.foregroundStyle(keyboardButtonForegroundColor)
-				.padding(.horizontal, 5)
-				.frame(minHeight: 44)
-				.background(toolbarButtonBackgroundColor(normalBackground: normalToolbarBackgroundColor))
-				.overlay {
-					RoundedRectangle(cornerRadius: 23)
-						.stroke(toolbarButtonBorderColor, lineWidth: 1.5)
-				}
-				.clipShape(.rect(cornerRadius: 23))
-				.contentShape(.rect)
-				.disabled(isGridEditModeEnabled || editingSlotIndex != nil)
+				.foregroundStyle(toolbarPrincipalForegroundColor)
+				.frame(maxWidth: 150)
+				.lineLimit(1) // <--- Restricts text to 1 line
+				.truncationMode(.tail) // Truncates with "..." if text exceeds width
+			//
+			//----------------------------------------
+			// next doc btn
+			Button {
+				ButtonClickFeedback.playIfEnabled()
+				selectNextDocument()
+			} label: {
+				Image(systemName: "triangle.fill")
+					.font(.system(size: 20))
+					.rotationEffect(.degrees(90))
+					.frame(width: 44, height: 44)
+					.contentShape(.rect)
+			}
+			.buttonStyle(.plain)
+			.foregroundStyle(toolbarPrincipalForegroundColor)
+			.disabled(currentFileNumber >= totalFileCount)
+			//
+			//----------------------------------------
+			// prev image
+			//
+			Button {
+				ButtonClickFeedback.playIfEnabled()
+				selectPreviousBackgroundImage()
+			} label: {
+				Image(systemName: "triangle.fill")
+					.font(.system(size: 20))
+					.rotationEffect(.degrees(-90))
+					.frame(width: 44, height: 44)
+					.contentShape(.rect)
+			}
+			.buttonStyle(.plain)
+			.foregroundStyle(toolbarPrincipalForegroundColor)
+			.disabled(currentBackgroundImageNumber <= 1)
+			//
+			//----------------------------------------
+			// rnd image
+			//
+			Button {
+				ButtonClickFeedback.playIfEnabled()
+				selectRandomBackgroundImage()
+			} label: {
+				Image(systemName: "photo.fill")
+					.font(.system(size: 18, weight: .semibold))
+					.frame(width: 33, height: 44)
+					.contentShape(.rect)
+			}
+			.buttonStyle(.plain)
+			.foregroundStyle(toolbarPrincipalForegroundColor)
+			.disabled(totalBackgroundImageCount == 0)
+			//
+			//----------------------------------------
+			// next img
+			//
+			Button {
+				ButtonClickFeedback.playIfEnabled()
+				selectNextBackgroundImage()
+			} label: {
+				Image(systemName: "triangle.fill")
+					.font(.system(size: 20))
+					.rotationEffect(.degrees(90))
+					.frame(width: 44, height: 44)
+					.contentShape(.rect)
+			}
+			.buttonStyle(.plain)
+			.foregroundStyle(toolbarPrincipalForegroundColor)
+			.disabled(currentBackgroundImageNumber >= totalBackgroundImageCount)
+			//
+			//----------------------------------------
+			//
+			Spacer()
+			//
+			//----------------------------------------
+			// opacity +/- btns
+			//
+			OpacityBtns(
+				value: $gridBackgroundOpacity,
+				range: 0...1,
+				visualWidth: isPad ? 30 : 100,
+				hitHorizontalPadding: opacitySliderHitHorizontalPadding,
+				hitHeight: opacitySliderHitHeight,
+				isDisabled: editingSlotIndex != nil
+			)
+			//
+			//----------------------------------------
+			// to keyboard btn
+			//
+			Button("KB") {
+				ButtonClickFeedback.playIfEnabled()
+				openKeyboardScreen()
+			}
+			.font(.headline)
+			.foregroundStyle(keyboardButtonForegroundColor)
+			.padding(.horizontal, 5)
+			.frame(minHeight: 36)
+			.frame(width: 60)
 
-				
-				
-                Button {
-                    ButtonClickFeedback.playIfEnabled()
-                    toggleGridEditMode()
-                } label: {
-                    Text(isGridEditModeEnabled ? "done" : "edit")
-                        .font(.headline)
-                        .foregroundStyle(toolbarActionForegroundColor)
-                        .frame(minWidth: 84, minHeight: 44)
-                        .background(toolbarButtonBackgroundColor(normalBackground: editModeButtonBackgroundColor))
-                        .overlay {
-                            RoundedRectangle(cornerRadius: 23)
-                                .stroke(toolbarButtonBorderColor, lineWidth: 1.5)
-                        }
-                        .clipShape(.rect(cornerRadius: 23))
-                        .contentShape(.rect)
-                }
-                .buttonStyle(.plain)
-                .disabled(editingSlotIndex != nil)
+			.background(toolbarButtonBackgroundColor(normalBackground: normalToolbarBackgroundColor))
+			.overlay {
+				RoundedRectangle(cornerRadius: 10)
+					.stroke(toolbarButtonBorderColor, lineWidth: 1.5)
+			}
+			.clipShape(.rect(cornerRadius: 10))
+			.contentShape(.rect)
+			.disabled(isGridEditModeEnabled || editingSlotIndex != nil)
+			//
+			//----------------------------------------
+			// edit btn
+			//
+			Button {
+				ButtonClickFeedback.playIfEnabled()
+				toggleGridEditMode()
+			} label: {
+				Text(isGridEditModeEnabled ? "done" : "edit")
+					.font(.headline)
+					.foregroundStyle(toolbarActionForegroundColor)
+					.frame(minWidth: 84, minHeight: 36)
+					.background(toolbarButtonBackgroundColor(normalBackground: editModeButtonBackgroundColor))
+					.overlay {
+						RoundedRectangle(cornerRadius: 10)
+							.stroke(toolbarButtonBorderColor, lineWidth: 1.5)
+					}
+					.clipShape(.rect(cornerRadius: 10))
+					.contentShape(.rect)
+			}
+			.buttonStyle(.plain)
+			.disabled(editingSlotIndex != nil)
+			//
+			//----------------------------------------
+			// goto settings btn
+			//
+			openSettings
+				.disabled(isGridEditModeEnabled)
+			//
+			//----------------------------------------
+			//
+		}   // END HS
+		.frame(maxWidth: .infinity)
 
-                openSettings
-                    .disabled(isGridEditModeEnabled)
-            }
-        }
-    }
-
+	}
+	//
+	//-----------------------------------------------------------------------------------------------
+	//
     private var editModeButtonBackgroundColor: Color {
         return isGridEditModeEnabled ? Color.blue : normalToolbarBackgroundColor
     }
-
+	//
+	//----------------------------------------
+	//
     private var toolbarButtonBorderColor: Color {
         normalToolbarBorderColor
     }
-
+	//
+	//----------------------------------------
+	//
     private func toolbarButtonBackgroundColor(normalBackground: Color) -> Color {
         normalBackground
     }
-
+	//
+	//----------------------------------------
+	//
     private var toolbarActionForegroundColor: Color {
         editingSlotIndex != nil ? Color(white: 0.75) : .white
     }
-
+	//
+	//----------------------------------------
+	//
     private var keyboardButtonForegroundColor: Color {
         (isGridEditModeEnabled || editingSlotIndex != nil) ? inactiveToolbarForegroundColor : .white
     }
-
+	//
+	//----------------------------------------
+	//
     private var toolbarPrincipalForegroundColor: Color {
         isGridEditModeEnabled ? inactiveToolbarForegroundColor : .white
     }
 }
-
-private struct WideHitSlider_OLD: View {
-    @Binding var value: Double
-
-    let range: ClosedRange<Double>
-    let visualWidth: CGFloat
-    let hitHorizontalPadding: CGFloat
-    let hitHeight: CGFloat
-    let isDisabled: Bool
-
-    var body: some View {
-        Slider(value: $value, in: range)
-            .tint(.white)
-            .frame(width: visualWidth)
-            .frame(width: visualWidth + hitHorizontalPadding * 2, height: hitHeight)
-            .contentShape(.rect)
-            .gesture(
-                DragGesture(minimumDistance: 0)
-                    .onChanged { gesture in
-                        guard !isDisabled else { return }
-                        updateValue(for: gesture.location.x)
-                    }
-            )
-            .disabled(isDisabled)
-    }
-
-    private func updateValue(for locationX: CGFloat) {
-        let clampedX = min(max(locationX - hitHorizontalPadding, 0), visualWidth)
-        let percent = Double(clampedX / visualWidth)
-        value = range.lowerBound + (range.upperBound - range.lowerBound) * percent
-    }
-}
-
-
-private struct WideHitSlider: View {
+//
+//----------------------------------------
+//
+private struct OpacityBtns: View {
 	@Binding var value: Double
 	
 	let range: ClosedRange<Double>
@@ -305,7 +305,8 @@ private struct WideHitSlider: View {
 				Image(systemName: "minus.circle.fill")
 					.resizable()
 					.scaledToFit()
-			}
+					.frame(width: 30, height: 30)
+}
 			.disabled(isDisabled || value < 0.1 /*range.lowerBound*/)
 			
 			// Increment Button
@@ -313,6 +314,7 @@ private struct WideHitSlider: View {
 				Image(systemName: "plus.circle.fill")
 					.resizable()
 					.scaledToFit()
+					.frame(width: 30, height: 30)
 			}
 			.disabled(isDisabled || value >= range.upperBound)
 		}
@@ -333,4 +335,7 @@ private struct WideHitSlider: View {
 		value = min(newValue, range.upperBound)
 	}
 }
+//
+//-----------------------------------------------------------------------------------------------
+//
 

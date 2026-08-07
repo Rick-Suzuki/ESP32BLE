@@ -240,7 +240,7 @@ struct ContentView: View {
     @AppStorage("settingsStatusBarVisible") private var isStatusBarVisible = true
 
     var body: some View {
-        NavigationStack(path: $rootNavigationPath) {
+        NavigationStack(path: $rootNavigationPath) { // this causes space at top
             ZStack {
                 GeometryReader { geometry in
                     let containerWidth = geometry.size.width.isFinite ? max(0, geometry.size.width) : 0
@@ -340,7 +340,7 @@ struct ContentView: View {
                     launchedSettingsScreen
                 }
             }
-        }
+       }
         .id(isStatusBarVisible)
         .ignoresSafeArea(.keyboard)
         .statusBarHidden(!isStatusBarVisible)

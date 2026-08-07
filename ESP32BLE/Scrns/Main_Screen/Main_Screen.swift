@@ -581,15 +581,54 @@ Tapping a row inserts the key code at the cursor.
         GeometryReader { geometry in
             let horizontalContentInset: CGFloat = 0
             let contentWidth = max(0, geometry.size.width - (horizontalContentInset * 2))
-            let topContentInset: CGFloat = 8
+            let topContentInset: CGFloat = 0
             let bottomContentInset: CGFloat = 0
-            let containerFrame = geometry.frame(in: .global)
-            let maskBottomY = min(containerFrame.maxY, keyboardMinY)
+            
+			let containerFrame = geometry.frame(in: .global)
+            
+			let maskBottomY = min(containerFrame.maxY, keyboardMinY)
             let maskHeight = max(0, maskBottomY - containerFrame.minY)
             let maskedScreenHeight = maskHeight + geometry.safeAreaInsets.top
 
             ZStack(alignment: .top) {
                 VStack(spacing: 20) {
+					
+					MainScreenToolbarContent(
+						isGridEditModeEnabled: isGridEditModeEnabled,
+						editingSlotIndex: editingSlotIndex,
+						currentFileNumber: currentFileNumber,
+						totalFileCount: totalFileCount,
+						currentBackgroundImageNumber: selectedBackgroundImageIndex,
+						totalBackgroundImageCount: availableBackgroundImageURLs.count,
+						gridBackgroundOpacity: $mainGridBackgroundOpacity,
+						isEditingDocumentName: $isEditingDocumentName,
+						documentNameDraft: $documentNameDraft,
+						selectedDocumentDisplayName: selectedDocumentDisplayName,
+						isHomeDocumentSelected: isHomeDocumentSelected,
+						isDocumentNameFieldFocused: $isDocumentNameFieldFocused,
+						openKeyboardScreen: openKeyboardScreen,
+						openHomeDocument: openHomeDocumentFromMainScreenControl,
+						canGoBackToPreviousDocument: canGoBackToPreviousDocument,
+						goBackToPreviousDocument: goBackToPreviousDocumentFromMainScreenControl,
+						selectPreviousDocument: selectPreviousDocumentFromMainScreenControl,
+						selectNextDocument: selectNextDocumentFromMainScreenControl,
+						selectPreviousBackgroundImage: selectPreviousBackgroundImage,
+						selectRandomBackgroundImage: selectRandomBackgroundImage,
+						selectNextBackgroundImage: selectNextBackgroundImage,
+						toggleGridEditMode: { isGridEditModeEnabled.toggle() },
+						commitDocumentRename: commitDocumentRename,
+						openSettings: AnyView(
+							Button {
+								ButtonClickFeedback.playIfEnabled()
+								openSettingsScreen()
+							} label: {
+								settingsToolbarButtonLabel
+							}
+								.buttonStyle(.plain)
+						)
+					)
+					
+					
                     mainGridSection(availableWidth: contentWidth)
 
                     if !isGridEditModeEnabled {
@@ -640,47 +679,6 @@ Tapping a row inserts the key code at the cursor.
         .overlay(alignment: .topLeading) {
             externalKeyboardShortcutLayer
         }
-        .navigationTitle("")
-        .toolbarTitleDisplayMode(.inline)
-        .compatibleNavigationBarVisibility(.visible)
-        .toolbarBackground(.hidden, for: .navigationBar)
-        .toolbarColorScheme(.dark, for: .navigationBar)
-        .toolbar {
-            MainScreenToolbarContent(
-                isGridEditModeEnabled: isGridEditModeEnabled,
-                editingSlotIndex: editingSlotIndex,
-                currentFileNumber: currentFileNumber,
-                totalFileCount: totalFileCount,
-                currentBackgroundImageNumber: selectedBackgroundImageIndex,
-                totalBackgroundImageCount: availableBackgroundImageURLs.count,
-                gridBackgroundOpacity: $mainGridBackgroundOpacity,
-                isEditingDocumentName: $isEditingDocumentName,
-                documentNameDraft: $documentNameDraft,
-                selectedDocumentDisplayName: selectedDocumentDisplayName,
-                isHomeDocumentSelected: isHomeDocumentSelected,
-                isDocumentNameFieldFocused: $isDocumentNameFieldFocused,
-                openKeyboardScreen: openKeyboardScreen,
-                openHomeDocument: openHomeDocumentFromMainScreenControl,
-                canGoBackToPreviousDocument: canGoBackToPreviousDocument,
-                goBackToPreviousDocument: goBackToPreviousDocumentFromMainScreenControl,
-                selectPreviousDocument: selectPreviousDocumentFromMainScreenControl,
-                selectNextDocument: selectNextDocumentFromMainScreenControl,
-                selectPreviousBackgroundImage: selectPreviousBackgroundImage,
-                selectRandomBackgroundImage: selectRandomBackgroundImage,
-                selectNextBackgroundImage: selectNextBackgroundImage,
-                toggleGridEditMode: { isGridEditModeEnabled.toggle() },
-                commitDocumentRename: commitDocumentRename,
-                openSettings: AnyView(
-                    Button {
-                        ButtonClickFeedback.playIfEnabled()
-                        openSettingsScreen()
-                    } label: {
-                        settingsToolbarButtonLabel
-                    }
-                    .buttonStyle(.plain)
-                )
-            )
-        }
     }
 
     private func mainGridSection(availableWidth: CGFloat) -> some View {
@@ -703,7 +701,7 @@ Tapping a row inserts the key code at the cursor.
                     mainGridButtonLabel(
                         entry: entry,
                         index: index,
-                        buttonHeight: buttonHeight,
+						buttonHeight: buttonHeight,
                         backgroundOpacity: mainGridBackgroundOpacity
                     )
                 )
@@ -733,13 +731,13 @@ Tapping a row inserts the key code at the cursor.
         Text(isPad ? "settings >" : ">")
             .font(.headline)
             .foregroundStyle((isGridEditModeEnabled || editingSlotIndex != nil) ? Color(white: 0.65) : .white)
-            .frame(minWidth: isPad ? 92 : 44, minHeight: 44)
+            .frame(minWidth: isPad ? 92 : 44, minHeight: 36)
             .background(Color.gray.opacity(0.45))
             .overlay {
-                RoundedRectangle(cornerRadius: 23)
+                RoundedRectangle(cornerRadius: 10)
                     .stroke(Color.gray.opacity(0.5), lineWidth: 1.5)
             }
-            .clipShape(.rect(cornerRadius: 23))
+            .clipShape(.rect(cornerRadius: 10))
             .contentShape(.rect)
     }
 	//
