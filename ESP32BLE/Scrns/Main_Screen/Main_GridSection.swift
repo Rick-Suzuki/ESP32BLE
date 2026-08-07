@@ -124,7 +124,7 @@ struct MainScreenGridSection: View {
         GeometryReader { geometry in
             let gridDimensions = visibleGridDimensions
             let totalGridSpacing = mainGridButtonSpacing * CGFloat(max(gridDimensions.rows - 1, 0))
-            let availableGridHeight = geometry.size.height.isFinite ? max(0, geometry.size.height - totalGridSpacing - reservedBottomInset) : 0
+            let availableGridHeight = geometry.size.height.isFinite ? max(0, geometry.size.height - totalGridSpacing - (reservedBottomInset-30)) : 0
             let buttonHeight = availableGridHeight / CGFloat(max(gridDimensions.rows, 1))
             let totalColumnSpacing = mainGridButtonSpacing * CGFloat(max(gridDimensions.columns - 1, 0))
             let safeAvailableWidth = availableWidth.isFinite ? max(0, availableWidth) : 0
