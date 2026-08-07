@@ -179,7 +179,7 @@ struct MainScreenToolbarContent: ToolbarContent {
                 WideHitSlider(
                     value: $gridBackgroundOpacity,
                     range: 0...1,
-                    visualWidth: isPad ? 150 : 100,
+                    visualWidth: isPad ? 30 : 100,
                     hitHorizontalPadding: opacitySliderHitHorizontalPadding,
                     hitHeight: opacitySliderHitHeight,
                     isDisabled: editingSlotIndex != nil
@@ -255,7 +255,7 @@ struct MainScreenToolbarContent: ToolbarContent {
     }
 }
 
-private struct WideHitSlider: View {
+private struct WideHitSlider_OLD: View {
     @Binding var value: Double
 
     let range: ClosedRange<Double>
@@ -286,3 +286,51 @@ private struct WideHitSlider: View {
         value = range.lowerBound + (range.upperBound - range.lowerBound) * percent
     }
 }
+
+
+private struct WideHitSlider: View {
+	@Binding var value: Double
+	
+	let range: ClosedRange<Double>
+	let step: Double = 0.05 // Adjust step increment as needed
+	let visualWidth: CGFloat
+	let hitHorizontalPadding: CGFloat
+	let hitHeight: CGFloat
+	let isDisabled: Bool
+	
+	var body: some View {
+		HStack(spacing: 16) {
+			// Decrement Button
+			Button(action: decrementValue) {
+				Image(systemName: "minus.circle.fill")
+					.resizable()
+					.scaledToFit()
+			}
+			.disabled(isDisabled || value < 0.1 /*range.lowerBound*/)
+			
+			// Increment Button
+			Button(action: incrementValue) {
+				Image(systemName: "plus.circle.fill")
+					.resizable()
+					.scaledToFit()
+			}
+			.disabled(isDisabled || value >= range.upperBound)
+		}
+		.tint(.white)
+		.frame(width: visualWidth)
+		.frame(width: visualWidth + hitHorizontalPadding , height: hitHeight)
+		.contentShape(.rect)
+		.disabled(isDisabled)
+	}
+	
+	private func decrementValue() {
+		let newValue = value - step
+		value = max(newValue, range.lowerBound)
+	}
+	
+	private func incrementValue() {
+		let newValue = value + step
+		value = min(newValue, range.upperBound)
+	}
+}
+
