@@ -87,7 +87,6 @@ struct SettingsScreen: View {
     private let maximumTextToSpeechPercentage = 140.0
     private let textToSpeechPercentageStep = 5.0
     private let maximumSpeechRecognitionAutoOffMinutes = 31
-    @Environment(\.dismiss) private var dismiss
     @AppStorage("speechRecognitionAutoOffMinutes") private var speechRecognitionAutoOffMinutes = 5
     @AppStorage("sendControlABeforeText") var sendControlABeforeText = false
     @AppStorage("keyboardTimingOnMs") private var keyboardTimingOnMs = 0.0
@@ -105,6 +104,7 @@ struct SettingsScreen: View {
     let duplicateDocument: (URL) -> Void
     let canDeleteDocuments: Bool
     @Binding var bleTextToSend: String
+    let returnToMain: () -> Void
     @State private var documentEditorText = ""
     @State private var documentEditorFontSize: CGFloat = 18
     @State private var isLoadingDocumentText = false
@@ -154,25 +154,125 @@ struct SettingsScreen: View {
     }
 
     private var settingsScreenBase: some View {
-        GeometryReader { geometry in
-            HStack(alignment: .top, spacing: 0) {
-                VStack(spacing: 0) {
-                    if isPad {
-                        editableDocumentSection
-                    }
+        VStack(spacing: 0) {
+            settingsTopToolbar
 
-                    if !isPad || !isDocumentEditorFocused {
-                        combinedBottomPanelSection
+            GeometryReader { geometry in
+                HStack(alignment: .top, spacing: 0) {
+                    VStack(spacing: 0) {
+                        if isPad {
+                            editableDocumentSection
+                        }
+
+                        if !isPad || !isDocumentEditorFocused {
+                            combinedBottomPanelSection
+                        }
                     }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+
+                    documentTableSection
+                        .frame(width: documentTableWidth(for: geometry.size.width))
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-
-                documentTableSection
-                    .frame(width: documentTableWidth(for: geometry.size.width))
+                .frame(maxHeight: .infinity, alignment: .top)
             }
-            .frame(maxHeight: .infinity, alignment: .top)
         }
     }
+
+	private var settingsTopToolbar: some View {
+		//
+		//----------------------------------------
+		// back to main
+		//
+		HStack(spacing: 8) {
+			SettingsToolbarButton(title: "main", backgroundColor: Color.gray.opacity(0.45), minWidth: 92, isEnabled: true) {
+				saveAndReturnToMain()
+			}
+			//
+			//----------------------------------------
+			// tts voice
+			//
+			textToSpeechVoiceMenu
+			//
+			//----------------------------------------
+			// tts slider
+			//
+			textToSpeechRateControl
+			//
+			//----------------------------------------
+			// title text
+			//
+			Spacer()
+				settingsTitleControl
+					.padding(.horizontal, 12)
+
+			Spacer()
+			//
+			//----------------------------------------
+			// import btn
+			//
+			Button {
+				ButtonClickFeedback.playIfEnabled()
+				guard listMode != .all else { return }
+				pendingImportListMode = listMode
+			} label: {
+				Image(systemName: "square.and.arrow.down")
+					.font(.title)
+					.foregroundStyle(.white)
+			}
+			.contentShape(.rect)
+			.accessibilityLabel("Import \(listMode.buttonTitle) from iCloud")
+			.disabled(listMode == .all)
+			.opacity(listMode == .all ? 0.45 : 1)
+
+			Spacer()
+				.frame(width:10)
+			//
+			//----------------------------------------
+			// export btn/menu
+			//
+			Menu {
+				Button("Export Single File") {
+					ButtonClickFeedback.playIfEnabled()
+					prepareSingleFileExport()
+				}
+				Button("Export Archive.zip") {
+					ButtonClickFeedback.playIfEnabled()
+					prepareArchiveExport()
+				}
+			} label: {
+				Image(systemName: "square.and.arrow.up")
+					.font(.title)
+					.foregroundStyle(.white)
+			}
+			.contentShape(.rect)
+			.accessibilityLabel("Export to iCloud")
+			
+			Spacer()
+			//
+			//----------------------------------------
+			// show type of table
+			//
+			SettingsToolbarButton(title: listMode.buttonTitle, backgroundColor: Color.gray.opacity(0.45), minWidth: 64.4, isEnabled: true) {
+				listMode.toggle()
+			}
+			//
+			//----------------------------------------
+			// repair btn
+			//
+			SettingsToolbarButton(title: "repair", backgroundColor: Color.red.opacity(0.5), minWidth: 64.4, isEnabled: listMode == .files) {
+				repairDocument()
+			}
+			//
+			//----------------------------------------
+			// new file
+			//
+			SettingsToolbarButton(title: "new", backgroundColor: Color.green.opacity(0.5), minWidth: 64.4, isEnabled: listMode == .files) {
+				createNewDocument()
+			}
+		}
+		.padding(.horizontal, 8)
+		.padding(.vertical, 6)
+	}
 
     private var configuredSettingsScreen: some View {
         settingsScreenBase
@@ -191,78 +291,6 @@ struct SettingsScreen: View {
                 SettingsSingleFileExportPicker(url: exportURL) {
                     cleanupSingleFileExportTemporaryURLIfNeeded()
                     singleFileExportURL = nil
-                }
-            }
-        }
-			//
-			//----------------------------------------
-			// top toolbar
-		//
-        .navigationTitle("")
-        .toolbar {
-            if isPad {
-                ToolbarItem(placement: .topBarLeading) {
-                    SettingsToolbarButton(title: "main", backgroundColor: Color.gray.opacity(0.45), minWidth: 92, isEnabled: true) {
-                        saveAndReturnToMain()
-                    }
-                }
-            }
-            ToolbarItem(placement: .topBarLeading) {
-                textToSpeechVoiceMenu
-            }
-            ToolbarItem(placement: .topBarLeading) {
-                textToSpeechRateControl
-            }
-            ToolbarItem(placement: .principal) {
-                settingsTitleControl
-            }
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    ButtonClickFeedback.playIfEnabled()
-                    guard listMode != .all else { return }
-                    pendingImportListMode = listMode
-                } label: {
-                    Image(systemName: "square.and.arrow.down")
-                        .font(.headline)
-                        .foregroundStyle(.white)
-                }
-                .contentShape(.rect)
-                .accessibilityLabel("Import \(listMode.buttonTitle) from iCloud")
-                .disabled(listMode == .all)
-                .opacity(listMode == .all ? 0.45 : 1)
-            }
-            ToolbarItem(placement: .topBarTrailing) {
-                Menu {
-                    Button("Export Single File") {
-                        ButtonClickFeedback.playIfEnabled()
-                        prepareSingleFileExport()
-                    }
-                    Button("Export Archive.zip") {
-                        ButtonClickFeedback.playIfEnabled()
-                        prepareArchiveExport()
-                    }
-                } label: {
-                    Image(systemName: "square.and.arrow.up")
-                        .font(.headline)
-                        .foregroundStyle(.white)
-                }
-                .contentShape(.rect)
-                .accessibilityLabel("Export to iCloud")
-            }
-            ToolbarItem(placement: .topBarTrailing) {
-				SettingsToolbarButton(title: listMode.buttonTitle, backgroundColor: Color.gray.opacity(0.45), minWidth: 64.4, isEnabled: true) {
-                    listMode.toggle()
-                }
-            }
-            ToolbarItem(placement: .topBarTrailing) {
-                SettingsToolbarButton(title: "repair", backgroundColor: Color.red.opacity(0.5), minWidth: 64.4, isEnabled: listMode == .files) {
-                    repairDocument()
-                }
-            }
-
-            ToolbarItem(placement: .topBarTrailing) {
-                SettingsToolbarButton(title: "new", backgroundColor: Color.green.opacity(0.5), minWidth: 64.4, isEnabled: listMode == .files) {
-                    createNewDocument()
                 }
             }
         }
@@ -508,7 +536,7 @@ struct SettingsScreen: View {
         Group {
             if isEditingDocumentName {
                 TextField("", text: $documentNameDraft)
-                    .textFieldStyle(.plain)
+                    .textFieldStyle(.roundedBorder)
                     .font(.headline)
                     .foregroundStyle(.white)
                     .textInputAutocapitalization(.never)
@@ -526,7 +554,8 @@ struct SettingsScreen: View {
                     documentNameDraft = currentTitleDisplayName
                     isEditingDocumentName = true
                 }
-                .buttonStyle(.plain)
+				.frame(minWidth: 180)
+                .buttonStyle(.bordered)
                 .font(.headline)
                 .foregroundStyle(.white)
                 .lineLimit(1)
@@ -1003,7 +1032,7 @@ struct SettingsScreen: View {
         } else {
             saveSelectedDocumentAndReload(documentEditorText)
         }
-        dismiss()
+        returnToMain()
     }
 
     private func saveDocumentText(_ text: String, to fileURL: URL) {

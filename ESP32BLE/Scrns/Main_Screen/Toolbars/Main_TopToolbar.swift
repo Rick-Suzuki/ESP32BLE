@@ -8,7 +8,7 @@ import SwiftUI
 //
 struct MainScreenToolbarContent: View {
     private let inactiveToolbarBackgroundColor = Color(red: 0.22, green: 0.22, blue: 0.24)
-    private let normalToolbarBackgroundColor = Color(red: 0.32, green: 0.32, blue: 0.34)
+	private let normalToolbarBackgroundColor = Color(red: 0.32, green: 0.32, blue: 0.34).opacity(0.4)
     private let inactiveToolbarBorderColor = Color(red: 0.30, green: 0.30, blue: 0.32)
     private let normalToolbarBorderColor = Color(red: 0.46, green: 0.46, blue: 0.48)
     private let inactiveToolbarForegroundColor = Color(red: 0.55, green: 0.55, blue: 0.57)
@@ -177,10 +177,6 @@ struct MainScreenToolbarContent: View {
 			.disabled(currentBackgroundImageNumber >= totalBackgroundImageCount)
 			//
 			//----------------------------------------
-			//
-			Spacer()
-			//
-			//----------------------------------------
 			// opacity +/- btns
 			//
 			OpacityBtns(
@@ -191,6 +187,10 @@ struct MainScreenToolbarContent: View {
 				hitHeight: opacitySliderHitHeight,
 				isDisabled: editingSlotIndex != nil
 			)
+			//
+			//----------------------------------------
+			//
+			Spacer()
 			//
 			//----------------------------------------
 			// to keyboard btn

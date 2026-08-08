@@ -187,30 +187,6 @@ final class NoWrapDocumentTextView: UITextView {
     }
 }
 
-struct BackButton: View {
-    @Environment(\.dismiss) private var dismiss
-    let action: () -> Void
-
-    var body: some View {
-        Button("main") {
-            ButtonClickFeedback.playIfEnabled()
-            action()
-            dismiss()
-        }
-        .font(.headline)
-        .foregroundStyle(.white)
-        .padding(.horizontal, 14)
-        .frame(minWidth: 92, minHeight: 44)
-        .background(Color.gray.opacity(0.45))
-        .overlay {
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.gray.opacity(0.5), lineWidth: 1.5)
-        }
-        .clipShape(.rect(cornerRadius: 12))
-        .contentShape(.rect)
-    }
-}
-
 struct SettingsToolbarButton: View {
     let title: String
     let backgroundColor: Color

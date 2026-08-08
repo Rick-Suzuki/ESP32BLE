@@ -154,10 +154,6 @@ func downsampledUIImage(at url: URL, maxPixelDimension: CGFloat) -> UIImage? {
     return UIImage(cgImage: downsampledImage)
 }
 
-private enum ContentViewLaunchDestination: Hashable {
-    case settings
-}
-
 struct ContentView: View {
 	//
 	//-----------------------------------------------------------------------------------------------
@@ -231,7 +227,6 @@ struct ContentView: View {
     @AppStorage("selectedDocumentName") private var selectedDocumentName = "fnkeys.txt"
     @AppStorage("documentFontSizesData") private var documentFontSizesData = ""
     @State private var settingsBLEText = ""
-    @State private var rootNavigationPath = NavigationPath()
     @State private var isKeyboardScreenPresented = false
     @State private var isSettingsScreenPresented = true
     @State private var didPresentInitialSettingsScreen = false
@@ -240,107 +235,102 @@ struct ContentView: View {
     @AppStorage("settingsStatusBarVisible") private var isStatusBarVisible = true
 
     var body: some View {
-        NavigationStack(path: $rootNavigationPath) { // this causes space at top
-            ZStack {
-                GeometryReader { geometry in
-                    let containerWidth = geometry.size.width.isFinite ? max(0, geometry.size.width) : 0
-                    let containerHeight = geometry.size.height.isFinite ? max(0, geometry.size.height) : 0
+        ZStack {
+            GeometryReader { geometry in
+                let containerWidth = geometry.size.width.isFinite ? max(0, geometry.size.width) : 0
+                let containerHeight = geometry.size.height.isFinite ? max(0, geometry.size.height) : 0
 
-                    ZStack {
-                        KeyboardScreen(ble: ble, isPresented: isKeyboardScreenPresented) {
-                            withAnimation(.easeInOut(duration: 0.25)) {
-                                isKeyboardScreenPresented = false
-                            }
+                ZStack {
+                    KeyboardScreen(ble: ble, isPresented: isKeyboardScreenPresented) {
+                        withAnimation(.easeInOut(duration: 0.25)) {
+                            isKeyboardScreenPresented = false
                         }
-                        .frame(width: containerWidth, height: containerHeight)
-                        .offset(x: isKeyboardScreenPresented ? 0 : -containerWidth)
-
-                        MainScreen(
-                            ble: ble,
-                            functionKeys: functionKeys,
-                            documentFiles: documentFiles,
-                            selectedDocumentName: selectedDocumentName,
-                            selectedDocumentDisplayName: displayName(for: selectedDocumentName),
-                            boxFontSize: Binding(
-                                get: {
-                                    fontSize(for: selectedDocumentName)
-                                },
-                                set: { newFontSize in
-                                    updateDocumentFontSize(newFontSize)
-                                }
-                            ),
-                            currentFileNumber: currentFileNumber,
-                            totalFileCount: documentFiles.count,
-                            definedFunctionKeyCount: loadedFunctionKeySlotCount,
-                            refreshDocumentFiles: refreshDocumentFiles,
-                            loadFunctionKeys: selectDocument,
-                            saveSelectedDocumentAndReload: saveSelectedDocumentAndReload,
-                            renameDocument: renameSelectedDocument,
-                            deleteDocument: deleteDocument,
-                            duplicateDocument: duplicateDocument,
-                            canDeleteDocuments: documentFiles.count > 1,
-                            selectPreviousDocument: selectPreviousDocument,
-                            selectNextDocument: selectNextDocument,
-                            goBackToPreviousDocument: goBackToPreviousDocument,
-                            goForwardToNextDocument: goForwardToNextDocument,
-                            canGoBackToPreviousDocument: canGoBackToPreviousDocument,
-                            previousDocumentDisplayName: previousDocumentDisplayName,
-                            adjacentPreviousDocumentDisplayName: adjacentPreviousDocumentDisplayName,
-                            adjacentNextDocumentDisplayName: adjacentNextDocumentDisplayName,
-                            selectDocumentNamedFromGrid: selectDocumentNamedFromGrid,
-                            resizeVisibleBoxCount: resizeSelectedDocumentGrid,
-                            moveFunctionKeySlot: { sourceIndex, targetIndex, span, gridDimensions in
-                                moveSelectedDocumentSlot(
-                                    from: sourceIndex,
-                                    to: targetIndex,
-                                    span: span,
-                                    gridDimensions: gridDimensions
-                                )
-                            },
-                            duplicateFunctionKeySlot: duplicateSelectedDocumentSlot,
-                            updateFunctionKeySlot: updateSelectedDocumentSlot,
-                            loadGridDimensions: loadStoredGridDimensions,
-                            saveGridDimensions: { documentName, gridDimensions in
-                                saveGridDimensions(gridDimensions, for: documentName)
-                            },
-                            openKeyboardScreen: {
-                                withAnimation(.easeInOut(duration: 0.25)) {
-                                    isKeyboardScreenPresented = true
-                                }
-                            },
-                            openSettingsScreen: {
-                                showSettingsScreen()
-                            },
-                            isSettingsScreenPresented: isSettingsScreenPresented,
-                            settingsBLEText: $settingsBLEText
-                        )
-                        .frame(width: containerWidth, height: containerHeight)
-                        .ignoresSafeArea(.keyboard)
-                        .offset(x: isKeyboardScreenPresented ? containerWidth : 0)
                     }
                     .frame(width: containerWidth, height: containerHeight)
-                    .clipped()
+                    .offset(x: isKeyboardScreenPresented ? 0 : -containerWidth)
+
+                    MainScreen(
+                        ble: ble,
+                        functionKeys: functionKeys,
+                        documentFiles: documentFiles,
+                        selectedDocumentName: selectedDocumentName,
+                        selectedDocumentDisplayName: displayName(for: selectedDocumentName),
+                        boxFontSize: Binding(
+                            get: {
+                                fontSize(for: selectedDocumentName)
+                            },
+                            set: { newFontSize in
+                                updateDocumentFontSize(newFontSize)
+                            }
+                        ),
+                        currentFileNumber: currentFileNumber,
+                        totalFileCount: documentFiles.count,
+                        definedFunctionKeyCount: loadedFunctionKeySlotCount,
+                        refreshDocumentFiles: refreshDocumentFiles,
+                        loadFunctionKeys: selectDocument,
+                        saveSelectedDocumentAndReload: saveSelectedDocumentAndReload,
+                        renameDocument: renameSelectedDocument,
+                        deleteDocument: deleteDocument,
+                        duplicateDocument: duplicateDocument,
+                        canDeleteDocuments: documentFiles.count > 1,
+                        selectPreviousDocument: selectPreviousDocument,
+                        selectNextDocument: selectNextDocument,
+                        goBackToPreviousDocument: goBackToPreviousDocument,
+                        goForwardToNextDocument: goForwardToNextDocument,
+                        canGoBackToPreviousDocument: canGoBackToPreviousDocument,
+                        previousDocumentDisplayName: previousDocumentDisplayName,
+                        adjacentPreviousDocumentDisplayName: adjacentPreviousDocumentDisplayName,
+                        adjacentNextDocumentDisplayName: adjacentNextDocumentDisplayName,
+                        selectDocumentNamedFromGrid: selectDocumentNamedFromGrid,
+                        resizeVisibleBoxCount: resizeSelectedDocumentGrid,
+                        moveFunctionKeySlot: { sourceIndex, targetIndex, span, gridDimensions in
+                            moveSelectedDocumentSlot(
+                                from: sourceIndex,
+                                to: targetIndex,
+                                span: span,
+                                gridDimensions: gridDimensions
+                            )
+                        },
+                        duplicateFunctionKeySlot: duplicateSelectedDocumentSlot,
+                        updateFunctionKeySlot: updateSelectedDocumentSlot,
+                        loadGridDimensions: loadStoredGridDimensions,
+                        saveGridDimensions: { documentName, gridDimensions in
+                            saveGridDimensions(gridDimensions, for: documentName)
+                        },
+                        openKeyboardScreen: {
+                            withAnimation(.easeInOut(duration: 0.25)) {
+                                isKeyboardScreenPresented = true
+                            }
+                        },
+                        openSettingsScreen: {
+                            showSettingsScreen()
+                        },
+                        isSettingsScreenPresented: isSettingsScreenPresented,
+                        settingsBLEText: $settingsBLEText
+                    )
+                    .frame(width: containerWidth, height: containerHeight)
                     .ignoresSafeArea(.keyboard)
-                    .onAppear {
-                        logDeviceTypeIfNeeded()
+                    .offset(x: isKeyboardScreenPresented ? containerWidth : 0)
+
+                    if isSettingsScreenPresented {
+                        launchedSettingsScreen
+                            .frame(width: containerWidth, height: containerHeight)
+                            .transition(.move(edge: .trailing))
                     }
                 }
+                .frame(width: containerWidth, height: containerHeight)
+                .clipped()
                 .ignoresSafeArea(.keyboard)
-            }
-            .ignoresSafeArea(.keyboard)
-            .background { 
-                mainScreenBackgroundView
-            }
-            .compatibleNavigationBarVisibility(isKeyboardScreenPresented ? .hidden : .visible)
-            .toolbarBackground(.hidden, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
-            .navigationDestination(for: ContentViewLaunchDestination.self) { destination in
-                switch destination {
-                case .settings:
-                    launchedSettingsScreen
+                .onAppear {
+                    logDeviceTypeIfNeeded()
                 }
             }
-       }
+            .ignoresSafeArea(.keyboard)
+        }
+        .ignoresSafeArea(.keyboard)
+        .background { 
+            mainScreenBackgroundView
+        }
         .id(isStatusBarVisible)
         .ignoresSafeArea(.keyboard)
         .statusBarHidden(!isStatusBarVisible)
@@ -2285,7 +2275,12 @@ struct ContentView: View {
             deleteDocument: deleteDocument,
             duplicateDocument: duplicateDocument,
             canDeleteDocuments: documentFiles.count > 1,
-            bleTextToSend: $settingsBLEText
+            bleTextToSend: $settingsBLEText,
+            returnToMain: {
+                withAnimation(.easeInOut(duration: 0.25)) {
+                    isSettingsScreenPresented = false
+                }
+            }
         )
         .onAppear {
             isSettingsScreenPresented = true
@@ -2301,7 +2296,7 @@ struct ContentView: View {
         }
 
         didPresentInitialSettingsScreen = true
-        rootNavigationPath.append(ContentViewLaunchDestination.settings)
+        isSettingsScreenPresented = true
     }
 
     private func showSettingsScreen() {
@@ -2309,7 +2304,9 @@ struct ContentView: View {
             return
         }
 
-        rootNavigationPath.append(ContentViewLaunchDestination.settings)
+        withAnimation(.easeInOut(duration: 0.25)) {
+            isSettingsScreenPresented = true
+        }
     }
 
     @ViewBuilder
@@ -2584,16 +2581,5 @@ struct ContentView: View {
         }
 
         return nil
-    }
-}
-
-extension View {
-    @ViewBuilder
-    func compatibleNavigationBarVisibility(_ visibility: Visibility) -> some View {
-        if #available(iOS 18.0, *) {
-            toolbarVisibility(visibility, for: .navigationBar)
-        } else {
-            toolbar(visibility, for: .navigationBar)
-        }
     }
 }
