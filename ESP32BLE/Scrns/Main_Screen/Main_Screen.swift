@@ -42,8 +42,12 @@ struct MainScreen: View {
     private let smartViewHeight: CGFloat = 294
     // Adjust this to tune the height of the 16 color/visibility cells in the smart button panel.
     private let smartButtonPanelColorCellHeight: CGFloat = 46
-	
-	// MARK: - BM:🟥 smart SF symbols
+  
+	// Vertical gap between the MainScreen top toolbar and the first button row.
+    // Smaller value moves the button grid upward toward the toolbar.
+    private let topToolbarToGridSpacing: CGFloat = 2
+		
+		// MARK: - BM:🟥 smart SF symbols
     
 	private let smartSFPanelSymbols = [
         "folder", "eye", "magnifyingglass", "lightbulb.max.fill",
@@ -591,15 +595,16 @@ Tapping a row inserts the key code at the cursor.
             let maskedScreenHeight = maskHeight + geometry.safeAreaInsets.top
 
             ZStack(alignment: .top) {
-                VStack(spacing: 20) {
-					
-					MainScreenToolbarContent(
-						isGridEditModeEnabled: isGridEditModeEnabled,
+                VStack(spacing: 0) {
+						
+						MainScreenToolbarContent(
+							isGridEditModeEnabled: isGridEditModeEnabled,
 						editingSlotIndex: editingSlotIndex,
 						currentFileNumber: currentFileNumber,
 						totalFileCount: totalFileCount,
 						currentBackgroundImageNumber: selectedBackgroundImageIndex,
 						totalBackgroundImageCount: availableBackgroundImageURLs.count,
+						backgroundImageOpacity: $backgroundImageOpacity,
 						gridBackgroundOpacity: $mainGridBackgroundOpacity,
 						isEditingDocumentName: $isEditingDocumentName,
 						documentNameDraft: $documentNameDraft,
@@ -626,12 +631,18 @@ Tapping a row inserts the key code at the cursor.
 							}
 								.buttonStyle(.plain)
 						)
-					)
-					
-					
+						)
+						
+						
+                    Color.clear
+                        .frame(height: topToolbarToGridSpacing)
+
                     mainGridSection(availableWidth: contentWidth)
 
                     if !isGridEditModeEnabled {
+                        Color.clear
+                            .frame(height: 20)
+
                         displayModeButtonSection(availableWidth: contentWidth)
                     }
                 }

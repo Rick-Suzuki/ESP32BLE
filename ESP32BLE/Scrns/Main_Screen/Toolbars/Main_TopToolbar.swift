@@ -24,6 +24,7 @@ struct MainScreenToolbarContent: View {
     let totalFileCount: Int
     let currentBackgroundImageNumber: Int
     let totalBackgroundImageCount: Int
+    @Binding var backgroundImageOpacity: Double
     @Binding var gridBackgroundOpacity: Double
     @Binding var isEditingDocumentName: Bool
     @Binding var documentNameDraft: String
@@ -140,7 +141,7 @@ struct MainScreenToolbarContent: View {
 					.contentShape(.rect)
 			}
 			.buttonStyle(.plain)
-			.foregroundStyle(toolbarPrincipalForegroundColor)
+			.foregroundStyle(.cyan)
 			.disabled(currentBackgroundImageNumber <= 1)
 			//
 			//----------------------------------------
@@ -156,7 +157,7 @@ struct MainScreenToolbarContent: View {
 					.contentShape(.rect)
 			}
 			.buttonStyle(.plain)
-			.foregroundStyle(toolbarPrincipalForegroundColor)
+			.foregroundStyle(.cyan)
 			.disabled(totalBackgroundImageCount == 0)
 			//
 			//----------------------------------------
@@ -173,19 +174,37 @@ struct MainScreenToolbarContent: View {
 					.contentShape(.rect)
 			}
 			.buttonStyle(.plain)
-			.foregroundStyle(toolbarPrincipalForegroundColor)
+			.foregroundStyle(.cyan)
 			.disabled(currentBackgroundImageNumber >= totalBackgroundImageCount)
 			//
 			//----------------------------------------
-			// opacity +/- btns
+			// background opacity +/- btns
 			//
-			OpacityBtns(
+			minusPlusBtns(
+				value: $backgroundImageOpacity,
+				range: 0...1,
+				visualWidth: isPad ? 30 : 100,
+				hitHorizontalPadding: opacitySliderHitHorizontalPadding,
+				hitHeight: opacitySliderHitHeight,
+				isDisabled: editingSlotIndex != nil,
+				bc:.cyan
+			)
+			//
+			//----------------------------------------
+			//
+			Spacer()
+			//
+			//----------------------------------------
+			// grid opacity +/- btns
+			//
+			minusPlusBtns(
 				value: $gridBackgroundOpacity,
 				range: 0...1,
 				visualWidth: isPad ? 30 : 100,
 				hitHorizontalPadding: opacitySliderHitHorizontalPadding,
 				hitHeight: opacitySliderHitHeight,
-				isDisabled: editingSlotIndex != nil
+				isDisabled: editingSlotIndex != nil,
+				bc:.white
 			)
 			//
 			//----------------------------------------
@@ -288,7 +307,7 @@ struct MainScreenToolbarContent: View {
 //
 //----------------------------------------
 //
-private struct OpacityBtns: View {
+private struct minusPlusBtns: View {
 	@Binding var value: Double
 	
 	let range: ClosedRange<Double>
@@ -297,6 +316,7 @@ private struct OpacityBtns: View {
 	let hitHorizontalPadding: CGFloat
 	let hitHeight: CGFloat
 	let isDisabled: Bool
+	let bc:Color
 	
 	var body: some View {
 		HStack(spacing: 16) {
@@ -306,7 +326,8 @@ private struct OpacityBtns: View {
 					.resizable()
 					.scaledToFit()
 					.frame(width: 30, height: 30)
-}
+					.foregroundStyle(bc)
+				}
 			.disabled(isDisabled || value < 0.1 /*range.lowerBound*/)
 			
 			// Increment Button
@@ -315,6 +336,7 @@ private struct OpacityBtns: View {
 					.resizable()
 					.scaledToFit()
 					.frame(width: 30, height: 30)
+					.foregroundStyle(bc)
 			}
 			.disabled(isDisabled || value >= range.upperBound)
 		}
@@ -338,4 +360,3 @@ private struct OpacityBtns: View {
 //
 //-----------------------------------------------------------------------------------------------
 //
-

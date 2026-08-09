@@ -591,7 +591,7 @@ struct SettingsScreen: View {
             .font(.headline)
             .foregroundStyle(.white)
             .padding(.horizontal, 14)
-            .frame(minWidth: 60, minHeight: 44)
+            .frame(minWidth: 60, minHeight: 36)
             .background(ttsControlColor)
             .overlay {
                 RoundedRectangle(cornerRadius: 12)
