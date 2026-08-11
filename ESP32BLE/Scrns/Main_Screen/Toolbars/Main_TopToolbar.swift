@@ -204,7 +204,7 @@ struct MainScreenToolbarContent: View {
 				hitHorizontalPadding: opacitySliderHitHorizontalPadding,
 				hitHeight: opacitySliderHitHeight,
 				isDisabled: editingSlotIndex != nil,
-				bc:.white
+				bc:.yellow
 			)
 			//
 			//----------------------------------------

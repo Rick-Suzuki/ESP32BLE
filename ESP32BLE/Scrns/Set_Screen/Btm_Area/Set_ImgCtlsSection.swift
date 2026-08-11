@@ -53,7 +53,7 @@ struct SettingsImageControlsSection: View {
         } label: {
             Image(systemName: systemName)
                 .font(.system(size: 28))
-                .foregroundStyle(.white)
+                .foregroundStyle(.cyan)
                 .opacity(isEnabled ? 1 : 0.35)
         }
         .buttonStyle(.plain)
@@ -67,7 +67,7 @@ struct SettingsImageControlsSection: View {
     ) -> some View {
         Image(systemName: systemName)
             .font(.system(size: 28))
-            .foregroundStyle(.white)
+            .foregroundStyle(.cyan)
             .opacity(isEnabled ? 1 : 0.35)
             .contentShape(Rectangle())
             .simultaneousGesture(

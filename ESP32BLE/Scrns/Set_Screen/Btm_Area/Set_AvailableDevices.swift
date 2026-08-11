@@ -236,7 +236,7 @@ struct SettingsAvailableDevicesPanel: View {
     private func settingsPlaceholderSlider(title: String, value: Binding<Double>) -> some View {
         VStack(spacing: 8) {
             Slider(value: value, in: 0...1)
-                .tint(.white)
+                .tint(.cyan)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
