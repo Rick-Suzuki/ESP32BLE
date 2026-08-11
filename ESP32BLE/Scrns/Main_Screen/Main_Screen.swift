@@ -40,8 +40,17 @@ struct MainScreen: View {
     private let slotEditorHelperButtonWidth: CGFloat = 58
     private let smartViewWidth: CGFloat = 1024
     private let smartViewHeight: CGFloat = 338
-    private let smartTopPlaceholderSymbols = ["doc", "folder", "scissors", "doc.on.doc", "clipboard", "arrow.uturn.left", "arrow.uturn.right", "magnifyingglass"]
-    private let smartModifierPlaceholderSymbols = ["keyboard", "cursorarrow", "text.cursor"]
+    private let smartEditControlsWidth: CGFloat = 205
+    private let smartCommandEditorWidth: CGFloat = 343
+    private let smartColorControlsWidth: CGFloat = 238
+    private let smartSFPanelWidth: CGFloat = 238
+    private let smartFunctionKeyColumnWidth: CGFloat = 58
+    private let smartColorSliderColumnWidth: CGFloat = 48
+    private let smartTopPlaceholderSymbols = [
+        "doc", "folder", "scissors", "doc.on.doc",
+        "clipboard", "arrow.uturn.left", "arrow.uturn.right", "magnifyingglass",
+        "keyboard", "cursorarrow", "text.cursor"
+    ]
     // Adjust this to tune the height of the color/visibility cells in the smart button panel.
     private let smartButtonPanelColorCellHeight: CGFloat = 46
   
@@ -1009,17 +1018,16 @@ Tapping a row inserts the key code at the cursor.
     private func smartView(availableWidth: CGFloat) -> some View {
         HStack(spacing: 0) {
             smartCommandPanel
-                .frame(width: 256, height: smartViewHeight)
+                .frame(width: smartEditControlsWidth, height: smartViewHeight)
 
             smartColorPanel
-                .frame(width: 224, height: smartViewHeight)
+                .frame(width: smartCommandEditorWidth, height: smartViewHeight)
 
             smartButtonPanel
-                .frame(width: 280, height: smartViewHeight)
+                .frame(width: smartColorControlsWidth, height: smartViewHeight)
 
             smartSFPanel
-                .frame(maxWidth: .infinity)
-                .frame(height: smartViewHeight)
+                .frame(width: smartSFPanelWidth, height: smartViewHeight)
         }
         .frame(width: min(smartViewWidth, availableWidth), height: smartViewHeight)
         .ignoresSafeArea(.keyboard)
@@ -1076,26 +1084,32 @@ Tapping a row inserts the key code at the cursor.
     private var smartCommandPanel: some View {
         VStack(spacing: 0) {
             HStack(spacing: 0) {
-                ForEach(smartTopPlaceholderSymbols, id: \.self) { systemName in
+                ForEach(Array(smartTopPlaceholderSymbols.prefix(4)), id: \.self) { systemName in
                     smartPlaceholderButton(systemName: systemName)
                 }
             }
-            .frame(height: 46)
-            .background(Color.black)
-            .overlay {
-                Rectangle()
-                    .stroke(Color.white, lineWidth: 1)
+            .frame(height: 44)
+
+            HStack(spacing: 0) {
+                ForEach(Array(smartTopPlaceholderSymbols.dropFirst(4).prefix(4)), id: \.self) { systemName in
+                    smartPlaceholderButton(systemName: systemName)
+                }
             }
+            .frame(height: 44)
+
+            HStack(spacing: 0) {
+                ForEach(Array(smartTopPlaceholderSymbols.dropFirst(8)), id: \.self) { systemName in
+                    smartPlaceholderButton(systemName: systemName)
+                }
+                smartEscapeCodeToggleButton
+            }
+            .frame(height: 44)
 
             HStack(spacing: 0) {
                 smartModifierButton(systemName: "control", accessibilityLabel: "Control", prefix: "⌃")
                 smartModifierButton(systemName: "option", accessibilityLabel: "Option", prefix: "⌥")
                 smartModifierButton(systemName: "shift", accessibilityLabel: "Shift", prefix: "⇧")
                 smartModifierButton(systemName: "command", accessibilityLabel: "Command", prefix: "⌘")
-                smartEscapeCodeToggleButton
-                ForEach(smartModifierPlaceholderSymbols, id: \.self) { systemName in
-                    smartPlaceholderButton(systemName: systemName)
-                }
             }
             .frame(height: 44)
 
@@ -1109,7 +1123,7 @@ Tapping a row inserts the key code at the cursor.
                         }
                     }
                 }
-                .frame(width: 72)
+                .frame(width: smartFunctionKeyColumnWidth)
                 .background(Color.black)
                 .overlay {
                     Rectangle()
@@ -1280,18 +1294,18 @@ Tapping a row inserts the key code at the cursor.
 
     private var smartButtonPanel: some View {
         VStack(spacing: 6) {
-            HStack(alignment: .top, spacing: 8) {
+            HStack(alignment: .top, spacing: 6) {
                 VStack(spacing: 4) {
                     smartVerticalSliderLabel("")
                     Slider(value: $smartButtonBrightness, in: 0...1)
                         .rotationEffect(.degrees(-90))
-                        .frame(width: 140, height: 26)
+                        .frame(width: 126, height: 24)
                         .tint(.yellow)
                         .onChange(of: smartButtonBrightness) {
                             applySmartButtonBrightness()
                         }
                 }
-                .frame(width: 64)
+                .frame(width: smartColorSliderColumnWidth)
 
                 VStack(spacing: 8) {
                     smartButtonPreview
@@ -1310,7 +1324,7 @@ Tapping a row inserts the key code at the cursor.
                 smartClearColorButton
                 smartRandomColorButton
                 smartColonButton
-                ForEach(Array(smartButtonSwatchHexColors.prefix(21)), id: \.self) { hexColor in
+                ForEach(Array(smartButtonSwatchHexColors.prefix(26)), id: \.self) { hexColor in
                     smartButtonColorSwatch(hexColor)
                 }
             }
@@ -2067,7 +2081,7 @@ Tapping a row inserts the key code at the cursor.
             setSmartButtonSFSymbol(symbolName)
         } label: {
             Image(systemName: symbolName)
-                .font(.system(size: 22, weight: .semibold))
+                .font(.system(size: 20, weight: .semibold))
                 .foregroundStyle(.yellow)
                 .frame(maxWidth: .infinity)
                 .frame(height: 42)
@@ -2123,8 +2137,10 @@ Tapping a row inserts the key code at the cursor.
             action()
         } label: {
             Text(title)
-                .font(.system(size: 24, weight: .semibold))
+                .font(.system(size: 22, weight: .semibold))
                 .foregroundStyle(foreground)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(background)
                 .overlay {
