@@ -39,10 +39,10 @@ struct MainScreen: View {
     // Easy-to-find width for all slot editor helper buttons.
     private let slotEditorHelperButtonWidth: CGFloat = 58
     private let smartViewWidth: CGFloat = 1024
-    private let smartViewHeight: CGFloat = 294
+    private let smartViewHeight: CGFloat = 338
     private let smartTopPlaceholderSymbols = ["doc", "folder", "scissors", "doc.on.doc", "clipboard", "arrow.uturn.left", "arrow.uturn.right", "magnifyingglass"]
     private let smartModifierPlaceholderSymbols = ["keyboard", "cursorarrow", "text.cursor"]
-    // Adjust this to tune the height of the 16 color/visibility cells in the smart button panel.
+    // Adjust this to tune the height of the color/visibility cells in the smart button panel.
     private let smartButtonPanelColorCellHeight: CGFloat = 46
   
 	// Vertical gap between the MainScreen top toolbar and the first button row.
@@ -1310,7 +1310,7 @@ Tapping a row inserts the key code at the cursor.
                 smartClearColorButton
                 smartRandomColorButton
                 smartColonButton
-                ForEach(Array(smartButtonSwatchHexColors.prefix(16)), id: \.self) { hexColor in
+                ForEach(Array(smartButtonSwatchHexColors.prefix(21)), id: \.self) { hexColor in
                     smartButtonColorSwatch(hexColor)
                 }
             }
