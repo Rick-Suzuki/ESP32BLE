@@ -40,6 +40,8 @@ struct MainScreen: View {
     private let slotEditorHelperButtonWidth: CGFloat = 58
     private let smartViewWidth: CGFloat = 1024
     private let smartViewHeight: CGFloat = 294
+    private let smartTopPlaceholderSymbols = ["doc", "folder", "scissors", "doc.on.doc", "clipboard", "arrow.uturn.left", "arrow.uturn.right", "magnifyingglass"]
+    private let smartModifierPlaceholderSymbols = ["keyboard", "cursorarrow", "text.cursor"]
     // Adjust this to tune the height of the 16 color/visibility cells in the smart button panel.
     private let smartButtonPanelColorCellHeight: CGFloat = 46
   
@@ -1037,33 +1039,46 @@ Tapping a row inserts the key code at the cursor.
             }
     }
 
+    private var smartCommandEditorRow: some View {
+        HStack(spacing: 0) {
+            Button {
+                ButtonClickFeedback.playIfEnabled()
+                smartActionTextBinding.wrappedValue = ""
+                smartActionTextSelectionRange = NSRange(location: 0, length: 0)
+            } label: {
+                Text("X")
+                    .font(.system(size: 16, weight: .regular))
+                    .foregroundStyle(.gray)
+                    .frame(width: 46)
+                    .frame(maxHeight: .infinity)
+                    .background(Color.black)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Clear command text")
+
+            SmartActionTextField(
+                placeholder: "characters/command(s)",
+                text: smartActionTextBinding,
+                selectedRange: $smartActionTextSelectionRange,
+                fontSize: 20
+            )
+                .padding(.horizontal, 3)
+                .frame(minWidth: 0)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        .background(Color.black)
+        .overlay {
+            Rectangle()
+                .stroke(Color.white, lineWidth: 1)
+        }
+    }
+
     private var smartCommandPanel: some View {
         VStack(spacing: 0) {
             HStack(spacing: 0) {
-                Button {
-                    ButtonClickFeedback.playIfEnabled()
-                    smartActionTextBinding.wrappedValue = ""
-                    smartActionTextSelectionRange = NSRange(location: 0, length: 0)
-                } label: {
-                    Text("X")
-                        .font(.system(size: 16, weight: .regular))
-                        .foregroundStyle(.gray)
-                        .frame(width: 46, height: 46)
-                        .background(Color.black)
+                ForEach(smartTopPlaceholderSymbols, id: \.self) { systemName in
+                    smartPlaceholderButton(systemName: systemName)
                 }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Clear command text")
-
-                SmartActionTextField(
-                    placeholder: "characters/command(s)",
-                    text: smartActionTextBinding,
-                    selectedRange: $smartActionTextSelectionRange,
-                    fontSize: 20
-                )
-                    .padding(.horizontal, 3)
-                    .frame(minWidth: 0)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 46)
             }
             .frame(height: 46)
             .background(Color.black)
@@ -1078,6 +1093,9 @@ Tapping a row inserts the key code at the cursor.
                 smartModifierButton(systemName: "shift", accessibilityLabel: "Shift", prefix: "⇧")
                 smartModifierButton(systemName: "command", accessibilityLabel: "Command", prefix: "⌘")
                 smartEscapeCodeToggleButton
+                ForEach(smartModifierPlaceholderSymbols, id: \.self) { systemName in
+                    smartPlaceholderButton(systemName: systemName)
+                }
             }
             .frame(height: 44)
 
@@ -1234,28 +1252,8 @@ Tapping a row inserts the key code at the cursor.
 
     private var smartColorPanel: some View {
         VStack(spacing: 0) {
-            GeometryReader { geometry in
-                smartColorImage
-                    .frame(width: geometry.size.width, height: geometry.size.height)
-                    .clipped()
-                    .contentShape(Rectangle())
-                    .gesture(
-                        DragGesture(minimumDistance: 0)
-                            .onChanged { dragValue in
-                                applySmartColorSelection(
-                                    at: dragValue.location,
-                                    in: geometry.size
-                                )
-                            }
-                    )
-            }
-            .frame(maxWidth: .infinity)
-            .frame(height: 132)
-            .background(Color.black)
-            .overlay {
-                Rectangle()
-                    .stroke(Color.white, lineWidth: 1)
-            }
+            smartCommandEditorRow
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             ScrollView(.vertical) {
                 Text(smartCommandDescription)
@@ -1265,7 +1263,8 @@ Tapping a row inserts the key code at the cursor.
                     .padding(6)
                     .frame(maxWidth: .infinity)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .frame(maxWidth: .infinity)
+            .frame(height: 80)
             .background(Color.black)
             .overlay {
                 Rectangle()
@@ -1821,6 +1820,22 @@ Tapping a row inserts the key code at the cursor.
             right: parts.right,
             isHidden: isHidden
         )
+    }
+
+    private func smartPlaceholderButton(systemName: String) -> some View {
+        Button { } label: {
+            Image(systemName: systemName)
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundStyle(.gray)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color.black)
+                .overlay {
+                    Rectangle()
+                        .stroke(Color.white.opacity(0.55), lineWidth: 1)
+                }
+        }
+        .buttonStyle(.plain)
+        .accessibilityHidden(true)
     }
 
     private func smartModifierButton(systemName: String, accessibilityLabel: String, prefix: String) -> some View {
