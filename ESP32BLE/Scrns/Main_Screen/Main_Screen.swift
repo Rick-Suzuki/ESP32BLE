@@ -1086,7 +1086,7 @@ Tapping a row inserts the key code at the cursor.
                     LazyVStack(spacing: 0) {
                         ForEach(1...20, id: \.self) { functionKeyNumber in
                             smartCommandTableButton("F\(functionKeyNumber)", foreground: .yellow) {
-                                insertSmartActionTextAtSelection("F\(functionKeyNumber)")
+                                insertSmartActionTextAtSelection("F\(functionKeyNumber) ")
                             }
                         }
                     }
@@ -1111,7 +1111,7 @@ Tapping a row inserts the key code at the cursor.
                         } else {
                             ForEach(smartCommandRows, id: \.english) { commandRow in
                                 smartCommandTableButton(commandRow.english, foreground: .white) {
-                                    smartActionTextBinding.wrappedValue = commandRow.shortcut
+                                    insertSmartActionTextAtSelection(commandRow.shortcut)
                                     smartCommandDescription = commandRow.description
                                 }
                                 .accessibilityHint(commandRow.description)
