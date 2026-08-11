@@ -1906,28 +1906,41 @@ Tapping a row inserts the key code at the cursor.
     private func toggleSmartModifierPrefix(_ prefix: String) {
         let orderedPrefixes = ["⌃", "⌥", "⇧", "⌘"]
         var actionText = smartActionTextBinding.wrappedValue
-        var enabledPrefixes = Set<String>()
-        var didRemovePrefix = true
+        let safeCursorLocation = min(max(smartActionTextSelectionRange.location, 0), actionText.utf16.count)
+        let cursorRange = NSRange(location: safeCursorLocation, length: 0)
+        let cursorIndex = Range(cursorRange, in: actionText)?.lowerBound ?? actionText.endIndex
 
-        while didRemovePrefix {
-            didRemovePrefix = false
-            for knownPrefix in orderedPrefixes where actionText.hasPrefix(knownPrefix) {
-                enabledPrefixes.insert(knownPrefix)
-                actionText.removeFirst(knownPrefix.count)
-                didRemovePrefix = true
-                break
-            }
+        func isModifier(_ character: Character) -> Bool {
+            orderedPrefixes.contains(String(character))
         }
 
+        var groupStart = cursorIndex
+        while groupStart > actionText.startIndex {
+            let previousIndex = actionText.index(before: groupStart)
+            guard isModifier(actionText[previousIndex]) else { break }
+            groupStart = previousIndex
+        }
+
+        var groupEnd = cursorIndex
+        while groupEnd < actionText.endIndex, isModifier(actionText[groupEnd]) {
+            groupEnd = actionText.index(after: groupEnd)
+        }
+
+        var enabledPrefixes = Set(actionText[groupStart..<groupEnd].map { String($0) })
         if enabledPrefixes.contains(prefix) {
             enabledPrefixes.remove(prefix)
         } else {
             enabledPrefixes.insert(prefix)
         }
 
-        smartActionTextBinding.wrappedValue = orderedPrefixes
+        let rebuiltGroup = orderedPrefixes
             .filter { enabledPrefixes.contains($0) }
-            .joined() + actionText
+            .joined()
+        let replacementLocation = NSRange(groupStart..<groupStart, in: actionText).location
+        actionText.replaceSubrange(groupStart..<groupEnd, with: rebuiltGroup)
+
+        smartActionTextBinding.wrappedValue = actionText
+        smartActionTextSelectionRange = NSRange(location: replacementLocation + rebuiltGroup.utf16.count, length: 0)
     }
 
     private func displayActionTextReplacingModifierCodes(_ actionText: String) -> String {
