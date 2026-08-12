@@ -1127,9 +1127,9 @@ Tapping a row inserts the key code at the cursor.
             .frame(height: 44)
 
             HStack(spacing: 0) {
+				smartModifierButton(systemName: "control", accessibilityLabel: "Control", prefix: "⌃")
+				smartModifierButton(systemName: "option", accessibilityLabel: "Option", prefix: "⌥")
                 smartModifierButton(systemName: "shift", accessibilityLabel: "Shift", prefix: "⇧")
-                smartModifierButton(systemName: "option", accessibilityLabel: "Option", prefix: "⌥")
-                smartModifierButton(systemName: "control", accessibilityLabel: "Control", prefix: "⌃")
                 smartModifierButton(systemName: "command", accessibilityLabel: "Command", prefix: "⌘")
             }
             .frame(height: 44)
@@ -1187,27 +1187,24 @@ Tapping a row inserts the key code at the cursor.
         }
     }
 
-    private var smartVisualEditorTextBinding: Binding<String> {
+    private var smartScriptEditorTextBinding: Binding<String> {
         Binding(
             get: {
-                guard let editingSlotIndex else {
-                    return editingSlotText
-                }
-
-                guard functionKeys.indices.contains(editingSlotIndex) else {
-                    return editingSlotText
-                }
-
-                return editableText(for: functionKeys[editingSlotIndex])
+                canonicalSmartScriptText(smartEditingTextParts.action)
             },
             set: { newText in
-                editingSlotText = newText
+                let parts = smartEditingTextParts
+                editingSlotText = composeSmartEditingText(
+                    action: canonicalSmartScriptText(newText),
+                    right: parts.right,
+                    isHidden: parts.isHidden
+                )
 
                 guard let editingSlotIndex else {
                     return
                 }
 
-                _ = updateFunctionKeySlot(editingSlotIndex, newText)
+                _ = updateFunctionKeySlot(editingSlotIndex, editingSlotText)
             }
         )
     }
@@ -1215,12 +1212,12 @@ Tapping a row inserts the key code at the cursor.
     private var smartActionTextBinding: Binding<String> {
         Binding(
             get: {
-                return displayActionTextReplacingModifierCodes(smartEditingTextParts.action)
+                return canonicalSmartScriptText(displayActionTextReplacingModifierCodes(smartEditingTextParts.action))
             },
             set: { newActionText in
                 let parts = smartEditingTextParts
                 editingSlotText = composeSmartEditingText(
-                    action: newActionText,
+                    action: canonicalSmartScriptText(newActionText),
                     right: parts.right,
                     isHidden: parts.isHidden
                 )
@@ -1310,9 +1307,76 @@ Tapping a row inserts the key code at the cursor.
         return components.joined(separator: "::")
     }
 
+    func canonicalSmartEditorStoredText(_ text: String) -> String {
+        var textWithoutMetadata = text
+        var isHidden = false
+        let hiddenSuffix = "::\(hiddenButtonMetadataToken)"
+
+        if textWithoutMetadata == hiddenButtonMetadataToken {
+            textWithoutMetadata = ""
+            isHidden = true
+        } else if textWithoutMetadata.hasSuffix(hiddenSuffix) {
+            textWithoutMetadata.removeLast(hiddenSuffix.count)
+            isHidden = true
+        }
+
+        guard let separatorRange = textWithoutMetadata.range(of: "::", options: .backwards) else {
+            return composeSmartEditingText(action: canonicalSmartScriptText(textWithoutMetadata), right: "", isHidden: isHidden)
+        }
+
+        let actionText = String(textWithoutMetadata[..<separatorRange.lowerBound])
+        let rightText = String(textWithoutMetadata[separatorRange.upperBound...])
+        return composeSmartEditingText(action: canonicalSmartScriptText(actionText), right: rightText, isHidden: isHidden)
+    }
+
+    private func canonicalSmartScriptText(_ actionText: String) -> String {
+        let mappings = [(symbol: "⌃", legacy: "ctl:"), (symbol: "⌥", legacy: "op:"), (symbol: "⇧", legacy: "sh:"), (symbol: "⌘", legacy: "cm:")]
+        var result = ""
+        var currentIndex = actionText.startIndex
+
+        while currentIndex < actionText.endIndex {
+            var scanIndex = currentIndex
+            var modifiers = Set<String>()
+            var didConsumeModifier = true
+
+            while didConsumeModifier {
+                didConsumeModifier = false
+
+                for mapping in mappings {
+                    if actionText[scanIndex...].hasPrefix(mapping.legacy) {
+                        modifiers.insert(mapping.symbol)
+                        scanIndex = actionText.index(scanIndex, offsetBy: mapping.legacy.count)
+                        didConsumeModifier = true
+                        break
+                    }
+
+                    if actionText[scanIndex...].hasPrefix(mapping.symbol) {
+                        modifiers.insert(mapping.symbol)
+                        scanIndex = actionText.index(scanIndex, offsetBy: mapping.symbol.count)
+                        didConsumeModifier = true
+                        break
+                    }
+                }
+            }
+
+            if scanIndex != currentIndex {
+                result += mappings
+                    .map { $0.symbol }
+                    .filter { modifiers.contains($0) }
+                    .joined()
+                currentIndex = scanIndex
+            } else {
+                result.append(actionText[currentIndex])
+                currentIndex = actionText.index(after: currentIndex)
+            }
+        }
+
+        return result
+    }
+
     private var smartColorPanel: some View {
         VStack(spacing: 0) {
-            TextEditor(text: smartVisualEditorTextBinding)
+            TextEditor(text: smartScriptEditorTextBinding)
                 .font(.system(size: 20, weight: .regular))
                 .foregroundStyle(.white)
                 .scrollContentBackground(.hidden)
@@ -2127,7 +2191,7 @@ Tapping a row inserts the key code at the cursor.
             .frame(height: 46)
 
             HStack(spacing: 0) {
-                smartControlButton("test btn", background: Color(red: 0.0, green: 0.5, blue: 0.0)) {
+                smartControlButton("test", background: Color(red: 0.0, green: 0.5, blue: 0.0)) {
                     testEditingSlotText()
                     // Help text location: SF panel test button.
                     smartCommandDescription = smartHelpSFTestButton

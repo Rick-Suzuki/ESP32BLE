@@ -250,7 +250,7 @@ struct MainScreenSlotEditorOverlay: View {
 							}
 							
 							HStack(spacing: buttonSpacing) {
-								helperInsertButton(label: "wait\ntime", 	insertedText: "wait 5")
+								helperInsertButton(label: "wait\ntime", 	insertedText: "wait 5 ")
 								helperInsertButton(label: "tap\nminus", 	insertedText: "minus 10",color:.cyan.opacity(0.3))
 								helperInsertButton(label: "tap\nadd",		insertedText: "add ",color:.cyan.opacity(0.3))
 								helperInsertButton(label: "rnd\nnum", 		insertedText: "rnd 0 100",color:.cyan.opacity(0.3))
