@@ -1127,9 +1127,9 @@ Tapping a row inserts the key code at the cursor.
             .frame(height: 44)
 
             HStack(spacing: 0) {
-                smartModifierButton(systemName: "control", accessibilityLabel: "Control", prefix: "⌃")
-                smartModifierButton(systemName: "option", accessibilityLabel: "Option", prefix: "⌥")
                 smartModifierButton(systemName: "shift", accessibilityLabel: "Shift", prefix: "⇧")
+                smartModifierButton(systemName: "option", accessibilityLabel: "Option", prefix: "⌥")
+                smartModifierButton(systemName: "control", accessibilityLabel: "Control", prefix: "⌃")
                 smartModifierButton(systemName: "command", accessibilityLabel: "Command", prefix: "⌘")
             }
             .frame(height: 44)
@@ -1185,6 +1185,31 @@ Tapping a row inserts the key code at the cursor.
             Rectangle()
                 .stroke(Color.white, lineWidth: 1)
         }
+    }
+
+    private var smartVisualEditorTextBinding: Binding<String> {
+        Binding(
+            get: {
+                guard let editingSlotIndex else {
+                    return editingSlotText
+                }
+
+                guard functionKeys.indices.contains(editingSlotIndex) else {
+                    return editingSlotText
+                }
+
+                return editableText(for: functionKeys[editingSlotIndex])
+            },
+            set: { newText in
+                editingSlotText = newText
+
+                guard let editingSlotIndex else {
+                    return
+                }
+
+                _ = updateFunctionKeySlot(editingSlotIndex, newText)
+            }
+        )
     }
 
     private var smartActionTextBinding: Binding<String> {
@@ -1287,8 +1312,16 @@ Tapping a row inserts the key code at the cursor.
 
     private var smartColorPanel: some View {
         VStack(spacing: 0) {
-            smartCommandEditorRow
+            TextEditor(text: smartVisualEditorTextBinding)
+                .font(.system(size: 20, weight: .regular))
+                .foregroundStyle(.white)
+                .scrollContentBackground(.hidden)
+                .background(Color.black)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .overlay {
+                    Rectangle()
+                        .stroke(Color.white, lineWidth: 1)
+                }
 
             ScrollView(.vertical) {
                 Text(smartCommandDescription)
@@ -1859,10 +1892,16 @@ Tapping a row inserts the key code at the cursor.
     }
 
     private func smartPlaceholderButton(systemName: String) -> some View {
-        Button { } label: {
+        Button {
+            if systemName == "xmark" {
+                ButtonClickFeedback.playIfEnabled()
+                smartActionTextBinding.wrappedValue = ""
+                smartActionTextSelectionRange = NSRange(location: 0, length: 0)
+            }
+        } label: {
             Image(systemName: systemName)
                 .font(.system(size: 20, weight: .semibold))
-                .foregroundStyle(.gray)
+                .foregroundStyle(smartPlaceholderButtonForegroundColor(for: systemName))
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(Color.black)
                 .overlay {
@@ -1872,6 +1911,18 @@ Tapping a row inserts the key code at the cursor.
         }
         .buttonStyle(.plain)
         .accessibilityHidden(true)
+    }
+
+    private func smartPlaceholderButtonForegroundColor(for systemName: String) -> Color {
+        if systemName == "xmark" || systemName == "delete.right.fill" || systemName == "delete.backward.fill" {
+            return .red
+        }
+
+        if systemName.isEmpty {
+            return .gray
+        }
+
+        return .white
     }
 
     private func smartModifierButton(systemName: String, accessibilityLabel: String, prefix: String) -> some View {
