@@ -283,7 +283,7 @@ struct MainScreenSlotEditorOverlay: View {
             .clipShape(.rect(cornerRadius: 12))
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         }
-        .frame(height: 320)
+        .frame(height: 444)
         .ignoresSafeArea(.keyboard)
         .onAppear {
             syncDraftsFromCombinedText()

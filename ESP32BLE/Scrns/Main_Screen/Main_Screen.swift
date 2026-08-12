@@ -47,9 +47,17 @@ struct MainScreen: View {
     private let smartFunctionKeyColumnWidth: CGFloat = 58
     private let smartColorSliderColumnWidth: CGFloat = 48
     private let smartTopPlaceholderSymbols = [
-        "doc", "folder", "scissors", "doc.on.doc",
-        "clipboard", "arrow.uturn.left", "arrow.uturn.right", "magnifyingglass",
-        "keyboard", "cursorarrow", "text.cursor"
+		// row 0
+        "xmark", "arrow.left", "arrow.right", "arrow.uturn.backward",
+		
+		// row 1
+        "delete.right.fill", "arrow.up", "arrow.down", "arrow.uturn.forward",
+		
+		// row 2
+        "delete.backward.fill", "", ""	// mode btn here
+		
+		// row 4
+		// modifiers
     ]
     // Adjust this to tune the height of the color/visibility cells in the smart button panel.
     private let smartButtonPanelColorCellHeight: CGFloat = 46
@@ -111,21 +119,30 @@ struct MainScreen: View {
 	// MARK: - BM:🟥 btn colors
 private let smartButtonSwatchHexColors = [
     "000000",	// black
+	
 	"FF0000",	// red
 	"00A600",	// green
 	"0000FF",	// blue
     "FFFF00",	// yellow
 	"00FFFF",	// cyan
+	
 	"FF00FF",	// purple
 	"FF8000",	// orange
     "8000FF",	// dark purple
 	"0080FF",	// light blue
 	"FFCC99",	// light orange
+	
 	"FF0080",	// pink
     "800000",	// red/brown
 	"005C5C",	// off green
 	"666600",	// dark yellow
-	"808080"	// gray
+	"808080",	// gray
+	
+	"910000",
+	"C97827",
+	"8A8A8A",
+	"D42AD4",
+	"007FFF"
 ]
 	// MARK: - BM:🟥 smart keycodes
     private let smartEscapeCodeRows: [(english: String, command: String, description: String)] = [
@@ -1080,6 +1097,10 @@ Tapping a row inserts the key code at the cursor.
                 .stroke(Color.white, lineWidth: 1)
         }
     }
+	//
+	//----------------------------------------
+	// MARK: - BM: EDITOR 4*4 btns
+	//
 
     private var smartCommandPanel: some View {
         VStack(spacing: 0) {
@@ -1142,7 +1163,7 @@ Tapping a row inserts the key code at the cursor.
                             }
                         } else {
                             ForEach(smartCommandRows, id: \.english) { commandRow in
-                                smartCommandTableButton(commandRow.english, foreground: .white) {
+                                smartCommandTableButton(commandRow.english, foreground: .cyan) {
                                     insertSmartActionTextAtSelection(commandRow.shortcut)
                                     smartCommandDescription = commandRow.description
                                 }
@@ -1272,7 +1293,7 @@ Tapping a row inserts the key code at the cursor.
             ScrollView(.vertical) {
                 Text(smartCommandDescription)
                     .font(.system(size: 16, weight: .regular))
-                    .foregroundStyle(.cyan)
+                    .foregroundStyle(isSmartEscapeCodeTableVisible ? .green : .cyan)
                     .multilineTextAlignment(.center)
                     .padding(6)
                     .frame(maxWidth: .infinity)
@@ -1293,7 +1314,7 @@ Tapping a row inserts the key code at the cursor.
     }
 
     private var smartButtonPanel: some View {
-        VStack(spacing: 6) {
+        VStack(spacing: 4) {
             HStack(alignment: .top, spacing: 6) {
                 VStack(spacing: 4) {
                     smartVerticalSliderLabel("")
@@ -1324,11 +1345,12 @@ Tapping a row inserts the key code at the cursor.
                 smartClearColorButton
                 smartRandomColorButton
                 smartColonButton
-                ForEach(Array(smartButtonSwatchHexColors.prefix(26)), id: \.self) { hexColor in
+                ForEach(Array(smartButtonSwatchHexColors), id: \.self) { hexColor in
                     smartButtonColorSwatch(hexColor)
                 }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .frame(maxWidth: .infinity, alignment: .top)
+            .frame(height: smartButtonPanelColorCellHeight * 5, alignment: .top)
         }
         .background(Color.black)
         .overlay {
@@ -1882,7 +1904,7 @@ Tapping a row inserts the key code at the cursor.
         } label: {
             Image(systemName: "rectangle.split.2x1")
                 .font(.system(size: 24, weight: .semibold))
-                .foregroundStyle(isSmartEscapeCodeTableVisible ? .green : .white)
+                .foregroundStyle(isSmartEscapeCodeTableVisible ? .green : .cyan)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(Color.black)
                 .overlay {
