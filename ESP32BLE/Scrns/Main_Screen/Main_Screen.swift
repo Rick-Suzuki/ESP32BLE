@@ -40,6 +40,16 @@ private struct SmartScriptEditingModel {
         return range.length > 0 || range.location < scriptText.utf16.count
     }
 
+    var canDeleteBackward: Bool {
+        let range = clampedRange(selectionRange)
+        return range.length > 0 || range.location > 0
+    }
+
+    var canDeleteForward: Bool {
+        let range = clampedRange(selectionRange)
+        return range.length > 0 || range.location < scriptText.utf16.count
+    }
+
     mutating func moveCaretLeft() {
         let range = clampedRange(selectionRange)
 
@@ -72,6 +82,46 @@ private struct SmartScriptEditingModel {
         let text = scriptText as NSString
         let nextRange = text.rangeOfComposedCharacterSequence(at: range.location)
         selectionRange = clampedRange(NSRange(location: nextRange.location + nextRange.length, length: 0))
+    }
+
+    mutating func deleteBackward() {
+        let range = clampedRange(selectionRange)
+
+        if range.length > 0 {
+            replaceSelection(with: "")
+            return
+        }
+
+        guard range.location > 0 else {
+            return
+        }
+
+        let text = scriptText as NSString
+        let deletedRange = text.rangeOfComposedCharacterSequence(at: range.location - 1)
+        if let stringRange = Range(deletedRange, in: scriptText) {
+            scriptText.removeSubrange(stringRange)
+            selectionRange = clampedRange(NSRange(location: deletedRange.location, length: 0))
+        }
+    }
+
+    mutating func deleteForward() {
+        let range = clampedRange(selectionRange)
+
+        if range.length > 0 {
+            replaceSelection(with: "")
+            return
+        }
+
+        guard range.location < scriptText.utf16.count else {
+            return
+        }
+
+        let text = scriptText as NSString
+        let deletedRange = text.rangeOfComposedCharacterSequence(at: range.location)
+        if let stringRange = Range(deletedRange, in: scriptText) {
+            scriptText.removeSubrange(stringRange)
+            selectionRange = clampedRange(NSRange(location: range.location, length: 0))
+        }
     }
 
     private mutating func clampSelectionRange() {
@@ -2073,6 +2123,14 @@ Tapping a row inserts the key code at the cursor.
             } else if systemName == "arrow.right" {
                 ButtonClickFeedback.playIfEnabled()
                 smartScriptEditingModel.moveCaretRight()
+            } else if systemName == "delete.right.fill" {
+                ButtonClickFeedback.playIfEnabled()
+                smartScriptEditingModel.deleteForward()
+                smartActionTextBinding.wrappedValue = smartScriptEditingModel.scriptText
+            } else if systemName == "delete.backward.fill" {
+                ButtonClickFeedback.playIfEnabled()
+                smartScriptEditingModel.deleteBackward()
+                smartActionTextBinding.wrappedValue = smartScriptEditingModel.scriptText
             }
         } label: {
             Image(systemName: systemName)
@@ -2097,6 +2155,14 @@ Tapping a row inserts the key code at the cursor.
 
         if systemName == "arrow.right" {
             return !smartScriptEditingModel.canMoveCaretRight
+        }
+
+        if systemName == "delete.right.fill" {
+            return !smartScriptEditingModel.canDeleteForward
+        }
+
+        if systemName == "delete.backward.fill" {
+            return !smartScriptEditingModel.canDeleteBackward
         }
 
         return false
