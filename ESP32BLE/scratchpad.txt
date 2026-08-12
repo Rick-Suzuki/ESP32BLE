@@ -1,25 +1,13 @@
-F::spare
-_
-_
-_
-_
-_	//
-	//----------------------------------------
-	//
-	struct temp: View {
-
-		var body: some View {
-			Text("hello")
-		}
-	}
-
-_
-_
-_
-_
-_
-_
-_
-_
-_
-_
+   
+   
+   
+                        TextField("", text: smartButtonEditablePreviewTextBinding, axis: .vertical)
+                            .font(.system(size: max(14, CGFloat(boxFontSize) * 0.55), weight: .semibold))
+                            .foregroundStyle(.white)
+                            .accentColor(.white)
+                            .multilineTextAlignment(.center)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                            .lineLimit(1...2)
+                            .padding(.horizontal, 8)
+                    }

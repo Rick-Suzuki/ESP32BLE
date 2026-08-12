@@ -61,8 +61,9 @@
 		1D590E4F2F61206100E430E0 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		1D590E512F61206100E430E0 /* ESP32BLEApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ESP32BLEApp.swift; sourceTree = "<group>"; };
 		1D590E522F61206100E430E0 /* PhraseButtonsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhraseButtonsSection.swift; sourceTree = "<group>"; };
-		1D590E532F61206100E430E0 /* scratchpad.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = scratchpad.txt; sourceTree = "<group>"; };
+		1D590E532F61206100E430E0 /* scratchpad.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = scratchpad.txt; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.swift; };
 		1D590E542F61206100E430E0 /* TestArea.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestArea.swift; sourceTree = "<group>"; };
+		1D9A8748302D3885005B5E36 /* codex.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = codex.txt; sourceTree = "<group>"; };
 		1D9E1CC82FC92DC600DB3621 /* KB_GridView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KB_GridView.swift; sourceTree = "<group>"; };
 		1D9E1CC92FC92DC600DB3621 /* KB_InputField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KB_InputField.swift; sourceTree = "<group>"; };
 		1D9E1CCA2FC92DC600DB3621 /* KB_Screen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KB_Screen.swift; sourceTree = "<group>"; };
@@ -161,12 +162,13 @@
 		1D590E552F61206100E430E0 /* ESP32BLE */ = {
 			isa = PBXGroup;
 			children = (
+				1D590E532F61206100E430E0 /* scratchpad.txt */,
+				1D9A8748302D3885005B5E36 /* codex.txt */,
 				1D33C2D12F6145DC0098FD5C /* Info.plist */,
 				1D590E4A2F61206100E430E0 /* Assets.xcassets */,
 				1D590E512F61206100E430E0 /* ESP32BLEApp.swift */,
 				1D2B666D2FE78DF600F10733 /* resources */,
 				1DDFB8102F87C64000776ED6 /* debug.swift */,
-				1D590E532F61206100E430E0 /* scratchpad.txt */,
 				1D1B29CD2F63AC3D004733D7 /* Scrns */,
 				1D1B29CB2F63ABE7004733D7 /* btns */,
 			);

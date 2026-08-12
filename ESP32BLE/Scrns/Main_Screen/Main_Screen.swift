@@ -63,6 +63,9 @@ private struct SmartScriptEditingModel {
         preferredVerticalColumn = nil
         clampSelectionRange()
         pendingSelectionRangeAfterEdit = keyboardEdit.selectionRange
+        if keyboardEdit.shouldEndUndoGroup {
+            activeEditTransactionKind = nil
+        }
     }
 
     mutating func setSelectionRange(_ range: NSRange) {
@@ -301,7 +304,7 @@ private struct SmartScriptEditingModel {
         selectionRange = clampedRange(state.selectionRange)
     }
 
-    private func keyboardEditInfo(for newText: String) -> (kind: EditTransactionKind?, selectionRange: NSRange?) {
+    private func keyboardEditInfo(for newText: String) -> (kind: EditTransactionKind?, selectionRange: NSRange?, shouldEndUndoGroup: Bool) {
         let range = clampedRange(selectionRange)
         let oldText = scriptText as NSString
         let newNSString = newText as NSString
@@ -315,7 +318,11 @@ private struct SmartScriptEditingModel {
             let expectedText = oldText.replacingCharacters(in: range, with: insertedText)
             if expectedText == newText {
                 let expectedRange = NSRange(location: range.location + insertedLength, length: 0)
-                return (insertedText.count == 1 ? .keyboardTyping : nil, expectedRange)
+                if insertedText.count == 1 {
+                    return (.keyboardTyping, expectedRange, isUndoGroupingSeparator(insertedText))
+                }
+
+                return (nil, expectedRange, true)
             }
         }
 
@@ -324,7 +331,7 @@ private struct SmartScriptEditingModel {
             let deletedRange = oldText.rangeOfComposedCharacterSequence(at: range.location - 1)
             let expectedText = oldText.replacingCharacters(in: deletedRange, with: "")
             if expectedText == newText {
-                return (.deleteBackward, NSRange(location: deletedRange.location, length: 0))
+                return (.deleteBackward, NSRange(location: deletedRange.location, length: 0), false)
             }
         }
 
@@ -333,18 +340,22 @@ private struct SmartScriptEditingModel {
             let deletedRange = oldText.rangeOfComposedCharacterSequence(at: range.location)
             let expectedText = oldText.replacingCharacters(in: deletedRange, with: "")
             if expectedText == newText {
-                return (.deleteForward, NSRange(location: range.location, length: 0))
+                return (.deleteForward, NSRange(location: range.location, length: 0), false)
             }
         }
 
         if range.length > 0 {
             let expectedText = oldText.replacingCharacters(in: range, with: "")
             if expectedText == newText {
-                return (nil, NSRange(location: range.location, length: 0))
+                return (nil, NSRange(location: range.location, length: 0), true)
             }
         }
 
-        return (nil, nil)
+        return (nil, nil, true)
+    }
+
+    private func isUndoGroupingSeparator(_ text: String) -> Bool {
+        text == " " || text == "\n" || text == "\t"
     }
 
     private func clampedRange(_ range: NSRange) -> NSRange {
