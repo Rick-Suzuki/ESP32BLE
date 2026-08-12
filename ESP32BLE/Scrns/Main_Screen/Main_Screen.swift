@@ -12,14 +12,20 @@ private enum MainScreenPersistedModeFiles {
 private struct SmartScriptEditingModel {
     var scriptText = ""
     var selectionRange = NSRange(location: 0, length: 0)
+    private var preferredVerticalColumn: Int?
 
     mutating func setText(_ text: String) {
         scriptText = text
+        preferredVerticalColumn = nil
         clampSelectionRange()
     }
 
     mutating func setSelectionRange(_ range: NSRange) {
-        selectionRange = clampedRange(range)
+        let newRange = clampedRange(range)
+        if newRange != selectionRange {
+            preferredVerticalColumn = nil
+        }
+        selectionRange = newRange
     }
 
     mutating func replaceSelection(with insertedText: String) {
@@ -27,6 +33,7 @@ private struct SmartScriptEditingModel {
         let replacementRange = Range(replacementNSRange, in: scriptText) ?? scriptText.endIndex..<scriptText.endIndex
         let insertionLocation = replacementNSRange.location + insertedText.utf16.count
         scriptText.replaceSubrange(replacementRange, with: insertedText)
+        preferredVerticalColumn = nil
         selectionRange = clampedRange(NSRange(location: insertionLocation, length: 0))
     }
 
@@ -50,8 +57,19 @@ private struct SmartScriptEditingModel {
         return range.length > 0 || range.location < scriptText.utf16.count
     }
 
+    var canMoveCaretUp: Bool {
+        lineBounds(containing: clampedRange(selectionRange).location).start > 0
+    }
+
+    var canMoveCaretDown: Bool {
+        let range = clampedRange(selectionRange)
+        let location = range.location + range.length
+        return nextLineBounds(after: lineBounds(containing: location)) != nil
+    }
+
     mutating func moveCaretLeft() {
         let range = clampedRange(selectionRange)
+        preferredVerticalColumn = nil
 
         if range.length > 0 {
             selectionRange = NSRange(location: range.location, length: 0)
@@ -69,6 +87,7 @@ private struct SmartScriptEditingModel {
 
     mutating func moveCaretRight() {
         let range = clampedRange(selectionRange)
+        preferredVerticalColumn = nil
 
         if range.length > 0 {
             selectionRange = NSRange(location: range.location + range.length, length: 0)
@@ -84,8 +103,36 @@ private struct SmartScriptEditingModel {
         selectionRange = clampedRange(NSRange(location: nextRange.location + nextRange.length, length: 0))
     }
 
+    mutating func moveCaretUp() {
+        let range = clampedRange(selectionRange)
+        let line = lineBounds(containing: range.location)
+        guard let previousLine = previousLineBounds(before: line) else {
+            selectionRange = NSRange(location: range.location, length: 0)
+            return
+        }
+
+        let column = preferredVerticalColumn ?? (range.location - line.start)
+        preferredVerticalColumn = column
+        selectionRange = clampedRange(NSRange(location: min(previousLine.start + column, previousLine.end), length: 0))
+    }
+
+    mutating func moveCaretDown() {
+        let range = clampedRange(selectionRange)
+        let location = range.location + range.length
+        let line = lineBounds(containing: location)
+        guard let nextLine = nextLineBounds(after: line) else {
+            selectionRange = NSRange(location: location, length: 0)
+            return
+        }
+
+        let column = preferredVerticalColumn ?? (location - line.start)
+        preferredVerticalColumn = column
+        selectionRange = clampedRange(NSRange(location: min(nextLine.start + column, nextLine.end), length: 0))
+    }
+
     mutating func deleteBackward() {
         let range = clampedRange(selectionRange)
+        preferredVerticalColumn = nil
 
         if range.length > 0 {
             replaceSelection(with: "")
@@ -106,6 +153,7 @@ private struct SmartScriptEditingModel {
 
     mutating func deleteForward() {
         let range = clampedRange(selectionRange)
+        preferredVerticalColumn = nil
 
         if range.length > 0 {
             replaceSelection(with: "")
@@ -139,6 +187,42 @@ private struct SmartScriptEditingModel {
         let length = max(range.length, 0)
         let upperBound = min(location + length, textLength)
         return NSRange(location: location, length: max(upperBound - location, 0))
+    }
+
+    private func lineBounds(containing location: Int) -> (start: Int, end: Int) {
+        let text = scriptText as NSString
+        let textLength = text.length
+        let safeLocation = min(max(location, 0), textLength)
+        let previousNewlineRange = text.range(of: "\n", options: .backwards, range: NSRange(location: 0, length: safeLocation))
+        let nextNewlineRange = text.range(of: "\n", range: NSRange(location: safeLocation, length: textLength - safeLocation))
+        let lineStart = previousNewlineRange.location == NSNotFound ? 0 : previousNewlineRange.location + previousNewlineRange.length
+        let lineEnd = nextNewlineRange.location == NSNotFound ? textLength : nextNewlineRange.location
+        return (lineStart, lineEnd)
+    }
+
+    private func previousLineBounds(before line: (start: Int, end: Int)) -> (start: Int, end: Int)? {
+        guard line.start > 0 else {
+            return nil
+        }
+
+        let previousLineEnd = line.start - 1
+        let text = scriptText as NSString
+        let previousNewlineRange = text.range(of: "\n", options: .backwards, range: NSRange(location: 0, length: previousLineEnd))
+        let previousLineStart = previousNewlineRange.location == NSNotFound ? 0 : previousNewlineRange.location + previousNewlineRange.length
+        return (previousLineStart, previousLineEnd)
+    }
+
+    private func nextLineBounds(after line: (start: Int, end: Int)) -> (start: Int, end: Int)? {
+        let text = scriptText as NSString
+        let textLength = text.length
+        guard line.end < textLength else {
+            return nil
+        }
+
+        let nextLineStart = line.end + 1
+        let nextNewlineRange = text.range(of: "\n", range: NSRange(location: nextLineStart, length: textLength - nextLineStart))
+        let nextLineEnd = nextNewlineRange.location == NSNotFound ? textLength : nextNewlineRange.location
+        return (nextLineStart, nextLineEnd)
     }
 }
 
@@ -2123,6 +2207,12 @@ Tapping a row inserts the key code at the cursor.
             } else if systemName == "arrow.right" {
                 ButtonClickFeedback.playIfEnabled()
                 smartScriptEditingModel.moveCaretRight()
+            } else if systemName == "arrow.up" {
+                ButtonClickFeedback.playIfEnabled()
+                smartScriptEditingModel.moveCaretUp()
+            } else if systemName == "arrow.down" {
+                ButtonClickFeedback.playIfEnabled()
+                smartScriptEditingModel.moveCaretDown()
             } else if systemName == "delete.right.fill" {
                 ButtonClickFeedback.playIfEnabled()
                 smartScriptEditingModel.deleteForward()
@@ -2155,6 +2245,14 @@ Tapping a row inserts the key code at the cursor.
 
         if systemName == "arrow.right" {
             return !smartScriptEditingModel.canMoveCaretRight
+        }
+
+        if systemName == "arrow.up" {
+            return !smartScriptEditingModel.canMoveCaretUp
+        }
+
+        if systemName == "arrow.down" {
+            return !smartScriptEditingModel.canMoveCaretDown
         }
 
         if systemName == "delete.right.fill" {
