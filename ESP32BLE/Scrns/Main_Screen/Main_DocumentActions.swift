@@ -142,6 +142,7 @@ extension MainScreen {
         let editableIndex = editableAnchorIndex(containing: index) ?? index
         activeDragIndex = nil
         editingSlotText = editableText(for: functionKeys[editableIndex])
+        resetSmartScriptEditingModel()
         editingSlotIndex = index
         isSlotEditorFocused = true
     }
@@ -187,6 +188,7 @@ extension MainScreen {
     func cancelSlotEditing() {
         editingSlotIndex = nil
         editingSlotText = ""
+        resetSmartScriptEditingModel()
         isSlotEditorFocused = false
     }
 	//
@@ -228,6 +230,7 @@ extension MainScreen {
 
             activeDragIndex = nil
             editingSlotText = editableText(for: candidateEntry)
+            resetSmartScriptEditingModel()
             self.editingSlotIndex = editableIndex
             isSlotEditorFocused = true
             return

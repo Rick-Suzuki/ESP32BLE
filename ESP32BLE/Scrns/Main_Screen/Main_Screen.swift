@@ -9,6 +9,89 @@ private enum MainScreenPersistedModeFiles {
     static let buttonActionMode = ".main_screen_button_action_mode.cfg"
 }
 
+private struct SmartScriptEditingModel {
+    var scriptText = ""
+    var selectionRange = NSRange(location: 0, length: 0)
+
+    mutating func setText(_ text: String) {
+        scriptText = text
+        clampSelectionRange()
+    }
+
+    mutating func setSelectionRange(_ range: NSRange) {
+        selectionRange = clampedRange(range)
+    }
+
+    mutating func replaceSelection(with insertedText: String) {
+        let replacementNSRange = clampedRange(selectionRange)
+        let replacementRange = Range(replacementNSRange, in: scriptText) ?? scriptText.endIndex..<scriptText.endIndex
+        let insertionLocation = replacementNSRange.location + insertedText.utf16.count
+        scriptText.replaceSubrange(replacementRange, with: insertedText)
+        selectionRange = clampedRange(NSRange(location: insertionLocation, length: 0))
+    }
+
+    var canMoveCaretLeft: Bool {
+        let range = clampedRange(selectionRange)
+        return range.length > 0 || range.location > 0
+    }
+
+    var canMoveCaretRight: Bool {
+        let range = clampedRange(selectionRange)
+        return range.length > 0 || range.location < scriptText.utf16.count
+    }
+
+    mutating func moveCaretLeft() {
+        let range = clampedRange(selectionRange)
+
+        if range.length > 0 {
+            selectionRange = NSRange(location: range.location, length: 0)
+            return
+        }
+
+        guard range.location > 0 else {
+            return
+        }
+
+        let text = scriptText as NSString
+        let previousRange = text.rangeOfComposedCharacterSequence(at: range.location - 1)
+        selectionRange = clampedRange(NSRange(location: previousRange.location, length: 0))
+    }
+
+    mutating func moveCaretRight() {
+        let range = clampedRange(selectionRange)
+
+        if range.length > 0 {
+            selectionRange = NSRange(location: range.location + range.length, length: 0)
+            return
+        }
+
+        guard range.location < scriptText.utf16.count else {
+            return
+        }
+
+        let text = scriptText as NSString
+        let nextRange = text.rangeOfComposedCharacterSequence(at: range.location)
+        selectionRange = clampedRange(NSRange(location: nextRange.location + nextRange.length, length: 0))
+    }
+
+    private mutating func clampSelectionRange() {
+        selectionRange = clampedRange(selectionRange)
+    }
+
+    private func clampedRange(_ range: NSRange) -> NSRange {
+        let textLength = scriptText.utf16.count
+
+        guard range.location != NSNotFound else {
+            return NSRange(location: textLength, length: 0)
+        }
+
+        let location = min(max(range.location, 0), textLength)
+        let length = max(range.length, 0)
+        let upperBound = min(location + length, textLength)
+        return NSRange(location: location, length: max(upperBound - location, 0))
+    }
+}
+
 struct MainScreen: View {
     enum PreviewedFile: Equatable, Identifiable {
         case text(filename: String, contents: String)
@@ -479,7 +562,7 @@ Tapping a row inserts the key code at the cursor.
 	//----------------------------------------
 	//
 	@State private var isSmartEscapeCodeTableVisible = false
-    @State private var smartActionTextSelectionRange = NSRange(location: 0, length: 0)
+    @State private var smartScriptEditingModel = SmartScriptEditingModel()
     @State private var smartButtonBrightness = 0.5
     @State private var smartButtonBrightnessBaseHex: String?
     @State private var smartButtonClearPreviewFallbackImageURL: URL?
@@ -1069,7 +1152,7 @@ Tapping a row inserts the key code at the cursor.
             Button {
                 ButtonClickFeedback.playIfEnabled()
                 smartActionTextBinding.wrappedValue = ""
-                smartActionTextSelectionRange = NSRange(location: 0, length: 0)
+                smartScriptEditingModel.setSelectionRange(NSRange(location: 0, length: 0))
             } label: {
                 Text("X")
                     .font(.system(size: 16, weight: .regular))
@@ -1084,7 +1167,7 @@ Tapping a row inserts the key code at the cursor.
             SmartActionTextField(
                 placeholder: "characters/command(s)",
                 text: smartActionTextBinding,
-                selectedRange: $smartActionTextSelectionRange,
+                selectedRange: smartScriptSelectionRangeBinding,
                 fontSize: 20
             )
                 .padding(.horizontal, 3)
@@ -1190,12 +1273,14 @@ Tapping a row inserts the key code at the cursor.
     private var smartScriptEditorTextBinding: Binding<String> {
         Binding(
             get: {
-                canonicalSmartScriptText(smartEditingTextParts.action)
+                smartScriptEditingModel.scriptText
             },
             set: { newText in
                 let parts = smartEditingTextParts
+                let canonicalScriptText = canonicalSmartScriptText(newText)
+                smartScriptEditingModel.setText(canonicalScriptText)
                 editingSlotText = composeSmartEditingText(
-                    action: canonicalSmartScriptText(newText),
+                    action: canonicalScriptText,
                     right: parts.right,
                     isHidden: parts.isHidden
                 )
@@ -1209,15 +1294,28 @@ Tapping a row inserts the key code at the cursor.
         )
     }
 
+    private var smartScriptSelectionRangeBinding: Binding<NSRange> {
+        Binding(
+            get: {
+                smartScriptEditingModel.selectionRange
+            },
+            set: { newRange in
+                smartScriptEditingModel.setSelectionRange(newRange)
+            }
+        )
+    }
+
     private var smartActionTextBinding: Binding<String> {
         Binding(
             get: {
-                return canonicalSmartScriptText(displayActionTextReplacingModifierCodes(smartEditingTextParts.action))
+                return smartScriptEditingModel.scriptText
             },
             set: { newActionText in
                 let parts = smartEditingTextParts
+                let canonicalScriptText = canonicalSmartScriptText(newActionText)
+                smartScriptEditingModel.setText(canonicalScriptText)
                 editingSlotText = composeSmartEditingText(
-                    action: canonicalSmartScriptText(newActionText),
+                    action: canonicalScriptText,
                     right: parts.right,
                     isHidden: parts.isHidden
                 )
@@ -1329,6 +1427,10 @@ Tapping a row inserts the key code at the cursor.
         return composeSmartEditingText(action: canonicalSmartScriptText(actionText), right: rightText, isHidden: isHidden)
     }
 
+    func resetSmartScriptEditingModel() {
+        smartScriptEditingModel.setText(canonicalSmartScriptText(displayActionTextReplacingModifierCodes(smartEditingTextParts.action)))
+    }
+
     private func canonicalSmartScriptText(_ actionText: String) -> String {
         let mappings = [(symbol: "⌃", legacy: "ctl:"), (symbol: "⌥", legacy: "op:"), (symbol: "⇧", legacy: "sh:"), (symbol: "⌘", legacy: "cm:")]
         var result = ""
@@ -1376,7 +1478,11 @@ Tapping a row inserts the key code at the cursor.
 
     private var smartColorPanel: some View {
         VStack(spacing: 0) {
-            TextEditor(text: smartScriptEditorTextBinding)
+            SmartScriptTextEditor(
+                text: smartScriptEditorTextBinding,
+                selectedRange: smartScriptSelectionRangeBinding,
+                fontSize: 20
+            )
                 .font(.system(size: 20, weight: .regular))
                 .foregroundStyle(.white)
                 .scrollContentBackground(.hidden)
@@ -1960,7 +2066,13 @@ Tapping a row inserts the key code at the cursor.
             if systemName == "xmark" {
                 ButtonClickFeedback.playIfEnabled()
                 smartActionTextBinding.wrappedValue = ""
-                smartActionTextSelectionRange = NSRange(location: 0, length: 0)
+                smartScriptEditingModel.setSelectionRange(NSRange(location: 0, length: 0))
+            } else if systemName == "arrow.left" {
+                ButtonClickFeedback.playIfEnabled()
+                smartScriptEditingModel.moveCaretLeft()
+            } else if systemName == "arrow.right" {
+                ButtonClickFeedback.playIfEnabled()
+                smartScriptEditingModel.moveCaretRight()
             }
         } label: {
             Image(systemName: systemName)
@@ -1974,10 +2086,27 @@ Tapping a row inserts the key code at the cursor.
                 }
         }
         .buttonStyle(.plain)
+        .disabled(smartPlaceholderButtonIsDisabled(systemName))
         .accessibilityHidden(true)
     }
 
+    private func smartPlaceholderButtonIsDisabled(_ systemName: String) -> Bool {
+        if systemName == "arrow.left" {
+            return !smartScriptEditingModel.canMoveCaretLeft
+        }
+
+        if systemName == "arrow.right" {
+            return !smartScriptEditingModel.canMoveCaretRight
+        }
+
+        return false
+    }
+
     private func smartPlaceholderButtonForegroundColor(for systemName: String) -> Color {
+        if smartPlaceholderButtonIsDisabled(systemName) {
+            return .gray
+        }
+
         if systemName == "xmark" || systemName == "delete.right.fill" || systemName == "delete.backward.fill" {
             return .red
         }
@@ -2058,21 +2187,14 @@ Tapping a row inserts the key code at the cursor.
     }
 
     private func insertSmartActionTextAtSelection(_ insertedText: String) {
-        var actionText = smartActionTextBinding.wrappedValue
-        let replacementRange = Range(smartActionTextSelectionRange, in: actionText) ?? actionText.endIndex..<actionText.endIndex
-
-        let insertionStart = replacementRange.lowerBound
-        actionText.replaceSubrange(replacementRange, with: insertedText)
-        let insertionEnd = actionText.index(insertionStart, offsetBy: insertedText.count)
-
-        smartActionTextBinding.wrappedValue = actionText
-        smartActionTextSelectionRange = NSRange(insertionEnd..<insertionEnd, in: actionText)
+        smartScriptEditingModel.replaceSelection(with: insertedText)
+        smartActionTextBinding.wrappedValue = smartScriptEditingModel.scriptText
     }
 
     private func toggleSmartModifierPrefix(_ prefix: String) {
         let orderedPrefixes = ["⌃", "⌥", "⇧", "⌘"]
         var actionText = smartActionTextBinding.wrappedValue
-        let safeCursorLocation = min(max(smartActionTextSelectionRange.location, 0), actionText.utf16.count)
+        let safeCursorLocation = min(max(smartScriptEditingModel.selectionRange.location, 0), actionText.utf16.count)
         let cursorRange = NSRange(location: safeCursorLocation, length: 0)
         let cursorIndex = Range(cursorRange, in: actionText)?.lowerBound ?? actionText.endIndex
 
@@ -2106,7 +2228,7 @@ Tapping a row inserts the key code at the cursor.
         actionText.replaceSubrange(groupStart..<groupEnd, with: rebuiltGroup)
 
         smartActionTextBinding.wrappedValue = actionText
-        smartActionTextSelectionRange = NSRange(location: replacementLocation + rebuiltGroup.utf16.count, length: 0)
+        smartScriptEditingModel.setSelectionRange(NSRange(location: replacementLocation + rebuiltGroup.utf16.count, length: 0))
     }
 
     private func displayActionTextReplacingModifierCodes(_ actionText: String) -> String {
@@ -2688,6 +2810,94 @@ Tapping a row inserts the key code at the cursor.
             alertTitle = ""
             renameAlertMessage = "can't move btn"
             return
+        }
+    }
+}
+
+private struct SmartScriptTextEditor: UIViewRepresentable {
+    @Binding var text: String
+    @Binding var selectedRange: NSRange
+    let fontSize: CGFloat
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+
+    func makeUIView(context: Context) -> UITextView {
+        let textView = UITextView()
+        textView.delegate = context.coordinator
+        textView.textColor = .white
+        textView.tintColor = .white
+        textView.backgroundColor = .clear
+        textView.font = .systemFont(ofSize: fontSize, weight: .regular)
+        textView.autocorrectionType = .no
+        textView.autocapitalizationType = .none
+        textView.textContainerInset = UIEdgeInsets(top: 8, left: 5, bottom: 8, right: 5)
+        textView.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        textView.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        return textView
+    }
+
+    func updateUIView(_ uiView: UITextView, context: Context) {
+        context.coordinator.parent = self
+        context.coordinator.isUpdatingView = true
+        defer {
+            context.coordinator.isUpdatingView = false
+        }
+
+        if uiView.text != text {
+            uiView.text = text
+        }
+
+        context.coordinator.applySelectedRange(to: uiView)
+    }
+
+    final class Coordinator: NSObject, UITextViewDelegate {
+        var parent: SmartScriptTextEditor
+        var isUpdatingView = false
+        private var isApplyingSelectedRange = false
+
+        init(_ parent: SmartScriptTextEditor) {
+            self.parent = parent
+        }
+
+        func textViewDidChange(_ textView: UITextView) {
+            guard !isUpdatingView, !isApplyingSelectedRange else {
+                return
+            }
+
+            let newText = textView.text ?? ""
+            let newSelectedRange = textView.selectedRange
+            DispatchQueue.main.async {
+                self.parent.text = newText
+                self.parent.selectedRange = newSelectedRange
+            }
+        }
+
+        func textViewDidChangeSelection(_ textView: UITextView) {
+            guard !isUpdatingView, !isApplyingSelectedRange else {
+                return
+            }
+
+            let newSelectedRange = textView.selectedRange
+            DispatchQueue.main.async {
+                self.parent.selectedRange = newSelectedRange
+            }
+        }
+
+        func applySelectedRange(to textView: UITextView) {
+            let textLength = textView.text.utf16.count
+            let location = min(max(parent.selectedRange.location, 0), textLength)
+            let length = max(0, min(parent.selectedRange.length, textLength - location))
+            let clampedRange = NSRange(location: location, length: length)
+
+            guard textView.selectedRange != clampedRange else {
+                return
+            }
+
+            isApplyingSelectedRange = true
+            textView.selectedRange = clampedRange
+            isApplyingSelectedRange = false
         }
     }
 }
