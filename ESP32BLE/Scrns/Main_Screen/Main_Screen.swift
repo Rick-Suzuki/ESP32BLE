@@ -1414,7 +1414,7 @@ Tapping a row inserts the key code at the cursor.
                 let canonicalScriptText = canonicalSmartScriptText(newText)
                 smartScriptEditingModel.setText(canonicalScriptText)
                 editingSlotText = composeSmartEditingText(
-                    action: canonicalScriptText,
+                    action: storedSmartScriptText(fromEditorText: canonicalScriptText),
                     right: parts.right,
                     isHidden: parts.isHidden
                 )
@@ -1449,7 +1449,7 @@ Tapping a row inserts the key code at the cursor.
                 let canonicalScriptText = canonicalSmartScriptText(newActionText)
                 smartScriptEditingModel.setText(canonicalScriptText)
                 editingSlotText = composeSmartEditingText(
-                    action: canonicalScriptText,
+                    action: storedSmartScriptText(fromEditorText: canonicalScriptText),
                     right: parts.right,
                     isHidden: parts.isHidden
                 )
@@ -1553,16 +1553,24 @@ Tapping a row inserts the key code at the cursor.
         }
 
         guard let separatorRange = textWithoutMetadata.range(of: "::", options: .backwards) else {
-            return composeSmartEditingText(action: canonicalSmartScriptText(textWithoutMetadata), right: "", isHidden: isHidden)
+            return composeSmartEditingText(action: storedSmartScriptText(fromEditorText: canonicalSmartScriptText(editorSmartScriptText(fromStoredText: textWithoutMetadata))), right: "", isHidden: isHidden)
         }
 
         let actionText = String(textWithoutMetadata[..<separatorRange.lowerBound])
         let rightText = String(textWithoutMetadata[separatorRange.upperBound...])
-        return composeSmartEditingText(action: canonicalSmartScriptText(actionText), right: rightText, isHidden: isHidden)
+        return composeSmartEditingText(action: storedSmartScriptText(fromEditorText: canonicalSmartScriptText(editorSmartScriptText(fromStoredText: actionText))), right: rightText, isHidden: isHidden)
     }
 
     func resetSmartScriptEditingModel() {
-        smartScriptEditingModel.setText(canonicalSmartScriptText(displayActionTextReplacingModifierCodes(smartEditingTextParts.action)))
+        smartScriptEditingModel.setText(canonicalSmartScriptText(editorSmartScriptText(fromStoredText: displayActionTextReplacingModifierCodes(smartEditingTextParts.action))))
+    }
+
+    private func editorSmartScriptText(fromStoredText storedText: String) -> String {
+        storedText.replacingOccurrences(of: "\\n", with: "\n")
+    }
+
+    private func storedSmartScriptText(fromEditorText editorText: String) -> String {
+        editorText.replacingOccurrences(of: "\n", with: "\\n")
     }
 
     private func canonicalSmartScriptText(_ actionText: String) -> String {
@@ -2351,7 +2359,7 @@ Tapping a row inserts the key code at the cursor.
     }
 
     private func insertSmartActionTextAtSelection(_ insertedText: String) {
-        smartScriptEditingModel.replaceSelection(with: insertedText)
+        smartScriptEditingModel.replaceSelection(with: editorSmartScriptText(fromStoredText: insertedText))
         smartActionTextBinding.wrappedValue = smartScriptEditingModel.scriptText
     }
 
@@ -2993,7 +3001,7 @@ private struct SmartScriptTextEditor: UIViewRepresentable {
         textView.textColor = .white
         textView.tintColor = .white
         textView.backgroundColor = .clear
-        textView.font = .systemFont(ofSize: fontSize, weight: .regular)
+        textView.font = .monospacedSystemFont(ofSize: fontSize, weight: .regular)
         textView.autocorrectionType = .no
         textView.autocapitalizationType = .none
         textView.textContainerInset = UIEdgeInsets(top: 8, left: 5, bottom: 8, right: 5)
