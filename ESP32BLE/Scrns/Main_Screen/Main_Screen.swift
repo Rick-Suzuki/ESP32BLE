@@ -10,14 +10,59 @@ private enum MainScreenPersistedModeFiles {
 }
 
 private struct SmartScriptEditingModel {
+    private struct EditingState {
+        var scriptText: String
+        var selectionRange: NSRange
+    }
+
+    private enum EditTransactionKind {
+        case keyboardTyping
+        case deleteBackward
+        case deleteForward
+    }
+
     var scriptText = ""
     var selectionRange = NSRange(location: 0, length: 0)
     private var preferredVerticalColumn: Int?
+    private var undoStack: [EditingState] = []
+    private var redoStack: [EditingState] = []
+    private var activeEditTransactionKind: EditTransactionKind?
+    private var pendingSelectionRangeAfterEdit: NSRange?
 
     mutating func setText(_ text: String) {
         scriptText = text
         preferredVerticalColumn = nil
+        undoStack.removeAll()
+        redoStack.removeAll()
+        activeEditTransactionKind = nil
+        pendingSelectionRangeAfterEdit = nil
         clampSelectionRange()
+    }
+
+    mutating func setEditedText(_ text: String) {
+        guard text != scriptText else {
+            clampSelectionRange()
+            return
+        }
+
+        pushUndoState()
+        scriptText = text
+        preferredVerticalColumn = nil
+        clampSelectionRange()
+    }
+
+    mutating func setKeyboardEditedText(_ text: String) {
+        guard text != scriptText else {
+            clampSelectionRange()
+            return
+        }
+
+        let keyboardEdit = keyboardEditInfo(for: text)
+        pushUndoState(kind: keyboardEdit.kind)
+        scriptText = text
+        preferredVerticalColumn = nil
+        clampSelectionRange()
+        pendingSelectionRangeAfterEdit = keyboardEdit.selectionRange
     }
 
     mutating func setSelectionRange(_ range: NSRange) {
@@ -25,6 +70,14 @@ private struct SmartScriptEditingModel {
         if newRange != selectionRange {
             preferredVerticalColumn = nil
         }
+
+        if let pendingSelectionRangeAfterEdit, pendingSelectionRangeAfterEdit == newRange {
+            self.pendingSelectionRangeAfterEdit = nil
+        } else if newRange != selectionRange {
+            activeEditTransactionKind = nil
+            pendingSelectionRangeAfterEdit = nil
+        }
+
         selectionRange = newRange
     }
 
@@ -32,9 +85,23 @@ private struct SmartScriptEditingModel {
         let replacementNSRange = clampedRange(selectionRange)
         let replacementRange = Range(replacementNSRange, in: scriptText) ?? scriptText.endIndex..<scriptText.endIndex
         let insertionLocation = replacementNSRange.location + insertedText.utf16.count
+        if String(scriptText[replacementRange]) == insertedText {
+            selectionRange = clampedRange(NSRange(location: insertionLocation, length: 0))
+            return
+        }
+
+        pushUndoState()
         scriptText.replaceSubrange(replacementRange, with: insertedText)
         preferredVerticalColumn = nil
         selectionRange = clampedRange(NSRange(location: insertionLocation, length: 0))
+    }
+
+    var canUndo: Bool {
+        !undoStack.isEmpty
+    }
+
+    var canRedo: Bool {
+        !redoStack.isEmpty
     }
 
     var canMoveCaretLeft: Bool {
@@ -70,6 +137,8 @@ private struct SmartScriptEditingModel {
     mutating func moveCaretLeft() {
         let range = clampedRange(selectionRange)
         preferredVerticalColumn = nil
+        activeEditTransactionKind = nil
+        pendingSelectionRangeAfterEdit = nil
 
         if range.length > 0 {
             selectionRange = NSRange(location: range.location, length: 0)
@@ -88,6 +157,8 @@ private struct SmartScriptEditingModel {
     mutating func moveCaretRight() {
         let range = clampedRange(selectionRange)
         preferredVerticalColumn = nil
+        activeEditTransactionKind = nil
+        pendingSelectionRangeAfterEdit = nil
 
         if range.length > 0 {
             selectionRange = NSRange(location: range.location + range.length, length: 0)
@@ -105,6 +176,8 @@ private struct SmartScriptEditingModel {
 
     mutating func moveCaretUp() {
         let range = clampedRange(selectionRange)
+        activeEditTransactionKind = nil
+        pendingSelectionRangeAfterEdit = nil
         let line = lineBounds(containing: range.location)
         guard let previousLine = previousLineBounds(before: line) else {
             selectionRange = NSRange(location: range.location, length: 0)
@@ -118,6 +191,8 @@ private struct SmartScriptEditingModel {
 
     mutating func moveCaretDown() {
         let range = clampedRange(selectionRange)
+        activeEditTransactionKind = nil
+        pendingSelectionRangeAfterEdit = nil
         let location = range.location + range.length
         let line = lineBounds(containing: location)
         guard let nextLine = nextLineBounds(after: line) else {
@@ -146,6 +221,7 @@ private struct SmartScriptEditingModel {
         let text = scriptText as NSString
         let deletedRange = text.rangeOfComposedCharacterSequence(at: range.location - 1)
         if let stringRange = Range(deletedRange, in: scriptText) {
+            pushUndoState(kind: .deleteBackward)
             scriptText.removeSubrange(stringRange)
             selectionRange = clampedRange(NSRange(location: deletedRange.location, length: 0))
         }
@@ -167,13 +243,108 @@ private struct SmartScriptEditingModel {
         let text = scriptText as NSString
         let deletedRange = text.rangeOfComposedCharacterSequence(at: range.location)
         if let stringRange = Range(deletedRange, in: scriptText) {
+            pushUndoState(kind: .deleteForward)
             scriptText.removeSubrange(stringRange)
             selectionRange = clampedRange(NSRange(location: range.location, length: 0))
         }
     }
 
+    mutating func undo() {
+        guard let previousState = undoStack.popLast() else {
+            return
+        }
+
+        redoStack.append(currentState)
+        restore(previousState)
+    }
+
+    mutating func redo() {
+        guard let nextState = redoStack.popLast() else {
+            return
+        }
+
+        undoStack.append(currentState)
+        restore(nextState)
+    }
+
     private mutating func clampSelectionRange() {
         selectionRange = clampedRange(selectionRange)
+    }
+
+    private var currentState: EditingState {
+        EditingState(scriptText: scriptText, selectionRange: clampedRange(selectionRange))
+    }
+
+    private mutating func pushUndoState() {
+        undoStack.append(currentState)
+        redoStack.removeAll()
+        activeEditTransactionKind = nil
+        pendingSelectionRangeAfterEdit = nil
+    }
+
+    private mutating func pushUndoState(kind: EditTransactionKind?) {
+        if let kind, activeEditTransactionKind == kind {
+            return
+        }
+
+        undoStack.append(currentState)
+        redoStack.removeAll()
+        activeEditTransactionKind = kind
+        pendingSelectionRangeAfterEdit = nil
+    }
+
+    private mutating func restore(_ state: EditingState) {
+        scriptText = state.scriptText
+        preferredVerticalColumn = nil
+        activeEditTransactionKind = nil
+        pendingSelectionRangeAfterEdit = nil
+        selectionRange = clampedRange(state.selectionRange)
+    }
+
+    private func keyboardEditInfo(for newText: String) -> (kind: EditTransactionKind?, selectionRange: NSRange?) {
+        let range = clampedRange(selectionRange)
+        let oldText = scriptText as NSString
+        let newNSString = newText as NSString
+        let insertedLength = newNSString.length - (oldText.length - range.length)
+
+        if insertedLength > 0,
+           range.location <= newNSString.length,
+           range.location + insertedLength <= newNSString.length,
+           range.location + range.length <= oldText.length {
+            let insertedText = newNSString.substring(with: NSRange(location: range.location, length: insertedLength))
+            let expectedText = oldText.replacingCharacters(in: range, with: insertedText)
+            if expectedText == newText {
+                let expectedRange = NSRange(location: range.location + insertedLength, length: 0)
+                return (insertedText.count == 1 ? .keyboardTyping : nil, expectedRange)
+            }
+        }
+
+        if range.length == 0,
+           range.location > 0 {
+            let deletedRange = oldText.rangeOfComposedCharacterSequence(at: range.location - 1)
+            let expectedText = oldText.replacingCharacters(in: deletedRange, with: "")
+            if expectedText == newText {
+                return (.deleteBackward, NSRange(location: deletedRange.location, length: 0))
+            }
+        }
+
+        if range.length == 0,
+           range.location < oldText.length {
+            let deletedRange = oldText.rangeOfComposedCharacterSequence(at: range.location)
+            let expectedText = oldText.replacingCharacters(in: deletedRange, with: "")
+            if expectedText == newText {
+                return (.deleteForward, NSRange(location: range.location, length: 0))
+            }
+        }
+
+        if range.length > 0 {
+            let expectedText = oldText.replacingCharacters(in: range, with: "")
+            if expectedText == newText {
+                return (nil, NSRange(location: range.location, length: 0))
+            }
+        }
+
+        return (nil, nil)
     }
 
     private func clampedRange(_ range: NSRange) -> NSRange {
@@ -1412,7 +1583,7 @@ Tapping a row inserts the key code at the cursor.
             set: { newText in
                 let parts = smartEditingTextParts
                 let canonicalScriptText = canonicalSmartScriptText(newText)
-                smartScriptEditingModel.setText(canonicalScriptText)
+                smartScriptEditingModel.setKeyboardEditedText(canonicalScriptText)
                 editingSlotText = composeSmartEditingText(
                     action: storedSmartScriptText(fromEditorText: canonicalScriptText),
                     right: parts.right,
@@ -1447,7 +1618,7 @@ Tapping a row inserts the key code at the cursor.
             set: { newActionText in
                 let parts = smartEditingTextParts
                 let canonicalScriptText = canonicalSmartScriptText(newActionText)
-                smartScriptEditingModel.setText(canonicalScriptText)
+                smartScriptEditingModel.setEditedText(canonicalScriptText)
                 editingSlotText = composeSmartEditingText(
                     action: storedSmartScriptText(fromEditorText: canonicalScriptText),
                     right: parts.right,
@@ -1563,6 +1734,21 @@ Tapping a row inserts the key code at the cursor.
 
     func resetSmartScriptEditingModel() {
         smartScriptEditingModel.setText(canonicalSmartScriptText(editorSmartScriptText(fromStoredText: displayActionTextReplacingModifierCodes(smartEditingTextParts.action))))
+    }
+
+    private func syncSmartEditingTextFromScriptModel() {
+        let parts = smartEditingTextParts
+        editingSlotText = composeSmartEditingText(
+            action: storedSmartScriptText(fromEditorText: smartScriptEditingModel.scriptText),
+            right: parts.right,
+            isHidden: parts.isHidden
+        )
+
+        guard let editingSlotIndex else {
+            return
+        }
+
+        _ = updateFunctionKeySlot(editingSlotIndex, editingSlotText)
     }
 
     private func editorSmartScriptText(fromStoredText storedText: String) -> String {
@@ -2215,6 +2401,14 @@ Tapping a row inserts the key code at the cursor.
             } else if systemName == "arrow.right" {
                 ButtonClickFeedback.playIfEnabled()
                 smartScriptEditingModel.moveCaretRight()
+            } else if systemName == "arrow.uturn.backward" {
+                ButtonClickFeedback.playIfEnabled()
+                smartScriptEditingModel.undo()
+                syncSmartEditingTextFromScriptModel()
+            } else if systemName == "arrow.uturn.forward" {
+                ButtonClickFeedback.playIfEnabled()
+                smartScriptEditingModel.redo()
+                syncSmartEditingTextFromScriptModel()
             } else if systemName == "arrow.up" {
                 ButtonClickFeedback.playIfEnabled()
                 smartScriptEditingModel.moveCaretUp()
@@ -2253,6 +2447,14 @@ Tapping a row inserts the key code at the cursor.
 
         if systemName == "arrow.right" {
             return !smartScriptEditingModel.canMoveCaretRight
+        }
+
+        if systemName == "arrow.uturn.backward" {
+            return !smartScriptEditingModel.canUndo
+        }
+
+        if systemName == "arrow.uturn.forward" {
+            return !smartScriptEditingModel.canRedo
         }
 
         if systemName == "arrow.up" {
