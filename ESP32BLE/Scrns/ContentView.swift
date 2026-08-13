@@ -672,16 +672,11 @@ struct ContentView: View {
     }
 
     private func persistSlotLines(_ slotLines: [String]) {
-        let callbackStartTime = CFAbsoluteTimeGetCurrent()
-        if !scriptEditorHasLoggedFirstFilePersistence {
-            scriptEditorHasLoggedFirstFilePersistence = true
-            db("FIRST FILE PERSISTENCE ContentView.persistSlotLines")
-        }
         db("ENTER ContentView.persistSlotLines count=\(slotLines.count)")
         guard let selectedDocumentURL = selectedDocumentURL() else {
             db("ENTER ContentView.persistSlotLines applySlotLines no selectedDocumentURL")
             applySlotLines(slotLines)
-            db("EXIT ContentView.persistSlotLines no selectedDocumentURL (\(scriptEditorProbeDurationMilliseconds(since: callbackStartTime)) ms)")
+            db("EXIT ContentView.persistSlotLines no selectedDocumentURL")
             return
         }
 
@@ -690,17 +685,16 @@ struct ContentView: View {
         let contents = normalizedLines.joined(separator: "\n")
 
         do {
-            let writeStartTime = CFAbsoluteTimeGetCurrent()
             db("ENTER ContentView.persistSlotLines write url=\(selectedDocumentURL.lastPathComponent) bytes=\(contents.utf8.count)")
             try contents.write(to: selectedDocumentURL, atomically: true, encoding: .utf8)
-            db("EXIT ContentView.persistSlotLines write (\(scriptEditorProbeDurationMilliseconds(since: writeStartTime)) ms)")
+            db("EXIT ContentView.persistSlotLines write")
             db("ENTER ContentView.persistSlotLines applySlotLines")
             applySlotLines(normalizedLines)
-            db("EXIT ContentView.persistSlotLines (\(scriptEditorProbeDurationMilliseconds(since: callbackStartTime)) ms)")
+            db("EXIT ContentView.persistSlotLines")
         } catch {
             db("ENTER ContentView.persistSlotLines loadFunctionKeys after write failure error=\(error.localizedDescription)")
             loadFunctionKeys(from: selectedDocumentURL)
-            db("EXIT ContentView.persistSlotLines error (\(scriptEditorProbeDurationMilliseconds(since: callbackStartTime)) ms)")
+            db("EXIT ContentView.persistSlotLines error")
         }
     }
 
@@ -2031,10 +2025,8 @@ struct ContentView: View {
 
     @discardableResult
     private func updateSelectedDocumentSlot(at index: Int, with line: String) -> Bool {
-        let callbackStartTime = CFAbsoluteTimeGetCurrent()
-        db("ENTER ContentView.updateSelectedDocumentSlot index=\(index) lineLength=\(line.utf16.count)")
+        db("updateFunctionKeySlot index=\(index)")
         guard index >= 0, index < maxFunctionKeyCount else {
-            db("EXIT ContentView.updateSelectedDocumentSlot invalid index (\(scriptEditorProbeDurationMilliseconds(since: callbackStartTime)) ms)")
             return false
         }
 
@@ -2047,9 +2039,7 @@ struct ContentView: View {
         }
 
         updatedLines[index] = persistedLine
-        db("ENTER ContentView.updateSelectedDocumentSlot persistSlotLines")
         persistSlotLines(updatedLines)
-        db("EXIT ContentView.updateSelectedDocumentSlot (\(scriptEditorProbeDurationMilliseconds(since: callbackStartTime)) ms)")
         return true
     }
 

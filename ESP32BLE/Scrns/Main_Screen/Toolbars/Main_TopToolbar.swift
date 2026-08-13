@@ -130,6 +130,7 @@ struct MainScreenToolbarContent: View {
 			//----------------------------------------
 			// prev image
 			//
+			Spacer()
 			Button {
 				ButtonClickFeedback.playIfEnabled()
 				selectPreviousBackgroundImage()

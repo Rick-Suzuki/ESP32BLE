@@ -184,8 +184,6 @@ struct MainScreenGridSection: View {
         index: Int,
         gridDimensions: GridDimensions
     ) {
-        let callbackStartTime = CFAbsoluteTimeGetCurrent()
-        db("ENTER MainScreenGridSection.registerEditTap index=\(index) pendingTapIndex=\(String(describing: pendingTapIndex)) pendingTapCount=\(pendingTapCount)")
         if pendingTapIndex == index {
             pendingTapCount += 1
         } else {
@@ -197,14 +195,11 @@ struct MainScreenGridSection: View {
         guard pendingTapCount < 5 else {
             pendingTapTask?.cancel()
             resetPendingTapState()
-            db("ENTER MainScreenGridSection.registerEditTap onDeleteSlot")
             onDeleteSlot(entry, index)
-            db("EXIT MainScreenGridSection.registerEditTap onDeleteSlot (\(scriptEditorProbeDurationMilliseconds(since: callbackStartTime)) ms)")
             return
         }
 
         schedulePendingTapResolution(entry: entry, index: index, gridDimensions: gridDimensions)
-        db("EXIT MainScreenGridSection.registerEditTap pendingTapCount=\(pendingTapCount) (\(scriptEditorProbeDurationMilliseconds(since: callbackStartTime)) ms)")
     }
 
 	// MARK: - BM:🟨 taps 1,2,3,4,5: main scrn
@@ -213,62 +208,41 @@ struct MainScreenGridSection: View {
         index: Int,
         gridDimensions: GridDimensions
     ) {
-        let callbackStartTime = CFAbsoluteTimeGetCurrent()
-        db("ENTER MainScreenGridSection.schedulePendingTapResolution index=\(index)")
         pendingTapTask?.cancel()
         let tapCount = pendingTapCount
 
-        db("SCHEDULED MainScreenGridSection.schedulePendingTapResolution Task tapCount=\(tapCount)")
         pendingTapTask = Task {
-            db("EXECUTED MainScreenGridSection.schedulePendingTapResolution Task tapCount=\(tapCount)")
             try? await Task.sleep(for: .milliseconds(450))
-            db("EXECUTED MainScreenGridSection.schedulePendingTapResolution Task sleep returned tapCount=\(tapCount)")
             guard !Task.isCancelled else {
-                db("EXIT MainScreenGridSection.schedulePendingTapResolution Task cancelled")
                 return
             }
 
-            db("SCHEDULED MainScreenGridSection.schedulePendingTapResolution MainActor.run tapCount=\(tapCount)")
             await MainActor.run {
-                let mainActorStartTime = CFAbsoluteTimeGetCurrent()
-                db("EXECUTED MainScreenGridSection.schedulePendingTapResolution MainActor.run tapCount=\(tapCount)")
                 guard pendingTapIndex == index, pendingTapCount == tapCount else {
-                    db("EXIT MainScreenGridSection.schedulePendingTapResolution MainActor.run guard (\(scriptEditorProbeDurationMilliseconds(since: mainActorStartTime)) ms)")
                     return
                 }
 
 						if tapCount == 1 {
-							db("ENTER MainScreenGridSection.schedulePendingTapResolution onCopyPasteSlot")
 							onCopyPasteSlot(entry, index)
-							db("EXIT MainScreenGridSection.schedulePendingTapResolution onCopyPasteSlot")
 						}
 						
                 if tapCount == 2 {
-                    db("ENTER MainScreenGridSection.schedulePendingTapResolution onDuplicateSlot")
                     onDuplicateSlot(entry, index, gridDimensions)
-                    db("EXIT MainScreenGridSection.schedulePendingTapResolution onDuplicateSlot")
                 }
 
                 if tapCount == 3 {
-                    db("ENTER MainScreenGridSection.schedulePendingTapResolution onResizeSlot")
                     onResizeSlot(entry, index, gridDimensions)
-                    db("EXIT MainScreenGridSection.schedulePendingTapResolution onResizeSlot")
                 }
 
                 if tapCount == 4 {
-                    db("ENTER MainScreenGridSection.schedulePendingTapResolution onResetSlotSize")
                     onResetSlotSize(entry, index, gridDimensions)
-                    db("EXIT MainScreenGridSection.schedulePendingTapResolution onResetSlotSize")
                 }
 
 				db("\(tapCount)")
 					
                 resetPendingTapState()
-                db("EXIT MainScreenGridSection.schedulePendingTapResolution MainActor.run (\(scriptEditorProbeDurationMilliseconds(since: mainActorStartTime)) ms)")
             }
-            db("EXIT MainScreenGridSection.schedulePendingTapResolution Task")
         }
-        db("EXIT MainScreenGridSection.schedulePendingTapResolution (\(scriptEditorProbeDurationMilliseconds(since: callbackStartTime)) ms)")
     }
 
     private func resetPendingTapState() {
@@ -403,10 +377,7 @@ struct MainScreenGridSection: View {
             .simultaneousGesture(
                 TapGesture()
                     .onEnded {
-                        let callbackStartTime = CFAbsoluteTimeGetCurrent()
-                        db("ENTER MainScreenGridSection.TapGesture.onEnded index=\(index) isGridEditModeEnabled=\(isGridEditModeEnabled)")
                         guard isGridEditModeEnabled else {
-                            db("EXIT MainScreenGridSection.TapGesture.onEnded non-edit (\(scriptEditorProbeDurationMilliseconds(since: callbackStartTime)) ms)")
                             return
                         }
 
@@ -415,7 +386,6 @@ struct MainScreenGridSection: View {
                             index: index,
                             gridDimensions: gridDimensions
                         )
-                        db("EXIT MainScreenGridSection.TapGesture.onEnded (\(scriptEditorProbeDurationMilliseconds(since: callbackStartTime)) ms)")
                     }
             )
             .simultaneousGesture(
@@ -427,25 +397,8 @@ struct MainScreenGridSection: View {
     private func slotEditorLongPressGesture(index: Int) -> some Gesture {
         LongPressGesture(minimumDuration: 0.4)
             .onEnded { _ in
-                let callbackStartTime = CFAbsoluteTimeGetCurrent()
-                scriptEditorProbeBeginSlotEditingStartTime = callbackStartTime
-                db("\(scriptEditorProbeTimingPrefix()) ENTER MainScreenGridSection.LongPressGesture.onEnded index=\(index)")
                 longPressedEditIndex = index
-                db("\(scriptEditorProbeTimingPrefix()) ENTER MainScreenGridSection.LongPressGesture.onEnded onBeginSlotEditing")
                 onBeginSlotEditing(index)
-                db("\(scriptEditorProbeTimingPrefix()) EXIT MainScreenGridSection.LongPressGesture.onEnded onBeginSlotEditing (\(scriptEditorProbeDurationMilliseconds(since: callbackStartTime)) ms)")
-                db("\(scriptEditorProbeTimingPrefix()) MainScreenGridSection.LongPressGesture.onEnded gesture completely finished")
-                db("\(scriptEditorProbeTimingPrefix()) SCHEDULED MainScreenGridSection.LongPressGesture.onEnded DispatchQueue.main.async first runloop")
-                DispatchQueue.main.async {
-                    db("\(scriptEditorProbeTimingPrefix()) EXECUTED MainScreenGridSection.LongPressGesture.onEnded first runloop after long press")
-                }
-                let checkpointDelays: [Double] = [0.1, 0.25, 0.5, 1, 2, 3, 4]
-                for checkpointDelay in checkpointDelays {
-                    db("\(scriptEditorProbeTimingPrefix()) SCHEDULED MainScreenGridSection.LongPressGesture.onEnded asyncAfter \(checkpointDelay)s")
-                    DispatchQueue.main.asyncAfter(deadline: .now() + checkpointDelay) {
-                        db("\(scriptEditorProbeTimingPrefix()) EXECUTED MainScreenGridSection.LongPressGesture.onEnded \(checkpointDelay)s after long press")
-                    }
-                }
             }
     }
 }

@@ -135,24 +135,17 @@ extension MainScreen {
 	//----------------------------------------
 	//
     func beginSlotEditing(at index: Int) {
-        let callbackStartTime = CFAbsoluteTimeGetCurrent()
-        scriptEditorProbeBeginSlotEditingStartTime = callbackStartTime
-        db("\(scriptEditorProbeTimingPrefix()) ENTER MainScreen.beginSlotEditing index=\(index)")
+        db("MainScreen.beginSlotEditing index=\(index)")
         guard index >= 0, index < visibleBoxCount else {
-            db("\(scriptEditorProbeTimingPrefix()) EXIT MainScreen.beginSlotEditing invalid index (\(scriptEditorProbeDurationMilliseconds(since: callbackStartTime)) ms)")
             return
         }
 
         let editableIndex = editableAnchorIndex(containing: index) ?? index
         activeDragIndex = nil
-        db("\(scriptEditorProbeTimingPrefix()) MainScreen.beginSlotEditing isEditing update setting editingSlotText")
         editingSlotText = editableText(for: functionKeys[editableIndex])
         resetSmartScriptEditingModel()
-        db("\(scriptEditorProbeTimingPrefix()) MainScreen.beginSlotEditing isEditing update setting editingSlotIndex")
         editingSlotIndex = index
-        db("\(scriptEditorProbeTimingPrefix()) MainScreen.beginSlotEditing FocusState update setting isSlotEditorFocused true")
         isSlotEditorFocused = true
-        db("\(scriptEditorProbeTimingPrefix()) EXIT MainScreen.beginSlotEditing (\(scriptEditorProbeDurationMilliseconds(since: callbackStartTime)) ms)")
     }
 	//
 	//----------------------------------------
