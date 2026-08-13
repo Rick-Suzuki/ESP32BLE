@@ -1041,7 +1041,7 @@ struct SettingsScreen: View {
             savedDocumentEditorText = text
             loadedDocumentName = fileURL.lastPathComponent
         } catch {
-            print("Failed to save document: \(fileURL.lastPathComponent)")
+            db("Failed to save document: \(fileURL.lastPathComponent)")
         }
     }
 
@@ -1503,7 +1503,7 @@ struct SettingsScreen: View {
             refreshDocumentFiles()
             loadFunctionKeys(fileURL)
         } catch {
-            print("Failed to create document: \(fileURL.lastPathComponent)")
+            db("Failed to create document: \(fileURL.lastPathComponent)")
         }
     }
 
@@ -1828,7 +1828,7 @@ struct SettingsScreen: View {
                         session: &session
                     )
                 } catch {
-                    print("Failed to import text file \(targetFileName): \(error.localizedDescription)")
+                    db("Failed to import text file \(targetFileName): \(error.localizedDescription)")
                 }
                 continue
             }
@@ -1855,7 +1855,7 @@ struct SettingsScreen: View {
                         session: &session
                     )
                 } catch {
-                    print("Failed to import image \(targetFileName): \(error.localizedDescription)")
+                    db("Failed to import image \(targetFileName): \(error.localizedDescription)")
                 }
                 continue
             }
@@ -1882,7 +1882,7 @@ struct SettingsScreen: View {
                         session: &session
                     )
                 } catch {
-                    print("Failed to import sound \(targetFileName): \(error.localizedDescription)")
+                    db("Failed to import sound \(targetFileName): \(error.localizedDescription)")
                 }
                 continue
             }
@@ -1909,7 +1909,7 @@ struct SettingsScreen: View {
                         session: &session
                     )
                 } catch {
-                    print("Failed to import pdf \(targetFileName): \(error.localizedDescription)")
+                    db("Failed to import pdf \(targetFileName): \(error.localizedDescription)")
                 }
             }
         }

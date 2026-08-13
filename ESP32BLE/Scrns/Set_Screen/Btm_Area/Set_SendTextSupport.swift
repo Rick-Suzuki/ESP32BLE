@@ -53,7 +53,7 @@ extension SettingsScreen {
         }
 
         guard ble.isConnected else {
-            print("Bluetooth not connected.")
+            db("Bluetooth not connected.")
             return
         }
 
@@ -61,7 +61,7 @@ extension SettingsScreen {
             ble.sendLine("ca")
         }
 
-        print("Settings text sent: [\(trimmedText)]")
+        db("Settings text sent: [\(trimmedText)]")
         ble.sendString(trimmedText)
     }
 

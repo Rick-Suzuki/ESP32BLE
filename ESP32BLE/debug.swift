@@ -7,9 +7,12 @@
 
 import SwiftUI
 import AVFoundation
+import Foundation
 
 // debug BT - prints
 let db_bt = false
+
+let db_dbCode = true
 
 // if disabled, no emoji text subs
 let db_emoji_parsing = false
@@ -17,6 +20,38 @@ let db_emoji_parsing = false
 // force emoji map to overwrite file: emoji_speech_map.cfg
 // with array in contentView, about line 145
 let db_overwriteConfigFile:Bool = true
+
+//
+//----------------------------------------
+//
+func getTime()->String {
+	let timestampFormatter = DateFormatter()
+	timestampFormatter.dateFormat = "yyMMdd_HHmm_SSS"
+	let timeStamp = timestampFormatter.string(from: Date())
+	return timeStamp
+}
+//
+//----------------------------------------
+//
+func db(
+	_ format: String,
+	_ args: CVarArg...,
+	file: String = #file,
+	function: String = #function,
+	line: Int = #line
+) {
+	let message = String(format: format, arguments: args)
+	
+	let output: String
+	
+	if db_dbCode {
+		output = "🐞\(URL(fileURLWithPath: file).lastPathComponent):\(function):\(line) \(message)"
+	} else {
+		output = "🐞\(message)"
+	}
+	
+	print("\(getTime()) \(output)")
+}
 
 
 extension Color {

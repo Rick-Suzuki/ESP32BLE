@@ -104,7 +104,7 @@ extension MainScreen {
         let leftText = entry.sendTexts.joined(separator: ":")
         let rightText = entry.alternateDisplayText ?? ""
 		print("")
-        print("** GRID_BTN ** [\(leftText)]::[\(rightText)]")
+        db("** GRID_BTN ** [\(leftText)]::[\(rightText)]")
     }
 
     func sendMainGridEntry(_ entry: FunctionKeyEntry) {

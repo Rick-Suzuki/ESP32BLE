@@ -273,9 +273,9 @@ extension BLEKeyboardManager: CBCentralManagerDelegate {
 			let now = Date()
 		
 			if db_bt {
-				print("** Found peripheral: \(name)")
-				print("** Found advertised local name: \(advertisedName)")
-				print("** Peripheral identifier: \(peripheral.identifier.uuidString)")
+				db("** Found peripheral: \(name)")
+				db("** Found advertised local name: \(advertisedName)")
+				db("** Peripheral identifier: \(peripheral.identifier.uuidString)")
 			}
 			
 			if let index = discoveredDevices.firstIndex(where: { $0.id == peripheral.identifier }) {
@@ -311,7 +311,7 @@ extension BLEKeyboardManager: CBCentralManagerDelegate {
 		let isProbe = probePeripheralIDs.contains(peripheral.identifier)
 		
 		if isProbe {
-			print("** Probe-connected to \(peripheral.identifier.uuidString)")
+			db("Probe-connected to \(peripheral.identifier.uuidString)")
 		} else {
 			connectionText = "Connected, discovering services..."
 			isConnected = true
@@ -422,7 +422,7 @@ extension BLEKeyboardManager: CBPeripheralDelegate {
 			   let value = String(data: data, encoding: .utf8)?
 				.trimmingCharacters(in: .whitespacesAndNewlines) {
 			
-			print("** Device ID read: \(value) for \(peripheral.identifier.uuidString)")
+			db("Device ID read: \(value) for \(peripheral.identifier.uuidString)")
 			
 			if let index = discoveredDevices.firstIndex(where: { $0.id == peripheral.identifier }) {
 				discoveredDevices[index].deviceID = value

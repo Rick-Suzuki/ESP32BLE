@@ -384,7 +384,7 @@ struct ContentView: View {
     private func logDeviceTypeIfNeeded() {
         guard !hasLoggedDeviceType else { return }
         hasLoggedDeviceType = true
-        print("isPad:", isPad ? "iPad" : "iPhone")
+        db("isPad: %@", isPad ? "iPad" : "iPhone")
     }
 
     private func refreshOrientationState() {
@@ -424,7 +424,7 @@ struct ContentView: View {
         let currentOrientationState = orientationState
         guard lastLoggedOrientationState != currentOrientationState else { return }
         lastLoggedOrientationState = currentOrientationState
-		print("orientationState:", currentOrientationState ? "horizontal" : "vertical")
+		db("orientationState: %@", currentOrientationState ? "horizontal" : "vertical")
     }
 
     private static func defaultFunctionKeyTitles() -> [String] {
@@ -672,8 +672,16 @@ struct ContentView: View {
     }
 
     private func persistSlotLines(_ slotLines: [String]) {
+        let callbackStartTime = CFAbsoluteTimeGetCurrent()
+        if !scriptEditorHasLoggedFirstFilePersistence {
+            scriptEditorHasLoggedFirstFilePersistence = true
+            db("FIRST FILE PERSISTENCE ContentView.persistSlotLines")
+        }
+        db("ENTER ContentView.persistSlotLines count=\(slotLines.count)")
         guard let selectedDocumentURL = selectedDocumentURL() else {
+            db("ENTER ContentView.persistSlotLines applySlotLines no selectedDocumentURL")
             applySlotLines(slotLines)
+            db("EXIT ContentView.persistSlotLines no selectedDocumentURL (\(scriptEditorProbeDurationMilliseconds(since: callbackStartTime)) ms)")
             return
         }
 
@@ -682,10 +690,17 @@ struct ContentView: View {
         let contents = normalizedLines.joined(separator: "\n")
 
         do {
+            let writeStartTime = CFAbsoluteTimeGetCurrent()
+            db("ENTER ContentView.persistSlotLines write url=\(selectedDocumentURL.lastPathComponent) bytes=\(contents.utf8.count)")
             try contents.write(to: selectedDocumentURL, atomically: true, encoding: .utf8)
+            db("EXIT ContentView.persistSlotLines write (\(scriptEditorProbeDurationMilliseconds(since: writeStartTime)) ms)")
+            db("ENTER ContentView.persistSlotLines applySlotLines")
             applySlotLines(normalizedLines)
+            db("EXIT ContentView.persistSlotLines (\(scriptEditorProbeDurationMilliseconds(since: callbackStartTime)) ms)")
         } catch {
+            db("ENTER ContentView.persistSlotLines loadFunctionKeys after write failure error=\(error.localizedDescription)")
             loadFunctionKeys(from: selectedDocumentURL)
+            db("EXIT ContentView.persistSlotLines error (\(scriptEditorProbeDurationMilliseconds(since: callbackStartTime)) ms)")
         }
     }
 
@@ -1051,7 +1066,7 @@ struct ContentView: View {
             oldGrid: sanitizedOldDimensions,
             newGrid: sanitizedNewDimensions
         ) else {
-            print("Can't resize grid because occupied buttons would fall outside the new dimensions.")
+            db("Can't resize grid because occupied buttons would fall outside the new dimensions.")
             return false
         }
 
@@ -2016,7 +2031,10 @@ struct ContentView: View {
 
     @discardableResult
     private func updateSelectedDocumentSlot(at index: Int, with line: String) -> Bool {
+        let callbackStartTime = CFAbsoluteTimeGetCurrent()
+        db("ENTER ContentView.updateSelectedDocumentSlot index=\(index) lineLength=\(line.utf16.count)")
         guard index >= 0, index < maxFunctionKeyCount else {
+            db("EXIT ContentView.updateSelectedDocumentSlot invalid index (\(scriptEditorProbeDurationMilliseconds(since: callbackStartTime)) ms)")
             return false
         }
 
@@ -2029,7 +2047,9 @@ struct ContentView: View {
         }
 
         updatedLines[index] = persistedLine
+        db("ENTER ContentView.updateSelectedDocumentSlot persistSlotLines")
         persistSlotLines(updatedLines)
+        db("EXIT ContentView.updateSelectedDocumentSlot (\(scriptEditorProbeDurationMilliseconds(since: callbackStartTime)) ms)")
         return true
     }
 
@@ -2222,7 +2242,7 @@ struct ContentView: View {
     }
 
     private func printDocumentNavigationStacks(_ label: String) {
-        print("Doc nav \(label). current: [\(selectedDocumentName)] back: \(documentNavigationHistory) forw: \(documentForwardNavigationHistory)")
+        db("Doc nav \(label). current: [\(selectedDocumentName)] back: \(documentNavigationHistory) forw: \(documentForwardNavigationHistory)")
     }
 
     private func appendingDocumentHistoryName(_ documentName: String, to history: [String]) -> [String] {
@@ -2510,7 +2530,7 @@ struct ContentView: View {
         while let previousName = documentNavigationHistory.popLast() {
             guard previousName != selectedDocumentName,
                   let fileURL = documentFiles.first(where: { $0.lastPathComponent == previousName }) else {
-                print("Doc nav back skipped: [\(previousName)]")
+                db("Doc nav back skipped: [\(previousName)]")
                 continue
             }
 
@@ -2533,7 +2553,7 @@ struct ContentView: View {
         while let nextName = documentForwardNavigationHistory.popLast() {
             guard nextName != selectedDocumentName,
                   let fileURL = documentFiles.first(where: { $0.lastPathComponent == nextName }) else {
-                print("Doc nav forw skipped: [\(nextName)]")
+                db("Doc nav forw skipped: [\(nextName)]")
                 continue
             }
 
@@ -2571,7 +2591,7 @@ struct ContentView: View {
                 let nextName = documentNavigationHistory[nextIndex]
                 guard nextName != selectedDocumentName,
                       let fileURL = documentFiles.first(where: { $0.lastPathComponent == nextName }) else {
-                    print("Doc nav forw history skipped: [\(nextName)]")
+                    db("Doc nav forw history skipped: [\(nextName)]")
                     nextIndex = documentNavigationHistory.index(after: nextIndex)
                     continue
                 }

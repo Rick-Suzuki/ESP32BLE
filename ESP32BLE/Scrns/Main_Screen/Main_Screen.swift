@@ -9,6 +9,30 @@ private enum MainScreenPersistedModeFiles {
     static let buttonActionMode = ".main_screen_button_action_mode.cfg"
 }
 
+var scriptEditorHasLoggedFirstKey = false
+var scriptEditorHasLoggedFirstTextInsertion = false
+var scriptEditorHasLoggedFirstBindingUpdate = false
+var scriptEditorHasLoggedFirstModelUpdate = false
+var scriptEditorHasLoggedFirstFilePersistence = false
+var scriptEditorProbeBeginSlotEditingStartTime: CFAbsoluteTime?
+var hasKeyboardBeenShownThisLaunch = false
+
+func scriptEditorProbeDurationMilliseconds(since startTime: CFAbsoluteTime) -> String {
+    String(format: "%.3f", (CFAbsoluteTimeGetCurrent() - startTime) * 1000)
+}
+
+func scriptEditorProbeTimingPrefix() -> String {
+    let now = CFAbsoluteTimeGetCurrent()
+    let elapsedMilliseconds: Int
+    if let scriptEditorProbeBeginSlotEditingStartTime {
+        elapsedMilliseconds = Int((now - scriptEditorProbeBeginSlotEditingStartTime) * 1000)
+    } else {
+        elapsedMilliseconds = -1
+    }
+
+    return String(format: "%.3f (+%04d ms)", now, elapsedMilliseconds)
+}
+
 private struct SmartScriptEditingModel {
     private struct EditingState {
         var scriptText: String
@@ -52,8 +76,15 @@ private struct SmartScriptEditingModel {
     }
 
     mutating func setKeyboardEditedText(_ text: String) {
+        let callbackStartTime = CFAbsoluteTimeGetCurrent()
+        if !scriptEditorHasLoggedFirstModelUpdate {
+            scriptEditorHasLoggedFirstModelUpdate = true
+            db("\(scriptEditorProbeTimingPrefix()) FIRST MODEL UPDATE SmartScriptEditingModel.setKeyboardEditedText")
+        }
+        db("\(scriptEditorProbeTimingPrefix()) ENTER SmartScriptEditingModel.setKeyboardEditedText oldLength=\(scriptText.utf16.count) newLength=\(text.utf16.count)")
         guard text != scriptText else {
             clampSelectionRange()
+            db("\(scriptEditorProbeTimingPrefix()) EXIT SmartScriptEditingModel.setKeyboardEditedText unchanged selection=\(selectionRange) (\(scriptEditorProbeDurationMilliseconds(since: callbackStartTime)) ms)")
             return
         }
 
@@ -66,6 +97,7 @@ private struct SmartScriptEditingModel {
         if keyboardEdit.shouldEndUndoGroup {
             activeEditTransactionKind = nil
         }
+        db("\(scriptEditorProbeTimingPrefix()) EXIT SmartScriptEditingModel.setKeyboardEditedText selection=\(selectionRange) (\(scriptEditorProbeDurationMilliseconds(since: callbackStartTime)) ms)")
     }
 
     mutating func setSelectionRange(_ range: NSRange) {
@@ -952,13 +984,26 @@ Tapping a row inserts the key code at the cursor.
                 handleSelectedDocumentDisplayNameChange()
             }
             .onChange(of: editingSlotIndex) {
+                db("\(scriptEditorProbeTimingPrefix()) MainScreen.onChange editingSlotIndex value=\(String(describing: editingSlotIndex))")
+                if editingSlotIndex != nil {
+                    db("\(scriptEditorProbeTimingPrefix()) ENTER show Script Editor editingSlotIndex=\(String(describing: editingSlotIndex)) opacity=1 hidden=false allowsHitTesting=true zIndex=default")
+                    db("\(scriptEditorProbeTimingPrefix()) EXIT show Script Editor editingSlotIndex=\(String(describing: editingSlotIndex)) opacity=1 hidden=false allowsHitTesting=true zIndex=default")
+                } else {
+                    db("\(scriptEditorProbeTimingPrefix()) ENTER hide Script Editor editingSlotIndex=nil opacity=0 hidden=true allowsHitTesting=false zIndex=default")
+                    db("\(scriptEditorProbeTimingPrefix()) EXIT hide Script Editor editingSlotIndex=nil opacity=0 hidden=true allowsHitTesting=false zIndex=default")
+                }
                 smartButtonBrightness = 0.5
                 smartButtonBrightnessBaseHex = smartButtonColorHex
             }
             .onChange(of: editingSlotText) { oldButtonCode, newButtonCode in
-                guard editingSlotIndex != nil else { return }
-                print("Button code before change -> \(oldButtonCode)")
-                print("Button code changed -> \(newButtonCode)")
+                guard editingSlotIndex != nil else {
+                    return
+                }
+                db("Button code before change -> \(oldButtonCode)")
+                db("Button code changed -> \(newButtonCode)")
+            }
+            .onChange(of: isSlotEditorFocused) {
+                db("MainScreen.onChange isSlotEditorFocused value=\(isSlotEditorFocused)")
             }
             .onChange(of: definedFunctionKeyCount) {
                 updateVisibleBoxCountToFitDefinedButtons()
@@ -1100,7 +1145,13 @@ Tapping a row inserts the key code at the cursor.
                 }
 
                 if editingSlotIndex != nil {
-                    smartView(availableWidth: contentWidth)
+                smartView(availableWidth: contentWidth)
+                        .onAppear {
+                            db("\(scriptEditorProbeTimingPrefix()) Script Editor overlay onAppear editingSlotIndex=\(String(describing: editingSlotIndex)) opacity=1 hidden=false allowsHitTesting=true zIndex=default")
+                        }
+                        .onDisappear {
+                            db("\(scriptEditorProbeTimingPrefix()) Script Editor overlay onDisappear editingSlotIndex=\(String(describing: editingSlotIndex)) opacity=0 hidden=true allowsHitTesting=false zIndex=default")
+                        }
                 }
 
                 popupOverlay(
@@ -1447,6 +1498,12 @@ Tapping a row inserts the key code at the cursor.
         }
         .frame(width: min(smartViewWidth, availableWidth), height: smartViewHeight)
         .ignoresSafeArea(.keyboard)
+        .onAppear {
+            db("\(scriptEditorProbeTimingPrefix()) smartView onAppear editingSlotIndex=\(String(describing: editingSlotIndex)) opacity=1 hidden=false allowsHitTesting=true zIndex=default")
+        }
+        .onDisappear {
+            db("\(scriptEditorProbeTimingPrefix()) smartView onDisappear editingSlotIndex=\(String(describing: editingSlotIndex)) opacity=0 hidden=true allowsHitTesting=false zIndex=default")
+        }
     }
 
     private func smartPanel(title: String) -> some View {
@@ -1494,6 +1551,12 @@ Tapping a row inserts the key code at the cursor.
         .overlay {
             Rectangle()
                 .stroke(Color.white, lineWidth: 1)
+        }
+        .onAppear {
+            db("\(scriptEditorProbeTimingPrefix()) smartColorPanel onAppear editingSlotIndex=\(String(describing: editingSlotIndex)) opacity=1 hidden=false allowsHitTesting=true zIndex=default")
+        }
+        .onDisappear {
+            db("\(scriptEditorProbeTimingPrefix()) smartColorPanel onDisappear editingSlotIndex=\(String(describing: editingSlotIndex)) opacity=0 hidden=true allowsHitTesting=false zIndex=default")
         }
     }
 	//
@@ -1549,6 +1612,12 @@ Tapping a row inserts the key code at the cursor.
                     Rectangle()
                         .stroke(Color.white, lineWidth: 1)
                 }
+                .onAppear {
+                    db("\(scriptEditorProbeTimingPrefix()) SmartScriptTextEditor view onAppear editingSlotIndex=\(String(describing: editingSlotIndex)) opacity=1 hidden=false allowsHitTesting=true zIndex=default")
+                }
+                .onDisappear {
+                    db("\(scriptEditorProbeTimingPrefix()) SmartScriptTextEditor view onDisappear editingSlotIndex=\(String(describing: editingSlotIndex)) opacity=0 hidden=true allowsHitTesting=false zIndex=default")
+                }
 
                 ScrollView(.vertical) {
                     LazyVStack(spacing: 0) {
@@ -1592,6 +1661,12 @@ Tapping a row inserts the key code at the cursor.
                 smartScriptEditingModel.scriptText
             },
             set: { newText in
+                let callbackStartTime = CFAbsoluteTimeGetCurrent()
+                if !scriptEditorHasLoggedFirstBindingUpdate {
+                    scriptEditorHasLoggedFirstBindingUpdate = true
+                    db("\(scriptEditorProbeTimingPrefix()) FIRST BINDING UPDATE smartScriptEditorTextBinding.set")
+                }
+                db("\(scriptEditorProbeTimingPrefix()) ENTER smartScriptEditorTextBinding.set newLength=\(newText.utf16.count)")
                 let parts = smartEditingTextParts
                 let canonicalScriptText = canonicalSmartScriptText(newText)
                 smartScriptEditingModel.setKeyboardEditedText(canonicalScriptText)
@@ -1602,10 +1677,14 @@ Tapping a row inserts the key code at the cursor.
                 )
 
                 guard let editingSlotIndex else {
+                    db("\(scriptEditorProbeTimingPrefix()) EXIT smartScriptEditorTextBinding.set no editingSlotIndex (\(scriptEditorProbeDurationMilliseconds(since: callbackStartTime)) ms)")
                     return
                 }
 
+                db("\(scriptEditorProbeTimingPrefix()) ENTER smartScriptEditorTextBinding.set updateFunctionKeySlot")
                 _ = updateFunctionKeySlot(editingSlotIndex, editingSlotText)
+                db("\(scriptEditorProbeTimingPrefix()) EXIT smartScriptEditorTextBinding.set updateFunctionKeySlot")
+                db("\(scriptEditorProbeTimingPrefix()) EXIT smartScriptEditorTextBinding.set (\(scriptEditorProbeDurationMilliseconds(since: callbackStartTime)) ms)")
             }
         )
     }
@@ -1616,7 +1695,10 @@ Tapping a row inserts the key code at the cursor.
                 smartScriptEditingModel.selectionRange
             },
             set: { newRange in
+                let callbackStartTime = CFAbsoluteTimeGetCurrent()
+                db("\(scriptEditorProbeTimingPrefix()) ENTER smartScriptSelectionRangeBinding.set range=\(newRange)")
                 smartScriptEditingModel.setSelectionRange(newRange)
+                db("\(scriptEditorProbeTimingPrefix()) EXIT smartScriptSelectionRangeBinding.set (\(scriptEditorProbeDurationMilliseconds(since: callbackStartTime)) ms)")
             }
         )
     }
@@ -1744,7 +1826,10 @@ Tapping a row inserts the key code at the cursor.
     }
 
     func resetSmartScriptEditingModel() {
+        let callbackStartTime = CFAbsoluteTimeGetCurrent()
+        db("\(scriptEditorProbeTimingPrefix()) ENTER resetSmartScriptEditingModel")
         smartScriptEditingModel.setText(canonicalSmartScriptText(editorSmartScriptText(fromStoredText: displayActionTextReplacingModifierCodes(smartEditingTextParts.action))))
+        db("\(scriptEditorProbeTimingPrefix()) EXIT resetSmartScriptEditingModel (\(scriptEditorProbeDurationMilliseconds(since: callbackStartTime)) ms)")
     }
 
     private func syncSmartEditingTextFromScriptModel() {
@@ -3209,7 +3294,9 @@ private struct SmartScriptTextEditor: UIViewRepresentable {
     }
 
     func makeUIView(context: Context) -> UITextView {
-        let textView = UITextView()
+        let callbackStartTime = CFAbsoluteTimeGetCurrent()
+        db("\(scriptEditorProbeTimingPrefix()) ENTER SmartScriptTextEditor.makeUIView")
+        let textView = ProbeTextView()
         textView.delegate = context.coordinator
         textView.textColor = .white
         textView.tintColor = .white
@@ -3220,14 +3307,23 @@ private struct SmartScriptTextEditor: UIViewRepresentable {
         textView.textContainerInset = UIEdgeInsets(top: 8, left: 5, bottom: 8, right: 5)
         textView.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         textView.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        db("\(scriptEditorProbeTimingPrefix()) EXIT SmartScriptTextEditor.makeUIView (\(scriptEditorProbeDurationMilliseconds(since: callbackStartTime)) ms)")
         return textView
     }
 
     func updateUIView(_ uiView: UITextView, context: Context) {
+        let callbackStartTime = CFAbsoluteTimeGetCurrent()
+        let shouldLog = !scriptEditorHasLoggedFirstKey
+        if shouldLog {
+            db("\(scriptEditorProbeTimingPrefix()) ENTER SmartScriptTextEditor.updateUIView uiTextLength=\((uiView.text ?? "").utf16.count) bindingLength=\(text.utf16.count) selected=\(selectedRange) windowNil=\(uiView.window == nil) isFirstResponder=\(uiView.isFirstResponder) isUserInteractionEnabled=\(uiView.isUserInteractionEnabled) isHidden=\(uiView.isHidden) alpha=\(uiView.alpha) frame=\(uiView.frame) bounds=\(uiView.bounds)")
+        }
         context.coordinator.parent = self
         context.coordinator.isUpdatingView = true
         defer {
             context.coordinator.isUpdatingView = false
+            if shouldLog {
+                db("\(scriptEditorProbeTimingPrefix()) EXIT SmartScriptTextEditor.updateUIView windowNil=\(uiView.window == nil) isFirstResponder=\(uiView.isFirstResponder) isUserInteractionEnabled=\(uiView.isUserInteractionEnabled) isHidden=\(uiView.isHidden) alpha=\(uiView.alpha) frame=\(uiView.frame) bounds=\(uiView.bounds) (\(scriptEditorProbeDurationMilliseconds(since: callbackStartTime)) ms)")
+            }
         }
 
         if uiView.text != text {
@@ -3237,52 +3333,302 @@ private struct SmartScriptTextEditor: UIViewRepresentable {
         context.coordinator.applySelectedRange(to: uiView)
     }
 
+    private final class ProbeTextView: UITextView {
+        private var keyboardNotificationObservers: [NSObjectProtocol] = []
+
+        override init(frame: CGRect, textContainer: NSTextContainer?) {
+            let callbackStartTime = CFAbsoluteTimeGetCurrent()
+            db("\(scriptEditorProbeTimingPrefix()) ENTER UITextView.init")
+            super.init(frame: frame, textContainer: textContainer)
+            registerKeyboardNotificationObservers()
+            db("\(scriptEditorProbeTimingPrefix()) EXIT UITextView.init (\(scriptEditorProbeDurationMilliseconds(since: callbackStartTime)) ms)")
+        }
+
+        required init?(coder: NSCoder) {
+            let callbackStartTime = CFAbsoluteTimeGetCurrent()
+            db("\(scriptEditorProbeTimingPrefix()) ENTER UITextView.init(coder:)")
+            super.init(coder: coder)
+            registerKeyboardNotificationObservers()
+            db("\(scriptEditorProbeTimingPrefix()) EXIT UITextView.init(coder:) (\(scriptEditorProbeDurationMilliseconds(since: callbackStartTime)) ms)")
+        }
+
+        deinit {
+            db("\(scriptEditorProbeTimingPrefix()) ENTER UITextView.deinit")
+            for observer in keyboardNotificationObservers {
+                NotificationCenter.default.removeObserver(observer)
+            }
+            db("\(scriptEditorProbeTimingPrefix()) EXIT UITextView.deinit")
+        }
+
+        override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+            let callbackStartTime = CFAbsoluteTimeGetCurrent()
+            db("\(scriptEditorProbeTimingPrefix()) ENTER UITextView.hitTest point=\(point) \(debugInteractionState)")
+            let result = super.hitTest(point, with: event)
+            db("\(scriptEditorProbeTimingPrefix()) EXIT UITextView.hitTest result=\(result.map { String(describing: type(of: $0)) } ?? "nil") \(debugInteractionState) (\(scriptEditorProbeDurationMilliseconds(since: callbackStartTime)) ms)")
+            return result
+        }
+
+        override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
+            let callbackStartTime = CFAbsoluteTimeGetCurrent()
+            db("\(scriptEditorProbeTimingPrefix()) ENTER UITextView.pointInside point=\(point) \(debugInteractionState)")
+            let result = super.point(inside: point, with: event)
+            db("\(scriptEditorProbeTimingPrefix()) EXIT UITextView.pointInside result=\(result) \(debugInteractionState) (\(scriptEditorProbeDurationMilliseconds(since: callbackStartTime)) ms)")
+            return result
+        }
+
+        override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+            let callbackStartTime = CFAbsoluteTimeGetCurrent()
+            db("\(scriptEditorProbeTimingPrefix()) ENTER UITextView.touchesBegan touchCount=\(touches.count) \(debugInteractionState)")
+            logGestureRecognizers(context: "touchesBegan")
+            logSuperviewChain(context: "touchesBegan")
+            logWindowState(context: "touchesBegan")
+            scriptEditorHasLoggedFirstKey = false
+            scriptEditorHasLoggedFirstTextInsertion = false
+            scriptEditorHasLoggedFirstBindingUpdate = false
+            scriptEditorHasLoggedFirstModelUpdate = false
+            scriptEditorHasLoggedFirstFilePersistence = false
+            super.touchesBegan(touches, with: event)
+            db("\(scriptEditorProbeTimingPrefix()) EXIT UITextView.touchesBegan \(debugInteractionState) (\(scriptEditorProbeDurationMilliseconds(since: callbackStartTime)) ms)")
+        }
+
+        override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+            let callbackStartTime = CFAbsoluteTimeGetCurrent()
+            db("\(scriptEditorProbeTimingPrefix()) ENTER UITextView.touchesEnded touchCount=\(touches.count) \(debugInteractionState)")
+            super.touchesEnded(touches, with: event)
+            db("\(scriptEditorProbeTimingPrefix()) EXIT UITextView.touchesEnded \(debugInteractionState) (\(scriptEditorProbeDurationMilliseconds(since: callbackStartTime)) ms)")
+        }
+
+        override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
+            let callbackStartTime = CFAbsoluteTimeGetCurrent()
+            db("\(scriptEditorProbeTimingPrefix()) ENTER UITextView.touchesCancelled touchCount=\(touches.count) \(debugInteractionState)")
+            super.touchesCancelled(touches, with: event)
+            db("\(scriptEditorProbeTimingPrefix()) EXIT UITextView.touchesCancelled \(debugInteractionState) (\(scriptEditorProbeDurationMilliseconds(since: callbackStartTime)) ms)")
+        }
+
+        override func becomeFirstResponder() -> Bool {
+            let callbackStartTime = CFAbsoluteTimeGetCurrent()
+            db("\(scriptEditorProbeTimingPrefix()) ENTER UITextView.becomeFirstResponder isFirstResponderBefore=\(isFirstResponder)")
+            let result = super.becomeFirstResponder()
+            db("\(scriptEditorProbeTimingPrefix()) EXIT UITextView.becomeFirstResponder result=\(result) isFirstResponderAfter=\(isFirstResponder) (\(scriptEditorProbeDurationMilliseconds(since: callbackStartTime)) ms)")
+            return result
+        }
+
+        override func resignFirstResponder() -> Bool {
+            let callbackStartTime = CFAbsoluteTimeGetCurrent()
+            db("\(scriptEditorProbeTimingPrefix()) ENTER UITextView.resignFirstResponder isFirstResponderBefore=\(isFirstResponder)")
+            let result = super.resignFirstResponder()
+            db("\(scriptEditorProbeTimingPrefix()) EXIT UITextView.resignFirstResponder result=\(result) isFirstResponderAfter=\(isFirstResponder) (\(scriptEditorProbeDurationMilliseconds(since: callbackStartTime)) ms)")
+            return result
+        }
+
+        override func didMoveToWindow() {
+            let callbackStartTime = CFAbsoluteTimeGetCurrent()
+            db("\(scriptEditorProbeTimingPrefix()) ENTER UITextView.didMoveToWindow windowNil=\(window == nil)")
+            super.didMoveToWindow()
+            logGestureRecognizers(context: "didMoveToWindow")
+            logSuperviewChain(context: "didMoveToWindow")
+            logWindowState(context: "didMoveToWindow")
+            db("\(scriptEditorProbeTimingPrefix()) EXIT UITextView.didMoveToWindow windowNil=\(window == nil) (\(scriptEditorProbeDurationMilliseconds(since: callbackStartTime)) ms)")
+        }
+
+        override func didMoveToSuperview() {
+            let callbackStartTime = CFAbsoluteTimeGetCurrent()
+            db("\(scriptEditorProbeTimingPrefix()) ENTER UITextView.didMoveToSuperview superviewNil=\(superview == nil)")
+            super.didMoveToSuperview()
+            logSuperviewChain(context: "didMoveToSuperview")
+            db("\(scriptEditorProbeTimingPrefix()) EXIT UITextView.didMoveToSuperview superviewNil=\(superview == nil) (\(scriptEditorProbeDurationMilliseconds(since: callbackStartTime)) ms)")
+        }
+
+        override func layoutSubviews() {
+            let callbackStartTime = CFAbsoluteTimeGetCurrent()
+            db("\(scriptEditorProbeTimingPrefix()) ENTER UITextView.layoutSubviews bounds=\(bounds)")
+            super.layoutSubviews()
+            db("\(scriptEditorProbeTimingPrefix()) EXIT UITextView.layoutSubviews bounds=\(bounds) (\(scriptEditorProbeDurationMilliseconds(since: callbackStartTime)) ms)")
+        }
+
+        private var debugInteractionState: String {
+            "windowNil=\(window == nil) isHidden=\(isHidden) alpha=\(alpha) isUserInteractionEnabled=\(isUserInteractionEnabled) isFirstResponder=\(isFirstResponder)"
+        }
+
+        private func logGestureRecognizers(context: String) {
+            let recognizers = gestureRecognizers ?? []
+            db("\(scriptEditorProbeTimingPrefix()) UITextView.gestureRecognizers context=\(context) count=\(recognizers.count)")
+            for recognizer in recognizers {
+                db("\(scriptEditorProbeTimingPrefix()) UITextView.gestureRecognizer context=\(context) class=\(String(describing: type(of: recognizer))) state=\(String(describing: recognizer.state)) delaysTouchesBegan=\(recognizer.delaysTouchesBegan) delaysTouchesEnded=\(recognizer.delaysTouchesEnded) cancelsTouchesInView=\(recognizer.cancelsTouchesInView) requiresExclusiveTouchType=\(recognizer.requiresExclusiveTouchType)")
+            }
+        }
+
+        private func logSuperviewChain(context: String) {
+            var currentView: UIView? = self
+            var depth = 0
+            while let view = currentView {
+                db("\(scriptEditorProbeTimingPrefix()) UITextView.superviewChain context=\(context) depth=\(depth) class=\(String(describing: type(of: view))) frame=\(view.frame) hidden=\(view.isHidden) alpha=\(view.alpha) userInteractionEnabled=\(view.isUserInteractionEnabled)")
+                currentView = view.superview
+                depth += 1
+            }
+        }
+
+        private func logWindowState(context: String) {
+            guard let window else {
+                db("\(scriptEditorProbeTimingPrefix()) UITextView.windowState context=\(context) window=nil")
+                return
+            }
+
+            db("\(scriptEditorProbeTimingPrefix()) UITextView.windowState context=\(context) isKeyWindow=\(window.isKeyWindow) rootViewController=\(String(describing: window.rootViewController.map { type(of: $0) })) firstResponder=unavailable")
+        }
+
+        private func registerKeyboardNotificationObservers() {
+            let notificationCenter = NotificationCenter.default
+            let notifications = [
+                UIResponder.keyboardWillShowNotification,
+                UIResponder.keyboardDidShowNotification,
+                UIResponder.keyboardWillHideNotification,
+                UIResponder.keyboardDidHideNotification,
+                UIResponder.keyboardWillChangeFrameNotification,
+                UIResponder.keyboardDidChangeFrameNotification
+            ]
+
+            keyboardNotificationObservers = notifications.map { notificationName in
+                notificationCenter.addObserver(forName: notificationName, object: nil, queue: .main) { notification in
+                    let userInfo = notification.userInfo ?? [:]
+                    let frame = (userInfo[UIResponder.keyboardFrameEndUserInfoKey] as? NSValue)?.cgRectValue ?? .zero
+                    let duration = (userInfo[UIResponder.keyboardAnimationDurationUserInfoKey] as? NSNumber)?.doubleValue ?? -1
+                    let curve = (userInfo[UIResponder.keyboardAnimationCurveUserInfoKey] as? NSNumber)?.intValue ?? -1
+                    db("\(scriptEditorProbeTimingPrefix()) KEYBOARD NOTIFICATION \(notification.name.rawValue) frame=\(frame) animationDuration=\(duration) animationCurve=\(curve)")
+                    if notification.name == UIResponder.keyboardDidShowNotification {
+                        if hasKeyboardBeenShownThisLaunch {
+                            db("\(scriptEditorProbeTimingPrefix()) KEYBOARD ALREADY INITIALISED")
+                        } else {
+                            db("\(scriptEditorProbeTimingPrefix()) FIRST KEYBOARD OF APP SESSION")
+                            hasKeyboardBeenShownThisLaunch = true
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     final class Coordinator: NSObject, UITextViewDelegate {
         var parent: SmartScriptTextEditor
         var isUpdatingView = false
         private var isApplyingSelectedRange = false
 
         init(_ parent: SmartScriptTextEditor) {
+            let callbackStartTime = CFAbsoluteTimeGetCurrent()
+            db("\(scriptEditorProbeTimingPrefix()) ENTER Coordinator.init")
             self.parent = parent
+            super.init()
+            db("\(scriptEditorProbeTimingPrefix()) EXIT Coordinator.init (\(scriptEditorProbeDurationMilliseconds(since: callbackStartTime)) ms)")
+        }
+
+        deinit {
+            db("\(scriptEditorProbeTimingPrefix()) ENTER Coordinator.deinit")
+            db("\(scriptEditorProbeTimingPrefix()) EXIT Coordinator.deinit")
+        }
+
+        func textViewShouldBeginEditing(_ textView: UITextView) -> Bool {
+            let callbackStartTime = CFAbsoluteTimeGetCurrent()
+            db("\(scriptEditorProbeTimingPrefix()) ENTER Coordinator.textViewShouldBeginEditing isFirstResponder=\(textView.isFirstResponder) selectedRange=\(textView.selectedRange) textLength=\((textView.text ?? "").utf16.count)")
+            db("\(scriptEditorProbeTimingPrefix()) EXIT Coordinator.textViewShouldBeginEditing true isFirstResponder=\(textView.isFirstResponder) selectedRange=\(textView.selectedRange) textLength=\((textView.text ?? "").utf16.count) (\(scriptEditorProbeDurationMilliseconds(since: callbackStartTime)) ms)")
+            return true
+        }
+
+        func textViewDidBeginEditing(_ textView: UITextView) {
+            let callbackStartTime = CFAbsoluteTimeGetCurrent()
+            db("\(scriptEditorProbeTimingPrefix()) ENTER Coordinator.textViewDidBeginEditing isFirstResponder=\(textView.isFirstResponder) selectedRange=\(textView.selectedRange) textLength=\((textView.text ?? "").utf16.count)")
+            db("\(scriptEditorProbeTimingPrefix()) EXIT Coordinator.textViewDidBeginEditing isFirstResponder=\(textView.isFirstResponder) selectedRange=\(textView.selectedRange) textLength=\((textView.text ?? "").utf16.count) (\(scriptEditorProbeDurationMilliseconds(since: callbackStartTime)) ms)")
+        }
+
+        func textViewDidEndEditing(_ textView: UITextView) {
+            let callbackStartTime = CFAbsoluteTimeGetCurrent()
+            db("\(scriptEditorProbeTimingPrefix()) ENTER Coordinator.textViewDidEndEditing isFirstResponder=\(textView.isFirstResponder) selectedRange=\(textView.selectedRange) textLength=\((textView.text ?? "").utf16.count)")
+            db("\(scriptEditorProbeTimingPrefix()) EXIT Coordinator.textViewDidEndEditing isFirstResponder=\(textView.isFirstResponder) selectedRange=\(textView.selectedRange) textLength=\((textView.text ?? "").utf16.count) (\(scriptEditorProbeDurationMilliseconds(since: callbackStartTime)) ms)")
+        }
+
+        func textView(_ textView: UITextView, shouldChangeTextIn range: NSRange, replacementText text: String) -> Bool {
+            let callbackStartTime = CFAbsoluteTimeGetCurrent()
+            db("\(scriptEditorProbeTimingPrefix()) ENTER Coordinator.textViewShouldChangeTextIn range=\(range) replacement=\(debugReplacementText(text)) isFirstResponder=\(textView.isFirstResponder) selectedRange=\(textView.selectedRange) textLength=\((textView.text ?? "").utf16.count)")
+            if !scriptEditorHasLoggedFirstKey, !text.isEmpty {
+                scriptEditorHasLoggedFirstKey = true
+                db("\(scriptEditorProbeTimingPrefix()) FIRST CHARACTER RECEIVED replacement=\(debugReplacementText(text)) selectedRange=\(textView.selectedRange) currentLength=\((textView.text ?? "").utf16.count)")
+            }
+            db("\(scriptEditorProbeTimingPrefix()) EXIT Coordinator.textViewShouldChangeTextIn true isFirstResponder=\(textView.isFirstResponder) selectedRange=\(textView.selectedRange) textLength=\((textView.text ?? "").utf16.count) (\(scriptEditorProbeDurationMilliseconds(since: callbackStartTime)) ms)")
+            return true
         }
 
         func textViewDidChange(_ textView: UITextView) {
+            let callbackStartTime = CFAbsoluteTimeGetCurrent()
+            db("\(scriptEditorProbeTimingPrefix()) ENTER Coordinator.textViewDidChange isUpdating=\(isUpdatingView) isApplyingSelection=\(isApplyingSelectedRange)")
             guard !isUpdatingView, !isApplyingSelectedRange else {
+                db("\(scriptEditorProbeTimingPrefix()) EXIT Coordinator.textViewDidChange skipped (\(scriptEditorProbeDurationMilliseconds(since: callbackStartTime)) ms)")
                 return
             }
 
             let newText = textView.text ?? ""
             let newSelectedRange = textView.selectedRange
+            if !scriptEditorHasLoggedFirstTextInsertion {
+                scriptEditorHasLoggedFirstTextInsertion = true
+                db("\(scriptEditorProbeTimingPrefix()) FIRST textViewDidChange text inserted length=\(newText.utf16.count) selected=\(newSelectedRange)")
+            }
+            db("\(scriptEditorProbeTimingPrefix()) SCHEDULED Coordinator.textViewDidChange DispatchQueue.main.async binding update length=\(newText.utf16.count) selected=\(newSelectedRange)")
             DispatchQueue.main.async {
+                let asyncStartTime = CFAbsoluteTimeGetCurrent()
+                db("\(scriptEditorProbeTimingPrefix()) EXECUTED Coordinator.textViewDidChange DispatchQueue.main.async binding update")
+                if !scriptEditorHasLoggedFirstBindingUpdate {
+                    scriptEditorHasLoggedFirstBindingUpdate = true
+                    db("\(scriptEditorProbeTimingPrefix()) FIRST BINDING UPDATE Coordinator.textViewDidChange async")
+                }
+                db("\(scriptEditorProbeTimingPrefix()) ENTER Coordinator.textViewDidChange async binding update")
                 self.parent.text = newText
                 self.parent.selectedRange = newSelectedRange
+                db("\(scriptEditorProbeTimingPrefix()) EXIT Coordinator.textViewDidChange async binding update (\(scriptEditorProbeDurationMilliseconds(since: asyncStartTime)) ms)")
             }
+            db("\(scriptEditorProbeTimingPrefix()) EXIT Coordinator.textViewDidChange (\(scriptEditorProbeDurationMilliseconds(since: callbackStartTime)) ms)")
         }
 
         func textViewDidChangeSelection(_ textView: UITextView) {
+            let callbackStartTime = CFAbsoluteTimeGetCurrent()
+            db("\(scriptEditorProbeTimingPrefix()) ENTER Coordinator.textViewDidChangeSelection isUpdating=\(isUpdatingView) isApplyingSelection=\(isApplyingSelectedRange) isFirstResponder=\(textView.isFirstResponder) selectedRange=\(textView.selectedRange) textLength=\((textView.text ?? "").utf16.count)")
             guard !isUpdatingView, !isApplyingSelectedRange else {
+                db("\(scriptEditorProbeTimingPrefix()) EXIT Coordinator.textViewDidChangeSelection skipped isFirstResponder=\(textView.isFirstResponder) selectedRange=\(textView.selectedRange) textLength=\((textView.text ?? "").utf16.count) (\(scriptEditorProbeDurationMilliseconds(since: callbackStartTime)) ms)")
                 return
             }
 
             let newSelectedRange = textView.selectedRange
+            db("\(scriptEditorProbeTimingPrefix()) SCHEDULED Coordinator.textViewDidChangeSelection DispatchQueue.main.async selected=\(newSelectedRange)")
             DispatchQueue.main.async {
+                let asyncStartTime = CFAbsoluteTimeGetCurrent()
+                db("\(scriptEditorProbeTimingPrefix()) EXECUTED Coordinator.textViewDidChangeSelection DispatchQueue.main.async")
+                db("\(scriptEditorProbeTimingPrefix()) ENTER Coordinator.textViewDidChangeSelection async binding update")
                 self.parent.selectedRange = newSelectedRange
+                db("\(scriptEditorProbeTimingPrefix()) EXIT Coordinator.textViewDidChangeSelection async binding update (\(scriptEditorProbeDurationMilliseconds(since: asyncStartTime)) ms)")
             }
+            db("\(scriptEditorProbeTimingPrefix()) EXIT Coordinator.textViewDidChangeSelection isFirstResponder=\(textView.isFirstResponder) selectedRange=\(textView.selectedRange) textLength=\((textView.text ?? "").utf16.count) (\(scriptEditorProbeDurationMilliseconds(since: callbackStartTime)) ms)")
         }
 
         func applySelectedRange(to textView: UITextView) {
+            let callbackStartTime = CFAbsoluteTimeGetCurrent()
+            db("\(scriptEditorProbeTimingPrefix()) ENTER Coordinator.applySelectedRange parentSelected=\(parent.selectedRange) textViewSelected=\(textView.selectedRange)")
             let textLength = textView.text.utf16.count
             let location = min(max(parent.selectedRange.location, 0), textLength)
             let length = max(0, min(parent.selectedRange.length, textLength - location))
             let clampedRange = NSRange(location: location, length: length)
 
             guard textView.selectedRange != clampedRange else {
+                db("\(scriptEditorProbeTimingPrefix()) EXIT Coordinator.applySelectedRange unchanged (\(scriptEditorProbeDurationMilliseconds(since: callbackStartTime)) ms)")
                 return
             }
 
             isApplyingSelectedRange = true
             textView.selectedRange = clampedRange
             isApplyingSelectedRange = false
+            db("\(scriptEditorProbeTimingPrefix()) EXIT Coordinator.applySelectedRange applied clamped=\(clampedRange) (\(scriptEditorProbeDurationMilliseconds(since: callbackStartTime)) ms)")
+        }
+
+        private func debugReplacementText(_ text: String) -> String {
+            text
+                .replacingOccurrences(of: "\n", with: "\\n")
+                .replacingOccurrences(of: "\t", with: "\\t")
         }
     }
 }
