@@ -1305,7 +1305,7 @@ Tapping a row inserts the key code at the cursor.
     }
 
     private var isHomeDocumentSelected: Bool {
-        selectedDocumentName.caseInsensitiveCompare("home.txt") == .orderedSame
+        false
     }
 
     private func openHomeDocumentFromMainScreenControl() {
