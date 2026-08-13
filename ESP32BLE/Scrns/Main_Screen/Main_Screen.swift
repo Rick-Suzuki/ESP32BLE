@@ -1004,9 +1004,16 @@ Tapping a row inserts the key code at the cursor.
                     previewedFile: previewedFile,
                     onClose: {
                         ButtonClickFeedback.playIfEnabled()
+                        db("STATE MainScreen.previewFullScreenCover current presentedPreviewFile=\(previewedFile.id) new=nil thread=\(Thread.isMainThread ? "main" : "background")")
                         presentedPreviewFile = nil
                     }
                 )
+                .onAppear {
+                    db("DESTINATION MainScreenFilePreviewOverlay.onAppear current presentedPreviewFile=\(previewedFile.id) new=visible thread=\(Thread.isMainThread ? "main" : "background")")
+                }
+                .onDisappear {
+                    db("DESTINATION MainScreenFilePreviewOverlay.onDisappear current presentedPreviewFile=\(previewedFile.id) new=hidden thread=\(Thread.isMainThread ? "main" : "background")")
+                }
             }
     }
 
@@ -1053,8 +1060,10 @@ Tapping a row inserts the key code at the cursor.
 						commitDocumentRename: commitDocumentRename,
 						openSettings: AnyView(
 							Button {
+								db("ENTER MainScreen.settingsButton current isSettingsScreenPresented=\(isSettingsScreenPresented) new=true thread=\(Thread.isMainThread ? "main" : "background")")
 								ButtonClickFeedback.playIfEnabled()
 								openSettingsScreen()
+								db("EXIT MainScreen.settingsButton current isSettingsScreenPresented=\(isSettingsScreenPresented) new=true thread=\(Thread.isMainThread ? "main" : "background")")
 							} label: {
 								settingsToolbarButtonLabel
 							}
@@ -1300,37 +1309,45 @@ Tapping a row inserts the key code at the cursor.
     }
 
     private func openHomeDocumentFromMainScreenControl() {
+        db("ENTER MainScreen.openHomeDocumentFromMainScreenControl current selectedDocumentName=\(selectedDocumentName) new=home.txt thread=\(Thread.isMainThread ? "main" : "background")")
         if mainGridButtonMode == .speechActive {
             speakMainGridText("home")
         }
-        _ = selectDocumentNamedFromGrid("home.txt")
+        let selectedHomeDocument = selectDocumentNamedFromGrid("home.txt")
+        db("EXIT MainScreen.openHomeDocumentFromMainScreenControl current selectedDocumentName=\(selectedDocumentName) new=home.txt result=\(selectedHomeDocument) thread=\(Thread.isMainThread ? "main" : "background")")
     }
 
     private func goBackToPreviousDocumentFromMainScreenControl() {
+        db("ENTER MainScreen.goBackToPreviousDocumentFromMainScreenControl current selectedDocumentName=\(selectedDocumentName) new=previousHistory thread=\(Thread.isMainThread ? "main" : "background")")
         if mainGridButtonMode == .speechActive,
            let previousDocumentDisplayName,
            !previousDocumentDisplayName.isEmpty {
             speakMainGridText(previousDocumentDisplayName)
         }
         goBackToPreviousDocument()
+        db("EXIT MainScreen.goBackToPreviousDocumentFromMainScreenControl current selectedDocumentName=\(selectedDocumentName) new=previousHistory complete thread=\(Thread.isMainThread ? "main" : "background")")
     }
 
     private func selectPreviousDocumentFromMainScreenControl() {
+        db("ENTER MainScreen.selectPreviousDocumentFromMainScreenControl current selectedDocumentName=\(selectedDocumentName) currentFileNumber=\(currentFileNumber) new=previousDocument thread=\(Thread.isMainThread ? "main" : "background")")
         if mainGridButtonMode == .speechActive,
            let adjacentPreviousDocumentDisplayName,
            !adjacentPreviousDocumentDisplayName.isEmpty {
             speakMainGridText(adjacentPreviousDocumentDisplayName)
         }
         selectPreviousDocument()
+        db("EXIT MainScreen.selectPreviousDocumentFromMainScreenControl current selectedDocumentName=\(selectedDocumentName) currentFileNumber=\(currentFileNumber) new=previousDocument complete thread=\(Thread.isMainThread ? "main" : "background")")
     }
 
     private func selectNextDocumentFromMainScreenControl() {
+        db("ENTER MainScreen.selectNextDocumentFromMainScreenControl current selectedDocumentName=\(selectedDocumentName) currentFileNumber=\(currentFileNumber) new=nextDocument thread=\(Thread.isMainThread ? "main" : "background")")
         if mainGridButtonMode == .speechActive,
            let adjacentNextDocumentDisplayName,
            !adjacentNextDocumentDisplayName.isEmpty {
             speakMainGridText(adjacentNextDocumentDisplayName)
         }
         selectNextDocument()
+        db("EXIT MainScreen.selectNextDocumentFromMainScreenControl current selectedDocumentName=\(selectedDocumentName) currentFileNumber=\(currentFileNumber) new=nextDocument complete thread=\(Thread.isMainThread ? "main" : "background")")
     }
 
     private func selectPreviousBackgroundImage() {

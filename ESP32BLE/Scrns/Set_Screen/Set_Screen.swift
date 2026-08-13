@@ -283,6 +283,7 @@ struct SettingsScreen: View {
                 set: { isPresented in
                     guard !isPresented else { return }
                     cleanupSingleFileExportTemporaryURLIfNeeded()
+                    db("STATE SettingsScreen.singleFileExportSheet current singleFileExportURL=\(String(describing: singleFileExportURL?.lastPathComponent)) new=nil thread=\(Thread.isMainThread ? "main" : "background")")
                     singleFileExportURL = nil
                 }
             )
@@ -290,7 +291,14 @@ struct SettingsScreen: View {
             if let exportURL = singleFileExportURL {
                 SettingsSingleFileExportPicker(url: exportURL) {
                     cleanupSingleFileExportTemporaryURLIfNeeded()
+                    db("STATE SettingsScreen.singleFileExportSheet.onClose current singleFileExportURL=\(String(describing: singleFileExportURL?.lastPathComponent)) new=nil thread=\(Thread.isMainThread ? "main" : "background")")
                     singleFileExportURL = nil
+                }
+                .onAppear {
+                    db("DESTINATION SettingsSingleFileExportPicker.onAppear current singleFileExportURL=\(exportURL.lastPathComponent) new=visible thread=\(Thread.isMainThread ? "main" : "background")")
+                }
+                .onDisappear {
+                    db("DESTINATION SettingsSingleFileExportPicker.onDisappear current singleFileExportURL=\(exportURL.lastPathComponent) new=hidden thread=\(Thread.isMainThread ? "main" : "background")")
                 }
             }
         }
@@ -1511,6 +1519,7 @@ struct SettingsScreen: View {
         saveCurrentDocumentText()
         do {
             let exportURL = try makeSingleFileExportURL()
+            db("STATE SettingsScreen.prepareSingleFileExport current singleFileExportURL=\(String(describing: singleFileExportURL?.lastPathComponent)) new=\(exportURL.lastPathComponent) thread=\(Thread.isMainThread ? "main" : "background")")
             singleFileExportURL = exportURL
         } catch {
             cleanupSingleFileExportTemporaryURLIfNeeded()

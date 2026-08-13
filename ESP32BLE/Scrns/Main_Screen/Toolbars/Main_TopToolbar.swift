@@ -55,12 +55,14 @@ struct MainScreenToolbarContent: View {
 			//----------------------------------------
 			// home btn
 			//
-			Button {
-				ButtonClickFeedback.playIfEnabled()
-				openHomeDocument()
-			} label: {
-				Image(systemName: "house")
-					.font(.system(size: 22))
+				Button {
+					db("ENTER MainScreenToolbarContent.homeButton current isHomeDocumentSelected=\(isHomeDocumentSelected) new=openHomeDocument thread=\(Thread.isMainThread ? "main" : "background")")
+					ButtonClickFeedback.playIfEnabled()
+					openHomeDocument()
+					db("EXIT MainScreenToolbarContent.homeButton current isHomeDocumentSelected=\(isHomeDocumentSelected) new=openHomeDocument complete thread=\(Thread.isMainThread ? "main" : "background")")
+				} label: {
+					Image(systemName: "house")
+						.font(.system(size: 22))
 					.frame(width: 44, height: 44)
 					.contentShape(.rect)
 			}
@@ -71,12 +73,14 @@ struct MainScreenToolbarContent: View {
 			//----------------------------------------
 			// go back btn
 			//
-			Button {
-				ButtonClickFeedback.playIfEnabled()
-				goBackToPreviousDocument()
-			} label: {
-				Image(systemName: "arrow.uturn.backward.circle")
-					.font(.system(size: 22))
+				Button {
+					db("ENTER MainScreenToolbarContent.goBackButton current canGoBackToPreviousDocument=\(canGoBackToPreviousDocument) new=goBackToPreviousDocument thread=\(Thread.isMainThread ? "main" : "background")")
+					ButtonClickFeedback.playIfEnabled()
+					goBackToPreviousDocument()
+					db("EXIT MainScreenToolbarContent.goBackButton current canGoBackToPreviousDocument=\(canGoBackToPreviousDocument) new=goBackToPreviousDocument complete thread=\(Thread.isMainThread ? "main" : "background")")
+				} label: {
+					Image(systemName: "arrow.uturn.backward.circle")
+						.font(.system(size: 22))
 					.frame(width: 44, height: 44)
 					.contentShape(.rect)
 			}
@@ -87,12 +91,14 @@ struct MainScreenToolbarContent: View {
 			//----------------------------------------
 			// previous btn
 			//
-			Button {
-				ButtonClickFeedback.playIfEnabled()
-				selectPreviousDocument()
-			} label: {
-				Image(systemName: "triangle.fill")
-					.font(.system(size: 20))
+				Button {
+					db("ENTER MainScreenToolbarContent.previousDocumentButton current currentFileNumber=\(currentFileNumber) new=selectPreviousDocument thread=\(Thread.isMainThread ? "main" : "background")")
+					ButtonClickFeedback.playIfEnabled()
+					selectPreviousDocument()
+					db("EXIT MainScreenToolbarContent.previousDocumentButton current currentFileNumber=\(currentFileNumber) new=selectPreviousDocument complete thread=\(Thread.isMainThread ? "main" : "background")")
+				} label: {
+					Image(systemName: "triangle.fill")
+						.font(.system(size: 20))
 					.rotationEffect(.degrees(-90))
 					.frame(width: 44, height: 44)
 					.contentShape(.rect)
@@ -113,12 +119,14 @@ struct MainScreenToolbarContent: View {
 			//
 			//----------------------------------------
 			// next doc btn
-			Button {
-				ButtonClickFeedback.playIfEnabled()
-				selectNextDocument()
-			} label: {
-				Image(systemName: "triangle.fill")
-					.font(.system(size: 20))
+				Button {
+					db("ENTER MainScreenToolbarContent.nextDocumentButton current currentFileNumber=\(currentFileNumber) new=selectNextDocument thread=\(Thread.isMainThread ? "main" : "background")")
+					ButtonClickFeedback.playIfEnabled()
+					selectNextDocument()
+					db("EXIT MainScreenToolbarContent.nextDocumentButton current currentFileNumber=\(currentFileNumber) new=selectNextDocument complete thread=\(Thread.isMainThread ? "main" : "background")")
+				} label: {
+					Image(systemName: "triangle.fill")
+						.font(.system(size: 20))
 					.rotationEffect(.degrees(90))
 					.frame(width: 44, height: 44)
 					.contentShape(.rect)
@@ -216,8 +224,10 @@ struct MainScreenToolbarContent: View {
 			// to keyboard btn
 			//
 			Button("KB") {
+				db("ENTER MainScreenToolbarContent.keyboardButton current isGridEditModeEnabled=\(isGridEditModeEnabled) editingSlotIndex=\(String(describing: editingSlotIndex)) new=openKeyboardScreen thread=\(Thread.isMainThread ? "main" : "background")")
 				ButtonClickFeedback.playIfEnabled()
 				openKeyboardScreen()
+				db("EXIT MainScreenToolbarContent.keyboardButton current isGridEditModeEnabled=\(isGridEditModeEnabled) editingSlotIndex=\(String(describing: editingSlotIndex)) new=openKeyboardScreen complete thread=\(Thread.isMainThread ? "main" : "background")")
 			}
 			.font(.headline)
 			.foregroundStyle(keyboardButtonForegroundColor)
