@@ -226,6 +226,7 @@ struct ContentView: View {
     @State private var documentForwardNavigationHistory: [String] = []
     @AppStorage("selectedDocumentName") private var selectedDocumentName = "fnkeys.txt"
     @AppStorage("documentFontSizesData") private var documentFontSizesData = ""
+    @State private var documentFontSizeRefreshToken = 0
     @State private var settingsBLEText = ""
     @State private var isKeyboardScreenPresented = false
     @State private var isSettingsScreenPresented = true
@@ -256,6 +257,9 @@ struct ContentView: View {
                         db("DESTINATION KeyboardScreen.onDisappear current isKeyboardScreenPresented=\(isKeyboardScreenPresented) new=hidden thread=\(Thread.isMainThread ? "main" : "background")")
                     }
 
+                    let _ = documentFontSizeRefreshToken
+                    let _ = db("ContentView before MainScreen selectedDocumentName=\(selectedDocumentName) fontSize=\(fontSize(for: selectedDocumentName))")
+
                     MainScreen(
                         ble: ble,
                         functionKeys: functionKeys,
@@ -264,9 +268,12 @@ struct ContentView: View {
                         selectedDocumentDisplayName: displayName(for: selectedDocumentName),
                         boxFontSize: Binding(
                             get: {
-                                fontSize(for: selectedDocumentName)
+                                let resolvedFontSize = fontSize(for: selectedDocumentName)
+                                db("Binding getter selectedDocumentName=\(selectedDocumentName) returned boxFontSize=\(resolvedFontSize)")
+                                return resolvedFontSize
                             },
                             set: { newFontSize in
+                                db("Binding setter new boxFontSize=\(newFontSize)")
                                 updateDocumentFontSize(newFontSize)
                             }
                         ),
@@ -745,13 +752,17 @@ struct ContentView: View {
     }
 
     private func fontSize(for fileName: String) -> Double {
-        loadDocumentFontSizes()[fileName] ?? defaultDocumentFontSize
+        let resolvedFontSize = loadDocumentFontSizes()[fileName] ?? defaultDocumentFontSize
+        db("fontSize(for: \(fileName)) returned=\(resolvedFontSize)")
+        return resolvedFontSize
     }
 
     private func updateDocumentFontSize(_ newFontSize: Double) {
+        db("updateDocumentFontSize new=\(newFontSize)")
         var updatedFontSizes = loadDocumentFontSizes()
         updatedFontSizes[selectedDocumentName] = newFontSize
         saveDocumentFontSizes(updatedFontSizes)
+        documentFontSizeRefreshToken += 1
     }
 
     private func loadDocumentFontSizes() -> [String: Double] {

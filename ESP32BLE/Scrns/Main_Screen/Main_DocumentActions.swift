@@ -70,13 +70,21 @@ extension MainScreen {
 	//----------------------------------------
 	//
     func decreaseBoxFontSize() {
-        boxFontSize = max(minimumBoxFontSize, boxFontSize - 1)
+        let currentBoxFontSize = boxFontSize
+        let newBoxFontSize = max(minimumBoxFontSize, currentBoxFontSize - 1)
+        db("decreaseBoxFontSize before=\(currentBoxFontSize) new=\(newBoxFontSize)")
+        boxFontSize = newBoxFontSize
+		db("decreaseBoxFontSize:\(boxFontSize)")
     }
 	//
 	//----------------------------------------
 	//
     func increaseBoxFontSize() {
-        boxFontSize = min(maximumBoxFontSize, boxFontSize + 1)
+        let currentBoxFontSize = boxFontSize
+        let newBoxFontSize = min(maximumBoxFontSize, currentBoxFontSize + 1)
+        db("increaseBoxFontSize before=\(currentBoxFontSize) new=\(newBoxFontSize)")
+        boxFontSize = newBoxFontSize
+		db("increaseBoxFontSize:\(boxFontSize)")
     }
 	//
 	//----------------------------------------

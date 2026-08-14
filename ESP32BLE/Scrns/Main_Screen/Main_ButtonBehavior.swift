@@ -2375,8 +2375,11 @@ struct MainScreenButtonLabelView: View {
     }
 
     private func textLabel(title: String) -> some View {
-        Text(title)
+        let _ = db("MainScreenButtonLabelView.textLabel index=\(index) fontSize=\(boxFontSize) title=\(title)")
+
+        return Text(title)
             .font(.system(size: boxFontSize, weight: .bold))
+            .id(boxFontSize)
             .multilineTextAlignment(.center)
             .lineLimit(4)
             .truncationMode(.tail)

@@ -933,6 +933,9 @@ Tapping a row inserts the key code at the cursor.
     @Binding var settingsBLEText: String
 
     var body: some View {
+        let _ = db("MainScreen.body")
+        let _ = db("MainScreen received boxFontSize=\(boxFontSize)")
+
         mainScreenContent
             .focusable()
             .focused($isMainScreenKeyboardFocused)
@@ -1131,13 +1134,16 @@ Tapping a row inserts the key code at the cursor.
     }
 
     private func mainGridSection(availableWidth: CGFloat) -> some View {
-        MainScreenGridSection(
+        let _ = db("Creating button label views")
+
+        return MainScreenGridSection(
             availableWidth: availableWidth,
             reservedBottomInset: isGridEditModeEnabled ? 74 : 0,
             functionKeys: functionKeys,
             visibleBoxCount: visibleBoxCount,
             visibleGridDimensions: visibleGridDimensions,
             mainGridButtonSpacing: mainGridButtonSpacing,
+            boxFontSize: boxFontSize,
             isGridEditModeEnabled: isGridEditModeEnabled,
             bleSendEnabled: mainGridButtonMode != .disabled,
             onButtonClick: { ButtonClickFeedback.playIfEnabled() },
@@ -1146,13 +1152,11 @@ Tapping a row inserts the key code at the cursor.
             sendLine: sendMainGridEntry,
             onBeginSlotEditing: beginSlotEditing,
             buttonLabel: { entry, index, buttonHeight in
-                AnyView(
-                    mainGridButtonLabel(
-                        entry: entry,
-                        index: index,
-						buttonHeight: buttonHeight,
-                        backgroundOpacity: mainGridBackgroundOpacity
-                    )
+                mainGridButtonLabel(
+                    entry: entry,
+                    index: index,
+							buttonHeight: buttonHeight,
+                    backgroundOpacity: mainGridBackgroundOpacity
                 )
             },
             dragGesture: { entry, index, gridDimensions in

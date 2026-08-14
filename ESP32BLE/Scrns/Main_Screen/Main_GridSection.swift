@@ -94,13 +94,14 @@ func functionKeyGridDimensions(for itemCount: Int) -> GridDimensions {
     return (columns, rows)
 }
 
-struct MainScreenGridSection: View {
+struct MainScreenGridSection<ButtonLabel: View>: View {
     let availableWidth: CGFloat
     let reservedBottomInset: CGFloat
     let functionKeys: [FunctionKeyEntry]
     let visibleBoxCount: Int
     let visibleGridDimensions: GridDimensions
     let mainGridButtonSpacing: CGFloat
+    let boxFontSize: Double
     let isGridEditModeEnabled: Bool
     let bleSendEnabled: Bool
     let onButtonClick: () -> Void
@@ -108,7 +109,7 @@ struct MainScreenGridSection: View {
     let isInteractiveWidgetEntry: (FunctionKeyEntry) -> Bool
     let sendLine: (FunctionKeyEntry) -> Void
     let onBeginSlotEditing: (Int) -> Void
-    let buttonLabel: (FunctionKeyEntry, Int, CGFloat) -> AnyView
+    let buttonLabel: (FunctionKeyEntry, Int, CGFloat) -> ButtonLabel
     let dragGesture: (FunctionKeyEntry, Int, GridDimensions) -> AnyGesture<DragGesture.Value>
     let onDuplicateSlot: (FunctionKeyEntry, Int, GridDimensions) -> Void
     let onCopyPasteSlot: (FunctionKeyEntry, Int) -> Void
@@ -121,6 +122,8 @@ struct MainScreenGridSection: View {
     @State private var longPressedEditIndex: Int?
 
     var body: some View {
+        let _ = db("MainScreenGridSection.body")
+
         GeometryReader { geometry in
             let gridDimensions = visibleGridDimensions
             let totalGridSpacing = mainGridButtonSpacing * CGFloat(max(gridDimensions.rows - 1, 0))
@@ -131,6 +134,7 @@ struct MainScreenGridSection: View {
             let availableGridWidth = max(0, safeAvailableWidth - totalColumnSpacing)
             let buttonWidth = availableGridWidth / CGFloat(max(gridDimensions.columns, 1))
             let visibleEntries = Array(functionKeys.prefix(visibleBoxCount).enumerated())
+            let _ = db("MainScreenGridSection.ForEach")
 
             ZStack(alignment: .topLeading) {
                 ForEach(visibleEntries, id: \.offset) { index, entry in

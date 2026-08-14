@@ -291,7 +291,10 @@ struct MainScreenBottomBar: View {
 					action: onIncreaseRows
 				)
 			}
-
+			//
+			//----------------------------------------
+			// font size
+			//
 			HStack(spacing: isCompact ? 8 : 12) {
                 controlTriangle(
                     rotationDegrees: -90,
