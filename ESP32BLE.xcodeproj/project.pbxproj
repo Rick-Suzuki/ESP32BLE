@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		1D16CD11302F1954004E330E /* ScreenConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D16CD10302F1954004E330E /* ScreenConfig.swift */; };
 		1D2B666F2FE78E0400F10733 /* color.png in Resources */ = {isa = PBXBuildFile; fileRef = 1D2B666E2FE78E0400F10733 /* color.png */; };
 		1D590E582F61206100E430E0 /* CommandButtonsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D590E4D2F61206100E430E0 /* CommandButtonsSection.swift */; };
 		1D590E5A2F61206100E430E0 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D590E4F2F61206100E430E0 /* ContentView.swift */; };
@@ -53,6 +54,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		1D16CD10302F1954004E330E /* ScreenConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenConfig.swift; sourceTree = "<group>"; };
 		1D2B666E2FE78E0400F10733 /* color.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = color.png; sourceTree = "<group>"; };
 		1D33C2D12F6145DC0098FD5C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		1D590E292F611FB700E430E0 /* ESP32BLE.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ESP32BLE.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -131,6 +133,7 @@
 				1D9E1CF32FC92DC600DB3621 /* Set_Screen */,
 				1D590E542F61206100E430E0 /* TestArea.swift */,
 				1D9E1D1C2FC92DD900DB3621 /* BLE */,
+				1D16CD10302F1954004E330E /* ScreenConfig.swift */,
 			);
 			path = Scrns;
 			sourceTree = "<group>";
@@ -366,6 +369,7 @@
 				1DDFB8112F87C64500776ED6 /* debug.swift in Sources */,
 				1D590E5E2F61206100E430E0 /* TestArea.swift in Sources */,
 				1D9E1CF42FC92DC600DB3621 /* Set_BtmCtls.swift in Sources */,
+				1D16CD11302F1954004E330E /* ScreenConfig.swift in Sources */,
 				1D9E1CF52FC92DC600DB3621 /* KB_TopToolbar.swift in Sources */,
 				1D9E1CF62FC92DC600DB3621 /* Main_BG_img.swift in Sources */,
 				1D9E1CF72FC92DC600DB3621 /* SR_Manager.swift in Sources */,

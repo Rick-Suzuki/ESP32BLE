@@ -1,1246 +1,164 @@
-260814_1127_786 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=29.0
-260814_1127_787 🐞ContentView.swift:body:261 ContentView before MainScreen selectedDocumentName=Home.txt fontSize=29.0
-260814_1127_787 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=29.0
-260814_1127_788 🐞ContentView.swift:body:272 Binding getter selectedDocumentName=Home.txt returned boxFontSize=29.0
-#FactoryInstall Unable to query results, error: 5
-Unable to list voice folder
-260814_1127_036 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=29.0
-260814_1127_036 🐞ContentView.swift:body:272 Binding getter selectedDocumentName=Home.txt returned boxFontSize=29.0
-260814_1127_048 🐞Main_Screen.swift:body:936 MainScreen.body
-260814_1127_049 🐞Main_Screen.swift:body:937 MainScreen received boxFontSize=29.0
-260814_1127_068 🐞Main_Screen.swift:mainGridSection(availableWidth:):1137 Creating button label views
-Unable to list voice folder
-Unable to list voice folder
-260814_1127_088 🐞Main_GridSection.swift:body:125 MainScreenGridSection.body
-260814_1127_107 🐞Main_GridSection.swift:body:137 MainScreenGridSection.ForEach
-260814_1127_132 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=0 fontSize=29.0 title=F1
-260814_1127_137 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=1 fontSize=29.0 title=F2
-260814_1127_138 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=2 fontSize=29.0 title=F3
-260814_1127_139 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=3 fontSize=29.0 title=F4
-260814_1127_140 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=4 fontSize=29.0 title=F5
-260814_1127_140 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=5 fontSize=29.0 title=F6
-260814_1127_141 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=6 fontSize=29.0 title=F7
-260814_1127_142 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=7 fontSize=29.0 title=F8
-260814_1127_143 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=8 fontSize=29.0 title=F9
-260814_1127_144 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=9 fontSize=29.0 title=F10
-260814_1127_145 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=10 fontSize=29.0 title=F11
-260814_1127_145 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=11 fontSize=29.0 title=F12
-260814_1127_146 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=12 fontSize=29.0 title=F13
-260814_1127_147 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=13 fontSize=29.0 title=F14
-260814_1127_148 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=14 fontSize=29.0 title=F15
-260814_1127_148 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=15 fontSize=29.0 title=F16
-260814_1127_149 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=16 fontSize=29.0 title=F17
-Unable to list voice folder
-260814_1127_150 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=17 fontSize=29.0 title=F18
-260814_1127_151 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=18 fontSize=29.0 title=F19
-260814_1127_151 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=19 fontSize=29.0 title=F20
-Unable to list voice folder
-Unable to list voice folder
-260814_1127_525 🐞ContentView.swift:presentInitialSettingsScreenIfNeeded():2367 ENTER ContentView.presentInitialSettingsScreenIfNeeded current isSettingsScreenPresented=true didPresentInitialSettingsScreen=false new=initialSettingsCheck thread=main
-260814_1127_525 🐞ContentView.swift:presentInitialSettingsScreenIfNeeded():2373 STATE ContentView.presentInitialSettingsScreenIfNeeded current didPresentInitialSettingsScreen=false new=true thread=main
-260814_1127_525 🐞ContentView.swift:presentInitialSettingsScreenIfNeeded():2375 STATE ContentView.presentInitialSettingsScreenIfNeeded current isSettingsScreenPresented=true new=true thread=main
-260814_1127_526 🐞ContentView.swift:presentInitialSettingsScreenIfNeeded():2377 EXIT ContentView.presentInitialSettingsScreenIfNeeded current isSettingsScreenPresented=true didPresentInitialSettingsScreen=true new=initialSettingsPresented thread=main
-260814_1127_526 🐞ContentView.swift:logDeviceTypeIfNeeded():415 isPad: iPad
-260814_1127_570 🐞ContentView.swift:launchedSettingsScreen:2355 DESTINATION SettingsScreen.onAppear current isSettingsScreenPresented=true new=true thread=main
-260814_1127_570 🐞ContentView.swift:launchedSettingsScreen:2356 STATE ContentView.launchedSettingsScreen.onAppear current isSettingsScreenPresented=true new=true thread=main
-260814_1127_586 🐞ContentView.swift:body:330 DESTINATION MainScreen.onAppear current isKeyboardScreenPresented=false isSettingsScreenPresented=true new=visible thread=main
-260814_1127_586 🐞ContentView.swift:body:254 DESTINATION KeyboardScreen.onAppear current isKeyboardScreenPresented=false new=visible thread=main
-260814_1127_589 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=29.0
-260814_1127_589 🐞ContentView.swift:body:272 Binding getter selectedDocumentName=Home.txt returned boxFontSize=29.0
-260814_1127_589 🐞Main_Screen.swift:body:936 MainScreen.body
-260814_1127_589 🐞Main_Screen.swift:body:937 MainScreen received boxFontSize=29.0
-260814_1127_815 🐞Main_Screen.swift:mainGridSection(availableWidth:):1137 Creating button label views
-260814_1127_817 🐞Main_GridSection.swift:body:125 MainScreenGridSection.body
-260814_1127_818 🐞Main_GridSection.swift:body:137 MainScreenGridSection.ForEach
-260814_1127_850 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=0 fontSize=29.0 title=F1
-260814_1127_850 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=1 fontSize=29.0 title=F2
-260814_1127_851 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=2 fontSize=29.0 title=F3
-260814_1127_851 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=3 fontSize=29.0 title=F4
-260814_1127_852 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=4 fontSize=29.0 title=F5
-260814_1127_852 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=5 fontSize=29.0 title=F6
-260814_1127_853 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=6 fontSize=29.0 title=F7
-260814_1127_853 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=7 fontSize=29.0 title=F8
-260814_1127_853 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=8 fontSize=29.0 title=F9
-260814_1127_854 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=9 fontSize=29.0 title=F10
-260814_1127_854 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=10 fontSize=29.0 title=F11
-260814_1127_855 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=11 fontSize=29.0 title=F12
-260814_1127_855 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=12 fontSize=29.0 title=F13
-260814_1127_855 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=13 fontSize=29.0 title=F14
-260814_1127_856 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=14 fontSize=29.0 title=F15
-260814_1127_856 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=15 fontSize=29.0 title=F16
-260814_1127_856 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=16 fontSize=29.0 title=F17
-260814_1127_857 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=17 fontSize=29.0 title=F18
-260814_1127_857 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=18 fontSize=29.0 title=F19
-260814_1127_858 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=19 fontSize=29.0 title=F20
-260814_1127_079 🐞ContentView.swift:refreshDocumentFiles():541 STATE ContentView.refreshDocumentFiles current documentFiles.count=0 new=39 thread=main
-260814_1127_080 🐞ContentView.swift:loadFunctionKeys(from:):641 ENTER ContentView.loadFunctionKeys current selectedDocumentName=Home.txt new=Home.txt thread=main
-260814_1127_080 🐞ContentView.swift:applySlotLines(_:):684 STATE ContentView.applySlotLines current functionKeySlotLines.count=20 new=60 thread=main
-260814_1127_082 🐞ContentView.swift:applySlotLines(_:):687 STATE ContentView.applySlotLines current functionKeys.count=400 new=400 thread=main
-260814_1127_082 🐞ContentView.swift:applySlotLines(_:):689 STATE ContentView.applySlotLines current loadedFunctionKeySlotCount=20 new=60 thread=main
-260814_1127_083 🐞ContentView.swift:loadFunctionKeys(from:):646 STATE ContentView.loadFunctionKeys current selectedDocumentName=Home.txt new=Home.txt thread=main
-260814_1127_085 🐞ContentView.swift:loadFunctionKeys(from:):649 EXIT ContentView.loadFunctionKeys current selectedDocumentName=Home.txt new=Home.txt thread=main
-260814_1127_098 🐞ContentView.swift:refreshDocumentFiles():541 STATE ContentView.refreshDocumentFiles current documentFiles.count=39 new=39 thread=main
-260814_1127_114 🐞ContentView.swift:loadFunctionKeys(from:):641 ENTER ContentView.loadFunctionKeys current selectedDocumentName=Home.txt new=Home.txt thread=main
-260814_1127_114 🐞ContentView.swift:applySlotLines(_:):684 STATE ContentView.applySlotLines current functionKeySlotLines.count=60 new=60 thread=main
-260814_1127_116 🐞ContentView.swift:applySlotLines(_:):687 STATE ContentView.applySlotLines current functionKeys.count=400 new=400 thread=main
-260814_1127_117 🐞ContentView.swift:applySlotLines(_:):689 STATE ContentView.applySlotLines current loadedFunctionKeySlotCount=60 new=60 thread=main
-260814_1127_117 🐞ContentView.swift:loadFunctionKeys(from:):646 STATE ContentView.loadFunctionKeys current selectedDocumentName=Home.txt new=Home.txt thread=main
-260814_1127_258 🐞ContentView.swift:loadFunctionKeys(from:):649 EXIT ContentView.loadFunctionKeys current selectedDocumentName=Home.txt new=Home.txt thread=main
-260814_1127_258 🐞ContentView.swift:logOrientationStateIfNeeded():455 orientationState: horizontal
-260814_1127_266 🐞ContentView.swift:refreshDocumentFiles():541 STATE ContentView.refreshDocumentFiles current documentFiles.count=39 new=39 thread=main
-260814_1127_281 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=29.0
-260814_1127_282 🐞ContentView.swift:body:261 ContentView before MainScreen selectedDocumentName=Home.txt fontSize=29.0
-260814_1127_282 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=29.0
-260814_1127_282 🐞ContentView.swift:body:272 Binding getter selectedDocumentName=Home.txt returned boxFontSize=29.0
-260814_1127_283 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=29.0
-260814_1127_284 🐞ContentView.swift:body:272 Binding getter selectedDocumentName=Home.txt returned boxFontSize=29.0
-260814_1127_284 🐞Main_Screen.swift:body:936 MainScreen.body
-260814_1127_284 🐞Main_Screen.swift:body:937 MainScreen received boxFontSize=29.0
-260814_1127_471 🐞Main_Screen.swift:mainGridSection(availableWidth:):1137 Creating button label views
-260814_1127_474 🐞Main_GridSection.swift:body:125 MainScreenGridSection.body
-260814_1127_475 🐞Main_GridSection.swift:body:137 MainScreenGridSection.ForEach
-260814_1127_500 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=0 fontSize=29.0 title=terminal
-260814_1127_501 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=2 fontSize=29.0 title=type …
-260814_1127_502 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=4 fontSize=29.0 title=msgs
-260814_1127_503 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=5 fontSize=29.0 title=notes
-260814_1127_504 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=6 fontSize=29.0 title=KM
-260814_1127_506 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=10 fontSize=29.0 title=VLC
-260814_1127_507 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=12 fontSize=29.0 title=Zoom
-260814_1127_508 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=14 fontSize=29.0 title=calc
-260814_1127_509 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=15 fontSize=29.0 title=draw
-260814_1127_510 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=16 fontSize=29.0 title=Test Area
-260814_1127_510 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=18 fontSize=29.0 title=TEST
-AREA 2
-260814_1127_511 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=20 fontSize=29.0 title=QT
-260814_1127_512 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=22 fontSize=29.0 title=prjs
-260814_1127_513 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=24 fontSize=29.0 title=scrn share
-260814_1127_513 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=26 fontSize=29.0 title=English
-260814_1127_514 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=28 fontSize=29.0 title=widgets
-260814_1127_514 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=30 fontSize=29.0 title=scriv
-260814_1127_514 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=32 fontSize=29.0 title=brave
-260814_1127_515 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=34 fontSize=29.0 title=mac mini
-260814_1127_516 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=36 fontSize=29.0 title=folders
-260814_1127_516 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=38 fontSize=29.0 title=tools
-260814_1127_517 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=40 fontSize=29.0 title=mind
-260814_1127_517 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=42 fontSize=29.0 title=nums
-260814_1127_518 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=44 fontSize=29.0 title=Recall
-260814_1127_518 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=46 fontSize=29.0 title=Xcode
-260814_1127_519 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=48 fontSize=29.0 title=GPT
-260814_1127_519 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=50 fontSize=29.0 title=switch
-260814_1127_520 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=51 fontSize=29.0 title=fore
-260814_1127_520 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=52 fontSize=29.0 title=mail
-260814_1127_521 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=54 fontSize=29.0 title=hub
-260814_1127_521 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=56 fontSize=29.0 title=tog mute
-260814_1127_522 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=57 fontSize=29.0 title=cls
-tab
-260814_1127_522 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=58 fontSize=29.0 title=close app
-260814_1127_677 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=29.0
-260814_1127_677 🐞ContentView.swift:body:272 Binding getter selectedDocumentName=Home.txt returned boxFontSize=29.0
-260814_1127_677 🐞Main_Screen.swift:body:936 MainScreen.body
-260814_1127_677 🐞Main_Screen.swift:body:937 MainScreen received boxFontSize=29.0
-260814_1127_691 🐞Main_Screen.swift:mainGridSection(availableWidth:):1137 Creating button label views
-260814_1127_694 🐞Main_GridSection.swift:body:125 MainScreenGridSection.body
-260814_1127_695 🐞Main_GridSection.swift:body:137 MainScreenGridSection.ForEach
-260814_1127_705 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=0 fontSize=29.0 title=terminal
-260814_1127_706 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=2 fontSize=29.0 title=type …
-260814_1127_707 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=4 fontSize=29.0 title=msgs
-260814_1127_707 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=5 fontSize=29.0 title=notes
-260814_1127_708 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=6 fontSize=29.0 title=KM
-260814_1127_713 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=10 fontSize=29.0 title=VLC
-260814_1127_713 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=12 fontSize=29.0 title=Zoom
-260814_1127_714 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=14 fontSize=29.0 title=calc
-260814_1127_714 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=15 fontSize=29.0 title=draw
-260814_1127_715 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=16 fontSize=29.0 title=Test Area
-260814_1127_715 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=18 fontSize=29.0 title=TEST
-AREA 2
-260814_1127_715 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=20 fontSize=29.0 title=QT
-260814_1127_716 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=22 fontSize=29.0 title=prjs
-260814_1127_716 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=24 fontSize=29.0 title=scrn share
-260814_1127_717 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=26 fontSize=29.0 title=English
-260814_1127_717 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=28 fontSize=29.0 title=widgets
-260814_1127_718 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=30 fontSize=29.0 title=scriv
-260814_1127_718 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=32 fontSize=29.0 title=brave
-260814_1127_719 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=34 fontSize=29.0 title=mac mini
-260814_1127_719 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=36 fontSize=29.0 title=folders
-260814_1127_719 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=38 fontSize=29.0 title=tools
-260814_1127_720 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=40 fontSize=29.0 title=mind
-260814_1127_720 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=42 fontSize=29.0 title=nums
-260814_1127_720 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=44 fontSize=29.0 title=Recall
-260814_1127_721 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=46 fontSize=29.0 title=Xcode
-260814_1127_721 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=48 fontSize=29.0 title=GPT
-260814_1127_722 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=50 fontSize=29.0 title=switch
-260814_1127_722 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=51 fontSize=29.0 title=fore
-260814_1127_722 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=52 fontSize=29.0 title=mail
-260814_1127_723 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=54 fontSize=29.0 title=hub
-260814_1127_723 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=56 fontSize=29.0 title=tog mute
-260814_1127_724 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=57 fontSize=29.0 title=cls
-tab
-260814_1127_724 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=58 fontSize=29.0 title=close app
-260814_1127_761 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=29.0
-260814_1127_761 🐞ContentView.swift:body:261 ContentView before MainScreen selectedDocumentName=Home.txt fontSize=29.0
-260814_1127_761 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=29.0
-260814_1127_762 🐞ContentView.swift:body:272 Binding getter selectedDocumentName=Home.txt returned boxFontSize=29.0
-260814_1127_764 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=29.0
-260814_1127_764 🐞ContentView.swift:body:272 Binding getter selectedDocumentName=Home.txt returned boxFontSize=29.0
-260814_1127_764 🐞Main_Screen.swift:body:936 MainScreen.body
-260814_1127_764 🐞Main_Screen.swift:body:937 MainScreen received boxFontSize=29.0
-260814_1127_936 🐞Main_Screen.swift:mainGridSection(availableWidth:):1137 Creating button label views
-260814_1127_938 🐞Main_GridSection.swift:body:125 MainScreenGridSection.body
-260814_1127_939 🐞Main_GridSection.swift:body:137 MainScreenGridSection.ForEach
-260814_1127_954 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=0 fontSize=29.0 title=terminal
-260814_1127_954 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=2 fontSize=29.0 title=type …
-260814_1127_955 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=4 fontSize=29.0 title=msgs
-260814_1127_955 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=5 fontSize=29.0 title=notes
-260814_1127_956 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=6 fontSize=29.0 title=KM
-260814_1127_960 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=10 fontSize=29.0 title=VLC
-260814_1127_960 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=12 fontSize=29.0 title=Zoom
-260814_1127_961 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=14 fontSize=29.0 title=calc
-260814_1127_961 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=15 fontSize=29.0 title=draw
-260814_1127_962 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=16 fontSize=29.0 title=Test Area
-260814_1127_962 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=18 fontSize=29.0 title=TEST
-AREA 2
-260814_1127_962 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=20 fontSize=29.0 title=QT
-260814_1127_963 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=22 fontSize=29.0 title=prjs
-260814_1127_963 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=24 fontSize=29.0 title=scrn share
-260814_1127_964 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=26 fontSize=29.0 title=English
-260814_1127_964 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=28 fontSize=29.0 title=widgets
-260814_1127_964 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=30 fontSize=29.0 title=scriv
-260814_1127_965 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=32 fontSize=29.0 title=brave
-260814_1127_965 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=34 fontSize=29.0 title=mac mini
-260814_1127_966 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=36 fontSize=29.0 title=folders
-260814_1127_966 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=38 fontSize=29.0 title=tools
-260814_1127_966 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=40 fontSize=29.0 title=mind
-260814_1127_967 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=42 fontSize=29.0 title=nums
-260814_1127_967 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=44 fontSize=29.0 title=Recall
-260814_1127_968 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=46 fontSize=29.0 title=Xcode
-260814_1127_968 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=48 fontSize=29.0 title=GPT
-260814_1127_968 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=50 fontSize=29.0 title=switch
-260814_1127_969 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=51 fontSize=29.0 title=fore
-260814_1127_969 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=52 fontSize=29.0 title=mail
-260814_1127_970 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=54 fontSize=29.0 title=hub
-260814_1127_970 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=56 fontSize=29.0 title=tog mute
-260814_1127_970 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=57 fontSize=29.0 title=cls
-tab
-260814_1127_971 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=58 fontSize=29.0 title=close app
-260814_1127_219 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=29.0
-260814_1127_220 🐞ContentView.swift:body:261 ContentView before MainScreen selectedDocumentName=Home.txt fontSize=29.0
-260814_1127_220 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=29.0
-260814_1127_220 🐞ContentView.swift:body:272 Binding getter selectedDocumentName=Home.txt returned boxFontSize=29.0
-260814_1127_222 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=29.0
-260814_1127_223 🐞ContentView.swift:body:272 Binding getter selectedDocumentName=Home.txt returned boxFontSize=29.0
-260814_1127_223 🐞Main_Screen.swift:body:936 MainScreen.body
-260814_1127_223 🐞Main_Screen.swift:body:937 MainScreen received boxFontSize=29.0
-260814_1127_396 🐞Main_Screen.swift:mainGridSection(availableWidth:):1137 Creating button label views
-260814_1127_398 🐞Main_GridSection.swift:body:125 MainScreenGridSection.body
-260814_1127_399 🐞Main_GridSection.swift:body:137 MainScreenGridSection.ForEach
-260814_1127_413 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=0 fontSize=29.0 title=terminal
-260814_1127_414 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=2 fontSize=29.0 title=type …
-260814_1127_415 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=4 fontSize=29.0 title=msgs
-260814_1127_415 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=5 fontSize=29.0 title=notes
-260814_1127_415 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=6 fontSize=29.0 title=KM
-260814_1127_421 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=10 fontSize=29.0 title=VLC
-260814_1127_422 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=12 fontSize=29.0 title=Zoom
-260814_1127_422 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=14 fontSize=29.0 title=calc
-260814_1127_422 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=15 fontSize=29.0 title=draw
-260814_1127_423 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=16 fontSize=29.0 title=Test Area
-260814_1127_423 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=18 fontSize=29.0 title=TEST
-AREA 2
-260814_1127_423 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=20 fontSize=29.0 title=QT
-260814_1127_424 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=22 fontSize=29.0 title=prjs
-260814_1127_424 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=24 fontSize=29.0 title=scrn share
-260814_1127_425 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=26 fontSize=29.0 title=English
-260814_1127_425 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=28 fontSize=29.0 title=widgets
-260814_1127_425 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=30 fontSize=29.0 title=scriv
-260814_1127_426 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=32 fontSize=29.0 title=brave
-260814_1127_426 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=34 fontSize=29.0 title=mac mini
-260814_1127_427 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=36 fontSize=29.0 title=folders
-260814_1127_427 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=38 fontSize=29.0 title=tools
-260814_1127_428 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=40 fontSize=29.0 title=mind
-260814_1127_428 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=42 fontSize=29.0 title=nums
-260814_1127_428 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=44 fontSize=29.0 title=Recall
-260814_1127_429 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=46 fontSize=29.0 title=Xcode
-260814_1127_429 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=48 fontSize=29.0 title=GPT
-260814_1127_429 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=50 fontSize=29.0 title=switch
-260814_1127_430 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=51 fontSize=29.0 title=fore
-260814_1127_430 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=52 fontSize=29.0 title=mail
-260814_1127_431 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=54 fontSize=29.0 title=hub
-260814_1127_431 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=56 fontSize=29.0 title=tog mute
-260814_1127_431 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=57 fontSize=29.0 title=cls
-tab
-260814_1127_432 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=58 fontSize=29.0 title=close app
-260814_1127_554 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=29.0
-260814_1127_554 🐞ContentView.swift:body:272 Binding getter selectedDocumentName=Home.txt returned boxFontSize=29.0
-260814_1127_554 🐞Main_Screen.swift:body:936 MainScreen.body
-260814_1127_555 🐞Main_Screen.swift:body:937 MainScreen received boxFontSize=29.0
-260814_1127_569 🐞Main_Screen.swift:mainGridSection(availableWidth:):1137 Creating button label views
-260814_1127_571 🐞Main_GridSection.swift:body:125 MainScreenGridSection.body
-260814_1127_572 🐞Main_GridSection.swift:body:137 MainScreenGridSection.ForEach
-260814_1127_587 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=0 fontSize=29.0 title=terminal
-260814_1127_587 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=2 fontSize=29.0 title=type …
-260814_1127_588 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=4 fontSize=29.0 title=msgs
-260814_1127_588 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=5 fontSize=29.0 title=notes
-260814_1127_588 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=6 fontSize=29.0 title=KM
-260814_1127_593 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=10 fontSize=29.0 title=VLC
-260814_1127_594 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=12 fontSize=29.0 title=Zoom
-260814_1127_594 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=14 fontSize=29.0 title=calc
-260814_1127_594 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=15 fontSize=29.0 title=draw
-260814_1127_595 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=16 fontSize=29.0 title=Test Area
-260814_1127_595 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=18 fontSize=29.0 title=TEST
-AREA 2
-260814_1127_595 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=20 fontSize=29.0 title=QT
-260814_1127_596 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=22 fontSize=29.0 title=prjs
-260814_1127_596 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=24 fontSize=29.0 title=scrn share
-260814_1127_597 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=26 fontSize=29.0 title=English
-260814_1127_597 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=28 fontSize=29.0 title=widgets
-260814_1127_597 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=30 fontSize=29.0 title=scriv
-260814_1127_598 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=32 fontSize=29.0 title=brave
-260814_1127_598 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=34 fontSize=29.0 title=mac mini
-260814_1127_598 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=36 fontSize=29.0 title=folders
-260814_1127_599 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=38 fontSize=29.0 title=tools
-260814_1127_599 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=40 fontSize=29.0 title=mind
-260814_1127_600 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=42 fontSize=29.0 title=nums
-260814_1127_600 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=44 fontSize=29.0 title=Recall
-260814_1127_600 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=46 fontSize=29.0 title=Xcode
-260814_1127_601 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=48 fontSize=29.0 title=GPT
-260814_1127_601 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=50 fontSize=29.0 title=switch
-260814_1127_602 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=51 fontSize=29.0 title=fore
-260814_1127_602 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=52 fontSize=29.0 title=mail
-260814_1127_602 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=54 fontSize=29.0 title=hub
-260814_1127_603 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=56 fontSize=29.0 title=tog mute
-260814_1127_603 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=57 fontSize=29.0 title=cls
-tab
-260814_1127_603 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=58 fontSize=29.0 title=close app
-260814_1127_616 🐞BLE_KB_Manager.swift:centralManager(_:didConnect:):314 Probe-connected to 7759F8ED-F57A-1247-7492-E327676D5834
-260814_1127_958 🐞BLE_KB_Manager.swift:peripheral(_:didUpdateValueFor:error:):425 Device ID read: 2 for 7759F8ED-F57A-1247-7492-E327676D5834
-260814_1127_968 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=29.0
-260814_1127_969 🐞ContentView.swift:body:261 ContentView before MainScreen selectedDocumentName=Home.txt fontSize=29.0
-260814_1127_970 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=29.0
-260814_1127_970 🐞ContentView.swift:body:272 Binding getter selectedDocumentName=Home.txt returned boxFontSize=29.0
-260814_1127_974 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=29.0
-260814_1127_974 🐞ContentView.swift:body:272 Binding getter selectedDocumentName=Home.txt returned boxFontSize=29.0
-260814_1127_975 🐞Main_Screen.swift:body:936 MainScreen.body
-260814_1127_975 🐞Main_Screen.swift:body:937 MainScreen received boxFontSize=29.0
-260814_1127_150 🐞Main_Screen.swift:mainGridSection(availableWidth:):1137 Creating button label views
-260814_1127_152 🐞Main_GridSection.swift:body:125 MainScreenGridSection.body
-260814_1127_153 🐞Main_GridSection.swift:body:137 MainScreenGridSection.ForEach
-260814_1127_168 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=0 fontSize=29.0 title=terminal
-260814_1127_168 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=2 fontSize=29.0 title=type …
-260814_1127_169 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=4 fontSize=29.0 title=msgs
-260814_1127_169 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=5 fontSize=29.0 title=notes
-260814_1127_169 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=6 fontSize=29.0 title=KM
-260814_1127_174 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=10 fontSize=29.0 title=VLC
-260814_1127_175 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=12 fontSize=29.0 title=Zoom
-260814_1127_175 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=14 fontSize=29.0 title=calc
-260814_1127_176 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=15 fontSize=29.0 title=draw
-260814_1127_176 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=16 fontSize=29.0 title=Test Area
-260814_1127_176 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=18 fontSize=29.0 title=TEST
-AREA 2
-260814_1127_177 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=20 fontSize=29.0 title=QT
-260814_1127_177 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=22 fontSize=29.0 title=prjs
-260814_1127_177 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=24 fontSize=29.0 title=scrn share
-260814_1127_178 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=26 fontSize=29.0 title=English
-260814_1127_178 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=28 fontSize=29.0 title=widgets
-260814_1127_178 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=30 fontSize=29.0 title=scriv
-260814_1127_179 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=32 fontSize=29.0 title=brave
-260814_1127_179 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=34 fontSize=29.0 title=mac mini
-260814_1127_180 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=36 fontSize=29.0 title=folders
-260814_1127_180 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=38 fontSize=29.0 title=tools
-260814_1127_180 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=40 fontSize=29.0 title=mind
-260814_1127_181 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=42 fontSize=29.0 title=nums
-260814_1127_181 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=44 fontSize=29.0 title=Recall
-260814_1127_181 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=46 fontSize=29.0 title=Xcode
-260814_1127_182 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=48 fontSize=29.0 title=GPT
-260814_1127_182 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=50 fontSize=29.0 title=switch
-260814_1127_182 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=51 fontSize=29.0 title=fore
-260814_1127_183 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=52 fontSize=29.0 title=mail
-260814_1127_183 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=54 fontSize=29.0 title=hub
-260814_1127_184 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=56 fontSize=29.0 title=tog mute
-260814_1127_184 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=57 fontSize=29.0 title=cls
-tab
-260814_1127_184 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=58 fontSize=29.0 title=close app
-260814_1127_964 🐞ContentView.swift:applySlotLines(_:):684 STATE ContentView.applySlotLines current functionKeySlotLines.count=60 new=60 thread=main
-260814_1127_967 🐞ContentView.swift:applySlotLines(_:):687 STATE ContentView.applySlotLines current functionKeys.count=400 new=400 thread=main
-260814_1127_967 🐞ContentView.swift:applySlotLines(_:):689 STATE ContentView.applySlotLines current loadedFunctionKeySlotCount=60 new=60 thread=main
-260814_1127_967 🐞ContentView.swift:launchedSettingsScreen:2349 STATE ContentView.SettingsScreen.returnToMain current isSettingsScreenPresented=true new=false thread=main
-260814_1127_977 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=29.0
-260814_1127_977 🐞ContentView.swift:body:261 ContentView before MainScreen selectedDocumentName=Home.txt fontSize=29.0
-260814_1127_977 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=29.0
-260814_1127_977 🐞ContentView.swift:body:272 Binding getter selectedDocumentName=Home.txt returned boxFontSize=29.0
-260814_1127_979 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=29.0
-260814_1127_979 🐞ContentView.swift:body:272 Binding getter selectedDocumentName=Home.txt returned boxFontSize=29.0
-260814_1127_979 🐞Main_Screen.swift:body:936 MainScreen.body
-260814_1127_980 🐞Main_Screen.swift:body:937 MainScreen received boxFontSize=29.0
-260814_1127_146 🐞Main_Screen.swift:mainGridSection(availableWidth:):1137 Creating button label views
-260814_1127_148 🐞Main_GridSection.swift:body:125 MainScreenGridSection.body
-260814_1127_149 🐞Main_GridSection.swift:body:137 MainScreenGridSection.ForEach
-260814_1127_163 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=0 fontSize=29.0 title=terminal
-260814_1127_164 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=2 fontSize=29.0 title=type …
-260814_1127_164 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=4 fontSize=29.0 title=msgs
-260814_1127_164 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=5 fontSize=29.0 title=notes
-260814_1127_165 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=6 fontSize=29.0 title=KM
-260814_1127_170 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=10 fontSize=29.0 title=VLC
-260814_1127_170 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=12 fontSize=29.0 title=Zoom
-260814_1127_171 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=14 fontSize=29.0 title=calc
-260814_1127_171 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=15 fontSize=29.0 title=draw
-260814_1127_171 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=16 fontSize=29.0 title=Test Area
-260814_1127_172 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=18 fontSize=29.0 title=TEST
-AREA 2
-260814_1127_172 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=20 fontSize=29.0 title=QT
-260814_1127_172 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=22 fontSize=29.0 title=prjs
-260814_1127_173 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=24 fontSize=29.0 title=scrn share
-260814_1127_173 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=26 fontSize=29.0 title=English
-260814_1127_173 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=28 fontSize=29.0 title=widgets
-260814_1127_174 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=30 fontSize=29.0 title=scriv
-260814_1127_174 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=32 fontSize=29.0 title=brave
-260814_1127_175 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=34 fontSize=29.0 title=mac mini
-260814_1127_175 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=36 fontSize=29.0 title=folders
-260814_1127_175 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=38 fontSize=29.0 title=tools
-260814_1127_176 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=40 fontSize=29.0 title=mind
-260814_1127_176 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=42 fontSize=29.0 title=nums
-260814_1127_176 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=44 fontSize=29.0 title=Recall
-260814_1127_177 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=46 fontSize=29.0 title=Xcode
-260814_1127_177 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=48 fontSize=29.0 title=GPT
-260814_1127_177 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=50 fontSize=29.0 title=switch
-260814_1127_178 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=51 fontSize=29.0 title=fore
-260814_1127_178 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=52 fontSize=29.0 title=mail
-260814_1127_178 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=54 fontSize=29.0 title=hub
-260814_1127_179 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=56 fontSize=29.0 title=tog mute
-260814_1127_179 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=57 fontSize=29.0 title=cls
-tab
-260814_1127_179 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=58 fontSize=29.0 title=close app
-260814_1127_197 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=29.0
-260814_1127_198 🐞ContentView.swift:body:261 ContentView before MainScreen selectedDocumentName=Home.txt fontSize=29.0
-260814_1127_198 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=29.0
-260814_1127_198 🐞ContentView.swift:body:272 Binding getter selectedDocumentName=Home.txt returned boxFontSize=29.0
-260814_1127_199 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=29.0
-260814_1127_200 🐞ContentView.swift:body:272 Binding getter selectedDocumentName=Home.txt returned boxFontSize=29.0
-260814_1127_200 🐞Main_Screen.swift:body:936 MainScreen.body
-260814_1127_200 🐞Main_Screen.swift:body:937 MainScreen received boxFontSize=29.0
-260814_1127_216 🐞Main_Screen.swift:mainGridSection(availableWidth:):1137 Creating button label views
-260814_1127_218 🐞Main_GridSection.swift:body:125 MainScreenGridSection.body
-260814_1127_219 🐞Main_GridSection.swift:body:137 MainScreenGridSection.ForEach
-260814_1127_234 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=0 fontSize=29.0 title=terminal
-260814_1127_234 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=2 fontSize=29.0 title=type …
-260814_1127_235 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=4 fontSize=29.0 title=msgs
-260814_1127_235 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=5 fontSize=29.0 title=notes
-260814_1127_236 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=6 fontSize=29.0 title=KM
-260814_1127_240 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=10 fontSize=29.0 title=VLC
-260814_1127_241 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=12 fontSize=29.0 title=Zoom
-260814_1127_241 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=14 fontSize=29.0 title=calc
-260814_1127_242 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=15 fontSize=29.0 title=draw
-260814_1127_242 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=16 fontSize=29.0 title=Test Area
-260814_1127_242 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=18 fontSize=29.0 title=TEST
-AREA 2
-260814_1127_243 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=20 fontSize=29.0 title=QT
-260814_1127_243 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=22 fontSize=29.0 title=prjs
-260814_1127_244 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=24 fontSize=29.0 title=scrn share
-260814_1127_244 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=26 fontSize=29.0 title=English
-260814_1127_244 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=28 fontSize=29.0 title=widgets
-260814_1127_245 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=30 fontSize=29.0 title=scriv
-260814_1127_245 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=32 fontSize=29.0 title=brave
-260814_1127_245 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=34 fontSize=29.0 title=mac mini
-260814_1127_246 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=36 fontSize=29.0 title=folders
-260814_1127_246 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=38 fontSize=29.0 title=tools
-260814_1127_246 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=40 fontSize=29.0 title=mind
-260814_1127_247 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=42 fontSize=29.0 title=nums
-260814_1127_247 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=44 fontSize=29.0 title=Recall
-260814_1127_248 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=46 fontSize=29.0 title=Xcode
-260814_1127_248 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=48 fontSize=29.0 title=GPT
-260814_1127_248 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=50 fontSize=29.0 title=switch
-260814_1127_249 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=51 fontSize=29.0 title=fore
-260814_1127_249 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=52 fontSize=29.0 title=mail
-260814_1127_249 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=54 fontSize=29.0 title=hub
-260814_1127_250 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=56 fontSize=29.0 title=tog mute
-260814_1127_250 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=57 fontSize=29.0 title=cls
-tab
-260814_1127_250 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=58 fontSize=29.0 title=close app
-260814_1127_308 🐞ContentView.swift:body:398 STATE ContentView.onChange isSettingsScreenPresented current=false new=backgroundRefresh thread=main
-260814_1127_318 🐞ContentView.swift:selectDocument(_:):2252 ENTER ContentView.selectDocument current selectedDocumentName=Home.txt new=Home.txt recordHistory=false thread=main
-260814_1127_318 🐞ContentView.swift:loadFunctionKeys(from:):641 ENTER ContentView.loadFunctionKeys current selectedDocumentName=Home.txt new=Home.txt thread=main
-260814_1127_319 🐞ContentView.swift:applySlotLines(_:):684 STATE ContentView.applySlotLines current functionKeySlotLines.count=60 new=60 thread=main
-260814_1127_321 🐞ContentView.swift:applySlotLines(_:):687 STATE ContentView.applySlotLines current functionKeys.count=400 new=400 thread=main
-260814_1127_321 🐞ContentView.swift:applySlotLines(_:):689 STATE ContentView.applySlotLines current loadedFunctionKeySlotCount=60 new=60 thread=main
-260814_1127_321 🐞ContentView.swift:loadFunctionKeys(from:):646 STATE ContentView.loadFunctionKeys current selectedDocumentName=Home.txt new=Home.txt thread=main
-260814_1127_332 🐞ContentView.swift:loadFunctionKeys(from:):649 EXIT ContentView.loadFunctionKeys current selectedDocumentName=Home.txt new=Home.txt thread=main
-260814_1127_338 🐞ContentView.swift:refreshDocumentFiles():541 STATE ContentView.refreshDocumentFiles current documentFiles.count=39 new=39 thread=main
-260814_1127_338 🐞ContentView.swift:selectDocument(_:):2255 EXIT ContentView.selectDocument current selectedDocumentName=Home.txt new=Home.txt recordHistory=false thread=main
-260814_1127_343 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=29.0
-260814_1127_343 🐞ContentView.swift:body:261 ContentView before MainScreen selectedDocumentName=Home.txt fontSize=29.0
-260814_1127_344 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=29.0
-260814_1127_344 🐞ContentView.swift:body:272 Binding getter selectedDocumentName=Home.txt returned boxFontSize=29.0
-260814_1127_345 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=29.0
-260814_1127_345 🐞ContentView.swift:body:272 Binding getter selectedDocumentName=Home.txt returned boxFontSize=29.0
-260814_1127_345 🐞Main_Screen.swift:body:936 MainScreen.body
-260814_1127_345 🐞Main_Screen.swift:body:937 MainScreen received boxFontSize=29.0
-260814_1127_360 🐞Main_Screen.swift:mainGridSection(availableWidth:):1137 Creating button label views
-260814_1127_363 🐞Main_GridSection.swift:body:125 MainScreenGridSection.body
-260814_1127_364 🐞Main_GridSection.swift:body:137 MainScreenGridSection.ForEach
-260814_1127_379 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=0 fontSize=29.0 title=terminal
-260814_1127_379 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=2 fontSize=29.0 title=type …
-260814_1127_380 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=4 fontSize=29.0 title=msgs
-260814_1127_380 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=5 fontSize=29.0 title=notes
-260814_1127_380 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=6 fontSize=29.0 title=KM
-260814_1127_385 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=10 fontSize=29.0 title=VLC
-260814_1127_386 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=12 fontSize=29.0 title=Zoom
-260814_1127_386 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=14 fontSize=29.0 title=calc
-260814_1127_387 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=15 fontSize=29.0 title=draw
-260814_1127_387 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=16 fontSize=29.0 title=Test Area
-260814_1127_387 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=18 fontSize=29.0 title=TEST
-AREA 2
-260814_1127_388 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=20 fontSize=29.0 title=QT
-260814_1127_388 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=22 fontSize=29.0 title=prjs
-260814_1127_388 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=24 fontSize=29.0 title=scrn share
-260814_1127_389 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=26 fontSize=29.0 title=English
-260814_1127_389 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=28 fontSize=29.0 title=widgets
-260814_1127_389 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=30 fontSize=29.0 title=scriv
-260814_1127_390 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=32 fontSize=29.0 title=brave
-260814_1127_390 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=34 fontSize=29.0 title=mac mini
-260814_1127_390 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=36 fontSize=29.0 title=folders
-260814_1127_391 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=38 fontSize=29.0 title=tools
-260814_1127_391 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=40 fontSize=29.0 title=mind
-260814_1127_391 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=42 fontSize=29.0 title=nums
-260814_1127_392 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=44 fontSize=29.0 title=Recall
-260814_1127_392 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=46 fontSize=29.0 title=Xcode
-260814_1127_392 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=48 fontSize=29.0 title=GPT
-260814_1127_393 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=50 fontSize=29.0 title=switch
-260814_1127_393 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=51 fontSize=29.0 title=fore
-260814_1127_393 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=52 fontSize=29.0 title=mail
-260814_1127_394 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=54 fontSize=29.0 title=hub
-260814_1127_394 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=56 fontSize=29.0 title=tog mute
-260814_1127_394 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=57 fontSize=29.0 title=cls
-tab
-260814_1127_395 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=58 fontSize=29.0 title=close app
-260814_1127_431 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=29.0
-260814_1127_431 🐞ContentView.swift:body:272 Binding getter selectedDocumentName=Home.txt returned boxFontSize=29.0
-260814_1127_431 🐞Main_Screen.swift:body:936 MainScreen.body
-260814_1127_431 🐞Main_Screen.swift:body:937 MainScreen received boxFontSize=29.0
-260814_1127_444 🐞Main_Screen.swift:mainGridSection(availableWidth:):1137 Creating button label views
-260814_1127_446 🐞Main_GridSection.swift:body:125 MainScreenGridSection.body
-260814_1127_448 🐞Main_GridSection.swift:body:137 MainScreenGridSection.ForEach
-260814_1127_457 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=0 fontSize=29.0 title=terminal
-260814_1127_457 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=2 fontSize=29.0 title=type …
-260814_1127_458 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=4 fontSize=29.0 title=msgs
-260814_1127_458 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=5 fontSize=29.0 title=notes
-260814_1127_459 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=6 fontSize=29.0 title=KM
-260814_1127_463 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=10 fontSize=29.0 title=VLC
-260814_1127_464 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=12 fontSize=29.0 title=Zoom
-260814_1127_464 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=14 fontSize=29.0 title=calc
-260814_1127_464 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=15 fontSize=29.0 title=draw
-260814_1127_465 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=16 fontSize=29.0 title=Test Area
-260814_1127_465 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=18 fontSize=29.0 title=TEST
-AREA 2
-260814_1127_465 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=20 fontSize=29.0 title=QT
-260814_1127_466 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=22 fontSize=29.0 title=prjs
-260814_1127_466 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=24 fontSize=29.0 title=scrn share
-260814_1127_466 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=26 fontSize=29.0 title=English
-260814_1127_467 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=28 fontSize=29.0 title=widgets
-260814_1127_467 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=30 fontSize=29.0 title=scriv
-260814_1127_468 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=32 fontSize=29.0 title=brave
-260814_1127_468 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=34 fontSize=29.0 title=mac mini
-260814_1127_468 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=36 fontSize=29.0 title=folders
-260814_1127_469 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=38 fontSize=29.0 title=tools
-260814_1127_469 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=40 fontSize=29.0 title=mind
-260814_1127_469 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=42 fontSize=29.0 title=nums
-260814_1127_470 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=44 fontSize=29.0 title=Recall
-260814_1127_470 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=46 fontSize=29.0 title=Xcode
-260814_1127_471 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=48 fontSize=29.0 title=GPT
-260814_1127_471 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=50 fontSize=29.0 title=switch
-260814_1127_472 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=51 fontSize=29.0 title=fore
-260814_1127_472 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=52 fontSize=29.0 title=mail
-260814_1127_473 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=54 fontSize=29.0 title=hub
-260814_1127_473 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=56 fontSize=29.0 title=tog mute
-260814_1127_473 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=57 fontSize=29.0 title=cls
-tab
-260814_1127_474 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=58 fontSize=29.0 title=close app
-260814_1127_483 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=29.0
-260814_1127_484 🐞ContentView.swift:body:272 Binding getter selectedDocumentName=Home.txt returned boxFontSize=29.0
-260814_1127_484 🐞Main_Screen.swift:body:936 MainScreen.body
-260814_1127_484 🐞Main_Screen.swift:body:937 MainScreen received boxFontSize=29.0
-260814_1127_496 🐞Main_Screen.swift:mainGridSection(availableWidth:):1137 Creating button label views
-260814_1127_498 🐞Main_GridSection.swift:body:125 MainScreenGridSection.body
-260814_1127_500 🐞Main_GridSection.swift:body:137 MainScreenGridSection.ForEach
-260814_1127_509 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=0 fontSize=29.0 title=terminal
-260814_1127_510 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=2 fontSize=29.0 title=type …
-260814_1127_510 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=4 fontSize=29.0 title=msgs
-260814_1127_511 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=5 fontSize=29.0 title=notes
-260814_1127_511 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=6 fontSize=29.0 title=KM
-260814_1127_516 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=10 fontSize=29.0 title=VLC
-260814_1127_516 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=12 fontSize=29.0 title=Zoom
-260814_1127_516 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=14 fontSize=29.0 title=calc
-260814_1127_517 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=15 fontSize=29.0 title=draw
-260814_1127_517 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=16 fontSize=29.0 title=Test Area
-260814_1127_517 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=18 fontSize=29.0 title=TEST
-AREA 2
-260814_1127_518 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=20 fontSize=29.0 title=QT
-260814_1127_518 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=22 fontSize=29.0 title=prjs
-260814_1127_518 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=24 fontSize=29.0 title=scrn share
-260814_1127_519 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=26 fontSize=29.0 title=English
-260814_1127_519 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=28 fontSize=29.0 title=widgets
-260814_1127_520 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=30 fontSize=29.0 title=scriv
-260814_1127_520 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=32 fontSize=29.0 title=brave
-260814_1127_520 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=34 fontSize=29.0 title=mac mini
-260814_1127_521 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=36 fontSize=29.0 title=folders
-260814_1127_521 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=38 fontSize=29.0 title=tools
-260814_1127_522 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=40 fontSize=29.0 title=mind
-260814_1127_522 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=42 fontSize=29.0 title=nums
-260814_1127_522 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=44 fontSize=29.0 title=Recall
-260814_1127_523 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=46 fontSize=29.0 title=Xcode
-260814_1127_523 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=48 fontSize=29.0 title=GPT
-260814_1127_524 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=50 fontSize=29.0 title=switch
-260814_1127_524 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=51 fontSize=29.0 title=fore
-260814_1127_524 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=52 fontSize=29.0 title=mail
-260814_1127_525 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=54 fontSize=29.0 title=hub
-260814_1127_525 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=56 fontSize=29.0 title=tog mute
-260814_1127_525 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=57 fontSize=29.0 title=cls
-tab
-260814_1127_526 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=58 fontSize=29.0 title=close app
-260814_1127_834 🐞ContentView.swift:launchedSettingsScreen:2360 DESTINATION SettingsScreen.onDisappear current isSettingsScreenPresented=false new=false thread=main
-260814_1127_834 🐞ContentView.swift:launchedSettingsScreen:2361 STATE ContentView.launchedSettingsScreen.onDisappear current isSettingsScreenPresented=false new=false thread=main
-260814_1127_871 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=29.0
-260814_1127_872 🐞ContentView.swift:body:272 Binding getter selectedDocumentName=Home.txt returned boxFontSize=29.0
-260814_1127_872 🐞Main_DocumentActions.swift:increaseBoxFontSize():85 increaseBoxFontSize before=29.0 new=30.0
-260814_1127_873 🐞ContentView.swift:body:276 Binding setter new boxFontSize=30.0
-260814_1127_874 🐞ContentView.swift:updateDocumentFontSize(_:):761 updateDocumentFontSize new=30.0
-260814_1127_879 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=30.0
-260814_1127_879 🐞ContentView.swift:body:272 Binding getter selectedDocumentName=Home.txt returned boxFontSize=30.0
-260814_1127_880 🐞Main_DocumentActions.swift:increaseBoxFontSize():87 increaseBoxFontSize:30.0
-260814_1127_886 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=30.0
-260814_1127_886 🐞ContentView.swift:body:261 ContentView before MainScreen selectedDocumentName=Home.txt fontSize=30.0
-260814_1127_887 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=30.0
-260814_1127_887 🐞ContentView.swift:body:272 Binding getter selectedDocumentName=Home.txt returned boxFontSize=30.0
-260814_1127_889 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=30.0
-260814_1127_890 🐞ContentView.swift:body:272 Binding getter selectedDocumentName=Home.txt returned boxFontSize=30.0
-260814_1127_890 🐞Main_Screen.swift:body:936 MainScreen.body
-260814_1127_890 🐞Main_Screen.swift:body:937 MainScreen received boxFontSize=30.0
-260814_1127_911 🐞Main_Screen.swift:mainGridSection(availableWidth:):1137 Creating button label views
-260814_1127_914 🐞Main_GridSection.swift:body:125 MainScreenGridSection.body
-260814_1127_915 🐞Main_GridSection.swift:body:137 MainScreenGridSection.ForEach
-260814_1127_930 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=0 fontSize=30.0 title=terminal
-260814_1127_931 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=2 fontSize=30.0 title=type …
-260814_1127_932 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=4 fontSize=30.0 title=msgs
-260814_1127_933 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=5 fontSize=30.0 title=notes
-260814_1127_935 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=6 fontSize=30.0 title=KM
-260814_1127_941 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=10 fontSize=30.0 title=VLC
-260814_1127_942 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=12 fontSize=30.0 title=Zoom
-260814_1127_943 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=14 fontSize=30.0 title=calc
-260814_1127_944 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=15 fontSize=30.0 title=draw
-260814_1127_945 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=16 fontSize=30.0 title=Test Area
-260814_1127_945 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=18 fontSize=30.0 title=TEST
-AREA 2
-260814_1127_946 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=20 fontSize=30.0 title=QT
-260814_1127_947 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=22 fontSize=30.0 title=prjs
-260814_1127_948 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=24 fontSize=30.0 title=scrn share
-260814_1127_949 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=26 fontSize=30.0 title=English
-260814_1127_950 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=28 fontSize=30.0 title=widgets
-260814_1127_951 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=30 fontSize=30.0 title=scriv
-260814_1127_951 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=32 fontSize=30.0 title=brave
-260814_1127_952 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=34 fontSize=30.0 title=mac mini
-260814_1127_953 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=36 fontSize=30.0 title=folders
-260814_1127_953 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=38 fontSize=30.0 title=tools
-260814_1127_954 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=40 fontSize=30.0 title=mind
-260814_1127_954 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=42 fontSize=30.0 title=nums
-260814_1127_955 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=44 fontSize=30.0 title=Recall
-260814_1127_956 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=46 fontSize=30.0 title=Xcode
-260814_1127_956 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=48 fontSize=30.0 title=GPT
-260814_1127_957 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=50 fontSize=30.0 title=switch
-260814_1127_957 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=51 fontSize=30.0 title=fore
-260814_1127_958 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=52 fontSize=30.0 title=mail
-260814_1127_959 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=54 fontSize=30.0 title=hub
-260814_1127_959 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=56 fontSize=30.0 title=tog mute
-260814_1127_960 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=57 fontSize=30.0 title=cls
-tab
-260814_1127_961 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=58 fontSize=30.0 title=close app
-260814_1128_795 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=30.0
-260814_1128_795 🐞ContentView.swift:body:272 Binding getter selectedDocumentName=Home.txt returned boxFontSize=30.0
-260814_1128_796 🐞Main_DocumentActions.swift:increaseBoxFontSize():85 increaseBoxFontSize before=30.0 new=31.0
-260814_1128_796 🐞ContentView.swift:body:276 Binding setter new boxFontSize=31.0
-260814_1128_796 🐞ContentView.swift:updateDocumentFontSize(_:):761 updateDocumentFontSize new=31.0
-260814_1128_797 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=31.0
-260814_1128_797 🐞ContentView.swift:body:272 Binding getter selectedDocumentName=Home.txt returned boxFontSize=31.0
-260814_1128_798 🐞Main_DocumentActions.swift:increaseBoxFontSize():87 increaseBoxFontSize:31.0
-260814_1128_800 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=31.0
-260814_1128_801 🐞ContentView.swift:body:261 ContentView before MainScreen selectedDocumentName=Home.txt fontSize=31.0
-260814_1128_801 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=31.0
-260814_1128_801 🐞ContentView.swift:body:272 Binding getter selectedDocumentName=Home.txt returned boxFontSize=31.0
-260814_1128_802 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=31.0
-260814_1128_802 🐞ContentView.swift:body:272 Binding getter selectedDocumentName=Home.txt returned boxFontSize=31.0
-260814_1128_802 🐞Main_Screen.swift:body:936 MainScreen.body
-260814_1128_803 🐞Main_Screen.swift:body:937 MainScreen received boxFontSize=31.0
-260814_1128_817 🐞Main_Screen.swift:mainGridSection(availableWidth:):1137 Creating button label views
-260814_1128_819 🐞Main_GridSection.swift:body:125 MainScreenGridSection.body
-260814_1128_820 🐞Main_GridSection.swift:body:137 MainScreenGridSection.ForEach
-260814_1128_835 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=0 fontSize=31.0 title=terminal
-260814_1128_836 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=2 fontSize=31.0 title=type …
-260814_1128_837 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=4 fontSize=31.0 title=msgs
-260814_1128_838 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=5 fontSize=31.0 title=notes
-260814_1128_839 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=6 fontSize=31.0 title=KM
-260814_1128_845 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=10 fontSize=31.0 title=VLC
-260814_1128_846 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=12 fontSize=31.0 title=Zoom
-260814_1128_847 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=14 fontSize=31.0 title=calc
-260814_1128_848 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=15 fontSize=31.0 title=draw
-260814_1128_849 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=16 fontSize=31.0 title=Test Area
-260814_1128_849 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=18 fontSize=31.0 title=TEST
-AREA 2
-260814_1128_850 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=20 fontSize=31.0 title=QT
-260814_1128_851 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=22 fontSize=31.0 title=prjs
-260814_1128_852 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=24 fontSize=31.0 title=scrn share
-260814_1128_853 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=26 fontSize=31.0 title=English
-260814_1128_854 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=28 fontSize=31.0 title=widgets
-260814_1128_855 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=30 fontSize=31.0 title=scriv
-260814_1128_856 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=32 fontSize=31.0 title=brave
-260814_1128_857 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=34 fontSize=31.0 title=mac mini
-260814_1128_858 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=36 fontSize=31.0 title=folders
-260814_1128_858 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=38 fontSize=31.0 title=tools
-260814_1128_859 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=40 fontSize=31.0 title=mind
-260814_1128_860 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=42 fontSize=31.0 title=nums
-260814_1128_861 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=44 fontSize=31.0 title=Recall
-260814_1128_862 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=46 fontSize=31.0 title=Xcode
-260814_1128_863 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=48 fontSize=31.0 title=GPT
-260814_1128_864 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=50 fontSize=31.0 title=switch
-260814_1128_865 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=51 fontSize=31.0 title=fore
-260814_1128_866 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=52 fontSize=31.0 title=mail
-260814_1128_867 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=54 fontSize=31.0 title=hub
-260814_1128_868 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=56 fontSize=31.0 title=tog mute
-260814_1128_869 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=57 fontSize=31.0 title=cls
-tab
-260814_1128_869 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=58 fontSize=31.0 title=close app
-260814_1128_510 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=31.0
-260814_1128_511 🐞ContentView.swift:body:272 Binding getter selectedDocumentName=Home.txt returned boxFontSize=31.0
-260814_1128_512 🐞Main_DocumentActions.swift:increaseBoxFontSize():85 increaseBoxFontSize before=31.0 new=32.0
-260814_1128_513 🐞ContentView.swift:body:276 Binding setter new boxFontSize=32.0
-260814_1128_514 🐞ContentView.swift:updateDocumentFontSize(_:):761 updateDocumentFontSize new=32.0
-260814_1128_517 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=32.0
-260814_1128_518 🐞ContentView.swift:body:272 Binding getter selectedDocumentName=Home.txt returned boxFontSize=32.0
-260814_1128_518 🐞Main_DocumentActions.swift:increaseBoxFontSize():87 increaseBoxFontSize:32.0
-260814_1128_526 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=32.0
-260814_1128_527 🐞ContentView.swift:body:261 ContentView before MainScreen selectedDocumentName=Home.txt fontSize=32.0
-260814_1128_532 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=32.0
-260814_1128_532 🐞ContentView.swift:body:272 Binding getter selectedDocumentName=Home.txt returned boxFontSize=32.0
-260814_1128_536 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=32.0
-260814_1128_537 🐞ContentView.swift:body:272 Binding getter selectedDocumentName=Home.txt returned boxFontSize=32.0
-260814_1128_537 🐞Main_Screen.swift:body:936 MainScreen.body
-260814_1128_538 🐞Main_Screen.swift:body:937 MainScreen received boxFontSize=32.0
-260814_1128_565 🐞Main_Screen.swift:mainGridSection(availableWidth:):1137 Creating button label views
-260814_1128_568 🐞Main_GridSection.swift:body:125 MainScreenGridSection.body
-260814_1128_569 🐞Main_GridSection.swift:body:137 MainScreenGridSection.ForEach
-260814_1128_585 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=0 fontSize=32.0 title=terminal
-260814_1128_587 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=2 fontSize=32.0 title=type …
-260814_1128_588 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=4 fontSize=32.0 title=msgs
-260814_1128_589 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=5 fontSize=32.0 title=notes
-260814_1128_590 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=6 fontSize=32.0 title=KM
-260814_1128_595 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=10 fontSize=32.0 title=VLC
-260814_1128_596 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=12 fontSize=32.0 title=Zoom
-260814_1128_597 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=14 fontSize=32.0 title=calc
-260814_1128_598 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=15 fontSize=32.0 title=draw
-260814_1128_599 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=16 fontSize=32.0 title=Test Area
-260814_1128_599 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=18 fontSize=32.0 title=TEST
-AREA 2
-260814_1128_600 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=20 fontSize=32.0 title=QT
-260814_1128_601 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=22 fontSize=32.0 title=prjs
-260814_1128_602 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=24 fontSize=32.0 title=scrn share
-260814_1128_602 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=26 fontSize=32.0 title=English
-260814_1128_603 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=28 fontSize=32.0 title=widgets
-260814_1128_604 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=30 fontSize=32.0 title=scriv
-260814_1128_605 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=32 fontSize=32.0 title=brave
-260814_1128_606 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=34 fontSize=32.0 title=mac mini
-260814_1128_607 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=36 fontSize=32.0 title=folders
-260814_1128_608 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=38 fontSize=32.0 title=tools
-260814_1128_609 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=40 fontSize=32.0 title=mind
-260814_1128_610 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=42 fontSize=32.0 title=nums
-260814_1128_610 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=44 fontSize=32.0 title=Recall
-260814_1128_611 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=46 fontSize=32.0 title=Xcode
-260814_1128_612 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=48 fontSize=32.0 title=GPT
-260814_1128_613 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=50 fontSize=32.0 title=switch
-260814_1128_613 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=51 fontSize=32.0 title=fore
-260814_1128_614 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=52 fontSize=32.0 title=mail
-260814_1128_615 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=54 fontSize=32.0 title=hub
-260814_1128_616 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=56 fontSize=32.0 title=tog mute
-260814_1128_616 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=57 fontSize=32.0 title=cls
-tab
-260814_1128_617 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=58 fontSize=32.0 title=close app
-260814_1128_753 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=32.0
-260814_1128_753 🐞ContentView.swift:body:272 Binding getter selectedDocumentName=Home.txt returned boxFontSize=32.0
-260814_1128_753 🐞Main_DocumentActions.swift:increaseBoxFontSize():85 increaseBoxFontSize before=32.0 new=33.0
-260814_1128_754 🐞ContentView.swift:body:276 Binding setter new boxFontSize=33.0
-260814_1128_754 🐞ContentView.swift:updateDocumentFontSize(_:):761 updateDocumentFontSize new=33.0
-260814_1128_755 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=33.0
-260814_1128_755 🐞ContentView.swift:body:272 Binding getter selectedDocumentName=Home.txt returned boxFontSize=33.0
-260814_1128_755 🐞Main_DocumentActions.swift:increaseBoxFontSize():87 increaseBoxFontSize:33.0
-260814_1128_758 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=33.0
-260814_1128_759 🐞ContentView.swift:body:261 ContentView before MainScreen selectedDocumentName=Home.txt fontSize=33.0
-260814_1128_759 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=33.0
-260814_1128_759 🐞ContentView.swift:body:272 Binding getter selectedDocumentName=Home.txt returned boxFontSize=33.0
-260814_1128_760 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=33.0
-260814_1128_761 🐞ContentView.swift:body:272 Binding getter selectedDocumentName=Home.txt returned boxFontSize=33.0
-260814_1128_761 🐞Main_Screen.swift:body:936 MainScreen.body
-260814_1128_761 🐞Main_Screen.swift:body:937 MainScreen received boxFontSize=33.0
-260814_1128_775 🐞Main_Screen.swift:mainGridSection(availableWidth:):1137 Creating button label views
-260814_1128_778 🐞Main_GridSection.swift:body:125 MainScreenGridSection.body
-260814_1128_779 🐞Main_GridSection.swift:body:137 MainScreenGridSection.ForEach
-260814_1128_794 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=0 fontSize=33.0 title=terminal
-260814_1128_795 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=2 fontSize=33.0 title=type …
-260814_1128_796 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=4 fontSize=33.0 title=msgs
-260814_1128_797 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=5 fontSize=33.0 title=notes
-260814_1128_798 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=6 fontSize=33.0 title=KM
-260814_1128_804 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=10 fontSize=33.0 title=VLC
-260814_1128_805 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=12 fontSize=33.0 title=Zoom
-260814_1128_806 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=14 fontSize=33.0 title=calc
-260814_1128_806 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=15 fontSize=33.0 title=draw
-260814_1128_807 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=16 fontSize=33.0 title=Test Area
-260814_1128_808 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=18 fontSize=33.0 title=TEST
-AREA 2
-260814_1128_809 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=20 fontSize=33.0 title=QT
-260814_1128_809 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=22 fontSize=33.0 title=prjs
-260814_1128_810 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=24 fontSize=33.0 title=scrn share
-260814_1128_811 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=26 fontSize=33.0 title=English
-260814_1128_812 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=28 fontSize=33.0 title=widgets
-260814_1128_813 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=30 fontSize=33.0 title=scriv
-260814_1128_813 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=32 fontSize=33.0 title=brave
-260814_1128_814 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=34 fontSize=33.0 title=mac mini
-260814_1128_815 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=36 fontSize=33.0 title=folders
-260814_1128_816 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=38 fontSize=33.0 title=tools
-260814_1128_816 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=40 fontSize=33.0 title=mind
-260814_1128_817 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=42 fontSize=33.0 title=nums
-260814_1128_818 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=44 fontSize=33.0 title=Recall
-260814_1128_819 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=46 fontSize=33.0 title=Xcode
-260814_1128_820 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=48 fontSize=33.0 title=GPT
-260814_1128_821 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=50 fontSize=33.0 title=switch
-260814_1128_822 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=51 fontSize=33.0 title=fore
-260814_1128_822 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=52 fontSize=33.0 title=mail
-260814_1128_823 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=54 fontSize=33.0 title=hub
-260814_1128_824 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=56 fontSize=33.0 title=tog mute
-260814_1128_824 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=57 fontSize=33.0 title=cls
-tab
-260814_1128_825 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=58 fontSize=33.0 title=close app
-260814_1128_470 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=33.0
-260814_1128_471 🐞ContentView.swift:body:272 Binding getter selectedDocumentName=Home.txt returned boxFontSize=33.0
-260814_1128_471 🐞Main_DocumentActions.swift:decreaseBoxFontSize():75 decreaseBoxFontSize before=33.0 new=32.0
-260814_1128_471 🐞ContentView.swift:body:276 Binding setter new boxFontSize=32.0
-260814_1128_471 🐞ContentView.swift:updateDocumentFontSize(_:):761 updateDocumentFontSize new=32.0
-260814_1128_473 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=32.0
-260814_1128_473 🐞ContentView.swift:body:272 Binding getter selectedDocumentName=Home.txt returned boxFontSize=32.0
-260814_1128_474 🐞Main_DocumentActions.swift:decreaseBoxFontSize():77 decreaseBoxFontSize:32.0
-260814_1128_478 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=32.0
-260814_1128_479 🐞ContentView.swift:body:261 ContentView before MainScreen selectedDocumentName=Home.txt fontSize=32.0
-260814_1128_479 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=32.0
-260814_1128_479 🐞ContentView.swift:body:272 Binding getter selectedDocumentName=Home.txt returned boxFontSize=32.0
-260814_1128_482 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=32.0
-260814_1128_482 🐞ContentView.swift:body:272 Binding getter selectedDocumentName=Home.txt returned boxFontSize=32.0
-260814_1128_482 🐞Main_Screen.swift:body:936 MainScreen.body
-260814_1128_483 🐞Main_Screen.swift:body:937 MainScreen received boxFontSize=32.0
-260814_1128_498 🐞Main_Screen.swift:mainGridSection(availableWidth:):1137 Creating button label views
-260814_1128_501 🐞Main_GridSection.swift:body:125 MainScreenGridSection.body
-260814_1128_502 🐞Main_GridSection.swift:body:137 MainScreenGridSection.ForEach
-260814_1128_517 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=0 fontSize=32.0 title=terminal
-260814_1128_518 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=2 fontSize=32.0 title=type …
-260814_1128_519 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=4 fontSize=32.0 title=msgs
-260814_1128_520 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=5 fontSize=32.0 title=notes
-260814_1128_521 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=6 fontSize=32.0 title=KM
-260814_1128_527 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=10 fontSize=32.0 title=VLC
-260814_1128_527 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=12 fontSize=32.0 title=Zoom
-260814_1128_528 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=14 fontSize=32.0 title=calc
-260814_1128_529 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=15 fontSize=32.0 title=draw
-260814_1128_530 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=16 fontSize=32.0 title=Test Area
-260814_1128_530 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=18 fontSize=32.0 title=TEST
-AREA 2
-260814_1128_531 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=20 fontSize=32.0 title=QT
-260814_1128_532 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=22 fontSize=32.0 title=prjs
-260814_1128_532 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=24 fontSize=32.0 title=scrn share
-260814_1128_533 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=26 fontSize=32.0 title=English
-260814_1128_534 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=28 fontSize=32.0 title=widgets
-260814_1128_535 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=30 fontSize=32.0 title=scriv
-260814_1128_535 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=32 fontSize=32.0 title=brave
-260814_1128_536 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=34 fontSize=32.0 title=mac mini
-260814_1128_537 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=36 fontSize=32.0 title=folders
-260814_1128_538 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=38 fontSize=32.0 title=tools
-260814_1128_539 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=40 fontSize=32.0 title=mind
-260814_1128_540 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=42 fontSize=32.0 title=nums
-260814_1128_541 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=44 fontSize=32.0 title=Recall
-260814_1128_542 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=46 fontSize=32.0 title=Xcode
-260814_1128_542 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=48 fontSize=32.0 title=GPT
-260814_1128_543 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=50 fontSize=32.0 title=switch
-260814_1128_544 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=51 fontSize=32.0 title=fore
-260814_1128_545 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=52 fontSize=32.0 title=mail
-260814_1128_545 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=54 fontSize=32.0 title=hub
-260814_1128_546 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=56 fontSize=32.0 title=tog mute
-260814_1128_547 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=57 fontSize=32.0 title=cls
-tab
-260814_1128_547 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=58 fontSize=32.0 title=close app
-260814_1128_736 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=32.0
-260814_1128_736 🐞ContentView.swift:body:272 Binding getter selectedDocumentName=Home.txt returned boxFontSize=32.0
-260814_1128_737 🐞Main_DocumentActions.swift:decreaseBoxFontSize():75 decreaseBoxFontSize before=32.0 new=31.0
-260814_1128_737 🐞ContentView.swift:body:276 Binding setter new boxFontSize=31.0
-260814_1128_737 🐞ContentView.swift:updateDocumentFontSize(_:):761 updateDocumentFontSize new=31.0
-260814_1128_738 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=31.0
-260814_1128_738 🐞ContentView.swift:body:272 Binding getter selectedDocumentName=Home.txt returned boxFontSize=31.0
-260814_1128_738 🐞Main_DocumentActions.swift:decreaseBoxFontSize():77 decreaseBoxFontSize:31.0
-260814_1128_741 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=31.0
-260814_1128_741 🐞ContentView.swift:body:261 ContentView before MainScreen selectedDocumentName=Home.txt fontSize=31.0
-260814_1128_742 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=31.0
-260814_1128_742 🐞ContentView.swift:body:272 Binding getter selectedDocumentName=Home.txt returned boxFontSize=31.0
-260814_1128_743 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=31.0
-260814_1128_743 🐞ContentView.swift:body:272 Binding getter selectedDocumentName=Home.txt returned boxFontSize=31.0
-260814_1128_743 🐞Main_Screen.swift:body:936 MainScreen.body
-260814_1128_744 🐞Main_Screen.swift:body:937 MainScreen received boxFontSize=31.0
-260814_1128_758 🐞Main_Screen.swift:mainGridSection(availableWidth:):1137 Creating button label views
-260814_1128_760 🐞Main_GridSection.swift:body:125 MainScreenGridSection.body
-260814_1128_761 🐞Main_GridSection.swift:body:137 MainScreenGridSection.ForEach
-260814_1128_776 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=0 fontSize=31.0 title=terminal
-260814_1128_777 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=2 fontSize=31.0 title=type …
-260814_1128_778 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=4 fontSize=31.0 title=msgs
-260814_1128_779 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=5 fontSize=31.0 title=notes
-260814_1128_780 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=6 fontSize=31.0 title=KM
-260814_1128_786 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=10 fontSize=31.0 title=VLC
-260814_1128_787 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=12 fontSize=31.0 title=Zoom
-260814_1128_788 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=14 fontSize=31.0 title=calc
-260814_1128_789 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=15 fontSize=31.0 title=draw
-260814_1128_790 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=16 fontSize=31.0 title=Test Area
-260814_1128_790 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=18 fontSize=31.0 title=TEST
-AREA 2
-260814_1128_791 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=20 fontSize=31.0 title=QT
-260814_1128_792 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=22 fontSize=31.0 title=prjs
-260814_1128_792 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=24 fontSize=31.0 title=scrn share
-260814_1128_793 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=26 fontSize=31.0 title=English
-260814_1128_795 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=28 fontSize=31.0 title=widgets
-260814_1128_796 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=30 fontSize=31.0 title=scriv
-260814_1128_797 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=32 fontSize=31.0 title=brave
-260814_1128_798 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=34 fontSize=31.0 title=mac mini
-260814_1128_798 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=36 fontSize=31.0 title=folders
-260814_1128_800 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=38 fontSize=31.0 title=tools
-260814_1128_800 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=40 fontSize=31.0 title=mind
-260814_1128_801 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=42 fontSize=31.0 title=nums
-260814_1128_802 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=44 fontSize=31.0 title=Recall
-260814_1128_803 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=46 fontSize=31.0 title=Xcode
-260814_1128_804 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=48 fontSize=31.0 title=GPT
-260814_1128_805 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=50 fontSize=31.0 title=switch
-260814_1128_805 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=51 fontSize=31.0 title=fore
-260814_1128_806 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=52 fontSize=31.0 title=mail
-260814_1128_807 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=54 fontSize=31.0 title=hub
-260814_1128_808 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=56 fontSize=31.0 title=tog mute
-260814_1128_809 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=57 fontSize=31.0 title=cls
-tab
-260814_1128_809 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=58 fontSize=31.0 title=close app
-260814_1128_978 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=31.0
-260814_1128_978 🐞ContentView.swift:body:272 Binding getter selectedDocumentName=Home.txt returned boxFontSize=31.0
-260814_1128_978 🐞Main_DocumentActions.swift:decreaseBoxFontSize():75 decreaseBoxFontSize before=31.0 new=30.0
-260814_1128_978 🐞ContentView.swift:body:276 Binding setter new boxFontSize=30.0
-260814_1128_979 🐞ContentView.swift:updateDocumentFontSize(_:):761 updateDocumentFontSize new=30.0
-260814_1128_979 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=30.0
-260814_1128_980 🐞ContentView.swift:body:272 Binding getter selectedDocumentName=Home.txt returned boxFontSize=30.0
-260814_1128_980 🐞Main_DocumentActions.swift:decreaseBoxFontSize():77 decreaseBoxFontSize:30.0
-260814_1128_983 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=30.0
-260814_1128_983 🐞ContentView.swift:body:261 ContentView before MainScreen selectedDocumentName=Home.txt fontSize=30.0
-260814_1128_983 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=30.0
-260814_1128_983 🐞ContentView.swift:body:272 Binding getter selectedDocumentName=Home.txt returned boxFontSize=30.0
-260814_1128_985 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=30.0
-260814_1128_985 🐞ContentView.swift:body:272 Binding getter selectedDocumentName=Home.txt returned boxFontSize=30.0
-260814_1128_985 🐞Main_Screen.swift:body:936 MainScreen.body
-260814_1128_985 🐞Main_Screen.swift:body:937 MainScreen received boxFontSize=30.0
-260814_1128_999 🐞Main_Screen.swift:mainGridSection(availableWidth:):1137 Creating button label views
-260814_1128_002 🐞Main_GridSection.swift:body:125 MainScreenGridSection.body
-260814_1128_003 🐞Main_GridSection.swift:body:137 MainScreenGridSection.ForEach
-260814_1128_019 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=0 fontSize=30.0 title=terminal
-260814_1128_020 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=2 fontSize=30.0 title=type …
-260814_1128_021 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=4 fontSize=30.0 title=msgs
-260814_1128_021 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=5 fontSize=30.0 title=notes
-260814_1128_022 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=6 fontSize=30.0 title=KM
-260814_1128_028 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=10 fontSize=30.0 title=VLC
-260814_1128_029 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=12 fontSize=30.0 title=Zoom
-260814_1128_030 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=14 fontSize=30.0 title=calc
-260814_1128_031 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=15 fontSize=30.0 title=draw
-260814_1128_031 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=16 fontSize=30.0 title=Test Area
-260814_1128_032 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=18 fontSize=30.0 title=TEST
-AREA 2
-260814_1128_033 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=20 fontSize=30.0 title=QT
-260814_1128_034 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=22 fontSize=30.0 title=prjs
-260814_1128_035 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=24 fontSize=30.0 title=scrn share
-260814_1128_036 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=26 fontSize=30.0 title=English
-260814_1128_036 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=28 fontSize=30.0 title=widgets
-260814_1128_037 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=30 fontSize=30.0 title=scriv
-260814_1128_038 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=32 fontSize=30.0 title=brave
-260814_1128_039 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=34 fontSize=30.0 title=mac mini
-260814_1128_039 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=36 fontSize=30.0 title=folders
-260814_1128_040 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=38 fontSize=30.0 title=tools
-260814_1128_041 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=40 fontSize=30.0 title=mind
-260814_1128_042 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=42 fontSize=30.0 title=nums
-260814_1128_042 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=44 fontSize=30.0 title=Recall
-260814_1128_043 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=46 fontSize=30.0 title=Xcode
-260814_1128_044 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=48 fontSize=30.0 title=GPT
-260814_1128_045 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=50 fontSize=30.0 title=switch
-260814_1128_045 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=51 fontSize=30.0 title=fore
-260814_1128_046 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=52 fontSize=30.0 title=mail
-260814_1128_047 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=54 fontSize=30.0 title=hub
-260814_1128_048 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=56 fontSize=30.0 title=tog mute
-260814_1128_049 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=57 fontSize=30.0 title=cls
-tab
-260814_1128_049 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=58 fontSize=30.0 title=close app
-260814_1128_211 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=30.0
-260814_1128_211 🐞ContentView.swift:body:272 Binding getter selectedDocumentName=Home.txt returned boxFontSize=30.0
-260814_1128_212 🐞Main_DocumentActions.swift:decreaseBoxFontSize():75 decreaseBoxFontSize before=30.0 new=29.0
-260814_1128_212 🐞ContentView.swift:body:276 Binding setter new boxFontSize=29.0
-260814_1128_212 🐞ContentView.swift:updateDocumentFontSize(_:):761 updateDocumentFontSize new=29.0
-260814_1128_213 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=29.0
-260814_1128_213 🐞ContentView.swift:body:272 Binding getter selectedDocumentName=Home.txt returned boxFontSize=29.0
-260814_1128_213 🐞Main_DocumentActions.swift:decreaseBoxFontSize():77 decreaseBoxFontSize:29.0
-260814_1128_216 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=29.0
-260814_1128_216 🐞ContentView.swift:body:261 ContentView before MainScreen selectedDocumentName=Home.txt fontSize=29.0
-260814_1128_217 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=29.0
-260814_1128_217 🐞ContentView.swift:body:272 Binding getter selectedDocumentName=Home.txt returned boxFontSize=29.0
-260814_1128_218 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=29.0
-260814_1128_218 🐞ContentView.swift:body:272 Binding getter selectedDocumentName=Home.txt returned boxFontSize=29.0
-260814_1128_218 🐞Main_Screen.swift:body:936 MainScreen.body
-260814_1128_219 🐞Main_Screen.swift:body:937 MainScreen received boxFontSize=29.0
-260814_1128_233 🐞Main_Screen.swift:mainGridSection(availableWidth:):1137 Creating button label views
-260814_1128_235 🐞Main_GridSection.swift:body:125 MainScreenGridSection.body
-260814_1128_236 🐞Main_GridSection.swift:body:137 MainScreenGridSection.ForEach
-260814_1128_251 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=0 fontSize=29.0 title=terminal
-260814_1128_253 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=2 fontSize=29.0 title=type …
-260814_1128_254 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=4 fontSize=29.0 title=msgs
-260814_1128_255 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=5 fontSize=29.0 title=notes
-260814_1128_256 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=6 fontSize=29.0 title=KM
-260814_1128_261 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=10 fontSize=29.0 title=VLC
-260814_1128_263 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=12 fontSize=29.0 title=Zoom
-260814_1128_263 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=14 fontSize=29.0 title=calc
-260814_1128_264 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=15 fontSize=29.0 title=draw
-260814_1128_265 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=16 fontSize=29.0 title=Test Area
-260814_1128_266 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=18 fontSize=29.0 title=TEST
-AREA 2
-260814_1128_267 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=20 fontSize=29.0 title=QT
-260814_1128_268 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=22 fontSize=29.0 title=prjs
-260814_1128_269 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=24 fontSize=29.0 title=scrn share
-260814_1128_270 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=26 fontSize=29.0 title=English
-260814_1128_271 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=28 fontSize=29.0 title=widgets
-260814_1128_271 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=30 fontSize=29.0 title=scriv
-260814_1128_272 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=32 fontSize=29.0 title=brave
-260814_1128_273 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=34 fontSize=29.0 title=mac mini
-260814_1128_274 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=36 fontSize=29.0 title=folders
-260814_1128_275 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=38 fontSize=29.0 title=tools
-260814_1128_275 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=40 fontSize=29.0 title=mind
-260814_1128_276 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=42 fontSize=29.0 title=nums
-260814_1128_277 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=44 fontSize=29.0 title=Recall
-260814_1128_278 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=46 fontSize=29.0 title=Xcode
-260814_1128_278 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=48 fontSize=29.0 title=GPT
-260814_1128_279 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=50 fontSize=29.0 title=switch
-260814_1128_280 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=51 fontSize=29.0 title=fore
-260814_1128_281 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=52 fontSize=29.0 title=mail
-260814_1128_282 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=54 fontSize=29.0 title=hub
-260814_1128_283 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=56 fontSize=29.0 title=tog mute
-260814_1128_283 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=57 fontSize=29.0 title=cls
-tab
-260814_1128_284 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=58 fontSize=29.0 title=close app
-260814_1128_411 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=29.0
-260814_1128_412 🐞ContentView.swift:body:272 Binding getter selectedDocumentName=Home.txt returned boxFontSize=29.0
-260814_1128_412 🐞Main_DocumentActions.swift:decreaseBoxFontSize():75 decreaseBoxFontSize before=29.0 new=28.0
-260814_1128_412 🐞ContentView.swift:body:276 Binding setter new boxFontSize=28.0
-260814_1128_412 🐞ContentView.swift:updateDocumentFontSize(_:):761 updateDocumentFontSize new=28.0
-260814_1128_413 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=28.0
-260814_1128_413 🐞ContentView.swift:body:272 Binding getter selectedDocumentName=Home.txt returned boxFontSize=28.0
-260814_1128_413 🐞Main_DocumentActions.swift:decreaseBoxFontSize():77 decreaseBoxFontSize:28.0
-260814_1128_416 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=28.0
-260814_1128_417 🐞ContentView.swift:body:261 ContentView before MainScreen selectedDocumentName=Home.txt fontSize=28.0
-260814_1128_417 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=28.0
-260814_1128_417 🐞ContentView.swift:body:272 Binding getter selectedDocumentName=Home.txt returned boxFontSize=28.0
-260814_1128_419 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=28.0
-260814_1128_419 🐞ContentView.swift:body:272 Binding getter selectedDocumentName=Home.txt returned boxFontSize=28.0
-260814_1128_419 🐞Main_Screen.swift:body:936 MainScreen.body
-260814_1128_419 🐞Main_Screen.swift:body:937 MainScreen received boxFontSize=28.0
-260814_1128_434 🐞Main_Screen.swift:mainGridSection(availableWidth:):1137 Creating button label views
-260814_1128_436 🐞Main_GridSection.swift:body:125 MainScreenGridSection.body
-260814_1128_437 🐞Main_GridSection.swift:body:137 MainScreenGridSection.ForEach
-260814_1128_452 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=0 fontSize=28.0 title=terminal
-260814_1128_453 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=2 fontSize=28.0 title=type …
-260814_1128_454 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=4 fontSize=28.0 title=msgs
-260814_1128_455 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=5 fontSize=28.0 title=notes
-260814_1128_456 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=6 fontSize=28.0 title=KM
-260814_1128_462 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=10 fontSize=28.0 title=VLC
-260814_1128_463 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=12 fontSize=28.0 title=Zoom
-260814_1128_463 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=14 fontSize=28.0 title=calc
-260814_1128_464 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=15 fontSize=28.0 title=draw
-260814_1128_465 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=16 fontSize=28.0 title=Test Area
-260814_1128_466 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=18 fontSize=28.0 title=TEST
-AREA 2
-260814_1128_466 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=20 fontSize=28.0 title=QT
-260814_1128_468 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=22 fontSize=28.0 title=prjs
-260814_1128_468 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=24 fontSize=28.0 title=scrn share
-260814_1128_469 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=26 fontSize=28.0 title=English
-260814_1128_470 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=28 fontSize=28.0 title=widgets
-260814_1128_470 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=30 fontSize=28.0 title=scriv
-260814_1128_471 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=32 fontSize=28.0 title=brave
-260814_1128_472 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=34 fontSize=28.0 title=mac mini
-260814_1128_472 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=36 fontSize=28.0 title=folders
-260814_1128_473 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=38 fontSize=28.0 title=tools
-260814_1128_473 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=40 fontSize=28.0 title=mind
-260814_1128_474 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=42 fontSize=28.0 title=nums
-260814_1128_475 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=44 fontSize=28.0 title=Recall
-260814_1128_475 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=46 fontSize=28.0 title=Xcode
-260814_1128_476 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=48 fontSize=28.0 title=GPT
-260814_1128_477 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=50 fontSize=28.0 title=switch
-260814_1128_478 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=51 fontSize=28.0 title=fore
-260814_1128_478 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=52 fontSize=28.0 title=mail
-260814_1128_479 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=54 fontSize=28.0 title=hub
-260814_1128_480 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=56 fontSize=28.0 title=tog mute
-260814_1128_480 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=57 fontSize=28.0 title=cls
-tab
-260814_1128_481 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=58 fontSize=28.0 title=close app
-260814_1128_098 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=28.0
-260814_1128_102 🐞ContentView.swift:body:272 Binding getter selectedDocumentName=Home.txt returned boxFontSize=28.0
-260814_1128_103 🐞Main_DocumentActions.swift:increaseBoxFontSize():85 increaseBoxFontSize before=28.0 new=29.0
-260814_1128_104 🐞ContentView.swift:body:276 Binding setter new boxFontSize=29.0
-260814_1128_105 🐞ContentView.swift:updateDocumentFontSize(_:):761 updateDocumentFontSize new=29.0
-260814_1128_108 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=29.0
-260814_1128_108 🐞ContentView.swift:body:272 Binding getter selectedDocumentName=Home.txt returned boxFontSize=29.0
-260814_1128_109 🐞Main_DocumentActions.swift:increaseBoxFontSize():87 increaseBoxFontSize:29.0
-260814_1128_117 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=29.0
-260814_1128_118 🐞ContentView.swift:body:261 ContentView before MainScreen selectedDocumentName=Home.txt fontSize=29.0
-260814_1128_119 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=29.0
-260814_1128_119 🐞ContentView.swift:body:272 Binding getter selectedDocumentName=Home.txt returned boxFontSize=29.0
-260814_1128_122 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=29.0
-260814_1128_122 🐞ContentView.swift:body:272 Binding getter selectedDocumentName=Home.txt returned boxFontSize=29.0
-260814_1128_123 🐞Main_Screen.swift:body:936 MainScreen.body
-260814_1128_123 🐞Main_Screen.swift:body:937 MainScreen received boxFontSize=29.0
-260814_1128_148 🐞Main_Screen.swift:mainGridSection(availableWidth:):1137 Creating button label views
-260814_1128_151 🐞Main_GridSection.swift:body:125 MainScreenGridSection.body
-260814_1128_153 🐞Main_GridSection.swift:body:137 MainScreenGridSection.ForEach
-260814_1128_170 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=0 fontSize=29.0 title=terminal
-260814_1128_172 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=2 fontSize=29.0 title=type …
-260814_1128_173 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=4 fontSize=29.0 title=msgs
-260814_1128_174 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=5 fontSize=29.0 title=notes
-260814_1128_175 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=6 fontSize=29.0 title=KM
-260814_1128_180 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=10 fontSize=29.0 title=VLC
-260814_1128_181 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=12 fontSize=29.0 title=Zoom
-260814_1128_182 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=14 fontSize=29.0 title=calc
-260814_1128_183 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=15 fontSize=29.0 title=draw
-260814_1128_183 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=16 fontSize=29.0 title=Test Area
-260814_1128_184 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=18 fontSize=29.0 title=TEST
-AREA 2
-260814_1128_185 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=20 fontSize=29.0 title=QT
-260814_1128_186 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=22 fontSize=29.0 title=prjs
-260814_1128_187 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=24 fontSize=29.0 title=scrn share
-260814_1128_189 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=26 fontSize=29.0 title=English
-260814_1128_189 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=28 fontSize=29.0 title=widgets
-260814_1128_190 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=30 fontSize=29.0 title=scriv
-260814_1128_191 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=32 fontSize=29.0 title=brave
-260814_1128_193 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=34 fontSize=29.0 title=mac mini
-260814_1128_194 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=36 fontSize=29.0 title=folders
-260814_1128_194 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=38 fontSize=29.0 title=tools
-260814_1128_195 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=40 fontSize=29.0 title=mind
-260814_1128_196 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=42 fontSize=29.0 title=nums
-260814_1128_197 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=44 fontSize=29.0 title=Recall
-260814_1128_198 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=46 fontSize=29.0 title=Xcode
-260814_1128_199 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=48 fontSize=29.0 title=GPT
-260814_1128_200 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=50 fontSize=29.0 title=switch
-260814_1128_200 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=51 fontSize=29.0 title=fore
-260814_1128_201 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=52 fontSize=29.0 title=mail
-260814_1128_202 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=54 fontSize=29.0 title=hub
-260814_1128_203 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=56 fontSize=29.0 title=tog mute
-260814_1128_204 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=57 fontSize=29.0 title=cls
-tab
-260814_1128_204 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=58 fontSize=29.0 title=close app
-260814_1128_320 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=29.0
-260814_1128_320 🐞ContentView.swift:body:272 Binding getter selectedDocumentName=Home.txt returned boxFontSize=29.0
-260814_1128_320 🐞Main_DocumentActions.swift:increaseBoxFontSize():85 increaseBoxFontSize before=29.0 new=30.0
-260814_1128_320 🐞ContentView.swift:body:276 Binding setter new boxFontSize=30.0
-260814_1128_320 🐞ContentView.swift:updateDocumentFontSize(_:):761 updateDocumentFontSize new=30.0
-260814_1128_321 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=30.0
-260814_1128_321 🐞ContentView.swift:body:272 Binding getter selectedDocumentName=Home.txt returned boxFontSize=30.0
-260814_1128_322 🐞Main_DocumentActions.swift:increaseBoxFontSize():87 increaseBoxFontSize:30.0
-260814_1128_325 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=30.0
-260814_1128_325 🐞ContentView.swift:body:261 ContentView before MainScreen selectedDocumentName=Home.txt fontSize=30.0
-260814_1128_325 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=30.0
-260814_1128_325 🐞ContentView.swift:body:272 Binding getter selectedDocumentName=Home.txt returned boxFontSize=30.0
-260814_1128_327 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=30.0
-260814_1128_327 🐞ContentView.swift:body:272 Binding getter selectedDocumentName=Home.txt returned boxFontSize=30.0
-260814_1128_327 🐞Main_Screen.swift:body:936 MainScreen.body
-260814_1128_327 🐞Main_Screen.swift:body:937 MainScreen received boxFontSize=30.0
-260814_1128_341 🐞Main_Screen.swift:mainGridSection(availableWidth:):1137 Creating button label views
-260814_1128_344 🐞Main_GridSection.swift:body:125 MainScreenGridSection.body
-260814_1128_345 🐞Main_GridSection.swift:body:137 MainScreenGridSection.ForEach
-260814_1128_360 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=0 fontSize=30.0 title=terminal
-260814_1128_361 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=2 fontSize=30.0 title=type …
-260814_1128_362 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=4 fontSize=30.0 title=msgs
-260814_1128_363 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=5 fontSize=30.0 title=notes
-260814_1128_364 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=6 fontSize=30.0 title=KM
-260814_1128_370 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=10 fontSize=30.0 title=VLC
-260814_1128_371 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=12 fontSize=30.0 title=Zoom
-260814_1128_372 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=14 fontSize=30.0 title=calc
-260814_1128_373 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=15 fontSize=30.0 title=draw
-260814_1128_374 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=16 fontSize=30.0 title=Test Area
-260814_1128_374 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=18 fontSize=30.0 title=TEST
-AREA 2
-260814_1128_375 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=20 fontSize=30.0 title=QT
-260814_1128_376 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=22 fontSize=30.0 title=prjs
-260814_1128_377 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=24 fontSize=30.0 title=scrn share
-260814_1128_378 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=26 fontSize=30.0 title=English
-260814_1128_379 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=28 fontSize=30.0 title=widgets
-260814_1128_380 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=30 fontSize=30.0 title=scriv
-260814_1128_381 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=32 fontSize=30.0 title=brave
-260814_1128_382 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=34 fontSize=30.0 title=mac mini
-260814_1128_383 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=36 fontSize=30.0 title=folders
-260814_1128_383 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=38 fontSize=30.0 title=tools
-260814_1128_384 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=40 fontSize=30.0 title=mind
-260814_1128_385 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=42 fontSize=30.0 title=nums
-260814_1128_386 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=44 fontSize=30.0 title=Recall
-260814_1128_387 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=46 fontSize=30.0 title=Xcode
-260814_1128_388 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=48 fontSize=30.0 title=GPT
-260814_1128_389 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=50 fontSize=30.0 title=switch
-260814_1128_390 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=51 fontSize=30.0 title=fore
-260814_1128_391 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=52 fontSize=30.0 title=mail
-260814_1128_391 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=54 fontSize=30.0 title=hub
-260814_1128_392 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=56 fontSize=30.0 title=tog mute
-260814_1128_393 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=57 fontSize=30.0 title=cls
-tab
-260814_1128_393 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=58 fontSize=30.0 title=close app
-260814_1128_503 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=30.0
-260814_1128_504 🐞ContentView.swift:body:272 Binding getter selectedDocumentName=Home.txt returned boxFontSize=30.0
-260814_1128_504 🐞Main_DocumentActions.swift:increaseBoxFontSize():85 increaseBoxFontSize before=30.0 new=31.0
-260814_1128_504 🐞ContentView.swift:body:276 Binding setter new boxFontSize=31.0
-260814_1128_504 🐞ContentView.swift:updateDocumentFontSize(_:):761 updateDocumentFontSize new=31.0
-260814_1128_505 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=31.0
-260814_1128_505 🐞ContentView.swift:body:272 Binding getter selectedDocumentName=Home.txt returned boxFontSize=31.0
-260814_1128_505 🐞Main_DocumentActions.swift:increaseBoxFontSize():87 increaseBoxFontSize:31.0
-260814_1128_508 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=31.0
-260814_1128_508 🐞ContentView.swift:body:261 ContentView before MainScreen selectedDocumentName=Home.txt fontSize=31.0
-260814_1128_509 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=31.0
-260814_1128_509 🐞ContentView.swift:body:272 Binding getter selectedDocumentName=Home.txt returned boxFontSize=31.0
-260814_1128_510 🐞ContentView.swift:fontSize(for:):756 fontSize(for: Home.txt) returned=31.0
-260814_1128_510 🐞ContentView.swift:body:272 Binding getter selectedDocumentName=Home.txt returned boxFontSize=31.0
-260814_1128_510 🐞Main_Screen.swift:body:936 MainScreen.body
-260814_1128_510 🐞Main_Screen.swift:body:937 MainScreen received boxFontSize=31.0
-260814_1128_525 🐞Main_Screen.swift:mainGridSection(availableWidth:):1137 Creating button label views
-260814_1128_528 🐞Main_GridSection.swift:body:125 MainScreenGridSection.body
-260814_1128_528 🐞Main_GridSection.swift:body:137 MainScreenGridSection.ForEach
-260814_1128_543 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=0 fontSize=31.0 title=terminal
-260814_1128_544 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=2 fontSize=31.0 title=type …
-260814_1128_545 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=4 fontSize=31.0 title=msgs
-260814_1128_546 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=5 fontSize=31.0 title=notes
-260814_1128_547 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=6 fontSize=31.0 title=KM
-260814_1128_553 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=10 fontSize=31.0 title=VLC
-260814_1128_553 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=12 fontSize=31.0 title=Zoom
-260814_1128_554 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=14 fontSize=31.0 title=calc
-260814_1128_555 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=15 fontSize=31.0 title=draw
-260814_1128_556 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=16 fontSize=31.0 title=Test Area
-260814_1128_556 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=18 fontSize=31.0 title=TEST
-AREA 2
-260814_1128_557 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=20 fontSize=31.0 title=QT
-260814_1128_558 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=22 fontSize=31.0 title=prjs
-260814_1128_559 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=24 fontSize=31.0 title=scrn share
-260814_1128_560 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=26 fontSize=31.0 title=English
-260814_1128_561 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=28 fontSize=31.0 title=widgets
-260814_1128_562 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=30 fontSize=31.0 title=scriv
-260814_1128_562 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=32 fontSize=31.0 title=brave
-260814_1128_563 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=34 fontSize=31.0 title=mac mini
-260814_1128_564 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=36 fontSize=31.0 title=folders
-260814_1128_565 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=38 fontSize=31.0 title=tools
-260814_1128_565 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=40 fontSize=31.0 title=mind
-260814_1128_566 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=42 fontSize=31.0 title=nums
-260814_1128_567 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=44 fontSize=31.0 title=Recall
-260814_1128_568 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=46 fontSize=31.0 title=Xcode
-260814_1128_568 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=48 fontSize=31.0 title=GPT
-260814_1128_569 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=50 fontSize=31.0 title=switch
-260814_1128_570 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=51 fontSize=31.0 title=fore
-260814_1128_571 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=52 fontSize=31.0 title=mail
-260814_1128_571 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=54 fontSize=31.0 title=hub
-260814_1128_572 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=56 fontSize=31.0 title=tog mute
-260814_1128_572 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=57 fontSize=31.0 title=cls
-tab
-260814_1128_573 🐞Main_ButtonBehavior.swift:textLabel(title:):2378 MainScreenButtonLabelView.textLabel index=58 fontSize=31.0 title=close app
+ Settings currently stored in ScreenConfig
+
+• schemaVersion
+• fontSize
+• grid.rows
+• grid.columns
+• backgroundImageName
+• backgroundOpacity
+• gridOpacity
+
+Current model details:
+
+• ScreenConfig is Codable and Equatable.
+• ScreenConfig.Grid is Codable and Equatable.
+• schemaVersion defaults to 1.
+• fontSize defaults to 20.0.
+• backgroundOpacity defaults to 0.5.
+• gridOpacity is optional.
+• backgroundImageName is optional.
+• grid row and column values are clamped to at least 1.
+• backgroundOpacity and gridOpacity are clamped to 0...1.
+
+2. Comparison against required portable document configuration
+
+font size
+
+• Present.
+• Field: fontSize.
+• Type: Double.
+• Concern: default is duplicated as ScreenConfig.defaultFontSize = 20.0 rather than sharing ContentView’s defaultDocumentFontSize.
+
+brightness
+
+• Missing.
+• There is no document-level brightness field.
+• If brightness means the smart editor color brightness slider, it should not be stored in ScreenConfig because current button color is already stored as final hex text in the txt file.
+• If brightness means a screen-level image/display brightness setting, add a dedicated optional field.
+
+opacity
+
+• Partly present.
+• Present: backgroundOpacity.
+• Present but unused/ambiguous: gridOpacity.
+• Missing if needed: separate button background opacity or screen overlay opacity.
+• Recommendation: clarify gridOpacity before connecting UI. The current app has mainGridBackgroundOpacity, which behaves more like button background opacity than “grid” opacity.
+
+button width
+
+• Missing.
+• Should not be added as actual pixel width.
+• Button width is calculated from device size, columns, spacing, and current layout.
+• Portable config should store grid/layout intent, not rendered dimensions.
+
+button height
+
+• Missing.
+• Should not be added as actual pixel height.
+• Button height is calculated from device size, rows, spacing, safe area, and toolbar state.
+
+grid/layout
+
+• Partly present.
+• Present: grid.rows and grid.columns.
+• Button order and large-button layout remain in txt through line order, @@wide, and @@block.
+• Missing only if future UI supports additional layout settings such as spacing, layout mode, or orientation-specific layouts.
+
+images
+
+• Partly present.
+• Present: backgroundImageName.
+• Good: filename-based storage is portable.
+• Missing optional future fields:
+   • backgroundImageMode, such as fill/fit/stretch
+   • backgroundImageAlignment, if positioning becomes user-configurable
+
+PDFs
+
+• Missing.
+• If PDFs are only referenced by button commands, they should stay in txt.
+• If a screen can have a document-level PDF assignment, add pdfName.
+
+sounds
+
+• Missing.
+• If sounds are only referenced by button commands, they should stay in txt.
+• If a screen can have a document-level ambient/default sound, add ambientSoundName or defaultSoundName.
+
+future source types
+
+• Missing.
+• schemaVersion supports future migration, but there is no field for future source references.
+• Add only if there is a known use case. Otherwise keep the model simple.
+
+3. Missing configuration fields to consider before connecting UI
+
+Recommended to add before connecting UI:
+
+• buttonBackgroundOpacity: Double?
+Better name than gridOpacity if the current mainGridBackgroundOpacity is meant to become screen-specific.
+
+• screenBrightness: Double?
+Only if brightness is a real screen-level appearance setting.
+
+• backgroundImageMode: String?
+Optional future-proof field if image rendering mode may become configurable.
+
+• pdfName: String?
+Only if there is a document-level PDF association.
+
+• ambientSoundName: String?
+Only if there is a document-level sound association.
+
+Recommended not to add:
+
+• buttonWidth
+• buttonHeight
+
+Reason:
+Those are calculated layout results, not portable document settings.
+
+4. Recommended final ScreenConfig structure
+
+Recommended final fields:
+
+• schemaVersion: Int
+• fontSize: Double
+• grid: ScreenConfig.Grid
+• backgroundImageName: String?
+• backgroundOpacity: Double
+• buttonBackgroundOpacity: Double?
+• screenBrightness: Double?
+• backgroundImageMode: String?
+• pdfName: String?
+• ambientSoundName: String?
+
+Recommended nested grid fields:
+
+• rows: Int
+• columns: Int
+
+Keep out of ScreenConfig:
+
+• button action text
+• button display text
+• button order
+• button colors
+• hidden state
+• @@wide and @@block markers
+• selected document
+• BLE settings
+• keyboard preferences
+• TTS settings
+• navigation history
+• editor state
+• runtime state
+• actual button pixel width
+• actual button pixel height
+
+Main recommendation:
+
+• Keep fontSize, grid.rows, grid.columns, backgroundImageName, and backgroundOpacity.
+• Replace or supplement gridOpacity with buttonBackgroundOpacity before wiring UI.
+• Add screenBrightness only if brightness is intended as a screen-level visual control.
+• Add PDF/sound fields only for document-level associations, not for button command references.

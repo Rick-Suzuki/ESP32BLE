@@ -534,6 +534,7 @@ struct ContentView: View {
                     return values?.isRegularFile == true && url.pathExtension.lowercased() == "txt"
                 }
                 .sorted { $0.lastPathComponent.localizedCaseInsensitiveCompare($1.lastPathComponent) == .orderedAscending }
+            ensureScreenConfigFiles(for: updatedDocumentFiles)
             db("STATE ContentView.refreshDocumentFiles current documentFiles.count=\(documentFiles.count) new=\(updatedDocumentFiles.count) thread=\(Thread.isMainThread ? "main" : "background")")
             documentFiles = updatedDocumentFiles
         } catch {
