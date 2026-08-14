@@ -72,9 +72,7 @@ extension MainScreen {
     func decreaseBoxFontSize() {
         let currentBoxFontSize = boxFontSize
         let newBoxFontSize = max(minimumBoxFontSize, currentBoxFontSize - 1)
-        db("decreaseBoxFontSize before=\(currentBoxFontSize) new=\(newBoxFontSize)")
         boxFontSize = newBoxFontSize
-		db("decreaseBoxFontSize:\(boxFontSize)")
     }
 	//
 	//----------------------------------------
@@ -82,9 +80,7 @@ extension MainScreen {
     func increaseBoxFontSize() {
         let currentBoxFontSize = boxFontSize
         let newBoxFontSize = min(maximumBoxFontSize, currentBoxFontSize + 1)
-        db("increaseBoxFontSize before=\(currentBoxFontSize) new=\(newBoxFontSize)")
         boxFontSize = newBoxFontSize
-		db("increaseBoxFontSize:\(boxFontSize)")
     }
 	//
 	//----------------------------------------

@@ -933,9 +933,6 @@ Tapping a row inserts the key code at the cursor.
     @Binding var settingsBLEText: String
 
     var body: some View {
-        let _ = db("MainScreen.body")
-        let _ = db("MainScreen received boxFontSize=\(boxFontSize)")
-
         mainScreenContent
             .focusable()
             .focused($isMainScreenKeyboardFocused)
@@ -1134,9 +1131,7 @@ Tapping a row inserts the key code at the cursor.
     }
 
     private func mainGridSection(availableWidth: CGFloat) -> some View {
-        let _ = db("Creating button label views")
-
-        return MainScreenGridSection(
+        MainScreenGridSection(
             availableWidth: availableWidth,
             reservedBottomInset: isGridEditModeEnabled ? 74 : 0,
             functionKeys: functionKeys,

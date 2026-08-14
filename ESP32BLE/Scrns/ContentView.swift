@@ -258,7 +258,6 @@ struct ContentView: View {
                     }
 
                     let _ = documentFontSizeRefreshToken
-                    let _ = db("ContentView before MainScreen selectedDocumentName=\(selectedDocumentName) fontSize=\(fontSize(for: selectedDocumentName))")
 
                     MainScreen(
                         ble: ble,
@@ -268,12 +267,9 @@ struct ContentView: View {
                         selectedDocumentDisplayName: displayName(for: selectedDocumentName),
                         boxFontSize: Binding(
                             get: {
-                                let resolvedFontSize = fontSize(for: selectedDocumentName)
-                                db("Binding getter selectedDocumentName=\(selectedDocumentName) returned boxFontSize=\(resolvedFontSize)")
-                                return resolvedFontSize
+                                fontSize(for: selectedDocumentName)
                             },
                             set: { newFontSize in
-                                db("Binding setter new boxFontSize=\(newFontSize)")
                                 updateDocumentFontSize(newFontSize)
                             }
                         ),
@@ -752,13 +748,10 @@ struct ContentView: View {
     }
 
     private func fontSize(for fileName: String) -> Double {
-        let resolvedFontSize = loadDocumentFontSizes()[fileName] ?? defaultDocumentFontSize
-        db("fontSize(for: \(fileName)) returned=\(resolvedFontSize)")
-        return resolvedFontSize
+        loadDocumentFontSizes()[fileName] ?? defaultDocumentFontSize
     }
 
     private func updateDocumentFontSize(_ newFontSize: Double) {
-        db("updateDocumentFontSize new=\(newFontSize)")
         var updatedFontSizes = loadDocumentFontSizes()
         updatedFontSizes[selectedDocumentName] = newFontSize
         saveDocumentFontSizes(updatedFontSizes)

@@ -122,8 +122,6 @@ struct MainScreenGridSection<ButtonLabel: View>: View {
     @State private var longPressedEditIndex: Int?
 
     var body: some View {
-        let _ = db("MainScreenGridSection.body")
-
         GeometryReader { geometry in
             let gridDimensions = visibleGridDimensions
             let totalGridSpacing = mainGridButtonSpacing * CGFloat(max(gridDimensions.rows - 1, 0))
@@ -134,7 +132,6 @@ struct MainScreenGridSection<ButtonLabel: View>: View {
             let availableGridWidth = max(0, safeAvailableWidth - totalColumnSpacing)
             let buttonWidth = availableGridWidth / CGFloat(max(gridDimensions.columns, 1))
             let visibleEntries = Array(functionKeys.prefix(visibleBoxCount).enumerated())
-            let _ = db("MainScreenGridSection.ForEach")
 
             ZStack(alignment: .topLeading) {
                 ForEach(visibleEntries, id: \.offset) { index, entry in
