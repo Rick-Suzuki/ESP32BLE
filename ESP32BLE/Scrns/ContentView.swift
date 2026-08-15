@@ -23,16 +23,6 @@ private enum AppRuntimeFlags {
     static var orientationState = false
 }
 
-private struct DocumentBackgroundImageConfig: Codable {
-    var imageNames: [String: String] = [:]
-    var imagePaths: [String: String] = [:]
-    var opacities: [String: Double] = [:]
-
-    var isEmpty: Bool {
-        imageNames.isEmpty && imagePaths.isEmpty && opacities.isEmpty
-    }
-}
-
 // True when horizontal, false when vertical.
 var orientationState: Bool {
     AppRuntimeFlags.orientationState
@@ -155,64 +145,10 @@ func downsampledUIImage(at url: URL, maxPixelDimension: CGFloat) -> UIImage? {
 }
 
 struct ContentView: View {
-	//
-	//-----------------------------------------------------------------------------------------------
-	// MARK: - BM:🔆 EMOJI LIST-not used
-	//
-	// normal emoji map
-	static let emojiSpeechConfigFilename = "emoji_speech_map.cfg"
-	
-	// default (start) emoji
-	static let defaultEmojiSpeechConfigContents = """
-
-	# Emoji Speech Map
-	# ----------------
-	# Edit this file to control how Text To Speech speaks emoji on the main screen.
-	#
-	# Emoji override format:
-	# <emoji> = words to speak
-	#
-	# Examples:
-	# ⏯ = play pause media
-	# ⏩ = fast forward
-	#
-	# Suffix format:
-	# suffix = word
-	#
-	# If an emoji has no explicit override, the app can look at its Unicode name.
-	# If that generated name ends with one of the suffixes below, the suffix is
-	# removed and the shorter phrase is spoken. Otherwise the emoji is spoken as-is.
-	#
-
-	⏯️ = play pause 
-	⏸️ = pause
-	⏹️ = stop
-	⏺️ = record
-	⏭️ = next track
-	⏮️ = previous track
-	◀️ = left
-	▶️ = right
-	⬅️ = left
-	➡️ = right
-	⏩ = fast forward
-	⏪ = fast rewind
-	🔼 = up
-	🔽 = down
-	⏏️ = eject
-	🔀 = shuffle
-	🔁 = repeat
-	🔂 = repeat single
-	"""
-	//
-	//-----------------------------------------------------------------------------------------------
-	//
     private let defaultDocumentFontSize: Double = 20
     @AppStorage("selectedBackgroundImageIndex") private var selectedBackgroundImageIndex = 0
     @AppStorage("selectedBackgroundImageName") private var selectedBackgroundImageName = ""
     @AppStorage("selectedBackgroundImagePath") private var selectedBackgroundImagePath = ""
-    @AppStorage("documentBackgroundImageNamesData") private var documentBackgroundImageNamesData = ""
-    @AppStorage("documentBackgroundImagePathsData") private var documentBackgroundImagePathsData = ""
-    @AppStorage("documentBackgroundImageOpacitiesData") private var documentBackgroundImageOpacitiesData = ""
     @AppStorage("documentGridDimensionsData") private var documentGridDimensionsData = ""
     @AppStorage("backgroundImageOpacity") private var backgroundImageOpacity = 0.5
     @AppStorage("mainGridBackgroundOpacity") private var mainGridBackgroundOpacity = 1.0
@@ -367,10 +303,8 @@ struct ContentView: View {
         }
         .task {
             ensureDefaultFunctionKeysFile()
-            ensureDefaultEmojiSpeechConfigFile()
             refreshDocumentFiles()
             refreshBackgroundImageFiles()
-            synchronizeDocumentBackgroundConfigFile()
             selectInitialDocument()
             updateLoadedBackgroundImageForVisibleScreen()
             logDeviceTypeIfNeeded()
@@ -515,20 +449,6 @@ struct ContentView: View {
 
         refreshDocumentFiles()
         selectInitialDocument()
-    }
-
-    private func ensureDefaultEmojiSpeechConfigFile() {
-        guard let documentsDirectoryURL = documentsDirectoryURL() else {
-            return
-        }
-
-        let fileURL = documentsDirectoryURL.appendingPathComponent(Self.emojiSpeechConfigFilename)
-
-        guard db_overwriteConfigFile || !FileManager.default.fileExists(atPath: fileURL.path) else {
-            return
-        }
-
-        try? Self.defaultEmojiSpeechConfigContents.write(to: fileURL, atomically: true, encoding: .utf8)
     }
 
     private func refreshDocumentFiles() {
@@ -886,215 +806,16 @@ struct ContentView: View {
 
         let fontSize = loadDocumentFontSizes()[trimmedDocumentName] ?? fallbackConfig.fontSize
         let gridDimensions = appStorageGridDimensions(for: trimmedDocumentName, requiredBoxCount: requiredBoxCount)
-        let backgroundImageName = fallbackBackgroundImageName(for: trimmedDocumentName)
-        let backgroundOpacity = fallbackBackgroundImageOpacity(
-            for: trimmedDocumentName,
-            defaultOpacity: fallbackConfig.backgroundOpacity
-        )
         let buttonsBackgroundOpacity = min(max(mainGridBackgroundOpacity, 0), 1)
 
         return ScreenConfig(
             schemaVersion: fallbackConfig.schemaVersion,
             fontSize: fontSize,
             grid: ScreenConfig.Grid(rows: gridDimensions.rows, columns: gridDimensions.columns),
-            backgroundImageName: backgroundImageName,
-            backgroundOpacity: backgroundOpacity,
+            backgroundImageName: fallbackConfig.backgroundImageName,
+            backgroundOpacity: fallbackConfig.backgroundOpacity,
             buttonsBackgroundOpacity: buttonsBackgroundOpacity
         )
-    }
-
-    private func fallbackBackgroundImageName(for documentName: String) -> String? {
-        if let imageName = documentBackgroundConfigImageName(for: documentName) {
-            return imageName
-        }
-
-        return appStorageBackgroundImageName(for: documentName)
-    }
-
-    private func documentBackgroundConfigImageName(for documentName: String) -> String? {
-        guard let config = loadDocumentBackgroundImageConfigFile() else {
-            return nil
-        }
-
-        if let imageName = config.imageNames[documentName], !imageName.isEmpty {
-            return URL(fileURLWithPath: imageName).lastPathComponent
-        }
-
-        guard let imagePath = config.imagePaths[documentName], !imagePath.isEmpty else {
-            return nil
-        }
-
-        return URL(fileURLWithPath: imagePath).lastPathComponent
-    }
-
-    private func fallbackBackgroundImageOpacity(for documentName: String, defaultOpacity: Double) -> Double {
-        if let opacity = loadDocumentBackgroundImageConfigFile()?.opacities[documentName] {
-            return min(max(opacity, 0), 1)
-        }
-
-        let appStorageOpacity = loadDocumentBackgroundImageOpacities()[documentName] ?? defaultOpacity
-        return min(max(appStorageOpacity, 0), 1)
-    }
-
-    private func appStorageBackgroundImageName(for documentName: String) -> String? {
-        let nameMappings = loadDocumentBackgroundImageNames()
-        if let imageName = nameMappings[documentName], !imageName.isEmpty {
-            return URL(fileURLWithPath: imageName).lastPathComponent
-        }
-
-        let pathMappings = loadDocumentBackgroundImagePaths()
-        guard let imagePath = pathMappings[documentName], !imagePath.isEmpty else {
-            return nil
-        }
-
-        return URL(fileURLWithPath: imagePath).lastPathComponent
-    }
-
-    private func loadDocumentBackgroundImageNames() -> [String: String] {
-        guard let data = documentBackgroundImageNamesData.data(using: .utf8),
-              let decoded = try? JSONDecoder().decode([String: String].self, from: data) else {
-            return [:]
-        }
-
-        return decoded
-    }
-
-    private func saveDocumentBackgroundImageNames(_ mappings: [String: String]) {
-        guard let data = try? JSONEncoder().encode(mappings),
-              let encoded = String(data: data, encoding: .utf8) else {
-            return
-        }
-
-        documentBackgroundImageNamesData = encoded
-    }
-
-    private func loadDocumentBackgroundImagePaths() -> [String: String] {
-        guard let data = documentBackgroundImagePathsData.data(using: .utf8),
-              let decoded = try? JSONDecoder().decode([String: String].self, from: data) else {
-            return [:]
-        }
-
-        return decoded
-    }
-
-    private func saveDocumentBackgroundImagePaths(_ mappings: [String: String]) {
-        guard let data = try? JSONEncoder().encode(mappings),
-              let encoded = String(data: data, encoding: .utf8) else {
-            return
-        }
-
-        documentBackgroundImagePathsData = encoded
-    }
-
-    private func loadDocumentBackgroundImageOpacities() -> [String: Double] {
-        guard let data = documentBackgroundImageOpacitiesData.data(using: .utf8),
-              let decoded = try? JSONDecoder().decode([String: Double].self, from: data) else {
-            return [:]
-        }
-
-        return decoded
-    }
-
-    private func saveDocumentBackgroundImageOpacities(_ mappings: [String: Double]) {
-        guard let data = try? JSONEncoder().encode(mappings),
-              let encoded = String(data: data, encoding: .utf8) else {
-            return
-        }
-
-        documentBackgroundImageOpacitiesData = encoded
-    }
-
-    private var documentBackgroundImageConfigURL: URL? {
-        documentsDirectoryURL()?.appendingPathComponent("document-backgrounds.json")
-    }
-
-    private var legacyDocumentBackgroundImageConfigURL: URL? {
-        documentsDirectoryURL()?.appendingPathComponent(".document-backgrounds.json")
-    }
-
-    private func loadDocumentBackgroundImageConfigFile() -> DocumentBackgroundImageConfig? {
-        let candidateURLs = [
-            documentBackgroundImageConfigURL,
-            legacyDocumentBackgroundImageConfigURL
-        ].compactMap { $0 }
-
-        guard let configURL = candidateURLs.first(where: { FileManager.default.fileExists(atPath: $0.path) }),
-              let data = try? Data(contentsOf: configURL) else {
-            return nil
-        }
-
-        guard !data.isEmpty else {
-            return DocumentBackgroundImageConfig()
-        }
-
-        return try? JSONDecoder().decode(DocumentBackgroundImageConfig.self, from: data)
-    }
-
-    private var visibleDocumentBackgroundImageConfigIsEmpty: Bool {
-        guard let configURL = documentBackgroundImageConfigURL,
-              FileManager.default.fileExists(atPath: configURL.path),
-              let data = try? Data(contentsOf: configURL) else {
-            return true
-        }
-
-        guard !data.isEmpty else {
-            return true
-        }
-
-        return (try? JSONDecoder().decode(DocumentBackgroundImageConfig.self, from: data).isEmpty) ?? true
-    }
-
-    private func saveDocumentBackgroundImageConfigFile(_ config: DocumentBackgroundImageConfig) {
-        guard let configURL = documentBackgroundImageConfigURL else {
-            return
-        }
-
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        guard let data = try? encoder.encode(config) else {
-            return
-        }
-
-        try? data.write(to: configURL, options: [.atomic])
-    }
-
-    private var hasDocumentBackgroundMappingsInAppStorage: Bool {
-        !loadDocumentBackgroundImageNames().isEmpty ||
-        !loadDocumentBackgroundImagePaths().isEmpty ||
-        !loadDocumentBackgroundImageOpacities().isEmpty
-    }
-
-    private func documentBackgroundImageConfigFromAppStorage() -> DocumentBackgroundImageConfig {
-        DocumentBackgroundImageConfig(
-            imageNames: loadDocumentBackgroundImageNames(),
-            imagePaths: loadDocumentBackgroundImagePaths(),
-            opacities: loadDocumentBackgroundImageOpacities()
-        )
-    }
-
-    private func writeDocumentBackgroundImageConfigFileFromAppStorage() {
-        saveDocumentBackgroundImageConfigFile(documentBackgroundImageConfigFromAppStorage())
-    }
-
-    private func synchronizeDocumentBackgroundConfigFile() {
-        let storedConfig = loadDocumentBackgroundImageConfigFile()
-
-        // A non-empty document-backgrounds.json is the portable source of truth.
-        // This lets copied config files replace stale AppStorage values on another iPad.
-        if let storedConfig, !storedConfig.isEmpty {
-            saveDocumentBackgroundImageNames(storedConfig.imageNames)
-            saveDocumentBackgroundImagePaths(storedConfig.imagePaths)
-            saveDocumentBackgroundImageOpacities(storedConfig.opacities)
-
-            if visibleDocumentBackgroundImageConfigIsEmpty {
-                saveDocumentBackgroundImageConfigFile(storedConfig)
-            }
-            return
-        }
-
-        if hasDocumentBackgroundMappingsInAppStorage, visibleDocumentBackgroundImageConfigIsEmpty {
-            writeDocumentBackgroundImageConfigFileFromAppStorage()
-        }
     }
 
     private func loadDocumentGridDimensions() -> [String: StoredGridDimensions] {
@@ -1236,10 +957,6 @@ struct ContentView: View {
         }
 
         let sanitizedOpacity = min(max(backgroundImageOpacity, 0), 1)
-        var opacityMappings = loadDocumentBackgroundImageOpacities()
-        opacityMappings[trimmedDocumentName] = sanitizedOpacity
-        saveDocumentBackgroundImageOpacities(opacityMappings)
-        writeDocumentBackgroundImageConfigFileFromAppStorage()
 
         updateScreenConfig(for: trimmedDocumentName) { config in
             config.backgroundOpacity = sanitizedOpacity
@@ -1265,7 +982,7 @@ struct ContentView: View {
             return
         }
 
-        backgroundImageOpacity = fallbackBackgroundImageOpacity(for: trimmedDocumentName, defaultOpacity: 0.5)
+        backgroundImageOpacity = 0.5
     }
 
     private func saveBackgroundImageSelection(for documentName: String) {
@@ -1274,26 +991,9 @@ struct ContentView: View {
             return
         }
 
-        var nameMappings = loadDocumentBackgroundImageNames()
-        var pathMappings = loadDocumentBackgroundImagePaths()
         let portableImageName = selectedBackgroundImageName.isEmpty
             ? nil
             : URL(fileURLWithPath: selectedBackgroundImageName).lastPathComponent
-
-        if let portableImageName {
-            nameMappings[trimmedDocumentName] = portableImageName
-            if !selectedBackgroundImagePath.isEmpty {
-                pathMappings[trimmedDocumentName] = selectedBackgroundImagePath
-            } else {
-                pathMappings.removeValue(forKey: trimmedDocumentName)
-            }
-        } else {
-            nameMappings.removeValue(forKey: trimmedDocumentName)
-            pathMappings.removeValue(forKey: trimmedDocumentName)
-        }
-        saveDocumentBackgroundImageNames(nameMappings)
-        saveDocumentBackgroundImagePaths(pathMappings)
-        writeDocumentBackgroundImageConfigFileFromAppStorage()
 
         updateScreenConfig(for: trimmedDocumentName) { config in
             config.backgroundImageName = portableImageName
@@ -1329,11 +1029,8 @@ struct ContentView: View {
             savedImageName = config.backgroundImageName ?? ""
             savedImagePath = ""
         } else {
-            let documentBackgroundConfig = loadDocumentBackgroundImageConfigFile()
-            let nameMappings = loadDocumentBackgroundImageNames()
-            let pathMappings = loadDocumentBackgroundImagePaths()
-            savedImagePath = documentBackgroundConfig?.imagePaths[trimmedDocumentName] ?? pathMappings[trimmedDocumentName] ?? ""
-            savedImageName = documentBackgroundConfig?.imageNames[trimmedDocumentName] ?? nameMappings[trimmedDocumentName] ?? ""
+            savedImageName = ""
+            savedImagePath = ""
         }
 
         if !savedImagePath.isEmpty,

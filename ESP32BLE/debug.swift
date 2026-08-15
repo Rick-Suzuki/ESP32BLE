@@ -14,13 +14,6 @@ let db_bt = false
 
 let db_dbCode = true
 
-// if disabled, no emoji text subs
-let db_emoji_parsing = false
-
-// force emoji map to overwrite file: emoji_speech_map.cfg
-// with array in contentView, about line 145
-let db_overwriteConfigFile:Bool = true
-
 //
 //----------------------------------------
 //
