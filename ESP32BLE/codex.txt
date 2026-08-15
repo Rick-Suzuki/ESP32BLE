@@ -1,164 +1,252 @@
- Settings currently stored in ScreenConfig
+Findings only. No code modified. No build run.
 
-• schemaVersion
+• Setting name: document font size
+• Current storage location: ContentView.swift, @AppStorage("documentFontSizesData"), loaded by fontSize(for:), saved by updateDocumentFontSize(:) and saveDocumentFontSizes(:)
+• Belongs in ScreenConfig: yes
+• Migration required: yes. Existing per-document values in documentFontSizesData should be copied into Screen.config.json when config is missing.
+
+• Setting name: grid size, rows
+• Current storage location: ContentView.swift, @AppStorage("documentGridDimensionsData"), StoredGridDimensions.rows, loadDocumentGridDimensions(), saveDocumentGridDimensions(), loadStoredGridDimensions(for:requiredBoxCount:), saveGridDimensions(:for:)
+• Also read in Set_Screen.swift by repairGridDimensions(for:requiredBoxCount:)
+• Belongs in ScreenConfig: yes
+• Migration required: yes. Existing per-document rows in documentGridDimensionsData should be copied into Screen.config.json.
+
+• Setting name: grid size, columns
+• Current storage location: ContentView.swift, @AppStorage("documentGridDimensionsData"), StoredGridDimensions.columns, loadDocumentGridDimensions(), saveDocumentGridDimensions(), loadStoredGridDimensions(for:requiredBoxCount:), saveGridDimensions(:for:)
+• Also read in Set_Screen.swift by repairGridDimensions(for:requiredBoxCount:)
+• Belongs in ScreenConfig: yes
+• Migration required: yes. Existing per-document columns in documentGridDimensionsData should be copied into Screen.config.json.
+
+• Setting name: visible grid layout / visible box count
+• Current storage location: Main_Screen.swift, @State visibleGridDimensions and @State visibleBoxCount
+• Restored from loadStoredGridDimensions(for:requiredBoxCount:) in Main_DocumentActions.swift, restoreVisibleGridState(requiredBoxCount:)
+• Belongs in ScreenConfig: partly
+• Migration required: yes for rows/columns only
+• Notes: visibleBoxCount itself is derived from required button count and grid rows/columns. It should not be stored separately unless there is a future explicit “visible slot count” concept.
+
+• Setting name: background image assignment
+• Current storage location: ContentView.swift, @AppStorage("documentBackgroundImageNamesData"), @AppStorage("documentBackgroundImagePathsData"), @AppStorage("selectedBackgroundImageName"), @AppStorage("selectedBackgroundImagePath"), @AppStorage("selectedBackgroundImageIndex")
+• Portable existing location: Documents/document-backgrounds.json via DocumentBackgroundImageConfig
+• Current ScreenConfig field: backgroundImageName
+• Belongs in ScreenConfig: yes
+• Migration required: yes. Prefer documentBackgroundImageNamesData or document-backgrounds.json. Use filename, not absolute path. Path can be fallback only.
+
+• Setting name: background opacity
+• Current storage location: ContentView.swift, @AppStorage("backgroundImageOpacity") for current runtime value, @AppStorage("documentBackgroundImageOpacitiesData") for per-document map
+• Portable existing location: Documents/document-backgrounds.json via DocumentBackgroundImageConfig.opacities
+• Current ScreenConfig field: backgroundOpacity
+• Belongs in ScreenConfig: yes
+• Migration required: yes. Existing per-document opacity should migrate from document-backgrounds.json or documentBackgroundImageOpacitiesData.
+
+• Setting name: buttonsBackgroundOpacity
+• Current storage location: ScreenConfig.swift, ScreenConfig.buttonsBackgroundOpacity
+• Current active rendering storage: Main_Screen.swift, @AppStorage("mainGridBackgroundOpacity")
+• Current rendering use: Main_ButtonBehavior.swift, buttonBackgroundColor applies backgroundOpacity passed from MainScreen.mainGridBackgroundOpacity
+• Belongs in ScreenConfig: yes, if button background opacity should become per-screen
+• Migration required: partly
+• Notes: ScreenConfig already accepts old JSON keys buttonBackgroundOpacity and gridOpacity. A separate migration from mainGridBackgroundOpacity should be handled carefully because that value is currently global, not per-document. Blindly copying it into every screen would preserve today’s appearance but change the meaning into per-screen data.
+
+• Setting name: button visibility
+• Current storage location: txt screen file
+• Parsing location: ContentView.swift, functionKeyEntry(from:), hiddenButtonMetadataToken, isHiddenInNormalMode
+• UI/help location: Main_Screen.swift, smartHelpButtonVisibility
+• Belongs in ScreenConfig: no
+• Migration required: no
+• Notes: This is per-button content/behavior and should stay in Screen.txt. It currently transfers with the txt file.
+
+• Setting name: button action text
+• Current storage location: txt screen file
+• Parsing location: ContentView.swift, functionKeyEntry(from:), parsedSendTexts(from:), parsedActionTokens(from:)
+• Belongs in ScreenConfig: no
+• Migration required: no
+• Notes: This defines what each button does and should stay in Screen.txt.
+
+• Setting name: button display text / alternate label
+• Current storage location: txt screen file, usually right side of :: format
+• Parsing location: ContentView.swift, functionKeyEntry(from:), parsedRightTextAndColor(from:)
+• Rendering location: Main_ButtonBehavior.swift
+• Belongs in ScreenConfig: no
+• Migration required: no
+
+• Setting name: button colors
+• Current storage location: txt screen file as six-digit hex prefix in right-side text
+• Parsing location: ContentView.swift, parsedRightTextAndColor(from:)
+• Rendering location: Main_ButtonBehavior.swift, buttonBackgroundColor
+• Belongs in ScreenConfig: no
+• Migration required: no
+• Notes: Per-button colors transfer with txt.
+
+• Setting name: button brightness
+• Current storage location: not stored as brightness
+• UI/runtime location: Main_Screen.swift, @State smartButtonBrightness and smartButtonBrightnessBaseHex
+• Persisted result: txt screen file as final adjusted hex color
+• Belongs in ScreenConfig: no, unless a new screen-level brightness feature is added
+• Migration required: no
+• Notes: Current brightness slider is editor state for producing a color, not persistent screen appearance.
+
+• Setting name: button dimensions, large button span
+• Current storage location: txt screen file with @@wide and @@block markers
+• Parsing/layout locations: ContentView.swift, Main_DocumentActions.swift, Main_GridSection.swift
+• Belongs in ScreenConfig: no
+• Migration required: no
+• Notes: Large button footprint is tied to button order and should stay in Screen.txt.
+
+• Setting name: button width
+• Current storage location: memory only
+• Calculation location: Main_GridSection.swift, body, resolvedWidth(buttonWidth:spacing:span:)
+• Inputs: availableWidth, columns, spacing, span
+• Belongs in ScreenConfig: no
+• Migration required: no
+• Notes: Actual pixel width is device-dependent. Store grid columns and span markers instead.
+
+• Setting name: button height
+• Current storage location: memory only
+• Calculation location: Main_GridSection.swift, body, resolvedHeight(buttonHeight:spacing:span:)
+• Inputs: available height, rows, spacing, bottom inset, span
+• Belongs in ScreenConfig: no
+• Migration required: no
+• Notes: Actual pixel height is device-dependent. Store grid rows and span markers instead.
+
+• Setting name: button order / position
+• Current storage location: txt screen file line order
+• Mutation locations: ContentView.swift, persistSlotLines(_:), moveSelectedDocumentSlot(from:to:span:gridDimensions:)
+• Belongs in ScreenConfig: no
+• Migration required: no
+• Notes: This transfers with txt.
+
+• Setting name: images as files
+• Current storage location: app Documents folder
+• Discovery locations: ContentView.swift, refreshBackgroundImageFiles(); Main_BG_img.swift, availableBackgroundImageURLs; Set_ImgSelectionSupport.swift, availableImageURLs
+• Belongs in ScreenConfig: no for file inventory, yes only for the selected screen background image filename
+• Migration required: yes only for backgroundImageName
+• Notes: Image files themselves are already portable when copied.
+
+• Setting name: image references inside button commands
+• Current storage location: txt screen file if used by commands
+• Belongs in ScreenConfig: no
+• Migration required: no
+• Notes: Command references should remain in txt with the button behavior.
+
+• Setting name: sounds as files
+• Current storage location: app Documents folder
+• Discovery location: Set_Screen.swift, availableSoundURLs
+• Selection state: Set_Screen.swift, @AppStorage("selectedSoundName"), @AppStorage("selectedSoundPath")
+• Button behavior references: txt commands such as snd, amb, timer sound
+• Belongs in ScreenConfig: no for current behavior
+• Migration required: no
+• Notes: Sound files are portable. Sound references that affect a screen are currently button commands in txt. selectedSoundName/selectedSoundPath are Settings-screen selection state, not document appearance.
+
+• Setting name: PDFs as files
+• Current storage location: app Documents folder
+• Discovery location: Set_Screen.swift, availablePDFURLs
+• Selection state: Set_Screen.swift, @AppStorage("selectedPDFName"), @AppStorage("selectedPDFPath")
+• Button behavior references: txt commands if a button opens/previews a file
+• Belongs in ScreenConfig: no for current behavior
+• Migration required: no
+• Notes: PDF files are portable. selectedPDFName/selectedPDFPath are Settings-screen selection state, not per-screen config.
+
+• Setting name: selected background image index/name/path current values
+• Current storage location: ContentView.swift and Main_Screen.swift, @AppStorage("selectedBackgroundImageIndex"), @AppStorage("selectedBackgroundImageName"), @AppStorage("selectedBackgroundImagePath")
+• Belongs in ScreenConfig: only backgroundImageName belongs
+• Migration required: yes, but only as fallback
+• Notes: selectedBackgroundImagePath is not portable as an absolute path. selectedBackgroundImageIndex is fragile because file order can change. Filename is the portable value.
+
+• Setting name: screen/document background mapping file
+• Current storage location: Documents/document-backgrounds.json
+• Code location: ContentView.swift, DocumentBackgroundImageConfig, loadDocumentBackgroundImageConfigFile(), saveDocumentBackgroundImageConfigFile(_:), synchronizeDocumentBackgroundConfigFile()
+• Belongs in ScreenConfig: yes, values should eventually move into per-screen config
+• Migration required: yes
+• Notes: Existing document-backgrounds.json should be a migration source, not the final per-screen store.
+
+• Setting name: display mode, left/right/both button text display
+• Current storage location: Main_Screen.swift, @State displayMode
+• Belongs in ScreenConfig: probably no for now
+• Migration required: no
+• Notes: It affects screen appearance, but current behavior is runtime/global for the MainScreen session, not stored per document. Only add to ScreenConfig if you want each screen to remember display mode.
+
+• Setting name: main grid button mode, active/speech/disabled behavior
+• Current storage location: Main_Screen.swift, @State mainGridButtonMode
+• Belongs in ScreenConfig: no
+• Migration required: no
+• Notes: This is runtime mode, not document-specific screen configuration.
+
+• Setting name: grid edit mode
+• Current storage location: Main_Screen.swift, @State isGridEditModeEnabled
+• Belongs in ScreenConfig: no
+• Migration required: no
+• Notes: Runtime/editor state.
+
+• Setting name: active drag index, editing slot index, editing slot text
+• Current storage location: Main_Screen.swift, @State activeDragIndex, editingSlotIndex, editingSlotText
+• Belongs in ScreenConfig: no
+• Migration required: no
+• Notes: Runtime/editor state.
+
+• Setting name: smart editor clipboard
+• Current storage location: Main_Screen.swift, @AppStorage("mainGridEditClipboardText"); Soft_Editor_Overlay.swift, @AppStorage("slotEditorClipboardAction"), @AppStorage("slotEditorClipboardRight")
+• Belongs in ScreenConfig: no
+• Migration required: no
+• Notes: Editor convenience state, not screen appearance.
+
+• Setting name: widget commands
+• Current storage location: txt screen file as button action text
+• Parsing/behavior location: ContentView.swift, parsedWidgetSendTexts(from:); Main_ButtonBehavior.swift widget descriptors
+• Belongs in ScreenConfig: no
+• Migration required: no
+• Notes: These are per-button behavior and already portable through txt.
+
+• Setting name: timer/stopwatch/random/counter widget runtime values
+• Current storage location: runtime @State/@StateObject in Main_Screen.swift and Main_ButtonBehavior.swift
+• Belongs in ScreenConfig: no
+• Migration required: no
+• Notes: Runtime state should not transfer as document configuration.
+
+• Setting name: speech recognition settings/state
+• Current storage location: Main_Screen.swift and SettingsScreen, @AppStorage("speechRecognitionAutoOffMinutes"), @State isSpkRecEnabled, speechRecognition state
+• Belongs in ScreenConfig: no
+• Migration required: no
+• Notes: Device/session behavior, not screen document appearance.
+
+• Setting name: TTS voice/rate
+• Current storage location: Main_Screen.swift and Set_Screen.swift, @AppStorage("selectedTextToSpeechVoiceIdentifier"), @AppStorage("textToSpeechRate")
+• Belongs in ScreenConfig: no
+• Migration required: no
+• Notes: Device preference, not individual screen appearance.
+
+• Setting name: future source types
+• Current storage location: none in ScreenConfig
+• Belongs in ScreenConfig: not yet
+• Migration required: no
+• Notes: schemaVersion already provides a future migration hook. Do not add generic source fields until there is a concrete source type to preserve.
+
+Summary of settings that should be in ScreenConfig:
 • fontSize
 • grid.rows
 • grid.columns
 • backgroundImageName
 • backgroundOpacity
-• gridOpacity
+• buttonsBackgroundOpacity, if the current global mainGridBackgroundOpacity is intentionally becoming per-screen
 
-Current model details:
-
-• ScreenConfig is Codable and Equatable.
-• ScreenConfig.Grid is Codable and Equatable.
-• schemaVersion defaults to 1.
-• fontSize defaults to 20.0.
-• backgroundOpacity defaults to 0.5.
-• gridOpacity is optional.
-• backgroundImageName is optional.
-• grid row and column values are clamped to at least 1.
-• backgroundOpacity and gridOpacity are clamped to 0...1.
-
-2. Comparison against required portable document configuration
-
-font size
-
-• Present.
-• Field: fontSize.
-• Type: Double.
-• Concern: default is duplicated as ScreenConfig.defaultFontSize = 20.0 rather than sharing ContentView’s defaultDocumentFontSize.
-
-brightness
-
-• Missing.
-• There is no document-level brightness field.
-• If brightness means the smart editor color brightness slider, it should not be stored in ScreenConfig because current button color is already stored as final hex text in the txt file.
-• If brightness means a screen-level image/display brightness setting, add a dedicated optional field.
-
-opacity
-
-• Partly present.
-• Present: backgroundOpacity.
-• Present but unused/ambiguous: gridOpacity.
-• Missing if needed: separate button background opacity or screen overlay opacity.
-• Recommendation: clarify gridOpacity before connecting UI. The current app has mainGridBackgroundOpacity, which behaves more like button background opacity than “grid” opacity.
-
-button width
-
-• Missing.
-• Should not be added as actual pixel width.
-• Button width is calculated from device size, columns, spacing, and current layout.
-• Portable config should store grid/layout intent, not rendered dimensions.
-
-button height
-
-• Missing.
-• Should not be added as actual pixel height.
-• Button height is calculated from device size, rows, spacing, safe area, and toolbar state.
-
-grid/layout
-
-• Partly present.
-• Present: grid.rows and grid.columns.
-• Button order and large-button layout remain in txt through line order, @@wide, and @@block.
-• Missing only if future UI supports additional layout settings such as spacing, layout mode, or orientation-specific layouts.
-
-images
-
-• Partly present.
-• Present: backgroundImageName.
-• Good: filename-based storage is portable.
-• Missing optional future fields:
-   • backgroundImageMode, such as fill/fit/stretch
-   • backgroundImageAlignment, if positioning becomes user-configurable
-
-PDFs
-
-• Missing.
-• If PDFs are only referenced by button commands, they should stay in txt.
-• If a screen can have a document-level PDF assignment, add pdfName.
-
-sounds
-
-• Missing.
-• If sounds are only referenced by button commands, they should stay in txt.
-• If a screen can have a document-level ambient/default sound, add ambientSoundName or defaultSoundName.
-
-future source types
-
-• Missing.
-• schemaVersion supports future migration, but there is no field for future source references.
-• Add only if there is a known use case. Otherwise keep the model simple.
-
-3. Missing configuration fields to consider before connecting UI
-
-Recommended to add before connecting UI:
-
-• buttonBackgroundOpacity: Double?
-Better name than gridOpacity if the current mainGridBackgroundOpacity is meant to become screen-specific.
-
-• screenBrightness: Double?
-Only if brightness is a real screen-level appearance setting.
-
-• backgroundImageMode: String?
-Optional future-proof field if image rendering mode may become configurable.
-
-• pdfName: String?
-Only if there is a document-level PDF association.
-
-• ambientSoundName: String?
-Only if there is a document-level sound association.
-
-Recommended not to add:
-
-• buttonWidth
-• buttonHeight
-
-Reason:
-Those are calculated layout results, not portable document settings.
-
-4. Recommended final ScreenConfig structure
-
-Recommended final fields:
-
-• schemaVersion: Int
-• fontSize: Double
-• grid: ScreenConfig.Grid
-• backgroundImageName: String?
-• backgroundOpacity: Double
-• buttonBackgroundOpacity: Double?
-• screenBrightness: Double?
-• backgroundImageMode: String?
-• pdfName: String?
-• ambientSoundName: String?
-
-Recommended nested grid fields:
-
-• rows: Int
-• columns: Int
-
-Keep out of ScreenConfig:
-
+Summary of settings that should stay in Screen.txt:
 • button action text
 • button display text
-• button order
+• button order/position
 • button colors
-• hidden state
-• @@wide and @@block markers
+• button visibility
+• @@wide and @@block large-button markers
+• button references to sounds, PDFs, images, files, widgets, shortcuts, apps, and other commands
+
+Summary of settings that should stay local/runtime:
+• actual button width
+• actual button height
 • selected document
+• selected sound/PDF in Settings
 • BLE settings
 • keyboard preferences
 • TTS settings
+• speech recognition state/preferences
 • navigation history
 • editor state
-• runtime state
-• actual button pixel width
-• actual button pixel height
-
-Main recommendation:
-
-• Keep fontSize, grid.rows, grid.columns, backgroundImageName, and backgroundOpacity.
-• Replace or supplement gridOpacity with buttonBackgroundOpacity before wiring UI.
-• Add screenBrightness only if brightness is intended as a screen-level visual control.
-• Add PDF/sound fields only for document-level associations, not for button command references.
+• display mode unless explicitly redesigned as per-screen
+• main grid button mode
+• active timers/widget runtime values

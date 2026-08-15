@@ -14,13 +14,14 @@ struct ScreenConfig: Codable, Equatable {
     static let currentSchemaVersion = 1
     static let defaultFontSize = 20.0
     static let defaultBackgroundOpacity = 0.5
+    static let defaultButtonsBackgroundOpacity = 1.0
 
     var schemaVersion: Int
     var fontSize: Double
     var grid: Grid
     var backgroundImageName: String?
     var backgroundOpacity: Double
-    var gridOpacity: Double?
+    var buttonsBackgroundOpacity: Double?
 
     init(
         schemaVersion: Int = ScreenConfig.currentSchemaVersion,
@@ -28,14 +29,56 @@ struct ScreenConfig: Codable, Equatable {
         grid: Grid,
         backgroundImageName: String? = nil,
         backgroundOpacity: Double = ScreenConfig.defaultBackgroundOpacity,
-        gridOpacity: Double? = nil
+        buttonsBackgroundOpacity: Double? = ScreenConfig.defaultButtonsBackgroundOpacity
     ) {
         self.schemaVersion = schemaVersion
         self.fontSize = fontSize
         self.grid = grid
         self.backgroundImageName = backgroundImageName
         self.backgroundOpacity = min(max(backgroundOpacity, 0), 1)
-        self.gridOpacity = gridOpacity.map { min(max($0, 0), 1) }
+        self.buttonsBackgroundOpacity = buttonsBackgroundOpacity.map { min(max($0, 0), 1) }
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case schemaVersion
+        case fontSize
+        case grid
+        case backgroundImageName
+        case backgroundOpacity
+        case buttonsBackgroundOpacity
+        case buttonBackgroundOpacity
+        case gridOpacity
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let schemaVersion = try container.decodeIfPresent(Int.self, forKey: .schemaVersion) ?? ScreenConfig.currentSchemaVersion
+        let fontSize = try container.decodeIfPresent(Double.self, forKey: .fontSize) ?? ScreenConfig.defaultFontSize
+        let grid = try container.decode(Grid.self, forKey: .grid)
+        let backgroundImageName = try container.decodeIfPresent(String.self, forKey: .backgroundImageName)
+        let backgroundOpacity = try container.decodeIfPresent(Double.self, forKey: .backgroundOpacity) ?? ScreenConfig.defaultBackgroundOpacity
+        let buttonsBackgroundOpacity = try container.decodeIfPresent(Double.self, forKey: .buttonsBackgroundOpacity) ??
+            container.decodeIfPresent(Double.self, forKey: .buttonBackgroundOpacity) ??
+            container.decodeIfPresent(Double.self, forKey: .gridOpacity)
+
+        self.init(
+            schemaVersion: schemaVersion,
+            fontSize: fontSize,
+            grid: grid,
+            backgroundImageName: backgroundImageName,
+            backgroundOpacity: backgroundOpacity,
+            buttonsBackgroundOpacity: buttonsBackgroundOpacity
+        )
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(schemaVersion, forKey: .schemaVersion)
+        try container.encode(fontSize, forKey: .fontSize)
+        try container.encode(grid, forKey: .grid)
+        try container.encodeIfPresent(backgroundImageName, forKey: .backgroundImageName)
+        try container.encode(backgroundOpacity, forKey: .backgroundOpacity)
+        try container.encodeIfPresent(buttonsBackgroundOpacity, forKey: .buttonsBackgroundOpacity)
     }
 }
 

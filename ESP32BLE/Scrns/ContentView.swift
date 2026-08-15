@@ -219,6 +219,7 @@ struct ContentView: View {
     @State private var functionKeys = ContentView.makeDefaultFunctionKeys()
     @State private var functionKeySlotLines = ContentView.defaultFunctionKeyTitles()
     @State private var loadedFunctionKeySlotCount = defaultNamedFunctionKeyCount
+    @State private var loadedScreenConfig: ScreenConfig?
     @State private var documentFiles: [URL] = []
     @State private var backgroundImageFiles: [URL] = []
     @State private var loadedBackgroundImage: UIImage?
@@ -534,7 +535,7 @@ struct ContentView: View {
                     return values?.isRegularFile == true && url.pathExtension.lowercased() == "txt"
                 }
                 .sorted { $0.lastPathComponent.localizedCaseInsensitiveCompare($1.lastPathComponent) == .orderedAscending }
-            ensureScreenConfigFiles(for: updatedDocumentFiles)
+            ensureScreenConfigFilesFromAppStorageFallback(for: updatedDocumentFiles)
             db("STATE ContentView.refreshDocumentFiles current documentFiles.count=\(documentFiles.count) new=\(updatedDocumentFiles.count) thread=\(Thread.isMainThread ? "main" : "background")")
             documentFiles = updatedDocumentFiles
         } catch {
@@ -639,12 +640,17 @@ struct ContentView: View {
         do {
             let contents = try String(contentsOf: fileURL, encoding: .utf8)
             let loadedTitles = normalizedSlotLines(from: contents)
+            loadedScreenConfig = loadScreenConfigForDocument(
+                fileURL,
+                requiredBoxCount: min(max(loadedTitles.count, 1), maxFunctionKeyCount)
+            )
             applySlotLines(loadedTitles)
             db("STATE ContentView.loadFunctionKeys current selectedDocumentName=\(selectedDocumentName) new=\(fileURL.lastPathComponent) thread=\(Thread.isMainThread ? "main" : "background")")
             selectedDocumentName = fileURL.lastPathComponent
             restoreBackgroundImageSelection(for: selectedDocumentName)
             db("EXIT ContentView.loadFunctionKeys current selectedDocumentName=\(selectedDocumentName) new=\(fileURL.lastPathComponent) thread=\(Thread.isMainThread ? "main" : "background")")
         } catch {
+            loadedScreenConfig = nil
             db("STATE ContentView.loadFunctionKeys error current functionKeySlotLines.count=\(functionKeySlotLines.count) new=0 thread=\(Thread.isMainThread ? "main" : "background")")
             functionKeySlotLines = []
             db("STATE ContentView.loadFunctionKeys error current functionKeys.count=\(functionKeys.count) new=\(maxFunctionKeyCount) thread=\(Thread.isMainThread ? "main" : "background")")
@@ -749,13 +755,32 @@ struct ContentView: View {
     }
 
     private func fontSize(for fileName: String) -> Double {
-        loadDocumentFontSizes()[fileName] ?? defaultDocumentFontSize
+        if fileName == selectedDocumentName,
+           let config = loadedScreenConfig {
+            return config.fontSize
+        }
+
+        return loadDocumentFontSizes()[fileName] ?? defaultDocumentFontSize
     }
 
     private func updateDocumentFontSize(_ newFontSize: Double) {
         var updatedFontSizes = loadDocumentFontSizes()
         updatedFontSizes[selectedDocumentName] = newFontSize
         saveDocumentFontSizes(updatedFontSizes)
+
+        if let selectedDocumentURL = selectedDocumentURL() {
+            var updatedConfig = loadedScreenConfig ?? screenConfigFromAppStorageFallback(
+                for: selectedDocumentName,
+                requiredBoxCount: requiredBoxCountForDocumentURL(selectedDocumentURL)
+            )
+            updatedConfig.fontSize = newFontSize
+            loadedScreenConfig = updatedConfig
+            _ = saveScreenConfig(updatedConfig, for: selectedDocumentURL)
+        } else if var updatedConfig = loadedScreenConfig {
+            updatedConfig.fontSize = newFontSize
+            loadedScreenConfig = updatedConfig
+        }
+
         documentFontSizeRefreshToken += 1
     }
 
@@ -775,6 +800,72 @@ struct ContentView: View {
         }
 
         documentFontSizesData = encoded
+    }
+
+    private func loadScreenConfigForDocument(_ documentURL: URL, requiredBoxCount: Int) -> ScreenConfig {
+        if let config = loadScreenConfig(for: documentURL) {
+            return config
+        }
+
+        return screenConfigFromAppStorageFallback(
+            for: documentURL.lastPathComponent,
+            requiredBoxCount: requiredBoxCount
+        )
+    }
+
+    private func ensureScreenConfigFilesFromAppStorageFallback(for documentURLs: [URL]) {
+        for documentURL in documentURLs where loadScreenConfig(for: documentURL) == nil {
+            let requiredBoxCount = requiredBoxCountForDocumentURL(documentURL)
+            let config = screenConfigFromAppStorageFallback(
+                for: documentURL.lastPathComponent,
+                requiredBoxCount: requiredBoxCount
+            )
+            _ = saveScreenConfig(config, for: documentURL)
+        }
+    }
+
+    private func requiredBoxCountForDocumentURL(_ documentURL: URL) -> Int {
+        guard let contents = try? String(contentsOf: documentURL, encoding: .utf8) else {
+            return 1
+        }
+
+        return min(max(normalizedSlotLines(from: contents).count, 1), maxFunctionKeyCount)
+    }
+
+    private func screenConfigFromAppStorageFallback(for documentName: String, requiredBoxCount: Int) -> ScreenConfig {
+        let fallbackConfig = defaultScreenConfig(for: documentName, requiredBoxCount: requiredBoxCount)
+        let trimmedDocumentName = documentName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedDocumentName.isEmpty else {
+            return fallbackConfig
+        }
+
+        let fontSize = loadDocumentFontSizes()[trimmedDocumentName] ?? fallbackConfig.fontSize
+        let gridDimensions = loadStoredGridDimensions(for: trimmedDocumentName, requiredBoxCount: requiredBoxCount)
+        let backgroundImageName = appStorageBackgroundImageName(for: trimmedDocumentName)
+        let backgroundOpacity = loadDocumentBackgroundImageOpacities()[trimmedDocumentName] ?? fallbackConfig.backgroundOpacity
+
+        return ScreenConfig(
+            schemaVersion: fallbackConfig.schemaVersion,
+            fontSize: fontSize,
+            grid: ScreenConfig.Grid(rows: gridDimensions.rows, columns: gridDimensions.columns),
+            backgroundImageName: backgroundImageName,
+            backgroundOpacity: backgroundOpacity,
+            buttonsBackgroundOpacity: fallbackConfig.buttonsBackgroundOpacity
+        )
+    }
+
+    private func appStorageBackgroundImageName(for documentName: String) -> String? {
+        let nameMappings = loadDocumentBackgroundImageNames()
+        if let imageName = nameMappings[documentName], !imageName.isEmpty {
+            return imageName
+        }
+
+        let pathMappings = loadDocumentBackgroundImagePaths()
+        guard let imagePath = pathMappings[documentName], !imagePath.isEmpty else {
+            return nil
+        }
+
+        return URL(fileURLWithPath: imagePath).lastPathComponent
     }
 
     private func loadDocumentBackgroundImageNames() -> [String: String] {
