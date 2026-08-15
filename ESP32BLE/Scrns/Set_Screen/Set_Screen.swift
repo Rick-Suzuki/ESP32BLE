@@ -26,7 +26,7 @@ struct SettingsScreen: View {
             }
         }
 
-        mutating func toggle() {
+        mutating func toggle(developerMode: Bool) {
             switch self {
             case .files:
                 self = .images
@@ -35,7 +35,7 @@ struct SettingsScreen: View {
             case .sounds:
                 self = .pdfs
             case .pdfs:
-                self = .all
+                self = developerMode ? .all : .files
             case .all:
                 self = .files
             }
@@ -95,6 +95,14 @@ struct SettingsScreen: View {
     private let maximumTextToSpeechPercentage = 140.0
     private let textToSpeechPercentageStep = 5.0
     private let maximumSpeechRecognitionAutoOffMinutes = 31
+    
+	
+	// MARK: - BM:🐞 DEBUG: Set false before release
+	// DEBUG ONLY
+    // Set false before release to hide internal files such as Screen.config.json.
+    private let developerMode = true
+	
+	
     @AppStorage("speechRecognitionAutoOffMinutes") private var speechRecognitionAutoOffMinutes = 5
     @AppStorage("sendControlABeforeText") var sendControlABeforeText = false
     @AppStorage("keyboardTimingOnMs") private var keyboardTimingOnMs = 0.0
@@ -264,8 +272,8 @@ struct SettingsScreen: View {
 			//----------------------------------------
 			// show type of table
 			//
-			SettingsToolbarButton(title: listMode.buttonTitle, backgroundColor: Color.gray.opacity(0.45), minWidth: 64.4, isEnabled: true) {
-				listMode.toggle()
+	SettingsToolbarButton(title: listMode.buttonTitle, backgroundColor: Color.gray.opacity(0.45), minWidth: 64.4, isEnabled: true) {
+				listMode.toggle(developerMode: developerMode)
 			}
 			//
 			//----------------------------------------
@@ -416,8 +424,21 @@ struct SettingsScreen: View {
     }
 
     private var listMode: SettingsListMode {
-        get { SettingsListMode(rawValue: listModeRawValue) ?? .files }
-        nonmutating set { listModeRawValue = newValue.rawValue }
+        get {
+            let storedListMode = SettingsListMode(rawValue: listModeRawValue) ?? .files
+            if !developerMode, storedListMode == .all {
+                return .files
+            }
+
+            return storedListMode
+        }
+        nonmutating set {
+            if !developerMode, newValue == .all {
+                listModeRawValue = SettingsListMode.files.rawValue
+            } else {
+                listModeRawValue = newValue.rawValue
+            }
+        }
     }
 
     private var fileScrollPositionID: Binding<String?> {
@@ -484,7 +505,9 @@ struct SettingsScreen: View {
     private var activeImportContentTypes: [UTType] {
         switch pendingImportListMode {
         case .files:
-            return [plainTextImportType, zipImportType, .data]
+            return developerMode
+                ? [plainTextImportType, zipImportType, screenConfigImportType]
+                : [plainTextImportType, zipImportType]
         case .images:
             return [.image]
         case .sounds:
@@ -1412,9 +1435,13 @@ struct SettingsScreen: View {
         return urls
             .filter { url in
                 let values = try? url.resourceValues(forKeys: [.isRegularFileKey])
-                return values?.isRegularFile == true
+                return values?.isRegularFile == true && (developerMode || !isInternalFile(url))
             }
             .sorted { $0.lastPathComponent.localizedCaseInsensitiveCompare($1.lastPathComponent) == .orderedAscending }
+    }
+
+    private func isInternalFile(_ url: URL) -> Bool {
+        url.lastPathComponent.lowercased().hasSuffix(".config.json")
     }
 
     private var selectedSoundURL: URL? {
@@ -1913,6 +1940,10 @@ struct SettingsScreen: View {
 
     private var zipImportType: UTType {
         UTType(filenameExtension: "zip") ?? .data
+    }
+
+    private var screenConfigImportType: UTType {
+        UTType(filenameExtension: "json") ?? .json
     }
 
     private var supportedImportedImageExtensions: Set<String> {
