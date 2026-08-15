@@ -223,6 +223,7 @@ struct ContentView: View {
     @State private var documentFiles: [URL] = []
     @State private var backgroundImageFiles: [URL] = []
     @State private var loadedBackgroundImage: UIImage?
+    @State private var isRestoringBackgroundImageSelection = false
     @State private var documentNavigationHistory: [String] = []
     @State private var documentForwardNavigationHistory: [String] = []
     @AppStorage("selectedDocumentName") private var selectedDocumentName = "fnkeys.txt"
@@ -388,7 +389,9 @@ struct ContentView: View {
         }
         .onChange(of: selectedBackgroundImageName) {
             refreshBackgroundImageFiles()
-            saveBackgroundImageSelection(for: selectedDocumentName)
+            if !isRestoringBackgroundImageSelection {
+                saveBackgroundImageSelection(for: selectedDocumentName)
+            }
             updateLoadedBackgroundImageForVisibleScreen()
         }
         .onChange(of: isSettingsScreenPresented) {
@@ -402,7 +405,9 @@ struct ContentView: View {
             db("STATE ContentView.onChange selectedDocumentName current=\(oldValue) new=\(newValue) thread=\(Thread.isMainThread ? "main" : "background")")
         }
         .onChange(of: backgroundImageOpacity) {
-            saveBackgroundImageOpacity(for: selectedDocumentName)
+            if !isRestoringBackgroundImageSelection {
+                saveBackgroundImageOpacity(for: selectedDocumentName)
+            }
         }
     }
 
@@ -845,8 +850,11 @@ struct ContentView: View {
 
         let fontSize = loadDocumentFontSizes()[trimmedDocumentName] ?? fallbackConfig.fontSize
         let gridDimensions = appStorageGridDimensions(for: trimmedDocumentName, requiredBoxCount: requiredBoxCount)
-        let backgroundImageName = appStorageBackgroundImageName(for: trimmedDocumentName)
-        let backgroundOpacity = loadDocumentBackgroundImageOpacities()[trimmedDocumentName] ?? fallbackConfig.backgroundOpacity
+        let backgroundImageName = fallbackBackgroundImageName(for: trimmedDocumentName)
+        let backgroundOpacity = fallbackBackgroundImageOpacity(
+            for: trimmedDocumentName,
+            defaultOpacity: fallbackConfig.backgroundOpacity
+        )
 
         return ScreenConfig(
             schemaVersion: fallbackConfig.schemaVersion,
@@ -858,10 +866,43 @@ struct ContentView: View {
         )
     }
 
+    private func fallbackBackgroundImageName(for documentName: String) -> String? {
+        if let imageName = documentBackgroundConfigImageName(for: documentName) {
+            return imageName
+        }
+
+        return appStorageBackgroundImageName(for: documentName)
+    }
+
+    private func documentBackgroundConfigImageName(for documentName: String) -> String? {
+        guard let config = loadDocumentBackgroundImageConfigFile() else {
+            return nil
+        }
+
+        if let imageName = config.imageNames[documentName], !imageName.isEmpty {
+            return URL(fileURLWithPath: imageName).lastPathComponent
+        }
+
+        guard let imagePath = config.imagePaths[documentName], !imagePath.isEmpty else {
+            return nil
+        }
+
+        return URL(fileURLWithPath: imagePath).lastPathComponent
+    }
+
+    private func fallbackBackgroundImageOpacity(for documentName: String, defaultOpacity: Double) -> Double {
+        if let opacity = loadDocumentBackgroundImageConfigFile()?.opacities[documentName] {
+            return min(max(opacity, 0), 1)
+        }
+
+        let appStorageOpacity = loadDocumentBackgroundImageOpacities()[documentName] ?? defaultOpacity
+        return min(max(appStorageOpacity, 0), 1)
+    }
+
     private func appStorageBackgroundImageName(for documentName: String) -> String? {
         let nameMappings = loadDocumentBackgroundImageNames()
         if let imageName = nameMappings[documentName], !imageName.isEmpty {
-            return imageName
+            return URL(fileURLWithPath: imageName).lastPathComponent
         }
 
         let pathMappings = loadDocumentBackgroundImagePaths()
@@ -1122,16 +1163,50 @@ struct ContentView: View {
         _ = saveScreenConfig(updatedConfig, for: documentURL)
     }
 
+    private func updateScreenConfig(for documentName: String, mutate: (inout ScreenConfig) -> Void) {
+        let trimmedDocumentName = documentName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedDocumentName.isEmpty,
+              let documentURL = documentURL(forDocumentName: trimmedDocumentName) else {
+            return
+        }
+
+        var updatedConfig: ScreenConfig
+        if trimmedDocumentName == selectedDocumentName,
+           let config = loadedScreenConfig {
+            updatedConfig = config
+        } else if let config = loadScreenConfig(for: documentURL) {
+            updatedConfig = config
+        } else {
+            updatedConfig = screenConfigFromAppStorageFallback(
+                for: trimmedDocumentName,
+                requiredBoxCount: requiredBoxCountForDocumentURL(documentURL)
+            )
+        }
+
+        mutate(&updatedConfig)
+
+        if trimmedDocumentName == selectedDocumentName {
+            loadedScreenConfig = updatedConfig
+        }
+
+        _ = saveScreenConfig(updatedConfig, for: documentURL)
+    }
+
     private func saveBackgroundImageOpacity(for documentName: String) {
         let trimmedDocumentName = documentName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedDocumentName.isEmpty else {
             return
         }
 
+        let sanitizedOpacity = min(max(backgroundImageOpacity, 0), 1)
         var opacityMappings = loadDocumentBackgroundImageOpacities()
-        opacityMappings[trimmedDocumentName] = backgroundImageOpacity
+        opacityMappings[trimmedDocumentName] = sanitizedOpacity
         saveDocumentBackgroundImageOpacities(opacityMappings)
         writeDocumentBackgroundImageConfigFileFromAppStorage()
+
+        updateScreenConfig(for: trimmedDocumentName) { config in
+            config.backgroundOpacity = sanitizedOpacity
+        }
     }
 
     private func restoreBackgroundImageOpacity(for documentName: String) {
@@ -1141,8 +1216,19 @@ struct ContentView: View {
             return
         }
 
-        let opacityMappings = loadDocumentBackgroundImageOpacities()
-        backgroundImageOpacity = opacityMappings[trimmedDocumentName] ?? 0.5
+        if trimmedDocumentName == selectedDocumentName,
+           let config = loadedScreenConfig {
+            backgroundImageOpacity = config.backgroundOpacity
+            return
+        }
+
+        if let documentURL = documentURL(forDocumentName: trimmedDocumentName),
+           let config = loadScreenConfig(for: documentURL) {
+            backgroundImageOpacity = config.backgroundOpacity
+            return
+        }
+
+        backgroundImageOpacity = fallbackBackgroundImageOpacity(for: trimmedDocumentName, defaultOpacity: 0.5)
     }
 
     private func saveBackgroundImageSelection(for documentName: String) {
@@ -1153,24 +1239,37 @@ struct ContentView: View {
 
         var nameMappings = loadDocumentBackgroundImageNames()
         var pathMappings = loadDocumentBackgroundImagePaths()
-        if selectedBackgroundImageName.isEmpty {
-            nameMappings.removeValue(forKey: trimmedDocumentName)
-            pathMappings.removeValue(forKey: trimmedDocumentName)
-        } else {
-            nameMappings[trimmedDocumentName] = selectedBackgroundImageName
+        let portableImageName = selectedBackgroundImageName.isEmpty
+            ? nil
+            : URL(fileURLWithPath: selectedBackgroundImageName).lastPathComponent
+
+        if let portableImageName {
+            nameMappings[trimmedDocumentName] = portableImageName
             if !selectedBackgroundImagePath.isEmpty {
                 pathMappings[trimmedDocumentName] = selectedBackgroundImagePath
             } else {
                 pathMappings.removeValue(forKey: trimmedDocumentName)
             }
+        } else {
+            nameMappings.removeValue(forKey: trimmedDocumentName)
+            pathMappings.removeValue(forKey: trimmedDocumentName)
         }
         saveDocumentBackgroundImageNames(nameMappings)
         saveDocumentBackgroundImagePaths(pathMappings)
         writeDocumentBackgroundImageConfigFileFromAppStorage()
+
+        updateScreenConfig(for: trimmedDocumentName) { config in
+            config.backgroundImageName = portableImageName
+        }
     }
 
     private func restoreBackgroundImageSelection(for documentName: String) {
         let trimmedDocumentName = documentName.trimmingCharacters(in: .whitespacesAndNewlines)
+        isRestoringBackgroundImageSelection = true
+        DispatchQueue.main.async {
+            isRestoringBackgroundImageSelection = false
+        }
+
         guard !trimmedDocumentName.isEmpty else {
             selectedBackgroundImageIndex = 0
             selectedBackgroundImagePath = ""
@@ -1182,10 +1281,23 @@ struct ContentView: View {
 
         restoreBackgroundImageOpacity(for: trimmedDocumentName)
 
-        let nameMappings = loadDocumentBackgroundImageNames()
-        let pathMappings = loadDocumentBackgroundImagePaths()
-        let savedImagePath = pathMappings[trimmedDocumentName] ?? ""
-        let savedImageName = nameMappings[trimmedDocumentName] ?? ""
+        let savedImageName: String
+        let savedImagePath: String
+        if trimmedDocumentName == selectedDocumentName,
+           let config = loadedScreenConfig {
+            savedImageName = config.backgroundImageName ?? ""
+            savedImagePath = ""
+        } else if let documentURL = documentURL(forDocumentName: trimmedDocumentName),
+                  let config = loadScreenConfig(for: documentURL) {
+            savedImageName = config.backgroundImageName ?? ""
+            savedImagePath = ""
+        } else {
+            let documentBackgroundConfig = loadDocumentBackgroundImageConfigFile()
+            let nameMappings = loadDocumentBackgroundImageNames()
+            let pathMappings = loadDocumentBackgroundImagePaths()
+            savedImagePath = documentBackgroundConfig?.imagePaths[trimmedDocumentName] ?? pathMappings[trimmedDocumentName] ?? ""
+            savedImageName = documentBackgroundConfig?.imageNames[trimmedDocumentName] ?? nameMappings[trimmedDocumentName] ?? ""
+        }
 
         if !savedImagePath.isEmpty,
            let pathImageURL = backgroundImageFiles.first(where: { $0.path == savedImagePath }) {
@@ -1197,7 +1309,7 @@ struct ContentView: View {
         }
 
         guard !savedImageName.isEmpty,
-              let nameImageURL = backgroundImageFiles.first(where: { $0.lastPathComponent == savedImageName }) else {
+              let nameImageURL = backgroundImageFiles.first(where: { $0.lastPathComponent == URL(fileURLWithPath: savedImageName).lastPathComponent }) else {
             selectedBackgroundImageIndex = 0
             selectedBackgroundImagePath = ""
             selectedBackgroundImageName = ""
