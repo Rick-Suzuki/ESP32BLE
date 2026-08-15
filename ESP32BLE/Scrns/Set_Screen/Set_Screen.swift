@@ -2128,28 +2128,42 @@ struct SettingsScreen: View {
     private func deleteAllData() {
         guard let directoryURL = currentDocumentsDirectoryURL else {
             renameAlertMessage = "Couldn't find the Documents folder."
+            db("DELETE_ALL_TRACE no_documents_directory")
             return
         }
 
         do {
-            let fileURLs = try FileManager.default.contentsOfDirectory(
+            db("DELETE_ALL_TRACE documents_directory=\(directoryURL.path)")
+            let allBeforeDeleteURLs = try FileManager.default.contentsOfDirectory(
                 at: directoryURL,
-                includingPropertiesForKeys: [.isRegularFileKey],
-                options: [.skipsHiddenFiles]
+                includingPropertiesForKeys: nil,
+                options: []
             )
+            db("DELETE_ALL_TRACE contents_before_delete count=\(allBeforeDeleteURLs.count) items=\(allBeforeDeleteURLs.map { $0.lastPathComponent }.joined(separator: ", "))")
 
-            for fileURL in fileURLs {
-                let values = try fileURL.resourceValues(forKeys: [.isRegularFileKey])
-                guard values.isRegularFile == true else {
-                    continue
+            for itemURL in allBeforeDeleteURLs {
+                do {
+                    db("DELETE_ALL_TRACE remove_attempt item=\(itemURL.lastPathComponent) path=\(itemURL.path)")
+                    try FileManager.default.removeItem(at: itemURL)
+                    db("DELETE_ALL_TRACE remove_success item=\(itemURL.lastPathComponent)")
+                } catch {
+                    db("DELETE_ALL_TRACE remove_failed item=\(itemURL.lastPathComponent) path=\(itemURL.path) error=\(error)")
+                    throw error
                 }
-
-                try FileManager.default.removeItem(at: fileURL)
             }
 
+            let remainingAfterDeleteURLs = try FileManager.default.contentsOfDirectory(
+                at: directoryURL,
+                includingPropertiesForKeys: nil,
+                options: []
+            )
+            db("DELETE_ALL_TRACE contents_after_delete count=\(remainingAfterDeleteURLs.count) items=\(remainingAfterDeleteURLs.map { $0.lastPathComponent }.joined(separator: ", "))")
+
             resetSettingsStateAfterDeletingAllData()
+            db("DELETE_ALL_TRACE before_refresh_after_delete")
             markImportedContentChanged()
         } catch {
+            db("DELETE_ALL_TRACE delete_all_failed error=\(error)")
             renameAlertMessage = "Couldn't delete all data: \(error.localizedDescription)"
         }
     }

@@ -112,17 +112,22 @@ func loadScreenConfig(for documentURL: URL) -> ScreenConfig? {
 @discardableResult
 func saveScreenConfig(_ config: ScreenConfig, for documentURL: URL) -> Bool {
     let screenConfigURL = configURL(forDocumentURL: documentURL)
+    let existedBeforeSave = FileManager.default.fileExists(atPath: screenConfigURL.path)
+    db("CONFIG_RECREATE_TRACE saveScreenConfig enter document=\(documentURL.lastPathComponent) config=\(screenConfigURL.lastPathComponent) existedBefore=\(existedBeforeSave) path=\(screenConfigURL.path)")
     let encoder = JSONEncoder()
     encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
 
     guard let data = try? encoder.encode(config) else {
+        db("CONFIG_RECREATE_TRACE saveScreenConfig encode_failed document=\(documentURL.lastPathComponent) config=\(screenConfigURL.lastPathComponent)")
         return false
     }
 
     do {
         try data.write(to: screenConfigURL, options: [.atomic])
+        db("CONFIG_RECREATE_TRACE saveScreenConfig success document=\(documentURL.lastPathComponent) config=\(screenConfigURL.lastPathComponent)")
         return true
     } catch {
+        db("CONFIG_RECREATE_TRACE saveScreenConfig failed document=\(documentURL.lastPathComponent) config=\(screenConfigURL.lastPathComponent) error=\(error)")
         return false
     }
 }
@@ -138,15 +143,24 @@ func screenConfig(for documentURL: URL, requiredBoxCount: Int) -> ScreenConfig {
 @discardableResult
 func ensureScreenConfigFile(for documentURL: URL, requiredBoxCount: Int) -> ScreenConfig {
     if let config = loadScreenConfig(for: documentURL) {
+        db("CONFIG_RECREATE_TRACE ensureScreenConfigFile existing document=\(documentURL.lastPathComponent) config=\(configFileName(forDocumentName: documentURL.lastPathComponent))")
         return config
     }
 
     let config = defaultScreenConfig(for: documentURL.lastPathComponent, requiredBoxCount: requiredBoxCount)
+    guard FileManager.default.fileExists(atPath: documentURL.path),
+          isScreenDocumentURL(documentURL) else {
+        db("CONFIG_RECREATE_TRACE SKIP config=\(configFileName(forDocumentName: documentURL.lastPathComponent)) reason=missing \(documentURL.lastPathComponent)")
+        return config
+    }
+
+    db("CONFIG_RECREATE_TRACE ensureScreenConfigFile creating document=\(documentURL.lastPathComponent) config=\(configFileName(forDocumentName: documentURL.lastPathComponent)) requiredBoxCount=\(requiredBoxCount)")
     _ = saveScreenConfig(config, for: documentURL)
     return config
 }
 
 func ensureScreenConfigFiles(for documentURLs: [URL]) {
+    db("CONFIG_RECREATE_TRACE ensureScreenConfigFiles enter documents=\(documentURLs.map { $0.lastPathComponent }.joined(separator: ", "))")
     for documentURL in documentURLs {
         let requiredBoxCount = requiredBoxCountForScreenConfig(documentURL: documentURL)
         _ = ensureScreenConfigFile(for: documentURL, requiredBoxCount: requiredBoxCount)

@@ -1,133 +1,24 @@
-App Storage keys found:
+Files changed:
+ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
 
-selectedBackgroundImageIndex
-• Location:
-   • ContentView.swift
-   • Main_Screen.swift
-   • Set_Screen.swift
-• Read:
-   • ContentView.swift: reloadBackgroundImage() uses it to resolve the currently selected runtime background image.
-   • Main_BG_img.swift reads it indirectly through MainScreen to render the background.
-   • Set_Screen uses it for image selection controls.
-• Written:
-   • ContentView.swift: reloadBackgroundImage(), restoreBackgroundImageSelection()
-   • Set_Screen image controls through selectedImageIndex binding.
-• Still required:
-   • Yes, as current runtime UI state.
-• Can be safely removed:
-   • Not yet. It is still used to keep the currently visible/selected background image in sync.
+Build result:
+Project built successfully.
 
-selectedBackgroundImageName
-• Location:
-   • ContentView.swift
-   • Main_Screen.swift
-   • Set_Screen.swift
-• Read:
-   • ContentView.swift: reloadBackgroundImage()
-   • Main_Screen.swift/Main_BG_img.swift: rendering path
-   • Set_Screen.swift: image selection display/control state
-• Written:
-   • ContentView.swift: reloadBackgroundImage(), restoreBackgroundImageSelection()
-   • ContentView.swift: onChange saves document background selection into Screen.config.json
-   • Set_Screen.swift through selectedImageName binding
-• Still required:
-   • Yes, as current runtime selected-image state.
-• Can be safely removed:
-   • Not yet. It is still part of the active background selection/rendering path.
+Delete All Data fix:
+Delete All Data now enumerates all top-level contents of the Documents directory with no extension filtering, no hidden-file skipping, and no regular-file-only guard.
 
-selectedBackgroundImagePath
-• Location:
-   • ContentView.swift
-   • Main_Screen.swift
-   • Set_Screen.swift
-• Read:
-   • ContentView.swift: reloadBackgroundImage()
-   • Set_Screen.swift: image controls and display
-• Written:
-   • ContentView.swift: reloadBackgroundImage(), restoreBackgroundImageSelection()
-   • Set_Screen.swift through selectedImagePath binding
-• Still required:
-   • Probably yes for current runtime compatibility, but it is less portable than selectedBackgroundImageName.
-• Can be safely removed:
-   • Not safely yet. The current image reload path still checks path first before falling back to name.
+Delete behaviour:
+Every item in Documents is removed with FileManager.removeItem(at:), so files and directories are removed recursively. The Documents directory itself is preserved.
 
-backgroundImageOpacity
-• Location:
-   • ContentView.swift
-   • Main_Screen.swift
-   • Set_Screen.swift
-• Read:
-   • ContentView.swift: saveBackgroundImageOpacity(), restoreBackgroundImageOpacity()
-   • Main_BG_img.swift: rendered background image opacity
-   • Main_TopToolbar.swift: opacity control binding
-   • Set_Screen.swift: opacity slider/runtime value
-• Written:
-   • Main_TopToolbar.swift through binding
-   • ContentView.swift onChange saves into Screen.config.json and legacy AppStorage map
-   • ContentView.swift restoreBackgroundImageOpacity() sets it from Screen.config.json first
-• Still required:
-   • Yes, as the current runtime value used by UI and rendering.
-• Can be safely removed:
-   • Not yet. Even though the document-specific value now belongs in Screen.config.json, the app still uses this AppStorage key as the active runtime opacity value.
+Logging added:
+DELETE_ALL_TRACE logs:
+Documents path
+contents before delete
+every remove attempt
+every remove success
+every remove failure
+contents after delete
+refresh after delete
 
-documentBackgroundImageNamesData
-• Location:
-   • ContentView.swift
-• Read:
-   • loadDocumentBackgroundImageNames()
-   • fallbackBackgroundImageName()
-   • restoreBackgroundImageSelection() fallback path when Screen.config.json is missing
-• Written:
-   • saveDocumentBackgroundImageNames()
-   • saveBackgroundImageSelection()
-• Still required:
-   • Only as legacy fallback/migration support.
-• Can be safely removed:
-   • Likely yes after confirming every .screen has a valid Screen.config.json backgroundImageName. Right now it is still actively written, so removal should be a deliberate cleanup pass.
-
-documentBackgroundImagePathsData
-• Location:
-   • ContentView.swift
-• Read:
-   • loadDocumentBackgroundImagePaths()
-   • appStorageBackgroundImageName()
-   • restoreBackgroundImageSelection() fallback path when Screen.config.json is missing
-• Written:
-   • saveDocumentBackgroundImagePaths()
-   • saveBackgroundImageSelection()
-• Still required:
-   • Only as legacy fallback/migration support.
-• Can be safely removed:
-   • Likely yes, but it requires removing the path fallback from restoreBackgroundImageSelection() and relying on Screen.config.json backgroundImageName only.
-
-documentBackgroundImageOpacitiesData
-• Location:
-   • ContentView.swift
-• Read:
-   • loadDocumentBackgroundImageOpacities()
-   • fallbackBackgroundImageOpacity()
-   • screenConfigFromAppStorageFallback()
-• Written:
-   • saveDocumentBackgroundImageOpacities()
-   • saveBackgroundImageOpacity()
-• Still required:
-   • Only as legacy fallback/migration support.
-• Can be safely removed:
-   • Likely yes after confirming Screen.config.json is now always created for .screen documents and backgroundOpacity is saved there.
-
-Summary:
-• Runtime AppStorage still required for now:
-   • selectedBackgroundImageIndex
-   • selectedBackgroundImageName
-   • selectedBackgroundImagePath
-   • backgroundImageOpacity
-
-• Legacy document-specific AppStorage maps that are candidates for removal:
-   • documentBackgroundImageNamesData
-   • documentBackgroundImagePathsData
-   • documentBackgroundImageOpacitiesData
-
-Recommended cleanup order:
-1. Stop writing documentBackgroundImageNamesData, documentBackgroundImagePathsData, and documentBackgroundImageOpacitiesData.
-2. Remove fallback reads from screenConfigFromAppStorageFallback(), fallbackBackgroundImageName(), fallbackBackgroundImageOpacity(), and restoreBackgroundImageSelection().
-3. Keep runtime selectedBackgroundImageName/path/index and backgroundImageOpacity until rendering and toolbar state no longer depend on AppStorage.
+Post-delete:
+Settings state is reset and the document list refresh still runs after deletion.

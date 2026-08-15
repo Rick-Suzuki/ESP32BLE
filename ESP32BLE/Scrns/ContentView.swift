@@ -18,6 +18,7 @@ var isPad: Bool {
 }
 
 private let maxDocumentNavigationHistoryCount = 50
+private let defaultStartupScreenBaseName = "sample"
 
 private enum AppRuntimeFlags {
     static var orientationState = false
@@ -163,7 +164,7 @@ struct ContentView: View {
     @State private var isRestoringBackgroundImageSelection = false
     @State private var documentNavigationHistory: [String] = []
     @State private var documentForwardNavigationHistory: [String] = []
-    @AppStorage("selectedDocumentName") private var selectedDocumentName = screenDocumentFileName(forBaseName: "fnkeys")
+    @AppStorage("selectedDocumentName") private var selectedDocumentName = screenDocumentFileName(forBaseName: defaultStartupScreenBaseName)
     @AppStorage("documentFontSizesData") private var documentFontSizesData = ""
     @State private var documentFontSizeRefreshToken = 0
     @State private var settingsBLEText = ""
@@ -302,14 +303,19 @@ struct ContentView: View {
             presentInitialSettingsScreenIfNeeded()
         }
         .task {
+            db("CONFIG_RECREATE_TRACE startup_task_enter selectedDocumentName=\(selectedDocumentName)")
+            db("CONFIG_RECREATE_TRACE startup_call ensureDefaultFunctionKeysFile selectedDocumentName=\(selectedDocumentName)")
             ensureDefaultFunctionKeysFile()
+            db("CONFIG_RECREATE_TRACE startup_call refreshDocumentFiles selectedDocumentName=\(selectedDocumentName)")
             refreshDocumentFiles()
             refreshBackgroundImageFiles()
+            db("CONFIG_RECREATE_TRACE startup_call selectInitialDocument selectedDocumentName=\(selectedDocumentName)")
             selectInitialDocument()
             updateLoadedBackgroundImageForVisibleScreen()
             logDeviceTypeIfNeeded()
             refreshOrientationState()
             logOrientationStateIfNeeded()
+            db("CONFIG_RECREATE_TRACE startup_task_exit selectedDocumentName=\(selectedDocumentName)")
         }
         .task {
             UIDevice.current.beginGeneratingDeviceOrientationNotifications()
@@ -427,27 +433,45 @@ struct ContentView: View {
 
     private func ensureDefaultFunctionKeysFile() {
         guard let documentsDirectoryURL = documentsDirectoryURL() else {
+            db("CONFIG_RECREATE_TRACE ensureDefaultFunctionKeysFile no_documents_directory selectedDocumentName=\(selectedDocumentName)")
             functionKeys = defaultFunctionKeys()
             loadedFunctionKeySlotCount = defaultNamedFunctionKeyCount
             return
         }
 
-        let fileURL = documentsDirectoryURL.appendingPathComponent(screenDocumentFileName(forBaseName: "fnkeys"))
-        let legacyFileURL = documentsDirectoryURL.appendingPathComponent("fnkeys.\(legacyScreenDocumentFileExtension)")
+        let existingURLs = (try? FileManager.default.contentsOfDirectory(
+            at: documentsDirectoryURL,
+            includingPropertiesForKeys: [URLResourceKey.isRegularFileKey],
+            options: [.skipsHiddenFiles]
+        )) ?? []
+        let existingScreenURLs = preferredScreenDocumentURLs(
+            from: existingURLs.filter { url in
+                let values = try? url.resourceValues(forKeys: [URLResourceKey.isRegularFileKey])
+                return values?.isRegularFile == true
+            }
+        )
+        let fileURL = documentsDirectoryURL.appendingPathComponent(screenDocumentFileName(forBaseName: defaultStartupScreenBaseName))
+        db("CONFIG_RECREATE_TRACE ensureDefaultFunctionKeysFile enter selectedDocumentName=\(selectedDocumentName) defaultFile=\(fileURL.lastPathComponent) existingScreens=\(existingScreenURLs.map { $0.lastPathComponent }.joined(separator: ", "))")
 
-        if !FileManager.default.fileExists(atPath: fileURL.path),
-           !FileManager.default.fileExists(atPath: legacyFileURL.path) {
+        if existingScreenURLs.isEmpty,
+           !FileManager.default.fileExists(atPath: fileURL.path) {
             let defaultContents = Self.defaultFunctionKeyTitles().joined(separator: "\n")
 
             do {
+                db("CONFIG_RECREATE_TRACE CREATE screen=\(fileURL.lastPathComponent) reason=default startup file selectedDocumentName=\(selectedDocumentName)")
                 try defaultContents.write(to: fileURL, atomically: true, encoding: .utf8)
             } catch {
+                db("CONFIG_RECREATE_TRACE ensureDefaultFunctionKeysFile create_failed selectedDocumentName=\(selectedDocumentName) file=\(fileURL.lastPathComponent) error=\(error)")
                 functionKeys = defaultFunctionKeys()
                 return
             }
+        } else {
+            db("CONFIG_RECREATE_TRACE ensureDefaultFunctionKeysFile skip_default_create reason=\(existingScreenURLs.isEmpty ? "default exists" : "screen documents exist") defaultFile=\(fileURL.lastPathComponent)")
         }
 
+        db("CONFIG_RECREATE_TRACE ensureDefaultFunctionKeysFile refresh_after_default_check selectedDocumentName=\(selectedDocumentName)")
         refreshDocumentFiles()
+        db("CONFIG_RECREATE_TRACE ensureDefaultFunctionKeysFile select_initial_after_default_check selectedDocumentName=\(selectedDocumentName)")
         selectInitialDocument()
     }
 
@@ -459,11 +483,13 @@ struct ContentView: View {
         }
 
         do {
+            db("CONFIG_RECREATE_TRACE refreshDocumentFiles enter selectedDocumentName=\(selectedDocumentName) documentsDirectory=\(documentsDirectoryURL.path)")
             let urls = try FileManager.default.contentsOfDirectory(
                 at: documentsDirectoryURL,
                 includingPropertiesForKeys: [URLResourceKey.isRegularFileKey],
                 options: [.skipsHiddenFiles]
             )
+            db("CONFIG_RECREATE_TRACE refreshDocumentFiles raw_files count=\(urls.count) files=\(urls.map { $0.lastPathComponent }.joined(separator: ", "))")
 
             let updatedDocumentFiles = preferredScreenDocumentURLs(
                 from: urls.filter { url in
@@ -471,10 +497,13 @@ struct ContentView: View {
                     return values?.isRegularFile == true
                 }
             )
+            db("CONFIG_RECREATE_TRACE refreshDocumentFiles screen_files count=\(updatedDocumentFiles.count) files=\(updatedDocumentFiles.map { $0.lastPathComponent }.joined(separator: ", ")) selectedDocumentName=\(selectedDocumentName)")
+            db("CONFIG_RECREATE_TRACE refreshDocumentFiles ensure_configs selectedDocumentName=\(selectedDocumentName)")
             ensureScreenConfigFilesFromAppStorageFallback(for: updatedDocumentFiles)
             db("STATE ContentView.refreshDocumentFiles current documentFiles.count=\(documentFiles.count) new=\(updatedDocumentFiles.count) thread=\(Thread.isMainThread ? "main" : "background")")
             documentFiles = updatedDocumentFiles
         } catch {
+            db("CONFIG_RECREATE_TRACE refreshDocumentFiles failed selectedDocumentName=\(selectedDocumentName) error=\(error)")
             db("STATE ContentView.refreshDocumentFiles current documentFiles.count=\(documentFiles.count) new=0 error=\(error.localizedDescription) thread=\(Thread.isMainThread ? "main" : "background")")
             documentFiles = []
         }
@@ -556,18 +585,22 @@ struct ContentView: View {
     }
 
     private func selectInitialDocument() {
+        db("CONFIG_RECREATE_TRACE selectInitialDocument enter selectedDocumentName=\(selectedDocumentName) documentFiles=\(documentFiles.map { $0.lastPathComponent }.joined(separator: ", "))")
         guard !documentFiles.isEmpty else {
+            db("CONFIG_RECREATE_TRACE selectInitialDocument no_documents setting_default_selected=\(screenDocumentFileName(forBaseName: defaultStartupScreenBaseName))")
             functionKeys = defaultFunctionKeys()
-            selectedDocumentName = screenDocumentFileName(forBaseName: "fnkeys")
+            selectedDocumentName = screenDocumentFileName(forBaseName: defaultStartupScreenBaseName)
             loadedFunctionKeySlotCount = defaultNamedFunctionKeyCount
             return
         }
 
         if let savedFileURL = documentFiles.first(where: { $0.lastPathComponent == selectedDocumentName }) {
+            db("CONFIG_RECREATE_TRACE selectInitialDocument loading_saved selectedDocumentName=\(selectedDocumentName) file=\(savedFileURL.lastPathComponent)")
             loadFunctionKeys(from: savedFileURL)
             return
         }
 
+        db("CONFIG_RECREATE_TRACE selectInitialDocument loading_first selectedDocumentName=\(selectedDocumentName) file=\(documentFiles[0].lastPathComponent)")
         loadFunctionKeys(from: documentFiles[0])
     }
 
@@ -715,13 +748,17 @@ struct ContentView: View {
         updatedFontSizes[selectedDocumentName] = newFontSize
         saveDocumentFontSizes(updatedFontSizes)
 
-        if let selectedDocumentURL = selectedDocumentURL() {
+        if let selectedDocumentURL = existingScreenDocumentURLForConfigWrite(
+            documentName: selectedDocumentName,
+            caller: "updateDocumentFontSize"
+        ) {
             var updatedConfig = loadedScreenConfig ?? screenConfigFromAppStorageFallback(
                 for: selectedDocumentName,
                 requiredBoxCount: requiredBoxCountForDocumentURL(selectedDocumentURL)
             )
             updatedConfig.fontSize = newFontSize
             loadedScreenConfig = updatedConfig
+            logConfigCreationIfMissing(for: selectedDocumentURL, caller: "updateDocumentFontSize")
             _ = saveScreenConfig(updatedConfig, for: selectedDocumentURL)
         } else if var updatedConfig = loadedScreenConfig {
             updatedConfig.fontSize = newFontSize
@@ -767,11 +804,53 @@ struct ContentView: View {
         documentFontSizesData = encoded
     }
 
+    private func existingScreenDocumentURLForConfigWrite(documentName: String, caller: String) -> URL? {
+        let trimmedDocumentName = documentName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let configFileName = configFileName(forDocumentName: trimmedDocumentName)
+
+        guard !trimmedDocumentName.isEmpty,
+              isScreenDocumentFileName(trimmedDocumentName) else {
+            db("CONFIG_RECREATE_TRACE SKIP config=\(configFileName) reason=not_screen_document caller=\(caller) selectedDocumentName=\(selectedDocumentName)")
+            return nil
+        }
+
+        let resolvedURL: URL?
+        if let matchingURL = documentFiles.first(where: { $0.lastPathComponent == trimmedDocumentName }) {
+            resolvedURL = matchingURL
+        } else if let matchingURL = documentFiles.first(where: {
+            screenDocumentBaseKey(for: $0.lastPathComponent) == screenDocumentBaseKey(for: trimmedDocumentName)
+        }) {
+            resolvedURL = matchingURL
+        } else {
+            resolvedURL = documentsDirectoryURL()?.appendingPathComponent(trimmedDocumentName)
+        }
+
+        guard let resolvedURL,
+              FileManager.default.fileExists(atPath: resolvedURL.path),
+              isScreenDocumentURL(resolvedURL) else {
+            db("CONFIG_RECREATE_TRACE SKIP config=\(configFileName) reason=missing \(trimmedDocumentName) caller=\(caller) selectedDocumentName=\(selectedDocumentName)")
+            return nil
+        }
+
+        return resolvedURL
+    }
+
+    private func logConfigCreationIfMissing(for documentURL: URL, caller: String) {
+        let screenConfigURL = configURL(forDocumentURL: documentURL)
+        guard !FileManager.default.fileExists(atPath: screenConfigURL.path) else {
+            return
+        }
+
+        db("CONFIG_RECREATE_TRACE CREATE screen=\(documentURL.lastPathComponent) config=\(screenConfigURL.lastPathComponent) reason=matching \(documentURL.lastPathComponent) exists caller=\(caller) selectedDocumentName=\(selectedDocumentName)")
+    }
+
     private func loadScreenConfigForDocument(_ documentURL: URL, requiredBoxCount: Int) -> ScreenConfig {
         if let config = loadScreenConfig(for: documentURL) {
+            db("CONFIG_RECREATE_TRACE loadScreenConfigForDocument loaded_existing selectedDocumentName=\(selectedDocumentName) document=\(documentURL.lastPathComponent) config=\(configFileName(forDocumentName: documentURL.lastPathComponent))")
             return config
         }
 
+        db("CONFIG_RECREATE_TRACE loadScreenConfigForDocument using_fallback_no_save selectedDocumentName=\(selectedDocumentName) document=\(documentURL.lastPathComponent) config=\(configFileName(forDocumentName: documentURL.lastPathComponent))")
         return screenConfigFromAppStorageFallback(
             for: documentURL.lastPathComponent,
             requiredBoxCount: requiredBoxCount
@@ -779,13 +858,29 @@ struct ContentView: View {
     }
 
     private func ensureScreenConfigFilesFromAppStorageFallback(for documentURLs: [URL]) {
-        for documentURL in documentURLs where loadScreenConfig(for: documentURL) == nil {
+        db("CONFIG_RECREATE_TRACE ensureScreenConfigFilesFromAppStorageFallback enter selectedDocumentName=\(selectedDocumentName) documents=\(documentURLs.map { $0.lastPathComponent }.joined(separator: ", "))")
+        for documentURL in documentURLs {
+            let configURL = configURL(forDocumentURL: documentURL)
+            guard FileManager.default.fileExists(atPath: documentURL.path),
+                  isScreenDocumentURL(documentURL) else {
+                db("CONFIG_RECREATE_TRACE SKIP config=\(configURL.lastPathComponent) reason=missing \(documentURL.lastPathComponent) selectedDocumentName=\(selectedDocumentName)")
+                continue
+            }
+
+            if loadScreenConfig(for: documentURL) != nil {
+                db("CONFIG_RECREATE_TRACE ensureScreenConfigFilesFromAppStorageFallback existing_config selectedDocumentName=\(selectedDocumentName) document=\(documentURL.lastPathComponent) config=\(configURL.lastPathComponent)")
+                continue
+            }
+
             let requiredBoxCount = requiredBoxCountForDocumentURL(documentURL)
             let config = screenConfigFromAppStorageFallback(
                 for: documentURL.lastPathComponent,
                 requiredBoxCount: requiredBoxCount
             )
-            _ = saveScreenConfig(config, for: documentURL)
+            let creationReason = documentURL.lastPathComponent == screenDocumentFileName(forBaseName: defaultStartupScreenBaseName) ? "default startup file" : "matching \(documentURL.lastPathComponent) exists"
+            db("CONFIG_RECREATE_TRACE CREATE screen=\(documentURL.lastPathComponent) config=\(configURL.lastPathComponent) reason=\(creationReason) selectedDocumentName=\(selectedDocumentName) requiredBoxCount=\(requiredBoxCount)")
+            let didSave = saveScreenConfig(config, for: documentURL)
+            db("CONFIG_RECREATE_TRACE ensureScreenConfigFilesFromAppStorageFallback create_result selectedDocumentName=\(selectedDocumentName) document=\(documentURL.lastPathComponent) config=\(configURL.lastPathComponent) saved=\(didSave)")
         }
     }
 
@@ -892,7 +987,10 @@ struct ContentView: View {
         )
         saveDocumentGridDimensions(mappings)
 
-        guard let documentURL = documentURL(forDocumentName: trimmedDocumentName) else {
+        guard let documentURL = existingScreenDocumentURLForConfigWrite(
+            documentName: trimmedDocumentName,
+            caller: "saveGridDimensions"
+        ) else {
             return
         }
 
@@ -918,13 +1016,17 @@ struct ContentView: View {
             loadedScreenConfig = updatedConfig
         }
 
+        logConfigCreationIfMissing(for: documentURL, caller: "saveGridDimensions")
         _ = saveScreenConfig(updatedConfig, for: documentURL)
     }
 
     private func updateScreenConfig(for documentName: String, mutate: (inout ScreenConfig) -> Void) {
         let trimmedDocumentName = documentName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedDocumentName.isEmpty,
-              let documentURL = documentURL(forDocumentName: trimmedDocumentName) else {
+              let documentURL = existingScreenDocumentURLForConfigWrite(
+                documentName: trimmedDocumentName,
+                caller: "updateScreenConfig"
+              ) else {
             return
         }
 
@@ -947,6 +1049,7 @@ struct ContentView: View {
             loadedScreenConfig = updatedConfig
         }
 
+        logConfigCreationIfMissing(for: documentURL, caller: "updateScreenConfig")
         _ = saveScreenConfig(updatedConfig, for: documentURL)
     }
 
