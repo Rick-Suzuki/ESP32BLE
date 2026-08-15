@@ -60,6 +60,8 @@ struct SettingsScreen: View {
         let directoryURL: URL
         let importListMode: SettingsListMode
         var remainingURLs: [URL]
+        var selectedConfigURLsByName: [String: URL]
+        var temporaryImportDirectoryURLs: [URL] = []
         var existingFileNames: Set<String>
         var existingImageNames: Set<String>
         var existingSoundNames: Set<String>
@@ -69,6 +71,12 @@ struct SettingsScreen: View {
         var firstImportedSoundURL: URL?
         var firstImportedPDFURL: URL?
         var importedAnything = false
+    }
+
+    private struct ScreenPackageImport {
+        let documentURL: URL
+        let configURL: URL?
+        let temporaryDirectoryURL: URL
     }
 
     private struct SettingsStoredGridDimensions: Codable {
@@ -235,7 +243,7 @@ struct SettingsScreen: View {
 			// export btn/menu
 			//
 			Menu {
-				Button("Export Single File") {
+				Button("Export Screen") {
 					ButtonClickFeedback.playIfEnabled()
 					prepareSingleFileExport()
 				}
@@ -476,7 +484,7 @@ struct SettingsScreen: View {
     private var activeImportContentTypes: [UTType] {
         switch pendingImportListMode {
         case .files:
-            return [.data]
+            return [plainTextImportType, zipImportType, .data]
         case .images:
             return [.image]
         case .sounds:
@@ -1603,7 +1611,7 @@ struct SettingsScreen: View {
             singleFileExportURL = exportURL
         } catch {
             cleanupSingleFileExportTemporaryURLIfNeeded()
-            renameAlertMessage = "Couldn't prepare the single file export."
+            renameAlertMessage = "Couldn't prepare the screen export."
         }
     }
 
@@ -1628,16 +1636,67 @@ struct SettingsScreen: View {
     private func makeSingleFileExportURL() throws -> URL {
         cleanupSingleFileExportTemporaryURLIfNeeded()
 
+        let documentFileName: String
+        let documentData: Data
+        let configData: Data
+
         if let selectedDocumentFileURL,
            selectedDocumentFileURL.pathExtension.lowercased() == "txt" {
-            return selectedDocumentFileURL
+            documentFileName = selectedDocumentFileURL.lastPathComponent
+            documentData = try Data(contentsOf: selectedDocumentFileURL)
+            configData = try screenPackageConfigData(
+                for: selectedDocumentFileURL,
+                documentFileName: documentFileName
+            )
+        } else {
+            documentFileName = "\(singleFileExportDisplayName).txt"
+            documentData = Data(documentEditorText.utf8)
+            configData = try defaultScreenPackageConfigData(
+                forDocumentName: documentFileName,
+                requiredBoxCount: requiredBoxCountForDocumentText(documentEditorText)
+            )
         }
 
         let temporaryURL = FileManager.default.temporaryDirectory
-            .appendingPathComponent("\(singleFileExportDisplayName).txt")
-        try documentEditorText.write(to: temporaryURL, atomically: true, encoding: .utf8)
+            .appendingPathComponent("\(singleFileExportDisplayName).zip")
+        let archiveData = try SettingsArchiveFileDocument.makeArchiveData(
+            with: [
+                SettingsArchiveFileDocument.ArchiveEntry(
+                    fileName: documentFileName,
+                    data: documentData
+                ),
+                SettingsArchiveFileDocument.ArchiveEntry(
+                    fileName: configFileName(forDocumentName: documentFileName),
+                    data: configData
+                )
+            ]
+        )
+
+        try archiveData.write(to: temporaryURL, options: [.atomic])
         singleFileExportTemporaryURL = temporaryURL
         return temporaryURL
+    }
+
+    private func screenPackageConfigData(for documentURL: URL, documentFileName: String) throws -> Data {
+        let screenConfigURL = configURL(forDocumentURL: documentURL)
+        if FileManager.default.fileExists(atPath: screenConfigURL.path),
+           let existingConfigData = try? Data(contentsOf: screenConfigURL),
+           !existingConfigData.isEmpty,
+           (try? JSONDecoder().decode(ScreenConfig.self, from: existingConfigData)) != nil {
+            return existingConfigData
+        }
+
+        return try defaultScreenPackageConfigData(
+            forDocumentName: documentFileName,
+            requiredBoxCount: requiredBoxCountForImportedDocument(at: documentURL)
+        )
+    }
+
+    private func defaultScreenPackageConfigData(forDocumentName documentFileName: String, requiredBoxCount: Int) throws -> Data {
+        let config = defaultScreenConfig(for: documentFileName, requiredBoxCount: requiredBoxCount)
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        return try encoder.encode(config)
     }
 
     private func cleanupSingleFileExportTemporaryURLIfNeeded() {
@@ -1852,6 +1911,10 @@ struct SettingsScreen: View {
         UTType(filenameExtension: "txt") ?? .plainText
     }
 
+    private var zipImportType: UTType {
+        UTType(filenameExtension: "zip") ?? .data
+    }
+
     private var supportedImportedImageExtensions: Set<String> {
         ["png", "jpg", "jpeg", "heic", "heif", "gif", "bmp", "tiff", "webp"]
     }
@@ -1877,6 +1940,7 @@ struct SettingsScreen: View {
             directoryURL: directoryURL,
             importListMode: listMode,
             remainingURLs: urls,
+            selectedConfigURLsByName: selectedScreenConfigURLsByName(from: urls),
             existingFileNames: Set(availableDocumentURLs.map { $0.lastPathComponent.lowercased() }),
             existingImageNames: Set(availableImageURLs.map { $0.lastPathComponent.lowercased() }),
             existingSoundNames: Set(availableSoundURLs.map { $0.lastPathComponent.lowercased() }),
@@ -1895,6 +1959,20 @@ struct SettingsScreen: View {
             let targetFileNameKey = targetFileName.lowercased()
             let targetURL = session.directoryURL.appendingPathComponent(targetFileName)
 
+            if pathExtension == "zip" {
+                do {
+                    let package = try extractScreenPackageImport(from: sourceURL)
+                    session.temporaryImportDirectoryURLs.append(package.temporaryDirectoryURL)
+                    if let configURL = package.configURL {
+                        session.selectedConfigURLsByName[configURL.lastPathComponent.lowercased()] = configURL
+                    }
+                    session.remainingURLs.insert(package.documentURL, at: 0)
+                } catch {
+                    db("Failed to import screen package \(targetFileName): \(error.localizedDescription)")
+                }
+                continue
+            }
+
             if pathExtension == "txt" {
                 if session.existingFileNames.contains(targetFileNameKey) ||
                     FileManager.default.fileExists(atPath: targetURL.path) {
@@ -1910,6 +1988,7 @@ struct SettingsScreen: View {
 
                 do {
                     try importFileData(from: sourceURL, to: targetURL)
+                    ensureImportedScreenConfig(for: targetURL, session: session, replacingDocument: false)
                     recordSuccessfulImport(
                         targetURL: targetURL,
                         fileNameKey: targetFileNameKey,
@@ -2053,6 +2132,9 @@ struct SettingsScreen: View {
             }
 
             try importFileData(from: conflict.sourceURL, to: conflict.targetURL)
+            if conflict.contentKind == .document {
+                ensureImportedScreenConfig(for: conflict.targetURL, session: session, replacingDocument: true)
+            }
             recordSuccessfulImport(
                 targetURL: conflict.targetURL,
                 fileNameKey: conflict.fileName.lowercased(),
@@ -2092,6 +2174,8 @@ struct SettingsScreen: View {
         pendingImportConflict = nil
         pendingImportSession = nil
 
+        cleanupTemporaryImportDirectories(session.temporaryImportDirectoryURLs)
+
         guard session.importedAnything else { return }
 
         markImportedContentChanged()
@@ -2114,6 +2198,159 @@ struct SettingsScreen: View {
            session.importListMode == .pdfs || selectedPDFURL == nil {
             persistSelectedPDF(firstImportedPDFURL)
         }
+    }
+
+    private func cleanupTemporaryImportDirectories(_ directoryURLs: [URL]) {
+        for directoryURL in directoryURLs {
+            try? FileManager.default.removeItem(at: directoryURL)
+        }
+    }
+
+    private func selectedScreenConfigURLsByName(from urls: [URL]) -> [String: URL] {
+        var configURLsByName: [String: URL] = [:]
+
+        for url in urls {
+            let fileName = url.lastPathComponent
+            guard fileName.lowercased().hasSuffix(".config.json") else {
+                continue
+            }
+
+            configURLsByName[fileName.lowercased()] = url
+        }
+
+        return configURLsByName
+    }
+
+    private func extractScreenPackageImport(from zipURL: URL) throws -> ScreenPackageImport {
+        let archiveData = try readImportedFileData(from: zipURL)
+        let entries = try SettingsArchiveFileDocument.archiveEntries(from: archiveData)
+        guard let documentEntry = entries.first(where: { entry in
+            guard let fileName = sanitizedArchiveFileName(entry.fileName) else {
+                return false
+            }
+
+            return URL(fileURLWithPath: fileName).pathExtension.lowercased() == "txt"
+        }),
+              let documentFileName = sanitizedArchiveFileName(documentEntry.fileName) else {
+            throw CocoaError(.fileReadCorruptFile)
+        }
+
+        let temporaryDirectoryURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+
+        do {
+            try FileManager.default.createDirectory(
+                at: temporaryDirectoryURL,
+                withIntermediateDirectories: true
+            )
+
+            let documentURL = temporaryDirectoryURL.appendingPathComponent(documentFileName)
+            try documentEntry.data.write(to: documentURL, options: [.atomic])
+
+            let matchingConfigFileName = configFileName(forDocumentName: documentFileName)
+            let matchingConfigKey = matchingConfigFileName.lowercased()
+            var configURL: URL?
+
+            if let configEntry = entries.first(where: { entry in
+                sanitizedArchiveFileName(entry.fileName)?.lowercased() == matchingConfigKey
+            }) {
+                let extractedConfigURL = temporaryDirectoryURL.appendingPathComponent(matchingConfigFileName)
+                try configEntry.data.write(to: extractedConfigURL, options: [.atomic])
+                configURL = extractedConfigURL
+            }
+
+            return ScreenPackageImport(
+                documentURL: documentURL,
+                configURL: configURL,
+                temporaryDirectoryURL: temporaryDirectoryURL
+            )
+        } catch {
+            try? FileManager.default.removeItem(at: temporaryDirectoryURL)
+            throw error
+        }
+    }
+
+    private func sanitizedArchiveFileName(_ fileName: String) -> String? {
+        let lastPathComponent = URL(fileURLWithPath: fileName).lastPathComponent
+        guard !lastPathComponent.isEmpty,
+              lastPathComponent != ".",
+              lastPathComponent != ".." else {
+            return nil
+        }
+
+        return lastPathComponent
+    }
+
+    private func ensureImportedScreenConfig(
+        for documentURL: URL,
+        session: PendingImportSession,
+        replacingDocument: Bool
+    ) {
+        let fileManager = FileManager.default
+        let targetConfigURL = configURL(forDocumentURL: documentURL)
+
+        if fileManager.fileExists(atPath: targetConfigURL.path) {
+            if replacingDocument {
+                try? fileManager.removeItem(at: targetConfigURL)
+            } else {
+                if loadScreenConfig(for: documentURL) != nil {
+                    return
+                }
+
+                try? fileManager.removeItem(at: targetConfigURL)
+            }
+        }
+
+        let matchingConfigFileName = configFileName(forDocumentName: documentURL.lastPathComponent).lowercased()
+        if let sourceConfigURL = session.selectedConfigURLsByName[matchingConfigFileName] {
+            do {
+                if fileManager.fileExists(atPath: targetConfigURL.path) {
+                    try fileManager.removeItem(at: targetConfigURL)
+                }
+
+                try importFileData(from: sourceConfigURL, to: targetConfigURL)
+
+                if loadScreenConfig(for: documentURL) != nil {
+                    return
+                }
+
+                try? fileManager.removeItem(at: targetConfigURL)
+            } catch {
+                db("Failed to import screen config \(sourceConfigURL.lastPathComponent): \(error.localizedDescription)")
+                try? fileManager.removeItem(at: targetConfigURL)
+            }
+        }
+
+        createDefaultScreenConfigIfNeeded(for: documentURL)
+    }
+
+    private func createDefaultScreenConfigIfNeeded(for documentURL: URL) {
+        guard loadScreenConfig(for: documentURL) == nil else {
+            return
+        }
+
+        let requiredBoxCount = requiredBoxCountForImportedDocument(at: documentURL)
+        _ = ensureScreenConfigFile(for: documentURL, requiredBoxCount: requiredBoxCount)
+    }
+
+    private func requiredBoxCountForImportedDocument(at documentURL: URL) -> Int {
+        guard let contents = try? String(contentsOf: documentURL, encoding: .utf8) else {
+            return 1
+        }
+
+        return requiredBoxCountForDocumentText(contents)
+    }
+
+    private func requiredBoxCountForDocumentText(_ contents: String) -> Int {
+        let slotLines = contents
+            .components(separatedBy: CharacterSet.newlines.union(.init(charactersIn: "\t")))
+            .filter { line in
+                let normalizedLine = line.replacingOccurrences(of: "\r", with: "")
+                let trimmedLine = normalizedLine.trimmingCharacters(in: .whitespacesAndNewlines)
+                return !trimmedLine.isEmpty && !trimmedLine.hasPrefix("//")
+            }
+
+        return min(max(slotLines.count, 1), maxFunctionKeyCount)
     }
 
     private func handleDocumentImport(_ result: Result<[URL], Error>) {
@@ -2312,6 +2549,42 @@ struct SettingsScreen: View {
     private func markImportedContentChanged() {
         refreshDocumentFiles()
         importRefreshID = UUID()
+    }
+
+    private func readImportedFileData(from sourceURL: URL) throws -> Data {
+        let didAccessSecurityScopedResource = sourceURL.startAccessingSecurityScopedResource()
+        defer {
+            if didAccessSecurityScopedResource {
+                sourceURL.stopAccessingSecurityScopedResource()
+            }
+        }
+
+        let coordinator = NSFileCoordinator()
+        var importedData: Data?
+        var importError: Error?
+        var coordinatorError: NSError?
+
+        coordinator.coordinate(readingItemAt: sourceURL, options: [], error: &coordinatorError) { coordinatedURL in
+            do {
+                importedData = try Data(contentsOf: coordinatedURL)
+            } catch {
+                importError = error
+            }
+        }
+
+        if let importError {
+            throw importError
+        }
+
+        if let coordinatorError {
+            throw coordinatorError
+        }
+
+        guard let importedData else {
+            throw CocoaError(.fileReadUnknown)
+        }
+
+        return importedData
     }
 
     private func importFileData(from sourceURL: URL, to targetURL: URL) throws {
@@ -2684,6 +2957,56 @@ private struct SettingsArchiveFileDocument: FileDocument {
         return archiveData
     }
 
+    static func archiveEntries(from archiveData: Data) throws -> [ArchiveEntry] {
+        var entries: [ArchiveEntry] = []
+        var offset = 0
+
+        while offset + 4 <= archiveData.count {
+            let signature = try archiveData.uint32LE(at: offset)
+            if signature == 0x02014B50 || signature == 0x06054B50 {
+                break
+            }
+
+            guard signature == 0x04034B50 else {
+                throw CocoaError(.fileReadCorruptFile)
+            }
+
+            let generalPurposeFlags = try archiveData.uint16LE(at: offset + 6)
+            let compressionMethod = try archiveData.uint16LE(at: offset + 8)
+            let compressedSize = Int(try archiveData.uint32LE(at: offset + 18))
+            let uncompressedSize = Int(try archiveData.uint32LE(at: offset + 22))
+            let fileNameLength = Int(try archiveData.uint16LE(at: offset + 26))
+            let extraFieldLength = Int(try archiveData.uint16LE(at: offset + 28))
+
+            guard generalPurposeFlags & 0x0008 == 0,
+                  compressionMethod == 0,
+                  compressedSize == uncompressedSize else {
+                throw CocoaError(.fileReadUnsupportedScheme)
+            }
+
+            let fileNameOffset = offset + 30
+            let fileDataOffset = fileNameOffset + fileNameLength + extraFieldLength
+            let nextOffset = fileDataOffset + compressedSize
+
+            guard fileNameOffset <= archiveData.count,
+                  fileDataOffset <= archiveData.count,
+                  nextOffset <= archiveData.count else {
+                throw CocoaError(.fileReadCorruptFile)
+            }
+
+            let fileNameData = archiveData.subdata(in: fileNameOffset..<(fileNameOffset + fileNameLength))
+            guard let fileName = String(data: fileNameData, encoding: .utf8) else {
+                throw CocoaError(.fileReadCorruptFile)
+            }
+
+            let entryData = archiveData.subdata(in: fileDataOffset..<nextOffset)
+            entries.append(ArchiveEntry(fileName: fileName, data: entryData))
+            offset = nextOffset
+        }
+
+        return entries
+    }
+
     private static func crc32(of data: Data) -> UInt32 {
         var crc = UInt32.max
 
@@ -2745,6 +3068,28 @@ private struct SettingsSingleFileExportPicker: UIViewControllerRepresentable {
 }
 
 private extension Data {
+    func uint16LE(at offset: Int) throws -> UInt16 {
+        guard offset >= 0,
+              offset + MemoryLayout<UInt16>.size <= count else {
+            throw CocoaError(.fileReadCorruptFile)
+        }
+
+        return UInt16(self[offset]) |
+            (UInt16(self[offset + 1]) << 8)
+    }
+
+    func uint32LE(at offset: Int) throws -> UInt32 {
+        guard offset >= 0,
+              offset + MemoryLayout<UInt32>.size <= count else {
+            throw CocoaError(.fileReadCorruptFile)
+        }
+
+        return UInt32(self[offset]) |
+            (UInt32(self[offset + 1]) << 8) |
+            (UInt32(self[offset + 2]) << 16) |
+            (UInt32(self[offset + 3]) << 24)
+    }
+
     mutating func appendUInt16LE(_ value: UInt16) {
         var littleEndianValue = value.littleEndian
         append(Data(bytes: &littleEndianValue, count: MemoryLayout<UInt16>.size))
