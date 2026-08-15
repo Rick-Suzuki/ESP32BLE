@@ -148,6 +148,7 @@ struct SettingsScreen: View {
     @AppStorage("settingsStatusBarVisible") private var isStatusBarVisible = true
     @FocusState var focusedField: SettingsFocusField?
     @FocusState private var isDocumentNameFieldFocused: Bool
+    @State private var isCancellingDocumentNameFromOutsideTap = false
 
     var body: some View {
         configuredSettingsScreen
@@ -276,7 +277,14 @@ struct SettingsScreen: View {
 
     private var configuredSettingsScreen: some View {
         settingsScreenBase
-        .background(Color.black.ignoresSafeArea())
+        .background {
+            Color.black
+                .ignoresSafeArea()
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    handleSettingsBackgroundTap()
+                }
+        }
         .sheet(
             isPresented: Binding(
                 get: { singleFileExportURL != nil },
@@ -311,6 +319,9 @@ struct SettingsScreen: View {
             refreshDocumentFiles()
             loadSelectedDocumentText()
         }
+        .task {
+            await observeSettingsKeyboardHide()
+        }
         .onChange(of: documentFiles.map(\.path)) {
             loadSelectedDocumentText()
         }
@@ -325,7 +336,9 @@ struct SettingsScreen: View {
         }
         .onChange(of: isDocumentNameFieldFocused) {
             guard isEditingDocumentName, !isDocumentNameFieldFocused else { return }
-            cancelNameEditing()
+            if isCancellingDocumentNameFromOutsideTap {
+                cancelNameEditing()
+            }
         }
         .onChange(of: settingsModeEditResetKey) {
             cancelNameEditing()
@@ -1493,18 +1506,54 @@ struct SettingsScreen: View {
 
         if let alertMessage {
             renameAlertMessage = alertMessage
+            isCancellingDocumentNameFromOutsideTap = false
             return
         }
 
+        isCancellingDocumentNameFromOutsideTap = false
         documentNameDraft = currentTitleDisplayName
         isEditingDocumentName = false
         isDocumentNameFieldFocused = false
     }
 
     private func cancelNameEditing() {
+        isCancellingDocumentNameFromOutsideTap = false
         documentNameDraft = currentTitleDisplayName
         isEditingDocumentName = false
         isDocumentNameFieldFocused = false
+    }
+
+    private func handleSettingsBackgroundTap() {
+        if isEditingDocumentName {
+            isCancellingDocumentNameFromOutsideTap = true
+            isDocumentNameFieldFocused = false
+        }
+
+        focusedField = nil
+        isDocumentEditorFocused = false
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+    }
+
+    private func handleSettingsKeyboardWillHide() {
+        guard isEditingDocumentName else {
+            return
+        }
+
+        guard !isCancellingDocumentNameFromOutsideTap else {
+            return
+        }
+
+        commitNameEdit()
+    }
+
+    private func observeSettingsKeyboardHide() async {
+        let notificationCenter = NotificationCenter.default
+
+        for await _ in notificationCenter.notifications(named: UIResponder.keyboardWillHideNotification) {
+            await MainActor.run {
+                handleSettingsKeyboardWillHide()
+            }
+        }
     }
 
     private func createNewDocument() {

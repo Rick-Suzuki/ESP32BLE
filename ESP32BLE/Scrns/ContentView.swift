@@ -215,6 +215,7 @@ struct ContentView: View {
     @AppStorage("documentBackgroundImageOpacitiesData") private var documentBackgroundImageOpacitiesData = ""
     @AppStorage("documentGridDimensionsData") private var documentGridDimensionsData = ""
     @AppStorage("backgroundImageOpacity") private var backgroundImageOpacity = 0.5
+    @AppStorage("mainGridBackgroundOpacity") private var mainGridBackgroundOpacity = 1.0
     @StateObject private var ble = BLEKeyboardManager()
     @State private var functionKeys = ContentView.makeDefaultFunctionKeys()
     @State private var functionKeySlotLines = ContentView.defaultFunctionKeyTitles()
@@ -273,6 +274,14 @@ struct ContentView: View {
                             },
                             set: { newFontSize in
                                 updateDocumentFontSize(newFontSize)
+                            }
+                        ),
+                        mainGridBackgroundOpacity: Binding(
+                            get: {
+                                buttonsBackgroundOpacity(for: selectedDocumentName)
+                            },
+                            set: { newOpacity in
+                                updateButtonsBackgroundOpacity(newOpacity)
                             }
                         ),
                         currentFileNumber: currentFileNumber,
@@ -793,6 +802,24 @@ struct ContentView: View {
         documentFontSizeRefreshToken += 1
     }
 
+    private func buttonsBackgroundOpacity(for fileName: String) -> Double {
+        if fileName == selectedDocumentName,
+           let configOpacity = loadedScreenConfig?.buttonsBackgroundOpacity {
+            return configOpacity
+        }
+
+        return mainGridBackgroundOpacity
+    }
+
+    private func updateButtonsBackgroundOpacity(_ newOpacity: Double) {
+        let sanitizedOpacity = min(max(newOpacity, 0), 1)
+        mainGridBackgroundOpacity = sanitizedOpacity
+
+        updateScreenConfig(for: selectedDocumentName) { config in
+            config.buttonsBackgroundOpacity = sanitizedOpacity
+        }
+    }
+
     private func loadDocumentFontSizes() -> [String: Double] {
         guard let data = documentFontSizesData.data(using: .utf8),
               let decoded = try? JSONDecoder().decode([String: Double].self, from: data) else {
@@ -855,6 +882,7 @@ struct ContentView: View {
             for: trimmedDocumentName,
             defaultOpacity: fallbackConfig.backgroundOpacity
         )
+        let buttonsBackgroundOpacity = min(max(mainGridBackgroundOpacity, 0), 1)
 
         return ScreenConfig(
             schemaVersion: fallbackConfig.schemaVersion,
@@ -862,7 +890,7 @@ struct ContentView: View {
             grid: ScreenConfig.Grid(rows: gridDimensions.rows, columns: gridDimensions.columns),
             backgroundImageName: backgroundImageName,
             backgroundOpacity: backgroundOpacity,
-            buttonsBackgroundOpacity: fallbackConfig.buttonsBackgroundOpacity
+            buttonsBackgroundOpacity: buttonsBackgroundOpacity
         )
     }
 
@@ -2665,6 +2693,54 @@ struct ContentView: View {
         return index + 1
     }
 
+    @discardableResult
+    private func moveDocumentConfigIfPresent(from sourceDocumentURL: URL, to targetDocumentURL: URL) throws -> Bool {
+        let fileManager = FileManager.default
+        let sourceConfigURL = configURL(forDocumentURL: sourceDocumentURL)
+        guard fileManager.fileExists(atPath: sourceConfigURL.path) else {
+            return false
+        }
+
+        let targetConfigURL = configURL(forDocumentURL: targetDocumentURL)
+        if fileManager.fileExists(atPath: targetConfigURL.path) {
+            try fileManager.removeItem(at: targetConfigURL)
+        }
+
+        try fileManager.moveItem(at: sourceConfigURL, to: targetConfigURL)
+        return true
+    }
+
+    private func deleteDocumentConfigIfPresent(for documentURL: URL) throws {
+        let configFileURL = configURL(forDocumentURL: documentURL)
+        guard FileManager.default.fileExists(atPath: configFileURL.path) else {
+            return
+        }
+
+        try FileManager.default.removeItem(at: configFileURL)
+    }
+
+    private func copyDocumentConfigOrCreateDefault(from sourceDocumentURL: URL, to targetDocumentURL: URL) throws {
+        let fileManager = FileManager.default
+        let sourceConfigURL = configURL(forDocumentURL: sourceDocumentURL)
+        let targetConfigURL = configURL(forDocumentURL: targetDocumentURL)
+
+        if fileManager.fileExists(atPath: targetConfigURL.path) {
+            try fileManager.removeItem(at: targetConfigURL)
+        }
+
+        if fileManager.fileExists(atPath: sourceConfigURL.path) {
+            try fileManager.copyItem(at: sourceConfigURL, to: targetConfigURL)
+            return
+        }
+
+        let requiredBoxCount = requiredBoxCountForDocumentURL(targetDocumentURL)
+        let config = screenConfigFromAppStorageFallback(
+            for: targetDocumentURL.lastPathComponent,
+            requiredBoxCount: requiredBoxCount
+        )
+        _ = saveScreenConfig(config, for: targetDocumentURL)
+    }
+
     private func renameSelectedDocument(to proposedName: String) -> String? {
         let trimmedName = proposedName.trimmingCharacters(in: .whitespacesAndNewlines)
 
@@ -2700,11 +2776,21 @@ struct ContentView: View {
                 updatedGridDimensions[targetFileName] = existingGridDimensions
                 saveDocumentGridDimensions(updatedGridDimensions)
             }
-            try FileManager.default.moveItem(at: sourceURL, to: targetURL)
+            let didMoveConfig = try moveDocumentConfigIfPresent(from: sourceURL, to: targetURL)
+            do {
+                try FileManager.default.moveItem(at: sourceURL, to: targetURL)
+            } catch {
+                if didMoveConfig {
+                    _ = try? moveDocumentConfigIfPresent(from: targetURL, to: sourceURL)
+                }
+                throw error
+            }
             loadFunctionKeys(from: targetURL)
             refreshDocumentFiles()
+            db("STATE ContentView.renameSelectedDocument succeeded current selectedDocumentName=\(sourceURL.lastPathComponent) new=\(targetURL.lastPathComponent) thread=\(Thread.isMainThread ? "main" : "background")")
             return nil
         } catch {
+            db("ERROR ContentView.renameSelectedDocument failed current selectedDocumentName=\(selectedDocumentName) new=\(targetFileName) error=\(String(describing: error)) thread=\(Thread.isMainThread ? "main" : "background")")
             return "Couldn't rename the file."
         }
     }
@@ -2733,6 +2819,7 @@ struct ContentView: View {
 
         do {
             try FileManager.default.removeItem(at: fileURL)
+            try deleteDocumentConfigIfPresent(for: fileURL)
             var updatedFontSizes = loadDocumentFontSizes()
             updatedFontSizes.removeValue(forKey: fileURL.lastPathComponent)
             saveDocumentFontSizes(updatedFontSizes)
@@ -2775,6 +2862,7 @@ struct ContentView: View {
                 updatedGridDimensions[targetURL.lastPathComponent] = existingGridDimensions
                 saveDocumentGridDimensions(updatedGridDimensions)
             }
+            try copyDocumentConfigOrCreateDefault(from: fileURL, to: targetURL)
             refreshDocumentFiles()
             selectDocument(targetURL)
         } catch {

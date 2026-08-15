@@ -63,7 +63,7 @@
 		1D590E4F2F61206100E430E0 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		1D590E512F61206100E430E0 /* ESP32BLEApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ESP32BLEApp.swift; sourceTree = "<group>"; };
 		1D590E522F61206100E430E0 /* PhraseButtonsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhraseButtonsSection.swift; sourceTree = "<group>"; };
-		1D590E532F61206100E430E0 /* scratchpad.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = scratchpad.txt; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.swift; };
+		1D590E532F61206100E430E0 /* debug.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = debug.txt; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.swift; };
 		1D590E542F61206100E430E0 /* TestArea.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestArea.swift; sourceTree = "<group>"; };
 		1D9A8748302D3885005B5E36 /* codex.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = codex.txt; sourceTree = "<group>"; };
 		1D9E1CC82FC92DC600DB3621 /* KB_GridView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KB_GridView.swift; sourceTree = "<group>"; };
@@ -165,7 +165,7 @@
 		1D590E552F61206100E430E0 /* ESP32BLE */ = {
 			isa = PBXGroup;
 			children = (
-				1D590E532F61206100E430E0 /* scratchpad.txt */,
+				1D590E532F61206100E430E0 /* debug.txt */,
 				1D9A8748302D3885005B5E36 /* codex.txt */,
 				1D33C2D12F6145DC0098FD5C /* Info.plist */,
 				1D590E4A2F61206100E430E0 /* Assets.xcassets */,

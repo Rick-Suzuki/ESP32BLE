@@ -892,7 +892,6 @@ Tapping a row inserts the key code at the cursor.
     @AppStorage("selectedBackgroundImageName") var selectedBackgroundImageName = ""
     @AppStorage("selectedBackgroundImagePath") var selectedBackgroundImagePath = ""
     @AppStorage("backgroundImageOpacity") var backgroundImageOpacity = 0.5
-    @AppStorage("mainGridBackgroundOpacity") var mainGridBackgroundOpacity = 1.0
     @AppStorage("mainGridEditClipboardText") var mainGridEditClipboardText = ""
     @FocusState var isDocumentNameFieldFocused: Bool
     @FocusState var isSlotEditorFocused: Bool
@@ -902,6 +901,7 @@ Tapping a row inserts the key code at the cursor.
     let selectedDocumentName: String
     let selectedDocumentDisplayName: String
     @Binding var boxFontSize: Double
+    @Binding var mainGridBackgroundOpacity: Double
     let currentFileNumber: Int
     let totalFileCount: Int
     let definedFunctionKeyCount: Int

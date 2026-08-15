@@ -1,0 +1,60 @@
+Update the Info.plist: Support for all orientations will soon be required.
+									260815_1318_713 🐞ContentView.swift:presentInitialSettingsScreenIfNeeded():2646 ENTER ContentView.presentInitialSettingsScreenIfNeeded current isSettingsScreenPresented=true didPresentInitialSettingsScreen=false new=initialSettingsCheck thread=main
+									260815_1318_714 🐞ContentView.swift:presentInitialSettingsScreenIfNeeded():2652 STATE ContentView.presentInitialSettingsScreenIfNeeded current didPresentInitialSettingsScreen=false new=true thread=main
+									260815_1318_714 🐞ContentView.swift:presentInitialSettingsScreenIfNeeded():2654 STATE ContentView.presentInitialSettingsScreenIfNeeded current isSettingsScreenPresented=true new=true thread=main
+									260815_1318_714 🐞ContentView.swift:presentInitialSettingsScreenIfNeeded():2656 EXIT ContentView.presentInitialSettingsScreenIfNeeded current isSettingsScreenPresented=true didPresentInitialSettingsScreen=true new=initialSettingsPresented thread=main
+									260815_1318_729 🐞ContentView.swift:refreshDocumentFiles():553 STATE ContentView.refreshDocumentFiles current documentFiles.count=0 new=40 thread=main
+									260815_1318_729 🐞ContentView.swift:loadFunctionKeys(from:):653 ENTER ContentView.loadFunctionKeys current selectedDocumentName=nms_1.txt new=nms_1.txt thread=main
+									260815_1318_729 🐞ContentView.swift:applySlotLines(_:):701 STATE ContentView.applySlotLines current functionKeySlotLines.count=20 new=16 thread=main
+									260815_1318_730 🐞ContentView.swift:applySlotLines(_:):704 STATE ContentView.applySlotLines current functionKeys.count=400 new=400 thread=main
+									260815_1318_730 🐞ContentView.swift:applySlotLines(_:):706 STATE ContentView.applySlotLines current loadedFunctionKeySlotCount=20 new=16 thread=main
+									260815_1318_730 🐞ContentView.swift:loadFunctionKeys(from:):662 STATE ContentView.loadFunctionKeys current selectedDocumentName=nms_1.txt new=nms_1.txt thread=main
+									260815_1318_730 🐞ContentView.swift:loadFunctionKeys(from:):665 EXIT ContentView.loadFunctionKeys current selectedDocumentName=nms_1.txt new=nms_1.txt thread=main
+									260815_1318_738 🐞ContentView.swift:refreshDocumentFiles():553 STATE ContentView.refreshDocumentFiles current documentFiles.count=40 new=40 thread=main
+									260815_1318_744 🐞ContentView.swift:loadFunctionKeys(from:):653 ENTER ContentView.loadFunctionKeys current selectedDocumentName=nms_1.txt new=nms_1.txt thread=main
+									260815_1318_744 🐞ContentView.swift:applySlotLines(_:):701 STATE ContentView.applySlotLines current functionKeySlotLines.count=16 new=16 thread=main
+									260815_1318_744 🐞ContentView.swift:applySlotLines(_:):704 STATE ContentView.applySlotLines current functionKeys.count=400 new=400 thread=main
+									260815_1318_744 🐞ContentView.swift:applySlotLines(_:):706 STATE ContentView.applySlotLines current loadedFunctionKeySlotCount=16 new=16 thread=main
+									260815_1318_744 🐞ContentView.swift:loadFunctionKeys(from:):662 STATE ContentView.loadFunctionKeys current selectedDocumentName=nms_1.txt new=nms_1.txt thread=main
+									260815_1318_828 🐞ContentView.swift:loadFunctionKeys(from:):665 EXIT ContentView.loadFunctionKeys current selectedDocumentName=nms_1.txt new=nms_1.txt thread=main
+									260815_1318_829 🐞ContentView.swift:logDeviceTypeIfNeeded():426 isPad: iPad
+									260815_1318_829 🐞ContentView.swift:logOrientationStateIfNeeded():466 orientationState: horizontal
+									260815_1318_838 🐞ContentView.swift:refreshDocumentFiles():553 STATE ContentView.refreshDocumentFiles current documentFiles.count=40 new=40 thread=main
+									260815_1318_841 🐞Set_Screen.swift:observeSettingsKeyboardHide():1556 KEYBOARD_HIDE observeSettingsKeyboardHide started notification=keyboardWillHide thread=main
+									260815_1318_925 🐞ContentView.swift:launchedSettingsScreen:2634 DESTINATION SettingsScreen.onAppear current isSettingsScreenPresented=true new=true thread=main
+									260815_1318_925 🐞ContentView.swift:launchedSettingsScreen:2635 STATE ContentView.launchedSettingsScreen.onAppear current isSettingsScreenPresented=true new=true thread=main
+									260815_1318_934 🐞ContentView.swift:body:337 DESTINATION MainScreen.onAppear current isKeyboardScreenPresented=false isSettingsScreenPresented=true new=visible thread=main
+									260815_1318_934 🐞ContentView.swift:body:257 DESTINATION KeyboardScreen.onAppear current isKeyboardScreenPresented=false new=visible thread=main
+									Reading from public effective user settings.
+									UIKeyboardLayoutStar implements focusItemsInRect: - caching for linear focus movement is limited as long as this view is on screen.
+									Reporter disconnected. { function=sendMessage, reporterID=44495861186562 }
+Reporter disconnected. { function=sendMessage, reporterID=44495861186562 }
+Reporter disconnected. { function=sendMessage, reporterID=44495861186562 }
+Reporter disconnected. { function=sendMessage, reporterID=44495861186562 }
+Reporter disconnected. { function=sendMessage, reporterID=44495861186562 }
+Reporter disconnected. { function=sendMessage, reporterID=44495861186562 }
+Reporter disconnected. { function=sendMessage, reporterID=44495861186562 }
+Reporter disconnected. { function=sendMessage, reporterID=44495861186562 }
+Reporter disconnected. { function=sendMessage, reporterID=44495861186562 }
+260815_1319_503 🐞BLE_KB_Manager.swift:centralManager(_:didConnect:):314 Probe-connected to B2D020B6-17A6-E4F9-84F9-CE3D30A7A795
+260815_1319_072 🐞BLE_KB_Manager.swift:peripheral(_:didUpdateValueFor:error:):425 Device ID read: 2 for B2D020B6-17A6-E4F9-84F9-CE3D30A7A795
+																											-[RTIInputSystemClient remoteTextInputSessionWithID:performInputOperation:]  perform input operation requires a valid sessionID. inputModality = Keyboard, inputOperation = <null selector>, customInfoType = UIEmojiSearchOperations
+																											260815_1319_305 🐞ContentView.swift:loadFunctionKeys(from:):653 ENTER ContentView.loadFunctionKeys current selectedDocumentName=nms_1.txt new=nms_1abcd.txt thread=main
+																											260815_1319_306 🐞ContentView.swift:applySlotLines(_:):701 STATE ContentView.applySlotLines current functionKeySlotLines.count=16 new=16 thread=main
+																											260815_1319_306 🐞ContentView.swift:applySlotLines(_:):704 STATE ContentView.applySlotLines current functionKeys.count=400 new=400 thread=main
+																											260815_1319_306 🐞ContentView.swift:applySlotLines(_:):706 STATE ContentView.applySlotLines current loadedFunctionKeySlotCount=16 new=16 thread=main
+																											260815_1319_306 🐞ContentView.swift:loadFunctionKeys(from:):662 STATE ContentView.loadFunctionKeys current selectedDocumentName=nms_1.txt new=nms_1abcd.txt thread=main
+																											260815_1319_314 🐞ContentView.swift:loadFunctionKeys(from:):665 EXIT ContentView.loadFunctionKeys current selectedDocumentName=nms_1abcd.txt new=nms_1abcd.txt thread=main
+																											260815_1319_320 🐞ContentView.swift:refreshDocumentFiles():553 STATE ContentView.refreshDocumentFiles current documentFiles.count=40 new=40 thread=main
+																											260815_1319_321 🐞ContentView.swift:renameSelectedDocument(to:):2790 STATE ContentView.renameSelectedDocument succeeded current selectedDocumentName=nms_1.txt new=nms_1abcd.txt thread=main
+																											260815_1319_410 🐞ContentView.swift:body:414 STATE ContentView.onChange selectedDocumentName current=nms_1.txt new=nms_1abcd.txt thread=main
+																											260815_1319_417 🐞Main_Screen.swift:resetSmartScriptEditingModel():1765 resetSmartScriptEditingModel
+																											260815_1319_516 🐞Set_Screen.swift:observeSettingsKeyboardHide():1560 KEYBOARD_HIDE notification received name=UIKeyboardWillHideNotification thread=main
+																											260815_1319_516 🐞Set_Screen.swift:handleSettingsKeyboardWillHide():1539 KEYBOARD_HIDE handleSettingsKeyboardWillHide state isEditingDocumentName=false isDocumentNameFieldFocused=false isCancellingDocumentNameFromOutsideTap=false draft=nms_1abcd thread=main
+																											260815_1319_516 🐞Set_Screen.swift:handleSettingsKeyboardWillHide():1541 KEYBOARD_HIDE skip commit reason=not editing or title field not focused thread=main
+																											-[RTIInputSystemClient remoteTextInputSessionWithID:performInputOperation:]  perform input operation requires a valid sessionID. inputModality = Keyboard, inputOperation = <null selector>, customInfoType = UIEmojiSearchOperations
+																											-[RTIInputSystemClient remoteTextInputSessionWithID:performInputOperation:]  perform input operation requires a valid sessionID. inputModality = Keyboard, inputOperation = <null selector>, customInfoType = UIEmojiSearchOperations
+																											-[RTIInputSystemClient remoteTextInputSessionWithID:performInputOperation:]  perform input operation requires a valid sessionID. inputModality = Keyboard, inputOperation = <null selector>, customInfoType = UIEmojiSearchOperations
+																											260815_1319_973 🐞Set_Screen.swift:observeSettingsKeyboardHide():1560 KEYBOARD_HIDE notification received name=UIKeyboardWillHideNotification thread=main
+																											260815_1319_973 🐞Set_Screen.swift:handleSettingsKeyboardWillHide():1539 KEYBOARD_HIDE handleSettingsKeyboardWillHide state isEditingDocumentName=false isDocumentNameFieldFocused=false isCancellingDocumentNameFromOutsideTap=false draft=nms_1abcd thread=main
+																											260815_1319_973 🐞Set_Screen.swift:handleSettingsKeyboardWillHide():1541 KEYBOARD_HIDE skip commit reason=not editing or title field not focused thread=main
