@@ -227,7 +227,7 @@ struct ContentView: View {
     @State private var isRestoringBackgroundImageSelection = false
     @State private var documentNavigationHistory: [String] = []
     @State private var documentForwardNavigationHistory: [String] = []
-    @AppStorage("selectedDocumentName") private var selectedDocumentName = "fnkeys.txt"
+    @AppStorage("selectedDocumentName") private var selectedDocumentName = screenDocumentFileName(forBaseName: "fnkeys")
     @AppStorage("documentFontSizesData") private var documentFontSizesData = ""
     @State private var documentFontSizeRefreshToken = 0
     @State private var settingsBLEText = ""
@@ -498,9 +498,11 @@ struct ContentView: View {
             return
         }
 
-        let fileURL = documentsDirectoryURL.appendingPathComponent("fnkeys.txt")
+        let fileURL = documentsDirectoryURL.appendingPathComponent(screenDocumentFileName(forBaseName: "fnkeys"))
+        let legacyFileURL = documentsDirectoryURL.appendingPathComponent("fnkeys.\(legacyScreenDocumentFileExtension)")
 
-        if !FileManager.default.fileExists(atPath: fileURL.path) {
+        if !FileManager.default.fileExists(atPath: fileURL.path),
+           !FileManager.default.fileExists(atPath: legacyFileURL.path) {
             let defaultContents = Self.defaultFunctionKeyTitles().joined(separator: "\n")
 
             do {
@@ -543,12 +545,12 @@ struct ContentView: View {
                 options: [.skipsHiddenFiles]
             )
 
-            let updatedDocumentFiles = urls
-                .filter { url in
+            let updatedDocumentFiles = preferredScreenDocumentURLs(
+                from: urls.filter { url in
                     let values = try? url.resourceValues(forKeys: [URLResourceKey.isRegularFileKey])
-                    return values?.isRegularFile == true && url.pathExtension.lowercased() == "txt"
+                    return values?.isRegularFile == true
                 }
-                .sorted { $0.lastPathComponent.localizedCaseInsensitiveCompare($1.lastPathComponent) == .orderedAscending }
+            )
             ensureScreenConfigFilesFromAppStorageFallback(for: updatedDocumentFiles)
             db("STATE ContentView.refreshDocumentFiles current documentFiles.count=\(documentFiles.count) new=\(updatedDocumentFiles.count) thread=\(Thread.isMainThread ? "main" : "background")")
             documentFiles = updatedDocumentFiles
@@ -636,7 +638,7 @@ struct ContentView: View {
     private func selectInitialDocument() {
         guard !documentFiles.isEmpty else {
             functionKeys = defaultFunctionKeys()
-            selectedDocumentName = "fnkeys.txt"
+            selectedDocumentName = screenDocumentFileName(forBaseName: "fnkeys")
             loadedFunctionKeySlotCount = defaultNamedFunctionKeyCount
             return
         }
@@ -727,6 +729,13 @@ struct ContentView: View {
 
     private func documentURL(forDocumentName documentName: String) -> URL? {
         if let matchingURL = documentFiles.first(where: { $0.lastPathComponent == documentName }) {
+            return matchingURL
+        }
+
+        if isScreenDocumentFileName(documentName),
+           let matchingURL = documentFiles.first(where: {
+               screenDocumentBaseKey(for: $0.lastPathComponent) == screenDocumentBaseKey(for: documentName)
+           }) {
             return matchingURL
         }
 
@@ -2585,19 +2594,47 @@ struct ContentView: View {
     private func canonicalDocumentFileName(from rawName: String) -> String {
         let trimmedName = rawName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedName.isEmpty else { return trimmedName }
-        return trimmedName.lowercased().hasSuffix(".txt") ? trimmedName : "\(trimmedName).txt"
+        let pathExtension = URL(fileURLWithPath: trimmedName).pathExtension.lowercased()
+        if pathExtension == screenDocumentFileExtension || pathExtension == legacyScreenDocumentFileExtension {
+            return trimmedName
+        }
+
+        return "\(trimmedName).\(legacyScreenDocumentFileExtension)"
     }
 
     @discardableResult
     private func selectDocumentNamedFromGrid(_ rawName: String) -> Bool {
         let targetFileName = canonicalDocumentFileName(from: rawName)
         db("ENTER ContentView.selectDocumentNamedFromGrid rawName=\(rawName) current selectedDocumentName=\(selectedDocumentName) new=\(targetFileName) documentFiles.count=\(documentFiles.count) thread=\(Thread.isMainThread ? "main" : "background")")
-        guard !targetFileName.isEmpty,
-              let fileURL = documentFiles.first(where: {
-                  $0.lastPathComponent.caseInsensitiveCompare(targetFileName) == .orderedSame
-              }) else {
+        guard !targetFileName.isEmpty else {
             db("EXIT ContentView.selectDocumentNamedFromGrid failed rawName=\(rawName) current selectedDocumentName=\(selectedDocumentName) new=\(targetFileName) thread=\(Thread.isMainThread ? "main" : "background")")
             return false
+        }
+
+        let exactFileURL = documentFiles.first(where: {
+            $0.lastPathComponent.caseInsensitiveCompare(targetFileName) == .orderedSame
+        })
+        let fallbackScreenURL: URL?
+        if exactFileURL == nil,
+           URL(fileURLWithPath: targetFileName).pathExtension.lowercased() == legacyScreenDocumentFileExtension {
+            fallbackScreenURL = documentFiles.first(where: {
+                $0.pathExtension.lowercased() == screenDocumentFileExtension &&
+                    screenDocumentBaseKey(for: $0.lastPathComponent) == screenDocumentBaseKey(for: targetFileName)
+            })
+        } else {
+            fallbackScreenURL = nil
+        }
+
+        let fileURL = exactFileURL ?? fallbackScreenURL
+
+        guard let fileURL else {
+            db("EXIT ContentView.selectDocumentNamedFromGrid failed rawName=\(rawName) current selectedDocumentName=\(selectedDocumentName) new=\(targetFileName) thread=\(Thread.isMainThread ? "main" : "background")")
+            return false
+        }
+
+        if exactFileURL == nil,
+           let fallbackScreenURL {
+            db("SCREEN_NAV_RESOLVE requested=\(targetFileName) resolved=\(fallbackScreenURL.lastPathComponent)")
         }
 
         selectDocument(fileURL, recordHistory: true)
@@ -2702,6 +2739,10 @@ struct ContentView: View {
         }
 
         let targetConfigURL = configURL(forDocumentURL: targetDocumentURL)
+        guard sourceConfigURL.path != targetConfigURL.path else {
+            return true
+        }
+
         if fileManager.fileExists(atPath: targetConfigURL.path) {
             try fileManager.removeItem(at: targetConfigURL)
         }
@@ -2748,7 +2789,7 @@ struct ContentView: View {
             return "Filename can't be blank."
         }
 
-        let targetFileName = "\(trimmedName).txt"
+        let targetFileName = screenDocumentFileName(forBaseName: trimmedName)
 
         if targetFileName.caseInsensitiveCompare(selectedDocumentName) == .orderedSame {
             return nil
@@ -2840,7 +2881,7 @@ struct ContentView: View {
 
     private func duplicateDocument(_ fileURL: URL) {
         let directoryURL = fileURL.deletingLastPathComponent()
-        let fileExtension = fileURL.pathExtension
+        let fileExtension = screenDocumentFileExtension
         let baseName = fileURL.deletingPathExtension().lastPathComponent
 
         var index = 1

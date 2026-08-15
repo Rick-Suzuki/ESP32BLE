@@ -35,6 +35,7 @@ struct SettingsDocumentTableSection: View {
     let deleteSound: (URL) -> Void
     let selectPDF: (URL) -> Void
     let deletePDF: (URL) -> Void
+    let deleteAllFile: (URL) -> Void
 
 	// set table font size for iphone
     private var tableRowFont: Font? {
@@ -305,5 +306,12 @@ struct SettingsDocumentTableSection: View {
         .listRowInsets(EdgeInsets())
         .listRowSeparator(.hidden)
         .listRowBackground(Color.clear)
+        .swipeActions(edge: .leading, allowsFullSwipe: false) {
+            Button(role: .destructive) {
+                deleteAllFile(fileURL)
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
+        }
     }
 }

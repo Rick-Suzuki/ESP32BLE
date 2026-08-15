@@ -506,8 +506,8 @@ struct SettingsScreen: View {
         switch pendingImportListMode {
         case .files:
             return developerMode
-                ? [plainTextImportType, zipImportType, screenConfigImportType]
-                : [plainTextImportType, zipImportType]
+                ? [screenDocumentImportType, plainTextImportType, zipImportType, screenConfigImportType]
+                : [screenDocumentImportType, plainTextImportType, zipImportType]
         case .images:
             return [.image]
         case .sounds:
@@ -828,7 +828,8 @@ struct SettingsScreen: View {
             selectSound: selectSound,
             deleteSound: deleteSound,
             selectPDF: selectPDF,
-            deletePDF: deletePDF
+            deletePDF: deletePDF,
+            deleteAllFile: deleteAllFile
         )
         .id(importRefreshID)
     }
@@ -1349,12 +1350,12 @@ struct SettingsScreen: View {
             options: [.skipsHiddenFiles]
         )) ?? []
 
-        return urls
-            .filter { url in
+        return preferredScreenDocumentURLs(
+            from: urls.filter { url in
                 let values = try? url.resourceValues(forKeys: [.isRegularFileKey])
-                return values?.isRegularFile == true && url.pathExtension.lowercased() == "txt"
+                return values?.isRegularFile == true
             }
-            .sorted { $0.lastPathComponent.localizedCaseInsensitiveCompare($1.lastPathComponent) == .orderedAscending }
+        )
     }
 
     private var selectedDocumentDisplayName: String {
@@ -1668,7 +1669,7 @@ struct SettingsScreen: View {
         let configData: Data
 
         if let selectedDocumentFileURL,
-           selectedDocumentFileURL.pathExtension.lowercased() == "txt" {
+           isScreenDocumentURL(selectedDocumentFileURL) {
             documentFileName = selectedDocumentFileURL.lastPathComponent
             documentData = try Data(contentsOf: selectedDocumentFileURL)
             configData = try screenPackageConfigData(
@@ -1676,7 +1677,7 @@ struct SettingsScreen: View {
                 documentFileName: documentFileName
             )
         } else {
-            documentFileName = "\(singleFileExportDisplayName).txt"
+            documentFileName = screenDocumentFileName(forBaseName: singleFileExportDisplayName)
             documentData = Data(documentEditorText.utf8)
             configData = try defaultScreenPackageConfigData(
                 forDocumentName: documentFileName,
@@ -1934,8 +1935,43 @@ struct SettingsScreen: View {
         }
     }
 
+    private func deleteAllFile(_ fileURL: URL) {
+        let fileExtension = fileURL.pathExtension.lowercased()
+
+        if isScreenDocumentURL(fileURL) {
+            deleteDocument(fileURL)
+            return
+        }
+
+        if supportedImportedImageExtensions.contains(fileExtension) {
+            deleteImage(fileURL)
+            return
+        }
+
+        if supportedImportedSoundExtensions.contains(fileExtension) {
+            deleteSound(fileURL)
+            return
+        }
+
+        if supportedImportedPDFExtensions.contains(fileExtension) {
+            deletePDF(fileURL)
+            return
+        }
+
+        do {
+            try FileManager.default.removeItem(at: fileURL)
+            markImportedContentChanged()
+        } catch {
+            renameAlertMessage = "Couldn't delete the file."
+        }
+    }
+
     private var plainTextImportType: UTType {
         UTType(filenameExtension: "txt") ?? .plainText
+    }
+
+    private var screenDocumentImportType: UTType {
+        UTType(filenameExtension: screenDocumentFileExtension) ?? .data
     }
 
     private var zipImportType: UTType {
@@ -2004,7 +2040,7 @@ struct SettingsScreen: View {
                 continue
             }
 
-            if pathExtension == "txt" {
+            if isScreenDocumentFileExtension(pathExtension) {
                 if session.existingFileNames.contains(targetFileNameKey) ||
                     FileManager.default.fileExists(atPath: targetURL.path) {
                     pendingImportSession = session
@@ -2260,7 +2296,7 @@ struct SettingsScreen: View {
                 return false
             }
 
-            return URL(fileURLWithPath: fileName).pathExtension.lowercased() == "txt"
+            return isScreenDocumentFileExtension(URL(fileURLWithPath: fileName).pathExtension)
         }),
               let documentFileName = sanitizedArchiveFileName(documentEntry.fileName) else {
             throw CocoaError(.fileReadCorruptFile)
@@ -2401,8 +2437,8 @@ struct SettingsScreen: View {
         var duplicateFileNames: [String] = []
 
         for sourceURL in urls {
-            guard sourceURL.pathExtension.lowercased() == "txt" else {
-                renameAlertMessage = "Only .txt files can be imported."
+            guard isScreenDocumentURL(sourceURL) else {
+                renameAlertMessage = "Only screen document files can be imported."
                 return
             }
 
@@ -2558,7 +2594,7 @@ struct SettingsScreen: View {
             return nil
         }
 
-        let fileExtension = "txt"
+        let fileExtension = screenDocumentFileExtension
         var candidateName = "new.\(fileExtension)"
         var suffix = 0
 
@@ -2673,7 +2709,7 @@ struct SettingsScreen: View {
             return textFiles
         }
 
-        if let selectedDocumentFileURL, selectedDocumentFileURL.pathExtension.lowercased() == "txt" {
+        if let selectedDocumentFileURL, isScreenDocumentURL(selectedDocumentFileURL) {
             return [selectedDocumentFileURL]
         }
 

@@ -154,6 +154,14 @@ extension MainScreen {
         let targetSpokenFilename = targetSpokenFilenameForGridEntry(entry)
         let targetSpokenText = targetSpokenTextForGridEntry(entry)
         let targetShortcutURL = targetShortcutURLForGridEntry(entry)
+        db("SCREEN_LINK_TRACE button rawLine=\(entry.rawLine) sendTexts=\(entry.sendTexts) parsedTargetDocument=\(targetDocumentName ?? "nil") targetPreview=\(targetPreviewFilename ?? "nil")")
+        if targetDocumentName != nil {
+            db("SCREEN_LINK_TRACE classification=screen navigation")
+        } else if targetPreviewFilename != nil {
+            db("SCREEN_LINK_TRACE classification=text/file command")
+        } else {
+            db("SCREEN_LINK_TRACE classification=other")
+        }
         let hasPostBluetoothChainCommand = targetSoundFilename != nil ||
             targetSpokenText != nil ||
             targetSpokenFilename != nil ||
@@ -244,7 +252,10 @@ extension MainScreen {
         )
 
         if let targetDocumentName {
-            guard selectDocumentNamedFromGrid(targetDocumentName) else {
+            db("SCREEN_LINK_TRACE will call selectDocumentNamedFromGrid target=\(targetDocumentName)")
+            let didSelectDocument = selectDocumentNamedFromGrid(targetDocumentName)
+            db("SCREEN_LINK_TRACE selectDocumentNamedFromGrid result=\(didSelectDocument) target=\(targetDocumentName)")
+            guard didSelectDocument else {
                 alertTitle = "File Not Found"
                 renameAlertMessage = "Couldn't find \(targetDocumentName.lowercased())."
                 return
@@ -399,7 +410,11 @@ extension MainScreen {
             }
 
             if let targetDocumentName = targetDocumentNameForSendText(trimmedActionToken) {
-                guard selectDocumentNamedFromGrid(targetDocumentName) else {
+                db("SCREEN_LINK_TRACE waitChain classification=screen navigation rawToken=\(trimmedActionToken) parsedTarget=\(targetDocumentName)")
+                db("SCREEN_LINK_TRACE waitChain will call selectDocumentNamedFromGrid target=\(targetDocumentName)")
+                let didSelectDocument = selectDocumentNamedFromGrid(targetDocumentName)
+                db("SCREEN_LINK_TRACE waitChain selectDocumentNamedFromGrid result=\(didSelectDocument) target=\(targetDocumentName)")
+                guard didSelectDocument else {
                     alertTitle = "File Not Found"
                     renameAlertMessage = "Couldn't find \(targetDocumentName.lowercased())."
                     return
@@ -672,7 +687,9 @@ extension MainScreen {
     }
 
     func targetDocumentNameForGridEntry(_ entry: FunctionKeyEntry) -> String? {
-        entry.sendTexts.first(where: { targetDocumentNameForSendText($0) != nil })
+        let target = entry.sendTexts.first(where: { targetDocumentNameForSendText($0) != nil })
+        db("SCREEN_LINK_TRACE targetDocumentNameForGridEntry rawSendTexts=\(entry.sendTexts) selectedTarget=\(target ?? "nil")")
+        return target
     }
 
     func targetBackDocumentCommandForGridEntry(_ entry: FunctionKeyEntry) -> Bool {
@@ -714,24 +731,53 @@ extension MainScreen {
     func targetDocumentNameForSendText(_ sendText: String) -> String? {
         let trimmedSendText = sendText.trimmingCharacters(in: .whitespacesAndNewlines)
         let loweredSendText = trimmedSendText.lowercased()
+        let isScreenLinkTraceCandidate = loweredSendText == "home" ||
+            loweredSendText.hasSuffix(".\(legacyScreenDocumentFileExtension)") ||
+            loweredSendText.hasSuffix(".\(screenDocumentFileExtension)")
+        if isScreenLinkTraceCandidate {
+            db("SCREEN_LINK_TRACE targetDocumentNameForSendText raw=\(sendText) trimmed=\(trimmedSendText)")
+        }
         guard !loweredSendText.hasPrefix("spk ") else {
+            if isScreenLinkTraceCandidate {
+                db("SCREEN_LINK_TRACE parsedTarget=nil classification=other reason=spk_command")
+            }
             return nil
         }
         guard !isWaitCommandText(loweredSendText) else {
+            if isScreenLinkTraceCandidate {
+                db("SCREEN_LINK_TRACE parsedTarget=nil classification=other reason=wait_command")
+            }
             return nil
         }
         guard !isShortcutCommandText(loweredSendText) else {
+            if isScreenLinkTraceCandidate {
+                db("SCREEN_LINK_TRACE parsedTarget=nil classification=other reason=shortcut_command")
+            }
             return nil
         }
         guard !loweredSendText.hasPrefix("file ") else {
+            if isScreenLinkTraceCandidate {
+                db("SCREEN_LINK_TRACE parsedTarget=nil classification=text/file command reason=file_prefix")
+            }
             return nil
         }
 
         if loweredSendText == "home" {
+            db("SCREEN_LINK_TRACE parsedTarget=home.txt classification=screen navigation")
             return "home.txt"
         }
 
-        return loweredSendText.hasSuffix(".txt") ? trimmedSendText : nil
+        if loweredSendText.hasSuffix(".\(legacyScreenDocumentFileExtension)") {
+            db("SCREEN_LINK_TRACE parsedTarget=\(trimmedSendText) classification=screen navigation")
+            return trimmedSendText
+        }
+
+        if loweredSendText.hasSuffix(".\(screenDocumentFileExtension)") {
+            db("SCREEN_LINK_RESOLVE requested=\(trimmedSendText) classification=screen navigation")
+            return trimmedSendText
+        }
+
+        return nil
     }
 
     func targetURLForGridEntry(_ entry: FunctionKeyEntry) -> URL? {

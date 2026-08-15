@@ -1,60 +1,234 @@
 Update the Info.plist: Support for all orientations will soon be required.
-									260815_1318_713 🐞ContentView.swift:presentInitialSettingsScreenIfNeeded():2646 ENTER ContentView.presentInitialSettingsScreenIfNeeded current isSettingsScreenPresented=true didPresentInitialSettingsScreen=false new=initialSettingsCheck thread=main
-									260815_1318_714 🐞ContentView.swift:presentInitialSettingsScreenIfNeeded():2652 STATE ContentView.presentInitialSettingsScreenIfNeeded current didPresentInitialSettingsScreen=false new=true thread=main
-									260815_1318_714 🐞ContentView.swift:presentInitialSettingsScreenIfNeeded():2654 STATE ContentView.presentInitialSettingsScreenIfNeeded current isSettingsScreenPresented=true new=true thread=main
-									260815_1318_714 🐞ContentView.swift:presentInitialSettingsScreenIfNeeded():2656 EXIT ContentView.presentInitialSettingsScreenIfNeeded current isSettingsScreenPresented=true didPresentInitialSettingsScreen=true new=initialSettingsPresented thread=main
-									260815_1318_729 🐞ContentView.swift:refreshDocumentFiles():553 STATE ContentView.refreshDocumentFiles current documentFiles.count=0 new=40 thread=main
-									260815_1318_729 🐞ContentView.swift:loadFunctionKeys(from:):653 ENTER ContentView.loadFunctionKeys current selectedDocumentName=nms_1.txt new=nms_1.txt thread=main
-									260815_1318_729 🐞ContentView.swift:applySlotLines(_:):701 STATE ContentView.applySlotLines current functionKeySlotLines.count=20 new=16 thread=main
-									260815_1318_730 🐞ContentView.swift:applySlotLines(_:):704 STATE ContentView.applySlotLines current functionKeys.count=400 new=400 thread=main
-									260815_1318_730 🐞ContentView.swift:applySlotLines(_:):706 STATE ContentView.applySlotLines current loadedFunctionKeySlotCount=20 new=16 thread=main
-									260815_1318_730 🐞ContentView.swift:loadFunctionKeys(from:):662 STATE ContentView.loadFunctionKeys current selectedDocumentName=nms_1.txt new=nms_1.txt thread=main
-									260815_1318_730 🐞ContentView.swift:loadFunctionKeys(from:):665 EXIT ContentView.loadFunctionKeys current selectedDocumentName=nms_1.txt new=nms_1.txt thread=main
-									260815_1318_738 🐞ContentView.swift:refreshDocumentFiles():553 STATE ContentView.refreshDocumentFiles current documentFiles.count=40 new=40 thread=main
-									260815_1318_744 🐞ContentView.swift:loadFunctionKeys(from:):653 ENTER ContentView.loadFunctionKeys current selectedDocumentName=nms_1.txt new=nms_1.txt thread=main
-									260815_1318_744 🐞ContentView.swift:applySlotLines(_:):701 STATE ContentView.applySlotLines current functionKeySlotLines.count=16 new=16 thread=main
-									260815_1318_744 🐞ContentView.swift:applySlotLines(_:):704 STATE ContentView.applySlotLines current functionKeys.count=400 new=400 thread=main
-									260815_1318_744 🐞ContentView.swift:applySlotLines(_:):706 STATE ContentView.applySlotLines current loadedFunctionKeySlotCount=16 new=16 thread=main
-									260815_1318_744 🐞ContentView.swift:loadFunctionKeys(from:):662 STATE ContentView.loadFunctionKeys current selectedDocumentName=nms_1.txt new=nms_1.txt thread=main
-									260815_1318_828 🐞ContentView.swift:loadFunctionKeys(from:):665 EXIT ContentView.loadFunctionKeys current selectedDocumentName=nms_1.txt new=nms_1.txt thread=main
-									260815_1318_829 🐞ContentView.swift:logDeviceTypeIfNeeded():426 isPad: iPad
-									260815_1318_829 🐞ContentView.swift:logOrientationStateIfNeeded():466 orientationState: horizontal
-									260815_1318_838 🐞ContentView.swift:refreshDocumentFiles():553 STATE ContentView.refreshDocumentFiles current documentFiles.count=40 new=40 thread=main
-									260815_1318_841 🐞Set_Screen.swift:observeSettingsKeyboardHide():1556 KEYBOARD_HIDE observeSettingsKeyboardHide started notification=keyboardWillHide thread=main
-									260815_1318_925 🐞ContentView.swift:launchedSettingsScreen:2634 DESTINATION SettingsScreen.onAppear current isSettingsScreenPresented=true new=true thread=main
-									260815_1318_925 🐞ContentView.swift:launchedSettingsScreen:2635 STATE ContentView.launchedSettingsScreen.onAppear current isSettingsScreenPresented=true new=true thread=main
-									260815_1318_934 🐞ContentView.swift:body:337 DESTINATION MainScreen.onAppear current isKeyboardScreenPresented=false isSettingsScreenPresented=true new=visible thread=main
-									260815_1318_934 🐞ContentView.swift:body:257 DESTINATION KeyboardScreen.onAppear current isKeyboardScreenPresented=false new=visible thread=main
-									Reading from public effective user settings.
-									UIKeyboardLayoutStar implements focusItemsInRect: - caching for linear focus movement is limited as long as this view is on screen.
-									Reporter disconnected. { function=sendMessage, reporterID=44495861186562 }
-Reporter disconnected. { function=sendMessage, reporterID=44495861186562 }
-Reporter disconnected. { function=sendMessage, reporterID=44495861186562 }
-Reporter disconnected. { function=sendMessage, reporterID=44495861186562 }
-Reporter disconnected. { function=sendMessage, reporterID=44495861186562 }
-Reporter disconnected. { function=sendMessage, reporterID=44495861186562 }
-Reporter disconnected. { function=sendMessage, reporterID=44495861186562 }
-Reporter disconnected. { function=sendMessage, reporterID=44495861186562 }
-Reporter disconnected. { function=sendMessage, reporterID=44495861186562 }
-260815_1319_503 🐞BLE_KB_Manager.swift:centralManager(_:didConnect:):314 Probe-connected to B2D020B6-17A6-E4F9-84F9-CE3D30A7A795
-260815_1319_072 🐞BLE_KB_Manager.swift:peripheral(_:didUpdateValueFor:error:):425 Device ID read: 2 for B2D020B6-17A6-E4F9-84F9-CE3D30A7A795
-																											-[RTIInputSystemClient remoteTextInputSessionWithID:performInputOperation:]  perform input operation requires a valid sessionID. inputModality = Keyboard, inputOperation = <null selector>, customInfoType = UIEmojiSearchOperations
-																											260815_1319_305 🐞ContentView.swift:loadFunctionKeys(from:):653 ENTER ContentView.loadFunctionKeys current selectedDocumentName=nms_1.txt new=nms_1abcd.txt thread=main
-																											260815_1319_306 🐞ContentView.swift:applySlotLines(_:):701 STATE ContentView.applySlotLines current functionKeySlotLines.count=16 new=16 thread=main
-																											260815_1319_306 🐞ContentView.swift:applySlotLines(_:):704 STATE ContentView.applySlotLines current functionKeys.count=400 new=400 thread=main
-																											260815_1319_306 🐞ContentView.swift:applySlotLines(_:):706 STATE ContentView.applySlotLines current loadedFunctionKeySlotCount=16 new=16 thread=main
-																											260815_1319_306 🐞ContentView.swift:loadFunctionKeys(from:):662 STATE ContentView.loadFunctionKeys current selectedDocumentName=nms_1.txt new=nms_1abcd.txt thread=main
-																											260815_1319_314 🐞ContentView.swift:loadFunctionKeys(from:):665 EXIT ContentView.loadFunctionKeys current selectedDocumentName=nms_1abcd.txt new=nms_1abcd.txt thread=main
-																											260815_1319_320 🐞ContentView.swift:refreshDocumentFiles():553 STATE ContentView.refreshDocumentFiles current documentFiles.count=40 new=40 thread=main
-																											260815_1319_321 🐞ContentView.swift:renameSelectedDocument(to:):2790 STATE ContentView.renameSelectedDocument succeeded current selectedDocumentName=nms_1.txt new=nms_1abcd.txt thread=main
-																											260815_1319_410 🐞ContentView.swift:body:414 STATE ContentView.onChange selectedDocumentName current=nms_1.txt new=nms_1abcd.txt thread=main
-																											260815_1319_417 🐞Main_Screen.swift:resetSmartScriptEditingModel():1765 resetSmartScriptEditingModel
-																											260815_1319_516 🐞Set_Screen.swift:observeSettingsKeyboardHide():1560 KEYBOARD_HIDE notification received name=UIKeyboardWillHideNotification thread=main
-																											260815_1319_516 🐞Set_Screen.swift:handleSettingsKeyboardWillHide():1539 KEYBOARD_HIDE handleSettingsKeyboardWillHide state isEditingDocumentName=false isDocumentNameFieldFocused=false isCancellingDocumentNameFromOutsideTap=false draft=nms_1abcd thread=main
-																											260815_1319_516 🐞Set_Screen.swift:handleSettingsKeyboardWillHide():1541 KEYBOARD_HIDE skip commit reason=not editing or title field not focused thread=main
-																											-[RTIInputSystemClient remoteTextInputSessionWithID:performInputOperation:]  perform input operation requires a valid sessionID. inputModality = Keyboard, inputOperation = <null selector>, customInfoType = UIEmojiSearchOperations
-																											-[RTIInputSystemClient remoteTextInputSessionWithID:performInputOperation:]  perform input operation requires a valid sessionID. inputModality = Keyboard, inputOperation = <null selector>, customInfoType = UIEmojiSearchOperations
-																											-[RTIInputSystemClient remoteTextInputSessionWithID:performInputOperation:]  perform input operation requires a valid sessionID. inputModality = Keyboard, inputOperation = <null selector>, customInfoType = UIEmojiSearchOperations
-																											260815_1319_973 🐞Set_Screen.swift:observeSettingsKeyboardHide():1560 KEYBOARD_HIDE notification received name=UIKeyboardWillHideNotification thread=main
-																											260815_1319_973 🐞Set_Screen.swift:handleSettingsKeyboardWillHide():1539 KEYBOARD_HIDE handleSettingsKeyboardWillHide state isEditingDocumentName=false isDocumentNameFieldFocused=false isCancellingDocumentNameFromOutsideTap=false draft=nms_1abcd thread=main
-																											260815_1319_973 🐞Set_Screen.swift:handleSettingsKeyboardWillHide():1541 KEYBOARD_HIDE skip commit reason=not editing or title field not focused thread=main
+									260815_1625_052 🐞ContentView.swift:presentInitialSettingsScreenIfNeeded():2678 ENTER ContentView.presentInitialSettingsScreenIfNeeded current isSettingsScreenPresented=true didPresentInitialSettingsScreen=false new=initialSettingsCheck thread=main
+									260815_1625_053 🐞ContentView.swift:presentInitialSettingsScreenIfNeeded():2684 STATE ContentView.presentInitialSettingsScreenIfNeeded current didPresentInitialSettingsScreen=false new=true thread=main
+									260815_1625_053 🐞ContentView.swift:presentInitialSettingsScreenIfNeeded():2686 STATE ContentView.presentInitialSettingsScreenIfNeeded current isSettingsScreenPresented=true new=true thread=main
+									260815_1625_053 🐞ContentView.swift:presentInitialSettingsScreenIfNeeded():2688 EXIT ContentView.presentInitialSettingsScreenIfNeeded current isSettingsScreenPresented=true didPresentInitialSettingsScreen=true new=initialSettingsPresented thread=main
+									260815_1625_070 🐞ContentView.swift:refreshDocumentFiles():555 STATE ContentView.refreshDocumentFiles current documentFiles.count=0 new=42 thread=main
+									260815_1625_070 🐞ContentView.swift:loadFunctionKeys(from:):655 ENTER ContentView.loadFunctionKeys current selectedDocumentName=Home.txt new=Home.txt thread=main
+									260815_1625_071 🐞ContentView.swift:applySlotLines(_:):703 STATE ContentView.applySlotLines current functionKeySlotLines.count=20 new=60 thread=main
+									260815_1625_071 🐞ContentView.swift:applySlotLines(_:):706 STATE ContentView.applySlotLines current functionKeys.count=400 new=400 thread=main
+									260815_1625_071 🐞ContentView.swift:applySlotLines(_:):708 STATE ContentView.applySlotLines current loadedFunctionKeySlotCount=20 new=60 thread=main
+									260815_1625_071 🐞ContentView.swift:loadFunctionKeys(from:):664 STATE ContentView.loadFunctionKeys current selectedDocumentName=Home.txt new=Home.txt thread=main
+									260815_1625_072 🐞ContentView.swift:loadFunctionKeys(from:):667 EXIT ContentView.loadFunctionKeys current selectedDocumentName=Home.txt new=Home.txt thread=main
+									260815_1625_085 🐞ContentView.swift:refreshDocumentFiles():555 STATE ContentView.refreshDocumentFiles current documentFiles.count=42 new=42 thread=main
+									260815_1625_091 🐞ContentView.swift:loadFunctionKeys(from:):655 ENTER ContentView.loadFunctionKeys current selectedDocumentName=Home.txt new=Home.txt thread=main
+									260815_1625_091 🐞ContentView.swift:applySlotLines(_:):703 STATE ContentView.applySlotLines current functionKeySlotLines.count=60 new=60 thread=main
+									260815_1625_092 🐞ContentView.swift:applySlotLines(_:):706 STATE ContentView.applySlotLines current functionKeys.count=400 new=400 thread=main
+									260815_1625_092 🐞ContentView.swift:applySlotLines(_:):708 STATE ContentView.applySlotLines current loadedFunctionKeySlotCount=60 new=60 thread=main
+									260815_1625_092 🐞ContentView.swift:loadFunctionKeys(from:):664 STATE ContentView.loadFunctionKeys current selectedDocumentName=Home.txt new=Home.txt thread=main
+									260815_1625_315 🐞ContentView.swift:loadFunctionKeys(from:):667 EXIT ContentView.loadFunctionKeys current selectedDocumentName=Home.txt new=Home.txt thread=main
+									260815_1625_317 🐞ContentView.swift:logDeviceTypeIfNeeded():426 isPad: iPad
+									260815_1625_317 🐞ContentView.swift:logOrientationStateIfNeeded():466 orientationState: horizontal
+									260815_1625_332 🐞ContentView.swift:refreshDocumentFiles():555 STATE ContentView.refreshDocumentFiles current documentFiles.count=42 new=42 thread=main
+									260815_1625_424 🐞ContentView.swift:launchedSettingsScreen:2666 DESTINATION SettingsScreen.onAppear current isSettingsScreenPresented=true new=true thread=main
+									260815_1625_424 🐞ContentView.swift:launchedSettingsScreen:2667 STATE ContentView.launchedSettingsScreen.onAppear current isSettingsScreenPresented=true new=true thread=main
+									260815_1625_429 🐞ContentView.swift:body:337 DESTINATION MainScreen.onAppear current isKeyboardScreenPresented=false isSettingsScreenPresented=true new=visible thread=main
+									260815_1625_429 🐞ContentView.swift:body:257 DESTINATION KeyboardScreen.onAppear current isKeyboardScreenPresented=false new=visible thread=main
+									260815_1625_389 🐞ContentView.swift:applySlotLines(_:):703 STATE ContentView.applySlotLines current functionKeySlotLines.count=60 new=60 thread=main
+									260815_1625_390 🐞ContentView.swift:applySlotLines(_:):706 STATE ContentView.applySlotLines current functionKeys.count=400 new=400 thread=main
+									260815_1625_390 🐞ContentView.swift:applySlotLines(_:):708 STATE ContentView.applySlotLines current loadedFunctionKeySlotCount=60 new=60 thread=main
+									260815_1625_390 🐞ContentView.swift:launchedSettingsScreen:2660 STATE ContentView.SettingsScreen.returnToMain current isSettingsScreenPresented=true new=false thread=main
+									260815_1625_640 🐞ContentView.swift:body:407 STATE ContentView.onChange isSettingsScreenPresented current=false new=backgroundRefresh thread=main
+									260815_1625_645 🐞ContentView.swift:selectDocument(_:):2540 ENTER ContentView.selectDocument current selectedDocumentName=Home.txt new=Home.txt recordHistory=false thread=main
+									260815_1625_645 🐞ContentView.swift:loadFunctionKeys(from:):655 ENTER ContentView.loadFunctionKeys current selectedDocumentName=Home.txt new=Home.txt thread=main
+									260815_1625_645 🐞ContentView.swift:applySlotLines(_:):703 STATE ContentView.applySlotLines current functionKeySlotLines.count=60 new=60 thread=main
+									260815_1625_646 🐞ContentView.swift:applySlotLines(_:):706 STATE ContentView.applySlotLines current functionKeys.count=400 new=400 thread=main
+									260815_1625_646 🐞ContentView.swift:applySlotLines(_:):708 STATE ContentView.applySlotLines current loadedFunctionKeySlotCount=60 new=60 thread=main
+									260815_1625_646 🐞ContentView.swift:loadFunctionKeys(from:):664 STATE ContentView.loadFunctionKeys current selectedDocumentName=Home.txt new=Home.txt thread=main
+									260815_1625_654 🐞ContentView.swift:loadFunctionKeys(from:):667 EXIT ContentView.loadFunctionKeys current selectedDocumentName=Home.txt new=Home.txt thread=main
+									260815_1625_662 🐞ContentView.swift:refreshDocumentFiles():555 STATE ContentView.refreshDocumentFiles current documentFiles.count=42 new=42 thread=main
+									260815_1625_662 🐞ContentView.swift:selectDocument(_:):2543 EXIT ContentView.selectDocument current selectedDocumentName=Home.txt new=Home.txt recordHistory=false thread=main
+									260815_1625_818 🐞BLE_KB_Manager.swift:centralManager(_:didConnect:):314 Probe-connected to B2D020B6-17A6-E4F9-84F9-CE3D30A7A795
+									260815_1625_818 🐞BLE_KB_Manager.swift:centralManager(_:didConnect:):314 Probe-connected to D665DE3A-1EB0-2E50-EC38-F7BF0B41F3E7
+									260815_1625_837 🐞Main_TopToolbar.swift:body:59 ENTER MainScreenToolbarContent.homeButton current isHomeDocumentSelected=false new=openHomeDocument thread=main
+									260815_1625_837 🐞Main_Screen.swift:openHomeDocumentFromMainScreenControl():1311 ENTER MainScreen.openHomeDocumentFromMainScreenControl current selectedDocumentName=Home.txt new=home.txt thread=main
+									260815_1625_837 🐞ContentView.swift:selectDocumentNamedFromGrid(_:):2603 ENTER ContentView.selectDocumentNamedFromGrid rawName=home.txt current selectedDocumentName=Home.txt new=home.txt documentFiles.count=42 thread=main
+									260815_1625_837 🐞ContentView.swift:selectDocument(_:recordHistory:):2547 ENTER ContentView.selectDocument current selectedDocumentName=Home.txt new=Home.txt recordHistory=true thread=main
+									260815_1625_837 🐞ContentView.swift:recordDocumentHistory(beforeSwitchingTo:):2557 ENTER ContentView.recordDocumentHistory current selectedDocumentName=Home.txt new=Home.txt thread=main
+									260815_1625_837 🐞ContentView.swift:printDocumentNavigationStacks(_:):2578 Doc nav record requested -> Home.txt. current: [Home.txt] back: [] forw: []
+									260815_1625_837 🐞ContentView.swift:recordDocumentHistory(beforeSwitchingTo:):2561 EXIT ContentView.recordDocumentHistory skipped current documentNavigationHistory=[] new=no change thread=main
+									260815_1625_837 🐞ContentView.swift:printDocumentNavigationStacks(_:):2578 Doc nav record skipped. current: [Home.txt] back: [] forw: []
+									260815_1625_837 🐞ContentView.swift:loadFunctionKeys(from:):655 ENTER ContentView.loadFunctionKeys current selectedDocumentName=Home.txt new=Home.txt thread=main
+									260815_1625_838 🐞ContentView.swift:applySlotLines(_:):703 STATE ContentView.applySlotLines current functionKeySlotLines.count=60 new=60 thread=main
+									260815_1625_838 🐞ContentView.swift:applySlotLines(_:):706 STATE ContentView.applySlotLines current functionKeys.count=400 new=400 thread=main
+									260815_1625_838 🐞ContentView.swift:applySlotLines(_:):708 STATE ContentView.applySlotLines current loadedFunctionKeySlotCount=60 new=60 thread=main
+									260815_1625_838 🐞ContentView.swift:loadFunctionKeys(from:):664 STATE ContentView.loadFunctionKeys current selectedDocumentName=Home.txt new=Home.txt thread=main
+									260815_1625_846 🐞ContentView.swift:loadFunctionKeys(from:):667 EXIT ContentView.loadFunctionKeys current selectedDocumentName=Home.txt new=Home.txt thread=main
+									260815_1625_854 🐞ContentView.swift:refreshDocumentFiles():555 STATE ContentView.refreshDocumentFiles current documentFiles.count=42 new=42 thread=main
+									260815_1625_854 🐞ContentView.swift:selectDocument(_:recordHistory:):2553 EXIT ContentView.selectDocument current selectedDocumentName=Home.txt new=Home.txt recordHistory=true thread=main
+									260815_1625_854 🐞ContentView.swift:selectDocumentNamedFromGrid(_:):2636 EXIT ContentView.selectDocumentNamedFromGrid succeeded rawName=home.txt current selectedDocumentName=Home.txt new=home.txt thread=main
+									260815_1625_854 🐞Main_Screen.swift:openHomeDocumentFromMainScreenControl():1316 EXIT MainScreen.openHomeDocumentFromMainScreenControl current selectedDocumentName=Home.txt new=home.txt result=true thread=main
+									260815_1625_855 🐞Main_TopToolbar.swift:body:62 EXIT MainScreenToolbarContent.homeButton current isHomeDocumentSelected=false new=openHomeDocument complete thread=main
+									260815_1625_004 🐞BLE_KB_Manager.swift:peripheral(_:didUpdateValueFor:error:):425 Device ID read: 2 for B2D020B6-17A6-E4F9-84F9-CE3D30A7A795
+									260815_1625_163 🐞ContentView.swift:launchedSettingsScreen:2671 DESTINATION SettingsScreen.onDisappear current isSettingsScreenPresented=false new=false thread=main
+									260815_1625_163 🐞ContentView.swift:launchedSettingsScreen:2672 STATE ContentView.launchedSettingsScreen.onDisappear current isSettingsScreenPresented=false new=false thread=main
+									260815_1625_170 🐞BLE_KB_Manager.swift:peripheral(_:didUpdateValueFor:error:):425 Device ID read: 4 for D665DE3A-1EB0-2E50-EC38-F7BF0B41F3E7
+									260815_1625_456 🐞Main_Screen.swift:mainScreenContent:1063 ENTER MainScreen.settingsButton current isSettingsScreenPresented=false new=true thread=main
+									260815_1625_456 🐞ContentView.swift:showSettingsScreen():2692 ENTER ContentView.showSettingsScreen current isSettingsScreenPresented=false new=true thread=main
+									260815_1625_456 🐞ContentView.swift:showSettingsScreen():2699 STATE ContentView.showSettingsScreen current isSettingsScreenPresented=false new=true thread=main
+									260815_1625_456 🐞ContentView.swift:showSettingsScreen():2702 EXIT ContentView.showSettingsScreen current isSettingsScreenPresented=true new=true thread=main
+									260815_1625_456 🐞Main_Screen.swift:mainScreenContent:1066 EXIT MainScreen.settingsButton current isSettingsScreenPresented=false new=true thread=main
+									260815_1625_565 🐞ContentView.swift:body:407 STATE ContentView.onChange isSettingsScreenPresented current=true new=backgroundRefresh thread=main
+									260815_1625_573 🐞ContentView.swift:refreshDocumentFiles():555 STATE ContentView.refreshDocumentFiles current documentFiles.count=42 new=42 thread=main
+									260815_1625_652 🐞ContentView.swift:launchedSettingsScreen:2666 DESTINATION SettingsScreen.onAppear current isSettingsScreenPresented=true new=true thread=main
+									260815_1625_652 🐞ContentView.swift:launchedSettingsScreen:2667 STATE ContentView.launchedSettingsScreen.onAppear current isSettingsScreenPresented=true new=true thread=main
+									260815_1625_775 🐞ContentView.swift:selectDocument(_:):2540 ENTER ContentView.selectDocument current selectedDocumentName=Home.txt new=new1234.screen recordHistory=false thread=main
+									260815_1625_775 🐞ContentView.swift:loadFunctionKeys(from:):655 ENTER ContentView.loadFunctionKeys current selectedDocumentName=Home.txt new=new1234.screen thread=main
+									260815_1625_777 🐞ContentView.swift:applySlotLines(_:):703 STATE ContentView.applySlotLines current functionKeySlotLines.count=60 new=16 thread=main
+									260815_1625_778 🐞ContentView.swift:applySlotLines(_:):706 STATE ContentView.applySlotLines current functionKeys.count=400 new=400 thread=main
+									260815_1625_778 🐞ContentView.swift:applySlotLines(_:):708 STATE ContentView.applySlotLines current loadedFunctionKeySlotCount=60 new=16 thread=main
+									260815_1625_778 🐞ContentView.swift:loadFunctionKeys(from:):664 STATE ContentView.loadFunctionKeys current selectedDocumentName=Home.txt new=new1234.screen thread=main
+									260815_1625_781 🐞ContentView.swift:loadFunctionKeys(from:):667 EXIT ContentView.loadFunctionKeys current selectedDocumentName=new1234.screen new=new1234.screen thread=main
+									260815_1625_803 🐞ContentView.swift:refreshDocumentFiles():555 STATE ContentView.refreshDocumentFiles current documentFiles.count=42 new=42 thread=main
+									260815_1625_803 🐞ContentView.swift:selectDocument(_:):2543 EXIT ContentView.selectDocument current selectedDocumentName=new1234.screen new=new1234.screen recordHistory=false thread=main
+									260815_1625_907 🐞ContentView.swift:body:414 STATE ContentView.onChange selectedDocumentName current=Home.txt new=new1234.screen thread=main
+									260815_1625_915 🐞Main_Screen.swift:resetSmartScriptEditingModel():1765 resetSmartScriptEditingModel
+									260815_1625_649 🐞ContentView.swift:applySlotLines(_:):703 STATE ContentView.applySlotLines current functionKeySlotLines.count=16 new=16 thread=main
+									260815_1625_650 🐞ContentView.swift:applySlotLines(_:):706 STATE ContentView.applySlotLines current functionKeys.count=400 new=400 thread=main
+									260815_1625_650 🐞ContentView.swift:applySlotLines(_:):708 STATE ContentView.applySlotLines current loadedFunctionKeySlotCount=16 new=16 thread=main
+									260815_1625_650 🐞ContentView.swift:launchedSettingsScreen:2660 STATE ContentView.SettingsScreen.returnToMain current isSettingsScreenPresented=true new=false thread=main
+									260815_1625_775 🐞ContentView.swift:body:407 STATE ContentView.onChange isSettingsScreenPresented current=false new=backgroundRefresh thread=main
+									260815_1625_775 🐞ContentView.swift:selectDocument(_:):2540 ENTER ContentView.selectDocument current selectedDocumentName=new1234.screen new=new1234.screen recordHistory=false thread=main
+									260815_1625_775 🐞ContentView.swift:loadFunctionKeys(from:):655 ENTER ContentView.loadFunctionKeys current selectedDocumentName=new1234.screen new=new1234.screen thread=main
+									260815_1625_776 🐞ContentView.swift:applySlotLines(_:):703 STATE ContentView.applySlotLines current functionKeySlotLines.count=16 new=16 thread=main
+									260815_1625_776 🐞ContentView.swift:applySlotLines(_:):706 STATE ContentView.applySlotLines current functionKeys.count=400 new=400 thread=main
+									260815_1625_776 🐞ContentView.swift:applySlotLines(_:):708 STATE ContentView.applySlotLines current loadedFunctionKeySlotCount=16 new=16 thread=main
+									260815_1625_776 🐞ContentView.swift:loadFunctionKeys(from:):664 STATE ContentView.loadFunctionKeys current selectedDocumentName=new1234.screen new=new1234.screen thread=main
+									260815_1625_776 🐞ContentView.swift:loadFunctionKeys(from:):667 EXIT ContentView.loadFunctionKeys current selectedDocumentName=new1234.screen new=new1234.screen thread=main
+									260815_1625_784 🐞ContentView.swift:refreshDocumentFiles():555 STATE ContentView.refreshDocumentFiles current documentFiles.count=42 new=42 thread=main
+									260815_1625_784 🐞ContentView.swift:selectDocument(_:):2543 EXIT ContentView.selectDocument current selectedDocumentName=new1234.screen new=new1234.screen recordHistory=false thread=main
+									260815_1625_142 🐞ContentView.swift:launchedSettingsScreen:2671 DESTINATION SettingsScreen.onDisappear current isSettingsScreenPresented=false new=false thread=main
+									260815_1625_142 🐞ContentView.swift:launchedSettingsScreen:2672 STATE ContentView.launchedSettingsScreen.onDisappear current isSettingsScreenPresented=false new=false thread=main
+									
+									260815_1625_940 🐞Main_ButtonBehavior.swift:logMainButtonPress(_:):107 ** GRID_BTN ** [xcode.screen]::[jump]
+									260815_1625_941 🐞Main_ButtonBehavior.swift:targetDocumentNameForSendText(_:):738 SCREEN_LINK_TRACE targetDocumentNameForSendText raw=xcode.screen trimmed=xcode.screen
+									260815_1625_941 🐞Main_ButtonBehavior.swift:targetDocumentNameForSendText(_:):776 SCREEN_LINK_TRACE parsedTarget=nil classification=other reason=unsupported_extension
+									260815_1625_941 🐞Main_ButtonBehavior.swift:targetDocumentNameForSendText(_:):738 SCREEN_LINK_TRACE targetDocumentNameForSendText raw=xcode.screen trimmed=xcode.screen
+									260815_1625_941 🐞Main_ButtonBehavior.swift:targetDocumentNameForSendText(_:):776 SCREEN_LINK_TRACE parsedTarget=nil classification=other reason=unsupported_extension
+									260815_1625_944 🐞Main_ButtonBehavior.swift:targetDocumentNameForGridEntry(_:):691 SCREEN_LINK_TRACE targetDocumentNameForGridEntry rawSendTexts=["xcode.screen"] selectedTarget=nil
+									260815_1625_944 🐞Main_ButtonBehavior.swift:sendMainGridEntry(_:):157 SCREEN_LINK_TRACE button rawLine=xcode.screen::jump sendTexts=["xcode.screen"] parsedTargetDocument=nil targetPreview=nil
+									260815_1625_944 🐞Main_ButtonBehavior.swift:sendMainGridEntry(_:):163 SCREEN_LINK_TRACE classification=other
+									
+									260815_1625_575 🐞Main_ButtonBehavior.swift:logMainButtonPress(_:):107 ** GRID_BTN ** [xcode.screen]::[jump]
+									260815_1625_576 🐞Main_ButtonBehavior.swift:targetDocumentNameForSendText(_:):738 SCREEN_LINK_TRACE targetDocumentNameForSendText raw=xcode.screen trimmed=xcode.screen
+									260815_1625_576 🐞Main_ButtonBehavior.swift:targetDocumentNameForSendText(_:):776 SCREEN_LINK_TRACE parsedTarget=nil classification=other reason=unsupported_extension
+									260815_1625_576 🐞Main_ButtonBehavior.swift:targetDocumentNameForSendText(_:):738 SCREEN_LINK_TRACE targetDocumentNameForSendText raw=xcode.screen trimmed=xcode.screen
+									260815_1625_577 🐞Main_ButtonBehavior.swift:targetDocumentNameForSendText(_:):776 SCREEN_LINK_TRACE parsedTarget=nil classification=other reason=unsupported_extension
+									260815_1625_577 🐞Main_ButtonBehavior.swift:targetDocumentNameForGridEntry(_:):691 SCREEN_LINK_TRACE targetDocumentNameForGridEntry rawSendTexts=["xcode.screen"] selectedTarget=nil
+									260815_1625_578 🐞Main_ButtonBehavior.swift:sendMainGridEntry(_:):157 SCREEN_LINK_TRACE button rawLine=xcode.screen::jump sendTexts=["xcode.screen"] parsedTargetDocument=nil targetPreview=nil
+									260815_1625_578 🐞Main_ButtonBehavior.swift:sendMainGridEntry(_:):163 SCREEN_LINK_TRACE classification=other
+									260815_1625_007 🐞Main_TopToolbar.swift:body:59 ENTER MainScreenToolbarContent.homeButton current isHomeDocumentSelected=false new=openHomeDocument thread=main
+									260815_1625_008 🐞Main_Screen.swift:openHomeDocumentFromMainScreenControl():1311 ENTER MainScreen.openHomeDocumentFromMainScreenControl current selectedDocumentName=new1234.screen new=home.txt thread=main
+									260815_1625_009 🐞ContentView.swift:selectDocumentNamedFromGrid(_:):2603 ENTER ContentView.selectDocumentNamedFromGrid rawName=home.txt current selectedDocumentName=new1234.screen new=home.txt documentFiles.count=42 thread=main
+									260815_1625_009 🐞ContentView.swift:selectDocument(_:recordHistory:):2547 ENTER ContentView.selectDocument current selectedDocumentName=new1234.screen new=Home.txt recordHistory=true thread=main
+									260815_1625_009 🐞ContentView.swift:recordDocumentHistory(beforeSwitchingTo:):2557 ENTER ContentView.recordDocumentHistory current selectedDocumentName=new1234.screen new=Home.txt thread=main
+									260815_1625_009 🐞ContentView.swift:printDocumentNavigationStacks(_:):2578 Doc nav record requested -> Home.txt. current: [new1234.screen] back: [] forw: []
+									260815_1625_009 🐞ContentView.swift:recordDocumentHistory(beforeSwitchingTo:):2567 STATE ContentView.recordDocumentHistory current documentNavigationHistory=[] new=append new1234.screen thread=main
+									260815_1625_010 🐞ContentView.swift:recordDocumentHistory(beforeSwitchingTo:):2572 STATE ContentView.recordDocumentHistory current documentNavigationHistory=[] new=["new1234.screen"] thread=main
+									260815_1625_010 🐞ContentView.swift:printDocumentNavigationStacks(_:):2578 Doc nav record stored -> Home.txt. current: [new1234.screen] back: ["new1234.screen"] forw: []
+									260815_1625_010 🐞ContentView.swift:recordDocumentHistory(beforeSwitchingTo:):2574 EXIT ContentView.recordDocumentHistory current selectedDocumentName=new1234.screen new=Home.txt thread=main
+									260815_1625_010 🐞ContentView.swift:loadFunctionKeys(from:):655 ENTER ContentView.loadFunctionKeys current selectedDocumentName=new1234.screen new=Home.txt thread=main
+									260815_1625_012 🐞ContentView.swift:applySlotLines(_:):703 STATE ContentView.applySlotLines current functionKeySlotLines.count=16 new=60 thread=main
+									260815_1625_014 🐞ContentView.swift:applySlotLines(_:):706 STATE ContentView.applySlotLines current functionKeys.count=400 new=400 thread=main
+									260815_1625_014 🐞ContentView.swift:applySlotLines(_:):708 STATE ContentView.applySlotLines current loadedFunctionKeySlotCount=16 new=60 thread=main
+									260815_1625_014 🐞ContentView.swift:loadFunctionKeys(from:):664 STATE ContentView.loadFunctionKeys current selectedDocumentName=new1234.screen new=Home.txt thread=main
+									260815_1625_038 🐞ContentView.swift:loadFunctionKeys(from:):667 EXIT ContentView.loadFunctionKeys current selectedDocumentName=Home.txt new=Home.txt thread=main
+									260815_1625_054 🐞ContentView.swift:refreshDocumentFiles():555 STATE ContentView.refreshDocumentFiles current documentFiles.count=42 new=42 thread=main
+									260815_1625_055 🐞ContentView.swift:selectDocument(_:recordHistory:):2553 EXIT ContentView.selectDocument current selectedDocumentName=Home.txt new=Home.txt recordHistory=true thread=main
+									260815_1625_055 🐞ContentView.swift:selectDocumentNamedFromGrid(_:):2636 EXIT ContentView.selectDocumentNamedFromGrid succeeded rawName=home.txt current selectedDocumentName=Home.txt new=home.txt thread=main
+									260815_1625_055 🐞Main_Screen.swift:openHomeDocumentFromMainScreenControl():1316 EXIT MainScreen.openHomeDocumentFromMainScreenControl current selectedDocumentName=new1234.screen new=home.txt result=true thread=main
+									260815_1625_055 🐞Main_TopToolbar.swift:body:62 EXIT MainScreenToolbarContent.homeButton current isHomeDocumentSelected=false new=openHomeDocument complete thread=main
+									260815_1625_120 🐞ContentView.swift:body:414 STATE ContentView.onChange selectedDocumentName current=new1234.screen new=Home.txt thread=main
+									260815_1625_127 🐞Main_Screen.swift:resetSmartScriptEditingModel():1765 resetSmartScriptEditingModel
+									
+									260815_1625_657 🐞Main_ButtonBehavior.swift:logMainButtonPress(_:):107 ** GRID_BTN ** [Xcode.txt]::[🛠️:Xcode]
+									260815_1625_658 🐞Main_ButtonBehavior.swift:targetDocumentNameForSendText(_:):738 SCREEN_LINK_TRACE targetDocumentNameForSendText raw=Xcode.txt trimmed=Xcode.txt
+									260815_1625_658 🐞Main_ButtonBehavior.swift:targetDocumentNameForSendText(_:):771 SCREEN_LINK_TRACE parsedTarget=Xcode.txt classification=screen navigation
+									260815_1625_658 🐞Main_ButtonBehavior.swift:targetDocumentNameForSendText(_:):738 SCREEN_LINK_TRACE targetDocumentNameForSendText raw=Xcode.txt trimmed=Xcode.txt
+									260815_1625_658 🐞Main_ButtonBehavior.swift:targetDocumentNameForSendText(_:):771 SCREEN_LINK_TRACE parsedTarget=Xcode.txt classification=screen navigation
+									260815_1625_658 🐞Main_ButtonBehavior.swift:targetDocumentNameForGridEntry(_:):691 SCREEN_LINK_TRACE targetDocumentNameForGridEntry rawSendTexts=["Xcode.txt"] selectedTarget=Xcode.txt
+									260815_1625_659 🐞Main_ButtonBehavior.swift:sendMainGridEntry(_:):157 SCREEN_LINK_TRACE button rawLine=Xcode.txt::CCCC00:🛠️:Xcode sendTexts=["Xcode.txt"] parsedTargetDocument=Xcode.txt targetPreview=nil
+									260815_1625_659 🐞Main_ButtonBehavior.swift:sendMainGridEntry(_:):159 SCREEN_LINK_TRACE classification=screen navigation
+									260815_1625_659 🐞Main_ButtonBehavior.swift:sendMainGridEntry(_:):255 SCREEN_LINK_TRACE will call selectDocumentNamedFromGrid target=Xcode.txt
+									260815_1625_659 🐞ContentView.swift:selectDocumentNamedFromGrid(_:):2603 ENTER ContentView.selectDocumentNamedFromGrid rawName=Xcode.txt current selectedDocumentName=Home.txt new=Xcode.txt documentFiles.count=42 thread=main
+									260815_1625_661 🐞ContentView.swift:selectDocumentNamedFromGrid(_:):2632 SCREEN_NAV_RESOLVE requested=Xcode.txt resolved=Xcode.screen
+									260815_1625_661 🐞ContentView.swift:selectDocument(_:recordHistory:):2547 ENTER ContentView.selectDocument current selectedDocumentName=Home.txt new=Xcode.screen recordHistory=true thread=main
+									260815_1625_661 🐞ContentView.swift:recordDocumentHistory(beforeSwitchingTo:):2557 ENTER ContentView.recordDocumentHistory current selectedDocumentName=Home.txt new=Xcode.screen thread=main
+									260815_1625_661 🐞ContentView.swift:printDocumentNavigationStacks(_:):2578 Doc nav record requested -> Xcode.screen. current: [Home.txt] back: ["new1234.screen"] forw: []
+									260815_1625_661 🐞ContentView.swift:recordDocumentHistory(beforeSwitchingTo:):2567 STATE ContentView.recordDocumentHistory current documentNavigationHistory=["new1234.screen"] new=append Home.txt thread=main
+									260815_1625_661 🐞ContentView.swift:recordDocumentHistory(beforeSwitchingTo:):2572 STATE ContentView.recordDocumentHistory current documentNavigationHistory=["new1234.screen"] new=["new1234.screen", "Home.txt"] thread=main
+									260815_1625_661 🐞ContentView.swift:printDocumentNavigationStacks(_:):2578 Doc nav record stored -> Xcode.screen. current: [Home.txt] back: ["new1234.screen", "Home.txt"] forw: []
+									260815_1625_661 🐞ContentView.swift:recordDocumentHistory(beforeSwitchingTo:):2574 EXIT ContentView.recordDocumentHistory current selectedDocumentName=Home.txt new=Xcode.screen thread=main
+									260815_1625_661 🐞ContentView.swift:loadFunctionKeys(from:):655 ENTER ContentView.loadFunctionKeys current selectedDocumentName=Home.txt new=Xcode.screen thread=main
+									260815_1625_663 🐞ContentView.swift:applySlotLines(_:):703 STATE ContentView.applySlotLines current functionKeySlotLines.count=60 new=42 thread=main
+									260815_1625_665 🐞ContentView.swift:applySlotLines(_:):706 STATE ContentView.applySlotLines current functionKeys.count=400 new=400 thread=main
+									260815_1625_665 🐞ContentView.swift:applySlotLines(_:):708 STATE ContentView.applySlotLines current loadedFunctionKeySlotCount=60 new=42 thread=main
+									260815_1625_665 🐞ContentView.swift:loadFunctionKeys(from:):664 STATE ContentView.loadFunctionKeys current selectedDocumentName=Home.txt new=Xcode.screen thread=main
+									260815_1625_683 🐞ContentView.swift:loadFunctionKeys(from:):667 EXIT ContentView.loadFunctionKeys current selectedDocumentName=Xcode.screen new=Xcode.screen thread=main
+									260815_1625_698 🐞ContentView.swift:refreshDocumentFiles():555 STATE ContentView.refreshDocumentFiles current documentFiles.count=42 new=42 thread=main
+									260815_1625_698 🐞ContentView.swift:selectDocument(_:recordHistory:):2553 EXIT ContentView.selectDocument current selectedDocumentName=Xcode.screen new=Xcode.screen recordHistory=true thread=main
+									260815_1625_698 🐞ContentView.swift:selectDocumentNamedFromGrid(_:):2636 EXIT ContentView.selectDocumentNamedFromGrid succeeded rawName=Xcode.txt current selectedDocumentName=Xcode.screen new=Xcode.txt thread=main
+									260815_1625_698 🐞Main_ButtonBehavior.swift:sendMainGridEntry(_:):257 SCREEN_LINK_TRACE selectDocumentNamedFromGrid result=true target=Xcode.txt
+									260815_1625_778 🐞ContentView.swift:body:414 STATE ContentView.onChange selectedDocumentName current=Home.txt new=Xcode.screen thread=main
+									260815_1625_785 🐞Main_Screen.swift:resetSmartScriptEditingModel():1765 resetSmartScriptEditingModel
+									
+									260815_1625_724 🐞Main_ButtonBehavior.swift:logMainButtonPress(_:):107 ** GRID_BTN ** [home]::[house:home]
+									260815_1625_725 🐞Main_ButtonBehavior.swift:targetDocumentNameForSendText(_:):738 SCREEN_LINK_TRACE targetDocumentNameForSendText raw=home trimmed=home
+									260815_1625_725 🐞Main_ButtonBehavior.swift:targetDocumentNameForSendText(_:):766 SCREEN_LINK_TRACE parsedTarget=home.txt classification=screen navigation
+									260815_1625_725 🐞Main_ButtonBehavior.swift:targetDocumentNameForSendText(_:):738 SCREEN_LINK_TRACE targetDocumentNameForSendText raw=home trimmed=home
+									260815_1625_725 🐞Main_ButtonBehavior.swift:targetDocumentNameForSendText(_:):766 SCREEN_LINK_TRACE parsedTarget=home.txt classification=screen navigation
+									260815_1625_725 🐞Main_ButtonBehavior.swift:targetDocumentNameForGridEntry(_:):691 SCREEN_LINK_TRACE targetDocumentNameForGridEntry rawSendTexts=["home"] selectedTarget=home
+									260815_1625_726 🐞Main_ButtonBehavior.swift:sendMainGridEntry(_:):157 SCREEN_LINK_TRACE button rawLine=home::house:home sendTexts=["home"] parsedTargetDocument=home targetPreview=nil
+									260815_1625_726 🐞Main_ButtonBehavior.swift:sendMainGridEntry(_:):159 SCREEN_LINK_TRACE classification=screen navigation
+									260815_1625_726 🐞Main_ButtonBehavior.swift:sendMainGridEntry(_:):255 SCREEN_LINK_TRACE will call selectDocumentNamedFromGrid target=home
+									260815_1625_726 🐞ContentView.swift:selectDocumentNamedFromGrid(_:):2603 ENTER ContentView.selectDocumentNamedFromGrid rawName=home current selectedDocumentName=Xcode.screen new=home.txt documentFiles.count=42 thread=main
+									260815_1625_726 🐞ContentView.swift:selectDocument(_:recordHistory:):2547 ENTER ContentView.selectDocument current selectedDocumentName=Xcode.screen new=Home.txt recordHistory=true thread=main
+									260815_1625_727 🐞ContentView.swift:recordDocumentHistory(beforeSwitchingTo:):2557 ENTER ContentView.recordDocumentHistory current selectedDocumentName=Xcode.screen new=Home.txt thread=main
+									260815_1625_727 🐞ContentView.swift:printDocumentNavigationStacks(_:):2578 Doc nav record requested -> Home.txt. current: [Xcode.screen] back: ["new1234.screen", "Home.txt"] forw: []
+									260815_1625_727 🐞ContentView.swift:recordDocumentHistory(beforeSwitchingTo:):2567 STATE ContentView.recordDocumentHistory current documentNavigationHistory=["new1234.screen", "Home.txt"] new=append Xcode.screen thread=main
+									260815_1625_727 🐞ContentView.swift:recordDocumentHistory(beforeSwitchingTo:):2572 STATE ContentView.recordDocumentHistory current documentNavigationHistory=["new1234.screen", "Home.txt"] new=["new1234.screen", "Home.txt", "Xcode.screen"] thread=main
+									260815_1625_727 🐞ContentView.swift:printDocumentNavigationStacks(_:):2578 Doc nav record stored -> Home.txt. current: [Xcode.screen] back: ["new1234.screen", "Home.txt", "Xcode.screen"] forw: []
+									260815_1625_727 🐞ContentView.swift:recordDocumentHistory(beforeSwitchingTo:):2574 EXIT ContentView.recordDocumentHistory current selectedDocumentName=Xcode.screen new=Home.txt thread=main
+									260815_1625_727 🐞ContentView.swift:loadFunctionKeys(from:):655 ENTER ContentView.loadFunctionKeys current selectedDocumentName=Xcode.screen new=Home.txt thread=main
+									260815_1625_729 🐞ContentView.swift:applySlotLines(_:):703 STATE ContentView.applySlotLines current functionKeySlotLines.count=42 new=60 thread=main
+									260815_1625_730 🐞ContentView.swift:applySlotLines(_:):706 STATE ContentView.applySlotLines current functionKeys.count=400 new=400 thread=main
+									260815_1625_730 🐞ContentView.swift:applySlotLines(_:):708 STATE ContentView.applySlotLines current loadedFunctionKeySlotCount=42 new=60 thread=main
+									260815_1625_730 🐞ContentView.swift:loadFunctionKeys(from:):664 STATE ContentView.loadFunctionKeys current selectedDocumentName=Xcode.screen new=Home.txt thread=main
+									260815_1625_748 🐞ContentView.swift:loadFunctionKeys(from:):667 EXIT ContentView.loadFunctionKeys current selectedDocumentName=Home.txt new=Home.txt thread=main
+									260815_1625_763 🐞ContentView.swift:refreshDocumentFiles():555 STATE ContentView.refreshDocumentFiles current documentFiles.count=42 new=42 thread=main
+									260815_1625_763 🐞ContentView.swift:selectDocument(_:recordHistory:):2553 EXIT ContentView.selectDocument current selectedDocumentName=Home.txt new=Home.txt recordHistory=true thread=main
+									260815_1625_763 🐞ContentView.swift:selectDocumentNamedFromGrid(_:):2636 EXIT ContentView.selectDocumentNamedFromGrid succeeded rawName=home current selectedDocumentName=Home.txt new=home.txt thread=main
+									260815_1625_763 🐞Main_ButtonBehavior.swift:sendMainGridEntry(_:):257 SCREEN_LINK_TRACE selectDocumentNamedFromGrid result=true target=home
+									260815_1625_832 🐞ContentView.swift:body:414 STATE ContentView.onChange selectedDocumentName current=Xcode.screen new=Home.txt thread=main
+									260815_1625_839 🐞Main_Screen.swift:resetSmartScriptEditingModel():1765 resetSmartScriptEditingModel
+									
+									260815_1625_041 🐞Main_ButtonBehavior.swift:logMainButtonPress(_:):107 ** GRID_BTN ** [Xcode.txt]::[🛠️:Xcode]
+									260815_1625_041 🐞Main_ButtonBehavior.swift:targetDocumentNameForSendText(_:):738 SCREEN_LINK_TRACE targetDocumentNameForSendText raw=Xcode.txt trimmed=Xcode.txt
+									260815_1625_041 🐞Main_ButtonBehavior.swift:targetDocumentNameForSendText(_:):771 SCREEN_LINK_TRACE parsedTarget=Xcode.txt classification=screen navigation
+									260815_1625_041 🐞Main_ButtonBehavior.swift:targetDocumentNameForSendText(_:):738 SCREEN_LINK_TRACE targetDocumentNameForSendText raw=Xcode.txt trimmed=Xcode.txt
+									260815_1625_042 🐞Main_ButtonBehavior.swift:targetDocumentNameForSendText(_:):771 SCREEN_LINK_TRACE parsedTarget=Xcode.txt classification=screen navigation
+									260815_1625_042 🐞Main_ButtonBehavior.swift:targetDocumentNameForGridEntry(_:):691 SCREEN_LINK_TRACE targetDocumentNameForGridEntry rawSendTexts=["Xcode.txt"] selectedTarget=Xcode.txt
+									260815_1625_042 🐞Main_ButtonBehavior.swift:sendMainGridEntry(_:):157 SCREEN_LINK_TRACE button rawLine=Xcode.txt::CCCC00:🛠️:Xcode sendTexts=["Xcode.txt"] parsedTargetDocument=Xcode.txt targetPreview=nil
+									260815_1625_042 🐞Main_ButtonBehavior.swift:sendMainGridEntry(_:):159 SCREEN_LINK_TRACE classification=screen navigation
+									260815_1625_042 🐞Main_ButtonBehavior.swift:sendMainGridEntry(_:):255 SCREEN_LINK_TRACE will call selectDocumentNamedFromGrid target=Xcode.txt
+									260815_1625_042 🐞ContentView.swift:selectDocumentNamedFromGrid(_:):2603 ENTER ContentView.selectDocumentNamedFromGrid rawName=Xcode.txt current selectedDocumentName=Home.txt new=Xcode.txt documentFiles.count=42 thread=main
+									260815_1625_044 🐞ContentView.swift:selectDocumentNamedFromGrid(_:):2632 SCREEN_NAV_RESOLVE requested=Xcode.txt resolved=Xcode.screen
+									260815_1625_044 🐞ContentView.swift:selectDocument(_:recordHistory:):2547 ENTER ContentView.selectDocument current selectedDocumentName=Home.txt new=Xcode.screen recordHistory=true thread=main
+									260815_1625_044 🐞ContentView.swift:recordDocumentHistory(beforeSwitchingTo:):2557 ENTER ContentView.recordDocumentHistory current selectedDocumentName=Home.txt new=Xcode.screen thread=main
+									260815_1625_044 🐞ContentView.swift:printDocumentNavigationStacks(_:):2578 Doc nav record requested -> Xcode.screen. current: [Home.txt] back: ["new1234.screen", "Home.txt", "Xcode.screen"] forw: []
+									260815_1625_044 🐞ContentView.swift:recordDocumentHistory(beforeSwitchingTo:):2567 STATE ContentView.recordDocumentHistory current documentNavigationHistory=["new1234.screen", "Home.txt", "Xcode.screen"] new=append Home.txt thread=main
+									260815_1625_044 🐞ContentView.swift:recordDocumentHistory(beforeSwitchingTo:):2572 STATE ContentView.recordDocumentHistory current documentNavigationHistory=["new1234.screen", "Home.txt", "Xcode.screen"] new=["new1234.screen", "Home.txt", "Xcode.screen", "Home.txt"] thread=main
+									260815_1625_044 🐞ContentView.swift:printDocumentNavigationStacks(_:):2578 Doc nav record stored -> Xcode.screen. current: [Home.txt] back: ["new1234.screen", "Home.txt", "Xcode.screen", "Home.txt"] forw: []
+									260815_1625_044 🐞ContentView.swift:recordDocumentHistory(beforeSwitchingTo:):2574 EXIT ContentView.recordDocumentHistory current selectedDocumentName=Home.txt new=Xcode.screen thread=main
+									260815_1625_044 🐞ContentView.swift:loadFunctionKeys(from:):655 ENTER ContentView.loadFunctionKeys current selectedDocumentName=Home.txt new=Xcode.screen thread=main
+									260815_1625_045 🐞ContentView.swift:applySlotLines(_:):703 STATE ContentView.applySlotLines current functionKeySlotLines.count=60 new=42 thread=main
+									260815_1625_046 🐞ContentView.swift:applySlotLines(_:):706 STATE ContentView.applySlotLines current functionKeys.count=400 new=400 thread=main
+									260815_1625_046 🐞ContentView.swift:applySlotLines(_:):708 STATE ContentView.applySlotLines current loadedFunctionKeySlotCount=60 new=42 thread=main
+									260815_1625_046 🐞ContentView.swift:loadFunctionKeys(from:):664 STATE ContentView.loadFunctionKeys current selectedDocumentName=Home.txt new=Xcode.screen thread=main
+									260815_1625_060 🐞ContentView.swift:loadFunctionKeys(from:):667 EXIT ContentView.loadFunctionKeys current selectedDocumentName=Xcode.screen new=Xcode.screen thread=main
+									260815_1625_076 🐞ContentView.swift:refreshDocumentFiles():555 STATE ContentView.refreshDocumentFiles current documentFiles.count=42 new=42 thread=main
+									260815_1625_077 🐞ContentView.swift:selectDocument(_:recordHistory:):2553 EXIT ContentView.selectDocument current selectedDocumentName=Xcode.screen new=Xcode.screen recordHistory=true thread=main
+									260815_1625_077 🐞ContentView.swift:selectDocumentNamedFromGrid(_:):2636 EXIT ContentView.selectDocumentNamedFromGrid succeeded rawName=Xcode.txt current selectedDocumentName=Xcode.screen new=Xcode.txt thread=main
+									260815_1625_077 🐞Main_ButtonBehavior.swift:sendMainGridEntry(_:):257 SCREEN_LINK_TRACE selectDocumentNamedFromGrid result=true target=Xcode.txt
+									260815_1625_156 🐞ContentView.swift:body:414 STATE ContentView.onChange selectedDocumentName current=Home.txt new=Xcode.screen thread=main
+									260815_1625_163 🐞Main_Screen.swift:resetSmartScriptEditingModel():1765 resetSmartScriptEditingModel
