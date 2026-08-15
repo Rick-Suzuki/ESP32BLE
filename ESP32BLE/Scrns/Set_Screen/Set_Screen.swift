@@ -155,34 +155,37 @@ struct SettingsScreen: View {
     }
 
     private var settingsScreenBase: some View {
-        VStack(spacing: 0) {
-            settingsTopToolbar
+        GeometryReader { screenGeometry in
+            VStack(spacing: 0) {
+                settingsTopToolbar(availableWidth: screenGeometry.size.width)
 
-            GeometryReader { geometry in
-                HStack(alignment: .top, spacing: 0) {
-                    VStack(spacing: 0) {
-                        if isPad {
-                            editableDocumentSection
-                        }
+                GeometryReader { geometry in
+                    HStack(alignment: .top, spacing: 0) {
+                        VStack(spacing: 0) {
+                            if isPad {
+                                editableDocumentSection
+                            }
 
-                        if !isPad || !isDocumentEditorFocused {
-                            combinedBottomPanelSection
+                            if !isPad || !isDocumentEditorFocused {
+                                combinedBottomPanelSection
+                            }
                         }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+
+                        documentTableSection
+                            .frame(width: documentTableWidth(for: geometry.size.width))
                     }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-
-                    documentTableSection
-                        .frame(width: documentTableWidth(for: geometry.size.width))
+                    .frame(maxHeight: .infinity, alignment: .top)
                 }
-                .frame(maxHeight: .infinity, alignment: .top)
             }
+            .frame(width: screenGeometry.size.width, height: screenGeometry.size.height)
         }
     }
 
-	private var settingsTopToolbar: some View {
-		//
-		//----------------------------------------
-		// back to main
+    private func settingsTopToolbar(availableWidth: CGFloat) -> some View {
+			//
+			//----------------------------------------
+			// back to main
 		//
 		HStack(spacing: 8) {
 			SettingsToolbarButton(title: "main", backgroundColor: Color.gray.opacity(0.45), minWidth: 92, isEnabled: true) {
@@ -199,11 +202,11 @@ struct SettingsScreen: View {
 			//
 			textToSpeechRateControl
 			//
-			//----------------------------------------
-			// title text
-			//
+				//----------------------------------------
+				// title text
+				//
 			Spacer()
-				settingsTitleControl
+                settingsTitleControl(availableWidth: availableWidth)
 					.padding(.horizontal, 12)
 
 			Spacer()
@@ -553,7 +556,10 @@ struct SettingsScreen: View {
         }
     }
 
-    private var settingsTitleControl: some View {
+    @ViewBuilder
+    private func settingsTitleControl(availableWidth: CGFloat) -> some View {
+        let titleWidth = settingsTitleWidth(for: availableWidth)
+		// MARK: - BM:🔠🔢 Settings: Top title
         Group {
             if isEditingDocumentName {
                 TextField("", text: $documentNameDraft)
@@ -563,27 +569,42 @@ struct SettingsScreen: View {
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     .multilineTextAlignment(.center)
-                    .frame(minWidth: 180)
+                    .frame(width: titleWidth, height: 36)
                     .focused($isDocumentNameFieldFocused)
                     .onSubmit {
                         commitNameEdit()
                     }
             } else {
-                Button(currentTitleDisplayName) {
-                    guard canEditCurrentTitle else { return }
-                    ButtonClickFeedback.playIfEnabled()
-                    documentNameDraft = currentTitleDisplayName
-                    isEditingDocumentName = true
-                }
-				.frame(minWidth: 180)
-                .buttonStyle(.bordered)
-                .font(.headline)
-                .foregroundStyle(.white)
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
-                .disabled(!canEditCurrentTitle)
+				Button {
+					guard canEditCurrentTitle else { return }
+					ButtonClickFeedback.playIfEnabled()
+					documentNameDraft = currentTitleDisplayName
+					isEditingDocumentName = true
+				} label: {
+					Text(currentTitleDisplayName)
+						.lineLimit(1)
+						.minimumScaleFactor(0.7)
+						.frame(maxWidth: .infinity)
+				}
+				.disabled(!canEditCurrentTitle)
+				.font(.headline)
+				.foregroundStyle(canEditCurrentTitle ? .white : Color(white: 0.8))
+				.frame(width: titleWidth, height: 36)
+				.background(Color.gray.opacity(0.45))
+				.overlay {
+					RoundedRectangle(cornerRadius: 12)
+						.stroke(Color.gray.opacity(0.5), lineWidth: 1.5)
+				}
+				.clipShape(.rect(cornerRadius: 12))
+				.contentShape(.rect)
             }
         }
+    }
+
+    private func settingsTitleWidth(for availableWidth: CGFloat) -> CGFloat {
+        let safeWidth = availableWidth.isFinite ? max(0, availableWidth) : 0
+        let preferredWidth = safeWidth * 0.18
+        return min(max(preferredWidth, 180), 280)
     }
 
     private var textToSpeechVoiceMenu: some View {
