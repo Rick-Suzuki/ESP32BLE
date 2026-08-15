@@ -132,10 +132,7 @@ func screenConfig(for documentURL: URL, requiredBoxCount: Int) -> ScreenConfig {
         return config
     }
 
-    return migratedScreenConfigFromAppStorage(
-        for: documentURL.lastPathComponent,
-        requiredBoxCount: requiredBoxCount
-    )
+    return defaultScreenConfig(for: documentURL.lastPathComponent, requiredBoxCount: requiredBoxCount)
 }
 
 @discardableResult
@@ -144,10 +141,7 @@ func ensureScreenConfigFile(for documentURL: URL, requiredBoxCount: Int) -> Scre
         return config
     }
 
-    let config = migratedScreenConfigFromAppStorage(
-        for: documentURL.lastPathComponent,
-        requiredBoxCount: requiredBoxCount
-    )
+    let config = defaultScreenConfig(for: documentURL.lastPathComponent, requiredBoxCount: requiredBoxCount)
     _ = saveScreenConfig(config, for: documentURL)
     return config
 }
@@ -167,10 +161,6 @@ func defaultScreenConfig(for documentName: String, requiredBoxCount: Int) -> Scr
             columns: resolvedGridDimensions.columns
         )
     )
-}
-
-func migratedScreenConfigFromAppStorage(for documentName: String, requiredBoxCount: Int) -> ScreenConfig {
-    defaultScreenConfig(for: documentName, requiredBoxCount: requiredBoxCount)
 }
 
 private func requiredBoxCountForScreenConfig(documentURL: URL) -> Int {

@@ -1131,6 +1131,16 @@ struct SettingsScreen: View {
         let trimmedDocumentName = documentName.trimmingCharacters(in: .whitespacesAndNewlines)
 
         if !trimmedDocumentName.isEmpty,
+           let documentURL = currentDocumentsDirectoryURL?.appendingPathComponent(trimmedDocumentName),
+           let config = loadScreenConfig(for: documentURL) {
+            let columns = max(config.grid.columns, 1)
+            let rows = max(config.grid.rows, 1)
+            if columns * rows >= minimumRequiredCount, columns * rows <= maxFunctionKeyCount {
+                return (columns: columns, rows: rows)
+            }
+        }
+
+        if !trimmedDocumentName.isEmpty,
            let data = documentGridDimensionsData.data(using: .utf8),
            let mappings = try? JSONDecoder().decode([String: SettingsStoredGridDimensions].self, from: data),
            let storedDimensions = mappings[trimmedDocumentName] {
