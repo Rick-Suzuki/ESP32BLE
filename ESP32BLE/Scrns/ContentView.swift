@@ -708,11 +708,15 @@ struct ContentView: View {
     }
 
     private func selectedDocumentURL() -> URL? {
-        if let matchingURL = documentFiles.first(where: { $0.lastPathComponent == selectedDocumentName }) {
+        documentURL(forDocumentName: selectedDocumentName)
+    }
+
+    private func documentURL(forDocumentName documentName: String) -> URL? {
+        if let matchingURL = documentFiles.first(where: { $0.lastPathComponent == documentName }) {
             return matchingURL
         }
 
-        return documentsDirectoryURL()?.appendingPathComponent(selectedDocumentName)
+        return documentsDirectoryURL()?.appendingPathComponent(documentName)
     }
 
     private func persistSlotLines(_ slotLines: [String]) {
@@ -840,7 +844,7 @@ struct ContentView: View {
         }
 
         let fontSize = loadDocumentFontSizes()[trimmedDocumentName] ?? fallbackConfig.fontSize
-        let gridDimensions = loadStoredGridDimensions(for: trimmedDocumentName, requiredBoxCount: requiredBoxCount)
+        let gridDimensions = appStorageGridDimensions(for: trimmedDocumentName, requiredBoxCount: requiredBoxCount)
         let backgroundImageName = appStorageBackgroundImageName(for: trimmedDocumentName)
         let backgroundOpacity = loadDocumentBackgroundImageOpacities()[trimmedDocumentName] ?? fallbackConfig.backgroundOpacity
 
@@ -1037,6 +1041,23 @@ struct ContentView: View {
         let trimmedDocumentName = documentName.trimmingCharacters(in: .whitespacesAndNewlines)
         let minimumRequiredCount = max(requiredBoxCount, 1)
 
+        if trimmedDocumentName == selectedDocumentName,
+           let config = loadedScreenConfig {
+            let sanitizedColumns = max(config.grid.columns, 1)
+            let sanitizedRows = max(config.grid.rows, 1)
+            if sanitizedColumns * sanitizedRows >= minimumRequiredCount,
+               sanitizedColumns * sanitizedRows <= maxFunctionKeyCount {
+                return (columns: sanitizedColumns, rows: sanitizedRows)
+            }
+        }
+
+        return appStorageGridDimensions(for: trimmedDocumentName, requiredBoxCount: minimumRequiredCount)
+    }
+
+    private func appStorageGridDimensions(for documentName: String, requiredBoxCount: Int) -> GridDimensions {
+        let trimmedDocumentName = documentName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let minimumRequiredCount = max(requiredBoxCount, 1)
+
         guard !trimmedDocumentName.isEmpty else {
             return functionKeyGridDimensions(for: minimumRequiredCount)
         }
@@ -1060,12 +1081,45 @@ struct ContentView: View {
             return
         }
 
-        var mappings = loadDocumentGridDimensions()
-        mappings[trimmedDocumentName] = StoredGridDimensions(
+        let sanitizedGridDimensions = (
             columns: max(gridDimensions.columns, 1),
             rows: max(gridDimensions.rows, 1)
         )
+
+        var mappings = loadDocumentGridDimensions()
+        mappings[trimmedDocumentName] = StoredGridDimensions(
+            columns: sanitizedGridDimensions.columns,
+            rows: sanitizedGridDimensions.rows
+        )
         saveDocumentGridDimensions(mappings)
+
+        guard let documentURL = documentURL(forDocumentName: trimmedDocumentName) else {
+            return
+        }
+
+        var updatedConfig: ScreenConfig
+        if trimmedDocumentName == selectedDocumentName,
+           let config = loadedScreenConfig {
+            updatedConfig = config
+        } else if let config = loadScreenConfig(for: documentURL) {
+            updatedConfig = config
+        } else {
+            updatedConfig = screenConfigFromAppStorageFallback(
+                for: trimmedDocumentName,
+                requiredBoxCount: sanitizedGridDimensions.columns * sanitizedGridDimensions.rows
+            )
+        }
+
+        updatedConfig.grid = ScreenConfig.Grid(
+            rows: sanitizedGridDimensions.rows,
+            columns: sanitizedGridDimensions.columns
+        )
+
+        if trimmedDocumentName == selectedDocumentName {
+            loadedScreenConfig = updatedConfig
+        }
+
+        _ = saveScreenConfig(updatedConfig, for: documentURL)
     }
 
     private func saveBackgroundImageOpacity(for documentName: String) {
