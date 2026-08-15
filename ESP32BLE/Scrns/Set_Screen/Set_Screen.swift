@@ -6,6 +6,7 @@ import UniformTypeIdentifiers
 struct SettingsScreen: View {
     private enum SettingsListMode: String {
         case files
+        case text
         case images
         case sounds
         case pdfs
@@ -14,6 +15,8 @@ struct SettingsScreen: View {
         var buttonTitle: String {
             switch self {
             case .files:
+                return "screens"
+            case .text:
                 return "text"
             case .images:
                 return "imgs"
@@ -29,6 +32,8 @@ struct SettingsScreen: View {
         mutating func toggle(developerMode: Bool) {
             switch self {
             case .files:
+                self = .text
+            case .text:
                 self = .images
             case .images:
                 self = .sounds
@@ -44,9 +49,21 @@ struct SettingsScreen: View {
 
     private enum ImportedContentKind {
         case document
+        case config
+        case text
         case image
         case sound
         case pdf
+    }
+
+    private enum SettingsImportMode {
+        case screen
+        case allFiles
+    }
+
+    private enum ImportConflictResolution {
+        case replace
+        case keepBoth
     }
 
     private struct PendingImportConflict {
@@ -58,24 +75,35 @@ struct SettingsScreen: View {
 
     private struct PendingImportSession {
         let directoryURL: URL
-        let importListMode: SettingsListMode
+        let importListMode: SettingsListMode?
+        let importMode: SettingsImportMode
         var remainingURLs: [URL]
         var selectedConfigURLsByName: [String: URL]
         var temporaryImportDirectoryURLs: [URL] = []
         var existingFileNames: Set<String>
+        var existingTextNames: Set<String>
+        var existingConfigNames: Set<String>
         var existingImageNames: Set<String>
         var existingSoundNames: Set<String>
         var existingPDFNames: Set<String>
         var firstImportedDocumentURL: URL?
+        var firstImportedTextURL: URL?
         var firstImportedImageURL: URL?
         var firstImportedSoundURL: URL?
         var firstImportedPDFURL: URL?
+        var applyToAllResolution: ImportConflictResolution?
         var importedAnything = false
     }
 
     private struct ScreenPackageImport {
         let documentURL: URL
         let configURL: URL?
+        let temporaryDirectoryURL: URL
+    }
+
+    private struct FullArchiveImport {
+        let fileURLs: [URL]
+        let configURLsByName: [String: URL]
         let temporaryDirectoryURL: URL
     }
 
@@ -136,13 +164,16 @@ struct SettingsScreen: View {
     @State private var repairAlertMessage: String?
     @AppStorage("settingsListMode") private var listModeRawValue = SettingsListMode.files.rawValue
     @AppStorage("settingsFilesScrollPositionID") private var fileScrollPositionIDStorage = ""
+    @AppStorage("settingsTextScrollPositionID") private var textScrollPositionIDStorage = ""
     @AppStorage("settingsImagesScrollPositionID") private var imageScrollPositionIDStorage = ""
     @AppStorage("settingsSoundsScrollPositionID") private var soundScrollPositionIDStorage = ""
     @AppStorage("settingsPDFsScrollPositionID") private var pdfScrollPositionIDStorage = ""
     @AppStorage("settingsAllScrollPositionID") private var allScrollPositionIDStorage = ""
     @State private var pendingImportListMode: SettingsListMode?
+    @State private var pendingImportMode: SettingsImportMode?
     @State private var pendingImportSession: PendingImportSession?
     @State private var pendingImportConflict: PendingImportConflict?
+    @State private var importConflictApplyToAll = false
     @State private var importRefreshID = UUID()
     @State private var isExportingArchive = false
     @State private var exportArchiveDocument: SettingsArchiveFileDocument?
@@ -165,6 +196,7 @@ struct SettingsScreen: View {
     @FocusState var focusedField: SettingsFocusField?
     @FocusState private var isDocumentNameFieldFocused: Bool
     @State private var isCancellingDocumentNameFromOutsideTap = false
+    @State private var selectedTextFileName = ""
 
     var body: some View {
         configuredSettingsScreen
@@ -230,19 +262,24 @@ struct SettingsScreen: View {
 			//----------------------------------------
 			// import btn
 			//
-			Button {
-				ButtonClickFeedback.playIfEnabled()
-				guard listMode != .all else { return }
-				pendingImportListMode = listMode
-			} label: {
-				Image(systemName: "square.and.arrow.down")
-					.font(.title)
-					.foregroundStyle(.white)
-			}
-			.contentShape(.rect)
-			.accessibilityLabel("Import \(listMode.buttonTitle) from iCloud")
-			.disabled(listMode == .all)
-			.opacity(listMode == .all ? 0.45 : 1)
+				Menu {
+					Button("Import Screen") {
+						ButtonClickFeedback.playIfEnabled()
+                        importConflictApplyToAll = false
+						pendingImportMode = .screen
+					}
+					Button("Import All Files") {
+						ButtonClickFeedback.playIfEnabled()
+                        importConflictApplyToAll = false
+						pendingImportMode = .allFiles
+					}
+				} label: {
+					Image(systemName: "square.and.arrow.down")
+						.font(.title)
+						.foregroundStyle(.white)
+				}
+				.contentShape(.rect)
+				.accessibilityLabel("Import from iCloud")
 
 			Spacer()
 				.frame(width:10)
@@ -255,10 +292,10 @@ struct SettingsScreen: View {
 					ButtonClickFeedback.playIfEnabled()
 					prepareSingleFileExport()
 				}
-				Button("Export Archive.zip") {
-					ButtonClickFeedback.playIfEnabled()
-					prepareArchiveExport()
-				}
+					Button("Export All Files") {
+						ButtonClickFeedback.playIfEnabled()
+						prepareArchiveExport()
+					}
 			} label: {
 				Image(systemName: "square.and.arrow.up")
 					.font(.title)
@@ -266,6 +303,8 @@ struct SettingsScreen: View {
 			}
 			.contentShape(.rect)
 			.accessibilityLabel("Export to iCloud")
+            .disabled(!canExportInCurrentListMode)
+            .opacity(canExportInCurrentListMode ? 1 : 0.45)
 			
 			Spacer()
 			//
@@ -349,6 +388,10 @@ struct SettingsScreen: View {
             loadSelectedDocumentText()
             cancelNameEditing()
         }
+        .onChange(of: listModeRawValue) {
+            saveCurrentDocumentText()
+            loadSelectedDocumentText()
+        }
         .onChange(of: documentEditorText) {
             guard !isLoadingDocumentText else { return }
             saveCurrentDocumentText()
@@ -385,18 +428,33 @@ struct SettingsScreen: View {
             repairDocumentAlertOverlay
         }
         .confirmationDialog(
-            "a file with that name already exists.",
+            importConflictDialogTitle,
             isPresented: importConflictIsPresented,
             titleVisibility: .visible
         ) {
-            Button("Replace Existing") {
-                resolvePendingImportConflictByReplacing()
-            }
-            Button("Skip This File") {
-                resolvePendingImportConflictBySkipping()
-            }
-            Button("Stop Import", role: .destructive) {
-                cancelPendingImportSession()
+            if pendingImportSession?.importMode == .allFiles {
+                Button(importConflictApplyToAll ? "Apply to All: On" : "Apply to All: Off") {
+                    importConflictApplyToAll.toggle()
+                }
+                Button("Replace") {
+                    resolvePendingImportConflictByReplacing()
+                }
+                Button("Keep Both") {
+                    resolvePendingImportConflictKeepingBoth()
+                }
+                Button("Stop", role: .destructive) {
+                    cancelPendingImportSession()
+                }
+            } else {
+                Button("Replace Existing") {
+                    resolvePendingImportConflictByReplacing()
+                }
+                Button("Skip This File") {
+                    resolvePendingImportConflictBySkipping()
+                }
+                Button("Stop Import", role: .destructive) {
+                    cancelPendingImportSession()
+                }
             }
             Button("Cancel", role: .cancel) { }
         } message: {
@@ -407,14 +465,16 @@ struct SettingsScreen: View {
             allowedContentTypes: activeImportContentTypes,
             allowsMultipleSelection: true
         ) { result in
+            let importMode = pendingImportMode
             pendingImportListMode = nil
-            handleImportedSelection(result)
+            pendingImportMode = nil
+            handleImportedSelection(result, importMode: importMode)
         }
         .fileExporter(
             isPresented: $isExportingArchive,
             document: exportArchiveDocument,
             contentType: archiveExportType,
-            defaultFilename: "Archive"
+            defaultFilename: archiveExportDefaultFilename()
         ) { result in
             if case let .failure(error) = result {
                 renameAlertMessage = error.localizedDescription
@@ -448,6 +508,13 @@ struct SettingsScreen: View {
         )
     }
 
+    private var textScrollPositionID: Binding<String?> {
+        Binding(
+            get: { textScrollPositionIDStorage.isEmpty ? nil : textScrollPositionIDStorage },
+            set: { textScrollPositionIDStorage = $0 ?? "" }
+        )
+    }
+
     private var imageScrollPositionID: Binding<String?> {
         Binding(
             get: { imageScrollPositionIDStorage.isEmpty ? nil : imageScrollPositionIDStorage },
@@ -477,15 +544,20 @@ struct SettingsScreen: View {
     }
 
     private var settingsModeEditResetKey: String {
-        "\(listModeRawValue)|\(selectedImagePath)|\(selectedSoundPath)|\(selectedPDFPath)"
+        "\(listModeRawValue)|\(selectedTextFileName)|\(selectedImagePath)|\(selectedSoundPath)|\(selectedPDFPath)"
+    }
+
+    private var canExportInCurrentListMode: Bool {
+        listMode != .text && listMode != .all
     }
 
     private var isImporting: Binding<Bool> {
         Binding(
-            get: { pendingImportListMode != nil },
+            get: { pendingImportMode != nil },
             set: { isPresented in
                 if !isPresented {
                     pendingImportListMode = nil
+                    pendingImportMode = nil
                 }
             }
         )
@@ -503,22 +575,23 @@ struct SettingsScreen: View {
     }
 
     private var activeImportContentTypes: [UTType] {
-        switch pendingImportListMode {
-        case .files:
-            return developerMode
-                ? [screenDocumentImportType, plainTextImportType, zipImportType, screenConfigImportType]
-                : [screenDocumentImportType, plainTextImportType, zipImportType]
-        case .images:
-            return [.image]
-        case .sounds:
-            return [.data]
-        case .pdfs:
-            return [.pdf]
-        case .all:
-            return [.data]
+        switch pendingImportMode {
+        case .screen:
+            return [screenDocumentImportType, zipImportType]
+        case .allFiles:
+            return [zipImportType]
         case nil:
             return [.data]
         }
+    }
+
+    private var importConflictDialogTitle: String {
+        guard pendingImportSession?.importMode == .allFiles,
+              let fileName = pendingImportConflict?.fileName else {
+            return "a file with that name already exists."
+        }
+
+        return "An item named \(fileName) already exists."
     }
 
     private func documentTableWidth(for availableWidth: CGFloat) -> CGFloat {
@@ -806,6 +879,8 @@ struct SettingsScreen: View {
             listMode: settingsDocumentTableListMode,
             documentFiles: availableDocumentURLs,
             selectedDocumentName: selectedDocumentName,
+            textURLs: availableTextURLs,
+            selectedTextFileName: selectedTextFileName,
             imageURLs: availableImageURLs,
             selectedImageURL: selectedImageURL,
             soundURLs: availableSoundURLs,
@@ -814,6 +889,7 @@ struct SettingsScreen: View {
             selectedPDFURL: selectedPDFURL,
             allFileURLs: availableAllFileURLs,
             fileScrollPositionID: fileScrollPositionID,
+            textScrollPositionID: textScrollPositionID,
             imageScrollPositionID: imageScrollPositionID,
             soundScrollPositionID: soundScrollPositionID,
             pdfScrollPositionID: pdfScrollPositionID,
@@ -821,8 +897,10 @@ struct SettingsScreen: View {
             canDeleteDocuments: canDeleteDocuments,
             imagePreviewSection: settingsTablePreviewSection,
             loadFunctionKeys: loadFunctionKeys,
+            loadTextFile: loadTextFile,
             deleteDocument: deleteDocument,
             duplicateDocument: duplicateDocument,
+            deleteTextFile: deleteTextFile,
             selectImage: selectImage,
             deleteImage: deleteImage,
             selectSound: selectSound,
@@ -838,6 +916,8 @@ struct SettingsScreen: View {
         switch listMode {
         case .files:
             return .files
+        case .text:
+            return .text
         case .images:
             return .images
         case .sounds:
@@ -1059,12 +1139,26 @@ struct SettingsScreen: View {
         isLoadingDocumentText = true
         defer { isLoadingDocumentText = false }
 
-        guard let fileURL = selectedDocumentFileURL else {
+        let fileURL = listMode == .text ? selectedTextFileURL : selectedDocumentFileURL
+
+        guard let fileURL else {
             documentEditorText = ""
             savedDocumentEditorText = ""
             loadedDocumentName = ""
             return
         }
+
+        let loadedText = (try? String(contentsOf: fileURL, encoding: .utf8)) ?? ""
+        documentEditorText = loadedText
+        savedDocumentEditorText = loadedText
+        loadedDocumentName = fileURL.lastPathComponent
+        documentNameDraft = currentTitleDisplayName
+    }
+
+    private func loadTextFile(_ fileURL: URL) {
+        selectedTextFileName = fileURL.lastPathComponent
+        isLoadingDocumentText = true
+        defer { isLoadingDocumentText = false }
 
         let loadedText = (try? String(contentsOf: fileURL, encoding: .utf8)) ?? ""
         documentEditorText = loadedText
@@ -1083,7 +1177,7 @@ struct SettingsScreen: View {
 
     private func saveCurrentDocumentText() {
         guard !loadedDocumentName.isEmpty,
-              let fileURL = availableDocumentURLs.first(where: { $0.lastPathComponent == loadedDocumentName }) else {
+              let fileURL = fileURLForLoadedDocumentName() else {
             return
         }
 
@@ -1092,11 +1186,16 @@ struct SettingsScreen: View {
 
     private func saveCurrentDocumentText(_ text: String) {
         guard !loadedDocumentName.isEmpty,
-              let fileURL = availableDocumentURLs.first(where: { $0.lastPathComponent == loadedDocumentName }) else {
+              let fileURL = fileURLForLoadedDocumentName() else {
             return
         }
 
         saveDocumentText(text, to: fileURL)
+    }
+
+    private func fileURLForLoadedDocumentName() -> URL? {
+        availableDocumentURLs.first(where: { $0.lastPathComponent == loadedDocumentName }) ??
+            availableTextURLs.first(where: { $0.lastPathComponent == loadedDocumentName })
     }
 
     private func saveAndReturnToMain(using text: String? = nil) {
@@ -1339,6 +1438,14 @@ struct SettingsScreen: View {
         availableDocumentURLs.first(where: { $0.lastPathComponent == selectedDocumentName })
     }
 
+    private var selectedTextFileURL: URL? {
+        guard !selectedTextFileName.isEmpty else {
+            return availableTextURLs.first
+        }
+
+        return availableTextURLs.first(where: { $0.lastPathComponent == selectedTextFileName }) ?? availableTextURLs.first
+    }
+
     private var availableDocumentURLs: [URL] {
         guard let directoryURL = currentDocumentsDirectoryURL else {
             return []
@@ -1358,8 +1465,35 @@ struct SettingsScreen: View {
         )
     }
 
+    private var availableTextURLs: [URL] {
+        guard let directoryURL = currentDocumentsDirectoryURL else {
+            return []
+        }
+
+        let urls = (try? FileManager.default.contentsOfDirectory(
+            at: directoryURL,
+            includingPropertiesForKeys: [.isRegularFileKey],
+            options: [.skipsHiddenFiles]
+        )) ?? []
+
+        return urls
+            .filter { url in
+                let values = try? url.resourceValues(forKeys: [.isRegularFileKey])
+                return values?.isRegularFile == true && url.pathExtension.lowercased() == legacyScreenDocumentFileExtension
+            }
+            .sorted { $0.lastPathComponent.localizedCaseInsensitiveCompare($1.lastPathComponent) == .orderedAscending }
+    }
+
     private var selectedDocumentDisplayName: String {
         URL(fileURLWithPath: selectedDocumentName).deletingPathExtension().lastPathComponent
+    }
+
+    private var selectedTextDisplayName: String {
+        guard let selectedTextFileURL else {
+            return "text"
+        }
+
+        return selectedTextFileURL.deletingPathExtension().lastPathComponent
     }
 
     private var singleFileExportDisplayName: String {
@@ -1507,6 +1641,8 @@ struct SettingsScreen: View {
         switch listMode {
         case .files:
             return selectedDocumentDisplayName
+        case .text:
+            return selectedTextDisplayName
         case .images:
             return selectedImageDisplayName
         case .sounds:
@@ -1522,6 +1658,8 @@ struct SettingsScreen: View {
         switch listMode {
         case .files:
             return selectedDocumentFileURL != nil
+        case .text:
+            return false
         case .images:
             return selectedImageURL != nil
         case .sounds:
@@ -1551,6 +1689,8 @@ struct SettingsScreen: View {
         switch listMode {
         case .files:
             alertMessage = renameDocument(proposedName)
+        case .text:
+            return
         case .images:
             alertMessage = renameSelectedImage(to: proposedName)
         case .sounds:
@@ -1646,14 +1786,13 @@ struct SettingsScreen: View {
     private func prepareArchiveExport() {
         saveCurrentDocumentText()
 
-        let textDocumentURLs = archiveTextDocumentURLs
-        guard !textDocumentURLs.isEmpty else {
-            renameAlertMessage = "There are no text files to export."
+        guard hasArchiveExportContent else {
+            renameAlertMessage = "There are no files to export."
             return
         }
 
         do {
-            let archiveData = try makeArchiveData(from: textDocumentURLs)
+            let archiveData = try makeFullArchiveData()
             exportArchiveDocument = SettingsArchiveFileDocument(data: archiveData)
             isExportingArchive = true
         } catch {
@@ -1935,6 +2074,25 @@ struct SettingsScreen: View {
         }
     }
 
+    private func deleteTextFile(_ textURL: URL) {
+        do {
+            try FileManager.default.removeItem(at: textURL)
+        } catch {
+            renameAlertMessage = "Couldn't delete the text file."
+            return
+        }
+
+        if selectedTextFileName == textURL.lastPathComponent {
+            selectedTextFileName = availableTextURLs.first?.lastPathComponent ?? ""
+        }
+
+        markImportedContentChanged()
+
+        if loadedDocumentName == textURL.lastPathComponent {
+            loadSelectedDocumentText()
+        }
+    }
+
     private func deleteAllFile(_ fileURL: URL) {
         let fileExtension = fileURL.pathExtension.lowercased()
 
@@ -1955,6 +2113,11 @@ struct SettingsScreen: View {
 
         if supportedImportedPDFExtensions.contains(fileExtension) {
             deletePDF(fileURL)
+            return
+        }
+
+        if fileExtension == legacyScreenDocumentFileExtension {
+            deleteTextFile(fileURL)
             return
         }
 
@@ -1994,8 +2157,12 @@ struct SettingsScreen: View {
         ["pdf"]
     }
 
-    private func handleImportedSelection(_ result: Result<[URL], Error>) {
+    private func handleImportedSelection(_ result: Result<[URL], Error>, importMode: SettingsImportMode?) {
         guard case let .success(urls) = result else {
+            return
+        }
+
+        guard let importMode else {
             return
         }
 
@@ -2003,17 +2170,56 @@ struct SettingsScreen: View {
             return
         }
 
-        let session = PendingImportSession(
+        switch importMode {
+        case .screen:
+            let session = makePendingImportSession(
+                directoryURL: directoryURL,
+                importMode: .screen,
+                remainingURLs: urls,
+                selectedConfigURLsByName: selectedScreenConfigURLsByName(from: urls)
+            )
+            processPendingImportSession(session)
+        case .allFiles:
+            guard let zipURL = urls.first, urls.count == 1, zipURL.pathExtension.lowercased() == "zip" else {
+                renameAlertMessage = "Import All Files expects one exported ZIP file."
+                return
+            }
+
+            do {
+                let archiveImport = try extractFullArchiveImport(from: zipURL)
+                var session = makePendingImportSession(
+                    directoryURL: directoryURL,
+                    importMode: .allFiles,
+                    remainingURLs: archiveImport.fileURLs,
+                    selectedConfigURLsByName: archiveImport.configURLsByName
+                )
+                session.temporaryImportDirectoryURLs.append(archiveImport.temporaryDirectoryURL)
+                processPendingImportSession(session)
+            } catch {
+                renameAlertMessage = "Couldn't import all files: \(error.localizedDescription)"
+            }
+        }
+    }
+
+    private func makePendingImportSession(
+        directoryURL: URL,
+        importMode: SettingsImportMode,
+        remainingURLs: [URL],
+        selectedConfigURLsByName: [String: URL]
+    ) -> PendingImportSession {
+        PendingImportSession(
             directoryURL: directoryURL,
-            importListMode: listMode,
-            remainingURLs: urls,
-            selectedConfigURLsByName: selectedScreenConfigURLsByName(from: urls),
+            importListMode: importMode == .screen ? .files : nil,
+            importMode: importMode,
+            remainingURLs: remainingURLs,
+            selectedConfigURLsByName: selectedConfigURLsByName,
             existingFileNames: Set(availableDocumentURLs.map { $0.lastPathComponent.lowercased() }),
+            existingTextNames: Set(availableTextURLs.map { $0.lastPathComponent.lowercased() }),
+            existingConfigNames: existingConfigFileNames(),
             existingImageNames: Set(availableImageURLs.map { $0.lastPathComponent.lowercased() }),
             existingSoundNames: Set(availableSoundURLs.map { $0.lastPathComponent.lowercased() }),
             existingPDFNames: Set(availablePDFURLs.map { $0.lastPathComponent.lowercased() })
         )
-        processPendingImportSession(session)
     }
 
     private func processPendingImportSession(_ session: PendingImportSession) {
@@ -2027,6 +2233,10 @@ struct SettingsScreen: View {
             let targetURL = session.directoryURL.appendingPathComponent(targetFileName)
 
             if pathExtension == "zip" {
+                guard session.importMode == .screen else {
+                    continue
+                }
+
                 do {
                     let package = try extractScreenPackageImport(from: sourceURL)
                     session.temporaryImportDirectoryURLs.append(package.temporaryDirectoryURL)
@@ -2040,17 +2250,52 @@ struct SettingsScreen: View {
                 continue
             }
 
-            if isScreenDocumentFileExtension(pathExtension) {
-                if session.existingFileNames.contains(targetFileNameKey) ||
+            if isScreenConfigFileName(targetFileName) {
+                guard session.importMode == .allFiles else {
+                    continue
+                }
+
+                if session.existingConfigNames.contains(targetFileNameKey) ||
                     FileManager.default.fileExists(atPath: targetURL.path) {
-                    pendingImportSession = session
-                    pendingImportConflict = PendingImportConflict(
+                    if applyPendingImportConflictIfNeeded(
                         sourceURL: sourceURL,
                         targetURL: targetURL,
                         fileName: targetFileName,
-                        contentKind: .document
+                        contentKind: .config,
+                        session: &session
+                    ) {
+                        return
+                    }
+                    continue
+                }
+
+                do {
+                    try importValidScreenConfig(from: sourceURL, to: targetURL)
+                    recordSuccessfulImport(
+                        targetURL: targetURL,
+                        fileNameKey: targetFileNameKey,
+                        contentKind: .config,
+                        session: &session
                     )
-                    return
+                } catch {
+                    db("Failed to import screen config \(targetFileName): \(error.localizedDescription)")
+                }
+                continue
+            }
+
+            if isScreenDocumentFileExtension(pathExtension) {
+                if session.existingFileNames.contains(targetFileNameKey) ||
+                    FileManager.default.fileExists(atPath: targetURL.path) {
+                    if applyPendingImportConflictIfNeeded(
+                        sourceURL: sourceURL,
+                        targetURL: targetURL,
+                        fileName: targetFileName,
+                        contentKind: .document,
+                        session: &session
+                    ) {
+                        return
+                    }
+                    continue
                 }
 
                 do {
@@ -2068,17 +2313,56 @@ struct SettingsScreen: View {
                 continue
             }
 
-            if supportedImportedImageExtensions.contains(pathExtension) {
-                if session.existingImageNames.contains(targetFileNameKey) ||
+            if pathExtension == legacyScreenDocumentFileExtension {
+                guard session.importMode == .allFiles else {
+                    continue
+                }
+
+                if session.existingTextNames.contains(targetFileNameKey) ||
                     FileManager.default.fileExists(atPath: targetURL.path) {
-                    pendingImportSession = session
-                    pendingImportConflict = PendingImportConflict(
+                    if applyPendingImportConflictIfNeeded(
                         sourceURL: sourceURL,
                         targetURL: targetURL,
                         fileName: targetFileName,
-                        contentKind: .image
+                        contentKind: .text,
+                        session: &session
+                    ) {
+                        return
+                    }
+                    continue
+                }
+
+                do {
+                    try importFileData(from: sourceURL, to: targetURL)
+                    recordSuccessfulImport(
+                        targetURL: targetURL,
+                        fileNameKey: targetFileNameKey,
+                        contentKind: .text,
+                        session: &session
                     )
-                    return
+                } catch {
+                    db("Failed to import text file \(targetFileName): \(error.localizedDescription)")
+                }
+                continue
+            }
+
+            if supportedImportedImageExtensions.contains(pathExtension) {
+                guard session.importMode == .allFiles else {
+                    continue
+                }
+
+                if session.existingImageNames.contains(targetFileNameKey) ||
+                    FileManager.default.fileExists(atPath: targetURL.path) {
+                    if applyPendingImportConflictIfNeeded(
+                        sourceURL: sourceURL,
+                        targetURL: targetURL,
+                        fileName: targetFileName,
+                        contentKind: .image,
+                        session: &session
+                    ) {
+                        return
+                    }
+                    continue
                 }
 
                 do {
@@ -2096,16 +2380,22 @@ struct SettingsScreen: View {
             }
 
             if supportedImportedSoundExtensions.contains(pathExtension) {
+                guard session.importMode == .allFiles else {
+                    continue
+                }
+
                 if session.existingSoundNames.contains(targetFileNameKey) ||
                     FileManager.default.fileExists(atPath: targetURL.path) {
-                    pendingImportSession = session
-                    pendingImportConflict = PendingImportConflict(
+                    if applyPendingImportConflictIfNeeded(
                         sourceURL: sourceURL,
                         targetURL: targetURL,
                         fileName: targetFileName,
-                        contentKind: .sound
-                    )
-                    return
+                        contentKind: .sound,
+                        session: &session
+                    ) {
+                        return
+                    }
+                    continue
                 }
 
                 do {
@@ -2123,16 +2413,22 @@ struct SettingsScreen: View {
             }
 
             if supportedImportedPDFExtensions.contains(pathExtension) {
+                guard session.importMode == .allFiles else {
+                    continue
+                }
+
                 if session.existingPDFNames.contains(targetFileNameKey) ||
                     FileManager.default.fileExists(atPath: targetURL.path) {
-                    pendingImportSession = session
-                    pendingImportConflict = PendingImportConflict(
+                    if applyPendingImportConflictIfNeeded(
                         sourceURL: sourceURL,
                         targetURL: targetURL,
                         fileName: targetFileName,
-                        contentKind: .pdf
-                    )
-                    return
+                        contentKind: .pdf,
+                        session: &session
+                    ) {
+                        return
+                    }
+                    continue
                 }
 
                 do {
@@ -2166,6 +2462,13 @@ struct SettingsScreen: View {
             if session.firstImportedDocumentURL == nil {
                 session.firstImportedDocumentURL = targetURL
             }
+        case .config:
+            session.existingConfigNames.insert(fileNameKey)
+        case .text:
+            session.existingTextNames.insert(fileNameKey)
+            if session.firstImportedTextURL == nil {
+                session.firstImportedTextURL = targetURL
+            }
         case .image:
             session.existingImageNames.insert(fileNameKey)
             if session.firstImportedImageURL == nil {
@@ -2184,6 +2487,44 @@ struct SettingsScreen: View {
         }
     }
 
+    private func applyPendingImportConflictIfNeeded(
+        sourceURL: URL,
+        targetURL: URL,
+        fileName: String,
+        contentKind: ImportedContentKind,
+        session: inout PendingImportSession
+    ) -> Bool {
+        if let resolution = session.applyToAllResolution {
+            switch resolution {
+            case .replace:
+                importReplacingExistingFile(
+                    sourceURL: sourceURL,
+                    targetURL: targetURL,
+                    fileName: fileName,
+                    contentKind: contentKind,
+                    session: &session
+                )
+            case .keepBoth:
+                importKeepingBothFiles(
+                    sourceURL: sourceURL,
+                    preferredTargetURL: targetURL,
+                    contentKind: contentKind,
+                    session: &session
+                )
+            }
+            return false
+        }
+
+        pendingImportSession = session
+        pendingImportConflict = PendingImportConflict(
+            sourceURL: sourceURL,
+            targetURL: targetURL,
+            fileName: fileName,
+            contentKind: contentKind
+        )
+        return true
+    }
+
     private func resolvePendingImportConflictByReplacing() {
         guard var session = pendingImportSession,
               let conflict = pendingImportConflict else {
@@ -2193,26 +2534,40 @@ struct SettingsScreen: View {
         pendingImportConflict = nil
         pendingImportSession = nil
 
-        do {
-            if FileManager.default.fileExists(atPath: conflict.targetURL.path) {
-                try FileManager.default.removeItem(at: conflict.targetURL)
-            }
-
-            try importFileData(from: conflict.sourceURL, to: conflict.targetURL)
-            if conflict.contentKind == .document {
-                ensureImportedScreenConfig(for: conflict.targetURL, session: session, replacingDocument: true)
-            }
-            recordSuccessfulImport(
-                targetURL: conflict.targetURL,
-                fileNameKey: conflict.fileName.lowercased(),
-                contentKind: conflict.contentKind,
-                session: &session
-            )
-            processPendingImportSession(session)
-        } catch {
-            renameAlertMessage = "Couldn't import the file: \(error.localizedDescription)"
-            finishPendingImportSession(session)
+        if importConflictApplyToAll, session.importMode == .allFiles {
+            session.applyToAllResolution = .replace
         }
+
+        importReplacingExistingFile(
+            sourceURL: conflict.sourceURL,
+            targetURL: conflict.targetURL,
+            fileName: conflict.fileName,
+            contentKind: conflict.contentKind,
+            session: &session
+        )
+        processPendingImportSession(session)
+    }
+
+    private func resolvePendingImportConflictKeepingBoth() {
+        guard var session = pendingImportSession,
+              let conflict = pendingImportConflict else {
+            return
+        }
+
+        pendingImportConflict = nil
+        pendingImportSession = nil
+
+        if importConflictApplyToAll, session.importMode == .allFiles {
+            session.applyToAllResolution = .keepBoth
+        }
+
+        importKeepingBothFiles(
+            sourceURL: conflict.sourceURL,
+            preferredTargetURL: conflict.targetURL,
+            contentKind: conflict.contentKind,
+            session: &session
+        )
+        processPendingImportSession(session)
     }
 
     private func resolvePendingImportConflictBySkipping() {
@@ -2224,6 +2579,77 @@ struct SettingsScreen: View {
         pendingImportConflict = nil
         pendingImportSession = nil
         processPendingImportSession(session)
+    }
+
+    private func importReplacingExistingFile(
+        sourceURL: URL,
+        targetURL: URL,
+        fileName: String,
+        contentKind: ImportedContentKind,
+        session: inout PendingImportSession
+    ) {
+        do {
+            if FileManager.default.fileExists(atPath: targetURL.path) {
+                try FileManager.default.removeItem(at: targetURL)
+            }
+
+            try importResolvedFile(
+                from: sourceURL,
+                to: targetURL,
+                contentKind: contentKind,
+                session: &session,
+                replacingDocument: true
+            )
+        } catch {
+            renameAlertMessage = "Couldn't import \(fileName): \(error.localizedDescription)"
+        }
+    }
+
+    private func importKeepingBothFiles(
+        sourceURL: URL,
+        preferredTargetURL: URL,
+        contentKind: ImportedContentKind,
+        session: inout PendingImportSession
+    ) {
+        let targetURL = uniqueImportTargetURL(for: preferredTargetURL, session: session)
+
+        do {
+            try importResolvedFile(
+                from: sourceURL,
+                to: targetURL,
+                contentKind: contentKind,
+                session: &session,
+                replacingDocument: false
+            )
+        } catch {
+            renameAlertMessage = "Couldn't import \(preferredTargetURL.lastPathComponent): \(error.localizedDescription)"
+        }
+    }
+
+    private func importResolvedFile(
+        from sourceURL: URL,
+        to targetURL: URL,
+        contentKind: ImportedContentKind,
+        session: inout PendingImportSession,
+        replacingDocument: Bool
+    ) throws {
+        switch contentKind {
+        case .config:
+            try importValidScreenConfig(from: sourceURL, to: targetURL)
+        default:
+            try importFileData(from: sourceURL, to: targetURL)
+        }
+
+        if contentKind == .document {
+            ensureImportedScreenConfig(for: targetURL, session: session, replacingDocument: replacingDocument)
+        }
+
+        recordSuccessfulImport(
+            targetURL: targetURL,
+            fileNameKey: targetURL.lastPathComponent.lowercased(),
+            contentKind: contentKind,
+            session: &session
+        )
     }
 
     private func cancelPendingImportSession() {
@@ -2240,6 +2666,7 @@ struct SettingsScreen: View {
     private func finishPendingImportSession(_ session: PendingImportSession) {
         pendingImportConflict = nil
         pendingImportSession = nil
+        importConflictApplyToAll = false
 
         cleanupTemporaryImportDirectories(session.temporaryImportDirectoryURLs)
 
@@ -2288,6 +2715,28 @@ struct SettingsScreen: View {
         return configURLsByName
     }
 
+    private func existingConfigFileNames() -> Set<String> {
+        guard let directoryURL = currentDocumentsDirectoryURL else {
+            return []
+        }
+
+        let urls = (try? FileManager.default.contentsOfDirectory(
+            at: directoryURL,
+            includingPropertiesForKeys: [.isRegularFileKey],
+            options: [.skipsHiddenFiles]
+        )) ?? []
+
+        return Set(urls.compactMap { url in
+            let values = try? url.resourceValues(forKeys: [.isRegularFileKey])
+            guard values?.isRegularFile == true,
+                  isScreenConfigFileName(url.lastPathComponent) else {
+                return nil
+            }
+
+            return url.lastPathComponent.lowercased()
+        })
+    }
+
     private func extractScreenPackageImport(from zipURL: URL) throws -> ScreenPackageImport {
         let archiveData = try readImportedFileData(from: zipURL)
         let entries = try SettingsArchiveFileDocument.archiveEntries(from: archiveData)
@@ -2329,6 +2778,79 @@ struct SettingsScreen: View {
             return ScreenPackageImport(
                 documentURL: documentURL,
                 configURL: configURL,
+                temporaryDirectoryURL: temporaryDirectoryURL
+            )
+        } catch {
+            try? FileManager.default.removeItem(at: temporaryDirectoryURL)
+            throw error
+        }
+    }
+
+    private func extractFullArchiveImport(from zipURL: URL) throws -> FullArchiveImport {
+        let archiveData = try readImportedFileData(from: zipURL)
+        let entries = try SettingsArchiveFileDocument.archiveEntries(from: archiveData)
+        let hasManifest = entries.contains { $0.fileName == "Archive.json" }
+        let hasScreensFolder = entries.contains { $0.fileName.hasPrefix("Screens/") }
+
+        guard hasManifest || hasScreensFolder else {
+            throw CocoaError(.fileReadCorruptFile)
+        }
+
+        let temporaryDirectoryURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+
+        do {
+            try FileManager.default.createDirectory(
+                at: temporaryDirectoryURL,
+                withIntermediateDirectories: true
+            )
+
+            var configURLsByName: [String: URL] = [:]
+            var configURLs: [URL] = []
+            var screenURLs: [URL] = []
+            var textURLs: [URL] = []
+            var imageURLs: [URL] = []
+            var soundURLs: [URL] = []
+            var pdfURLs: [URL] = []
+
+            for entry in entries {
+                let components = entry.fileName.split(separator: "/", omittingEmptySubsequences: true).map(String.init)
+                guard components.count == 2 else {
+                    continue
+                }
+
+                let folderName = components[0]
+                guard let fileName = sanitizedArchiveFileName(components[1]) else {
+                    continue
+                }
+
+                let extractedURL = temporaryDirectoryURL.appendingPathComponent(fileName)
+                try entry.data.write(to: extractedURL, options: [.atomic])
+                let pathExtension = extractedURL.pathExtension.lowercased()
+
+                switch folderName {
+                case "Configs" where isScreenConfigFileName(fileName):
+                    configURLsByName[fileName.lowercased()] = extractedURL
+                    configURLs.append(extractedURL)
+                case "Screens" where isScreenDocumentFileExtension(pathExtension):
+                    screenURLs.append(extractedURL)
+                case "Text" where pathExtension == legacyScreenDocumentFileExtension:
+                    textURLs.append(extractedURL)
+                case "Images" where supportedImportedImageExtensions.contains(pathExtension):
+                    imageURLs.append(extractedURL)
+                case "Sounds" where supportedImportedSoundExtensions.contains(pathExtension):
+                    soundURLs.append(extractedURL)
+                case "PDFs" where supportedImportedPDFExtensions.contains(pathExtension):
+                    pdfURLs.append(extractedURL)
+                default:
+                    continue
+                }
+            }
+
+            let orderedURLs = configURLs + screenURLs + textURLs + imageURLs + soundURLs + pdfURLs
+            return FullArchiveImport(
+                fileURLs: orderedURLs,
+                configURLsByName: configURLsByName,
                 temporaryDirectoryURL: temporaryDirectoryURL
             )
         } catch {
@@ -2398,6 +2920,56 @@ struct SettingsScreen: View {
 
         let requiredBoxCount = requiredBoxCountForImportedDocument(at: documentURL)
         _ = ensureScreenConfigFile(for: documentURL, requiredBoxCount: requiredBoxCount)
+    }
+
+    private func importValidScreenConfig(from sourceURL: URL, to targetURL: URL) throws {
+        try importFileData(from: sourceURL, to: targetURL)
+        let data = try Data(contentsOf: targetURL)
+
+        do {
+            _ = try JSONDecoder().decode(ScreenConfig.self, from: data)
+        } catch {
+            try? FileManager.default.removeItem(at: targetURL)
+            throw error
+        }
+    }
+
+    private func isScreenConfigFileName(_ fileName: String) -> Bool {
+        fileName.lowercased().hasSuffix(".config.json")
+    }
+
+    private func uniqueImportTargetURL(for preferredTargetURL: URL, session: PendingImportSession) -> URL {
+        let directoryURL = preferredTargetURL.deletingLastPathComponent()
+        let fileName = preferredTargetURL.lastPathComponent
+        let baseName: String
+        let suffix: String
+
+        if isScreenConfigFileName(fileName) {
+            baseName = String(fileName.dropLast(".config.json".count))
+            suffix = ".config.json"
+        } else {
+            baseName = preferredTargetURL.deletingPathExtension().lastPathComponent
+            suffix = ".\(preferredTargetURL.pathExtension)"
+        }
+
+        var index = 2
+        while true {
+            let candidateFileName = "\(baseName) \(index)\(suffix)"
+            let candidateURL = directoryURL.appendingPathComponent(candidateFileName)
+            let candidateKey = candidateFileName.lowercased()
+
+            if !FileManager.default.fileExists(atPath: candidateURL.path),
+               !session.existingFileNames.contains(candidateKey),
+               !session.existingTextNames.contains(candidateKey),
+               !session.existingConfigNames.contains(candidateKey),
+               !session.existingImageNames.contains(candidateKey),
+               !session.existingSoundNames.contains(candidateKey),
+               !session.existingPDFNames.contains(candidateKey) {
+                return candidateURL
+            }
+
+            index += 1
+        }
     }
 
     private func requiredBoxCountForImportedDocument(at documentURL: URL) -> Int {
@@ -2703,32 +3275,98 @@ struct SettingsScreen: View {
         }
     }
 
-    private var archiveTextDocumentURLs: [URL] {
-        let textFiles = availableDocumentURLs
-        if !textFiles.isEmpty {
-            return textFiles
-        }
-
-        if let selectedDocumentFileURL, isScreenDocumentURL(selectedDocumentFileURL) {
-            return [selectedDocumentFileURL]
-        }
-
-        return []
+    private var hasArchiveExportContent: Bool {
+        !availableDocumentURLs.isEmpty ||
+            !availableTextURLs.isEmpty ||
+            !availableImageURLs.isEmpty ||
+            !availableSoundURLs.isEmpty ||
+            !availablePDFURLs.isEmpty
     }
 
     private var archiveExportType: UTType {
         UTType(filenameExtension: "zip") ?? .data
     }
 
-    private func makeArchiveData(from fileURLs: [URL]) throws -> Data {
-        let entries = try fileURLs.map { fileURL in
+    private func archiveExportDefaultFilename() -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyMMdd_HHmmss"
+        return "ESP_\(formatter.string(from: Date()))"
+    }
+
+    private func makeFullArchiveData() throws -> Data {
+        var entries: [SettingsArchiveFileDocument.ArchiveEntry] = [
             SettingsArchiveFileDocument.ArchiveEntry(
-                fileName: fileURL.lastPathComponent,
-                data: try Data(contentsOf: fileURL)
+                fileName: "Archive.json",
+                data: try archiveManifestData()
+            )
+        ]
+
+        for screenURL in availableDocumentURLs {
+            entries.append(
+                SettingsArchiveFileDocument.ArchiveEntry(
+                    fileName: "Screens/\(screenURL.lastPathComponent)",
+                    data: try Data(contentsOf: screenURL)
+                )
+            )
+            entries.append(
+                SettingsArchiveFileDocument.ArchiveEntry(
+                    fileName: "Configs/\(configFileName(forDocumentName: screenURL.lastPathComponent))",
+                    data: try screenPackageConfigData(
+                        for: screenURL,
+                        documentFileName: screenURL.lastPathComponent
+                    )
+                )
             )
         }
 
+        try appendArchiveEntries(
+            from: availableTextURLs,
+            folderName: "Text",
+            to: &entries
+        )
+        try appendArchiveEntries(
+            from: availableImageURLs,
+            folderName: "Images",
+            to: &entries
+        )
+        try appendArchiveEntries(
+            from: availableSoundURLs,
+            folderName: "Sounds",
+            to: &entries
+        )
+        try appendArchiveEntries(
+            from: availablePDFURLs,
+            folderName: "PDFs",
+            to: &entries
+        )
+
         return try SettingsArchiveFileDocument.makeArchiveData(with: entries)
+    }
+
+    private func appendArchiveEntries(
+        from fileURLs: [URL],
+        folderName: String,
+        to entries: inout [SettingsArchiveFileDocument.ArchiveEntry]
+    ) throws {
+        for fileURL in fileURLs {
+            entries.append(
+                SettingsArchiveFileDocument.ArchiveEntry(
+                    fileName: "\(folderName)/\(fileURL.lastPathComponent)",
+                    data: try Data(contentsOf: fileURL)
+                )
+            )
+        }
+    }
+
+    private func archiveManifestData() throws -> Data {
+        let manifest: [String: Any] = [
+            "archiveFormatVersion": 1,
+            "app": "ESP32BLE"
+        ]
+        return try JSONSerialization.data(
+            withJSONObject: manifest,
+            options: [.prettyPrinted, .sortedKeys]
+        )
     }
 
     private func sendKeyboardTimingCommand() {

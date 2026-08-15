@@ -1,106 +1,64 @@
-iles involved:
-• ESP32BLE/Scrns/ScreenDocument.swift
-• ESP32BLE/Scrns/ScreenConfig.swift
-• ESP32BLE/Scrns/ContentView.swift
-• ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
-• ESP32BLE/Scrns/Set_Screen/Table_Img/Set_Table.swift
+IMPORTANT:
+Return plain flat text only.
+
+Task:
+
+Polish the full archive export naming.
 
 Current behaviour:
-• ScreenDocument.swift currently defines isScreenDocumentFileExtension() as true for both .screen and .txt.
-• ContentView.refreshDocumentFiles() scans the Documents folder, filters through preferredScreenDocumentURLs(), then calls ensureScreenConfigFilesFromAppStorageFallback(for:) for every discovered document.
-• Because .txt is still classified as a screen document, spk.txt is included in updatedDocumentFiles.
-• ensureScreenConfigFilesFromAppStorageFallback(for:) sees no spk.config.json, creates fallback/default ScreenConfig, and saves spk.config.json.
-• This can happen during document refresh/open lifecycle, not specifically because of close.
-• loadFunctionKeys(from:) also loads a ScreenConfig fallback for any selected document, but it does not directly save a config by itself.
-• Saving appearance settings can also create config files through updateDocumentFontSize(), saveGridDimensions(), updateScreenConfig(), saveBackgroundImageOpacity(), saveBackgroundImageSelection(), and updateButtonsBackgroundOpacity(), but the automatic spk.txt case is most directly caused by refreshDocumentFiles().
 
-Where Screen.config.json is automatically created:
-• ScreenConfig.swift:
-   • ensureScreenConfigFile(for:requiredBoxCount:) creates and saves a config if missing.
-   • ensureScreenConfigFiles(for:) creates configs for a list of URLs.
-• ContentView.swift:
-   • refreshDocumentFiles() calls ensureScreenConfigFilesFromAppStorageFallback(for:).
-   • ensureScreenConfigFilesFromAppStorageFallback(for:) creates configs for every discovered document lacking one.
-   • copyDocumentConfigOrCreateDefault(from:to:) creates config for duplicated documents when source config is missing.
-   • updateDocumentFontSize(), saveGridDimensions(), updateScreenConfig(), saveBackgroundImageOpacity(), saveBackgroundImageSelection(), and updateButtonsBackgroundOpacity() can save config for the selected document.
-• Set_Screen.swift:
-   • ensureImportedScreenConfig(for:session:replacingDocument:) creates config during import.
-   • createDefaultScreenConfigIfNeeded(for:) calls ensureScreenConfigFile().
-   • makeSingleFileExportURL() can generate config data for export without necessarily saving it.
+Export creates:
 
-Code paths that create configs when opening/saving/closing:
-• Opening / refresh:
-   • ContentView.refreshDocumentFiles()
-   • preferredScreenDocumentURLs(from:)
-   • ensureScreenConfigFilesFromAppStorageFallback(for:)
-   • saveScreenConfig()
-• Loading selected document:
-   • ContentView.loadFunctionKeys(from:)
-   • loadScreenConfigForDocument()
-   • This loads config or fallback but does not save unless another path updates settings.
-• Saving appearance settings:
-   • ContentView.updateDocumentFontSize()
-   • ContentView.saveGridDimensions()
-   • ContentView.updateScreenConfig()
-   • ContentView.saveBackgroundImageOpacity()
-   • ContentView.saveBackgroundImageSelection()
-   • ContentView.updateButtonsBackgroundOpacity()
-• Import:
-   • Set_Screen.processPendingImportSession()
-   • ensureImportedScreenConfig()
-   • createDefaultScreenConfigIfNeeded()
-• Duplicate:
-   • ContentView.duplicateDocument()
-   • copyDocumentConfigOrCreateDefault()
-• Close:
-   • I did not find a specific close-only config creation path. The observed “opened and closed” result is likely from refresh/load lifecycle or a settings save path triggered while the file is considered a screen document.
+Archive.zip
 
-How to distinguish document types:
-• New .screen:
-   • pathExtension == screen
-   • Always a screen document.
-   • Should create/use Screen.config.json.
-• Legacy .txt screen:
-   • pathExtension == txt and matching <base>.config.json exists.
-   • Should remain loadable as a screen for migration.
-   • Should keep using existing config.
-• Ordinary .txt text file:
-   • pathExtension == txt and no matching <base>.config.json.
-   • Should not be included in screen document discovery.
-   • Should not auto-create Screen.config.json.
-   • Should remain a normal text file.
+Change to:
 
-Required change:
-• Split the current helper meaning.
-• isScreenDocumentFileExtension() currently means “screen or legacy screen candidate,” but it treats all .txt as screens.
-• Add or refactor into separate concepts:
-   • .screen is definitely a screen document.
-   • .txt is only a legacy screen when a matching config exists, or when explicitly imported/converted as a legacy screen package.
-   • .txt without config is ordinary text.
-• Update ContentView.refreshDocumentFiles() so it does not pass every .txt file into ensureScreenConfigFilesFromAppStorageFallback(for:).
-• Update preferredScreenDocumentURLs(from:) or add a new discovery helper that has access to the full file list and can decide:
-   • include .screen
-   • include .txt only if <base>.config.json exists
-   • prefer .screen over .txt when both exist
-• Update Set_Screen.availableDocumentURLs the same way so ordinary .txt files do not appear as managed screens.
-• Update import handling so .txt imports do not automatically create configs unless the imported set/package includes a matching .config.json or the user is explicitly importing as a legacy screen.
-• Keep navigation fallback from old .txt links to .screen unchanged.
+ESP_YYMMDD_HHMMSS.zip
 
-Migration risks:
-• Existing legacy screens that are .txt but do not yet have config files would stop appearing as screens if the rule is strictly “.txt + config only.”
-• This is the main risk because earlier versions used .txt as screen documents without sidecar config.
-• A safer transitional rule may need another legacy signal, such as known AppStorage mappings, document-backgrounds.json entries, or screen-like content markers, but content heuristics can misclassify phrase files like spk.txt.
-• Auto-creating configs for all .txt solves old migration but breaks ordinary text files.
-• Not auto-creating configs for .txt protects ordinary text files but may hide old screens with no config.
-• Import currently accepts plainTextImportType for files mode, so normal .txt import still enters the screen import pipeline and gets config creation.
+Example:
 
-Recommended fix order:
-• First, add a central discovery helper that determines screen documents from a full directory listing:
-   • include .screen always
-   • include .txt only when matching .config.json exists
-   • prefer .screen over .txt
-• Second, change ContentView.refreshDocumentFiles() to use that helper before calling ensureScreenConfigFilesFromAppStorageFallback(for:).
-• Third, change Set_Screen.availableDocumentURLs to use the same helper.
-• Fourth, guard ensureScreenConfigFilesFromAppStorageFallback(for:) so it only writes configs for .screen files, or for .txt files that already qualify as legacy screens.
-• Fifth, review import .txt behaviour separately because the app must decide whether Import Screen should still accept .txt as legacy screens or leave .txt as ordinary files.
-• Sixth, after the rules are stable, clean up any unwanted orphan configs such as spk.config.json only if explicitly requested.
+ESP_260815_172329.zip
+
+Requirements:
+
+1. Update the archive export filename generation only.
+
+2. Use local date/time.
+
+Format:
+ESP_yyMMdd_HHmmss
+.zip
+
+3. Keep ZIP contents unchanged:
+
+Screens/
+Configs/
+Text/
+Images/
+Sounds/
+PDFs/
+Archive.json
+
+4. Rename the Settings export action title/button from:
+
+Archive Export
+or
+Export Archive
+
+to:
+
+Export All Files
+
+5. Do not change:
+- archive structure
+- import
+- single screen export
+- developer mode
+- file discovery
+
+Build and report:
+
+Files changed:
+Build result:
+New export filename:
+UI text changes:

@@ -3,6 +3,7 @@ import SwiftUI
 struct SettingsDocumentTableSection: View {
     enum ListMode {
         case files
+        case text
         case images
         case sounds
         case pdfs
@@ -12,6 +13,8 @@ struct SettingsDocumentTableSection: View {
     let listMode: ListMode
     let documentFiles: [URL]
     let selectedDocumentName: String
+    let textURLs: [URL]
+    let selectedTextFileName: String
     let imageURLs: [URL]
     let selectedImageURL: URL?
     let soundURLs: [URL]
@@ -20,6 +23,7 @@ struct SettingsDocumentTableSection: View {
     let selectedPDFURL: URL?
     let allFileURLs: [URL]
     @Binding var fileScrollPositionID: String?
+    @Binding var textScrollPositionID: String?
     @Binding var imageScrollPositionID: String?
     @Binding var soundScrollPositionID: String?
     @Binding var pdfScrollPositionID: String?
@@ -27,8 +31,10 @@ struct SettingsDocumentTableSection: View {
     let canDeleteDocuments: Bool
     let imagePreviewSection: AnyView
     let loadFunctionKeys: (URL) -> Void
+    let loadTextFile: (URL) -> Void
     let deleteDocument: (URL) -> Void
     let duplicateDocument: (URL) -> Void
+    let deleteTextFile: (URL) -> Void
     let selectImage: (URL) -> Void
     let deleteImage: (URL) -> Void
     let selectSound: (URL) -> Void
@@ -49,6 +55,11 @@ struct SettingsDocumentTableSection: View {
                 case .files:
                     ForEach(documentFiles, id: \.path) { fileURL in
                         documentRow(for: fileURL)
+                    }
+                    .scrollTargetLayout()
+                case .text:
+                    ForEach(textURLs, id: \.path) { textURL in
+                        textRow(for: textURL)
                     }
                     .scrollTargetLayout()
                 case .images:
@@ -93,6 +104,8 @@ struct SettingsDocumentTableSection: View {
         switch listMode {
         case .files:
             return $fileScrollPositionID
+        case .text:
+            return $textScrollPositionID
         case .images:
             return $imageScrollPositionID
         case .sounds:
@@ -152,6 +165,48 @@ struct SettingsDocumentTableSection: View {
                 } label: {
                     Label("Delete", systemImage: "trash")
                 }
+            }
+        }
+    }
+
+    private func textRow(for textURL: URL) -> some View {
+        let isSelected = selectedTextFileName == textURL.lastPathComponent
+
+        return Button {
+            ButtonClickFeedback.playIfEnabled()
+            loadTextFile(textURL)
+        } label: {
+            HStack {
+                Text(textURL.lastPathComponent)
+                    .font(tableRowFont)
+                    .fontWeight(isSelected ? .bold : .regular)
+                    .foregroundStyle(isSelected ? Color.green : .white)
+                    .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Spacer()
+            }
+            .padding(.leading, 10)
+            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            .background(Color.black)
+            .overlay {
+                Rectangle()
+                    .fill(Color.gray.opacity(0.6))
+                    .frame(height: 1)
+                    .frame(maxHeight: .infinity, alignment: .bottom)
+            }
+            .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .id(textURL.path)
+        .listRowInsets(EdgeInsets())
+        .listRowSeparator(.hidden)
+        .listRowBackground(Color.clear)
+        .swipeActions(edge: .leading, allowsFullSwipe: false) {
+            Button(role: .destructive) {
+                deleteTextFile(textURL)
+            } label: {
+                Label("Delete", systemImage: "trash")
             }
         }
     }
