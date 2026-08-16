@@ -173,6 +173,7 @@ struct ContentView: View {
     @State private var didPresentInitialSettingsScreen = false
     @State private var hasLoggedDeviceType = false
     @State private var lastLoggedOrientationState: Bool?
+    @State private var isDeletingAllData = false
     @AppStorage("settingsStatusBarVisible") private var isStatusBarVisible = true
 
     var body: some View {
@@ -498,8 +499,12 @@ struct ContentView: View {
                 }
             )
             db("CONFIG_RECREATE_TRACE refreshDocumentFiles screen_files count=\(updatedDocumentFiles.count) files=\(updatedDocumentFiles.map { $0.lastPathComponent }.joined(separator: ", ")) selectedDocumentName=\(selectedDocumentName)")
-            db("CONFIG_RECREATE_TRACE refreshDocumentFiles ensure_configs selectedDocumentName=\(selectedDocumentName)")
-            ensureScreenConfigFilesFromAppStorageFallback(for: updatedDocumentFiles)
+            if isDeletingAllData {
+                db("CONFIG_RECREATE_TRACE refreshDocumentFiles skip_config_repair reason=delete_all selectedDocumentName=\(selectedDocumentName)")
+            } else {
+                db("CONFIG_RECREATE_TRACE refreshDocumentFiles ensure_configs selectedDocumentName=\(selectedDocumentName)")
+                ensureScreenConfigFilesFromAppStorageFallback(for: updatedDocumentFiles)
+            }
             db("STATE ContentView.refreshDocumentFiles current documentFiles.count=\(documentFiles.count) new=\(updatedDocumentFiles.count) thread=\(Thread.isMainThread ? "main" : "background")")
             documentFiles = updatedDocumentFiles
         } catch {
@@ -507,6 +512,16 @@ struct ContentView: View {
             db("STATE ContentView.refreshDocumentFiles current documentFiles.count=\(documentFiles.count) new=0 error=\(error.localizedDescription) thread=\(Thread.isMainThread ? "main" : "background")")
             documentFiles = []
         }
+    }
+
+    private func refreshDocumentFilesAfterDeletingAllData() {
+        db("CONFIG_RECREATE_TRACE delete_all_refresh begin skip_config_repair=true selectedDocumentName=\(selectedDocumentName)")
+        isDeletingAllData = true
+        defer {
+            isDeletingAllData = false
+            db("CONFIG_RECREATE_TRACE delete_all_refresh end skip_config_repair=false selectedDocumentName=\(selectedDocumentName)")
+        }
+        refreshDocumentFiles()
     }
 
     private func refreshBackgroundImageFiles() {
@@ -2453,6 +2468,7 @@ struct ContentView: View {
             documentFiles: documentFiles,
             selectedDocumentName: selectedDocumentName,
             refreshDocumentFiles: refreshDocumentFiles,
+            refreshDocumentFilesAfterDeletingAllData: refreshDocumentFilesAfterDeletingAllData,
             loadFunctionKeys: selectDocument,
             saveSelectedDocumentAndReload: saveSelectedDocumentAndReload,
             renameDocument: renameSelectedDocument,

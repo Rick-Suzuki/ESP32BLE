@@ -78,6 +78,7 @@ struct SettingsScreen: View {
         let importListMode: SettingsListMode?
         let importMode: SettingsImportMode
         var remainingURLs: [URL]
+        var processedItemCount = 0
         var selectedConfigURLsByName: [String: URL]
         var temporaryImportDirectoryURLs: [URL] = []
         var existingFileNames: Set<String>
@@ -93,6 +94,9 @@ struct SettingsScreen: View {
         var firstImportedPDFURL: URL?
         var applyToAllResolution: ImportConflictResolution?
         var importedAnything = false
+        var importedFileCount = 0
+        var replacedFileCount = 0
+        var failedFileCount = 0
     }
 
     private struct ScreenPackageImport {
@@ -141,6 +145,7 @@ struct SettingsScreen: View {
     let documentFiles: [URL]
     let selectedDocumentName: String
     let refreshDocumentFiles: () -> Void
+    let refreshDocumentFilesAfterDeletingAllData: () -> Void
     let loadFunctionKeys: (URL) -> Void
     let saveSelectedDocumentAndReload: (String) -> Void
     let renameDocument: (String) -> String?
@@ -163,6 +168,7 @@ struct SettingsScreen: View {
     @State private var renameAlertMessage: String?
     @State private var repairAlertMessage: String?
     @State private var isDeleteAllDataConfirmationPresented = false
+    @State private var isRestoreAllFilesConfirmationPresented = false
     @AppStorage("settingsListMode") private var listModeRawValue = SettingsListMode.files.rawValue
     @AppStorage("settingsFilesScrollPositionID") private var fileScrollPositionIDStorage = ""
     @AppStorage("settingsTextScrollPositionID") private var textScrollPositionIDStorage = ""
@@ -265,17 +271,15 @@ struct SettingsScreen: View {
 			// import btn
 			//
 				Menu {
-					Button("Import Screen") {
+					Button("Import Screens") {
 						ButtonClickFeedback.playIfEnabled()
                         importConflictApplyToAll = false
                         activeImportMode = .screen
 						pendingImportMode = .screen
 					}
-					Button("Import All Files") {
+					Button("Restore All Files") {
 						ButtonClickFeedback.playIfEnabled()
-                        importConflictApplyToAll = false
-                        activeImportMode = .allFiles
-						pendingImportMode = .allFiles
+						isRestoreAllFilesConfirmationPresented = true
 					}
 				} label: {
 					Image(systemName: "square.and.arrow.down")
@@ -421,16 +425,17 @@ struct SettingsScreen: View {
             guard isEditingDocumentName else { return }
             isDocumentNameFieldFocused = true
         }
-        .alert("Alert", isPresented: renameAlertIsPresented) {
-            Button("OK", role: .cancel) {
-                renameAlertMessage = nil
-            }
-        } message: {
-            Text(renameAlertMessage ?? "")
-        }
+        .modifier(SettingsRenameAlertModifier(
+            message: $renameAlertMessage,
+            isPresented: renameAlertIsPresented
+        ))
         .modifier(DeleteAllDataConfirmationModifier(
             isPresented: $isDeleteAllDataConfirmationPresented,
             deleteAllData: deleteAllData
+        ))
+        .modifier(RestoreAllFilesConfirmationModifier(
+            isPresented: $isRestoreAllFilesConfirmationPresented,
+            restoreAllFiles: beginRestoreAllFiles
         ))
         .overlay {
             repairDocumentAlertOverlay
@@ -440,29 +445,14 @@ struct SettingsScreen: View {
             isPresented: importConflictIsPresented,
             titleVisibility: .visible
         ) {
-            if pendingImportSession?.importMode == .allFiles {
-                Button(importConflictApplyToAll ? "Apply to All: On" : "Apply to All: Off") {
-                    importConflictApplyToAll.toggle()
-                }
-                Button("Replace") {
-                    resolvePendingImportConflictByReplacing()
-                }
-                Button("Keep Both") {
-                    resolvePendingImportConflictKeepingBoth()
-                }
-                Button("Stop", role: .destructive) {
-                    cancelPendingImportSession()
-                }
-            } else {
-                Button("Replace Existing") {
-                    resolvePendingImportConflictByReplacing()
-                }
-                Button("Skip This File") {
-                    resolvePendingImportConflictBySkipping()
-                }
-                Button("Stop Import", role: .destructive) {
-                    cancelPendingImportSession()
-                }
+            Button("Replace Existing") {
+                resolvePendingImportConflictByReplacing()
+            }
+            Button("Skip This File") {
+                resolvePendingImportConflictBySkipping()
+            }
+            Button("Stop Import", role: .destructive) {
+                cancelPendingImportSession()
             }
             Button("Cancel", role: .cancel) { }
         } message: {
@@ -570,6 +560,12 @@ struct SettingsScreen: View {
                 }
             }
         )
+    }
+
+    private func beginRestoreAllFiles() {
+        importConflictApplyToAll = false
+        activeImportMode = .allFiles
+        pendingImportMode = .allFiles
     }
 
     private var importConflictIsPresented: Binding<Bool> {
@@ -2161,7 +2157,7 @@ struct SettingsScreen: View {
 
             resetSettingsStateAfterDeletingAllData()
             db("DELETE_ALL_TRACE before_refresh_after_delete")
-            markImportedContentChanged()
+            markDeletedAllDataChanged()
         } catch {
             db("DELETE_ALL_TRACE delete_all_failed error=\(error)")
             renameAlertMessage = "Couldn't delete all data: \(error.localizedDescription)"
@@ -2282,13 +2278,16 @@ struct SettingsScreen: View {
             db("IMPORT_TRACE all_files_archive_selected count=\(urls.count) first=\(urls.first?.path ?? "nil")")
             guard let zipURL = urls.first, urls.count == 1, zipURL.pathExtension.lowercased() == "zip" else {
                 db("IMPORT_TRACE all_files_archive_validation=invalid reason=expected_single_zip")
-                renameAlertMessage = "Import All Files expects one exported ZIP file."
+                renameAlertMessage = "Restore All Files expects one exported ZIP file."
                 return
             }
 
             do {
                 let archiveImport = try extractFullArchiveImport(from: zipURL)
                 db("IMPORT_TRACE all_files_archive_validation=valid queued_count=\(archiveImport.fileURLs.count)")
+                db("IMPORT_FULL_COPY_START total=\(archiveImport.fileURLs.count)")
+                db("RESTORE_ALL_START total=\(archiveImport.fileURLs.count)")
+                db("IMPORT_ALL_QUEUE_CREATED total=\(archiveImport.fileURLs.count) items=[\(archiveImport.fileURLs.prefix(10).map { $0.lastPathComponent }.joined(separator: ", "))]")
                 var session = makePendingImportSession(
                     directoryURL: directoryURL,
                     importMode: .allFiles,
@@ -2296,6 +2295,7 @@ struct SettingsScreen: View {
                     selectedConfigURLsByName: archiveImport.configURLsByName
                 )
                 session.temporaryImportDirectoryURLs.append(archiveImport.temporaryDirectoryURL)
+                db("IMPORT_ALL_QUEUE_START")
                 processPendingImportSession(session)
             } catch {
                 db("IMPORT_TRACE all_files_archive_validation=invalid error=\(error.localizedDescription)")
@@ -2310,7 +2310,8 @@ struct SettingsScreen: View {
         remainingURLs: [URL],
         selectedConfigURLsByName: [String: URL]
     ) -> PendingImportSession {
-        PendingImportSession(
+        db("IMPORT_QUEUE created count=\(remainingURLs.count)")
+        return PendingImportSession(
             directoryURL: directoryURL,
             importListMode: importMode == .screen ? .files : nil,
             importMode: importMode,
@@ -2328,29 +2329,47 @@ struct SettingsScreen: View {
     private func processPendingImportSession(_ session: PendingImportSession) {
         var session = session
         db("IMPORT_TRACE processPendingImportSession entered mode=\(session.importMode) queued=\(session.remainingURLs.map { $0.lastPathComponent }.joined(separator: ","))")
+        db("IMPORT_QUEUE_START total=\(session.remainingURLs.count) currentIndex=\(session.processedItemCount + 1)")
+        if session.importMode == .allFiles {
+            db("IMPORT_ALL_QUEUE_START total=\(session.remainingURLs.count) currentIndex=\(session.processedItemCount + 1) items=[\(session.remainingURLs.prefix(10).map { $0.lastPathComponent }.joined(separator: ", "))]")
+        }
 
         while !session.remainingURLs.isEmpty {
             let sourceURL = session.remainingURLs.removeFirst()
+            session.processedItemCount += 1
             let pathExtension = sourceURL.pathExtension.lowercased()
             let targetFileName = sourceURL.lastPathComponent
             let targetFileNameKey = targetFileName.lowercased()
             let targetURL = session.directoryURL.appendingPathComponent(targetFileName)
+            db("IMPORT_QUEUE processing index=\(session.processedItemCount) filename=\(targetFileName)")
+            db("IMPORT_QUEUE_ITEM filename=\(targetFileName)")
+            if session.importMode == .allFiles {
+                db("IMPORT_FULL_COPY_ITEM filename=\(targetFileName)")
+                db("IMPORT_ALL_PROCESSING index=\(session.processedItemCount) filename=\(targetFileName)")
+            }
             db("IMPORT_TRACE pipeline_stage=dequeue source=\(sourceURL.path) filename=\(targetFileName) extension=\(pathExtension) destination=\(targetURL.path)")
 
             if pathExtension == "zip" {
-                guard session.importMode == .screen else {
+                guard session.importMode == .screen || session.importMode == .allFiles else {
                     db("IMPORT_TRACE file_rejected filename=\(targetFileName) reason=zip_not_allowed_for_mode mode=\(session.importMode)")
                     continue
                 }
 
-                db("IMPORT_TRACE zip_detected mode=screen filename=\(targetFileName)")
+                db("IMPORT_TRACE zip_detected mode=\(session.importMode) filename=\(targetFileName)")
                 do {
+                    let queueBeforeZipExpand = [sourceURL] + session.remainingURLs
+                    db("IMPORT_QUEUE_BEFORE_ZIP_EXPAND [\(queueBeforeZipExpand.map { $0.lastPathComponent }.joined(separator: ", "))]")
+                    db("IMPORT_QUEUE_BEFORE_REPLACE total=\(session.processedItemCount + session.remainingURLs.count) currentIndex=\(session.processedItemCount) items=[\(queueBeforeZipExpand.map { $0.lastPathComponent }.joined(separator: ", "))]")
                     let package = try extractScreenPackageImport(from: sourceURL)
                     session.temporaryImportDirectoryURLs.append(package.temporaryDirectoryURL)
                     if let configURL = package.configURL {
                         session.selectedConfigURLsByName[configURL.lastPathComponent.lowercased()] = configURL
                     }
-                    session.remainingURLs.insert(package.documentURL, at: 0)
+                    let packageFilePaths = Set([package.documentURL.path, package.configURL?.path].compactMap { $0 })
+                    session.remainingURLs = [package.documentURL] + session.remainingURLs.filter { !packageFilePaths.contains($0.path) }
+                    db("IMPORT_QUEUE_AFTER_ZIP_EXPAND [\(session.remainingURLs.map { $0.lastPathComponent }.joined(separator: ", "))]")
+                    db("IMPORT_QUEUE_AFTER_ZIP_EXPAND total=\(session.processedItemCount + session.remainingURLs.count) currentIndex=\(session.processedItemCount)")
+                    db("IMPORT_QUEUE_AFTER_REPLACE total=\(session.processedItemCount + session.remainingURLs.count) currentIndex=\(session.processedItemCount) items=[\(session.remainingURLs.map { $0.lastPathComponent }.joined(separator: ", "))]")
                     db("IMPORT_TRACE zip_classification=single_screen_package document=\(package.documentURL.lastPathComponent) config=\(package.configURL?.lastPathComponent ?? "nil")")
                 } catch {
                     db("IMPORT_TRACE zip_classification=invalid_archive filename=\(targetFileName) error=\(error.localizedDescription)")
@@ -2389,6 +2408,7 @@ struct SettingsScreen: View {
                         session: &session
                     )
                 } catch {
+                    recordImportFailure(fileName: targetFileName, error: error, session: &session)
                     db("Failed to import screen config \(targetFileName): \(error.localizedDescription)")
                 }
                 continue
@@ -2420,6 +2440,7 @@ struct SettingsScreen: View {
                         session: &session
                     )
                 } catch {
+                    recordImportFailure(fileName: targetFileName, error: error, session: &session)
                     db("Failed to import text file \(targetFileName): \(error.localizedDescription)")
                 }
                 continue
@@ -2455,6 +2476,7 @@ struct SettingsScreen: View {
                         session: &session
                     )
                 } catch {
+                    recordImportFailure(fileName: targetFileName, error: error, session: &session)
                     db("Failed to import text file \(targetFileName): \(error.localizedDescription)")
                 }
                 continue
@@ -2490,6 +2512,7 @@ struct SettingsScreen: View {
                         session: &session
                     )
                 } catch {
+                    recordImportFailure(fileName: targetFileName, error: error, session: &session)
                     db("Failed to import image \(targetFileName): \(error.localizedDescription)")
                 }
                 continue
@@ -2525,6 +2548,7 @@ struct SettingsScreen: View {
                         session: &session
                     )
                 } catch {
+                    recordImportFailure(fileName: targetFileName, error: error, session: &session)
                     db("Failed to import sound \(targetFileName): \(error.localizedDescription)")
                 }
                 continue
@@ -2560,6 +2584,7 @@ struct SettingsScreen: View {
                         session: &session
                     )
                 } catch {
+                    recordImportFailure(fileName: targetFileName, error: error, session: &session)
                     db("Failed to import pdf \(targetFileName): \(error.localizedDescription)")
                 }
                 continue
@@ -2568,6 +2593,12 @@ struct SettingsScreen: View {
             db("IMPORT_TRACE file_rejected filename=\(targetFileName) reason=unsupported_extension extension=\(pathExtension) mode=\(session.importMode)")
         }
 
+        db("IMPORT_QUEUE_COMPLETE")
+        if session.importMode == .allFiles {
+            db("IMPORT_ALL_COMPLETE imported=\(session.importedFileCount) replaced=\(session.replacedFileCount) failed=\(session.failedFileCount)")
+            db("RESTORE_ALL_COMPLETE restored=\(session.importedFileCount) replaced=\(session.replacedFileCount) failed=\(session.failedFileCount)")
+            db("IMPORT_FULL_COPY_COMPLETE imported=\(session.importedFileCount) failed=\(session.failedFileCount)")
+        }
         finishPendingImportSession(session)
     }
 
@@ -2578,7 +2609,13 @@ struct SettingsScreen: View {
         session: inout PendingImportSession
     ) {
         session.importedAnything = true
+        session.importedFileCount += 1
         db("IMPORT_TRACE record_success kind=\(contentKind) target=\(targetURL.path)")
+        db("IMPORT_QUEUE imported filename=\(targetURL.lastPathComponent) remaining=\(session.remainingURLs.count)")
+        db("IMPORT_COPY_SUCCESS filename=\(targetURL.lastPathComponent)")
+        if session.importMode == .allFiles {
+            db("IMPORT_FULL_COPY_SUCCESS filename=\(targetURL.lastPathComponent)")
+        }
 
         switch contentKind {
         case .document:
@@ -2611,6 +2648,13 @@ struct SettingsScreen: View {
         }
     }
 
+    private func recordImportFailure(fileName: String, error: Error, session: inout PendingImportSession) {
+        session.failedFileCount += 1
+        if session.importMode == .allFiles {
+            db("IMPORT_FULL_COPY_FAILED filename=\(fileName) error=\(error.localizedDescription)")
+        }
+    }
+
     private func applyPendingImportConflictIfNeeded(
         sourceURL: URL,
         targetURL: URL,
@@ -2618,10 +2662,30 @@ struct SettingsScreen: View {
         contentKind: ImportedContentKind,
         session: inout PendingImportSession
     ) -> Bool {
+        if session.importMode == .allFiles {
+            db("IMPORT_ALL_REPLACE filename=\(fileName)")
+            db("RESTORE_ALL_REPLACE filename=\(fileName)")
+            db("IMPORT_CONFLICT filename=\(fileName) action=replace continuing=true")
+            db("IMPORT_FULL_CONFLICT_RESOLVED action=replace filename=\(fileName)")
+            session.replacedFileCount += 1
+            importReplacingExistingFile(
+                sourceURL: sourceURL,
+                targetURL: targetURL,
+                fileName: fileName,
+                contentKind: contentKind,
+                session: &session
+            )
+            return false
+        }
+
         if let resolution = session.applyToAllResolution {
             db("IMPORT_TRACE conflict_auto_resolve file=\(fileName) resolution=\(resolution)")
             switch resolution {
             case .replace:
+                db("IMPORT_CONFLICT filename=\(fileName) action=replace continuing=true")
+                if session.importMode == .allFiles {
+                    db("IMPORT_FULL_CONFLICT_RESOLVED action=replace filename=\(fileName)")
+                }
                 importReplacingExistingFile(
                     sourceURL: sourceURL,
                     targetURL: targetURL,
@@ -2630,6 +2694,10 @@ struct SettingsScreen: View {
                     session: &session
                 )
             case .keepBoth:
+                db("IMPORT_CONFLICT filename=\(fileName) action=keepBoth continuing=true")
+                if session.importMode == .allFiles {
+                    db("IMPORT_FULL_CONFLICT_RESOLVED action=keepBoth filename=\(fileName)")
+                }
                 importKeepingBothFiles(
                     sourceURL: sourceURL,
                     preferredTargetURL: targetURL,
@@ -2641,6 +2709,11 @@ struct SettingsScreen: View {
         }
 
         db("IMPORT_TRACE conflict_presented file=\(fileName) kind=\(contentKind) destination=\(targetURL.path)")
+        db("IMPORT_QUEUE conflict filename=\(fileName) remaining=\(session.remainingURLs.count)")
+        db("IMPORT_CONFLICT_WAITING filename=\(fileName)")
+        if session.importMode == .allFiles {
+            db("IMPORT_FULL_CONFLICT filename=\(fileName)")
+        }
         pendingImportSession = session
         pendingImportConflict = PendingImportConflict(
             sourceURL: sourceURL,
@@ -2654,6 +2727,7 @@ struct SettingsScreen: View {
     private func resolvePendingImportConflictByReplacing() {
         guard var session = pendingImportSession,
               let conflict = pendingImportConflict else {
+            db("IMPORT_CONFLICT filename=nil action=replace continuing=false reason=missing_pending_conflict")
             return
         }
 
@@ -2664,6 +2738,12 @@ struct SettingsScreen: View {
             session.applyToAllResolution = .replace
         }
 
+        db("IMPORT_CONFLICT filename=\(conflict.fileName) action=replace continuing=true")
+        db("IMPORT_CONFLICT_RESOLVED action=replace filename=\(conflict.fileName)")
+        if session.importMode == .allFiles {
+            db("IMPORT_FULL_CONFLICT_RESOLVED action=replace filename=\(conflict.fileName)")
+        }
+        db("IMPORT_QUEUE replace_pending filename=\(conflict.fileName) queue_count_before_continue=\(session.remainingURLs.count)")
         importReplacingExistingFile(
             sourceURL: conflict.sourceURL,
             targetURL: conflict.targetURL,
@@ -2671,12 +2751,15 @@ struct SettingsScreen: View {
             contentKind: conflict.contentKind,
             session: &session
         )
+        db("IMPORT_QUEUE replace_pending filename=\(conflict.fileName) queue_count_after_continue=\(session.remainingURLs.count)")
+        db("IMPORT_QUEUE_AFTER_CONFLICT remaining=\(session.remainingURLs.count) next=\(session.remainingURLs.first?.lastPathComponent ?? "nil")")
         processPendingImportSession(session)
     }
 
     private func resolvePendingImportConflictKeepingBoth() {
         guard var session = pendingImportSession,
               let conflict = pendingImportConflict else {
+            db("IMPORT_CONFLICT filename=nil action=keepBoth continuing=false reason=missing_pending_conflict")
             return
         }
 
@@ -2687,6 +2770,10 @@ struct SettingsScreen: View {
             session.applyToAllResolution = .keepBoth
         }
 
+        db("IMPORT_CONFLICT filename=\(conflict.fileName) action=keepBoth continuing=true")
+        if session.importMode == .allFiles {
+            db("IMPORT_FULL_CONFLICT_RESOLVED action=keepBoth filename=\(conflict.fileName)")
+        }
         importKeepingBothFiles(
             sourceURL: conflict.sourceURL,
             preferredTargetURL: conflict.targetURL,
@@ -2727,6 +2814,7 @@ struct SettingsScreen: View {
                 replacingDocument: true
             )
         } catch {
+            recordImportFailure(fileName: fileName, error: error, session: &session)
             renameAlertMessage = "Couldn't import \(fileName): \(error.localizedDescription)"
         }
     }
@@ -2748,6 +2836,7 @@ struct SettingsScreen: View {
                 replacingDocument: false
             )
         } catch {
+            recordImportFailure(fileName: preferredTargetURL.lastPathComponent, error: error, session: &session)
             renameAlertMessage = "Couldn't import \(preferredTargetURL.lastPathComponent): \(error.localizedDescription)"
         }
     }
@@ -2780,10 +2869,15 @@ struct SettingsScreen: View {
 
     private func cancelPendingImportSession() {
         guard let session = pendingImportSession else {
+            db("IMPORT_CONFLICT filename=\(pendingImportConflict?.fileName ?? "nil") action=stop continuing=false reason=missing_pending_session")
             pendingImportConflict = nil
             return
         }
 
+        db("IMPORT_CONFLICT filename=\(pendingImportConflict?.fileName ?? "nil") action=stop continuing=false")
+        if session.importMode == .allFiles {
+            db("IMPORT_FULL_CONFLICT_RESOLVED action=stop filename=\(pendingImportConflict?.fileName ?? "nil")")
+        }
         pendingImportConflict = nil
         pendingImportSession = nil
         finishPendingImportSession(session)
@@ -3351,6 +3445,13 @@ struct SettingsScreen: View {
         refreshDocumentFiles()
         importRefreshID = UUID()
         db("IMPORT_TRACE final_document_count_after_import=\(availableDocumentURLs.count)")
+    }
+
+    private func markDeletedAllDataChanged() {
+        db("DELETE_ALL_TRACE final_refresh_call before_count=\(availableDocumentURLs.count)")
+        refreshDocumentFilesAfterDeletingAllData()
+        importRefreshID = UUID()
+        db("DELETE_ALL_TRACE final_document_count_after_delete=\(availableDocumentURLs.count)")
     }
 
     private func readImportedFileData(from sourceURL: URL) throws -> Data {
@@ -3940,6 +4041,21 @@ private struct SettingsSingleFileExportPicker: UIViewControllerRepresentable {
     }
 }
 
+private struct SettingsRenameAlertModifier: ViewModifier {
+    @Binding var message: String?
+    let isPresented: Binding<Bool>
+
+    func body(content: Content) -> some View {
+        content.alert("Alert", isPresented: isPresented) {
+            Button("OK", role: .cancel) {
+                message = nil
+            }
+        } message: {
+            Text(message ?? "")
+        }
+    }
+}
+
 private struct DeleteAllDataConfirmationModifier: ViewModifier {
     @Binding var isPresented: Bool
     let deleteAllData: () -> Void
@@ -3952,6 +4068,22 @@ private struct DeleteAllDataConfirmationModifier: ViewModifier {
             }
         } message: {
             Text("This will permanently delete all ESP32 screen files, configs, text files, images, sounds, and PDFs.\n\nTHIS CANNOT BE UNDONE.")
+        }
+    }
+}
+
+private struct RestoreAllFilesConfirmationModifier: ViewModifier {
+    @Binding var isPresented: Bool
+    let restoreAllFiles: () -> Void
+
+    func body(content: Content) -> some View {
+        content.alert("Restore All Files?", isPresented: $isPresented) {
+            Button("Cancel", role: .cancel) { }
+            Button("Restore") {
+                restoreAllFiles()
+            }
+        } message: {
+            Text("This will restore all files from the backup archive.\n\nExisting files with the same name will be replaced.")
         }
     }
 }
