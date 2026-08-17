@@ -4,7 +4,7 @@
 import SwiftUI
 //
 //-----------------------------------------------------------------------------------------------
-// MARK: - BM:🟧 main screen - top toolbar
+// MARK: - BM:🟧 MAIN: TOP TOOLBAR
 //
 struct MainScreenToolbarContent: View {
     private let inactiveToolbarBackgroundColor = Color(red: 0.22, green: 0.22, blue: 0.24)
@@ -337,7 +337,7 @@ private struct minusPlusBtns: View {
 					.resizable()
 					.scaledToFit()
 					.frame(width: 30, height: 30)
-					.foregroundStyle(bc)
+					.foregroundStyle(value > 0.1 ? bc : bc.opacity(0.5))
 				}
 			.disabled(isDisabled || value < 0.1 /*range.lowerBound*/)
 			
@@ -347,7 +347,7 @@ private struct minusPlusBtns: View {
 					.resizable()
 					.scaledToFit()
 					.frame(width: 30, height: 30)
-					.foregroundStyle(bc)
+					.foregroundStyle(value < 1 ? bc : bc.opacity(0.5))
 			}
 			.disabled(isDisabled || value >= range.upperBound)
 		}
@@ -361,6 +361,7 @@ private struct minusPlusBtns: View {
 	private func decrementValue() {
 		let newValue = value - step
 		value = max(newValue, range.lowerBound)
+		print(value)
 	}
 	
 	private func incrementValue() {

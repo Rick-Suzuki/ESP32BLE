@@ -158,10 +158,9 @@ private struct RepeatingToolbarButton<Label: View>: View {
         repeatTask = nil
     }
 }
-
 //
 //----------------------------------------
-// MARK: - BM:🟩 btm toolbar
+// MARK: - BM:🟩 MAIN: BTM TOOLBAR
 //
 struct MainScreenBottomBar: View {
     private let inactiveButtonBackgroundColor = Color(red: 0.22, green: 0.22, blue: 0.24)
@@ -271,6 +270,7 @@ struct MainScreenBottomBar: View {
 			//----------------------------------------
 			// rows
 			//
+			Spacer()
 			HStack(spacing: isCompact ? 8 : 12) {
 				singleStepTriangle(
 					rotationDegrees: 0,
@@ -295,6 +295,7 @@ struct MainScreenBottomBar: View {
 			//----------------------------------------
 			// font size
 			//
+			Spacer()
 			HStack(spacing: isCompact ? 8 : 12) {
                 controlTriangle(
                     rotationDegrees: -90,
@@ -305,21 +306,9 @@ struct MainScreenBottomBar: View {
                     onDecreaseBoxFontSize()
                 }
 
-                Group {
-                    if isFontResetButtonEnabled {
-                        Button {
-                            ButtonClickFeedback.playIfEnabled()
-                            onResetBoxFontSize()
-                        } label: {
-                            fontSizeValueLabel(isCompact: isCompact)
-                        }
-                        .buttonStyle(.plain)
-                    } else {
-                        fontSizeValueLabel(isCompact: isCompact)
-                    }
-                }
+				fontSizeValueLabel(isCompact: isCompact)
 
-                controlTriangle(
+				controlTriangle(
                     rotationDegrees: 90,
                     foreground: fontControlColor,
                     isEnabled: boxFontSize < maximumBoxFontSize,
