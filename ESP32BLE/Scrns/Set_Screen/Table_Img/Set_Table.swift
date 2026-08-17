@@ -48,48 +48,70 @@ struct SettingsDocumentTableSection: View {
         isPad ? nil : .system(size: 15)
     }
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            List {
-                switch listMode {
-                case .files:
-                    ForEach(documentFiles, id: \.path) { fileURL in
-                        documentRow(for: fileURL)
-                    }
-                    .scrollTargetLayout()
-                case .text:
-                    ForEach(textURLs, id: \.path) { textURL in
-                        textRow(for: textURL)
-                    }
-                    .scrollTargetLayout()
-                case .images:
-                    ForEach(imageURLs, id: \.path) { imageURL in
-                        imageRow(for: imageURL)
-                    }
-                    .scrollTargetLayout()
-                case .sounds:
-                    ForEach(soundURLs, id: \.path) { soundURL in
-                        soundRow(for: soundURL)
-                    }
-                    .scrollTargetLayout()
-                case .pdfs:
-                    ForEach(pdfURLs, id: \.path) { pdfURL in
-                        pdfRow(for: pdfURL)
-                    }
-                    .scrollTargetLayout()
-                case .all:
-                    ForEach(allFileURLs, id: \.path) { fileURL in
-                        allFilesRow(for: fileURL)
-                    }
-                    .scrollTargetLayout()
-                }
-            }
-            .listStyle(.plain)
-            .scrollContentBackground(.hidden)
-            .scrollPosition(id: activeScrollPositionID, anchor: .top)
-            .background(.clear)
+    private let itemCountReservedHeight: CGFloat = 44
 
-            imagePreviewSection
+    var body: some View {
+        GeometryReader { geometry in
+            let availableHeight = safeHeight(geometry.size.height)
+            let itemCountHeight = itemCountReservedHeight
+            let previewHeight = previewReservedHeight(for: geometry.size.width)
+            let listHeight = max(0, availableHeight - itemCountHeight - previewHeight)
+
+            VStack(alignment: .leading, spacing: 0) {
+                List {
+                    switch listMode {
+                    case .files:
+                        ForEach(documentFiles, id: \.path) { fileURL in
+                            documentRow(for: fileURL)
+                        }
+                        .scrollTargetLayout()
+                    case .text:
+                        ForEach(textURLs, id: \.path) { textURL in
+                            textRow(for: textURL)
+                        }
+                        .scrollTargetLayout()
+                    case .images:
+                        ForEach(imageURLs, id: \.path) { imageURL in
+                            imageRow(for: imageURL)
+                        }
+                        .scrollTargetLayout()
+                    case .sounds:
+                        ForEach(soundURLs, id: \.path) { soundURL in
+                            soundRow(for: soundURL)
+                        }
+                        .scrollTargetLayout()
+                    case .pdfs:
+                        ForEach(pdfURLs, id: \.path) { pdfURL in
+                            pdfRow(for: pdfURL)
+                        }
+                        .scrollTargetLayout()
+                    case .all:
+                        ForEach(allFileURLs, id: \.path) { fileURL in
+                            allFilesRow(for: fileURL)
+                        }
+                        .scrollTargetLayout()
+                    }
+                }
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
+                .scrollPosition(id: activeScrollPositionID, anchor: .top)
+                .background(.clear)
+                .frame(height: listHeight)
+
+                itemCountBox
+                    .frame(height: itemCountHeight)
+
+                imagePreviewSection
+                    .frame(height: previewHeight)
+            }
+            .task(id: layoutLogID(
+                availableHeight: availableHeight,
+                listHeight: listHeight,
+                itemCountHeight: itemCountHeight,
+                previewHeight: previewHeight
+            )) {
+                db("SETTINGS_TABLE_LAYOUT availableHeight=\(availableHeight) listHeight=\(listHeight) itemCountHeight=\(itemCountHeight) previewHeight=\(previewHeight)")
+            }
         }
         .frame(maxHeight: .infinity, alignment: .top)
         .background(Color.black)
@@ -98,6 +120,86 @@ struct SettingsDocumentTableSection: View {
                 .stroke(Color.white, lineWidth: 1)
         }
         .clipShape(.rect(cornerRadius: 0))
+    }
+
+    private func safeHeight(_ height: CGFloat) -> CGFloat {
+        height.isFinite ? max(0, height) : 0
+    }
+
+    private func previewReservedHeight(for width: CGFloat) -> CGFloat {
+        guard listMode == .images || listMode == .pdfs else { return 0 }
+        let safeWidth = width.isFinite ? max(0, width) : 0
+        return safeWidth / 1.3
+    }
+
+    private func layoutLogID(
+        availableHeight: CGFloat,
+        listHeight: CGFloat,
+        itemCountHeight: CGFloat,
+        previewHeight: CGFloat
+    ) -> String {
+        [
+            roundedLayoutValue(availableHeight),
+            roundedLayoutValue(listHeight),
+            roundedLayoutValue(itemCountHeight),
+            roundedLayoutValue(previewHeight),
+            "\(listMode)",
+            "\(visibleItemCount)"
+        ].joined(separator: ":")
+    }
+
+    private func roundedLayoutValue(_ value: CGFloat) -> String {
+        "\(Int(value.rounded()))"
+    }
+	//
+	//----------------------------------------
+	//
+	private var itemCountBox: some View {
+		HStack(alignment: .center) {
+			Text(itemCountText)
+				.font(tableRowFont)
+				.bold()
+				.foregroundStyle(.white)
+				.multilineTextAlignment(.leading)
+				.fixedSize(horizontal: false, vertical: true)
+			
+			Spacer()
+		}
+		.padding(.leading, 10)
+		.frame(maxWidth: .infinity)
+		.frame(height: 40)
+		.background(Color.gray.opacity(0.3))
+		.overlay(alignment: .top) {
+			Rectangle()
+				.fill(Color.gray)
+				.frame(height: 1)
+		}
+		.layoutPriority(1)
+	}
+	//
+	//----------------------------------------
+	//
+    private var itemCountText: String {
+        let count = visibleItemCount
+        let noun = count == 1 ? "item" : "items"
+        return "\(count) \(noun)"
+    }
+
+    private var visibleItemCount: Int {
+        switch listMode {
+        case .files:
+            return documentFiles.count
+        case .text:
+            return textURLs.count
+        case .images:
+            return imageURLs.count
+        case .sounds:
+            return soundURLs.count
+        case .pdfs:
+            return pdfURLs.count
+        case .all:
+            return allFileURLs.count
+        }
     }
 
     private var activeScrollPositionID: Binding<String?> {

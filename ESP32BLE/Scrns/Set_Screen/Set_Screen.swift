@@ -277,7 +277,7 @@ struct SettingsScreen: View {
                         activeImportMode = .screen
 						pendingImportMode = .screen
 					}
-					Button("Restore All Files") {
+					Button("Restore Backup") {
 						ButtonClickFeedback.playIfEnabled()
 						isRestoreAllFilesConfirmationPresented = true
 					}
@@ -300,7 +300,7 @@ struct SettingsScreen: View {
 					ButtonClickFeedback.playIfEnabled()
 					prepareSingleFileExport()
 				}
-					Button("Export All Files") {
+					Button("Export Backup") {
 						ButtonClickFeedback.playIfEnabled()
 						prepareArchiveExport()
 					}
