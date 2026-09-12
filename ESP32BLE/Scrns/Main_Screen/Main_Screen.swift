@@ -468,10 +468,10 @@ struct MainScreen: View {
 		// MARK: - BM:🟥 smart SF symbols
     
 	private let smartSFPanelSymbols = [
-        "folder", "eye", "magnifyingglass", "lightbulb.max.fill",
+        "folder", "folder", "magnifyingglass", "lightbulb.max.fill",
         "speaker.wave.2", "star", "heart", "bell",
         "house", "gearshape", "airplane", "book",
-        "camera", "cart", "cloud", "envelope",
+        "camera", "eye", "cloud", "envelope",
         "flag", "leaf", "moon", "wrench",
         "paperplane", "doc", "calendar", "paintbrush",
         "photo", "tray", "sun.max.fill", "link",
@@ -2691,8 +2691,12 @@ Tapping a row inserts the key code at the cursor.
                     columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 4),
                     spacing: 0
                 ) {
-                    ForEach(smartSFPanelSymbols, id: \.self) { symbolName in
-                        smartSFSymbolCell(symbolName)
+                    ForEach(Array(smartSFPanelSymbols.enumerated()), id: \.offset) { index, symbolName in
+                        if index == 0 {
+                            smartSFSymbolDeleteCell
+                        } else {
+                            smartSFSymbolCell(symbolName)
+                        }
                     }
                 }
             }
@@ -2756,6 +2760,42 @@ Tapping a row inserts the key code at the cursor.
         }
         .buttonStyle(.plain)
         .accessibilityLabel(symbolName)
+    }
+
+	// MARK: - BM: sf symbol trash btn
+    private var smartSFSymbolDeleteCell: some View {
+        Button {
+            ButtonClickFeedback.playIfEnabled()
+            clearSmartButtonSFSymbol()
+        } label: {
+            Image(systemName: "xmark")
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundStyle(.red)
+                .frame(maxWidth: .infinity)
+                .frame(height: 42)
+                .background(Color.black)
+                .overlay {
+                    Rectangle()
+                        .stroke(Color.white, lineWidth: 1)
+                }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Remove SF Symbol")
+        .help("Remove SF Symbol")
+    }
+
+    private func clearSmartButtonSFSymbol() {
+        let currentText = smartButtonTextBinding.wrappedValue
+        let components = currentText.components(separatedBy: ":")
+        let candidateName = components.first?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+
+        guard !candidateName.isEmpty,
+              !candidateName.contains(where: \.isWhitespace),
+              UIImage(systemName: candidateName) != nil else {
+            return
+        }
+
+        smartButtonTextBinding.wrappedValue = components.dropFirst().joined(separator: ":")
     }
 
     @ViewBuilder
