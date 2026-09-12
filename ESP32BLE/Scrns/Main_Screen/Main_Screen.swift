@@ -1077,26 +1077,16 @@ Tapping a row inserts the key code at the cursor.
 
                     mainGridSection(availableWidth: contentWidth)
 
-                    if !isGridEditModeEnabled {
-                        Color.clear
-                            .frame(height: 20)
+                    Color.clear
+                        .frame(height: 20)
 
-                        displayModeButtonSection(availableWidth: contentWidth)
-                    }
+                    displayModeButtonSection(availableWidth: contentWidth)
                 }
                 .frame(width: contentWidth)
                 .frame(maxHeight: .infinity, alignment: .top)
                 .padding(.top, topContentInset)
                 .padding(.bottom, bottomContentInset)
                 .ignoresSafeArea(.keyboard)
-
-                if isGridEditModeEnabled {
-                    VStack {
-                        Spacer()
-                        displayModeButtonSection(availableWidth: contentWidth)
-                    }
-                    .frame(maxWidth: contentWidth, maxHeight: .infinity)
-                }
 
                 if editingSlotIndex != nil {
                     Color.black.opacity(0.5)
@@ -1133,7 +1123,7 @@ Tapping a row inserts the key code at the cursor.
     private func mainGridSection(availableWidth: CGFloat) -> some View {
         MainScreenGridSection(
             availableWidth: availableWidth,
-            reservedBottomInset: isGridEditModeEnabled ? 74 : 0,
+            reservedBottomInset: 0,
             functionKeys: functionKeys,
             visibleBoxCount: visibleBoxCount,
             visibleGridDimensions: visibleGridDimensions,
