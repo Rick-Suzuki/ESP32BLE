@@ -229,7 +229,7 @@ struct MainScreenToolbarContent: View {
 				openKeyboardScreen()
 				db("EXIT MainScreenToolbarContent.keyboardButton current isGridEditModeEnabled=\(isGridEditModeEnabled) editingSlotIndex=\(String(describing: editingSlotIndex)) new=openKeyboardScreen complete thread=\(Thread.isMainThread ? "main" : "background")")
 			}
-			.font(.headline)
+			//.font(.headline)
 			.foregroundStyle(keyboardButtonForegroundColor)
 			.padding(.horizontal, 5)
 			.frame(minHeight: 36)
@@ -252,7 +252,7 @@ struct MainScreenToolbarContent: View {
 				toggleGridEditMode()
 			} label: {
 				Text(isGridEditModeEnabled ? "done" : "edit")
-					.font(.headline)
+					//.font(.headline)
 					.foregroundStyle(toolbarActionForegroundColor)
 					.frame(minWidth: 84, minHeight: 36)
 					.background(toolbarButtonBackgroundColor(normalBackground: editModeButtonBackgroundColor))

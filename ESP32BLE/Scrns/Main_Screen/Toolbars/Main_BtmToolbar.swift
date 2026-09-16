@@ -163,6 +163,10 @@ private struct RepeatingToolbarButton<Label: View>: View {
 // MARK: - BM:🟩 MAIN: BTM TOOLBAR
 //
 struct MainScreenBottomBar: View {
+	private let normalToolbarBg = Color(red: 0.32, green: 0.32, blue: 0.34).opacity(0.4)
+	private let normalToolbarBc = Color(red: 0.46, green: 0.46, blue: 0.48)
+
+	
     private let inactiveButtonBackgroundColor = Color(red: 0.22, green: 0.22, blue: 0.24)
     private let inactiveButtonBorderColor = Color(red: 0.30, green: 0.30, blue: 0.32)
     private let speechActiveModeColor = Color(red: 0.48, green: 0.24, blue: 0.02)
@@ -297,47 +301,54 @@ struct MainScreenBottomBar: View {
 			//
 			Spacer()
 			HStack(spacing: isCompact ? 8 : 12) {
-                controlTriangle(
-                    rotationDegrees: -90,
-                    foreground: fontControlColor,
-                    isEnabled: boxFontSize > minimumBoxFontSize,
-                    actionVersion: Int(boxFontSize)
-                ) {
-                    onDecreaseBoxFontSize()
-                }
-
+				fontSizeButton(
+					systemName: "minus.circle.fill",
+					isEnabled: boxFontSize > minimumBoxFontSize,
+					actionVersion: Int(boxFontSize)
+				) {
+					onDecreaseBoxFontSize()
+				}
+				
 				fontSizeValueLabel(isCompact: isCompact)
-
-				controlTriangle(
-                    rotationDegrees: 90,
-                    foreground: fontControlColor,
-                    isEnabled: boxFontSize < maximumBoxFontSize,
-                    actionVersion: Int(boxFontSize)
-                ) {
-                    onIncreaseBoxFontSize()
-                }
-            }
-
+				
+				fontSizeButton(
+					systemName: "plus.circle.fill",
+					isEnabled: boxFontSize < maximumBoxFontSize,
+					actionVersion: Int(boxFontSize)
+				) {
+					onIncreaseBoxFontSize()
+				}
+			}
+			//
+			//----------------------------------------
+			// indicator led
+			//
             HStack(spacing: isCompact ? 8 : 12) {
                 bluetoothIndicator
             }
             .padding(.leading, 25)
 
             Spacer(minLength: isCompact ? 6 : 12)
-
+			//
+			//----------------------------------------
+			// speech recog btn
+			//
             toggleButton(
                 title: speechRecognitionButtonTitle,
-                background: isSpeechRecognitionEnabled ? speechRecognitionActiveColor : inactiveButtonBackgroundColor,
-                border: isSpeechRecognitionEnabled ? speechRecognitionActiveColor : inactiveButtonBorderColor,
+                background: isSpeechRecognitionEnabled ? speechRecognitionActiveColor : normalToolbarBg,
+                border: isSpeechRecognitionEnabled ? speechRecognitionActiveColor : normalToolbarBc,
                 isEnabled: !isGridEditModeEnabled,
                 usesCompactWidth: usesCompactSpeechRecognitionButton,
-                buttonHeight: toolbarButtonHeight-5,
+                buttonHeight: toolbarButtonHeight,
                 font: bottomToolbarButtonFont,
                 minimumScaleFactor: bottomToolbarMinimumScaleFactor,
                 action: onToggleSpeechRecognition
             )
             .frame(width: speechRecognitionButtonWidth)
-
+			//
+			//----------------------------------------
+			// report speech area
+			//
             Text(speechRecognitionDisplayText)
                 .font(isCompact ? .caption : .body)
                 .foregroundStyle(speechRecognitionDisplayColor)
@@ -355,14 +366,21 @@ struct MainScreenBottomBar: View {
                 .clipShape(.rect(cornerRadius: 6))
 
             HStack(spacing: 8) {
+				//
+				//----------------------------------------
+				// stop speech
+				//
                 stopSpeechButton(buttonHeight: toolbarButtonHeight-5)
-
+				//
+				//----------------------------------------
+				// btn mode
+				//
                 toggleButton(
                     title: mainGridButtonMode.title,
-                    background: mainGridButtonModeBackgroundColor,
-                    border: mainGridButtonModeBorderColor,
+                    background: normalToolbarBg,
+                    border: normalToolbarBc,
                     isEnabled: !isGridEditModeEnabled,
-                    buttonHeight: toolbarButtonHeight-5,
+                    buttonHeight: toolbarButtonHeight,
                     font: bottomToolbarButtonFont,
                     minimumScaleFactor: bottomToolbarMinimumScaleFactor,
                     action: onCycleMainGridButtonMode
@@ -383,11 +401,11 @@ struct MainScreenBottomBar: View {
 							.foregroundStyle(.white)
 							.background(
 							RoundedRectangle(cornerRadius: 12)
-							.fill(displayModeButtonColor.opacity(1))
+							.fill(normalToolbarBg)
 					)
 					.overlay(
 						RoundedRectangle(cornerRadius: 12)
-							.stroke(displayModeButtonColor, lineWidth: 2)
+							.stroke(normalToolbarBc, lineWidth: 2)
 					)
 					.clipShape(RoundedRectangle(cornerRadius: 12))
 					}
@@ -400,41 +418,44 @@ struct MainScreenBottomBar: View {
 		}
     }
 
-    private func controlTriangle(
-        rotationDegrees: Double,
-        foreground: Color,
-        isEnabled: Bool,
-        actionVersion: Int,
-        action: @escaping () -> Void
-    ) -> some View {
-        Group {
-            if #available(iOS 18.0, *) {
-                RepeatingToolbarButton(isEnabled: isEnabled, actionVersion: actionVersion, action: action) {
-                    triangleLabel(rotationDegrees: rotationDegrees)
-                }
-            } else {
-                Button {
-                    guard isEnabled else { return }
-                    ButtonClickFeedback.playIfEnabled()
-                    action()
-                } label: {
-                    triangleLabel(rotationDegrees: rotationDegrees)
-                }
-                .buttonStyle(.plain)
-                .disabled(!isEnabled)
-                .opacity(isEnabled ? 1 : 0.35)
-                .contentShape(.rect)
-            }
-        }
-        .foregroundStyle(foreground)
-    }
-
-    private func triangleLabel(rotationDegrees: Double) -> some View {
-        Image(systemName: "triangle.fill")
-            .font(.system(size: 24))
-            .rotationEffect(.degrees(rotationDegrees))
-            .frame(width: 24, height: 24)
-    }
+	
+	private func fontSizeButton(
+		systemName: String,
+		isEnabled: Bool,
+		actionVersion: Int,
+		action: @escaping () -> Void
+	) -> some View {
+		Group {
+			if #available(iOS 18.0, *) {
+				RepeatingToolbarButton(
+					isEnabled: isEnabled,
+					actionVersion: actionVersion,
+					action: action
+				) {
+					fontSizeButtonLabel(systemName: systemName)
+				}
+			} else {
+				Button {
+					guard isEnabled else { return }
+					ButtonClickFeedback.playIfEnabled()
+					action()
+				} label: {
+					fontSizeButtonLabel(systemName: systemName)
+				}
+				.buttonStyle(.plain)
+				.disabled(!isEnabled)
+				.opacity(isEnabled ? 1 : 0.35)
+				.contentShape(.rect)
+			}
+		}
+		.foregroundStyle(fontControlColor)
+	}
+	
+	private func fontSizeButtonLabel(systemName: String) -> some View {
+		Image(systemName: systemName)
+			.font(.system(size: 30))
+			.frame(width: 30, height: 30)
+	}
 
     private func singleStepTriangle(
         rotationDegrees: Double,

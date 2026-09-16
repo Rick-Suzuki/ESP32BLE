@@ -1121,6 +1121,7 @@ Tapping a row inserts the key code at the cursor.
     }
 
     private func mainGridSection(availableWidth: CGFloat) -> some View {
+
         MainScreenGridSection(
             availableWidth: availableWidth,
             reservedBottomInset: 0,
@@ -1166,11 +1167,13 @@ Tapping a row inserts the key code at the cursor.
     }
 
     private var settingsToolbarButtonLabel: some View {
+
         Text(isPad ? "settings >" : ">")
-            .font(.headline)
+           // .font(.headline)
             .foregroundStyle((isGridEditModeEnabled || editingSlotIndex != nil) ? Color(white: 0.65) : .white)
             .frame(minWidth: isPad ? 92 : 44, minHeight: 36)
-            .background(Color.gray.opacity(0.45))
+          //  .background(Color.gray.opacity(0.45))
+            .background(Color(red: 0.32, green: 0.32, blue: 0.34).opacity(0.4))
             .overlay {
                 RoundedRectangle(cornerRadius: 10)
                     .stroke(Color.gray.opacity(0.5), lineWidth: 1.5)
@@ -2761,7 +2764,7 @@ Tapping a row inserts the key code at the cursor.
             Image(systemName: "xmark")
                 .font(.system(size: 20, weight: .semibold))
                 .foregroundStyle(.red)
-                .frame(maxWidth: .infinity)
+                 .frame(maxWidth: .infinity)
                 .frame(height: 42)
                 .background(Color.black)
                 .overlay {
