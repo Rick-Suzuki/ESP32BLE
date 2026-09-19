@@ -248,16 +248,19 @@ final class SpeechRecognitionManager: NSObject, ObservableObject {
         }
 
         do {
-            try configureAudioSession()
+            await finishRecognitionSession(shouldRestart: false)
+            try await configureAudioSession()
             try startRecognitionSession(using: speechRecognizer)
         } catch {
-            finishRecognitionSession(shouldRestart: wantsListening)
+            await finishRecognitionSession(shouldRestart: wantsListening)
         }
     }
 
     private func stopListening() {
         restartTask?.cancel()
-        finishRecognitionSession(shouldRestart: false)
+        Task {
+            await finishRecognitionSession(shouldRestart: false)
+        }
     }
 
     private func hasRequiredPermissions() async -> Bool {
@@ -307,14 +310,17 @@ final class SpeechRecognitionManager: NSObject, ObservableObject {
         }
     }
 
-    private func configureAudioSession() throws {
+    private func configureAudioSession() async throws {
         try audioSession.setCategory(.record, mode: .measurement, options: [.duckOthers])
-        try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
+
+        if #available(iOS 27.0, *) {
+            _ = try await audioSession.activate()
+        } else {
+            try audioSession.setActive(true)
+        }
     }
 
     private func startRecognitionSession(using speechRecognizer: SFSpeechRecognizer) throws {
-        finishRecognitionSession(shouldRestart: false)
-
         let sessionID = UUID()
         activeSessionID = sessionID
         latestTranscript = ""
@@ -367,14 +373,18 @@ final class SpeechRecognitionManager: NSObject, ObservableObject {
 
             if result.isFinal {
                 commitTranscriptIfNeeded()
-                finishRecognitionSession(shouldRestart: wantsListening)
+                Task {
+                    await finishRecognitionSession(shouldRestart: wantsListening)
+                }
             }
 
             return
         }
 
         if error != nil {
-            finishRecognitionSession(shouldRestart: wantsListening)
+            Task {
+                await finishRecognitionSession(shouldRestart: wantsListening)
+            }
         }
     }
 
@@ -401,7 +411,9 @@ final class SpeechRecognitionManager: NSObject, ObservableObject {
         }
 
         commitTranscriptIfNeeded()
-        finishRecognitionSession(shouldRestart: wantsListening)
+        Task {
+            await finishRecognitionSession(shouldRestart: wantsListening)
+        }
     }
 
     private func commitTranscriptIfNeeded() {
@@ -413,7 +425,7 @@ final class SpeechRecognitionManager: NSObject, ObservableObject {
         displayState = .recognized(latestTranscript)
     }
 
-    private func finishRecognitionSession(shouldRestart: Bool) {
+    private func finishRecognitionSession(shouldRestart: Bool) async {
         silenceTask?.cancel()
         silenceTask = nil
 
@@ -435,7 +447,11 @@ final class SpeechRecognitionManager: NSObject, ObservableObject {
         latestTranscript = ""
         activeSessionID = nil
 
-        try? audioSession.setActive(false, options: .notifyOthersOnDeactivation)
+        if #available(iOS 27.0, *) {
+            _ = try? await audioSession.deactivate(options: [.notifyOthersOnDeactivation])
+        } else {
+            try? audioSession.setActive(false, options: .notifyOthersOnDeactivation)
+        }
 
         if !wantsListening {
             displayState = .disabled
@@ -476,6 +492,8 @@ extension SpeechRecognitionManager: SFSpeechRecognizerDelegate {
             return
         }
 
-        finishRecognitionSession(shouldRestart: false)
+        Task {
+            await finishRecognitionSession(shouldRestart: false)
+        }
     }
 }

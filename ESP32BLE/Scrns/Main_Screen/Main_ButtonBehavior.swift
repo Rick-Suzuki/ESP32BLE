@@ -491,13 +491,15 @@ extension MainScreen {
             return
         }
 
-        stopSpokenGridText()
-        activateAudioSessionForSpeechPlayback()
+        Task {
+            stopSpokenGridText()
+            await activateAudioSessionForSpeechPlayback()
 
-        let utterance = AVSpeechUtterance(string: spokenText)
-        utterance.voice = resolvedSpeechVoice
-        utterance.rate = Float(clampedTextToSpeechRate)
-        speechSynthesizer.speak(utterance)
+            let utterance = AVSpeechUtterance(string: spokenText)
+            utterance.voice = resolvedSpeechVoice
+            utterance.rate = Float(clampedTextToSpeechRate)
+            speechSynthesizer.speak(utterance)
+        }
     }
 
     func speechSynthesisText(from text: String) -> String {
@@ -1279,17 +1281,19 @@ extension MainScreen {
             return
         }
 
-        activateAudioSessionForSpeechPlayback()
+        Task {
+            await activateAudioSessionForSpeechPlayback()
 
-        do {
-            let player = try AVAudioPlayer(contentsOf: audioURL)
-            player.numberOfLoops = repeats ? -1 : 0
-            player.prepareToPlay()
-            player.play()
-            soundEffectPlayer = player
-        } catch {
-            alertTitle = "Sound Error"
-            renameAlertMessage = "Couldn't play \(filename)."
+            do {
+                let player = try AVAudioPlayer(contentsOf: audioURL)
+                player.numberOfLoops = repeats ? -1 : 0
+                player.prepareToPlay()
+                player.play()
+                soundEffectPlayer = player
+            } catch {
+                alertTitle = "Sound Error"
+                renameAlertMessage = "Couldn't play \(filename)."
+            }
         }
     }
 
@@ -1678,7 +1682,7 @@ struct MainScreenButtonLabelView: View {
     let stopSoundPlayback: () -> Void
     let sendTimerCompletionAction: (FunctionKeyEntry) -> Bool
     let resolveSoundURL: (String) -> URL?
-    let activateAudioSession: () -> Void
+    let activateAudioSession: () async -> Void
     let reportSoundError: (String, String) -> Void
     let shouldSpeakWidgetSelections: Bool
     let speakText: (String) -> Void
@@ -2826,9 +2830,9 @@ final class MainGridAmbientSoundState: ObservableObject {
         widgetID: String,
         filename: String,
         resolveSoundURL: (String) -> URL?,
-        activateAudioSession: () -> Void,
+        activateAudioSession: () async -> Void,
         reportSoundError: (String, String) -> Void
-    ) {
+    ) async {
         let normalizedFilename = filename.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !normalizedFilename.isEmpty else {
             return
@@ -2848,7 +2852,7 @@ final class MainGridAmbientSoundState: ObservableObject {
             return
         }
 
-        activateAudioSession()
+        await activateAudioSession()
 
         do {
             let player = try AVAudioPlayer(contentsOf: audioURL)
@@ -3028,7 +3032,7 @@ private struct MainGridAmbientSoundWidgetView: View {
     let isInteractionEnabled: Bool
     @ObservedObject var sharedState: MainGridAmbientSoundState
     let resolveSoundURL: (String) -> URL?
-    let activateAudioSession: () -> Void
+    let activateAudioSession: () async -> Void
     let reportSoundError: (String, String) -> Void
 
     var body: some View {
@@ -3046,13 +3050,15 @@ private struct MainGridAmbientSoundWidgetView: View {
                         guard isInteractionEnabled else {
                             return
                         }
-                        sharedState.togglePlayback(
-                            widgetID: widgetID,
-                            filename: filename,
-                            resolveSoundURL: resolveSoundURL,
-                            activateAudioSession: activateAudioSession,
-                            reportSoundError: reportSoundError
-                        )
+                        Task {
+                            await sharedState.togglePlayback(
+                                widgetID: widgetID,
+                                filename: filename,
+                                resolveSoundURL: resolveSoundURL,
+                                activateAudioSession: activateAudioSession,
+                                reportSoundError: reportSoundError
+                            )
+                        }
                     }
                     .exclusively(before:
                         TapGesture(count: 2)

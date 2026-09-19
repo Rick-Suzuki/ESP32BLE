@@ -352,16 +352,16 @@ struct MainScreenBottomBar: View {
             Text(speechRecognitionDisplayText)
                 .font(isCompact ? .caption : .body)
                 .foregroundStyle(speechRecognitionDisplayColor)
-                .opacity(0.6)
+                .opacity(0.9)
                 .lineLimit(1)
                 .truncationMode(.tail)
                 .frame(width: effectiveSpeechBoxWidth, alignment: .leading)
                 .padding(.horizontal, isCompact ? 8 : 12)
-                .frame(minHeight: isCompact ? 34 : 38)
-                .background(Color.black.opacity(0.7))
+                .frame(minHeight: isCompact ? 40 : 40)
+                .background(Color.black.opacity(0.3))
                 .overlay {
-                    RoundedRectangle(cornerRadius: 6)
-                        .stroke(Color.white, lineWidth: 1)
+                    RoundedRectangle(cornerRadius: 12)
+						.stroke(Color.white.opacity(0.4), lineWidth: 1)
                 }
                 .clipShape(.rect(cornerRadius: 6))
 
@@ -370,7 +370,7 @@ struct MainScreenBottomBar: View {
 				//----------------------------------------
 				// stop speech
 				//
-                stopSpeechButton(buttonHeight: toolbarButtonHeight-5)
+                stopSpeechButton(buttonHeight: toolbarButtonHeight)
 				//
 				//----------------------------------------
 				// btn mode
@@ -504,7 +504,7 @@ struct MainScreenBottomBar: View {
         .buttonStyle(.plain)
         .disabled(!isEnabled)
         .foregroundStyle(.white)
-        .background(background)
+		.background(title=="disabled" ? .red : background)
         .overlay {
             RoundedRectangle(cornerRadius: 12)
                 .stroke(border, lineWidth: 2)

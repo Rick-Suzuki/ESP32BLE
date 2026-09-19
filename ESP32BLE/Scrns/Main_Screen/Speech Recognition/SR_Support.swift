@@ -244,7 +244,6 @@ extension MainScreen {
         speechRecognitionAutoOffTask = nil
         unmatchedSpeechText = nil
         speechRecognition.setListeningEnabled(false)
-        resetAudioSessionForSpeechPlayback()
     }
 
     var latestRecognizedText: String? {
@@ -298,15 +297,15 @@ extension MainScreen {
         }
     }
 
-    func activateAudioSessionForSpeechPlayback() {
+    func activateAudioSessionForSpeechPlayback() async {
         let audioSession = AVAudioSession.sharedInstance()
         try? audioSession.setCategory(.playback, mode: .spokenAudio, options: [.duckOthers])
-        try? audioSession.setActive(true, options: .notifyOthersOnDeactivation)
-    }
 
-    func resetAudioSessionForSpeechPlayback() {
-        let audioSession = AVAudioSession.sharedInstance()
-        try? audioSession.setCategory(.playback, mode: .spokenAudio, options: [.duckOthers])
+        if #available(iOS 27.0, *) {
+            _ = try? await audioSession.activate()
+        } else {
+            try? audioSession.setActive(true)
+        }
     }
 
     func sendModifierFunctionKey(_ functionKey: String) {
