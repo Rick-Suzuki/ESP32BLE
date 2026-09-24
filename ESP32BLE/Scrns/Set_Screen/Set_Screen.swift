@@ -145,6 +145,7 @@ struct SettingsScreen: View {
     private let timingLabelWidth = 90.0
     @ObservedObject var ble: BLEKeyboardManager
     let documentFiles: [URL]
+    let documentDirectorySnapshot: [URL]
     let selectedDocumentName: String
     let refreshDocumentFiles: () -> Void
     let refreshDocumentFilesAfterDeletingAllData: () -> Void
@@ -1563,18 +1564,8 @@ struct SettingsScreen: View {
 
     private var availableDocumentURLs: [URL] {
         SettingsProbeCounters.recordFileEvaluation("document", detail: "mode=\(listMode.buttonTitle)")
-        guard let directoryURL = currentDocumentsDirectoryURL else {
-            return []
-        }
-
-        let urls = SettingsProbeCounters.contentsOfDirectory(
-            category: "document",
-            at: directoryURL,
-            includingPropertiesForKeys: [.isRegularFileKey]
-        )
-
         return preferredScreenDocumentURLs(
-            from: urls.filter { url in
+            from: documentDirectorySnapshot.filter { url in
                 let values = try? url.resourceValues(forKeys: [.isRegularFileKey])
                 return values?.isRegularFile == true
             }
@@ -1583,17 +1574,7 @@ struct SettingsScreen: View {
 
     private var availableTextURLs: [URL] {
         SettingsProbeCounters.recordFileEvaluation("text", detail: "mode=\(listMode.buttonTitle)")
-        guard let directoryURL = currentDocumentsDirectoryURL else {
-            return []
-        }
-
-        let urls = SettingsProbeCounters.contentsOfDirectory(
-            category: "text",
-            at: directoryURL,
-            includingPropertiesForKeys: [.isRegularFileKey]
-        )
-
-        return urls
+        return documentDirectorySnapshot
             .filter { url in
                 let values = try? url.resourceValues(forKeys: [.isRegularFileKey])
                 return values?.isRegularFile == true && url.pathExtension.lowercased() == legacyScreenDocumentFileExtension
@@ -1635,19 +1616,9 @@ struct SettingsScreen: View {
 
     private var availableSoundURLs: [URL] {
         SettingsProbeCounters.recordFileEvaluation("sounds", detail: "mode=\(listMode.buttonTitle)")
-        guard let directoryURL = currentDocumentsDirectoryURL else {
-            return []
-        }
-
         let supportedExtensions = supportedImportedSoundExtensions
 
-        let urls = SettingsProbeCounters.contentsOfDirectory(
-            category: "sounds",
-            at: directoryURL,
-            includingPropertiesForKeys: [.isRegularFileKey]
-        )
-
-        return urls
+        return documentDirectorySnapshot
             .filter { url in
                 let values = try? url.resourceValues(forKeys: [.isRegularFileKey])
                 return values?.isRegularFile == true && supportedExtensions.contains(url.pathExtension.lowercased())
@@ -1657,17 +1628,7 @@ struct SettingsScreen: View {
 
     private var availablePDFURLs: [URL] {
         SettingsProbeCounters.recordFileEvaluation("pdfs", detail: "mode=\(listMode.buttonTitle)")
-        guard let directoryURL = currentDocumentsDirectoryURL else {
-            return []
-        }
-
-        let urls = SettingsProbeCounters.contentsOfDirectory(
-            category: "pdfs",
-            at: directoryURL,
-            includingPropertiesForKeys: [.isRegularFileKey]
-        )
-
-        return urls
+        return documentDirectorySnapshot
             .filter { url in
                 let values = try? url.resourceValues(forKeys: [.isRegularFileKey])
                 return values?.isRegularFile == true && url.pathExtension.lowercased() == "pdf"
@@ -1677,17 +1638,7 @@ struct SettingsScreen: View {
 
     private var availableAllFileURLs: [URL] {
         SettingsProbeCounters.recordFileEvaluation("all", detail: "mode=\(listMode.buttonTitle)")
-        guard let directoryURL = currentDocumentsDirectoryURL else {
-            return []
-        }
-
-        let urls = SettingsProbeCounters.contentsOfDirectory(
-            category: "all",
-            at: directoryURL,
-            includingPropertiesForKeys: [.isRegularFileKey]
-        )
-
-        return urls
+        return documentDirectorySnapshot
             .filter { url in
                 let values = try? url.resourceValues(forKeys: [.isRegularFileKey])
                 return values?.isRegularFile == true && (developerMode || !isInternalFile(url))
@@ -2054,6 +2005,7 @@ struct SettingsScreen: View {
 
         do {
             try FileManager.default.moveItem(at: sourceURL, to: targetURL)
+            refreshDocumentFiles()
             persistSelectedImage(targetURL)
             return nil
         } catch {
@@ -2083,6 +2035,7 @@ struct SettingsScreen: View {
 
         do {
             try FileManager.default.moveItem(at: sourceURL, to: targetURL)
+            refreshDocumentFiles()
             persistSelectedPDF(targetURL)
             return nil
         } catch {
@@ -2100,6 +2053,7 @@ struct SettingsScreen: View {
             return
         }
 
+        refreshDocumentFiles()
         let refreshedImageURLs = availableImageURLs
 
         if let previousSelectedImageURL,
@@ -2145,6 +2099,7 @@ struct SettingsScreen: View {
 
         do {
             try FileManager.default.moveItem(at: sourceURL, to: targetURL)
+            refreshDocumentFiles()
             persistSelectedSound(targetURL)
             return nil
         } catch {
@@ -2162,6 +2117,7 @@ struct SettingsScreen: View {
             return
         }
 
+        refreshDocumentFiles()
         let refreshedSoundURLs = availableSoundURLs
 
         if let previousSelectedSoundURL,
@@ -2183,6 +2139,7 @@ struct SettingsScreen: View {
             return
         }
 
+        refreshDocumentFiles()
         let refreshedPDFURLs = availablePDFURLs
 
         if let previousSelectedPDFURL,
@@ -2206,11 +2163,11 @@ struct SettingsScreen: View {
             return
         }
 
+        markImportedContentChanged()
+
         if selectedTextFileName == textURL.lastPathComponent {
             selectedTextFileName = availableTextURLs.first?.lastPathComponent ?? ""
         }
-
-        markImportedContentChanged()
 
         if loadedDocumentName == textURL.lastPathComponent {
             loadSelectedDocumentText()

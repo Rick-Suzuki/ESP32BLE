@@ -193,6 +193,7 @@ struct ContentView: View {
     @State private var loadedFunctionKeySlotCount = defaultNamedFunctionKeyCount
     @State private var loadedScreenConfig: ScreenConfig?
     @State private var documentFiles: [URL] = []
+    @State private var documentDirectorySnapshot: [URL] = []
     @State private var backgroundImageFiles: [URL] = []
     @State private var loadedBackgroundImage: UIImage?
     @State private var backgroundImageLoadRequestID = UUID()
@@ -530,15 +531,15 @@ struct ContentView: View {
         guard let documentsDirectoryURL = documentsDirectoryURL() else {
             db("STATE ContentView.refreshDocumentFiles current documentFiles.count=\(documentFiles.count) new=0 thread=\(Thread.isMainThread ? "main" : "background")")
             documentFiles = []
+            documentDirectorySnapshot = []
             return
         }
 
         do {
             db("CONFIG_RECREATE_TRACE refreshDocumentFiles enter selectedDocumentName=\(selectedDocumentName) documentsDirectory=\(documentsDirectoryURL.path)")
-            let urls = try FileManager.default.contentsOfDirectory(
+            var urls = try SettingsProbeCounters.scanDocumentsDirectory(
                 at: documentsDirectoryURL,
-                includingPropertiesForKeys: [URLResourceKey.isRegularFileKey],
-                options: [.skipsHiddenFiles]
+                includingPropertiesForKeys: [URLResourceKey.isRegularFileKey]
             )
             db("CONFIG_RECREATE_TRACE refreshDocumentFiles raw_files count=\(urls.count) files=\(urls.map { $0.lastPathComponent }.joined(separator: ", "))")
 
@@ -553,14 +554,22 @@ struct ContentView: View {
                 db("CONFIG_RECREATE_TRACE refreshDocumentFiles skip_config_repair reason=delete_all selectedDocumentName=\(selectedDocumentName)")
             } else {
                 db("CONFIG_RECREATE_TRACE refreshDocumentFiles ensure_configs selectedDocumentName=\(selectedDocumentName)")
-                ensureScreenConfigFilesFromAppStorageFallback(for: updatedDocumentFiles)
+                if ensureScreenConfigFilesFromAppStorageFallback(for: updatedDocumentFiles) {
+                    urls = try SettingsProbeCounters.scanDocumentsDirectory(
+                        at: documentsDirectoryURL,
+                        includingPropertiesForKeys: [URLResourceKey.isRegularFileKey]
+                    )
+                    db("CONFIG_RECREATE_TRACE refreshDocumentFiles raw_files_after_config_create count=\(urls.count) files=\(urls.map { $0.lastPathComponent }.joined(separator: ", "))")
+                }
             }
             db("STATE ContentView.refreshDocumentFiles current documentFiles.count=\(documentFiles.count) new=\(updatedDocumentFiles.count) thread=\(Thread.isMainThread ? "main" : "background")")
             documentFiles = updatedDocumentFiles
+            documentDirectorySnapshot = urls
         } catch {
             db("CONFIG_RECREATE_TRACE refreshDocumentFiles failed selectedDocumentName=\(selectedDocumentName) error=\(error)")
             db("STATE ContentView.refreshDocumentFiles current documentFiles.count=\(documentFiles.count) new=0 error=\(error.localizedDescription) thread=\(Thread.isMainThread ? "main" : "background")")
             documentFiles = []
+            documentDirectorySnapshot = []
         }
     }
 
@@ -979,8 +988,10 @@ struct ContentView: View {
         )
     }
 
-    private func ensureScreenConfigFilesFromAppStorageFallback(for documentURLs: [URL]) {
+    @discardableResult
+    private func ensureScreenConfigFilesFromAppStorageFallback(for documentURLs: [URL]) -> Bool {
         db("CONFIG_RECREATE_TRACE ensureScreenConfigFilesFromAppStorageFallback enter selectedDocumentName=\(selectedDocumentName) documents=\(documentURLs.map { $0.lastPathComponent }.joined(separator: ", "))")
+        var didCreateConfigFile = false
         for documentURL in documentURLs {
             let configURL = configURL(forDocumentURL: documentURL)
             guard FileManager.default.fileExists(atPath: documentURL.path),
@@ -1002,8 +1013,10 @@ struct ContentView: View {
             let creationReason = documentURL.lastPathComponent == screenDocumentFileName(forBaseName: defaultStartupScreenBaseName) ? "default startup file" : "matching \(documentURL.lastPathComponent) exists"
             db("CONFIG_RECREATE_TRACE CREATE screen=\(documentURL.lastPathComponent) config=\(configURL.lastPathComponent) reason=\(creationReason) selectedDocumentName=\(selectedDocumentName) requiredBoxCount=\(requiredBoxCount)")
             let didSave = saveScreenConfig(config, for: documentURL)
+            didCreateConfigFile = didCreateConfigFile || didSave
             db("CONFIG_RECREATE_TRACE ensureScreenConfigFilesFromAppStorageFallback create_result selectedDocumentName=\(selectedDocumentName) document=\(documentURL.lastPathComponent) config=\(configURL.lastPathComponent) saved=\(didSave)")
         }
+        return didCreateConfigFile
     }
 
     private func requiredBoxCountForDocumentURL(_ documentURL: URL) -> Int {
@@ -2483,7 +2496,6 @@ struct ContentView: View {
     private func selectDocument(_ fileURL: URL) {
         db("ENTER ContentView.selectDocument current selectedDocumentName=\(selectedDocumentName) new=\(fileURL.lastPathComponent) recordHistory=false thread=\(Thread.isMainThread ? "main" : "background")")
         loadFunctionKeys(from: fileURL)
-        refreshDocumentFiles()
         db("EXIT ContentView.selectDocument current selectedDocumentName=\(selectedDocumentName) new=\(fileURL.lastPathComponent) recordHistory=false thread=\(Thread.isMainThread ? "main" : "background")")
     }
 
@@ -2493,7 +2505,6 @@ struct ContentView: View {
             recordDocumentHistory(beforeSwitchingTo: fileURL.lastPathComponent)
         }
         loadFunctionKeys(from: fileURL)
-        refreshDocumentFiles()
         db("EXIT ContentView.selectDocument current selectedDocumentName=\(selectedDocumentName) new=\(fileURL.lastPathComponent) recordHistory=\(recordHistory) thread=\(Thread.isMainThread ? "main" : "background")")
     }
 
@@ -2595,6 +2606,7 @@ struct ContentView: View {
         SettingsScreen(
             ble: ble,
             documentFiles: documentFiles,
+            documentDirectorySnapshot: documentDirectorySnapshot,
             selectedDocumentName: selectedDocumentName,
             refreshDocumentFiles: refreshDocumentFiles,
             refreshDocumentFilesAfterDeletingAllData: refreshDocumentFilesAfterDeletingAllData,

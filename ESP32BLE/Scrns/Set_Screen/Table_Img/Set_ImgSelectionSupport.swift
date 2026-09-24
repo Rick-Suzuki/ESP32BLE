@@ -7,8 +7,10 @@ enum SettingsProbeCounters {
     private static var bodyCounts: [String: Int] = [:]
     private static var fileStats: [String: FileScanStats] = [:]
     private static var lifetimeFileStats: [String: FileScanStats] = [:]
+    private static var physicalDirectoryStats = FileScanStats()
+    private static var lifetimePhysicalDirectoryStats = FileScanStats()
     private static var burstStart = CACurrentMediaTime()
-    private static var burstStats: [String: FileScanStats] = [:]
+    private static var burstPhysicalDirectoryStats = FileScanStats()
     private static var directorySignatures: [String: String] = [:]
     private static var directoryChangeCounts: [String: Int] = [:]
 
@@ -46,37 +48,36 @@ enum SettingsProbeCounters {
         emitSummaryIfNeeded(detail: detail)
     }
 
-    static func contentsOfDirectory(
-        category: String,
+    static func scanDocumentsDirectory(
         at directoryURL: URL,
         includingPropertiesForKeys keys: [URLResourceKey]
-    ) -> [URL] {
+    ) throws -> [URL] {
         let scanStart = CACurrentMediaTime()
-        let urls = (try? FileManager.default.contentsOfDirectory(
+        let urls = try FileManager.default.contentsOfDirectory(
             at: directoryURL,
             includingPropertiesForKeys: keys,
             options: [.skipsHiddenFiles]
-        )) ?? []
+        )
         let elapsedMilliseconds = (CACurrentMediaTime() - scanStart) * 1000
         let signature = directorySignature(for: urls)
-        let previousSignature = directorySignatures[category]
+        let previousSignature = directorySignatures["physical"]
         let directoryChanged = previousSignature != nil && previousSignature != signature
-        directorySignatures[category] = signature
+        directorySignatures["physical"] = signature
         if directoryChanged {
-            directoryChangeCounts[category, default: 0] += 1
+            directoryChangeCounts["physical", default: 0] += 1
         }
 
-        fileStats[category, default: FileScanStats()].recordScan(
+        physicalDirectoryStats.recordScan(
             elapsedMilliseconds: elapsedMilliseconds,
             rawCount: urls.count,
             directoryChanged: directoryChanged
         )
-        lifetimeFileStats[category, default: FileScanStats()].recordScan(
+        lifetimePhysicalDirectoryStats.recordScan(
             elapsedMilliseconds: elapsedMilliseconds,
             rawCount: urls.count,
             directoryChanged: directoryChanged
         )
-        burstStats[category, default: FileScanStats()].recordScan(
+        burstPhysicalDirectoryStats.recordScan(
             elapsedMilliseconds: elapsedMilliseconds,
             rawCount: urls.count,
             directoryChanged: directoryChanged
@@ -84,7 +85,7 @@ enum SettingsProbeCounters {
 
         let now = CACurrentMediaTime()
         emitBurstIfNeeded(now: now)
-        emitSummaryIfNeeded(now: now, detail: "category=\(category)")
+        emitSummaryIfNeeded(now: now, detail: "physical-directory-scan")
         return urls
     }
 
@@ -128,11 +129,12 @@ enum SettingsProbeCounters {
             return "\(category) scans=\(stats.scans) directoryChanges=\(stats.directoryChanges) rawCount=\(stats.lastRawCount)"
         }.joined(separator: "\n")
 
-        db("[FILESCAN 10s]\n\(fileLines)\nTOTAL scans=\(totalScans) totalMs=\(String(format: "%.3f", totalMilliseconds)) lifetimeScans=\(lifetimeScans) lifetimeTotalMs=\(String(format: "%.3f", lifetimeMilliseconds)) detail=\(detail) thread=\(Thread.isMainThread ? "main" : "background")")
+        db("[FILESCAN 10s]\n\(fileLines)\nIN_MEMORY_FILTER_SCANS=\(totalScans) totalMs=\(String(format: "%.3f", totalMilliseconds)) lifetimeScans=\(lifetimeScans) lifetimeTotalMs=\(String(format: "%.3f", lifetimeMilliseconds))\nPHYSICAL DIRECTORY SCANS=\(physicalDirectoryStats.scans) totalMs=\(String(format: "%.3f", physicalDirectoryStats.totalMilliseconds)) maxMs=\(String(format: "%.3f", physicalDirectoryStats.maxMilliseconds)) lifetimeScans=\(lifetimePhysicalDirectoryStats.scans) lifetimeTotalMs=\(String(format: "%.3f", lifetimePhysicalDirectoryStats.totalMilliseconds)) detail=\(detail) thread=\(Thread.isMainThread ? "main" : "background")")
         db("[BODYCOUNTS 10s]\n\(bodySummary)\nthread=\(Thread.isMainThread ? "main" : "background")")
-        db("[FILESCAN STATE]\n\(stateSummary)\nthread=\(Thread.isMainThread ? "main" : "background")")
+        db("[FILESCAN STATE]\n\(stateSummary)\nphysical scans=\(lifetimePhysicalDirectoryStats.scans) directoryChanges=\(lifetimePhysicalDirectoryStats.directoryChanges) rawCount=\(lifetimePhysicalDirectoryStats.lastRawCount)\nthread=\(Thread.isMainThread ? "main" : "background")")
         fileStats = [:]
         bodyCounts = [:]
+        physicalDirectoryStats = FileScanStats()
         windowStart = now
     }
 
@@ -140,20 +142,15 @@ enum SettingsProbeCounters {
         let elapsedMilliseconds = (now - burstStart) * 1000
         guard elapsedMilliseconds >= 500 else { return }
 
-        let categories = ["document", "text", "images", "sounds", "pdfs", "all"]
-        let totalScans = categories.reduce(0) { $0 + (burstStats[$1]?.scans ?? 0) }
+        let totalScans = burstPhysicalDirectoryStats.scans
         guard totalScans >= 10 else {
-            burstStats = [:]
+            burstPhysicalDirectoryStats = FileScanStats()
             burstStart = now
             return
         }
 
-        let totalMilliseconds = categories.reduce(0.0) { $0 + (burstStats[$1]?.totalMilliseconds ?? 0) }
-        let categorySummary = categories
-            .map { "\($0)=\(burstStats[$0]?.scans ?? 0)" }
-            .joined(separator: " ")
-        db("[FILESCAN BURST]\nwindowMs=\(String(format: "%.1f", elapsedMilliseconds))\nscans=\(totalScans)\n\(categorySummary)\ntotalMs=\(String(format: "%.3f", totalMilliseconds))\nthread=\(Thread.isMainThread ? "main" : "background")")
-        burstStats = [:]
+        db("[FILESCAN BURST]\nwindowMs=\(String(format: "%.1f", elapsedMilliseconds))\nPHYSICAL DIRECTORY SCANS=\(totalScans)\ntotalMs=\(String(format: "%.3f", burstPhysicalDirectoryStats.totalMilliseconds))\nthread=\(Thread.isMainThread ? "main" : "background")")
+        burstPhysicalDirectoryStats = FileScanStats()
         burstStart = now
     }
 }
@@ -161,19 +158,9 @@ enum SettingsProbeCounters {
 extension SettingsScreen {
     var availableImageURLs: [URL] {
         SettingsProbeCounters.recordFileEvaluation("images")
-        guard let directoryURL = currentDocumentsDirectoryURL else {
-            return []
-        }
-
         let supportedExtensions = Set(["png", "jpg", "jpeg", "heic", "heif", "gif", "bmp", "tiff", "webp"])
 
-        let urls = SettingsProbeCounters.contentsOfDirectory(
-            category: "images",
-            at: directoryURL,
-            includingPropertiesForKeys: [URLResourceKey.isRegularFileKey]
-        )
-
-        return urls
+        return documentDirectorySnapshot
             .filter { url in
                 let values = try? url.resourceValues(forKeys: [.isRegularFileKey])
                 return values?.isRegularFile == true && supportedExtensions.contains(url.pathExtension.lowercased())

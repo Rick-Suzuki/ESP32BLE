@@ -1,33 +1,116 @@
-Changed file:
+Implemented the smallest production fix for repeated Settings directory scans.
+
+1. Exact files changed
+
 ESP32BLE/Scrns/ContentView.swift
+ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
+ESP32BLE/Scrns/Set_Screen/Table_Img/Set_ImgSelectionSupport.swift
 
-Exact statements currently between existing downsampledUIImage START and THUMBNAIL START:
-1. maxPixelDimension > 0 guard check
-2. imageSourceOptions dictionary construction
-3. CGImageSourceCreateWithURL(url as CFURL, imageSourceOptions)
-4. thumbnail max pixel size calculation from maxPixelDimension.rounded(.up)
-5. downsampleOptions dictionary construction
+2. Single Documents-directory snapshot
 
-Exact instrumentation added:
-• Imported QuartzCore for CACurrentMediaTime()
-• Timed maxPixelDimension guard
-• Timed UIImage(contentsOfFile:) fallback branch
-• Timed imageSourceOptions construction
-• Timed CGImageSourceCreateWithURL
-• Timed thumbnailMaxPixelSize calculation
-• Timed downsampleOptions construction
+Added this state in ContentView:
 
-Each new probe logs:
-START
-END
-elapsedMs
-thread
-filename
+documentDirectorySnapshot: [URL]
 
-The operation already obviously capable of blocking is CGImageSourceCreateWithURL. It can touch image file metadata/container parsing through ImageIO even before thumbnail creation begins. The new logs should prove whether the ~11 seconds are there or somewhere unexpectedly earlier.
+It stores the raw, hidden-file-skipped Documents directory listing from the same physical enumeration used by refreshDocumentFiles().
 
-No production fix was made. No async/background move, cache, quality change, UI change, or unrelated optimization was made.
+3. Where physical enumeration now occurs
 
-Validation:
-XcodeRefreshCodeIssuesInFile: no issues.
-BuildProject: built successfully.
+For the Settings lists, physical enumeration now occurs in:
+
+ContentView.refreshDocumentFiles()
+
+via:
+
+SettingsProbeCounters.scanDocumentsDirectory(...)
+
+The Settings available*URLs properties no longer call FileManager.contentsOfDirectory.
+
+4. How Settings lists are derived
+
+availableDocumentURLs:
+filters documentDirectorySnapshot for regular files, then uses preferredScreenDocumentURLs exactly as before.
+
+availableTextURLs:
+filters documentDirectorySnapshot for regular .txt files and sorts as before.
+
+availableImageURLs:
+filters documentDirectorySnapshot for the same supported image extensions and sorts as before.
+
+availableSoundURLs:
+filters documentDirectorySnapshot for supportedImportedSoundExtensions and sorts as before.
+
+availablePDFURLs:
+filters documentDirectorySnapshot for regular .pdf files and sorts as before.
+
+availableAllFileURLs:
+filters documentDirectorySnapshot for regular files, preserving developerMode/internal config-file visibility behavior, and sorts as before.
+
+5. Filesystem mutation paths that refresh the snapshot
+
+These now refresh through refreshDocumentFiles or existing wrappers:
+create new Screen
+rename Screen
+delete Screen
+duplicate Screen
+delete all data
+generic delete from All
+screen import
+full archive/import session finish
+image import
+sound import
+text delete
+image rename
+image delete
+sound rename
+sound delete
+PDF rename
+PDF delete
+startup/default screen refresh paths already using refreshDocumentFiles
+
+If config fallback creation creates config files during refreshDocumentFiles, it now returns a flag and refreshDocumentFiles rescans once so the raw snapshot includes newly-created config files.
+
+6. Ordinary actions that do NOT refresh it
+
+SwiftUI body reevaluation
+Settings redraw
+file-mode changes
+slider changes
+image selection
+sound/PDF selection
+Main/Settings navigation
+ordinary screen selection
+ordinary text/screen content saves
+
+I removed the refreshDocumentFiles call from ContentView.selectDocument because selecting a screen does not change directory contents.
+
+7. Filtering/sorting semantics
+
+Preserved. The same extension checks, regular-file checks, preferred screen logic, sorting, hidden-file behavior, config visibility, developerMode behavior, and legacy .txt behavior are still used.
+
+8. Selection preservation
+
+Selections are preserved. For delete/rename paths that need the refreshed list to choose a replacement or update selected file state, the snapshot is refreshed before reading the available*URLs list.
+
+9. Image-preview and Main background concurrency
+
+Untouched in this change.
+
+10. Build result
+
+Build succeeded. Xcode diagnostics for the touched files are clean.
+
+11. Expected FILESCAN behavior
+
+Before:
+available*URLs evaluation caused physical Documents scans repeatedly.
+
+After:
+available*URLs evaluation may still be frequent, but it is in-memory filtering only.
+During ordinary Settings interaction, expect:
+
+PHYSICAL DIRECTORY SCANS=0
+
+After a real filesystem mutation, expect a small number of physical scans, usually 1. A second scan can occur only if refreshDocumentFiles creates missing config files and must resnapshot the directory.
+
+No unrelated performance optimization was made.
