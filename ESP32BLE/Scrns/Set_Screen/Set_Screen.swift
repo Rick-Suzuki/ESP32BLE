@@ -2,6 +2,8 @@ import SwiftUI
 import UIKit
 import AVFoundation
 import UniformTypeIdentifiers
+import QuartzCore
+import Darwin
 
 struct SettingsScreen: View {
     private enum SettingsListMode: String {
@@ -152,6 +154,7 @@ struct SettingsScreen: View {
     let deleteDocument: (URL) -> Void
     let duplicateDocument: (URL) -> Void
     let canDeleteDocuments: Bool
+    let isSettingsScreenPresented: Bool
     @Binding var bleTextToSend: String
     let returnToMain: () -> Void
     @State private var documentEditorText = ""
@@ -207,6 +210,7 @@ struct SettingsScreen: View {
     @State private var selectedTextFileName = ""
 
     var body: some View {
+        let _ = SettingsProbeCounters.record("SettingsScreen.body", detail: "mode=\(listMode.buttonTitle)")
         configuredSettingsScreen
     }
 
@@ -232,6 +236,7 @@ struct SettingsScreen: View {
                             .frame(width: documentTableWidth(for: geometry.size.width))
                     }
                     .frame(maxHeight: .infinity, alignment: .top)
+                    .background { hitTestFrameProbe("SETTINGS CONTENT") }
                 }
             }
             .frame(width: screenGeometry.size.width, height: screenGeometry.size.height)
@@ -241,6 +246,7 @@ struct SettingsScreen: View {
                 Color.clear
                     .task(id: rootLayoutID) {
                         db("[PROBE] SETTINGS ROOT FRAME global=\(rootFrame) size=\(screenGeometry.size) safeTop=\(screenGeometry.safeAreaInsets.top) safeBottom=\(screenGeometry.safeAreaInsets.bottom) statusBarVisible=\(isStatusBarVisible)")
+                        db("[HITTEST] SETTINGS ROOT frame=\(rootFrame) size=\(screenGeometry.size) safeAreaInsets=\(screenGeometry.safeAreaInsets) isSettingsScreenPresented=\(isSettingsScreenPresented) statusBarVisible=\(isStatusBarVisible) orientationHorizontal=\(orientationState) thread=\(pthread_main_np() == 1 ? "main" : "background")")
                     }
             }
         }
@@ -253,19 +259,27 @@ struct SettingsScreen: View {
 		//
 			HStack(spacing: 8) {
 				SettingsToolbarButton(title: "main", backgroundColor: Color.gray.opacity(0.45), minWidth: 92, isEnabled: true) {
+                    db("[PERF ACTION] Main thread=\(Thread.isMainThread ? "main" : "background")")
+                    db("[PROBE] MAIN ACTION RECEIVED \(Date()) mode=\(listMode.buttonTitle) loadedDocumentName=\(loadedDocumentName) thread=\(Thread.isMainThread ? "main" : "background")")
                     db("[PROBE] MAIN TAP received \(Date()) thread=\(Thread.isMainThread ? "main" : "background")")
 					saveAndReturnToMain()
 				}
+                .background { hitTestFrameProbe("MAIN") }
+                .simultaneousGesture(TapGesture().onEnded {
+                    db("[HITTEST] MAIN CONTAINER TOUCH \(Date()) isSettingsScreenPresented=\(isSettingsScreenPresented) mode=\(listMode.buttonTitle) thread=\(Thread.isMainThread ? "main" : "background")")
+                })
 			//
 			//----------------------------------------
 			// tts voice
 			//
 			textToSpeechVoiceMenu
+                .background { hitTestFrameProbe("TTS MENU") }
 			//
 			//----------------------------------------
 			// tts slider
 			//
 			textToSpeechRateControl
+                .background { hitTestFrameProbe("TTS RATE") }
 			//
 				//----------------------------------------
 				// title text
@@ -273,6 +287,7 @@ struct SettingsScreen: View {
 			Spacer()
                 settingsTitleControl(availableWidth: availableWidth)
 					.padding(.horizontal, 12)
+                    .background { hitTestFrameProbe("TITLE") }
 
 			Spacer()
 			//
@@ -297,6 +312,7 @@ struct SettingsScreen: View {
 				}
 				.contentShape(.rect)
 				.accessibilityLabel("Import from iCloud")
+                .background { hitTestFrameProbe("IMPORT") }
 
 			Spacer()
 				.frame(width:10)
@@ -322,6 +338,7 @@ struct SettingsScreen: View {
 			.accessibilityLabel("Export to iCloud")
             .disabled(!canExportInCurrentListMode)
             .opacity(canExportInCurrentListMode ? 1 : 0.45)
+            .background { hitTestFrameProbe("EXPORT") }
 			
 			Spacer()
 			//
@@ -329,9 +346,18 @@ struct SettingsScreen: View {
 			// show type of table
 			//
 		SettingsToolbarButton(title: listMode.buttonTitle, backgroundColor: Color.gray.opacity(0.45), minWidth: 64.4, isEnabled: true) {
+                    db("[PERF ACTION] fileMode \(nextListMode(from: listMode).buttonTitle) thread=\(Thread.isMainThread ? "main" : "background")")
+                    db("[PROBE] FILE MODE ACTION RECEIVED \(Date()) current=\(listMode.buttonTitle) requested=\(nextListMode(from: listMode).buttonTitle) thread=\(Thread.isMainThread ? "main" : "background")")
                     db("[PROBE] FILE TYPE TAP received \(Date()) current=\(listMode.buttonTitle) thread=\(Thread.isMainThread ? "main" : "background")")
+                    let fileModeToggleStart = CACurrentMediaTime()
+                    db("[PROBE] FILE MODE toggle START \(Date()) current=\(listMode.buttonTitle) thread=\(Thread.isMainThread ? "main" : "background")")
 					listMode.toggle(developerMode: developerMode)
+                    db("[PROBE] FILE MODE toggle END \(Date()) current=\(listMode.buttonTitle) elapsedMs=\((CACurrentMediaTime() - fileModeToggleStart) * 1000) thread=\(Thread.isMainThread ? "main" : "background")")
 				}
+                .background { hitTestFrameProbe("FILEMODE") }
+                .simultaneousGesture(TapGesture().onEnded {
+                    db("[HITTEST] FILEMODE CONTAINER TOUCH \(Date()) isSettingsScreenPresented=\(isSettingsScreenPresented) mode=\(listMode.buttonTitle) thread=\(Thread.isMainThread ? "main" : "background")")
+                })
 			//
 			//----------------------------------------
 			// repair btn
@@ -339,6 +365,7 @@ struct SettingsScreen: View {
 			SettingsToolbarButton(title: "repair", backgroundColor: Color.red.opacity(0.5), minWidth: 64.4, isEnabled: listMode == .files) {
 				repairDocument()
 			}
+            .background { hitTestFrameProbe("REPAIR") }
 			//
 			//----------------------------------------
 			// new file
@@ -346,6 +373,7 @@ struct SettingsScreen: View {
 			SettingsToolbarButton(title: "new", backgroundColor: Color.green.opacity(0.5), minWidth: 64.4, isEnabled: listMode == .files) {
 				createNewDocument()
 			}
+            .background { hitTestFrameProbe("NEW") }
 		}
 		.padding(.horizontal, 8)
 		.padding(.vertical, 6)
@@ -356,10 +384,22 @@ struct SettingsScreen: View {
                 Color.clear
                     .task(id: toolbarLayoutID) {
                         db("[PROBE] SETTINGS TOP TOOLBAR FRAME global=\(toolbarFrame) safeTop=\(toolbarGeometry.safeAreaInsets.top) safeBottom=\(toolbarGeometry.safeAreaInsets.bottom) statusBarVisible=\(isStatusBarVisible)")
+                        db("[HITTEST] TOOLBAR frame=\(toolbarFrame) safeAreaInsets=\(toolbarGeometry.safeAreaInsets) isSettingsScreenPresented=\(isSettingsScreenPresented) statusBarVisible=\(isStatusBarVisible) orientationHorizontal=\(orientationState) thread=\(pthread_main_np() == 1 ? "main" : "background")")
                     }
             }
         }
 	}
+
+    private func hitTestFrameProbe(_ label: String) -> some View {
+        GeometryReader { geometry in
+            let frame = geometry.frame(in: .global)
+            let layoutID = "\(label):\(Int(frame.minX.rounded())):\(Int(frame.minY.rounded())):\(Int(frame.width.rounded())):\(Int(frame.height.rounded())):\(Int(geometry.safeAreaInsets.top.rounded())):\(isSettingsScreenPresented):\(isStatusBarVisible):\(orientationState)"
+            Color.clear
+                .task(id: layoutID) {
+                    db("[HITTEST] \(label) frame=\(frame) safeAreaInsets=\(geometry.safeAreaInsets) isSettingsScreenPresented=\(isSettingsScreenPresented) statusBarVisible=\(isStatusBarVisible) orientationHorizontal=\(orientationState) thread=\(pthread_main_np() == 1 ? "main" : "background")")
+                }
+        }
+    }
 
     private var configuredSettingsScreen: some View {
         settingsScreenBase
@@ -417,8 +457,12 @@ struct SettingsScreen: View {
             cancelNameEditing()
         }
         .onChange(of: listModeRawValue) {
+            let listModeChangeStart = CACurrentMediaTime()
+            db("[PROBE] FILE MODE onChange START \(Date()) mode=\(listMode.buttonTitle) thread=\(Thread.isMainThread ? "main" : "background")")
             saveCurrentDocumentText()
+            db("[PROBE] FILE MODE onChange after saveCurrentDocumentText \(Date()) mode=\(listMode.buttonTitle) elapsedMs=\((CACurrentMediaTime() - listModeChangeStart) * 1000) thread=\(Thread.isMainThread ? "main" : "background")")
             loadSelectedDocumentText()
+            db("[PROBE] FILE MODE onChange END \(Date()) mode=\(listMode.buttonTitle) elapsedMs=\((CACurrentMediaTime() - listModeChangeStart) * 1000) thread=\(Thread.isMainThread ? "main" : "background")")
         }
         .onChange(of: documentEditorText) {
             guard !isLoadingDocumentText else { return }
@@ -518,6 +562,12 @@ struct SettingsScreen: View {
                 listModeRawValue = newValue.rawValue
             }
         }
+    }
+
+    private func nextListMode(from mode: SettingsListMode) -> SettingsListMode {
+        var nextMode = mode
+        nextMode.toggle(developerMode: developerMode)
+        return nextMode
     }
 
     private var fileScrollPositionID: Binding<String?> {
@@ -648,6 +698,7 @@ struct SettingsScreen: View {
                 ZStack {
                     Color.black.opacity(0.001)
                         .ignoresSafeArea()
+                        .background { hitTestFrameProbe("REPAIR ALERT OVERLAY") }
 
                     VStack(spacing: 16) {
                         VStack(spacing: 8) {
@@ -1255,13 +1306,21 @@ struct SettingsScreen: View {
     }
 
     private func saveAndReturnToMain(using text: String? = nil) {
+        let saveAndReturnStart = CACurrentMediaTime()
+        db("[PROBE] saveAndReturnToMain START \(Date()) mode=\(listMode.buttonTitle) textOverride=\(text != nil) thread=\(Thread.isMainThread ? "main" : "background")")
         if let text {
             documentEditorText = text
+            db("[PROBE] saveAndReturnToMain saveSelectedDocumentAndReload START \(Date()) source=override textCount=\(text.count) thread=\(Thread.isMainThread ? "main" : "background")")
             saveSelectedDocumentAndReload(text)
+            db("[PROBE] saveAndReturnToMain saveSelectedDocumentAndReload END \(Date()) elapsedMs=\((CACurrentMediaTime() - saveAndReturnStart) * 1000) thread=\(Thread.isMainThread ? "main" : "background")")
         } else {
+            db("[PROBE] saveAndReturnToMain saveSelectedDocumentAndReload START \(Date()) source=editor textCount=\(documentEditorText.count) thread=\(Thread.isMainThread ? "main" : "background")")
             saveSelectedDocumentAndReload(documentEditorText)
+            db("[PROBE] saveAndReturnToMain saveSelectedDocumentAndReload END \(Date()) elapsedMs=\((CACurrentMediaTime() - saveAndReturnStart) * 1000) thread=\(Thread.isMainThread ? "main" : "background")")
         }
+        db("[PROBE] saveAndReturnToMain returnToMain START \(Date()) elapsedMs=\((CACurrentMediaTime() - saveAndReturnStart) * 1000) thread=\(Thread.isMainThread ? "main" : "background")")
         returnToMain()
+        db("[PROBE] saveAndReturnToMain END \(Date()) elapsedMs=\((CACurrentMediaTime() - saveAndReturnStart) * 1000) thread=\(Thread.isMainThread ? "main" : "background")")
     }
 
     private func saveDocumentText(_ text: String, to fileURL: URL) {
@@ -1503,17 +1562,16 @@ struct SettingsScreen: View {
     }
 
     private var availableDocumentURLs: [URL] {
+        SettingsProbeCounters.recordFileEvaluation("document", detail: "mode=\(listMode.buttonTitle)")
         guard let directoryURL = currentDocumentsDirectoryURL else {
             return []
         }
 
-        db("[PROBE] availableDocumentURLs directory enumeration START \(Date()) thread=\(Thread.isMainThread ? "main" : "background")")
-        let urls = (try? FileManager.default.contentsOfDirectory(
+        let urls = SettingsProbeCounters.contentsOfDirectory(
+            category: "document",
             at: directoryURL,
-            includingPropertiesForKeys: [.isRegularFileKey],
-            options: [.skipsHiddenFiles]
-        )) ?? []
-        db("[PROBE] availableDocumentURLs directory enumeration END \(Date()) rawCount=\(urls.count) thread=\(Thread.isMainThread ? "main" : "background")")
+            includingPropertiesForKeys: [.isRegularFileKey]
+        )
 
         return preferredScreenDocumentURLs(
             from: urls.filter { url in
@@ -1524,17 +1582,16 @@ struct SettingsScreen: View {
     }
 
     private var availableTextURLs: [URL] {
+        SettingsProbeCounters.recordFileEvaluation("text", detail: "mode=\(listMode.buttonTitle)")
         guard let directoryURL = currentDocumentsDirectoryURL else {
             return []
         }
 
-        db("[PROBE] availableTextURLs directory enumeration START \(Date()) thread=\(Thread.isMainThread ? "main" : "background")")
-        let urls = (try? FileManager.default.contentsOfDirectory(
+        let urls = SettingsProbeCounters.contentsOfDirectory(
+            category: "text",
             at: directoryURL,
-            includingPropertiesForKeys: [.isRegularFileKey],
-            options: [.skipsHiddenFiles]
-        )) ?? []
-        db("[PROBE] availableTextURLs directory enumeration END \(Date()) rawCount=\(urls.count) thread=\(Thread.isMainThread ? "main" : "background")")
+            includingPropertiesForKeys: [.isRegularFileKey]
+        )
 
         return urls
             .filter { url in
@@ -1577,19 +1634,18 @@ struct SettingsScreen: View {
     }
 
     private var availableSoundURLs: [URL] {
+        SettingsProbeCounters.recordFileEvaluation("sounds", detail: "mode=\(listMode.buttonTitle)")
         guard let directoryURL = currentDocumentsDirectoryURL else {
             return []
         }
 
         let supportedExtensions = supportedImportedSoundExtensions
 
-        db("[PROBE] availableSoundURLs directory enumeration START \(Date()) thread=\(Thread.isMainThread ? "main" : "background")")
-        let urls = (try? FileManager.default.contentsOfDirectory(
+        let urls = SettingsProbeCounters.contentsOfDirectory(
+            category: "sounds",
             at: directoryURL,
-            includingPropertiesForKeys: [.isRegularFileKey],
-            options: [.skipsHiddenFiles]
-        )) ?? []
-        db("[PROBE] availableSoundURLs directory enumeration END \(Date()) rawCount=\(urls.count) thread=\(Thread.isMainThread ? "main" : "background")")
+            includingPropertiesForKeys: [.isRegularFileKey]
+        )
 
         return urls
             .filter { url in
@@ -1600,17 +1656,16 @@ struct SettingsScreen: View {
     }
 
     private var availablePDFURLs: [URL] {
+        SettingsProbeCounters.recordFileEvaluation("pdfs", detail: "mode=\(listMode.buttonTitle)")
         guard let directoryURL = currentDocumentsDirectoryURL else {
             return []
         }
 
-        db("[PROBE] availablePDFURLs directory enumeration START \(Date()) thread=\(Thread.isMainThread ? "main" : "background")")
-        let urls = (try? FileManager.default.contentsOfDirectory(
+        let urls = SettingsProbeCounters.contentsOfDirectory(
+            category: "pdfs",
             at: directoryURL,
-            includingPropertiesForKeys: [.isRegularFileKey],
-            options: [.skipsHiddenFiles]
-        )) ?? []
-        db("[PROBE] availablePDFURLs directory enumeration END \(Date()) rawCount=\(urls.count) thread=\(Thread.isMainThread ? "main" : "background")")
+            includingPropertiesForKeys: [.isRegularFileKey]
+        )
 
         return urls
             .filter { url in
@@ -1621,17 +1676,16 @@ struct SettingsScreen: View {
     }
 
     private var availableAllFileURLs: [URL] {
+        SettingsProbeCounters.recordFileEvaluation("all", detail: "mode=\(listMode.buttonTitle)")
         guard let directoryURL = currentDocumentsDirectoryURL else {
             return []
         }
 
-        db("[PROBE] availableAllFileURLs directory enumeration START \(Date()) thread=\(Thread.isMainThread ? "main" : "background")")
-        let urls = (try? FileManager.default.contentsOfDirectory(
+        let urls = SettingsProbeCounters.contentsOfDirectory(
+            category: "all",
             at: directoryURL,
-            includingPropertiesForKeys: [.isRegularFileKey],
-            options: [.skipsHiddenFiles]
-        )) ?? []
-        db("[PROBE] availableAllFileURLs directory enumeration END \(Date()) rawCount=\(urls.count) thread=\(Thread.isMainThread ? "main" : "background")")
+            includingPropertiesForKeys: [.isRegularFileKey]
+        )
 
         return urls
             .filter { url in
@@ -1942,7 +1996,11 @@ struct SettingsScreen: View {
     }
 
     private func selectImage(_ imageURL: URL) {
+        db("[PERF ACTION] selectImage \(imageURL.lastPathComponent) thread=\(Thread.isMainThread ? "main" : "background")")
+        let selectImageStart = CACurrentMediaTime()
+        db("[PROBE] SettingsScreen.selectImage START \(Date()) file=\(imageURL.lastPathComponent) thread=\(Thread.isMainThread ? "main" : "background")")
         persistSelectedImage(imageURL)
+        db("[PROBE] SettingsScreen.selectImage END \(Date()) file=\(imageURL.lastPathComponent) elapsedMs=\((CACurrentMediaTime() - selectImageStart) * 1000) thread=\(Thread.isMainThread ? "main" : "background")")
     }
 
     private func selectSound(_ soundURL: URL) {

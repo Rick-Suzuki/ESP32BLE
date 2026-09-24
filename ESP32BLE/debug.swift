@@ -10,14 +10,14 @@ import AVFoundation
 import Foundation
 
 // debug BT - prints
-let db_bt = false
+nonisolated let db_bt = false
 
-let db_dbCode = true
+nonisolated let db_dbCode = true
 
 //
 //----------------------------------------
 //
-func getTime()->String {
+nonisolated func getTime()->String {
 	let timestampFormatter = DateFormatter()
 	timestampFormatter.dateFormat = "yyMMdd_HHmm_SSS"
 	let timeStamp = timestampFormatter.string(from: Date())
@@ -26,7 +26,7 @@ func getTime()->String {
 //
 //----------------------------------------
 //
-func db(
+nonisolated func db(
 	_ format: String,
 	_ args: CVarArg...,
 	file: String = #file,

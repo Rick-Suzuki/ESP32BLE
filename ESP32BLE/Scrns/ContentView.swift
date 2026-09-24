@@ -3,6 +3,8 @@ import SwiftUI
 import AudioToolbox
 import UIKit
 import ImageIO
+import QuartzCore
+import Darwin
 
 
 let maxGridDimension = 20
@@ -121,26 +123,49 @@ private struct StoredGridDimensions: Codable {
     let rows: Int
 }
 
-func downsampledUIImage(at url: URL, maxPixelDimension: CGFloat) -> UIImage? {
+nonisolated func downsampledUIImage(at url: URL, maxPixelDimension: CGFloat) -> UIImage? {
     db("[PROBE] downsampledUIImage START \(Date()) file=\(url.lastPathComponent) maxPixelDimension=\(maxPixelDimension) thread=\(Thread.isMainThread ? "main" : "background")")
-    guard maxPixelDimension > 0 else {
+    var probeStageStart = CACurrentMediaTime()
+    db("[PROBE] downsampledUIImage maxPixelDimension guard START \(Date()) file=\(url.lastPathComponent) thread=\(Thread.isMainThread ? "main" : "background")")
+    let hasPositiveMaxPixelDimension = maxPixelDimension > 0
+    db("[PROBE] downsampledUIImage maxPixelDimension guard END \(Date()) file=\(url.lastPathComponent) elapsedMs=\((CACurrentMediaTime() - probeStageStart) * 1000) result=\(hasPositiveMaxPixelDimension) thread=\(Thread.isMainThread ? "main" : "background")")
+    guard hasPositiveMaxPixelDimension else {
+        probeStageStart = CACurrentMediaTime()
+        db("[PROBE] downsampledUIImage UIImage(contentsOfFile:) START \(Date()) file=\(url.lastPathComponent) thread=\(Thread.isMainThread ? "main" : "background")")
         let image = UIImage(contentsOfFile: url.path)
+        db("[PROBE] downsampledUIImage UIImage(contentsOfFile:) END \(Date()) file=\(url.lastPathComponent) elapsedMs=\((CACurrentMediaTime() - probeStageStart) * 1000) hasImage=\(image != nil) thread=\(Thread.isMainThread ? "main" : "background")")
         db("[PROBE] downsampledUIImage END \(Date()) file=\(url.lastPathComponent) fallback hasImage=\(image != nil) thread=\(Thread.isMainThread ? "main" : "background")")
         return image
     }
 
+    probeStageStart = CACurrentMediaTime()
+    db("[PROBE] downsampledUIImage imageSourceOptions START \(Date()) file=\(url.lastPathComponent) thread=\(Thread.isMainThread ? "main" : "background")")
     let imageSourceOptions = [kCGImageSourceShouldCache: false] as CFDictionary
-    guard let imageSource = CGImageSourceCreateWithURL(url as CFURL, imageSourceOptions) else {
+    db("[PROBE] downsampledUIImage imageSourceOptions END \(Date()) file=\(url.lastPathComponent) elapsedMs=\((CACurrentMediaTime() - probeStageStart) * 1000) thread=\(Thread.isMainThread ? "main" : "background")")
+
+    probeStageStart = CACurrentMediaTime()
+    db("[PROBE] downsampledUIImage CGImageSourceCreateWithURL START \(Date()) file=\(url.lastPathComponent) thread=\(Thread.isMainThread ? "main" : "background")")
+    let imageSource = CGImageSourceCreateWithURL(url as CFURL, imageSourceOptions)
+    db("[PROBE] downsampledUIImage CGImageSourceCreateWithURL END \(Date()) file=\(url.lastPathComponent) elapsedMs=\((CACurrentMediaTime() - probeStageStart) * 1000) hasSource=\(imageSource != nil) thread=\(Thread.isMainThread ? "main" : "background")")
+    guard let imageSource else {
         db("[PROBE] downsampledUIImage END \(Date()) file=\(url.lastPathComponent) createSource=false thread=\(Thread.isMainThread ? "main" : "background")")
         return nil
     }
 
+    probeStageStart = CACurrentMediaTime()
+    db("[PROBE] downsampledUIImage thumbnailMaxPixelSize START \(Date()) file=\(url.lastPathComponent) maxPixelDimension=\(maxPixelDimension) thread=\(Thread.isMainThread ? "main" : "background")")
+    let thumbnailMaxPixelSize = Int(maxPixelDimension.rounded(.up))
+    db("[PROBE] downsampledUIImage thumbnailMaxPixelSize END \(Date()) file=\(url.lastPathComponent) elapsedMs=\((CACurrentMediaTime() - probeStageStart) * 1000) value=\(thumbnailMaxPixelSize) thread=\(Thread.isMainThread ? "main" : "background")")
+
+    probeStageStart = CACurrentMediaTime()
+    db("[PROBE] downsampledUIImage downsampleOptions START \(Date()) file=\(url.lastPathComponent) thread=\(Thread.isMainThread ? "main" : "background")")
     let downsampleOptions = [
         kCGImageSourceCreateThumbnailFromImageAlways: true,
         kCGImageSourceCreateThumbnailWithTransform: true,
         kCGImageSourceShouldCacheImmediately: false,
-        kCGImageSourceThumbnailMaxPixelSize: Int(maxPixelDimension.rounded(.up))
+        kCGImageSourceThumbnailMaxPixelSize: thumbnailMaxPixelSize
     ] as CFDictionary
+    db("[PROBE] downsampledUIImage downsampleOptions END \(Date()) file=\(url.lastPathComponent) elapsedMs=\((CACurrentMediaTime() - probeStageStart) * 1000) thread=\(Thread.isMainThread ? "main" : "background")")
 
     db("[PROBE] downsampledUIImage THUMBNAIL START \(Date()) file=\(url.lastPathComponent) thread=\(Thread.isMainThread ? "main" : "background")")
     guard let downsampledImage = CGImageSourceCreateThumbnailAtIndex(imageSource, 0, downsampleOptions) else {
@@ -170,6 +195,7 @@ struct ContentView: View {
     @State private var documentFiles: [URL] = []
     @State private var backgroundImageFiles: [URL] = []
     @State private var loadedBackgroundImage: UIImage?
+    @State private var backgroundImageLoadRequestID = UUID()
     @State private var isRestoringBackgroundImageSelection = false
     @State private var documentNavigationHistory: [String] = []
     @State private var documentForwardNavigationHistory: [String] = []
@@ -200,6 +226,7 @@ struct ContentView: View {
                     }
                     .frame(width: containerWidth, height: containerHeight)
                     .offset(x: isKeyboardScreenPresented ? 0 : -containerWidth)
+                    .background { contentHitTestFrameProbe("CONTENTVIEW KEYBOARD LAYER") }
                     .onAppear {
                         db("DESTINATION KeyboardScreen.onAppear current isKeyboardScreenPresented=\(isKeyboardScreenPresented) new=visible thread=\(Thread.isMainThread ? "main" : "background")")
                     }
@@ -280,6 +307,7 @@ struct ContentView: View {
                     .frame(width: containerWidth, height: containerHeight)
                     .ignoresSafeArea(.keyboard)
                     .offset(x: isKeyboardScreenPresented ? containerWidth : 0)
+                    .background { contentHitTestFrameProbe("CONTENTVIEW MAIN LAYER") }
                     .onAppear {
                         db("DESTINATION MainScreen.onAppear current isKeyboardScreenPresented=\(isKeyboardScreenPresented) isSettingsScreenPresented=\(isSettingsScreenPresented) new=visible thread=\(Thread.isMainThread ? "main" : "background")")
                     }
@@ -290,12 +318,14 @@ struct ContentView: View {
                     if isSettingsScreenPresented {
                         launchedSettingsScreen
                             .frame(width: containerWidth, height: containerHeight)
+                            .background { contentHitTestFrameProbe("CONTENTVIEW SETTINGS LAYER") }
                             .transition(.move(edge: .trailing))
                     }
                 }
                 .frame(width: containerWidth, height: containerHeight)
                 .clipped()
                 .ignoresSafeArea(.keyboard)
+                .background { contentHitTestFrameProbe("CONTENTVIEW SCREEN STACK") }
                 .onAppear {
                     logDeviceTypeIfNeeded()
                 }
@@ -367,6 +397,17 @@ struct ContentView: View {
             if !isRestoringBackgroundImageSelection {
                 saveBackgroundImageOpacity(for: selectedDocumentName)
             }
+        }
+    }
+
+    private func contentHitTestFrameProbe(_ label: String) -> some View {
+        GeometryReader { geometry in
+            let frame = geometry.frame(in: .global)
+            let layoutID = "\(label):\(Int(frame.minX.rounded())):\(Int(frame.minY.rounded())):\(Int(frame.width.rounded())):\(Int(frame.height.rounded())):\(Int(geometry.safeAreaInsets.top.rounded())):\(isSettingsScreenPresented):\(isKeyboardScreenPresented):\(isStatusBarVisible):\(orientationState)"
+            Color.clear
+                .task(id: layoutID) {
+                    db("[HITTEST] \(label) frame=\(frame) safeAreaInsets=\(geometry.safeAreaInsets) isSettingsScreenPresented=\(isSettingsScreenPresented) isKeyboardScreenPresented=\(isKeyboardScreenPresented) statusBarVisible=\(isStatusBarVisible) orientationHorizontal=\(orientationState) thread=\(pthread_main_np() == 1 ? "main" : "background")")
+                }
         }
     }
 
@@ -561,35 +602,34 @@ struct ContentView: View {
 
         if !selectedBackgroundImagePath.isEmpty {
             let pathImageURL = URL(fileURLWithPath: selectedBackgroundImagePath)
-            db("[PROBE] reloadBackgroundImage path downsample START \(Date()) file=\(pathImageURL.lastPathComponent) exists=\(FileManager.default.fileExists(atPath: pathImageURL.path)) thread=\(Thread.isMainThread ? "main" : "background")")
-            if FileManager.default.fileExists(atPath: pathImageURL.path),
-               let pathImage = downsampledUIImage(at: pathImageURL, maxPixelDimension: maxPixelDimension) {
-                db("[PROBE] reloadBackgroundImage path downsample END \(Date()) file=\(pathImageURL.lastPathComponent) hasImage=true thread=\(Thread.isMainThread ? "main" : "background")")
-                loadedBackgroundImage = pathImage
+            let pathExists = FileManager.default.fileExists(atPath: pathImageURL.path)
+            db("[PROBE] reloadBackgroundImage path downsample REQUEST \(Date()) file=\(pathImageURL.lastPathComponent) exists=\(pathExists) thread=\(Thread.isMainThread ? "main" : "background")")
+            if pathExists {
                 selectedBackgroundImageName = pathImageURL.lastPathComponent
                 if let pathImageIndex = backgroundImageFiles.firstIndex(where: { $0.path == pathImageURL.path }) {
                     selectedBackgroundImageIndex = pathImageIndex + 1
                 }
-                db("[PROBE] reloadBackgroundImage END \(Date()) branch=path hasImage=true thread=\(Thread.isMainThread ? "main" : "background")")
+                startBackgroundImageDecode(imageURL: pathImageURL, maxPixelDimension: maxPixelDimension, branch: "path")
+                db("[PROBE] reloadBackgroundImage END \(Date()) branch=path requested=true thread=\(Thread.isMainThread ? "main" : "background")")
                 return
             }
-            db("[PROBE] reloadBackgroundImage path downsample END \(Date()) file=\(pathImageURL.lastPathComponent) hasImage=false thread=\(Thread.isMainThread ? "main" : "background")")
+            db("[PROBE] reloadBackgroundImage path downsample SKIP \(Date()) file=\(pathImageURL.lastPathComponent) reason=missing thread=\(Thread.isMainThread ? "main" : "background")")
         }
 
         if !selectedBackgroundImageName.isEmpty,
            let namedImageURL = backgroundImageFiles.first(where: { $0.lastPathComponent == selectedBackgroundImageName }) {
-            db("[PROBE] reloadBackgroundImage name downsample START \(Date()) file=\(namedImageURL.lastPathComponent) thread=\(Thread.isMainThread ? "main" : "background")")
-            loadedBackgroundImage = downsampledUIImage(at: namedImageURL, maxPixelDimension: maxPixelDimension)
-            db("[PROBE] reloadBackgroundImage name downsample END \(Date()) file=\(namedImageURL.lastPathComponent) hasImage=\(loadedBackgroundImage != nil) thread=\(Thread.isMainThread ? "main" : "background")")
+            db("[PROBE] reloadBackgroundImage name downsample REQUEST \(Date()) file=\(namedImageURL.lastPathComponent) thread=\(Thread.isMainThread ? "main" : "background")")
             selectedBackgroundImagePath = namedImageURL.path
             if let namedImageIndex = backgroundImageFiles.firstIndex(where: { $0.lastPathComponent == selectedBackgroundImageName }) {
                 selectedBackgroundImageIndex = namedImageIndex + 1
             }
-            db("[PROBE] reloadBackgroundImage END \(Date()) branch=name hasImage=\(loadedBackgroundImage != nil) thread=\(Thread.isMainThread ? "main" : "background")")
+            startBackgroundImageDecode(imageURL: namedImageURL, maxPixelDimension: maxPixelDimension, branch: "name")
+            db("[PROBE] reloadBackgroundImage END \(Date()) branch=name requested=true thread=\(Thread.isMainThread ? "main" : "background")")
             return
         }
 
         guard selectedBackgroundImageIndex > 0 else {
+            backgroundImageLoadRequestID = UUID()
             selectedBackgroundImagePath = ""
             selectedBackgroundImageName = ""
             loadedBackgroundImage = nil
@@ -599,6 +639,7 @@ struct ContentView: View {
 
         let imageIndex = selectedBackgroundImageIndex - 1
         guard backgroundImageFiles.indices.contains(imageIndex) else {
+            backgroundImageLoadRequestID = UUID()
             loadedBackgroundImage = nil
             db("[PROBE] reloadBackgroundImage END \(Date()) branch=index-out-of-range hasImage=false thread=\(Thread.isMainThread ? "main" : "background")")
             return
@@ -607,14 +648,48 @@ struct ContentView: View {
         let resolvedImageURL = backgroundImageFiles[imageIndex]
         selectedBackgroundImagePath = resolvedImageURL.path
         selectedBackgroundImageName = resolvedImageURL.lastPathComponent
-        db("[PROBE] reloadBackgroundImage index downsample START \(Date()) file=\(resolvedImageURL.lastPathComponent) thread=\(Thread.isMainThread ? "main" : "background")")
-        loadedBackgroundImage = downsampledUIImage(at: resolvedImageURL, maxPixelDimension: maxPixelDimension)
-        db("[PROBE] reloadBackgroundImage index downsample END \(Date()) file=\(resolvedImageURL.lastPathComponent) hasImage=\(loadedBackgroundImage != nil) thread=\(Thread.isMainThread ? "main" : "background")")
-        db("[PROBE] reloadBackgroundImage END \(Date()) branch=index hasImage=\(loadedBackgroundImage != nil) thread=\(Thread.isMainThread ? "main" : "background")")
+        db("[PROBE] reloadBackgroundImage index downsample REQUEST \(Date()) file=\(resolvedImageURL.lastPathComponent) thread=\(Thread.isMainThread ? "main" : "background")")
+        startBackgroundImageDecode(imageURL: resolvedImageURL, maxPixelDimension: maxPixelDimension, branch: "index")
+        db("[PROBE] reloadBackgroundImage END \(Date()) branch=index requested=true thread=\(Thread.isMainThread ? "main" : "background")")
+    }
+
+    private func startBackgroundImageDecode(imageURL: URL, maxPixelDimension: CGFloat, branch: String) {
+        let requestID = UUID()
+        backgroundImageLoadRequestID = requestID
+        loadedBackgroundImage = nil
+
+        db("[PROBE] background decode TASK CREATE \(Date()) branch=\(branch) file=\(imageURL.lastPathComponent) requestID=\(requestID) thread=\(Thread.isMainThread ? "main" : "background")")
+        Task.detached(priority: .userInitiated) {
+            db("[PROBE] background decode DETACHED START \(Date()) branch=\(branch) file=\(imageURL.lastPathComponent) requestID=\(requestID) thread=\(pthread_main_np() == 1 ? "main" : "background")")
+            let decodedImage = downsampledUIImage(at: imageURL, maxPixelDimension: maxPixelDimension)
+            db("[PROBE] background decode DETACHED END \(Date()) branch=\(branch) file=\(imageURL.lastPathComponent) requestID=\(requestID) hasImage=\(decodedImage != nil) thread=\(pthread_main_np() == 1 ? "main" : "background")")
+
+            await MainActor.run {
+                guard backgroundImageLoadRequestID == requestID else {
+                    db("[PROBE] background decode APPLY SKIP \(Date()) reason=stale-request branch=\(branch) file=\(imageURL.lastPathComponent) requestID=\(requestID) currentRequestID=\(backgroundImageLoadRequestID) thread=\(Thread.isMainThread ? "main" : "background")")
+                    return
+                }
+
+                guard !isSettingsScreenPresented else {
+                    db("[PROBE] background decode APPLY SKIP \(Date()) reason=settings-visible branch=\(branch) file=\(imageURL.lastPathComponent) requestID=\(requestID) thread=\(Thread.isMainThread ? "main" : "background")")
+                    return
+                }
+
+                guard selectedBackgroundImagePath == imageURL.path,
+                      selectedBackgroundImageName == imageURL.lastPathComponent else {
+                    db("[PROBE] background decode APPLY SKIP \(Date()) reason=selection-changed branch=\(branch) file=\(imageURL.lastPathComponent) requestID=\(requestID) currentPath=\(selectedBackgroundImagePath) currentName=\(selectedBackgroundImageName) thread=\(Thread.isMainThread ? "main" : "background")")
+                    return
+                }
+
+                loadedBackgroundImage = decodedImage
+                db("[PROBE] background decode APPLY END \(Date()) branch=\(branch) file=\(imageURL.lastPathComponent) requestID=\(requestID) hasImage=\(loadedBackgroundImage != nil) thread=\(Thread.isMainThread ? "main" : "background")")
+            }
+        }
     }
 
     private func updateLoadedBackgroundImageForVisibleScreen() {
         if isSettingsScreenPresented {
+            backgroundImageLoadRequestID = UUID()
             loadedBackgroundImage = nil
         } else {
             db("[PROBE] background reload START \(Date()) selectedDocumentName=\(selectedDocumentName) thread=\(Thread.isMainThread ? "main" : "background")")
@@ -1191,6 +1266,12 @@ struct ContentView: View {
             selectedBackgroundImagePath = pathImageURL.path
             selectedBackgroundImageName = pathImageURL.lastPathComponent
             selectedBackgroundImageIndex = (backgroundImageFiles.firstIndex(where: { $0.path == pathImageURL.path }) ?? -1) + 1
+            guard !isSettingsScreenPresented else {
+                loadedBackgroundImage = nil
+                db("[PROBE] restoreBackgroundImageSelection reload SKIP \(Date()) branch=path reason=settings-visible file=\(pathImageURL.lastPathComponent) thread=\(Thread.isMainThread ? "main" : "background")")
+                db("[PROBE] restoreBackgroundImageSelection END \(Date()) branch=path deferred=true thread=\(Thread.isMainThread ? "main" : "background")")
+                return
+            }
             db("[PROBE] restoreBackgroundImageSelection reload START \(Date()) branch=path file=\(pathImageURL.lastPathComponent) thread=\(Thread.isMainThread ? "main" : "background")")
             reloadBackgroundImage()
             db("[PROBE] restoreBackgroundImageSelection reload END \(Date()) branch=path file=\(pathImageURL.lastPathComponent) hasImage=\(loadedBackgroundImage != nil) thread=\(Thread.isMainThread ? "main" : "background")")
@@ -1212,6 +1293,12 @@ struct ContentView: View {
         selectedBackgroundImageName = nameImageURL.lastPathComponent
         if let imageIndex = backgroundImageFiles.firstIndex(where: { $0.path == nameImageURL.path }) {
             selectedBackgroundImageIndex = imageIndex + 1
+        }
+        guard !isSettingsScreenPresented else {
+            loadedBackgroundImage = nil
+            db("[PROBE] restoreBackgroundImageSelection reload SKIP \(Date()) branch=name reason=settings-visible file=\(nameImageURL.lastPathComponent) thread=\(Thread.isMainThread ? "main" : "background")")
+            db("[PROBE] restoreBackgroundImageSelection END \(Date()) branch=name deferred=true thread=\(Thread.isMainThread ? "main" : "background")")
+            return
         }
         db("[PROBE] restoreBackgroundImageSelection reload START \(Date()) branch=name file=\(nameImageURL.lastPathComponent) thread=\(Thread.isMainThread ? "main" : "background")")
         reloadBackgroundImage()
@@ -2517,8 +2604,10 @@ struct ContentView: View {
             deleteDocument: deleteDocument,
             duplicateDocument: duplicateDocument,
             canDeleteDocuments: documentFiles.count > 1,
+            isSettingsScreenPresented: isSettingsScreenPresented,
             bleTextToSend: $settingsBLEText,
             returnToMain: {
+                db("[PERF ACTION] returnToMain thread=\(Thread.isMainThread ? "main" : "background")")
                 db("[PROBE] returnToMain \(Date()) before isSettingsScreenPresented=\(isSettingsScreenPresented) thread=\(Thread.isMainThread ? "main" : "background")")
                 withAnimation(.easeInOut(duration: 0.25)) {
                     db("STATE ContentView.SettingsScreen.returnToMain current isSettingsScreenPresented=\(isSettingsScreenPresented) new=false thread=\(Thread.isMainThread ? "main" : "background")")
@@ -2554,6 +2643,7 @@ struct ContentView: View {
     }
 
     private func showSettingsScreen() {
+        db("[PERF ACTION] Settings thread=\(Thread.isMainThread ? "main" : "background")")
         db("ENTER ContentView.showSettingsScreen current isSettingsScreenPresented=\(isSettingsScreenPresented) new=true thread=\(Thread.isMainThread ? "main" : "background")")
         guard !isSettingsScreenPresented else {
             db("EXIT ContentView.showSettingsScreen skipped current isSettingsScreenPresented=\(isSettingsScreenPresented) new=no change thread=\(Thread.isMainThread ? "main" : "background")")

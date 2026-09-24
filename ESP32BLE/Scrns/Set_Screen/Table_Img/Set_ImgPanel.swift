@@ -1,6 +1,8 @@
 import SwiftUI
 import UIKit
 import PDFKit
+import QuartzCore
+import Darwin
 
 struct SettingsImagePreviewPanel: View {
     let imageURL: URL?
@@ -8,10 +10,12 @@ struct SettingsImagePreviewPanel: View {
     @State private var previewImage: UIImage?
 
     var body: some View {
+        let _ = SettingsProbeCounters.record("SettingsImagePreviewPanel.body", detail: "file=\(imageURL?.lastPathComponent ?? "none")")
         GeometryReader { geometry in
             let previewWidth = geometry.size.width
             let previewHeight = previewWidth / 1.3
             let previewMaxPixelDimension = max(previewWidth, previewHeight) * UIScreen.main.scale
+            let _ = SettingsProbeCounters.record("SettingsImagePreviewPanel.geometry", detail: "file=\(imageURL?.lastPathComponent ?? "none")")
 
             ZStack {
                 Color.black
@@ -31,7 +35,9 @@ struct SettingsImagePreviewPanel: View {
                     .stroke(Color.white, lineWidth: 2)
             }
             .task(id: previewImageTaskID(maxPixelDimension: previewMaxPixelDimension)) {
+                db("[PROBE] SettingsImagePreviewPanel task START \(Date()) id=\(previewImageTaskID(maxPixelDimension: previewMaxPixelDimension)) file=\(imageURL?.lastPathComponent ?? "none") maxPixelDimension=\(previewMaxPixelDimension) thread=\(pthread_main_np() == 1 ? "main" : "background")")
                 loadPreviewImage(maxPixelDimension: previewMaxPixelDimension)
+                db("[PROBE] SettingsImagePreviewPanel task END \(Date()) file=\(imageURL?.lastPathComponent ?? "none") hasImage=\(previewImage != nil) thread=\(pthread_main_np() == 1 ? "main" : "background")")
             }
         }
         .aspectRatio(1.3, contentMode: .fit)
@@ -42,12 +48,18 @@ struct SettingsImagePreviewPanel: View {
     }
 
     private func loadPreviewImage(maxPixelDimension: CGFloat) {
+        let previewLoadStart = CACurrentMediaTime()
+        db("[PROBE] SettingsImagePreviewPanel loadPreviewImage START \(Date()) file=\(imageURL?.lastPathComponent ?? "none") maxPixelDimension=\(maxPixelDimension) thread=\(Thread.isMainThread ? "main" : "background")")
         guard let imageURL else {
             previewImage = nil
+            db("[PROBE] SettingsImagePreviewPanel loadPreviewImage END \(Date()) file=none elapsedMs=\((CACurrentMediaTime() - previewLoadStart) * 1000) hasImage=false thread=\(Thread.isMainThread ? "main" : "background")")
             return
         }
 
+        db("[PROBE] SettingsImagePreviewPanel downsample START \(Date()) file=\(imageURL.lastPathComponent) thread=\(Thread.isMainThread ? "main" : "background")")
         previewImage = downsampledUIImage(at: imageURL, maxPixelDimension: maxPixelDimension)
+        db("[PROBE] SettingsImagePreviewPanel downsample END \(Date()) file=\(imageURL.lastPathComponent) elapsedMs=\((CACurrentMediaTime() - previewLoadStart) * 1000) hasImage=\(previewImage != nil) thread=\(Thread.isMainThread ? "main" : "background")")
+        db("[PROBE] SettingsImagePreviewPanel loadPreviewImage END \(Date()) file=\(imageURL.lastPathComponent) elapsedMs=\((CACurrentMediaTime() - previewLoadStart) * 1000) hasImage=\(previewImage != nil) thread=\(Thread.isMainThread ? "main" : "background")")
     }
 }
 

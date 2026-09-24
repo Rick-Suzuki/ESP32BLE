@@ -933,6 +933,7 @@ Tapping a row inserts the key code at the cursor.
     @Binding var settingsBLEText: String
 
     var body: some View {
+        let _ = SettingsProbeCounters.record("MainScreen.body", detail: "settings=\(isSettingsScreenPresented) keys=\(functionKeys.count) defined=\(definedFunctionKeyCount)")
         mainScreenContent
             .focusable()
             .focused($isMainScreenKeyboardFocused)
