@@ -235,6 +235,14 @@ struct SettingsScreen: View {
                 }
             }
             .frame(width: screenGeometry.size.width, height: screenGeometry.size.height)
+            .background {
+                let rootFrame = screenGeometry.frame(in: .global)
+                let rootLayoutID = "\(Int(rootFrame.minY.rounded())):\(Int(rootFrame.height.rounded())):\(Int(screenGeometry.safeAreaInsets.top.rounded())):\(Int(screenGeometry.safeAreaInsets.bottom.rounded()))"
+                Color.clear
+                    .task(id: rootLayoutID) {
+                        db("[PROBE] SETTINGS ROOT FRAME global=\(rootFrame) size=\(screenGeometry.size) safeTop=\(screenGeometry.safeAreaInsets.top) safeBottom=\(screenGeometry.safeAreaInsets.bottom) statusBarVisible=\(isStatusBarVisible)")
+                    }
+            }
         }
     }
 
@@ -243,10 +251,11 @@ struct SettingsScreen: View {
 			//----------------------------------------
 			// back to main
 		//
-		HStack(spacing: 8) {
-			SettingsToolbarButton(title: "main", backgroundColor: Color.gray.opacity(0.45), minWidth: 92, isEnabled: true) {
-				saveAndReturnToMain()
-			}
+			HStack(spacing: 8) {
+				SettingsToolbarButton(title: "main", backgroundColor: Color.gray.opacity(0.45), minWidth: 92, isEnabled: true) {
+                    db("[PROBE] MAIN TAP received \(Date()) thread=\(Thread.isMainThread ? "main" : "background")")
+					saveAndReturnToMain()
+				}
 			//
 			//----------------------------------------
 			// tts voice
@@ -319,9 +328,10 @@ struct SettingsScreen: View {
 			//----------------------------------------
 			// show type of table
 			//
-	SettingsToolbarButton(title: listMode.buttonTitle, backgroundColor: Color.gray.opacity(0.45), minWidth: 64.4, isEnabled: true) {
-				listMode.toggle(developerMode: developerMode)
-			}
+		SettingsToolbarButton(title: listMode.buttonTitle, backgroundColor: Color.gray.opacity(0.45), minWidth: 64.4, isEnabled: true) {
+                    db("[PROBE] FILE TYPE TAP received \(Date()) current=\(listMode.buttonTitle) thread=\(Thread.isMainThread ? "main" : "background")")
+					listMode.toggle(developerMode: developerMode)
+				}
 			//
 			//----------------------------------------
 			// repair btn
@@ -339,6 +349,16 @@ struct SettingsScreen: View {
 		}
 		.padding(.horizontal, 8)
 		.padding(.vertical, 6)
+        .background {
+            GeometryReader { toolbarGeometry in
+                let toolbarFrame = toolbarGeometry.frame(in: .global)
+                let toolbarLayoutID = "\(Int(toolbarFrame.minY.rounded())):\(Int(toolbarFrame.height.rounded())):\(Int(toolbarGeometry.safeAreaInsets.top.rounded())):\(Int(toolbarGeometry.safeAreaInsets.bottom.rounded()))"
+                Color.clear
+                    .task(id: toolbarLayoutID) {
+                        db("[PROBE] SETTINGS TOP TOOLBAR FRAME global=\(toolbarFrame) safeTop=\(toolbarGeometry.safeAreaInsets.top) safeBottom=\(toolbarGeometry.safeAreaInsets.bottom) statusBarVisible=\(isStatusBarVisible)")
+                    }
+            }
+        }
 	}
 
     private var configuredSettingsScreen: some View {
@@ -1164,6 +1184,10 @@ struct SettingsScreen: View {
     }
 
     private func loadSelectedDocumentText() {
+        db("[PROBE] loadSelectedDocumentText START \(Date()) listMode=\(listMode.buttonTitle) thread=\(Thread.isMainThread ? "main" : "background")")
+        defer {
+            db("[PROBE] loadSelectedDocumentText END \(Date()) loadedDocumentName=\(loadedDocumentName) textCount=\(documentEditorText.count) thread=\(Thread.isMainThread ? "main" : "background")")
+        }
         isLoadingDocumentText = true
         defer { isLoadingDocumentText = false }
 
@@ -1204,6 +1228,10 @@ struct SettingsScreen: View {
     }
 
     private func saveCurrentDocumentText() {
+        db("[PROBE] saveCurrentDocumentText START \(Date()) loadedDocumentName=\(loadedDocumentName) textCount=\(documentEditorText.count) thread=\(Thread.isMainThread ? "main" : "background")")
+        defer {
+            db("[PROBE] saveCurrentDocumentText END \(Date()) loadedDocumentName=\(loadedDocumentName) thread=\(Thread.isMainThread ? "main" : "background")")
+        }
         guard !loadedDocumentName.isEmpty,
               let fileURL = fileURLForLoadedDocumentName() else {
             return
@@ -1479,11 +1507,13 @@ struct SettingsScreen: View {
             return []
         }
 
+        db("[PROBE] availableDocumentURLs directory enumeration START \(Date()) thread=\(Thread.isMainThread ? "main" : "background")")
         let urls = (try? FileManager.default.contentsOfDirectory(
             at: directoryURL,
             includingPropertiesForKeys: [.isRegularFileKey],
             options: [.skipsHiddenFiles]
         )) ?? []
+        db("[PROBE] availableDocumentURLs directory enumeration END \(Date()) rawCount=\(urls.count) thread=\(Thread.isMainThread ? "main" : "background")")
 
         return preferredScreenDocumentURLs(
             from: urls.filter { url in
@@ -1498,11 +1528,13 @@ struct SettingsScreen: View {
             return []
         }
 
+        db("[PROBE] availableTextURLs directory enumeration START \(Date()) thread=\(Thread.isMainThread ? "main" : "background")")
         let urls = (try? FileManager.default.contentsOfDirectory(
             at: directoryURL,
             includingPropertiesForKeys: [.isRegularFileKey],
             options: [.skipsHiddenFiles]
         )) ?? []
+        db("[PROBE] availableTextURLs directory enumeration END \(Date()) rawCount=\(urls.count) thread=\(Thread.isMainThread ? "main" : "background")")
 
         return urls
             .filter { url in
@@ -1551,11 +1583,13 @@ struct SettingsScreen: View {
 
         let supportedExtensions = supportedImportedSoundExtensions
 
+        db("[PROBE] availableSoundURLs directory enumeration START \(Date()) thread=\(Thread.isMainThread ? "main" : "background")")
         let urls = (try? FileManager.default.contentsOfDirectory(
             at: directoryURL,
             includingPropertiesForKeys: [.isRegularFileKey],
             options: [.skipsHiddenFiles]
         )) ?? []
+        db("[PROBE] availableSoundURLs directory enumeration END \(Date()) rawCount=\(urls.count) thread=\(Thread.isMainThread ? "main" : "background")")
 
         return urls
             .filter { url in
@@ -1570,11 +1604,13 @@ struct SettingsScreen: View {
             return []
         }
 
+        db("[PROBE] availablePDFURLs directory enumeration START \(Date()) thread=\(Thread.isMainThread ? "main" : "background")")
         let urls = (try? FileManager.default.contentsOfDirectory(
             at: directoryURL,
             includingPropertiesForKeys: [.isRegularFileKey],
             options: [.skipsHiddenFiles]
         )) ?? []
+        db("[PROBE] availablePDFURLs directory enumeration END \(Date()) rawCount=\(urls.count) thread=\(Thread.isMainThread ? "main" : "background")")
 
         return urls
             .filter { url in
@@ -1589,11 +1625,13 @@ struct SettingsScreen: View {
             return []
         }
 
+        db("[PROBE] availableAllFileURLs directory enumeration START \(Date()) thread=\(Thread.isMainThread ? "main" : "background")")
         let urls = (try? FileManager.default.contentsOfDirectory(
             at: directoryURL,
             includingPropertiesForKeys: [.isRegularFileKey],
             options: [.skipsHiddenFiles]
         )) ?? []
+        db("[PROBE] availableAllFileURLs directory enumeration END \(Date()) rawCount=\(urls.count) thread=\(Thread.isMainThread ? "main" : "background")")
 
         return urls
             .filter { url in
@@ -3665,6 +3703,7 @@ struct SettingsScreen: View {
     private func loadSpeechVoicesIfNeeded() {
         guard availableSpeechVoices.isEmpty else { return }
 
+        db("[PROBE] loadSpeechVoicesIfNeeded START \(Date()) thread=\(Thread.isMainThread ? "main" : "background")")
         let loadedVoices = AVSpeechSynthesisVoice.speechVoices()
             .map { voice in
                 let localeName = Locale.current.localizedString(forIdentifier: voice.language) ?? voice.language
@@ -3682,6 +3721,7 @@ struct SettingsScreen: View {
             loadedVoices,
             selectedIdentifier: selectedTextToSpeechVoiceIdentifier
         )
+        db("[PROBE] loadSpeechVoicesIfNeeded END \(Date()) voicesReturned=\(loadedVoices.count) orderedCount=\(availableSpeechVoices.count) thread=\(Thread.isMainThread ? "main" : "background")")
     }
 
     private func orderedSpeechVoices(_ voices: [SpeechVoiceOption], selectedIdentifier: String) -> [SpeechVoiceOption] {

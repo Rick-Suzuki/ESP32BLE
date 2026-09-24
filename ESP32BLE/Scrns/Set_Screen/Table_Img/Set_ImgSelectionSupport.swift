@@ -9,11 +9,13 @@ extension SettingsScreen {
 
         let supportedExtensions = Set(["png", "jpg", "jpeg", "heic", "heif", "gif", "bmp", "tiff", "webp"])
 
+        db("[PROBE] availableImageURLs directory enumeration START \(Date()) thread=\(Thread.isMainThread ? "main" : "background")")
         let urls = (try? FileManager.default.contentsOfDirectory(
             at: directoryURL,
             includingPropertiesForKeys: [URLResourceKey.isRegularFileKey],
             options: [.skipsHiddenFiles]
         )) ?? []
+        db("[PROBE] availableImageURLs directory enumeration END \(Date()) rawCount=\(urls.count) thread=\(Thread.isMainThread ? "main" : "background")")
 
         return urls
             .filter { url in

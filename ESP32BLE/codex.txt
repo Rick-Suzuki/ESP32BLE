@@ -1,24 +1,252 @@
-Files changed:
+PROBE RESULT: likely one proven main-thread stall, plus a weaker/secondary top-toolbar responsiveness symptom.
+
+1. Files and functions investigated
+
+ESP32BLE/Scrns/ContentView.swift
+• ContentView.body
+• loadFunctionKeys(from:)
+• applySlotLines(_:)
+• refreshDocumentFiles()
+• refreshBackgroundImageFiles()
+• reloadBackgroundImage()
+• updateLoadedBackgroundImageForVisibleScreen()
+• restoreBackgroundImageSelection(for:)
+• downsampledUIImage(at:maxPixelDimension:)
+• launchedSettingsScreen
+• mainScreenBackgroundView
+
+ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
+• MainScreen.body
+• mainScreenContent
+• mainGridSection(availableWidth:)
+• handleSelectedDocumentDisplayNameChange()
+• reloadSelectedDocumentIfAvailable()
+• observeKeyboardFrameChanges()
+
+ESP32BLE/Scrns/Main_Screen/Main_GridSection.swift
+• MainScreenGridSection.body
+• gridButtonView(...)
+• buttonShape(...)
+• drag/tap gesture attachment
+
+ESP32BLE/Scrns/Main_Screen/Main_DocumentActions.swift
+• updateVisibleBoxCountToFitDefinedButtons()
+• restoreVisibleGridState(requiredBoxCount:)
+• applyGridDimensions(columns:rows:)
+
+ESP32BLE/Scrns/Main_Screen/Main_BG_img.swift
+• availableBackgroundImageURLs
+• mainBackgroundImage
+• mainBackgroundView
+
+ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift
+• mainGridButtonLabel(...)
+• MainScreenButtonLabelView.body
+• parsedSFSymbolDisplay(for:)
+• parsedEmojiDisplay(for:)
+
 ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
+• configuredSettingsScreen
+• settingsScreenBase
+• settingsTopToolbar(availableWidth:)
+• Settings onChange/task handlers
+• repairDocumentAlertOverlay
 
-Build result:
-Project built successfully.
+ESP32BLE/Scrns/Set_Screen/Set_TxtEditor.swift
+• SettingsToolbarButton.body
 
-Delete All Data fix:
-Delete All Data now enumerates all top-level contents of the Documents directory with no extension filtering, no hidden-file skipping, and no regular-file-only guard.
+ESP32BLE/Scrns/KB_Screen/KB_Screen.swift
+• KeyboardScreen.body
+• keyGrid
 
-Delete behaviour:
-Every item in Documents is removed with FileManager.removeItem(at:), so files and directories are removed recursively. The Documents directory itself is preserved.
+ESP32BLE/Scrns/KB_Screen/Top_Screen/KB_GridView.swift
+• KeyboardGridView.body
 
-Logging added:
-DELETE_ALL_TRACE logs:
-Documents path
-contents before delete
-every remove attempt
-every remove success
-every remove failure
-contents after delete
-refresh after delete
+2. What executes during the ~59-second gap
 
-Post-delete:
-Settings state is reset and the document list refresh still runs after deletion.
+The console pins the gap to this exact region in ContentView.loadFunctionKeys(from:):
+
+• line 634 logs:
+STATE ContentView.loadFunctionKeys current selectedDocumentName=Home.screen new=Home.screen
+• line 635:
+selectedDocumentName = fileURL.lastPathComponent
+• line 636:
+restoreBackgroundImageSelection(for: selectedDocumentName)
+• line 637 logs:
+EXIT ContentView.loadFunctionKeys ...
+
+So the 59-second silent interval is not inside applySlotLines assignment timing. It is after the selectedDocumentName log and before EXIT, meaning it is either:
+
+• the AppStorage selectedDocumentName assignment, or
+• restoreBackgroundImageSelection(for:), especially its call to reloadBackgroundImage(), or
+• the synchronous image decode/downsample inside reloadBackgroundImage().
+
+The strongest source evidence points to restoreBackgroundImageSelection -> reloadBackgroundImage -> downsampledUIImage -> CGImageSourceCreateThumbnailAtIndex on the main thread.
+
+3. Whether MainScreen is doing substantial work while Settings covers it
+
+Yes, MainScreen is mounted underneath Settings.
+
+ContentView.body always constructs MainScreen. Settings is conditionally added above it:
+
+• KeyboardScreen is present and offset offscreen.
+• MainScreen is present.
+• launchedSettingsScreen is conditionally overlaid when isSettingsScreenPresented is true.
+
+MainScreen.onAppear can run while Settings is visible. MainScreen receives these changing values:
+
+• functionKeys
+• selectedDocumentName
+• selectedDocumentDisplayName
+• definedFunctionKeyCount
+• documentFiles
+
+MainScreen has onChange/task hooks for selectedDocumentDisplayName and definedFunctionKeyCount, which mutate internal @State:
+
+• visibleGridDimensions
+• visibleBoxCount
+• edit/focus state
+
+However, the 59-second gap occurs before loadFunctionKeys exits. The direct code path during that gap is not MainScreen grid layout; it is still inside loadFunctionKeys after the state assignments.
+
+4. Whether KeyboardScreen is doing substantial work while hidden
+
+KeyboardScreen is also mounted while hidden by offset. Its body builds topSection and keyGrid. KeyboardGridView uses GeometryReader and nested ForEach over rows/cells.
+
+I did not find evidence tying KeyboardScreen to the 59-second gap. It does exist underneath Settings, but it does not consume functionKeys, selectedDocumentName, functionKeySlotLines, or loadedFunctionKeySlotCount. It is likely incidental here.
+
+5. Number/frequency of significant body/layout recomputations
+
+I did not add broad body-evaluation counters because static inspection and the existing console narrowed the long gap to a specific synchronous path before SwiftUI can finish returning from loadFunctionKeys.
+
+Known recomputation triggers exist:
+
+• functionKeys changes invalidate MainScreen grid input.
+• loadedFunctionKeySlotCount changes MainScreen.definedFunctionKeyCount.
+• selectedDocumentName changes AppStorage and ContentView.onChange.
+• selectedDocumentDisplayName changes MainScreen.onChange and calls restoreVisibleGridState().
+• MainScreen.task(id: definedFunctionKeyCount) also calls updateVisibleBoxCountToFitDefinedButtons().
+
+But the observed 59-second interval is not currently best explained by repeated body/layout recomputation. It is best explained by synchronous work before the EXIT log.
+
+6. Any state/layout feedback loop found
+
+No proven infinite or runaway feedback loop found.
+
+There is a mild cascade:
+
+State change
+-> MainScreen receives new props
+-> selectedDocumentDisplayName onChange calls restoreVisibleGridState()
+-> visibleGridDimensions and visibleBoxCount are assigned
+-> grid recomputes
+
+And separately:
+
+definedFunctionKeyCount onChange/task
+-> updateVisibleBoxCountToFitDefinedButtons()
+-> may call restoreVisibleGridState()
+-> visibleGridDimensions / visibleBoxCount assigned
+
+This is worth cleaning later, but it does not match the exact 59-second gap because the gap is inside ContentView.loadFunctionKeys before EXIT.
+
+7. Expensive synchronous operation found
+
+Yes.
+
+ContentView.restoreBackgroundImageSelection(for:) calls reloadBackgroundImage() even while Settings is visible.
+
+reloadBackgroundImage() calls downsampledUIImage(...) synchronously on the main thread.
+
+downsampledUIImage(...) calls:
+
+CGImageSourceCreateThumbnailAtIndex(...)
+
+That can decode/downsample a large image. On an older iPad running iPadOS 17, a large JPEG/HEIC/PNG can plausibly block the main thread for many seconds. A newer iPad could mask it by completing faster.
+
+Also found but less likely as the 59-second cause:
+
+• refreshDocumentFiles() logs and processes all 226 filenames on main.
+• ensureScreenConfigFilesFromAppStorageFallback loops all screen docs.
+• MainScreen.availableBackgroundImageURLs enumerates the Documents directory from a computed property.
+• MainScreen toolbar asks availableBackgroundImageURLs.count during body construction.
+• MainScreenButtonLabelView can parse SF Symbols / emoji per visible grid cell.
+• Settings onChange handlers synchronously save/load document text.
+
+8. Why faster/newer iPads could mask the problem
+
+The likely hot path is CPU/storage/image-codec heavy and synchronous on the main thread. Faster devices can decode and downsample the same image quickly enough that users do not perceive the UI freeze. The older iPadOS 17 device exposes the stall because the UI actor is blocked and cannot process touches, layout, or gesture arbitration.
+
+9. Most likely root cause, with evidence
+
+Most likely root cause:
+
+ContentView.loadFunctionKeys(from:) restores and decodes the selected document’s background image synchronously on the main thread, even while Settings is visible.
+
+Evidence:
+
+• The 59-second gap is between loadFunctionKeys line 634 and line 637.
+• The only code in that corridor is selectedDocumentName assignment plus restoreBackgroundImageSelection(for:).
+• restoreBackgroundImageSelection(for:) can call reloadBackgroundImage().
+• reloadBackgroundImage() synchronously calls downsampledUIImage().
+• downsampledUIImage() synchronously calls CGImageSourceCreateThumbnailAtIndex.
+• Existing background reload probe elsewhere showed image reload can occur on main.
+• Settings root/top toolbar frames are sane: root y=20, toolbar y=20, safeTop=20. That weakens the “toolbar is under status bar” theory.
+• Console contains “System gesture gate timed out,” consistent with main-thread stalls delaying touch handling.
+
+10. Smallest safe production fix
+
+Smallest likely fix:
+
+Do not decode/load the main background image while Settings is visible.
+
+Specifically, restore the saved background selection metadata, but defer reloadBackgroundImage() until Main is actually visible, using the existing updateLoadedBackgroundImageForVisibleScreen() gate or an equivalent guard around reloadBackgroundImage().
+
+A second small fix, if needed after that:
+
+Move downsampledUIImage work off the main actor and assign loadedBackgroundImage back on MainActor only after decoding completes.
+
+This should improve both startup and intermittent Settings responsiveness, because the same synchronous image decode can happen at launch and whenever selected background state changes.
+
+Probe logging added this turn
+
+ESP32BLE/Scrns/ContentView.swift
+
+• line 125: downsampledUIImage START
+• line 128: downsampledUIImage fallback END
+• line 134: downsampledUIImage createSource failure END
+• line 145: downsampledUIImage THUMBNAIL START
+• line 147: downsampledUIImage THUMBNAIL failure END
+• line 150: downsampledUIImage THUMBNAIL success END with pixel size
+• line 153: downsampledUIImage END
+• line 560: reloadBackgroundImage START
+• line 564: reloadBackgroundImage path downsample START
+• line 567: reloadBackgroundImage path downsample END success
+• line 573: reloadBackgroundImage END branch=path
+• line 576: reloadBackgroundImage path downsample END failure
+• line 581: reloadBackgroundImage name downsample START
+• line 583: reloadBackgroundImage name downsample END
+• line 588: reloadBackgroundImage END branch=name
+• line 596: reloadBackgroundImage END branch=no-selection
+• line 603: reloadBackgroundImage END branch=index-out-of-range
+• line 610: reloadBackgroundImage index downsample START
+• line 612: reloadBackgroundImage index downsample END
+• line 613: reloadBackgroundImage END branch=index
+• line 657: loadFunctionKeys selectedDocumentName SET START
+• line 659: loadFunctionKeys selectedDocumentName SET END
+• line 660: loadFunctionKeys restoreBackgroundImageSelection START
+• line 662: loadFunctionKeys restoreBackgroundImageSelection END
+• line 1155: restoreBackgroundImageSelection START
+• line 1167: restoreBackgroundImageSelection END branch=empty-document
+• line 1187: restoreBackgroundImageSelection resolved saved image
+• line 1194: restoreBackgroundImageSelection reload START branch=path
+• line 1196: restoreBackgroundImageSelection reload END branch=path
+• line 1197: restoreBackgroundImageSelection END branch=path
+• line 1207: restoreBackgroundImageSelection END branch=no-image
+• line 1216: restoreBackgroundImageSelection reload START branch=name
+• line 1218: restoreBackgroundImageSelection reload END branch=name
+• line 1219: restoreBackgroundImageSelection END branch=name
+
+Validation
+
+XcodeRefreshCodeIssuesInFile found no issues in ESP32BLE/Scrns/ContentView.swift.
