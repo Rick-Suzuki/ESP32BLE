@@ -51,6 +51,7 @@
 		1D9E1D1D2FC92DD900DB3621 /* BLE_Status.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D9E1D192FC92DD900DB3621 /* BLE_Status.swift */; };
 		1D9E1D1E2FC92DD900DB3621 /* BLE_Devices.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D9E1D1A2FC92DD900DB3621 /* BLE_Devices.swift */; };
 		1D9E1D1F2FC92DD900DB3621 /* BLE_KB_Manager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D9E1D1B2FC92DD900DB3621 /* BLE_KB_Manager.swift */; };
+		1DA256FE3065FD2A008C934A /* console pro.txt in Resources */ = {isa = PBXBuildFile; fileRef = 1DA256FD3065FD1A008C934A /* console pro.txt */; };
 		1DDFB8112F87C64500776ED6 /* debug.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DDFB8102F87C64000776ED6 /* debug.swift */; };
 /* End PBXBuildFile section */
 
@@ -65,7 +66,7 @@
 		1D590E4F2F61206100E430E0 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		1D590E512F61206100E430E0 /* ESP32BLEApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ESP32BLEApp.swift; sourceTree = "<group>"; };
 		1D590E522F61206100E430E0 /* PhraseButtonsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhraseButtonsSection.swift; sourceTree = "<group>"; };
-		1D590E532F61206100E430E0 /* console.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = console.txt; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.swift; };
+		1D590E532F61206100E430E0 /* console m2.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "console m2.txt"; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.swift; };
 		1D590E542F61206100E430E0 /* TestArea.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestArea.swift; sourceTree = "<group>"; };
 		1D9A8748302D3885005B5E36 /* codex.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = codex.txt; sourceTree = "<group>"; };
 		1D9E1CC82FC92DC600DB3621 /* KB_GridView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KB_GridView.swift; sourceTree = "<group>"; };
@@ -103,6 +104,7 @@
 		1D9E1D192FC92DD900DB3621 /* BLE_Status.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BLE_Status.swift; sourceTree = "<group>"; };
 		1D9E1D1A2FC92DD900DB3621 /* BLE_Devices.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BLE_Devices.swift; sourceTree = "<group>"; };
 		1D9E1D1B2FC92DD900DB3621 /* BLE_KB_Manager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BLE_KB_Manager.swift; sourceTree = "<group>"; };
+		1DA256FD3065FD1A008C934A /* console pro.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "console pro.txt"; sourceTree = "<group>"; };
 		1DDFB8102F87C64000776ED6 /* debug.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = debug.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -168,8 +170,9 @@
 		1D590E552F61206100E430E0 /* ESP32BLE */ = {
 			isa = PBXGroup;
 			children = (
-				1D590E532F61206100E430E0 /* console.txt */,
+				1D590E532F61206100E430E0 /* console m2.txt */,
 				1D9A8748302D3885005B5E36 /* codex.txt */,
+				1DA256FD3065FD1A008C934A /* console pro.txt */,
 				1D33C2D12F6145DC0098FD5C /* Info.plist */,
 				1D590E4A2F61206100E430E0 /* Assets.xcassets */,
 				1D590E512F61206100E430E0 /* ESP32BLEApp.swift */,
@@ -354,6 +357,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				1D590E5F2F61206100E430E0 /* Assets.xcassets in Resources */,
+				1DA256FE3065FD2A008C934A /* console pro.txt in Resources */,
 				1D2B666F2FE78E0400F10733 /* color.png in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

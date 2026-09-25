@@ -1,5 +1,4 @@
 import SwiftUI
-import QuartzCore
 
 struct SettingsDocumentTableSection: View {
     enum ListMode {
@@ -52,9 +51,7 @@ struct SettingsDocumentTableSection: View {
     private let itemCountReservedHeight: CGFloat = 44
 
     var body: some View {
-        let _ = SettingsProbeCounters.record("SettingsDocumentTableView.body", detail: "mode=\(listMode)")
         GeometryReader { geometry in
-            let _ = SettingsProbeCounters.record("SettingsDocumentTableView.geometry", detail: "mode=\(listMode)")
             let availableHeight = safeHeight(geometry.size.height)
             let itemCountHeight = itemCountReservedHeight
             let previewHeight = previewReservedHeight(for: geometry.size.width)
@@ -107,14 +104,6 @@ struct SettingsDocumentTableSection: View {
                 imagePreviewSection
                     .frame(height: previewHeight)
             }
-            .task(id: layoutLogID(
-                availableHeight: availableHeight,
-                listHeight: listHeight,
-                itemCountHeight: itemCountHeight,
-                previewHeight: previewHeight
-            )) {
-                db("SETTINGS_TABLE_LAYOUT availableHeight=\(availableHeight) listHeight=\(listHeight) itemCountHeight=\(itemCountHeight) previewHeight=\(previewHeight)")
-            }
         }
         .frame(maxHeight: .infinity, alignment: .top)
         .background(Color.black)
@@ -135,26 +124,7 @@ struct SettingsDocumentTableSection: View {
         return safeWidth / 1.3
     }
 
-    private func layoutLogID(
-        availableHeight: CGFloat,
-        listHeight: CGFloat,
-        itemCountHeight: CGFloat,
-        previewHeight: CGFloat
-    ) -> String {
-        [
-            roundedLayoutValue(availableHeight),
-            roundedLayoutValue(listHeight),
-            roundedLayoutValue(itemCountHeight),
-            roundedLayoutValue(previewHeight),
-            "\(listMode)",
-            "\(visibleItemCount)"
-        ].joined(separator: ":")
-    }
-
-    private func roundedLayoutValue(_ value: CGFloat) -> String {
-        "\(Int(value.rounded()))"
-    }
-	//
+		//
 	//----------------------------------------
 	//
 	private var itemCountBox: some View {
@@ -226,7 +196,6 @@ struct SettingsDocumentTableSection: View {
         let isSelected = selectedDocumentName == fileURL.lastPathComponent
 
         return Button {
-            db("[PERF ACTION] selectTable Screens \(fileURL.lastPathComponent) thread=\(Thread.isMainThread ? "main" : "background")")
             ButtonClickFeedback.playIfEnabled()
             loadFunctionKeys(fileURL)
         } label: {
@@ -279,7 +248,6 @@ struct SettingsDocumentTableSection: View {
         let isSelected = selectedTextFileName == textURL.lastPathComponent
 
         return Button {
-            db("[PERF ACTION] selectTable Text \(textURL.lastPathComponent) thread=\(Thread.isMainThread ? "main" : "background")")
             ButtonClickFeedback.playIfEnabled()
             loadTextFile(textURL)
         } label: {
@@ -322,13 +290,8 @@ struct SettingsDocumentTableSection: View {
         let isSelected = selectedImageURL?.lastPathComponent == imageURL.lastPathComponent
 
         return Button {
-            db("[PERF ACTION] selectTable Images \(imageURL.lastPathComponent) thread=\(Thread.isMainThread ? "main" : "background")")
-            db("[PROBE] IMAGE ROW ACTION RECEIVED \(Date()) file=\(imageURL.lastPathComponent) selectedBefore=\(isSelected) thread=\(Thread.isMainThread ? "main" : "background")")
             ButtonClickFeedback.playIfEnabled()
-            let selectImageStart = CACurrentMediaTime()
-            db("[PROBE] IMAGE ROW selectImage START \(Date()) file=\(imageURL.lastPathComponent) thread=\(Thread.isMainThread ? "main" : "background")")
             selectImage(imageURL)
-            db("[PROBE] IMAGE ROW selectImage END \(Date()) file=\(imageURL.lastPathComponent) elapsedMs=\((CACurrentMediaTime() - selectImageStart) * 1000) thread=\(Thread.isMainThread ? "main" : "background")")
         } label: {
             HStack {
                 Text(imageURL.lastPathComponent)
@@ -369,7 +332,6 @@ struct SettingsDocumentTableSection: View {
         let isSelected = selectedSoundURL?.lastPathComponent == soundURL.lastPathComponent
 
         return Button {
-            db("[PERF ACTION] selectTable Sounds \(soundURL.lastPathComponent) thread=\(Thread.isMainThread ? "main" : "background")")
             ButtonClickFeedback.playIfEnabled()
             selectSound(soundURL)
         } label: {
@@ -412,7 +374,6 @@ struct SettingsDocumentTableSection: View {
         let isSelected = selectedPDFURL?.lastPathComponent == pdfURL.lastPathComponent
 
         return Button {
-            db("[PERF ACTION] selectTable PDFs \(pdfURL.lastPathComponent) thread=\(Thread.isMainThread ? "main" : "background")")
             ButtonClickFeedback.playIfEnabled()
             selectPDF(pdfURL)
         } label: {

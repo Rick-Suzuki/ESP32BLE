@@ -3,8 +3,6 @@ import SwiftUI
 import AudioToolbox
 import UIKit
 import ImageIO
-import QuartzCore
-import Darwin
 
 
 let maxGridDimension = 20
@@ -124,59 +122,29 @@ private struct StoredGridDimensions: Codable {
 }
 
 nonisolated func downsampledUIImage(at url: URL, maxPixelDimension: CGFloat) -> UIImage? {
-    db("[PROBE] downsampledUIImage START \(Date()) file=\(url.lastPathComponent) maxPixelDimension=\(maxPixelDimension) thread=\(Thread.isMainThread ? "main" : "background")")
-    var probeStageStart = CACurrentMediaTime()
-    db("[PROBE] downsampledUIImage maxPixelDimension guard START \(Date()) file=\(url.lastPathComponent) thread=\(Thread.isMainThread ? "main" : "background")")
-    let hasPositiveMaxPixelDimension = maxPixelDimension > 0
-    db("[PROBE] downsampledUIImage maxPixelDimension guard END \(Date()) file=\(url.lastPathComponent) elapsedMs=\((CACurrentMediaTime() - probeStageStart) * 1000) result=\(hasPositiveMaxPixelDimension) thread=\(Thread.isMainThread ? "main" : "background")")
-    guard hasPositiveMaxPixelDimension else {
-        probeStageStart = CACurrentMediaTime()
-        db("[PROBE] downsampledUIImage UIImage(contentsOfFile:) START \(Date()) file=\(url.lastPathComponent) thread=\(Thread.isMainThread ? "main" : "background")")
-        let image = UIImage(contentsOfFile: url.path)
-        db("[PROBE] downsampledUIImage UIImage(contentsOfFile:) END \(Date()) file=\(url.lastPathComponent) elapsedMs=\((CACurrentMediaTime() - probeStageStart) * 1000) hasImage=\(image != nil) thread=\(Thread.isMainThread ? "main" : "background")")
-        db("[PROBE] downsampledUIImage END \(Date()) file=\(url.lastPathComponent) fallback hasImage=\(image != nil) thread=\(Thread.isMainThread ? "main" : "background")")
-        return image
+    guard maxPixelDimension > 0 else {
+        return UIImage(contentsOfFile: url.path)
     }
 
-    probeStageStart = CACurrentMediaTime()
-    db("[PROBE] downsampledUIImage imageSourceOptions START \(Date()) file=\(url.lastPathComponent) thread=\(Thread.isMainThread ? "main" : "background")")
     let imageSourceOptions = [kCGImageSourceShouldCache: false] as CFDictionary
-    db("[PROBE] downsampledUIImage imageSourceOptions END \(Date()) file=\(url.lastPathComponent) elapsedMs=\((CACurrentMediaTime() - probeStageStart) * 1000) thread=\(Thread.isMainThread ? "main" : "background")")
-
-    probeStageStart = CACurrentMediaTime()
-    db("[PROBE] downsampledUIImage CGImageSourceCreateWithURL START \(Date()) file=\(url.lastPathComponent) thread=\(Thread.isMainThread ? "main" : "background")")
     let imageSource = CGImageSourceCreateWithURL(url as CFURL, imageSourceOptions)
-    db("[PROBE] downsampledUIImage CGImageSourceCreateWithURL END \(Date()) file=\(url.lastPathComponent) elapsedMs=\((CACurrentMediaTime() - probeStageStart) * 1000) hasSource=\(imageSource != nil) thread=\(Thread.isMainThread ? "main" : "background")")
     guard let imageSource else {
-        db("[PROBE] downsampledUIImage END \(Date()) file=\(url.lastPathComponent) createSource=false thread=\(Thread.isMainThread ? "main" : "background")")
         return nil
     }
 
-    probeStageStart = CACurrentMediaTime()
-    db("[PROBE] downsampledUIImage thumbnailMaxPixelSize START \(Date()) file=\(url.lastPathComponent) maxPixelDimension=\(maxPixelDimension) thread=\(Thread.isMainThread ? "main" : "background")")
     let thumbnailMaxPixelSize = Int(maxPixelDimension.rounded(.up))
-    db("[PROBE] downsampledUIImage thumbnailMaxPixelSize END \(Date()) file=\(url.lastPathComponent) elapsedMs=\((CACurrentMediaTime() - probeStageStart) * 1000) value=\(thumbnailMaxPixelSize) thread=\(Thread.isMainThread ? "main" : "background")")
-
-    probeStageStart = CACurrentMediaTime()
-    db("[PROBE] downsampledUIImage downsampleOptions START \(Date()) file=\(url.lastPathComponent) thread=\(Thread.isMainThread ? "main" : "background")")
     let downsampleOptions = [
         kCGImageSourceCreateThumbnailFromImageAlways: true,
         kCGImageSourceCreateThumbnailWithTransform: true,
         kCGImageSourceShouldCacheImmediately: false,
         kCGImageSourceThumbnailMaxPixelSize: thumbnailMaxPixelSize
     ] as CFDictionary
-    db("[PROBE] downsampledUIImage downsampleOptions END \(Date()) file=\(url.lastPathComponent) elapsedMs=\((CACurrentMediaTime() - probeStageStart) * 1000) thread=\(Thread.isMainThread ? "main" : "background")")
 
-    db("[PROBE] downsampledUIImage THUMBNAIL START \(Date()) file=\(url.lastPathComponent) thread=\(Thread.isMainThread ? "main" : "background")")
     guard let downsampledImage = CGImageSourceCreateThumbnailAtIndex(imageSource, 0, downsampleOptions) else {
-        db("[PROBE] downsampledUIImage THUMBNAIL END \(Date()) file=\(url.lastPathComponent) hasImage=false thread=\(Thread.isMainThread ? "main" : "background")")
         return nil
     }
-    db("[PROBE] downsampledUIImage THUMBNAIL END \(Date()) file=\(url.lastPathComponent) hasImage=true pixelWidth=\(downsampledImage.width) pixelHeight=\(downsampledImage.height) thread=\(Thread.isMainThread ? "main" : "background")")
 
-    let image = UIImage(cgImage: downsampledImage)
-    db("[PROBE] downsampledUIImage END \(Date()) file=\(url.lastPathComponent) hasImage=true thread=\(Thread.isMainThread ? "main" : "background")")
-    return image
+    return UIImage(cgImage: downsampledImage)
 }
 
 struct ContentView: View {
@@ -227,7 +195,6 @@ struct ContentView: View {
                     }
                     .frame(width: containerWidth, height: containerHeight)
                     .offset(x: isKeyboardScreenPresented ? 0 : -containerWidth)
-                    .background { contentHitTestFrameProbe("CONTENTVIEW KEYBOARD LAYER") }
                     .onAppear {
                         db("DESTINATION KeyboardScreen.onAppear current isKeyboardScreenPresented=\(isKeyboardScreenPresented) new=visible thread=\(Thread.isMainThread ? "main" : "background")")
                     }
@@ -308,7 +275,6 @@ struct ContentView: View {
                     .frame(width: containerWidth, height: containerHeight)
                     .ignoresSafeArea(.keyboard)
                     .offset(x: isKeyboardScreenPresented ? containerWidth : 0)
-                    .background { contentHitTestFrameProbe("CONTENTVIEW MAIN LAYER") }
                     .onAppear {
                         db("DESTINATION MainScreen.onAppear current isKeyboardScreenPresented=\(isKeyboardScreenPresented) isSettingsScreenPresented=\(isSettingsScreenPresented) new=visible thread=\(Thread.isMainThread ? "main" : "background")")
                     }
@@ -319,14 +285,12 @@ struct ContentView: View {
                     if isSettingsScreenPresented {
                         launchedSettingsScreen
                             .frame(width: containerWidth, height: containerHeight)
-                            .background { contentHitTestFrameProbe("CONTENTVIEW SETTINGS LAYER") }
                             .transition(.move(edge: .trailing))
                     }
                 }
                 .frame(width: containerWidth, height: containerHeight)
                 .clipped()
                 .ignoresSafeArea(.keyboard)
-                .background { contentHitTestFrameProbe("CONTENTVIEW SCREEN STACK") }
                 .onAppear {
                     logDeviceTypeIfNeeded()
                 }
@@ -344,19 +308,12 @@ struct ContentView: View {
             presentInitialSettingsScreenIfNeeded()
         }
         .task {
-            db("CONFIG_RECREATE_TRACE startup_task_enter selectedDocumentName=\(selectedDocumentName)")
-            db("CONFIG_RECREATE_TRACE startup_call ensureDefaultFunctionKeysFile selectedDocumentName=\(selectedDocumentName)")
             ensureDefaultFunctionKeysFile()
-            db("CONFIG_RECREATE_TRACE startup_call refreshDocumentFiles selectedDocumentName=\(selectedDocumentName)")
-            refreshDocumentFiles()
             refreshBackgroundImageFiles()
-            db("CONFIG_RECREATE_TRACE startup_call selectInitialDocument selectedDocumentName=\(selectedDocumentName)")
-            selectInitialDocument()
             updateLoadedBackgroundImageForVisibleScreen()
             logDeviceTypeIfNeeded()
             refreshOrientationState()
             logOrientationStateIfNeeded()
-            db("CONFIG_RECREATE_TRACE startup_task_exit selectedDocumentName=\(selectedDocumentName)")
         }
         .task {
             UIDevice.current.beginGeneratingDeviceOrientationNotifications()
@@ -398,17 +355,6 @@ struct ContentView: View {
             if !isRestoringBackgroundImageSelection {
                 saveBackgroundImageOpacity(for: selectedDocumentName)
             }
-        }
-    }
-
-    private func contentHitTestFrameProbe(_ label: String) -> some View {
-        GeometryReader { geometry in
-            let frame = geometry.frame(in: .global)
-            let layoutID = "\(label):\(Int(frame.minX.rounded())):\(Int(frame.minY.rounded())):\(Int(frame.width.rounded())):\(Int(frame.height.rounded())):\(Int(geometry.safeAreaInsets.top.rounded())):\(isSettingsScreenPresented):\(isKeyboardScreenPresented):\(isStatusBarVisible):\(orientationState)"
-            Color.clear
-                .task(id: layoutID) {
-                    db("[HITTEST] \(label) frame=\(frame) safeAreaInsets=\(geometry.safeAreaInsets) isSettingsScreenPresented=\(isSettingsScreenPresented) isKeyboardScreenPresented=\(isKeyboardScreenPresented) statusBarVisible=\(isStatusBarVisible) orientationHorizontal=\(orientationState) thread=\(pthread_main_np() == 1 ? "main" : "background")")
-                }
         }
     }
 
@@ -485,7 +431,6 @@ struct ContentView: View {
 
     private func ensureDefaultFunctionKeysFile() {
         guard let documentsDirectoryURL = documentsDirectoryURL() else {
-            db("CONFIG_RECREATE_TRACE ensureDefaultFunctionKeysFile no_documents_directory selectedDocumentName=\(selectedDocumentName)")
             functionKeys = defaultFunctionKeys()
             loadedFunctionKeySlotCount = defaultNamedFunctionKeyCount
             return
@@ -503,45 +448,36 @@ struct ContentView: View {
             }
         )
         let fileURL = documentsDirectoryURL.appendingPathComponent(screenDocumentFileName(forBaseName: defaultStartupScreenBaseName))
-        db("CONFIG_RECREATE_TRACE ensureDefaultFunctionKeysFile enter selectedDocumentName=\(selectedDocumentName) defaultFile=\(fileURL.lastPathComponent) existingScreens=\(existingScreenURLs.map { $0.lastPathComponent }.joined(separator: ", "))")
 
         if existingScreenURLs.isEmpty,
            !FileManager.default.fileExists(atPath: fileURL.path) {
             let defaultContents = Self.defaultFunctionKeyTitles().joined(separator: "\n")
 
             do {
-                db("CONFIG_RECREATE_TRACE CREATE screen=\(fileURL.lastPathComponent) reason=default startup file selectedDocumentName=\(selectedDocumentName)")
                 try defaultContents.write(to: fileURL, atomically: true, encoding: .utf8)
             } catch {
-                db("CONFIG_RECREATE_TRACE ensureDefaultFunctionKeysFile create_failed selectedDocumentName=\(selectedDocumentName) file=\(fileURL.lastPathComponent) error=\(error)")
                 functionKeys = defaultFunctionKeys()
                 return
             }
-        } else {
-            db("CONFIG_RECREATE_TRACE ensureDefaultFunctionKeysFile skip_default_create reason=\(existingScreenURLs.isEmpty ? "default exists" : "screen documents exist") defaultFile=\(fileURL.lastPathComponent)")
         }
 
-        db("CONFIG_RECREATE_TRACE ensureDefaultFunctionKeysFile refresh_after_default_check selectedDocumentName=\(selectedDocumentName)")
         refreshDocumentFiles()
-        db("CONFIG_RECREATE_TRACE ensureDefaultFunctionKeysFile select_initial_after_default_check selectedDocumentName=\(selectedDocumentName)")
         selectInitialDocument()
     }
 
     private func refreshDocumentFiles() {
         guard let documentsDirectoryURL = documentsDirectoryURL() else {
-            db("STATE ContentView.refreshDocumentFiles current documentFiles.count=\(documentFiles.count) new=0 thread=\(Thread.isMainThread ? "main" : "background")")
             documentFiles = []
             documentDirectorySnapshot = []
             return
         }
 
         do {
-            db("CONFIG_RECREATE_TRACE refreshDocumentFiles enter selectedDocumentName=\(selectedDocumentName) documentsDirectory=\(documentsDirectoryURL.path)")
-            var urls = try SettingsProbeCounters.scanDocumentsDirectory(
+            var urls = try FileManager.default.contentsOfDirectory(
                 at: documentsDirectoryURL,
-                includingPropertiesForKeys: [URLResourceKey.isRegularFileKey]
+                includingPropertiesForKeys: [URLResourceKey.isRegularFileKey],
+                options: [.skipsHiddenFiles]
             )
-            db("CONFIG_RECREATE_TRACE refreshDocumentFiles raw_files count=\(urls.count) files=\(urls.map { $0.lastPathComponent }.joined(separator: ", "))")
 
             let updatedDocumentFiles = preferredScreenDocumentURLs(
                 from: urls.filter { url in
@@ -549,36 +485,28 @@ struct ContentView: View {
                     return values?.isRegularFile == true
                 }
             )
-            db("CONFIG_RECREATE_TRACE refreshDocumentFiles screen_files count=\(updatedDocumentFiles.count) files=\(updatedDocumentFiles.map { $0.lastPathComponent }.joined(separator: ", ")) selectedDocumentName=\(selectedDocumentName)")
             if isDeletingAllData {
-                db("CONFIG_RECREATE_TRACE refreshDocumentFiles skip_config_repair reason=delete_all selectedDocumentName=\(selectedDocumentName)")
             } else {
-                db("CONFIG_RECREATE_TRACE refreshDocumentFiles ensure_configs selectedDocumentName=\(selectedDocumentName)")
                 if ensureScreenConfigFilesFromAppStorageFallback(for: updatedDocumentFiles) {
-                    urls = try SettingsProbeCounters.scanDocumentsDirectory(
+                    urls = try FileManager.default.contentsOfDirectory(
                         at: documentsDirectoryURL,
-                        includingPropertiesForKeys: [URLResourceKey.isRegularFileKey]
+                        includingPropertiesForKeys: [URLResourceKey.isRegularFileKey],
+                        options: [.skipsHiddenFiles]
                     )
-                    db("CONFIG_RECREATE_TRACE refreshDocumentFiles raw_files_after_config_create count=\(urls.count) files=\(urls.map { $0.lastPathComponent }.joined(separator: ", "))")
                 }
             }
-            db("STATE ContentView.refreshDocumentFiles current documentFiles.count=\(documentFiles.count) new=\(updatedDocumentFiles.count) thread=\(Thread.isMainThread ? "main" : "background")")
             documentFiles = updatedDocumentFiles
             documentDirectorySnapshot = urls
         } catch {
-            db("CONFIG_RECREATE_TRACE refreshDocumentFiles failed selectedDocumentName=\(selectedDocumentName) error=\(error)")
-            db("STATE ContentView.refreshDocumentFiles current documentFiles.count=\(documentFiles.count) new=0 error=\(error.localizedDescription) thread=\(Thread.isMainThread ? "main" : "background")")
             documentFiles = []
             documentDirectorySnapshot = []
         }
     }
 
     private func refreshDocumentFilesAfterDeletingAllData() {
-        db("CONFIG_RECREATE_TRACE delete_all_refresh begin skip_config_repair=true selectedDocumentName=\(selectedDocumentName)")
         isDeletingAllData = true
         defer {
             isDeletingAllData = false
-            db("CONFIG_RECREATE_TRACE delete_all_refresh end skip_config_repair=false selectedDocumentName=\(selectedDocumentName)")
         }
         refreshDocumentFiles()
     }
@@ -607,33 +535,27 @@ struct ContentView: View {
 
     private func reloadBackgroundImage() {
         let maxPixelDimension = max(UIScreen.main.bounds.width, UIScreen.main.bounds.height) * UIScreen.main.scale
-        db("[PROBE] reloadBackgroundImage START \(Date()) isSettingsScreenPresented=\(isSettingsScreenPresented) selectedBackgroundImageIndex=\(selectedBackgroundImageIndex) selectedBackgroundImageName=\(selectedBackgroundImageName) selectedBackgroundImagePathEmpty=\(selectedBackgroundImagePath.isEmpty) backgroundImageFiles=\(backgroundImageFiles.count) maxPixelDimension=\(maxPixelDimension) thread=\(Thread.isMainThread ? "main" : "background")")
 
         if !selectedBackgroundImagePath.isEmpty {
             let pathImageURL = URL(fileURLWithPath: selectedBackgroundImagePath)
             let pathExists = FileManager.default.fileExists(atPath: pathImageURL.path)
-            db("[PROBE] reloadBackgroundImage path downsample REQUEST \(Date()) file=\(pathImageURL.lastPathComponent) exists=\(pathExists) thread=\(Thread.isMainThread ? "main" : "background")")
             if pathExists {
                 selectedBackgroundImageName = pathImageURL.lastPathComponent
                 if let pathImageIndex = backgroundImageFiles.firstIndex(where: { $0.path == pathImageURL.path }) {
                     selectedBackgroundImageIndex = pathImageIndex + 1
                 }
-                startBackgroundImageDecode(imageURL: pathImageURL, maxPixelDimension: maxPixelDimension, branch: "path")
-                db("[PROBE] reloadBackgroundImage END \(Date()) branch=path requested=true thread=\(Thread.isMainThread ? "main" : "background")")
+                startBackgroundImageDecode(imageURL: pathImageURL, maxPixelDimension: maxPixelDimension)
                 return
             }
-            db("[PROBE] reloadBackgroundImage path downsample SKIP \(Date()) file=\(pathImageURL.lastPathComponent) reason=missing thread=\(Thread.isMainThread ? "main" : "background")")
         }
 
         if !selectedBackgroundImageName.isEmpty,
            let namedImageURL = backgroundImageFiles.first(where: { $0.lastPathComponent == selectedBackgroundImageName }) {
-            db("[PROBE] reloadBackgroundImage name downsample REQUEST \(Date()) file=\(namedImageURL.lastPathComponent) thread=\(Thread.isMainThread ? "main" : "background")")
             selectedBackgroundImagePath = namedImageURL.path
             if let namedImageIndex = backgroundImageFiles.firstIndex(where: { $0.lastPathComponent == selectedBackgroundImageName }) {
                 selectedBackgroundImageIndex = namedImageIndex + 1
             }
-            startBackgroundImageDecode(imageURL: namedImageURL, maxPixelDimension: maxPixelDimension, branch: "name")
-            db("[PROBE] reloadBackgroundImage END \(Date()) branch=name requested=true thread=\(Thread.isMainThread ? "main" : "background")")
+            startBackgroundImageDecode(imageURL: namedImageURL, maxPixelDimension: maxPixelDimension)
             return
         }
 
@@ -642,7 +564,6 @@ struct ContentView: View {
             selectedBackgroundImagePath = ""
             selectedBackgroundImageName = ""
             loadedBackgroundImage = nil
-            db("[PROBE] reloadBackgroundImage END \(Date()) branch=no-selection hasImage=false thread=\(Thread.isMainThread ? "main" : "background")")
             return
         }
 
@@ -650,48 +571,38 @@ struct ContentView: View {
         guard backgroundImageFiles.indices.contains(imageIndex) else {
             backgroundImageLoadRequestID = UUID()
             loadedBackgroundImage = nil
-            db("[PROBE] reloadBackgroundImage END \(Date()) branch=index-out-of-range hasImage=false thread=\(Thread.isMainThread ? "main" : "background")")
             return
         }
 
         let resolvedImageURL = backgroundImageFiles[imageIndex]
         selectedBackgroundImagePath = resolvedImageURL.path
         selectedBackgroundImageName = resolvedImageURL.lastPathComponent
-        db("[PROBE] reloadBackgroundImage index downsample REQUEST \(Date()) file=\(resolvedImageURL.lastPathComponent) thread=\(Thread.isMainThread ? "main" : "background")")
-        startBackgroundImageDecode(imageURL: resolvedImageURL, maxPixelDimension: maxPixelDimension, branch: "index")
-        db("[PROBE] reloadBackgroundImage END \(Date()) branch=index requested=true thread=\(Thread.isMainThread ? "main" : "background")")
+        startBackgroundImageDecode(imageURL: resolvedImageURL, maxPixelDimension: maxPixelDimension)
     }
 
-    private func startBackgroundImageDecode(imageURL: URL, maxPixelDimension: CGFloat, branch: String) {
+    private func startBackgroundImageDecode(imageURL: URL, maxPixelDimension: CGFloat) {
         let requestID = UUID()
         backgroundImageLoadRequestID = requestID
         loadedBackgroundImage = nil
 
-        db("[PROBE] background decode TASK CREATE \(Date()) branch=\(branch) file=\(imageURL.lastPathComponent) requestID=\(requestID) thread=\(Thread.isMainThread ? "main" : "background")")
         Task.detached(priority: .userInitiated) {
-            db("[PROBE] background decode DETACHED START \(Date()) branch=\(branch) file=\(imageURL.lastPathComponent) requestID=\(requestID) thread=\(pthread_main_np() == 1 ? "main" : "background")")
             let decodedImage = downsampledUIImage(at: imageURL, maxPixelDimension: maxPixelDimension)
-            db("[PROBE] background decode DETACHED END \(Date()) branch=\(branch) file=\(imageURL.lastPathComponent) requestID=\(requestID) hasImage=\(decodedImage != nil) thread=\(pthread_main_np() == 1 ? "main" : "background")")
 
             await MainActor.run {
                 guard backgroundImageLoadRequestID == requestID else {
-                    db("[PROBE] background decode APPLY SKIP \(Date()) reason=stale-request branch=\(branch) file=\(imageURL.lastPathComponent) requestID=\(requestID) currentRequestID=\(backgroundImageLoadRequestID) thread=\(Thread.isMainThread ? "main" : "background")")
                     return
                 }
 
                 guard !isSettingsScreenPresented else {
-                    db("[PROBE] background decode APPLY SKIP \(Date()) reason=settings-visible branch=\(branch) file=\(imageURL.lastPathComponent) requestID=\(requestID) thread=\(Thread.isMainThread ? "main" : "background")")
                     return
                 }
 
                 guard selectedBackgroundImagePath == imageURL.path,
                       selectedBackgroundImageName == imageURL.lastPathComponent else {
-                    db("[PROBE] background decode APPLY SKIP \(Date()) reason=selection-changed branch=\(branch) file=\(imageURL.lastPathComponent) requestID=\(requestID) currentPath=\(selectedBackgroundImagePath) currentName=\(selectedBackgroundImageName) thread=\(Thread.isMainThread ? "main" : "background")")
                     return
                 }
 
                 loadedBackgroundImage = decodedImage
-                db("[PROBE] background decode APPLY END \(Date()) branch=\(branch) file=\(imageURL.lastPathComponent) requestID=\(requestID) hasImage=\(loadedBackgroundImage != nil) thread=\(Thread.isMainThread ? "main" : "background")")
             }
         }
     }
@@ -701,16 +612,12 @@ struct ContentView: View {
             backgroundImageLoadRequestID = UUID()
             loadedBackgroundImage = nil
         } else {
-            db("[PROBE] background reload START \(Date()) selectedDocumentName=\(selectedDocumentName) thread=\(Thread.isMainThread ? "main" : "background")")
             reloadBackgroundImage()
-            db("[PROBE] background reload END \(Date()) hasImage=\(loadedBackgroundImage != nil) thread=\(Thread.isMainThread ? "main" : "background")")
         }
     }
 
     private func selectInitialDocument() {
-        db("CONFIG_RECREATE_TRACE selectInitialDocument enter selectedDocumentName=\(selectedDocumentName) documentFiles=\(documentFiles.map { $0.lastPathComponent }.joined(separator: ", "))")
         guard !documentFiles.isEmpty else {
-            db("CONFIG_RECREATE_TRACE selectInitialDocument no_documents setting_default_selected=\(screenDocumentFileName(forBaseName: defaultStartupScreenBaseName))")
             functionKeys = defaultFunctionKeys()
             selectedDocumentName = screenDocumentFileName(forBaseName: defaultStartupScreenBaseName)
             loadedFunctionKeySlotCount = defaultNamedFunctionKeyCount
@@ -718,12 +625,10 @@ struct ContentView: View {
         }
 
         if let savedFileURL = documentFiles.first(where: { $0.lastPathComponent == selectedDocumentName }) {
-            db("CONFIG_RECREATE_TRACE selectInitialDocument loading_saved selectedDocumentName=\(selectedDocumentName) file=\(savedFileURL.lastPathComponent)")
             loadFunctionKeys(from: savedFileURL)
             return
         }
 
-        db("CONFIG_RECREATE_TRACE selectInitialDocument loading_first selectedDocumentName=\(selectedDocumentName) file=\(documentFiles[0].lastPathComponent)")
         loadFunctionKeys(from: documentFiles[0])
     }
 
@@ -738,12 +643,8 @@ struct ContentView: View {
             )
             applySlotLines(loadedTitles)
             db("STATE ContentView.loadFunctionKeys current selectedDocumentName=\(selectedDocumentName) new=\(fileURL.lastPathComponent) thread=\(Thread.isMainThread ? "main" : "background")")
-            db("[PROBE] loadFunctionKeys selectedDocumentName SET START \(Date()) current=\(selectedDocumentName) new=\(fileURL.lastPathComponent) thread=\(Thread.isMainThread ? "main" : "background")")
             selectedDocumentName = fileURL.lastPathComponent
-            db("[PROBE] loadFunctionKeys selectedDocumentName SET END \(Date()) current=\(selectedDocumentName) thread=\(Thread.isMainThread ? "main" : "background")")
-            db("[PROBE] loadFunctionKeys restoreBackgroundImageSelection START \(Date()) selectedDocumentName=\(selectedDocumentName) thread=\(Thread.isMainThread ? "main" : "background")")
             restoreBackgroundImageSelection(for: selectedDocumentName)
-            db("[PROBE] loadFunctionKeys restoreBackgroundImageSelection END \(Date()) selectedDocumentName=\(selectedDocumentName) thread=\(Thread.isMainThread ? "main" : "background")")
             db("EXIT ContentView.loadFunctionKeys current selectedDocumentName=\(selectedDocumentName) new=\(fileURL.lastPathComponent) thread=\(Thread.isMainThread ? "main" : "background")")
         } catch {
             loadedScreenConfig = nil
@@ -850,9 +751,7 @@ struct ContentView: View {
     }
 
     private func saveSelectedDocumentAndReload(_ text: String) {
-        db("[PROBE] saveSelectedDocumentAndReload START \(Date()) selectedDocumentName=\(selectedDocumentName) textCount=\(text.count) thread=\(Thread.isMainThread ? "main" : "background")")
         defer {
-            db("[PROBE] saveSelectedDocumentAndReload END \(Date()) selectedDocumentName=\(selectedDocumentName) functionKeys=\(functionKeys.count) thread=\(Thread.isMainThread ? "main" : "background")")
         }
         guard let selectedDocumentURL = selectedDocumentURL() else { return }
 
@@ -941,7 +840,6 @@ struct ContentView: View {
 
         guard !trimmedDocumentName.isEmpty,
               isScreenDocumentFileName(trimmedDocumentName) else {
-            db("CONFIG_RECREATE_TRACE SKIP config=\(configFileName) reason=not_screen_document caller=\(caller) selectedDocumentName=\(selectedDocumentName)")
             return nil
         }
 
@@ -959,7 +857,6 @@ struct ContentView: View {
         guard let resolvedURL,
               FileManager.default.fileExists(atPath: resolvedURL.path),
               isScreenDocumentURL(resolvedURL) else {
-            db("CONFIG_RECREATE_TRACE SKIP config=\(configFileName) reason=missing \(trimmedDocumentName) caller=\(caller) selectedDocumentName=\(selectedDocumentName)")
             return nil
         }
 
@@ -972,16 +869,13 @@ struct ContentView: View {
             return
         }
 
-        db("CONFIG_RECREATE_TRACE CREATE screen=\(documentURL.lastPathComponent) config=\(screenConfigURL.lastPathComponent) reason=matching \(documentURL.lastPathComponent) exists caller=\(caller) selectedDocumentName=\(selectedDocumentName)")
     }
 
     private func loadScreenConfigForDocument(_ documentURL: URL, requiredBoxCount: Int) -> ScreenConfig {
         if let config = loadScreenConfig(for: documentURL) {
-            db("CONFIG_RECREATE_TRACE loadScreenConfigForDocument loaded_existing selectedDocumentName=\(selectedDocumentName) document=\(documentURL.lastPathComponent) config=\(configFileName(forDocumentName: documentURL.lastPathComponent))")
             return config
         }
 
-        db("CONFIG_RECREATE_TRACE loadScreenConfigForDocument using_fallback_no_save selectedDocumentName=\(selectedDocumentName) document=\(documentURL.lastPathComponent) config=\(configFileName(forDocumentName: documentURL.lastPathComponent))")
         return screenConfigFromAppStorageFallback(
             for: documentURL.lastPathComponent,
             requiredBoxCount: requiredBoxCount
@@ -990,18 +884,15 @@ struct ContentView: View {
 
     @discardableResult
     private func ensureScreenConfigFilesFromAppStorageFallback(for documentURLs: [URL]) -> Bool {
-        db("CONFIG_RECREATE_TRACE ensureScreenConfigFilesFromAppStorageFallback enter selectedDocumentName=\(selectedDocumentName) documents=\(documentURLs.map { $0.lastPathComponent }.joined(separator: ", "))")
         var didCreateConfigFile = false
         for documentURL in documentURLs {
             let configURL = configURL(forDocumentURL: documentURL)
             guard FileManager.default.fileExists(atPath: documentURL.path),
                   isScreenDocumentURL(documentURL) else {
-                db("CONFIG_RECREATE_TRACE SKIP config=\(configURL.lastPathComponent) reason=missing \(documentURL.lastPathComponent) selectedDocumentName=\(selectedDocumentName)")
                 continue
             }
 
             if loadScreenConfig(for: documentURL) != nil {
-                db("CONFIG_RECREATE_TRACE ensureScreenConfigFilesFromAppStorageFallback existing_config selectedDocumentName=\(selectedDocumentName) document=\(documentURL.lastPathComponent) config=\(configURL.lastPathComponent)")
                 continue
             }
 
@@ -1010,11 +901,8 @@ struct ContentView: View {
                 for: documentURL.lastPathComponent,
                 requiredBoxCount: requiredBoxCount
             )
-            let creationReason = documentURL.lastPathComponent == screenDocumentFileName(forBaseName: defaultStartupScreenBaseName) ? "default startup file" : "matching \(documentURL.lastPathComponent) exists"
-            db("CONFIG_RECREATE_TRACE CREATE screen=\(documentURL.lastPathComponent) config=\(configURL.lastPathComponent) reason=\(creationReason) selectedDocumentName=\(selectedDocumentName) requiredBoxCount=\(requiredBoxCount)")
             let didSave = saveScreenConfig(config, for: documentURL)
             didCreateConfigFile = didCreateConfigFile || didSave
-            db("CONFIG_RECREATE_TRACE ensureScreenConfigFilesFromAppStorageFallback create_result selectedDocumentName=\(selectedDocumentName) document=\(documentURL.lastPathComponent) config=\(configURL.lastPathComponent) saved=\(didSave)")
         }
         return didCreateConfigFile
     }
@@ -1240,7 +1128,6 @@ struct ContentView: View {
 
     private func restoreBackgroundImageSelection(for documentName: String) {
         let trimmedDocumentName = documentName.trimmingCharacters(in: .whitespacesAndNewlines)
-        db("[PROBE] restoreBackgroundImageSelection START \(Date()) documentName=\(trimmedDocumentName) isSettingsScreenPresented=\(isSettingsScreenPresented) backgroundImageFiles=\(backgroundImageFiles.count) thread=\(Thread.isMainThread ? "main" : "background")")
         isRestoringBackgroundImageSelection = true
         DispatchQueue.main.async {
             isRestoringBackgroundImageSelection = false
@@ -1252,7 +1139,6 @@ struct ContentView: View {
             selectedBackgroundImageName = ""
             backgroundImageOpacity = 0.5
             loadedBackgroundImage = nil
-            db("[PROBE] restoreBackgroundImageSelection END \(Date()) branch=empty-document hasImage=false thread=\(Thread.isMainThread ? "main" : "background")")
             return
         }
 
@@ -1272,7 +1158,6 @@ struct ContentView: View {
             savedImageName = ""
             savedImagePath = ""
         }
-        db("[PROBE] restoreBackgroundImageSelection resolved \(Date()) savedImageName=\(savedImageName) savedImagePathEmpty=\(savedImagePath.isEmpty) thread=\(Thread.isMainThread ? "main" : "background")")
 
         if !savedImagePath.isEmpty,
            let pathImageURL = backgroundImageFiles.first(where: { $0.path == savedImagePath }) {
@@ -1281,14 +1166,9 @@ struct ContentView: View {
             selectedBackgroundImageIndex = (backgroundImageFiles.firstIndex(where: { $0.path == pathImageURL.path }) ?? -1) + 1
             guard !isSettingsScreenPresented else {
                 loadedBackgroundImage = nil
-                db("[PROBE] restoreBackgroundImageSelection reload SKIP \(Date()) branch=path reason=settings-visible file=\(pathImageURL.lastPathComponent) thread=\(Thread.isMainThread ? "main" : "background")")
-                db("[PROBE] restoreBackgroundImageSelection END \(Date()) branch=path deferred=true thread=\(Thread.isMainThread ? "main" : "background")")
                 return
             }
-            db("[PROBE] restoreBackgroundImageSelection reload START \(Date()) branch=path file=\(pathImageURL.lastPathComponent) thread=\(Thread.isMainThread ? "main" : "background")")
             reloadBackgroundImage()
-            db("[PROBE] restoreBackgroundImageSelection reload END \(Date()) branch=path file=\(pathImageURL.lastPathComponent) hasImage=\(loadedBackgroundImage != nil) thread=\(Thread.isMainThread ? "main" : "background")")
-            db("[PROBE] restoreBackgroundImageSelection END \(Date()) branch=path thread=\(Thread.isMainThread ? "main" : "background")")
             return
         }
 
@@ -1298,7 +1178,6 @@ struct ContentView: View {
             selectedBackgroundImagePath = ""
             selectedBackgroundImageName = ""
             loadedBackgroundImage = nil
-            db("[PROBE] restoreBackgroundImageSelection END \(Date()) branch=no-image hasImage=false thread=\(Thread.isMainThread ? "main" : "background")")
             return
         }
 
@@ -1309,14 +1188,9 @@ struct ContentView: View {
         }
         guard !isSettingsScreenPresented else {
             loadedBackgroundImage = nil
-            db("[PROBE] restoreBackgroundImageSelection reload SKIP \(Date()) branch=name reason=settings-visible file=\(nameImageURL.lastPathComponent) thread=\(Thread.isMainThread ? "main" : "background")")
-            db("[PROBE] restoreBackgroundImageSelection END \(Date()) branch=name deferred=true thread=\(Thread.isMainThread ? "main" : "background")")
             return
         }
-        db("[PROBE] restoreBackgroundImageSelection reload START \(Date()) branch=name file=\(nameImageURL.lastPathComponent) thread=\(Thread.isMainThread ? "main" : "background")")
         reloadBackgroundImage()
-        db("[PROBE] restoreBackgroundImageSelection reload END \(Date()) branch=name file=\(nameImageURL.lastPathComponent) hasImage=\(loadedBackgroundImage != nil) thread=\(Thread.isMainThread ? "main" : "background")")
-        db("[PROBE] restoreBackgroundImageSelection END \(Date()) branch=name thread=\(Thread.isMainThread ? "main" : "background")")
     }
 
     @discardableResult
@@ -2619,13 +2493,10 @@ struct ContentView: View {
             isSettingsScreenPresented: isSettingsScreenPresented,
             bleTextToSend: $settingsBLEText,
             returnToMain: {
-                db("[PERF ACTION] returnToMain thread=\(Thread.isMainThread ? "main" : "background")")
-                db("[PROBE] returnToMain \(Date()) before isSettingsScreenPresented=\(isSettingsScreenPresented) thread=\(Thread.isMainThread ? "main" : "background")")
                 withAnimation(.easeInOut(duration: 0.25)) {
                     db("STATE ContentView.SettingsScreen.returnToMain current isSettingsScreenPresented=\(isSettingsScreenPresented) new=false thread=\(Thread.isMainThread ? "main" : "background")")
                     isSettingsScreenPresented = false
                 }
-                db("[PROBE] returnToMain \(Date()) after isSettingsScreenPresented=\(isSettingsScreenPresented) thread=\(Thread.isMainThread ? "main" : "background")")
             }
         )
         .onAppear {
@@ -2634,9 +2505,8 @@ struct ContentView: View {
             isSettingsScreenPresented = true
         }
         .onDisappear {
-            db("DESTINATION SettingsScreen.onDisappear current isSettingsScreenPresented=\(isSettingsScreenPresented) new=false thread=\(Thread.isMainThread ? "main" : "background")")
-            db("STATE ContentView.launchedSettingsScreen.onDisappear current isSettingsScreenPresented=\(isSettingsScreenPresented) new=false thread=\(Thread.isMainThread ? "main" : "background")")
-            isSettingsScreenPresented = false
+            db("DESTINATION SettingsScreen.onDisappear current isSettingsScreenPresented=\(isSettingsScreenPresented) event=disappeared thread=\(Thread.isMainThread ? "main" : "background")")
+            db("STATE ContentView.launchedSettingsScreen.onDisappear current isSettingsScreenPresented=\(isSettingsScreenPresented) new=no change thread=\(Thread.isMainThread ? "main" : "background")")
         }
     }
 
@@ -2655,7 +2525,6 @@ struct ContentView: View {
     }
 
     private func showSettingsScreen() {
-        db("[PERF ACTION] Settings thread=\(Thread.isMainThread ? "main" : "background")")
         db("ENTER ContentView.showSettingsScreen current isSettingsScreenPresented=\(isSettingsScreenPresented) new=true thread=\(Thread.isMainThread ? "main" : "background")")
         guard !isSettingsScreenPresented else {
             db("EXIT ContentView.showSettingsScreen skipped current isSettingsScreenPresented=\(isSettingsScreenPresented) new=no change thread=\(Thread.isMainThread ? "main" : "background")")

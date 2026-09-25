@@ -1,0 +1,233 @@
+Update the Info.plist: Support for all orientations will soon be required.
+									260925_1351_163 🐞Set_Screen.swift:settingsDocumentTableListMode:972 SETTINGS-BUTTON-PROBE tableMode recompute listMode=files raw=files selected=widgets.screen docs=0 all=0
+									260925_1351_699 🐞ContentView.swift:presentInitialSettingsScreenIfNeeded():2523 ENTER ContentView.presentInitialSettingsScreenIfNeeded current isSettingsScreenPresented=true didPresentInitialSettingsScreen=false new=initialSettingsCheck thread=main
+									260925_1351_699 🐞ContentView.swift:presentInitialSettingsScreenIfNeeded():2529 STATE ContentView.presentInitialSettingsScreenIfNeeded current didPresentInitialSettingsScreen=false new=true thread=main
+									260925_1351_700 🐞ContentView.swift:presentInitialSettingsScreenIfNeeded():2531 STATE ContentView.presentInitialSettingsScreenIfNeeded current isSettingsScreenPresented=true new=true thread=main
+									260925_1351_700 🐞ContentView.swift:presentInitialSettingsScreenIfNeeded():2533 EXIT ContentView.presentInitialSettingsScreenIfNeeded current isSettingsScreenPresented=true didPresentInitialSettingsScreen=true new=initialSettingsPresented thread=main
+									260925_1351_723 🐞ContentView.swift:loadFunctionKeys(from:):644 ENTER ContentView.loadFunctionKeys current selectedDocumentName=widgets.screen new=widgets.screen thread=main
+									260925_1351_723 🐞ContentView.swift:applySlotLines(_:):692 STATE ContentView.applySlotLines current functionKeySlotLines.count=20 new=48 thread=main
+									260925_1351_724 🐞ContentView.swift:applySlotLines(_:):695 STATE ContentView.applySlotLines current functionKeys.count=400 new=400 thread=main
+									260925_1351_724 🐞ContentView.swift:applySlotLines(_:):697 STATE ContentView.applySlotLines current loadedFunctionKeySlotCount=20 new=48 thread=main
+									260925_1351_724 🐞ContentView.swift:loadFunctionKeys(from:):653 STATE ContentView.loadFunctionKeys current selectedDocumentName=widgets.screen new=widgets.screen thread=main
+									260925_1351_724 🐞ContentView.swift:loadFunctionKeys(from:):656 EXIT ContentView.loadFunctionKeys current selectedDocumentName=widgets.screen new=widgets.screen thread=main
+									260925_1351_729 🐞ContentView.swift:logDeviceTypeIfNeeded():372 isPad: iPad
+									260925_1351_729 🐞ContentView.swift:logOrientationStateIfNeeded():412 orientationState: horizontal
+									260925_1351_807 🐞ContentView.swift:launchedSettingsScreen:2511 DESTINATION SettingsScreen.onAppear current isSettingsScreenPresented=true new=true thread=main
+									260925_1351_807 🐞ContentView.swift:launchedSettingsScreen:2512 STATE ContentView.launchedSettingsScreen.onAppear current isSettingsScreenPresented=true new=true thread=main
+									260925_1351_807 🐞Set_Table.swift:body:113 SETTINGS-BUTTON-PROBE table recompute listMode=files visible=0 selected=widgets.screen text= image=nil sound=nil pdf=nil
+									260925_1351_810 🐞ContentView.swift:body:281 DESTINATION MainScreen.onAppear current isKeyboardScreenPresented=false isSettingsScreenPresented=true new=visible thread=main
+									260925_1351_810 🐞ContentView.swift:body:200 DESTINATION KeyboardScreen.onAppear current isKeyboardScreenPresented=false new=visible thread=main
+									260925_1351_825 🐞Set_Screen.swift:settingsDocumentTableListMode:972 SETTINGS-BUTTON-PROBE tableMode recompute listMode=files raw=files selected=widgets.screen docs=41 all=224
+									260925_1351_083 🐞Set_Table.swift:body:113 SETTINGS-BUTTON-PROBE table recompute listMode=files visible=41 selected=widgets.screen text= image=nil sound=beep.mp3 pdf=nil
+									260925_1351_102 🐞Set_Screen.swift:settingsDocumentTableListMode:972 SETTINGS-BUTTON-PROBE tableMode recompute listMode=files raw=files selected=widgets.screen docs=41 all=224
+									non-launching port is incompatible with service identifier "com.apple.PointerUI.pointeruid.default-service"
+									260925_1351_831 🐞Set_Screen.swift:settingsDocumentTableListMode:972 SETTINGS-BUTTON-PROBE tableMode recompute listMode=files raw=files selected=widgets.screen docs=41 all=224
+									AX Safe category class 'SFBarButtonGroupContainerAccessibility' was not found!
+									260925_1351_301 🐞ContentView.swift:selectDocument(_:):2379 ENTER ContentView.selectDocument current selectedDocumentName=widgets.screen new=gt7sim.screen recordHistory=false thread=main
+									260925_1351_301 🐞ContentView.swift:loadFunctionKeys(from:):644 ENTER ContentView.loadFunctionKeys current selectedDocumentName=widgets.screen new=gt7sim.screen thread=main
+									260925_1351_303 🐞ContentView.swift:applySlotLines(_:):692 STATE ContentView.applySlotLines current functionKeySlotLines.count=48 new=12 thread=main
+									260925_1351_303 🐞ContentView.swift:applySlotLines(_:):695 STATE ContentView.applySlotLines current functionKeys.count=400 new=400 thread=main
+									260925_1351_303 🐞ContentView.swift:applySlotLines(_:):697 STATE ContentView.applySlotLines current loadedFunctionKeySlotCount=48 new=12 thread=main
+									260925_1351_303 🐞ContentView.swift:loadFunctionKeys(from:):653 STATE ContentView.loadFunctionKeys current selectedDocumentName=widgets.screen new=gt7sim.screen thread=main
+									260925_1351_304 🐞ContentView.swift:loadFunctionKeys(from:):656 EXIT ContentView.loadFunctionKeys current selectedDocumentName=gt7sim.screen new=gt7sim.screen thread=main
+									260925_1351_304 🐞ContentView.swift:selectDocument(_:):2381 EXIT ContentView.selectDocument current selectedDocumentName=gt7sim.screen new=gt7sim.screen recordHistory=false thread=main
+									260925_1351_331 🐞ContentView.swift:selectDocument(_:):2379 ENTER ContentView.selectDocument current selectedDocumentName=gt7sim.screen new=GT7_2.screen recordHistory=false thread=main
+									260925_1351_331 🐞ContentView.swift:loadFunctionKeys(from:):644 ENTER ContentView.loadFunctionKeys current selectedDocumentName=gt7sim.screen new=GT7_2.screen thread=main
+									260925_1351_638 🐞ContentView.swift:applySlotLines(_:):692 STATE ContentView.applySlotLines current functionKeySlotLines.count=12 new=20 thread=main
+									260925_1351_639 🐞ContentView.swift:applySlotLines(_:):695 STATE ContentView.applySlotLines current functionKeys.count=400 new=400 thread=main
+									260925_1351_639 🐞ContentView.swift:applySlotLines(_:):697 STATE ContentView.applySlotLines current loadedFunctionKeySlotCount=12 new=20 thread=main
+									260925_1351_639 🐞ContentView.swift:loadFunctionKeys(from:):653 STATE ContentView.loadFunctionKeys current selectedDocumentName=gt7sim.screen new=GT7_2.screen thread=main
+									260925_1351_648 🐞ContentView.swift:loadFunctionKeys(from:):656 EXIT ContentView.loadFunctionKeys current selectedDocumentName=GT7_2.screen new=GT7_2.screen thread=main
+									260925_1351_648 🐞ContentView.swift:selectDocument(_:):2381 EXIT ContentView.selectDocument current selectedDocumentName=GT7_2.screen new=GT7_2.screen recordHistory=false thread=main
+									260925_1351_746 🐞Set_Screen.swift:settingsDocumentTableListMode:972 SETTINGS-BUTTON-PROBE tableMode recompute listMode=files raw=files selected=GT7_2.screen docs=41 all=224
+									260925_1351_857 🐞ContentView.swift:body:356 STATE ContentView.onChange selectedDocumentName current=widgets.screen new=GT7_2.screen thread=main
+									260925_1351_873 🐞Main_Screen.swift:resetSmartScriptEditingModel():1758 resetSmartScriptEditingModel
+									260925_1351_931 🐞ContentView.swift:selectDocument(_:):2379 ENTER ContentView.selectDocument current selectedDocumentName=GT7_2.screen new=games.screen recordHistory=false thread=main
+									260925_1351_932 🐞ContentView.swift:loadFunctionKeys(from:):644 ENTER ContentView.loadFunctionKeys current selectedDocumentName=GT7_2.screen new=games.screen thread=main
+									260925_1351_933 🐞ContentView.swift:applySlotLines(_:):692 STATE ContentView.applySlotLines current functionKeySlotLines.count=20 new=6 thread=main
+									260925_1351_934 🐞ContentView.swift:applySlotLines(_:):695 STATE ContentView.applySlotLines current functionKeys.count=400 new=400 thread=main
+									260925_1351_934 🐞ContentView.swift:applySlotLines(_:):697 STATE ContentView.applySlotLines current loadedFunctionKeySlotCount=20 new=6 thread=main
+									260925_1351_934 🐞ContentView.swift:loadFunctionKeys(from:):653 STATE ContentView.loadFunctionKeys current selectedDocumentName=GT7_2.screen new=games.screen thread=main
+									260925_1351_935 🐞ContentView.swift:loadFunctionKeys(from:):656 EXIT ContentView.loadFunctionKeys current selectedDocumentName=games.screen new=games.screen thread=main
+									260925_1351_935 🐞ContentView.swift:selectDocument(_:):2381 EXIT ContentView.selectDocument current selectedDocumentName=games.screen new=games.screen recordHistory=false thread=main
+									260925_1351_954 🐞Set_Screen.swift:settingsDocumentTableListMode:972 SETTINGS-BUTTON-PROBE tableMode recompute listMode=files raw=files selected=games.screen docs=41 all=224
+									260925_1351_005 🐞ContentView.swift:body:356 STATE ContentView.onChange selectedDocumentName current=GT7_2.screen new=games.screen thread=main
+									260925_1351_008 🐞Main_Screen.swift:resetSmartScriptEditingModel():1758 resetSmartScriptEditingModel
+									260925_1351_032 🐞ContentView.swift:selectDocument(_:):2379 ENTER ContentView.selectDocument current selectedDocumentName=games.screen new=folders.screen recordHistory=false thread=main
+									260925_1351_033 🐞ContentView.swift:loadFunctionKeys(from:):644 ENTER ContentView.loadFunctionKeys current selectedDocumentName=games.screen new=folders.screen thread=main
+									260925_1351_033 🐞ContentView.swift:applySlotLines(_:):692 STATE ContentView.applySlotLines current functionKeySlotLines.count=6 new=48 thread=main
+									260925_1351_034 🐞ContentView.swift:applySlotLines(_:):695 STATE ContentView.applySlotLines current functionKeys.count=400 new=400 thread=main
+									260925_1351_034 🐞ContentView.swift:applySlotLines(_:):697 STATE ContentView.applySlotLines current loadedFunctionKeySlotCount=6 new=48 thread=main
+									260925_1351_034 🐞ContentView.swift:loadFunctionKeys(from:):653 STATE ContentView.loadFunctionKeys current selectedDocumentName=games.screen new=folders.screen thread=main
+									260925_1351_040 🐞ContentView.swift:loadFunctionKeys(from:):656 EXIT ContentView.loadFunctionKeys current selectedDocumentName=folders.screen new=folders.screen thread=main
+									260925_1351_040 🐞ContentView.swift:selectDocument(_:):2381 EXIT ContentView.selectDocument current selectedDocumentName=folders.screen new=folders.screen recordHistory=false thread=main
+									onChange(of: Int) action tried to update multiple times per frame.
+									onChange(of: String) action tried to update multiple times per frame.
+									onChange(of: String) action tried to update multiple times per frame.
+									onChange(of: String) action tried to update multiple times per frame.
+									onChange(of: String) action tried to update multiple times per frame.
+									onChange(of: Int) action tried to update multiple times per frame.
+									onChange(of: Int) action tried to update multiple times per frame.
+									260925_1351_067 🐞Set_Screen.swift:settingsDocumentTableListMode:972 SETTINGS-BUTTON-PROBE tableMode recompute listMode=files raw=files selected=folders.screen docs=41 all=224
+									onChange(of: Int) action tried to update multiple times per frame.
+									onChange(of: Int) action tried to update multiple times per frame.
+									onChange(of: String) action tried to update multiple times per frame.
+									onChange(of: String) action tried to update multiple times per frame.
+									260925_1351_125 🐞ContentView.swift:selectDocument(_:):2379 ENTER ContentView.selectDocument current selectedDocumentName=folders.screen new=folders.screen recordHistory=false thread=main
+									260925_1351_125 🐞ContentView.swift:loadFunctionKeys(from:):644 ENTER ContentView.loadFunctionKeys current selectedDocumentName=folders.screen new=folders.screen thread=main
+									260925_1351_125 🐞ContentView.swift:applySlotLines(_:):692 STATE ContentView.applySlotLines current functionKeySlotLines.count=48 new=48 thread=main
+									260925_1351_125 🐞ContentView.swift:applySlotLines(_:):695 STATE ContentView.applySlotLines current functionKeys.count=400 new=400 thread=main
+									260925_1351_125 🐞ContentView.swift:applySlotLines(_:):697 STATE ContentView.applySlotLines current loadedFunctionKeySlotCount=48 new=48 thread=main
+									260925_1351_126 🐞ContentView.swift:loadFunctionKeys(from:):653 STATE ContentView.loadFunctionKeys current selectedDocumentName=folders.screen new=folders.screen thread=main
+									260925_1351_129 🐞ContentView.swift:loadFunctionKeys(from:):656 EXIT ContentView.loadFunctionKeys current selectedDocumentName=folders.screen new=folders.screen thread=main
+									260925_1351_129 🐞ContentView.swift:selectDocument(_:):2381 EXIT ContentView.selectDocument current selectedDocumentName=folders.screen new=folders.screen recordHistory=false thread=main
+									260925_1351_176 🐞Set_Screen.swift:settingsDocumentTableListMode:972 SETTINGS-BUTTON-PROBE tableMode recompute listMode=files raw=files selected=folders.screen docs=41 all=224
+									260925_1351_234 🐞Set_Screen.swift:settingsDocumentTableListMode:972 SETTINGS-BUTTON-PROBE tableMode recompute listMode=files raw=files selected=folders.screen docs=41 all=224
+									260925_1351_348 🐞ContentView.swift:selectDocument(_:):2379 ENTER ContentView.selectDocument current selectedDocumentName=folders.screen new=GT7_3.screen recordHistory=false thread=main
+									260925_1351_348 🐞ContentView.swift:loadFunctionKeys(from:):644 ENTER ContentView.loadFunctionKeys current selectedDocumentName=folders.screen new=GT7_3.screen thread=main
+									260925_1351_349 🐞ContentView.swift:applySlotLines(_:):692 STATE ContentView.applySlotLines current functionKeySlotLines.count=48 new=20 thread=main
+									260925_1351_349 🐞ContentView.swift:applySlotLines(_:):695 STATE ContentView.applySlotLines current functionKeys.count=400 new=400 thread=main
+									260925_1351_349 🐞ContentView.swift:applySlotLines(_:):697 STATE ContentView.applySlotLines current loadedFunctionKeySlotCount=48 new=20 thread=main
+									260925_1351_350 🐞ContentView.swift:loadFunctionKeys(from:):653 STATE ContentView.loadFunctionKeys current selectedDocumentName=folders.screen new=GT7_3.screen thread=main
+									260925_1351_350 🐞ContentView.swift:loadFunctionKeys(from:):656 EXIT ContentView.loadFunctionKeys current selectedDocumentName=GT7_3.screen new=GT7_3.screen thread=main
+									260925_1351_350 🐞ContentView.swift:selectDocument(_:):2381 EXIT ContentView.selectDocument current selectedDocumentName=GT7_3.screen new=GT7_3.screen recordHistory=false thread=main
+									260925_1351_372 🐞Set_Screen.swift:settingsDocumentTableListMode:972 SETTINGS-BUTTON-PROBE tableMode recompute listMode=files raw=files selected=GT7_3.screen docs=41 all=224
+									260925_1351_418 🐞ContentView.swift:body:356 STATE ContentView.onChange selectedDocumentName current=folders.screen new=GT7_3.screen thread=main
+									260925_1351_419 🐞Main_Screen.swift:resetSmartScriptEditingModel():1758 resetSmartScriptEditingModel
+									260925_1351_436 🐞Set_Screen.swift:settingsDocumentTableListMode:972 SETTINGS-BUTTON-PROBE tableMode recompute listMode=files raw=files selected=GT7_3.screen docs=41 all=224
+									260925_1351_932 🐞ContentView.swift:selectDocument(_:):2379 ENTER ContentView.selectDocument current selectedDocumentName=GT7_3.screen new=Jap1.screen recordHistory=false thread=main
+									260925_1351_932 🐞ContentView.swift:loadFunctionKeys(from:):644 ENTER ContentView.loadFunctionKeys current selectedDocumentName=GT7_3.screen new=Jap1.screen thread=main
+									260925_1351_936 🐞ContentView.swift:applySlotLines(_:):692 STATE ContentView.applySlotLines current functionKeySlotLines.count=20 new=400 thread=main
+									260925_1351_937 🐞ContentView.swift:applySlotLines(_:):695 STATE ContentView.applySlotLines current functionKeys.count=400 new=400 thread=main
+									260925_1351_937 🐞ContentView.swift:applySlotLines(_:):697 STATE ContentView.applySlotLines current loadedFunctionKeySlotCount=20 new=400 thread=main
+									260925_1351_937 🐞ContentView.swift:loadFunctionKeys(from:):653 STATE ContentView.loadFunctionKeys current selectedDocumentName=GT7_3.screen new=Jap1.screen thread=main
+									260925_1351_937 🐞ContentView.swift:loadFunctionKeys(from:):656 EXIT ContentView.loadFunctionKeys current selectedDocumentName=Jap1.screen new=Jap1.screen thread=main
+									260925_1351_938 🐞ContentView.swift:selectDocument(_:):2381 EXIT ContentView.selectDocument current selectedDocumentName=Jap1.screen new=Jap1.screen recordHistory=false thread=main
+									260925_1351_958 🐞Set_Screen.swift:settingsDocumentTableListMode:972 SETTINGS-BUTTON-PROBE tableMode recompute listMode=files raw=files selected=Jap1.screen docs=41 all=224
+									260925_1351_010 🐞ContentView.swift:body:356 STATE ContentView.onChange selectedDocumentName current=GT7_3.screen new=Jap1.screen thread=main
+									260925_1351_012 🐞Main_Screen.swift:resetSmartScriptEditingModel():1758 resetSmartScriptEditingModel
+									260925_1351_029 🐞Set_Screen.swift:settingsDocumentTableListMode:972 SETTINGS-BUTTON-PROBE tableMode recompute listMode=files raw=files selected=Jap1.screen docs=41 all=224
+									<0x14ad508c0> Gesture: System gesture gate timed out.
+									260925_1351_883 🐞ContentView.swift:selectDocument(_:):2379 ENTER ContentView.selectDocument current selectedDocumentName=Jap1.screen new=folders.screen recordHistory=false thread=main
+									260925_1351_884 🐞ContentView.swift:loadFunctionKeys(from:):644 ENTER ContentView.loadFunctionKeys current selectedDocumentName=Jap1.screen new=folders.screen thread=main
+									260925_1351_884 🐞ContentView.swift:applySlotLines(_:):692 STATE ContentView.applySlotLines current functionKeySlotLines.count=400 new=48 thread=main
+									260925_1351_884 🐞ContentView.swift:applySlotLines(_:):695 STATE ContentView.applySlotLines current functionKeys.count=400 new=400 thread=main
+									260925_1351_884 🐞ContentView.swift:applySlotLines(_:):697 STATE ContentView.applySlotLines current loadedFunctionKeySlotCount=400 new=48 thread=main
+									260925_1351_884 🐞ContentView.swift:loadFunctionKeys(from:):653 STATE ContentView.loadFunctionKeys current selectedDocumentName=Jap1.screen new=folders.screen thread=main
+									260925_1351_888 🐞ContentView.swift:loadFunctionKeys(from:):656 EXIT ContentView.loadFunctionKeys current selectedDocumentName=folders.screen new=folders.screen thread=main
+									260925_1351_888 🐞ContentView.swift:selectDocument(_:):2381 EXIT ContentView.selectDocument current selectedDocumentName=folders.screen new=folders.screen recordHistory=false thread=main
+									260925_1351_955 🐞Set_Screen.swift:settingsDocumentTableListMode:972 SETTINGS-BUTTON-PROBE tableMode recompute listMode=files raw=files selected=folders.screen docs=41 all=224
+									260925_1351_052 🐞ContentView.swift:body:356 STATE ContentView.onChange selectedDocumentName current=Jap1.screen new=folders.screen thread=main
+									260925_1351_055 🐞Main_Screen.swift:resetSmartScriptEditingModel():1758 resetSmartScriptEditingModel
+									260925_1351_087 🐞Set_Screen.swift:settingsDocumentTableListMode:972 SETTINGS-BUTTON-PROBE tableMode recompute listMode=files raw=files selected=folders.screen docs=41 all=224
+									260925_1351_184 🐞ContentView.swift:selectDocument(_:):2379 ENTER ContentView.selectDocument current selectedDocumentName=folders.screen new=Home.screen recordHistory=false thread=main
+									260925_1351_185 🐞ContentView.swift:loadFunctionKeys(from:):644 ENTER ContentView.loadFunctionKeys current selectedDocumentName=folders.screen new=Home.screen thread=main
+									260925_1351_186 🐞ContentView.swift:applySlotLines(_:):692 STATE ContentView.applySlotLines current functionKeySlotLines.count=48 new=60 thread=main
+									260925_1351_186 🐞ContentView.swift:applySlotLines(_:):695 STATE ContentView.applySlotLines current functionKeys.count=400 new=400 thread=main
+									260925_1351_186 🐞ContentView.swift:applySlotLines(_:):697 STATE ContentView.applySlotLines current loadedFunctionKeySlotCount=48 new=60 thread=main
+									260925_1351_186 🐞ContentView.swift:loadFunctionKeys(from:):653 STATE ContentView.loadFunctionKeys current selectedDocumentName=folders.screen new=Home.screen thread=main
+									260925_1351_190 🐞ContentView.swift:loadFunctionKeys(from:):656 EXIT ContentView.loadFunctionKeys current selectedDocumentName=Home.screen new=Home.screen thread=main
+									260925_1351_190 🐞ContentView.swift:selectDocument(_:):2381 EXIT ContentView.selectDocument current selectedDocumentName=Home.screen new=Home.screen recordHistory=false thread=main
+									260925_1351_242 🐞Set_Screen.swift:settingsDocumentTableListMode:972 SETTINGS-BUTTON-PROBE tableMode recompute listMode=files raw=files selected=Home.screen docs=41 all=224
+									260925_1351_300 🐞ContentView.swift:body:356 STATE ContentView.onChange selectedDocumentName current=folders.screen new=Home.screen thread=main
+									260925_1351_302 🐞Main_Screen.swift:resetSmartScriptEditingModel():1758 resetSmartScriptEditingModel
+									260925_1351_330 🐞Set_Screen.swift:settingsDocumentTableListMode:972 SETTINGS-BUTTON-PROBE tableMode recompute listMode=files raw=files selected=Home.screen docs=41 all=224
+									260925_1351_412 🐞ContentView.swift:selectDocument(_:):2379 ENTER ContentView.selectDocument current selectedDocumentName=Home.screen new=GT7_1.screen recordHistory=false thread=main
+									260925_1351_412 🐞ContentView.swift:loadFunctionKeys(from:):644 ENTER ContentView.loadFunctionKeys current selectedDocumentName=Home.screen new=GT7_1.screen thread=main
+									260925_1351_413 🐞ContentView.swift:applySlotLines(_:):692 STATE ContentView.applySlotLines current functionKeySlotLines.count=60 new=74 thread=main
+									260925_1351_413 🐞ContentView.swift:applySlotLines(_:):695 STATE ContentView.applySlotLines current functionKeys.count=400 new=400 thread=main
+									260925_1351_414 🐞ContentView.swift:applySlotLines(_:):697 STATE ContentView.applySlotLines current loadedFunctionKeySlotCount=60 new=74 thread=main
+									260925_1351_414 🐞ContentView.swift:loadFunctionKeys(from:):653 STATE ContentView.loadFunctionKeys current selectedDocumentName=Home.screen new=GT7_1.screen thread=main
+									260925_1351_414 🐞ContentView.swift:loadFunctionKeys(from:):656 EXIT ContentView.loadFunctionKeys current selectedDocumentName=GT7_1.screen new=GT7_1.screen thread=main
+									260925_1351_414 🐞ContentView.swift:selectDocument(_:):2381 EXIT ContentView.selectDocument current selectedDocumentName=GT7_1.screen new=GT7_1.screen recordHistory=false thread=main
+									260925_1351_434 🐞Set_Screen.swift:settingsDocumentTableListMode:972 SETTINGS-BUTTON-PROBE tableMode recompute listMode=files raw=files selected=GT7_1.screen docs=41 all=224
+									260925_1351_491 🐞ContentView.swift:body:356 STATE ContentView.onChange selectedDocumentName current=Home.screen new=GT7_1.screen thread=main
+									260925_1351_493 🐞Main_Screen.swift:resetSmartScriptEditingModel():1758 resetSmartScriptEditingModel
+									260925_1351_510 🐞Set_Screen.swift:settingsDocumentTableListMode:972 SETTINGS-BUTTON-PROBE tableMode recompute listMode=files raw=files selected=GT7_1.screen docs=41 all=224
+									260925_1351_798 🐞Set_Screen.swift:settingsTopToolbar(availableWidth:):327 SETTINGS-BUTTON-PROBE Screens action entered before listMode=files raw=files next=text presented=true
+									260925_1351_798 🐞Set_Screen.swift:settingsTopToolbar(availableWidth:):328 SETTINGS-BUTTON-PROBE Screens state set listMode=text raw=text
+									260925_1351_810 🐞Set_Screen.swift:settingsDocumentTableListMode:972 SETTINGS-BUTTON-PROBE tableMode recompute listMode=text raw=text selected=GT7_1.screen docs=41 all=224
+									260925_1351_810 🐞Set_Screen.swift:settingsTopToolbar(availableWidth:):330 SETTINGS-BUTTON-PROBE Screens after listMode=text raw=text tableMode=text title=spk importing=false restoreAlert=false deleteAlert=false presented=true
+									260925_1351_822 🐞Set_Screen.swift:settingsDocumentTableListMode:972 SETTINGS-BUTTON-PROBE tableMode recompute listMode=text raw=text selected=GT7_1.screen docs=41 all=224
+									260925_1351_844 🐞Set_Table.swift:body:113 SETTINGS-BUTTON-PROBE table recompute listMode=text visible=1 selected=GT7_1.screen text= image=nil sound=beep.mp3 pdf=nil
+									260925_1351_859 🐞Set_Screen.swift:settingsDocumentTableListMode:972 SETTINGS-BUTTON-PROBE tableMode recompute listMode=text raw=text selected=GT7_1.screen docs=41 all=224
+									260925_1351_532 🐞Set_Screen.swift:settingsTopToolbar(availableWidth:):327 SETTINGS-BUTTON-PROBE Screens action entered before listMode=text raw=text next=images presented=true
+									260925_1351_532 🐞Set_Screen.swift:settingsTopToolbar(availableWidth:):328 SETTINGS-BUTTON-PROBE Screens state set listMode=images raw=images
+									260925_1351_559 🐞Set_Screen.swift:settingsDocumentTableListMode:972 SETTINGS-BUTTON-PROBE tableMode recompute listMode=images raw=images selected=GT7_1.screen docs=41 all=224
+									260925_1351_559 🐞Set_Screen.swift:settingsTopToolbar(availableWidth:):330 SETTINGS-BUTTON-PROBE Screens after listMode=images raw=images tableMode=images title=black bg importing=false restoreAlert=false deleteAlert=false presented=true
+									260925_1351_575 🐞Set_Screen.swift:settingsDocumentTableListMode:972 SETTINGS-BUTTON-PROBE tableMode recompute listMode=images raw=images selected=GT7_1.screen docs=41 all=224
+									260925_1351_606 🐞Set_Table.swift:body:113 SETTINGS-BUTTON-PROBE table recompute listMode=images visible=117 selected=GT7_1.screen text= image=nil sound=beep.mp3 pdf=nil
+									260925_1351_620 🐞Set_Screen.swift:settingsDocumentTableListMode:972 SETTINGS-BUTTON-PROBE tableMode recompute listMode=images raw=images selected=GT7_1.screen docs=41 all=224
+									260925_1351_149 🐞Set_Screen.swift:settingsTopToolbar(availableWidth:):327 SETTINGS-BUTTON-PROBE Screens action entered before listMode=images raw=images next=sounds presented=true
+									260925_1351_149 🐞Set_Screen.swift:settingsTopToolbar(availableWidth:):328 SETTINGS-BUTTON-PROBE Screens state set listMode=sounds raw=sounds
+									260925_1351_172 🐞Set_Screen.swift:settingsDocumentTableListMode:972 SETTINGS-BUTTON-PROBE tableMode recompute listMode=sounds raw=sounds selected=GT7_1.screen docs=41 all=224
+									260925_1351_174 🐞Set_Screen.swift:settingsTopToolbar(availableWidth:):330 SETTINGS-BUTTON-PROBE Screens after listMode=sounds raw=sounds tableMode=sounds title=beep importing=false restoreAlert=false deleteAlert=false presented=true
+									260925_1351_194 🐞Set_Screen.swift:settingsDocumentTableListMode:972 SETTINGS-BUTTON-PROBE tableMode recompute listMode=sounds raw=sounds selected=GT7_1.screen docs=41 all=224
+									260925_1351_213 🐞Set_Table.swift:body:113 SETTINGS-BUTTON-PROBE table recompute listMode=sounds visible=24 selected=GT7_1.screen text= image=nil sound=beep.mp3 pdf=nil
+									260925_1351_732 🐞Set_Screen.swift:settingsTopToolbar(availableWidth:):327 SETTINGS-BUTTON-PROBE Screens action entered before listMode=sounds raw=sounds next=pdfs presented=true
+									260925_1351_732 🐞Set_Screen.swift:settingsTopToolbar(availableWidth:):328 SETTINGS-BUTTON-PROBE Screens state set listMode=pdfs raw=pdfs
+									260925_1351_751 🐞Set_Screen.swift:settingsDocumentTableListMode:972 SETTINGS-BUTTON-PROBE tableMode recompute listMode=pdfs raw=pdfs selected=GT7_1.screen docs=41 all=224
+									260925_1351_751 🐞Set_Screen.swift:settingsTopToolbar(availableWidth:):330 SETTINGS-BUTTON-PROBE Screens after listMode=pdfs raw=pdfs tableMode=pdfs title=pdf importing=false restoreAlert=false deleteAlert=false presented=true
+									260925_1351_767 🐞Set_Screen.swift:settingsDocumentTableListMode:972 SETTINGS-BUTTON-PROBE tableMode recompute listMode=pdfs raw=pdfs selected=GT7_1.screen docs=41 all=224
+									260925_1351_789 🐞Set_Table.swift:body:113 SETTINGS-BUTTON-PROBE table recompute listMode=pdfs visible=0 selected=GT7_1.screen text= image=nil sound=beep.mp3 pdf=nil
+									260925_1351_766 🐞ContentView.swift:applySlotLines(_:):692 STATE ContentView.applySlotLines current functionKeySlotLines.count=74 new=74 thread=main
+									260925_1351_767 🐞ContentView.swift:applySlotLines(_:):695 STATE ContentView.applySlotLines current functionKeys.count=400 new=400 thread=main
+									260925_1351_767 🐞ContentView.swift:applySlotLines(_:):697 STATE ContentView.applySlotLines current loadedFunctionKeySlotCount=74 new=74 thread=main
+									260925_1351_767 🐞ContentView.swift:launchedSettingsScreen:2505 STATE ContentView.SettingsScreen.returnToMain current isSettingsScreenPresented=true new=false thread=main
+									260925_1351_799 🐞Set_Screen.swift:settingsDocumentTableListMode:972 SETTINGS-BUTTON-PROBE tableMode recompute listMode=pdfs raw=pdfs selected=GT7_1.screen docs=41 all=224
+									260925_1351_859 🐞ContentView.swift:body:349 STATE ContentView.onChange isSettingsScreenPresented current=false new=backgroundRefresh thread=main
+									260925_1351_859 🐞ContentView.swift:selectDocument(_:):2379 ENTER ContentView.selectDocument current selectedDocumentName=GT7_1.screen new=GT7_1.screen recordHistory=false thread=main
+									260925_1351_859 🐞ContentView.swift:loadFunctionKeys(from:):644 ENTER ContentView.loadFunctionKeys current selectedDocumentName=GT7_1.screen new=GT7_1.screen thread=main
+									260925_1351_859 🐞ContentView.swift:applySlotLines(_:):692 STATE ContentView.applySlotLines current functionKeySlotLines.count=74 new=74 thread=main
+									260925_1351_860 🐞ContentView.swift:applySlotLines(_:):695 STATE ContentView.applySlotLines current functionKeys.count=400 new=400 thread=main
+									260925_1351_860 🐞ContentView.swift:applySlotLines(_:):697 STATE ContentView.applySlotLines current loadedFunctionKeySlotCount=74 new=74 thread=main
+									260925_1351_860 🐞ContentView.swift:loadFunctionKeys(from:):653 STATE ContentView.loadFunctionKeys current selectedDocumentName=GT7_1.screen new=GT7_1.screen thread=main
+									260925_1351_860 🐞ContentView.swift:loadFunctionKeys(from:):656 EXIT ContentView.loadFunctionKeys current selectedDocumentName=GT7_1.screen new=GT7_1.screen thread=main
+									260925_1351_860 🐞ContentView.swift:selectDocument(_:):2381 EXIT ContentView.selectDocument current selectedDocumentName=GT7_1.screen new=GT7_1.screen recordHistory=false thread=main
+									260925_1351_228 🐞ContentView.swift:launchedSettingsScreen:2516 DESTINATION SettingsScreen.onDisappear current isSettingsScreenPresented=false new=false thread=main
+									260925_1351_228 🐞ContentView.swift:launchedSettingsScreen:2517 STATE ContentView.launchedSettingsScreen.onDisappear current isSettingsScreenPresented=false new=false thread=main
+									260925_1351_566 🐞Main_TopToolbar.swift:body:95 ENTER MainScreenToolbarContent.previousDocumentButton current currentFileNumber=9 new=selectPreviousDocument thread=main
+									260925_1351_567 🐞Main_Screen.swift:selectPreviousDocumentFromMainScreenControl():1324 ENTER MainScreen.selectPreviousDocumentFromMainScreenControl current selectedDocumentName=GT7_1.screen currentFileNumber=9 new=previousDocument thread=main
+									260925_1351_567 🐞ContentView.swift:selectPreviousDocument():2755 ENTER ContentView.selectPreviousDocument current selectedDocumentName=GT7_1.screen currentFileNumber=9 new=previousDocument thread=main
+									260925_1351_567 🐞ContentView.swift:selectDocument(_:recordHistory:):2385 ENTER ContentView.selectDocument current selectedDocumentName=GT7_1.screen new=games.screen recordHistory=true thread=main
+									260925_1351_568 🐞ContentView.swift:recordDocumentHistory(beforeSwitchingTo:):2394 ENTER ContentView.recordDocumentHistory current selectedDocumentName=GT7_1.screen new=games.screen thread=main
+									260925_1351_568 🐞ContentView.swift:printDocumentNavigationStacks(_:):2415 Doc nav record requested -> games.screen. current: [GT7_1.screen] back: [] forw: []
+									260925_1351_568 🐞ContentView.swift:recordDocumentHistory(beforeSwitchingTo:):2404 STATE ContentView.recordDocumentHistory current documentNavigationHistory=[] new=append GT7_1.screen thread=main
+									260925_1351_574 🐞ContentView.swift:recordDocumentHistory(beforeSwitchingTo:):2409 STATE ContentView.recordDocumentHistory current documentNavigationHistory=[] new=["GT7_1.screen"] thread=main
+									260925_1351_575 🐞ContentView.swift:printDocumentNavigationStacks(_:):2415 Doc nav record stored -> games.screen. current: [GT7_1.screen] back: ["GT7_1.screen"] forw: []
+									260925_1351_575 🐞ContentView.swift:recordDocumentHistory(beforeSwitchingTo:):2411 EXIT ContentView.recordDocumentHistory current selectedDocumentName=GT7_1.screen new=games.screen thread=main
+									260925_1351_575 🐞ContentView.swift:loadFunctionKeys(from:):644 ENTER ContentView.loadFunctionKeys current selectedDocumentName=GT7_1.screen new=games.screen thread=main
+									260925_1351_577 🐞ContentView.swift:applySlotLines(_:):692 STATE ContentView.applySlotLines current functionKeySlotLines.count=74 new=6 thread=main
+									260925_1351_578 🐞ContentView.swift:applySlotLines(_:):695 STATE ContentView.applySlotLines current functionKeys.count=400 new=400 thread=main
+									260925_1351_579 🐞ContentView.swift:applySlotLines(_:):697 STATE ContentView.applySlotLines current loadedFunctionKeySlotCount=74 new=6 thread=main
+									260925_1351_579 🐞ContentView.swift:loadFunctionKeys(from:):653 STATE ContentView.loadFunctionKeys current selectedDocumentName=GT7_1.screen new=games.screen thread=main
+									260925_1351_581 🐞ContentView.swift:loadFunctionKeys(from:):656 EXIT ContentView.loadFunctionKeys current selectedDocumentName=games.screen new=games.screen thread=main
+									260925_1351_581 🐞ContentView.swift:selectDocument(_:recordHistory:):2390 EXIT ContentView.selectDocument current selectedDocumentName=games.screen new=games.screen recordHistory=true thread=main
+									260925_1351_581 🐞ContentView.swift:selectPreviousDocument():2763 EXIT ContentView.selectPreviousDocument current selectedDocumentName=games.screen currentFileNumber=8 new=previousDocument complete thread=main
+									260925_1351_581 🐞Main_Screen.swift:selectPreviousDocumentFromMainScreenControl():1331 EXIT MainScreen.selectPreviousDocumentFromMainScreenControl current selectedDocumentName=GT7_1.screen currentFileNumber=9 new=previousDocument complete thread=main
+									260925_1351_591 🐞Main_TopToolbar.swift:body:98 EXIT MainScreenToolbarContent.previousDocumentButton current currentFileNumber=9 new=selectPreviousDocument complete thread=main
+									260925_1351_634 🐞ContentView.swift:body:356 STATE ContentView.onChange selectedDocumentName current=GT7_1.screen new=games.screen thread=main
+									260925_1351_637 🐞Main_Screen.swift:resetSmartScriptEditingModel():1758 resetSmartScriptEditingModel
+									260925_1351_565 🐞Main_TopToolbar.swift:body:59 ENTER MainScreenToolbarContent.homeButton current isHomeDocumentSelected=false new=openHomeDocument thread=main
+									260925_1351_566 🐞Main_Screen.swift:openHomeDocumentFromMainScreenControl():1304 ENTER MainScreen.openHomeDocumentFromMainScreenControl current selectedDocumentName=games.screen new=home.txt thread=main
+									260925_1351_567 🐞ContentView.swift:selectDocumentNamedFromGrid(_:):2445 ENTER ContentView.selectDocumentNamedFromGrid rawName=home.txt current selectedDocumentName=games.screen new=home.txt documentFiles.count=41 thread=main
+									260925_1351_573 🐞ContentView.swift:selectDocumentNamedFromGrid(_:):2474 SCREEN_NAV_RESOLVE requested=home.txt resolved=Home.screen
+									260925_1351_574 🐞ContentView.swift:selectDocument(_:recordHistory:):2385 ENTER ContentView.selectDocument current selectedDocumentName=games.screen new=Home.screen recordHistory=true thread=main
+									260925_1351_574 🐞ContentView.swift:recordDocumentHistory(beforeSwitchingTo:):2394 ENTER ContentView.recordDocumentHistory current selectedDocumentName=games.screen new=Home.screen thread=main
+									260925_1351_574 🐞ContentView.swift:printDocumentNavigationStacks(_:):2415 Doc nav record requested -> Home.screen. current: [games.screen] back: ["GT7_1.screen"] forw: []
+									260925_1351_574 🐞ContentView.swift:recordDocumentHistory(beforeSwitchingTo:):2404 STATE ContentView.recordDocumentHistory current documentNavigationHistory=["GT7_1.screen"] new=append games.screen thread=main
+									260925_1351_575 🐞ContentView.swift:recordDocumentHistory(beforeSwitchingTo:):2409 STATE ContentView.recordDocumentHistory current documentNavigationHistory=["GT7_1.screen"] new=["GT7_1.screen", "games.screen"] thread=main
+									260925_1351_575 🐞ContentView.swift:printDocumentNavigationStacks(_:):2415 Doc nav record stored -> Home.screen. current: [games.screen] back: ["GT7_1.screen", "games.screen"] forw: []
+									260925_1351_576 🐞ContentView.swift:recordDocumentHistory(beforeSwitchingTo:):2411 EXIT ContentView.recordDocumentHistory current selectedDocumentName=games.screen new=Home.screen thread=main
+									260925_1351_576 🐞ContentView.swift:loadFunctionKeys(from:):644 ENTER ContentView.loadFunctionKeys current selectedDocumentName=games.screen new=Home.screen thread=main
+									260925_1351_578 🐞ContentView.swift:applySlotLines(_:):692 STATE ContentView.applySlotLines current functionKeySlotLines.count=6 new=60 thread=main
+									260925_1351_579 🐞ContentView.swift:applySlotLines(_:):695 STATE ContentView.applySlotLines current functionKeys.count=400 new=400 thread=main
+									260925_1351_580 🐞ContentView.swift:applySlotLines(_:):697 STATE ContentView.applySlotLines current loadedFunctionKeySlotCount=6 new=60 thread=main
+									260925_1351_581 🐞ContentView.swift:loadFunctionKeys(from:):653 STATE ContentView.loadFunctionKeys current selectedDocumentName=games.screen new=Home.screen thread=main
+									260925_1351_593 🐞ContentView.swift:loadFunctionKeys(from:):656 EXIT ContentView.loadFunctionKeys current selectedDocumentName=Home.screen new=Home.screen thread=main
+									260925_1351_593 🐞ContentView.swift:selectDocument(_:recordHistory:):2390 EXIT ContentView.selectDocument current selectedDocumentName=Home.screen new=Home.screen recordHistory=true thread=main
+									260925_1351_593 🐞ContentView.swift:selectDocumentNamedFromGrid(_:):2478 EXIT ContentView.selectDocumentNamedFromGrid succeeded rawName=home.txt current selectedDocumentName=Home.screen new=home.txt thread=main
+									260925_1351_594 🐞Main_Screen.swift:openHomeDocumentFromMainScreenControl():1309 EXIT MainScreen.openHomeDocumentFromMainScreenControl current selectedDocumentName=games.screen new=home.txt result=true thread=main
+									260925_1351_594 🐞Main_TopToolbar.swift:body:62 EXIT MainScreenToolbarContent.homeButton current isHomeDocumentSelected=false new=openHomeDocument complete thread=main
+									260925_1351_658 🐞ContentView.swift:body:356 STATE ContentView.onChange selectedDocumentName current=games.screen new=Home.screen thread=main
+									260925_1351_660 🐞Main_Screen.swift:resetSmartScriptEditingModel():1758 resetSmartScriptEditingModel

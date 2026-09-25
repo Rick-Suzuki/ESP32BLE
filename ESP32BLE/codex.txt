@@ -1,116 +1,38 @@
-Implemented the smallest production fix for repeated Settings directory scans.
+Implemented the final iOS 17 Settings top-button fix.
 
-1. Exact files changed
+1. Reusable UIKit component used:
+SettingsUIKitVisualButton in Set_TxtEditor.swift􀰓.
 
-ESP32BLE/Scrns/ContentView.swift
-ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
-ESP32BLE/Scrns/Set_Screen/Table_Img/Set_ImgSelectionSupport.swift
+It wraps UIButton through UIViewRepresentable, and the UIButton owns:
+title, background color, title color, enabled state, alpha, corner radius, border, content insets, font, and .touchUpInside.
 
-2. Single Documents-directory snapshot
+2. Exact five controls converted on iOS 17:
+Main, File Mode, Repair, and New through SettingsToolbarButton.
+Filename through settingsTitleControl.
 
-Added this state in ContentView:
+3. Original dimensions/appearance preserved:
+Main/File Mode/Repair/New use the same titles, colors, enabled states, font, border, corner radius, padding, and toolbar positions. iOS 17 now uses fixed UIKit button frames matching the existing toolbar sizes: Main 92 x 36, others 64.4 x 36.
 
-documentDirectorySnapshot: [URL]
+Filename keeps its own titleWidth x 36 sizing and gray/border visual design.
 
-It stores the raw, hidden-file-skipped Documents directory listing from the same physical enumeration used by refreshDocumentFiles().
+4. Newer iOS unchanged:
+On iOS 18 and newer, the original SwiftUI Button implementations and styling modifiers are still used.
 
-3. Where physical enumeration now occurs
+5. Original action/state closures unchanged:
+Main still calls saveAndReturnToMain().
+Filename still sets documentNameDraft and isEditingDocumentName.
+File Mode still runs the same list-mode cycling logic.
+Repair still calls repairDocument().
+New still calls createNewDocument().
 
-For the Settings lists, physical enumeration now occurs in:
+6. Obsolete experimental code removed:
+Removed the unreliable SettingsCompatibilityTextButton path.
+Removed the temporary NakedUIKitSettingsToolbarButton experiment.
 
-ContentView.refreshDocumentFiles()
+Useful action logs remain for the final physical test.
 
-via:
+7. Build result:
+Project built successfully.
 
-SettingsProbeCounters.scanDocumentsDirectory(...)
-
-The Settings available*URLs properties no longer call FileManager.contentsOfDirectory.
-
-4. How Settings lists are derived
-
-availableDocumentURLs:
-filters documentDirectorySnapshot for regular files, then uses preferredScreenDocumentURLs exactly as before.
-
-availableTextURLs:
-filters documentDirectorySnapshot for regular .txt files and sorts as before.
-
-availableImageURLs:
-filters documentDirectorySnapshot for the same supported image extensions and sorts as before.
-
-availableSoundURLs:
-filters documentDirectorySnapshot for supportedImportedSoundExtensions and sorts as before.
-
-availablePDFURLs:
-filters documentDirectorySnapshot for regular .pdf files and sorts as before.
-
-availableAllFileURLs:
-filters documentDirectorySnapshot for regular files, preserving developerMode/internal config-file visibility behavior, and sorts as before.
-
-5. Filesystem mutation paths that refresh the snapshot
-
-These now refresh through refreshDocumentFiles or existing wrappers:
-create new Screen
-rename Screen
-delete Screen
-duplicate Screen
-delete all data
-generic delete from All
-screen import
-full archive/import session finish
-image import
-sound import
-text delete
-image rename
-image delete
-sound rename
-sound delete
-PDF rename
-PDF delete
-startup/default screen refresh paths already using refreshDocumentFiles
-
-If config fallback creation creates config files during refreshDocumentFiles, it now returns a flag and refreshDocumentFiles rescans once so the raw snapshot includes newly-created config files.
-
-6. Ordinary actions that do NOT refresh it
-
-SwiftUI body reevaluation
-Settings redraw
-file-mode changes
-slider changes
-image selection
-sound/PDF selection
-Main/Settings navigation
-ordinary screen selection
-ordinary text/screen content saves
-
-I removed the refreshDocumentFiles call from ContentView.selectDocument because selecting a screen does not change directory contents.
-
-7. Filtering/sorting semantics
-
-Preserved. The same extension checks, regular-file checks, preferred screen logic, sorting, hidden-file behavior, config visibility, developerMode behavior, and legacy .txt behavior are still used.
-
-8. Selection preservation
-
-Selections are preserved. For delete/rename paths that need the refreshed list to choose a replacement or update selected file state, the snapshot is refreshed before reading the available*URLs list.
-
-9. Image-preview and Main background concurrency
-
-Untouched in this change.
-
-10. Build result
-
-Build succeeded. Xcode diagnostics for the touched files are clean.
-
-11. Expected FILESCAN behavior
-
-Before:
-available*URLs evaluation caused physical Documents scans repeatedly.
-
-After:
-available*URLs evaluation may still be frequent, but it is in-memory filtering only.
-During ordinary Settings interaction, expect:
-
-PHYSICAL DIRECTORY SCANS=0
-
-After a real filesystem mutation, expect a small number of physical scans, usually 1. A second scan can occur only if refreshDocumentFiles creates missing config files and must resnapshot the directory.
-
-No unrelated performance optimization was made.
+Build log:
+/var/folders/kj/8r83ch8d6dx88328fxn6sf5m0000gn/T/ActionArtifacts/1C6CE6DD-BE88-4D6E-A1BA-8A9B72F3264A/BuildProject/BuildProject-Log-20260925-154648.txt

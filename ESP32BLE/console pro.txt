@@ -1,0 +1,125 @@
+Looking up debug dylib relative path
+Found debug dylib relative path string `ESP32BLE.debug.dylib`
+Looking up debug dylib entry point name
+No debug dylib entry point name defined.
+Looking up debug dylib install name
+Found debug dylib install name string `@rpath/ESP32BLE.debug.dylib`
+Looking for Previews JIT link entry point.
+No Previews JIT entry point found.
+Gave PreviewsInjection a chance to run and it returned, continuing with debug dylib.
+Looking for main entry point.
+Opening debug dylib with '@rpath/ESP32BLE.debug.dylib'
+Debug dylib handle: 0xb5827e00
+No entry point found. Checking for alias.
+Calling provided entry point.
+#FactoryInstall Unable to query results, error: 5
+Unable to list voice folder
+Unable to list voice folder
+Unable to list voice folder
+260925_1547_446 🐞Set_Screen.swift:settingsDocumentTableListMode:999 SETTINGS-BUTTON-PROBE tableMode recompute listMode=images raw=images selected=VLC.screen docs=0 all=0
+260925_1547_669 🐞Set_Screen.swift:settingsDocumentTableListMode:999 SETTINGS-BUTTON-PROBE tableMode recompute listMode=images raw=images selected=VLC.screen docs=0 all=0
+260925_1547_684 🐞ContentView.swift:presentInitialSettingsScreenIfNeeded():2516 ENTER ContentView.presentInitialSettingsScreenIfNeeded current isSettingsScreenPresented=true didPresentInitialSettingsScreen=false new=initialSettingsCheck thread=main
+260925_1547_684 🐞ContentView.swift:presentInitialSettingsScreenIfNeeded():2522 STATE ContentView.presentInitialSettingsScreenIfNeeded current didPresentInitialSettingsScreen=false new=true thread=main
+260925_1547_685 🐞ContentView.swift:presentInitialSettingsScreenIfNeeded():2524 STATE ContentView.presentInitialSettingsScreenIfNeeded current isSettingsScreenPresented=true new=true thread=main
+260925_1547_685 🐞ContentView.swift:presentInitialSettingsScreenIfNeeded():2526 EXIT ContentView.presentInitialSettingsScreenIfNeeded current isSettingsScreenPresented=true didPresentInitialSettingsScreen=true new=initialSettingsPresented thread=main
+260925_1547_686 🐞ContentView.swift:logDeviceTypeIfNeeded():364 isPad: iPad
+260925_1547_729 🐞ContentView.swift:launchedSettingsScreen:2503 DESTINATION SettingsScreen.onAppear current isSettingsScreenPresented=true new=true thread=main
+260925_1547_729 🐞ContentView.swift:launchedSettingsScreen:2504 STATE ContentView.launchedSettingsScreen.onAppear current isSettingsScreenPresented=true new=true thread=main
+260925_1547_729 🐞ContentView.swift:launchedSettingsScreen:2505 ZIP-REGRESSION-PROBE Settings onAppear presented=true selected=VLC.screen docs=0 snapshot=0
+260925_1547_745 🐞ContentView.swift:body:279 DESTINATION MainScreen.onAppear current isKeyboardScreenPresented=false isSettingsScreenPresented=true new=visible thread=main
+260925_1547_746 🐞ContentView.swift:body:199 DESTINATION KeyboardScreen.onAppear current isKeyboardScreenPresented=false new=visible thread=main
+260925_1547_755 🐞Set_Screen.swift:settingsDocumentTableListMode:999 SETTINGS-BUTTON-PROBE tableMode recompute listMode=images raw=images selected=VLC.screen docs=0 all=0
+260925_1547_946 🐞ContentView.swift:loadFunctionKeys(from:):636 ENTER ContentView.loadFunctionKeys current selectedDocumentName=VLC.screen new=VLC.screen thread=main
+260925_1547_948 🐞ContentView.swift:applySlotLines(_:):684 STATE ContentView.applySlotLines current functionKeySlotLines.count=20 new=45 thread=main
+260925_1547_950 🐞ContentView.swift:applySlotLines(_:):687 STATE ContentView.applySlotLines current functionKeys.count=400 new=400 thread=main
+260925_1547_950 🐞ContentView.swift:applySlotLines(_:):689 STATE ContentView.applySlotLines current loadedFunctionKeySlotCount=20 new=45 thread=main
+260925_1547_950 🐞ContentView.swift:loadFunctionKeys(from:):645 STATE ContentView.loadFunctionKeys current selectedDocumentName=VLC.screen new=VLC.screen thread=main
+260925_1547_953 🐞ContentView.swift:loadFunctionKeys(from:):648 EXIT ContentView.loadFunctionKeys current selectedDocumentName=VLC.screen new=VLC.screen thread=main
+260925_1547_966 🐞ContentView.swift:logOrientationStateIfNeeded():404 orientationState: horizontal
+260925_1547_968 🐞Set_Table.swift:body:113 SETTINGS-BUTTON-PROBE table recompute listMode=images visible=0 selected=VLC.screen text= image=nil sound=nil pdf=nil
+260925_1547_968 🐞Set_Table.swift:body:113 SETTINGS-BUTTON-PROBE table recompute listMode=images visible=0 selected=VLC.screen text= image=nil sound=nil pdf=nil
+260925_1547_026 🐞Set_Screen.swift:settingsDocumentTableListMode:999 SETTINGS-BUTTON-PROBE tableMode recompute listMode=images raw=images selected=VLC.screen docs=41 all=224
+260925_1547_347 🐞Set_Screen.swift:settingsDocumentTableListMode:999 SETTINGS-BUTTON-PROBE tableMode recompute listMode=images raw=images selected=VLC.screen docs=41 all=224
+260925_1547_985 🐞Set_Table.swift:body:113 SETTINGS-BUTTON-PROBE table recompute listMode=images visible=117 selected=VLC.screen text= image=nil sound=beep.mp3 pdf=nil
+260925_1547_510 🐞Set_Screen.swift:settingsTopToolbar(availableWidth:):329 TOP-HITTEST-PROBE screens action entered
+260925_1547_514 🐞Set_Screen.swift:settingsTopToolbar(availableWidth:):330 SETTINGS-BUTTON-PROBE Screens action entered before listMode=images raw=images next=sounds presented=true
+260925_1547_515 🐞Set_Screen.swift:settingsTopToolbar(availableWidth:):331 SETTINGS-BUTTON-PROBE Screens state set listMode=sounds raw=sounds
+260925_1547_571 🐞Set_Screen.swift:settingsDocumentTableListMode:999 SETTINGS-BUTTON-PROBE tableMode recompute listMode=sounds raw=sounds selected=VLC.screen docs=41 all=224
+260925_1547_577 🐞Set_Screen.swift:settingsTopToolbar(availableWidth:):333 SETTINGS-BUTTON-PROBE Screens after listMode=sounds raw=sounds tableMode=sounds title=beep importing=false restoreAlert=false deleteAlert=false presented=true
+260925_1547_631 🐞Set_Screen.swift:settingsDocumentTableListMode:999 SETTINGS-BUTTON-PROBE tableMode recompute listMode=sounds raw=sounds selected=VLC.screen docs=41 all=224
+260925_1547_736 🐞Set_Table.swift:body:113 SETTINGS-BUTTON-PROBE table recompute listMode=sounds visible=24 selected=VLC.screen text= image=nil sound=beep.mp3 pdf=nil
+260925_1547_543 🐞Set_Screen.swift:settingsTopToolbar(availableWidth:):329 TOP-HITTEST-PROBE screens action entered
+260925_1547_544 🐞Set_Screen.swift:settingsTopToolbar(availableWidth:):330 SETTINGS-BUTTON-PROBE Screens action entered before listMode=sounds raw=sounds next=pdfs presented=true
+260925_1547_545 🐞Set_Screen.swift:settingsTopToolbar(availableWidth:):331 SETTINGS-BUTTON-PROBE Screens state set listMode=pdfs raw=pdfs
+260925_1547_596 🐞Set_Screen.swift:settingsDocumentTableListMode:999 SETTINGS-BUTTON-PROBE tableMode recompute listMode=pdfs raw=pdfs selected=VLC.screen docs=41 all=224
+260925_1547_597 🐞Set_Screen.swift:settingsTopToolbar(availableWidth:):333 SETTINGS-BUTTON-PROBE Screens after listMode=pdfs raw=pdfs tableMode=pdfs title=pdf importing=false restoreAlert=false deleteAlert=false presented=true
+260925_1547_633 🐞Set_Screen.swift:settingsDocumentTableListMode:999 SETTINGS-BUTTON-PROBE tableMode recompute listMode=pdfs raw=pdfs selected=VLC.screen docs=41 all=224
+260925_1547_714 🐞Set_Table.swift:body:113 SETTINGS-BUTTON-PROBE table recompute listMode=pdfs visible=0 selected=VLC.screen text= image=nil sound=beep.mp3 pdf=nil
+260925_1547_344 🐞Set_Screen.swift:settingsTopToolbar(availableWidth:):329 TOP-HITTEST-PROBE screens action entered
+260925_1547_345 🐞Set_Screen.swift:settingsTopToolbar(availableWidth:):330 SETTINGS-BUTTON-PROBE Screens action entered before listMode=pdfs raw=pdfs next=all presented=true
+260925_1547_345 🐞Set_Screen.swift:settingsTopToolbar(availableWidth:):331 SETTINGS-BUTTON-PROBE Screens state set listMode=all raw=all
+260925_1547_396 🐞Set_Screen.swift:settingsDocumentTableListMode:999 SETTINGS-BUTTON-PROBE tableMode recompute listMode=all raw=all selected=VLC.screen docs=41 all=224
+260925_1547_396 🐞Set_Screen.swift:settingsTopToolbar(availableWidth:):333 SETTINGS-BUTTON-PROBE Screens after listMode=all raw=all tableMode=all title=all files importing=false restoreAlert=false deleteAlert=false presented=true
+260925_1547_434 🐞Set_Screen.swift:settingsDocumentTableListMode:999 SETTINGS-BUTTON-PROBE tableMode recompute listMode=all raw=all selected=VLC.screen docs=41 all=224
+260925_1547_538 🐞Set_Table.swift:body:113 SETTINGS-BUTTON-PROBE table recompute listMode=all visible=224 selected=VLC.screen text= image=nil sound=beep.mp3 pdf=nil
+260925_1547_134 🐞Set_Screen.swift:settingsTopToolbar(availableWidth:):329 TOP-HITTEST-PROBE screens action entered
+260925_1547_135 🐞Set_Screen.swift:settingsTopToolbar(availableWidth:):330 SETTINGS-BUTTON-PROBE Screens action entered before listMode=all raw=all next=files presented=true
+260925_1547_135 🐞Set_Screen.swift:settingsTopToolbar(availableWidth:):331 SETTINGS-BUTTON-PROBE Screens state set listMode=files raw=files
+260925_1547_207 🐞Set_Screen.swift:settingsDocumentTableListMode:999 SETTINGS-BUTTON-PROBE tableMode recompute listMode=files raw=files selected=VLC.screen docs=41 all=224
+260925_1547_208 🐞Set_Screen.swift:settingsTopToolbar(availableWidth:):333 SETTINGS-BUTTON-PROBE Screens after listMode=files raw=files tableMode=files title=VLC importing=false restoreAlert=false deleteAlert=false presented=true
+260925_1547_252 🐞Set_Screen.swift:settingsDocumentTableListMode:999 SETTINGS-BUTTON-PROBE tableMode recompute listMode=files raw=files selected=VLC.screen docs=41 all=224
+260925_1547_356 🐞Set_Table.swift:body:113 SETTINGS-BUTTON-PROBE table recompute listMode=files visible=41 selected=VLC.screen text= image=nil sound=beep.mp3 pdf=nil
+260925_1547_977 🐞Set_Screen.swift:settingsTopToolbar(availableWidth:):329 TOP-HITTEST-PROBE screens action entered
+260925_1547_977 🐞Set_Screen.swift:settingsTopToolbar(availableWidth:):330 SETTINGS-BUTTON-PROBE Screens action entered before listMode=files raw=files next=text presented=true
+260925_1547_978 🐞Set_Screen.swift:settingsTopToolbar(availableWidth:):331 SETTINGS-BUTTON-PROBE Screens state set listMode=text raw=text
+260925_1547_060 🐞Set_Screen.swift:settingsDocumentTableListMode:999 SETTINGS-BUTTON-PROBE tableMode recompute listMode=text raw=text selected=VLC.screen docs=41 all=224
+260925_1547_062 🐞Set_Screen.swift:settingsTopToolbar(availableWidth:):333 SETTINGS-BUTTON-PROBE Screens after listMode=text raw=text tableMode=text title=spk importing=false restoreAlert=false deleteAlert=false presented=true
+260925_1547_102 🐞Set_Screen.swift:settingsDocumentTableListMode:999 SETTINGS-BUTTON-PROBE tableMode recompute listMode=text raw=text selected=VLC.screen docs=41 all=224
+260925_1547_213 🐞Set_Screen.swift:settingsDocumentTableListMode:999 SETTINGS-BUTTON-PROBE tableMode recompute listMode=text raw=text selected=VLC.screen docs=41 all=224
+260925_1547_296 🐞Set_Table.swift:body:113 SETTINGS-BUTTON-PROBE table recompute listMode=text visible=1 selected=VLC.screen text= image=nil sound=beep.mp3 pdf=nil
+260925_1547_412 🐞Set_Screen.swift:settingsTopToolbar(availableWidth:):250 TOP-HITTEST-PROBE main action entered
+260925_1547_427 🐞ContentView.swift:applySlotLines(_:):684 STATE ContentView.applySlotLines current functionKeySlotLines.count=45 new=1 thread=main
+260925_1547_428 🐞ContentView.swift:applySlotLines(_:):687 STATE ContentView.applySlotLines current functionKeys.count=400 new=400 thread=main
+260925_1547_429 🐞ContentView.swift:applySlotLines(_:):689 STATE ContentView.applySlotLines current loadedFunctionKeySlotCount=45 new=1 thread=main
+260925_1547_429 🐞ContentView.swift:launchedSettingsScreen:2497 STATE ContentView.SettingsScreen.returnToMain current isSettingsScreenPresented=true new=false thread=main
+260925_1547_501 🐞Set_Screen.swift:settingsDocumentTableListMode:999 SETTINGS-BUTTON-PROBE tableMode recompute listMode=text raw=text selected=VLC.screen docs=41 all=224
+260925_1547_682 🐞ContentView.swift:body:345 STATE ContentView.onChange isSettingsScreenPresented current=false new=backgroundRefresh thread=main
+260925_1547_682 🐞ContentView.swift:selectDocument(_:):2371 ENTER ContentView.selectDocument current selectedDocumentName=VLC.screen new=VLC.screen recordHistory=false thread=main
+260925_1547_682 🐞ContentView.swift:loadFunctionKeys(from:):636 ENTER ContentView.loadFunctionKeys current selectedDocumentName=VLC.screen new=VLC.screen thread=main
+260925_1547_684 🐞ContentView.swift:applySlotLines(_:):684 STATE ContentView.applySlotLines current functionKeySlotLines.count=1 new=1 thread=main
+260925_1547_684 🐞ContentView.swift:applySlotLines(_:):687 STATE ContentView.applySlotLines current functionKeys.count=400 new=400 thread=main
+260925_1547_684 🐞ContentView.swift:applySlotLines(_:):689 STATE ContentView.applySlotLines current loadedFunctionKeySlotCount=1 new=1 thread=main
+260925_1547_685 🐞ContentView.swift:loadFunctionKeys(from:):645 STATE ContentView.loadFunctionKeys current selectedDocumentName=VLC.screen new=VLC.screen thread=main
+260925_1547_685 🐞ContentView.swift:loadFunctionKeys(from:):648 EXIT ContentView.loadFunctionKeys current selectedDocumentName=VLC.screen new=VLC.screen thread=main
+260925_1547_685 🐞ContentView.swift:selectDocument(_:):2373 EXIT ContentView.selectDocument current selectedDocumentName=VLC.screen new=VLC.screen recordHistory=false thread=main
+260925_1547_132 🐞ContentView.swift:launchedSettingsScreen:2509 DESTINATION SettingsScreen.onDisappear current isSettingsScreenPresented=false event=disappeared thread=main
+260925_1547_132 🐞ContentView.swift:launchedSettingsScreen:2510 STATE ContentView.launchedSettingsScreen.onDisappear current isSettingsScreenPresented=false new=no change thread=main
+260925_1547_132 🐞ContentView.swift:launchedSettingsScreen:2511 ZIP-REGRESSION-PROBE Settings onDisappear presented=false selected=VLC.screen docs=41 snapshot=224
+260925_1547_046 🐞Main_Screen.swift:mainScreenContent:1063 ENTER MainScreen.settingsButton current isSettingsScreenPresented=false new=true thread=main
+260925_1547_046 🐞ContentView.swift:showSettingsScreen():2530 ENTER ContentView.showSettingsScreen current isSettingsScreenPresented=false new=true thread=main
+260925_1547_046 🐞ContentView.swift:showSettingsScreen():2537 STATE ContentView.showSettingsScreen current isSettingsScreenPresented=false new=true thread=main
+260925_1547_046 🐞ContentView.swift:showSettingsScreen():2540 EXIT ContentView.showSettingsScreen current isSettingsScreenPresented=true new=true thread=main
+260925_1547_047 🐞Main_Screen.swift:mainScreenContent:1066 EXIT MainScreen.settingsButton current isSettingsScreenPresented=false new=true thread=main
+260925_1547_100 🐞Set_Screen.swift:settingsDocumentTableListMode:999 SETTINGS-BUTTON-PROBE tableMode recompute listMode=text raw=text selected=VLC.screen docs=41 all=224
+260925_1547_241 🐞ContentView.swift:body:345 STATE ContentView.onChange isSettingsScreenPresented current=true new=backgroundRefresh thread=main
+260925_1547_277 🐞ContentView.swift:launchedSettingsScreen:2503 DESTINATION SettingsScreen.onAppear current isSettingsScreenPresented=true new=true thread=main
+260925_1547_277 🐞ContentView.swift:launchedSettingsScreen:2504 STATE ContentView.launchedSettingsScreen.onAppear current isSettingsScreenPresented=true new=true thread=main
+260925_1547_277 🐞ContentView.swift:launchedSettingsScreen:2505 ZIP-REGRESSION-PROBE Settings onAppear presented=true selected=VLC.screen docs=41 snapshot=224
+260925_1547_316 🐞Set_Screen.swift:settingsDocumentTableListMode:999 SETTINGS-BUTTON-PROBE tableMode recompute listMode=text raw=text selected=VLC.screen docs=41 all=224
+260925_1547_519 🐞Set_Table.swift:body:113 SETTINGS-BUTTON-PROBE table recompute listMode=text visible=1 selected=VLC.screen text= image=nil sound=beep.mp3 pdf=nil
+260925_1547_556 🐞Set_Screen.swift:settingsDocumentTableListMode:999 SETTINGS-BUTTON-PROBE tableMode recompute listMode=text raw=text selected=VLC.screen docs=41 all=224
+260925_1547_996 🐞Set_Screen.swift:settingsTopToolbar(availableWidth:):329 TOP-HITTEST-PROBE screens action entered
+260925_1547_997 🐞Set_Screen.swift:settingsTopToolbar(availableWidth:):330 SETTINGS-BUTTON-PROBE Screens action entered before listMode=text raw=text next=images presented=true
+260925_1547_997 🐞Set_Screen.swift:settingsTopToolbar(availableWidth:):331 SETTINGS-BUTTON-PROBE Screens state set listMode=images raw=images
+260925_1547_054 🐞Set_Screen.swift:settingsDocumentTableListMode:999 SETTINGS-BUTTON-PROBE tableMode recompute listMode=images raw=images selected=VLC.screen docs=41 all=224
+260925_1547_054 🐞Set_Screen.swift:settingsTopToolbar(availableWidth:):333 SETTINGS-BUTTON-PROBE Screens after listMode=images raw=images tableMode=images title=black bg importing=false restoreAlert=false deleteAlert=false presented=true
+260925_1547_091 🐞Set_Screen.swift:settingsDocumentTableListMode:999 SETTINGS-BUTTON-PROBE tableMode recompute listMode=images raw=images selected=VLC.screen docs=41 all=224
+260925_1547_211 🐞Set_Table.swift:body:113 SETTINGS-BUTTON-PROBE table recompute listMode=images visible=117 selected=VLC.screen text= image=nil sound=beep.mp3 pdf=nil
+260925_1548_340 🐞Set_Screen.swift:settingsDocumentTableListMode:999 SETTINGS-BUTTON-PROBE tableMode recompute listMode=images raw=images selected=VLC.screen docs=41 all=224
+260925_1548_638 🐞Set_Screen.swift:settingsDocumentTableListMode:999 SETTINGS-BUTTON-PROBE tableMode recompute listMode=images raw=images selected=VLC.screen docs=41 all=224
+260925_1548_800 🐞Set_Screen.swift:settingsTitleControl(availableWidth:):742 TOP-HITTEST-PROBE title action entered title=Autumn Trees Reflected Lake
+260925_1548_894 🐞Set_Screen.swift:settingsDocumentTableListMode:999 SETTINGS-BUTTON-PROBE tableMode recompute listMode=images raw=images selected=VLC.screen docs=41 all=224
+260925_1548_947 🐞Set_Screen.swift:settingsDocumentTableListMode:999 SETTINGS-BUTTON-PROBE tableMode recompute listMode=images raw=images selected=VLC.screen docs=41 all=224
+-[RTIInputSystemClient remoteTextInputSessionWithID:performInputOperation:]  perform input operation requires a valid sessionID. inputModality = Keyboard, inputOperation = <null selector>, customInfoType = UIEmojiSearchOperations
+260925_1548_933 🐞Set_Screen.swift:settingsDocumentTableListMode:999 SETTINGS-BUTTON-PROBE tableMode recompute listMode=images raw=images selected=VLC.screen docs=41 all=224
+260925_1548_231 🐞Set_Screen.swift:settingsDocumentTableListMode:999 SETTINGS-BUTTON-PROBE tableMode recompute listMode=images raw=images selected=VLC.screen docs=41 all=224

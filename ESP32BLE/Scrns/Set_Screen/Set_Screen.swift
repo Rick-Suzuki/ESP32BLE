@@ -2,8 +2,6 @@ import SwiftUI
 import UIKit
 import AVFoundation
 import UniformTypeIdentifiers
-import QuartzCore
-import Darwin
 
 struct SettingsScreen: View {
     private enum SettingsListMode: String {
@@ -77,8 +75,8 @@ struct SettingsScreen: View {
 
     private struct PendingImportSession {
         let directoryURL: URL
-        let importListMode: SettingsListMode?
-        let importMode: SettingsImportMode
+        var importListMode: SettingsListMode?
+        var importMode: SettingsImportMode
         var remainingURLs: [URL]
         var processedItemCount = 0
         var selectedConfigURLsByName: [String: URL]
@@ -211,7 +209,6 @@ struct SettingsScreen: View {
     @State private var selectedTextFileName = ""
 
     var body: some View {
-        let _ = SettingsProbeCounters.record("SettingsScreen.body", detail: "mode=\(listMode.buttonTitle)")
         configuredSettingsScreen
     }
 
@@ -237,19 +234,9 @@ struct SettingsScreen: View {
                             .frame(width: documentTableWidth(for: geometry.size.width))
                     }
                     .frame(maxHeight: .infinity, alignment: .top)
-                    .background { hitTestFrameProbe("SETTINGS CONTENT") }
                 }
             }
             .frame(width: screenGeometry.size.width, height: screenGeometry.size.height)
-            .background {
-                let rootFrame = screenGeometry.frame(in: .global)
-                let rootLayoutID = "\(Int(rootFrame.minY.rounded())):\(Int(rootFrame.height.rounded())):\(Int(screenGeometry.safeAreaInsets.top.rounded())):\(Int(screenGeometry.safeAreaInsets.bottom.rounded()))"
-                Color.clear
-                    .task(id: rootLayoutID) {
-                        db("[PROBE] SETTINGS ROOT FRAME global=\(rootFrame) size=\(screenGeometry.size) safeTop=\(screenGeometry.safeAreaInsets.top) safeBottom=\(screenGeometry.safeAreaInsets.bottom) statusBarVisible=\(isStatusBarVisible)")
-                        db("[HITTEST] SETTINGS ROOT frame=\(rootFrame) size=\(screenGeometry.size) safeAreaInsets=\(screenGeometry.safeAreaInsets) isSettingsScreenPresented=\(isSettingsScreenPresented) statusBarVisible=\(isStatusBarVisible) orientationHorizontal=\(orientationState) thread=\(pthread_main_np() == 1 ? "main" : "background")")
-                    }
-            }
         }
     }
 
@@ -258,37 +245,27 @@ struct SettingsScreen: View {
 			//----------------------------------------
 			// back to main
 		//
-			HStack(spacing: 8) {
+				HStack(spacing: 8) {
 				SettingsToolbarButton(title: "main", backgroundColor: Color.gray.opacity(0.45), minWidth: 92, isEnabled: true) {
-                    db("[PERF ACTION] Main thread=\(Thread.isMainThread ? "main" : "background")")
-                    db("[PROBE] MAIN ACTION RECEIVED \(Date()) mode=\(listMode.buttonTitle) loadedDocumentName=\(loadedDocumentName) thread=\(Thread.isMainThread ? "main" : "background")")
-                    db("[PROBE] MAIN TAP received \(Date()) thread=\(Thread.isMainThread ? "main" : "background")")
-					saveAndReturnToMain()
-				}
-                .background { hitTestFrameProbe("MAIN") }
-                .simultaneousGesture(TapGesture().onEnded {
-                    db("[HITTEST] MAIN CONTAINER TOUCH \(Date()) isSettingsScreenPresented=\(isSettingsScreenPresented) mode=\(listMode.buttonTitle) thread=\(Thread.isMainThread ? "main" : "background")")
-                })
+				saveAndReturnToMain()
+			}
 			//
 			//----------------------------------------
 			// tts voice
 			//
-			textToSpeechVoiceMenu
-                .background { hitTestFrameProbe("TTS MENU") }
+				textToSpeechVoiceMenu
 			//
 			//----------------------------------------
 			// tts slider
 			//
-			textToSpeechRateControl
-                .background { hitTestFrameProbe("TTS RATE") }
+				textToSpeechRateControl
 			//
 				//----------------------------------------
 				// title text
 				//
 			Spacer()
                 settingsTitleControl(availableWidth: availableWidth)
-					.padding(.horizontal, 12)
-                    .background { hitTestFrameProbe("TITLE") }
+						.padding(.horizontal, 12)
 
 			Spacer()
 			//
@@ -313,7 +290,6 @@ struct SettingsScreen: View {
 				}
 				.contentShape(.rect)
 				.accessibilityLabel("Import from iCloud")
-                .background { hitTestFrameProbe("IMPORT") }
 
 			Spacer()
 				.frame(width:10)
@@ -335,72 +311,37 @@ struct SettingsScreen: View {
 					.font(.title)
 					.foregroundStyle(.white)
 			}
-			.contentShape(.rect)
-			.accessibilityLabel("Export to iCloud")
+				.contentShape(.rect)
+				.accessibilityLabel("Export to iCloud")
             .disabled(!canExportInCurrentListMode)
             .opacity(canExportInCurrentListMode ? 1 : 0.45)
-            .background { hitTestFrameProbe("EXPORT") }
 			
 			Spacer()
 			//
 			//----------------------------------------
 			// show type of table
 			//
-		SettingsToolbarButton(title: listMode.buttonTitle, backgroundColor: Color.gray.opacity(0.45), minWidth: 64.4, isEnabled: true) {
-                    db("[PERF ACTION] fileMode \(nextListMode(from: listMode).buttonTitle) thread=\(Thread.isMainThread ? "main" : "background")")
-                    db("[PROBE] FILE MODE ACTION RECEIVED \(Date()) current=\(listMode.buttonTitle) requested=\(nextListMode(from: listMode).buttonTitle) thread=\(Thread.isMainThread ? "main" : "background")")
-                    db("[PROBE] FILE TYPE TAP received \(Date()) current=\(listMode.buttonTitle) thread=\(Thread.isMainThread ? "main" : "background")")
-                    let fileModeToggleStart = CACurrentMediaTime()
-                    db("[PROBE] FILE MODE toggle START \(Date()) current=\(listMode.buttonTitle) thread=\(Thread.isMainThread ? "main" : "background")")
+			SettingsToolbarButton(title: listMode.buttonTitle, backgroundColor: Color.gray.opacity(0.45), minWidth: 64.4, isEnabled: true) {
 					listMode.toggle(developerMode: developerMode)
-                    db("[PROBE] FILE MODE toggle END \(Date()) current=\(listMode.buttonTitle) elapsedMs=\((CACurrentMediaTime() - fileModeToggleStart) * 1000) thread=\(Thread.isMainThread ? "main" : "background")")
 				}
-                .background { hitTestFrameProbe("FILEMODE") }
-                .simultaneousGesture(TapGesture().onEnded {
-                    db("[HITTEST] FILEMODE CONTAINER TOUCH \(Date()) isSettingsScreenPresented=\(isSettingsScreenPresented) mode=\(listMode.buttonTitle) thread=\(Thread.isMainThread ? "main" : "background")")
-                })
 			//
 			//----------------------------------------
 			// repair btn
 			//
-			SettingsToolbarButton(title: "repair", backgroundColor: Color.red.opacity(0.5), minWidth: 64.4, isEnabled: listMode == .files) {
+				SettingsToolbarButton(title: "repair", backgroundColor: Color.red.opacity(0.5), minWidth: 64.4, isEnabled: listMode == .files) {
 				repairDocument()
 			}
-            .background { hitTestFrameProbe("REPAIR") }
 			//
 			//----------------------------------------
 			// new file
 			//
-			SettingsToolbarButton(title: "new", backgroundColor: Color.green.opacity(0.5), minWidth: 64.4, isEnabled: listMode == .files) {
-				createNewDocument()
+				SettingsToolbarButton(title: "new", backgroundColor: Color.green.opacity(0.5), minWidth: 64.4, isEnabled: listMode == .files) {
+					createNewDocument()
 			}
-            .background { hitTestFrameProbe("NEW") }
+			}
+			.padding(.horizontal, 8)
+			.padding(.vertical, 6)
 		}
-		.padding(.horizontal, 8)
-		.padding(.vertical, 6)
-        .background {
-            GeometryReader { toolbarGeometry in
-                let toolbarFrame = toolbarGeometry.frame(in: .global)
-                let toolbarLayoutID = "\(Int(toolbarFrame.minY.rounded())):\(Int(toolbarFrame.height.rounded())):\(Int(toolbarGeometry.safeAreaInsets.top.rounded())):\(Int(toolbarGeometry.safeAreaInsets.bottom.rounded()))"
-                Color.clear
-                    .task(id: toolbarLayoutID) {
-                        db("[PROBE] SETTINGS TOP TOOLBAR FRAME global=\(toolbarFrame) safeTop=\(toolbarGeometry.safeAreaInsets.top) safeBottom=\(toolbarGeometry.safeAreaInsets.bottom) statusBarVisible=\(isStatusBarVisible)")
-                        db("[HITTEST] TOOLBAR frame=\(toolbarFrame) safeAreaInsets=\(toolbarGeometry.safeAreaInsets) isSettingsScreenPresented=\(isSettingsScreenPresented) statusBarVisible=\(isStatusBarVisible) orientationHorizontal=\(orientationState) thread=\(pthread_main_np() == 1 ? "main" : "background")")
-                    }
-            }
-        }
-	}
-
-    private func hitTestFrameProbe(_ label: String) -> some View {
-        GeometryReader { geometry in
-            let frame = geometry.frame(in: .global)
-            let layoutID = "\(label):\(Int(frame.minX.rounded())):\(Int(frame.minY.rounded())):\(Int(frame.width.rounded())):\(Int(frame.height.rounded())):\(Int(geometry.safeAreaInsets.top.rounded())):\(isSettingsScreenPresented):\(isStatusBarVisible):\(orientationState)"
-            Color.clear
-                .task(id: layoutID) {
-                    db("[HITTEST] \(label) frame=\(frame) safeAreaInsets=\(geometry.safeAreaInsets) isSettingsScreenPresented=\(isSettingsScreenPresented) statusBarVisible=\(isStatusBarVisible) orientationHorizontal=\(orientationState) thread=\(pthread_main_np() == 1 ? "main" : "background")")
-                }
-        }
-    }
 
     private var configuredSettingsScreen: some View {
         settingsScreenBase
@@ -443,7 +384,6 @@ struct SettingsScreen: View {
             }
         }
         .task {
-            refreshDocumentFiles()
             loadSelectedDocumentText()
         }
         .task {
@@ -458,12 +398,8 @@ struct SettingsScreen: View {
             cancelNameEditing()
         }
         .onChange(of: listModeRawValue) {
-            let listModeChangeStart = CACurrentMediaTime()
-            db("[PROBE] FILE MODE onChange START \(Date()) mode=\(listMode.buttonTitle) thread=\(Thread.isMainThread ? "main" : "background")")
             saveCurrentDocumentText()
-            db("[PROBE] FILE MODE onChange after saveCurrentDocumentText \(Date()) mode=\(listMode.buttonTitle) elapsedMs=\((CACurrentMediaTime() - listModeChangeStart) * 1000) thread=\(Thread.isMainThread ? "main" : "background")")
             loadSelectedDocumentText()
-            db("[PROBE] FILE MODE onChange END \(Date()) mode=\(listMode.buttonTitle) elapsedMs=\((CACurrentMediaTime() - listModeChangeStart) * 1000) thread=\(Thread.isMainThread ? "main" : "background")")
         }
         .onChange(of: documentEditorText) {
             guard !isLoadingDocumentText else { return }
@@ -699,7 +635,6 @@ struct SettingsScreen: View {
                 ZStack {
                     Color.black.opacity(0.001)
                         .ignoresSafeArea()
-                        .background { hitTestFrameProbe("REPAIR ALERT OVERLAY") }
 
                     VStack(spacing: 16) {
                         VStack(spacing: 8) {
@@ -755,30 +690,49 @@ struct SettingsScreen: View {
                     .onSubmit {
                         commitNameEdit()
                     }
-            } else {
-				Button {
-					guard canEditCurrentTitle else { return }
-					ButtonClickFeedback.playIfEnabled()
-					documentNameDraft = currentTitleDisplayName
-					isEditingDocumentName = true
-				} label: {
-					Text(currentTitleDisplayName)
-						.lineLimit(1)
-						.minimumScaleFactor(0.7)
-						.frame(maxWidth: .infinity)
-				}
-				.disabled(!canEditCurrentTitle)
-				.font(.headline)
-				.foregroundStyle(canEditCurrentTitle ? .white : Color(white: 0.8))
-				.frame(width: titleWidth, height: 36)
-				.background(Color.gray.opacity(0.45))
-				.overlay {
-					RoundedRectangle(cornerRadius: 12)
-						.stroke(Color.gray.opacity(0.5), lineWidth: 1.5)
-				}
-				.clipShape(.rect(cornerRadius: 12))
-				.contentShape(.rect)
-            }
+				} else {
+					if #available(iOS 18, *) {
+						Button {
+							guard canEditCurrentTitle else { return }
+							ButtonClickFeedback.playIfEnabled()
+							documentNameDraft = currentTitleDisplayName
+							isEditingDocumentName = true
+						} label: {
+							Text(currentTitleDisplayName)
+								.lineLimit(1)
+								.minimumScaleFactor(0.7)
+								.frame(maxWidth: .infinity)
+						}
+						.disabled(!canEditCurrentTitle)
+						.font(.headline)
+						.foregroundStyle(canEditCurrentTitle ? .white : Color(white: 0.8))
+						.frame(width: titleWidth, height: 36)
+						.background(Color.gray.opacity(0.45))
+						.overlay {
+							RoundedRectangle(cornerRadius: 12)
+								.stroke(Color.gray.opacity(0.5), lineWidth: 1.5)
+						}
+						.clipShape(.rect(cornerRadius: 12))
+						.contentShape(.rect)
+					} else {
+						SettingsUIKitVisualButton(
+							title: currentTitleDisplayName,
+							backgroundColor: Color.gray.opacity(0.45),
+							width: titleWidth,
+							height: 36,
+							isEnabled: canEditCurrentTitle,
+							fontStyle: .headline,
+							titleColor: canEditCurrentTitle ? .white : UIColor(white: 0.8, alpha: 1),
+							adjustsFontSizeToFitWidth: true,
+							contentInsets: .zero
+						) {
+							guard canEditCurrentTitle else { return }
+							ButtonClickFeedback.playIfEnabled()
+							documentNameDraft = currentTitleDisplayName
+							isEditingDocumentName = true
+						}
+					}
+	            }
         }
     }
 
@@ -996,7 +950,7 @@ struct SettingsScreen: View {
             allScrollPositionID: allScrollPositionID,
             canDeleteDocuments: canDeleteDocuments,
             imagePreviewSection: settingsTablePreviewSection,
-            loadFunctionKeys: loadFunctionKeys,
+            loadFunctionKeys: handleSettingsDocumentSelection,
             loadTextFile: loadTextFile,
             deleteDocument: deleteDocument,
             duplicateDocument: duplicateDocument,
@@ -1010,6 +964,10 @@ struct SettingsScreen: View {
             deleteAllFile: deleteAllFile
         )
         .id(importRefreshID)
+    }
+
+    private func handleSettingsDocumentSelection(_ fileURL: URL) {
+        loadFunctionKeys(fileURL)
     }
 
     private var settingsDocumentTableListMode: SettingsDocumentTableSection.ListMode {
@@ -1236,10 +1194,6 @@ struct SettingsScreen: View {
     }
 
     private func loadSelectedDocumentText() {
-        db("[PROBE] loadSelectedDocumentText START \(Date()) listMode=\(listMode.buttonTitle) thread=\(Thread.isMainThread ? "main" : "background")")
-        defer {
-            db("[PROBE] loadSelectedDocumentText END \(Date()) loadedDocumentName=\(loadedDocumentName) textCount=\(documentEditorText.count) thread=\(Thread.isMainThread ? "main" : "background")")
-        }
         isLoadingDocumentText = true
         defer { isLoadingDocumentText = false }
 
@@ -1280,10 +1234,6 @@ struct SettingsScreen: View {
     }
 
     private func saveCurrentDocumentText() {
-        db("[PROBE] saveCurrentDocumentText START \(Date()) loadedDocumentName=\(loadedDocumentName) textCount=\(documentEditorText.count) thread=\(Thread.isMainThread ? "main" : "background")")
-        defer {
-            db("[PROBE] saveCurrentDocumentText END \(Date()) loadedDocumentName=\(loadedDocumentName) thread=\(Thread.isMainThread ? "main" : "background")")
-        }
         guard !loadedDocumentName.isEmpty,
               let fileURL = fileURLForLoadedDocumentName() else {
             return
@@ -1307,21 +1257,13 @@ struct SettingsScreen: View {
     }
 
     private func saveAndReturnToMain(using text: String? = nil) {
-        let saveAndReturnStart = CACurrentMediaTime()
-        db("[PROBE] saveAndReturnToMain START \(Date()) mode=\(listMode.buttonTitle) textOverride=\(text != nil) thread=\(Thread.isMainThread ? "main" : "background")")
         if let text {
             documentEditorText = text
-            db("[PROBE] saveAndReturnToMain saveSelectedDocumentAndReload START \(Date()) source=override textCount=\(text.count) thread=\(Thread.isMainThread ? "main" : "background")")
             saveSelectedDocumentAndReload(text)
-            db("[PROBE] saveAndReturnToMain saveSelectedDocumentAndReload END \(Date()) elapsedMs=\((CACurrentMediaTime() - saveAndReturnStart) * 1000) thread=\(Thread.isMainThread ? "main" : "background")")
         } else {
-            db("[PROBE] saveAndReturnToMain saveSelectedDocumentAndReload START \(Date()) source=editor textCount=\(documentEditorText.count) thread=\(Thread.isMainThread ? "main" : "background")")
             saveSelectedDocumentAndReload(documentEditorText)
-            db("[PROBE] saveAndReturnToMain saveSelectedDocumentAndReload END \(Date()) elapsedMs=\((CACurrentMediaTime() - saveAndReturnStart) * 1000) thread=\(Thread.isMainThread ? "main" : "background")")
         }
-        db("[PROBE] saveAndReturnToMain returnToMain START \(Date()) elapsedMs=\((CACurrentMediaTime() - saveAndReturnStart) * 1000) thread=\(Thread.isMainThread ? "main" : "background")")
         returnToMain()
-        db("[PROBE] saveAndReturnToMain END \(Date()) elapsedMs=\((CACurrentMediaTime() - saveAndReturnStart) * 1000) thread=\(Thread.isMainThread ? "main" : "background")")
     }
 
     private func saveDocumentText(_ text: String, to fileURL: URL) {
@@ -1563,7 +1505,6 @@ struct SettingsScreen: View {
     }
 
     private var availableDocumentURLs: [URL] {
-        SettingsProbeCounters.recordFileEvaluation("document", detail: "mode=\(listMode.buttonTitle)")
         return preferredScreenDocumentURLs(
             from: documentDirectorySnapshot.filter { url in
                 let values = try? url.resourceValues(forKeys: [.isRegularFileKey])
@@ -1573,7 +1514,6 @@ struct SettingsScreen: View {
     }
 
     private var availableTextURLs: [URL] {
-        SettingsProbeCounters.recordFileEvaluation("text", detail: "mode=\(listMode.buttonTitle)")
         return documentDirectorySnapshot
             .filter { url in
                 let values = try? url.resourceValues(forKeys: [.isRegularFileKey])
@@ -1615,7 +1555,6 @@ struct SettingsScreen: View {
     }
 
     private var availableSoundURLs: [URL] {
-        SettingsProbeCounters.recordFileEvaluation("sounds", detail: "mode=\(listMode.buttonTitle)")
         let supportedExtensions = supportedImportedSoundExtensions
 
         return documentDirectorySnapshot
@@ -1627,7 +1566,6 @@ struct SettingsScreen: View {
     }
 
     private var availablePDFURLs: [URL] {
-        SettingsProbeCounters.recordFileEvaluation("pdfs", detail: "mode=\(listMode.buttonTitle)")
         return documentDirectorySnapshot
             .filter { url in
                 let values = try? url.resourceValues(forKeys: [.isRegularFileKey])
@@ -1637,7 +1575,6 @@ struct SettingsScreen: View {
     }
 
     private var availableAllFileURLs: [URL] {
-        SettingsProbeCounters.recordFileEvaluation("all", detail: "mode=\(listMode.buttonTitle)")
         return documentDirectorySnapshot
             .filter { url in
                 let values = try? url.resourceValues(forKeys: [.isRegularFileKey])
@@ -1947,11 +1884,7 @@ struct SettingsScreen: View {
     }
 
     private func selectImage(_ imageURL: URL) {
-        db("[PERF ACTION] selectImage \(imageURL.lastPathComponent) thread=\(Thread.isMainThread ? "main" : "background")")
-        let selectImageStart = CACurrentMediaTime()
-        db("[PROBE] SettingsScreen.selectImage START \(Date()) file=\(imageURL.lastPathComponent) thread=\(Thread.isMainThread ? "main" : "background")")
         persistSelectedImage(imageURL)
-        db("[PROBE] SettingsScreen.selectImage END \(Date()) file=\(imageURL.lastPathComponent) elapsedMs=\((CACurrentMediaTime() - selectImageStart) * 1000) thread=\(Thread.isMainThread ? "main" : "background")")
     }
 
     private func selectSound(_ soundURL: URL) {
@@ -2413,17 +2346,30 @@ struct SettingsScreen: View {
                     let queueBeforeZipExpand = [sourceURL] + session.remainingURLs
                     db("IMPORT_QUEUE_BEFORE_ZIP_EXPAND [\(queueBeforeZipExpand.map { $0.lastPathComponent }.joined(separator: ", "))]")
                     db("IMPORT_QUEUE_BEFORE_REPLACE total=\(session.processedItemCount + session.remainingURLs.count) currentIndex=\(session.processedItemCount) items=[\(queueBeforeZipExpand.map { $0.lastPathComponent }.joined(separator: ", "))]")
-                    let package = try extractScreenPackageImport(from: sourceURL)
-                    session.temporaryImportDirectoryURLs.append(package.temporaryDirectoryURL)
-                    if let configURL = package.configURL {
-                        session.selectedConfigURLsByName[configURL.lastPathComponent.lowercased()] = configURL
+
+                    if let archiveImport = try extractFullArchiveImportIfPresent(from: sourceURL) {
+                        session.importMode = .allFiles
+                        session.importListMode = nil
+                        session.temporaryImportDirectoryURLs.append(archiveImport.temporaryDirectoryURL)
+                        session.selectedConfigURLsByName.merge(archiveImport.configURLsByName) { _, newValue in newValue }
+                        session.remainingURLs = archiveImport.fileURLs + session.remainingURLs
+                        db("IMPORT_QUEUE_AFTER_ZIP_EXPAND [\(session.remainingURLs.map { $0.lastPathComponent }.joined(separator: ", "))]")
+                        db("IMPORT_QUEUE_AFTER_ZIP_EXPAND total=\(session.processedItemCount + session.remainingURLs.count) currentIndex=\(session.processedItemCount)")
+                        db("IMPORT_QUEUE_AFTER_REPLACE total=\(session.processedItemCount + session.remainingURLs.count) currentIndex=\(session.processedItemCount) items=[\(session.remainingURLs.map { $0.lastPathComponent }.joined(separator: ", "))]")
+                        db("IMPORT_TRACE zip_classification=full_archive queued_count=\(archiveImport.fileURLs.count)")
+                    } else {
+                        let package = try extractScreenPackageImport(from: sourceURL)
+                        session.temporaryImportDirectoryURLs.append(package.temporaryDirectoryURL)
+                        if let configURL = package.configURL {
+                            session.selectedConfigURLsByName[configURL.lastPathComponent.lowercased()] = configURL
+                        }
+                        let packageFilePaths = Set([package.documentURL.path, package.configURL?.path].compactMap { $0 })
+                        session.remainingURLs = [package.documentURL] + session.remainingURLs.filter { !packageFilePaths.contains($0.path) }
+                        db("IMPORT_QUEUE_AFTER_ZIP_EXPAND [\(session.remainingURLs.map { $0.lastPathComponent }.joined(separator: ", "))]")
+                        db("IMPORT_QUEUE_AFTER_ZIP_EXPAND total=\(session.processedItemCount + session.remainingURLs.count) currentIndex=\(session.processedItemCount)")
+                        db("IMPORT_QUEUE_AFTER_REPLACE total=\(session.processedItemCount + session.remainingURLs.count) currentIndex=\(session.processedItemCount) items=[\(session.remainingURLs.map { $0.lastPathComponent }.joined(separator: ", "))]")
+                        db("IMPORT_TRACE zip_classification=single_screen_package document=\(package.documentURL.lastPathComponent) config=\(package.configURL?.lastPathComponent ?? "nil")")
                     }
-                    let packageFilePaths = Set([package.documentURL.path, package.configURL?.path].compactMap { $0 })
-                    session.remainingURLs = [package.documentURL] + session.remainingURLs.filter { !packageFilePaths.contains($0.path) }
-                    db("IMPORT_QUEUE_AFTER_ZIP_EXPAND [\(session.remainingURLs.map { $0.lastPathComponent }.joined(separator: ", "))]")
-                    db("IMPORT_QUEUE_AFTER_ZIP_EXPAND total=\(session.processedItemCount + session.remainingURLs.count) currentIndex=\(session.processedItemCount)")
-                    db("IMPORT_QUEUE_AFTER_REPLACE total=\(session.processedItemCount + session.remainingURLs.count) currentIndex=\(session.processedItemCount) items=[\(session.remainingURLs.map { $0.lastPathComponent }.joined(separator: ", "))]")
-                    db("IMPORT_TRACE zip_classification=single_screen_package document=\(package.documentURL.lastPathComponent) config=\(package.configURL?.lastPathComponent ?? "nil")")
                 } catch {
                     db("IMPORT_TRACE zip_classification=invalid_archive filename=\(targetFileName) error=\(error.localizedDescription)")
                     db("Failed to import screen package \(targetFileName): \(error.localizedDescription)")
@@ -2944,6 +2890,12 @@ struct SettingsScreen: View {
 
         cleanupTemporaryImportDirectories(session.temporaryImportDirectoryURLs)
 
+        if session.importMode == .allFiles,
+           session.failedFileCount > 0,
+           renameAlertMessage == nil {
+            renameAlertMessage = "Some files couldn't be restored: \(session.failedFileCount) failed."
+        }
+
         guard session.importedAnything else { return }
 
         markImportedContentChanged()
@@ -3071,26 +3023,28 @@ struct SettingsScreen: View {
     }
 
     private func extractFullArchiveImport(from zipURL: URL) throws -> FullArchiveImport {
+        guard let archiveImport = try extractFullArchiveImportIfPresent(from: zipURL) else {
+            db("IMPORT_TRACE zip_classification=invalid_archive reason=missing_full_archive_structure")
+            throw CocoaError(.fileReadCorruptFile)
+        }
+
+        return archiveImport
+    }
+
+    private func extractFullArchiveImportIfPresent(from zipURL: URL) throws -> FullArchiveImport? {
         db("IMPORT_TRACE full_archive_extraction_started zip=\(zipURL.path)")
         let archiveData = try readImportedFileData(from: zipURL)
         let entries = try SettingsArchiveFileDocument.archiveEntries(from: archiveData)
-        let hasManifest = entries.contains { $0.fileName == "Archive.json" }
-        let hasScreensFolder = entries.contains { $0.fileName.hasPrefix("Screens/") }
-        let hasConfigsFolder = entries.contains { $0.fileName.hasPrefix("Configs/") }
-        let hasTextFolder = entries.contains { $0.fileName.hasPrefix("Text/") }
-        let hasImagesFolder = entries.contains { $0.fileName.hasPrefix("Images/") }
-        let hasSoundsFolder = entries.contains { $0.fileName.hasPrefix("Sounds/") }
-        let hasPDFsFolder = entries.contains { $0.fileName.hasPrefix("PDFs/") }
+        let archiveStructure = fullArchiveStructure(in: entries)
 
-        db("IMPORT_TRACE full_archive_validation Archive.json=\(hasManifest ? "yes" : "no") Screens=\(hasScreensFolder ? "yes" : "no") Configs=\(hasConfigsFolder ? "yes" : "no") Text=\(hasTextFolder ? "yes" : "no") Images=\(hasImagesFolder ? "yes" : "no") Sounds=\(hasSoundsFolder ? "yes" : "no") PDFs=\(hasPDFsFolder ? "yes" : "no")")
+        db("IMPORT_TRACE full_archive_validation Archive.json=\(archiveStructure.hasManifest ? "yes" : "no") Screens=\(archiveStructure.hasScreensFolder ? "yes" : "no") Configs=\(archiveStructure.hasConfigsFolder ? "yes" : "no") Text=\(archiveStructure.hasTextFolder ? "yes" : "no") Images=\(archiveStructure.hasImagesFolder ? "yes" : "no") Sounds=\(archiveStructure.hasSoundsFolder ? "yes" : "no") PDFs=\(archiveStructure.hasPDFsFolder ? "yes" : "no")")
         for entry in entries {
             let fileName = sanitizedArchiveFileName(entry.fileName) ?? "nil"
             db("IMPORT_TRACE extracted_entry relative_path=\(entry.fileName) filename=\(fileName) extension=\(URL(fileURLWithPath: fileName).pathExtension.lowercased())")
         }
 
-        guard hasManifest || hasScreensFolder else {
-            db("IMPORT_TRACE zip_classification=invalid_archive reason=missing_archive_json_and_screens_folder")
-            throw CocoaError(.fileReadCorruptFile)
+        guard archiveStructure.isFullArchive else {
+            return nil
         }
         db("IMPORT_TRACE zip_classification=full_archive")
 
@@ -3165,6 +3119,44 @@ struct SettingsScreen: View {
             try? FileManager.default.removeItem(at: temporaryDirectoryURL)
             throw error
         }
+    }
+
+    private func fullArchiveStructure(
+        in entries: [SettingsArchiveFileDocument.ArchiveEntry]
+    ) -> (
+        hasManifest: Bool,
+        hasScreensFolder: Bool,
+        hasConfigsFolder: Bool,
+        hasTextFolder: Bool,
+        hasImagesFolder: Bool,
+        hasSoundsFolder: Bool,
+        hasPDFsFolder: Bool,
+        isFullArchive: Bool
+    ) {
+        let hasManifest = entries.contains { $0.fileName == "Archive.json" }
+        let hasScreensFolder = entries.contains { $0.fileName.hasPrefix("Screens/") }
+        let hasConfigsFolder = entries.contains { $0.fileName.hasPrefix("Configs/") }
+        let hasTextFolder = entries.contains { $0.fileName.hasPrefix("Text/") }
+        let hasImagesFolder = entries.contains { $0.fileName.hasPrefix("Images/") }
+        let hasSoundsFolder = entries.contains { $0.fileName.hasPrefix("Sounds/") }
+        let hasPDFsFolder = entries.contains { $0.fileName.hasPrefix("PDFs/") }
+        let hasArchiveContentFolder = hasScreensFolder ||
+            hasConfigsFolder ||
+            hasTextFolder ||
+            hasImagesFolder ||
+            hasSoundsFolder ||
+            hasPDFsFolder
+
+        return (
+            hasManifest: hasManifest,
+            hasScreensFolder: hasScreensFolder,
+            hasConfigsFolder: hasConfigsFolder,
+            hasTextFolder: hasTextFolder,
+            hasImagesFolder: hasImagesFolder,
+            hasSoundsFolder: hasSoundsFolder,
+            hasPDFsFolder: hasPDFsFolder,
+            isFullArchive: hasManifest && hasArchiveContentFolder
+        )
     }
 
     private func sanitizedArchiveFileName(_ fileName: String) -> String? {
@@ -3718,7 +3710,6 @@ struct SettingsScreen: View {
     private func loadSpeechVoicesIfNeeded() {
         guard availableSpeechVoices.isEmpty else { return }
 
-        db("[PROBE] loadSpeechVoicesIfNeeded START \(Date()) thread=\(Thread.isMainThread ? "main" : "background")")
         let loadedVoices = AVSpeechSynthesisVoice.speechVoices()
             .map { voice in
                 let localeName = Locale.current.localizedString(forIdentifier: voice.language) ?? voice.language
@@ -3736,7 +3727,6 @@ struct SettingsScreen: View {
             loadedVoices,
             selectedIdentifier: selectedTextToSpeechVoiceIdentifier
         )
-        db("[PROBE] loadSpeechVoicesIfNeeded END \(Date()) voicesReturned=\(loadedVoices.count) orderedCount=\(availableSpeechVoices.count) thread=\(Thread.isMainThread ? "main" : "background")")
     }
 
     private func orderedSpeechVoices(_ voices: [SpeechVoiceOption], selectedIdentifier: String) -> [SpeechVoiceOption] {

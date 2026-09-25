@@ -194,24 +194,130 @@ struct SettingsToolbarButton: View {
     let isEnabled: Bool
     let action: () -> Void
 
+    @ViewBuilder
     var body: some View {
-        Button(title) {
-            ButtonClickFeedback.playIfEnabled()
+        if #available(iOS 18, *) {
+            Button(title) {
+                ButtonClickFeedback.playIfEnabled()
+                action()
+            }
+            .disabled(!isEnabled)
+            .font(.headline)
+            .foregroundStyle(isEnabled ? .white : Color(white: 0.8))
+            .padding(.horizontal, 5)
+            .frame(minWidth: minWidth, minHeight: 36)
+            .background(isEnabled ? backgroundColor : Color.gray.opacity(0.45))
+            .overlay {
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(Color.gray.opacity(0.5), lineWidth: 1.5)
+            }
+            .clipShape(.rect(cornerRadius: 12))
+            .contentShape(.rect)
+            .opacity(isEnabled ? 1 : 0.75)
+        } else {
+            SettingsUIKitVisualButton(
+                title: title,
+                backgroundColor: backgroundColor,
+                width: minWidth,
+                height: 36,
+                isEnabled: isEnabled,
+                fontStyle: .headline,
+                titleColor: isEnabled ? .white : UIColor(white: 0.8, alpha: 1),
+                adjustsFontSizeToFitWidth: false,
+                contentInsets: UIEdgeInsets(top: 0, left: 5, bottom: 0, right: 5)
+            ) {
+                ButtonClickFeedback.playIfEnabled()
+                action()
+            }
+        }
+    }
+}
+
+struct SettingsUIKitVisualButton: View {
+    let title: String
+    let backgroundColor: Color
+    let width: CGFloat
+    let height: CGFloat
+    let isEnabled: Bool
+    let fontStyle: UIFont.TextStyle
+    let titleColor: UIColor
+    let adjustsFontSizeToFitWidth: Bool
+    let contentInsets: UIEdgeInsets
+    let action: () -> Void
+
+    var body: some View {
+        SettingsUIKitVisualButtonRepresentable(
+            title: title,
+            backgroundColor: backgroundColor,
+            isEnabled: isEnabled,
+            fontStyle: fontStyle,
+            titleColor: titleColor,
+            adjustsFontSizeToFitWidth: adjustsFontSizeToFitWidth,
+            contentInsets: contentInsets,
+            action: action
+        )
+        .frame(width: width, height: height)
+    }
+}
+
+private struct SettingsUIKitVisualButtonRepresentable: UIViewRepresentable {
+    let title: String
+    let backgroundColor: Color
+    let isEnabled: Bool
+    let fontStyle: UIFont.TextStyle
+    let titleColor: UIColor
+    let adjustsFontSizeToFitWidth: Bool
+    let contentInsets: UIEdgeInsets
+    let action: () -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(action: action)
+    }
+
+    func makeUIView(context: Context) -> UIButton {
+        let button = UIButton(type: .system)
+        button.titleLabel?.textAlignment = .center
+        button.titleLabel?.lineBreakMode = .byTruncatingTail
+        button.titleLabel?.adjustsFontSizeToFitWidth = adjustsFontSizeToFitWidth
+        button.titleLabel?.minimumScaleFactor = adjustsFontSizeToFitWidth ? 0.7 : 1
+        button.contentEdgeInsets = contentInsets
+        button.layer.cornerRadius = 12
+        button.layer.borderWidth = 1.5
+        button.layer.borderColor = UIColor.gray.withAlphaComponent(0.5).cgColor
+        button.clipsToBounds = true
+        button.addTarget(context.coordinator, action: #selector(Coordinator.buttonTapped), for: .touchUpInside)
+        return button
+    }
+
+    func updateUIView(_ button: UIButton, context: Context) {
+        context.coordinator.action = action
+        button.setTitle(title, for: .normal)
+        button.setTitleColor(titleColor, for: .normal)
+        button.titleLabel?.font = .preferredFont(forTextStyle: fontStyle)
+        button.titleLabel?.adjustsFontSizeToFitWidth = adjustsFontSizeToFitWidth
+        button.titleLabel?.minimumScaleFactor = adjustsFontSizeToFitWidth ? 0.7 : 1
+        button.contentEdgeInsets = contentInsets
+        button.backgroundColor = isEnabled ? UIColor(backgroundColor) : UIColor.gray.withAlphaComponent(0.45)
+        button.isEnabled = isEnabled
+        button.alpha = isEnabled ? 1 : 0.75
+    }
+
+    func sizeThatFits(_ proposal: ProposedViewSize, uiView: UIButton, context: Context) -> CGSize? {
+        let width = proposal.width ?? uiView.intrinsicContentSize.width
+        let height = proposal.height ?? uiView.intrinsicContentSize.height
+        return CGSize(width: width, height: height)
+    }
+
+    final class Coordinator: NSObject {
+        var action: () -> Void
+
+        init(action: @escaping () -> Void) {
+            self.action = action
+        }
+
+        @objc func buttonTapped() {
             action()
         }
-        .disabled(!isEnabled)
-        .font(.headline)
-        .foregroundStyle(isEnabled ? .white : Color(white: 0.8))
-        .padding(.horizontal, 5)
-        .frame(minWidth: minWidth, minHeight: 36)
-        .background(isEnabled ? backgroundColor : Color.gray.opacity(0.45))
-        .overlay {
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.gray.opacity(0.5), lineWidth: 1.5)
-        }
-        .clipShape(.rect(cornerRadius: 12))
-        .contentShape(.rect)
-        .opacity(isEnabled ? 1 : 0.75)
     }
 }
 

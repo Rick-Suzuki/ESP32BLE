@@ -35,7 +35,6 @@ struct KeyboardScreen: View {
     @State var immediateTypingPreviewTask: Task<Void, Never>?
 
     var body: some View {
-        let _ = SettingsProbeCounters.record("KeyboardScreen.body", detail: "presented=\(isPresented)")
         VStack(spacing: 0) {
             topSection
        //     Divider()
