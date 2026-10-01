@@ -181,7 +181,9 @@ struct MainScreenBottomBar: View {
     let speechRecognitionDisplayText: String
     let speechRecognitionDisplayColor: Color
     let isSpeechRecognitionEnabled: Bool
+    let outputMode: OutputMode
     let isBluetoothConnected: Bool
+    let isMacConnected: Bool
     let mainGridButtonMode: MainGridButtonMode
     let displayMode: FunctionKeyDisplayMode
     let displayModeButtonColor: Color
@@ -578,15 +580,34 @@ struct MainScreenBottomBar: View {
     }
 
     private func bluetoothIndicatorColor(at date: Date) -> Color {
-        guard !isBluetoothConnected else {
-            guard isGridEditModeEnabled else {
-                return .blue
-            }
-
-            return isIndicatorPulseVisible(at: date, activeFraction: 0.5) ? .blue : .black
+        guard selectedTransportIsConnected else {
+            return isIndicatorPulseVisible(at: date, activeFraction: 0.1) ? .red : .black
         }
 
-        return isIndicatorPulseVisible(at: date, activeFraction: 0.1) ? .red : .black
+        let connectedColor = selectedTransportConnectedColor
+        guard isGridEditModeEnabled else {
+            return connectedColor
+        }
+
+        return isIndicatorPulseVisible(at: date, activeFraction: 0.5) ? connectedColor : .black
+    }
+
+    private var selectedTransportIsConnected: Bool {
+        switch outputMode {
+        case .esp32:
+            return isBluetoothConnected
+        case .mac:
+            return isMacConnected
+        }
+    }
+
+    private var selectedTransportConnectedColor: Color {
+        switch outputMode {
+        case .esp32:
+            return .blue
+        case .mac:
+            return .green
+        }
     }
 
     private func isIndicatorPulseVisible(at date: Date, activeFraction: Double) -> Bool {

@@ -71,26 +71,16 @@ extension MainScreen {
                 return true
             }
 
-            guard mainGridButtonMode.sendsBluetooth, !bluetoothSendTexts.isEmpty else {
-                return true
-            }
-
-            guard ble.isConnected else {
-                alertTitle = "Bluetooth not connected"
-                renameAlertMessage = "Bluetooth needs to be connected\nin order to send data to the ESP32."
+            guard sendKeyboardOutputTokens(
+                bluetoothSendTexts,
+                respectsButtonMode: true
+            ) else {
                 return false
             }
 
-            guard bluetoothSendTexts.allSatisfy(isBluetoothSendableText(_:)) else {
-                showBluetoothUnsupportedTextBlockedPopup()
-                return false
+            if mainGridButtonMode.sendsBluetooth && !bluetoothSendTexts.isEmpty {
+                didSendBluetooth = true
             }
-
-            for sendText in bluetoothSendTexts {
-                ble.sendLine(sendText)
-            }
-
-            didSendBluetooth = true
             return true
         }
 
@@ -313,11 +303,10 @@ extension MainScreen {
             return
         }
 
-        ble.sendLine("ct")
-        ble.sendLine("sh")
-        ble.sendLine("op")
-        ble.sendLine("cm")
-        ble.sendLine(functionKey)
+        _ = sendKeyboardOutputTokens(
+            ["ct", "sh", "op", "cm", functionKey],
+            respectsButtonMode: false
+        )
     }
 
     var speechRecognitionDisplayText: String {

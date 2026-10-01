@@ -36,12 +36,20 @@ extension KeyboardScreen {
         }
 
         if isSendImmediatelyEnabled {
-            guard ble.isConnected else {
-                showBluetoothDisconnectedPopup()
-                return
+            if outputMode == .mac {
+                guard macConnection.sendKeyboardTokens([insertedText]) else {
+                    showMacDisconnectedPopup()
+                    return
+                }
+            } else {
+                guard ble.isConnected else {
+                    showBluetoothDisconnectedPopup()
+                    return
+                }
+
+                ble.sendString(insertedText)
             }
 
-            ble.sendString(insertedText)
             showImmediateTypingPreview(insertedText)
             return
         }
@@ -53,12 +61,20 @@ extension KeyboardScreen {
 
     func handleBackspace() {
         if isSendImmediatelyEnabled {
-            guard ble.isConnected else {
-                showBluetoothDisconnectedPopup()
-                return
+            if outputMode == .mac {
+                guard macConnection.sendKeyboardTokens(["BS"]) else {
+                    showMacDisconnectedPopup()
+                    return
+                }
+            } else {
+                guard ble.isConnected else {
+                    showBluetoothDisconnectedPopup()
+                    return
+                }
+
+                ble.pressBackspace()
             }
 
-            ble.pressBackspace()
             showImmediateTypingPreview("⏪")
             return
         }
@@ -75,12 +91,20 @@ extension KeyboardScreen {
 
     func handleReturn() {
         guard isSendOnReturnMode else {
-            guard ble.isConnected else {
-                showBluetoothDisconnectedPopup()
-                return
+            if outputMode == .mac {
+                guard macConnection.sendKeyboardTokens(["ENTER"]) else {
+                    showMacDisconnectedPopup()
+                    return
+                }
+            } else {
+                guard ble.isConnected else {
+                    showBluetoothDisconnectedPopup()
+                    return
+                }
+
+                ble.pressEnter()
             }
 
-            ble.pressEnter()
             showImmediateTypingPreview("➡️")
             return
         }

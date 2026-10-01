@@ -2,6 +2,8 @@ import SwiftUI
 
 struct SettingsBottomControlsSection: View {
     @ObservedObject var ble: BLEKeyboardManager
+    @ObservedObject var macConnection: MacConnectionManager
+    @Binding var outputModeRawValue: String
     @Binding var keepScreenAwake: Bool
     @Binding var isButtonClickEnabled: Bool
     @Binding var isBluetoothMonitorMode: Bool
@@ -12,6 +14,8 @@ struct SettingsBottomControlsSection: View {
     var body: some View {
         SettingsAvailableDevicesPanel(
             ble: ble,
+            macConnection: macConnection,
+            outputModeRawValue: $outputModeRawValue,
             keepScreenAwake: $keepScreenAwake,
             isButtonClickEnabled: $isButtonClickEnabled,
             isBluetoothMonitorMode: $isBluetoothMonitorMode,

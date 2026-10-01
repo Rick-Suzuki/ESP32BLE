@@ -554,6 +554,7 @@
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_LSSupportsOpeningDocumentsInPlace = YES;
 				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "This app uses BT to connect to ESP32";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "ESP uses the local network to send keyboard commands to ESP Mac Helper.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "This app listens for spoken commands so it can trigger matching ESP32 actions.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "This app recognizes spoken phrases and matches them to ESP32 button text.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -595,6 +596,7 @@
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_LSSupportsOpeningDocumentsInPlace = YES;
 				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "This app uses BT to connect to ESP32";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "ESP uses the local network to send keyboard commands to ESP Mac Helper.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "This app listens for spoken commands so it can trigger matching ESP32 actions.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "This app recognizes spoken phrases and matches them to ESP32 button text.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;

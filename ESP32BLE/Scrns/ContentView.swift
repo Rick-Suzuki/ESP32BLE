@@ -3,6 +3,8 @@ import SwiftUI
 import AudioToolbox
 import UIKit
 import ImageIO
+import Network
+import Combine
 
 
 let maxGridDimension = 20
@@ -37,6 +39,239 @@ enum ButtonClickFeedback {
         let isEnabled = UserDefaults.standard.object(forKey: preferenceKey) as? Bool ?? true
         guard isEnabled else { return }
         AudioServicesPlaySystemSound(soundID)
+    }
+}
+
+enum OutputMode: String, CaseIterable {
+    case esp32
+    case mac
+
+    init(persistedValue: String) {
+        self = OutputMode(rawValue: persistedValue) ?? .esp32
+    }
+
+    var title: String {
+        switch self {
+        case .esp32:
+            return "ESP32"
+        case .mac:
+            return "Mac"
+        }
+    }
+}
+
+@MainActor
+final class MacConnectionManager: ObservableObject {
+    enum ConnectionStatus: String {
+        case searching = "Searching"
+        case connecting = "Connecting"
+        case connected = "Connected"
+    }
+
+    static let serviceType = "_esp-network-test._tcp"
+
+    @Published private(set) var status: ConnectionStatus = .searching
+
+    private let queue = DispatchQueue(label: "MacConnectionManager")
+    private var browser: NWBrowser?
+    private var connection: NWConnection?
+    private var isDeliberatelyStopped = false
+
+    var canSend: Bool {
+        status == .connected
+    }
+
+    func start() {
+        isDeliberatelyStopped = false
+        guard browser == nil, connection == nil else { return }
+
+        status = .searching
+
+        let parameters = NWParameters.tcp
+        parameters.includePeerToPeer = true
+
+        let browser = NWBrowser(for: .bonjour(type: Self.serviceType, domain: nil), using: parameters)
+        self.browser = browser
+
+        browser.stateUpdateHandler = { [weak self] state in
+            guard let self else { return }
+
+            if case .failed = state {
+                Task { @MainActor in
+                    guard !self.isDeliberatelyStopped else { return }
+                    self.restartSearch()
+                }
+            }
+        }
+
+        browser.browseResultsChangedHandler = { [weak self] results, _ in
+            guard let endpoint = results.first?.endpoint else { return }
+            guard let self else { return }
+
+            Task { @MainActor in
+                self.connect(to: endpoint)
+            }
+        }
+
+        browser.start(queue: queue)
+    }
+
+    func stop() {
+        isDeliberatelyStopped = true
+        browser?.cancel()
+        browser = nil
+        connection?.cancel()
+        connection = nil
+        status = .searching
+    }
+
+    func sendKeyboardTokens(_ tokens: [String]) -> Bool {
+        let messages = macMessages(from: tokens)
+        guard !messages.isEmpty else {
+            return true
+        }
+
+        guard canSend else {
+            return false
+        }
+
+        for message in messages {
+            send(message)
+        }
+
+        return true
+    }
+
+    private func send(_ message: String) {
+        guard let connection, canSend, let data = message.data(using: .utf8) else { return }
+
+        connection.send(content: data, completion: .contentProcessed { [weak self] error in
+            guard let self, error != nil else { return }
+
+            Task { @MainActor in
+                guard !self.isDeliberatelyStopped else { return }
+                self.restartSearch()
+            }
+        })
+    }
+
+    private func connect(to endpoint: NWEndpoint) {
+        guard connection == nil else { return }
+
+        browser?.cancel()
+        browser = nil
+        status = .connecting
+
+        let parameters = NWParameters.tcp
+        parameters.includePeerToPeer = true
+
+        let connection = NWConnection(to: endpoint, using: parameters)
+        self.connection = connection
+
+        connection.stateUpdateHandler = { [weak self] state in
+            guard let self else { return }
+
+            Task { @MainActor in
+                self.handleConnectionState(state)
+            }
+        }
+
+        connection.start(queue: queue)
+    }
+
+    private func handleConnectionState(_ state: NWConnection.State) {
+        switch state {
+        case .ready:
+            status = .connected
+        case .failed, .cancelled:
+            if !isDeliberatelyStopped {
+                restartSearch()
+            }
+        default:
+            break
+        }
+    }
+
+    private func restartSearch() {
+        connection?.cancel()
+        connection = nil
+        browser?.cancel()
+        browser = nil
+        status = .searching
+        start()
+    }
+
+    private func macMessages(from tokens: [String]) -> [String] {
+        var messages: [String] = []
+        var modifiers: [String] = []
+
+        for token in tokens {
+            let trimmedToken = token.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmedToken.isEmpty else {
+                continue
+            }
+
+            if let modifier = macModifierName(for: trimmedToken) {
+                if !modifiers.contains(modifier) {
+                    modifiers.append(modifier)
+                }
+                continue
+            }
+
+            messages.append(macMessage(for: trimmedToken, modifiers: modifiers))
+            modifiers.removeAll()
+        }
+
+        return messages
+    }
+
+    private func macMessage(for token: String, modifiers: [String]) -> String {
+        let upperToken = token.uppercased()
+
+        if !modifiers.isEmpty {
+            return (modifiers + [upperToken]).joined(separator: "+")
+        }
+
+        if upperToken == "RET" || upperToken == "RETURN" || upperToken == "ENTER" {
+            return "KEY:RETURN"
+        }
+
+        if upperToken == "BS" || upperToken == "BACKSPACE" || upperToken == "DELETE" {
+            return "KEY:BACKSPACE"
+        }
+
+        if upperToken == "CA" {
+            return "CTRL+A"
+        }
+
+        if upperToken == "UP" || upperToken == "DOWN" || upperToken == "LEFT" || upperToken == "RIGHT" {
+            return "KEY:\(upperToken)"
+        }
+
+        if upperToken.hasPrefix("F"), upperToken.dropFirst().allSatisfy(\.isNumber) {
+            return "KEY:\(upperToken)"
+        }
+
+        if upperToken.count == 1, upperToken.unicodeScalars.allSatisfy(CharacterSet.letters.contains) {
+            return "KEY:\(upperToken)"
+        }
+
+        return "TEXT:\(token)"
+    }
+
+    private func macModifierName(for token: String) -> String? {
+        switch token.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+        case "ct", "ctl", "ctrl", "control":
+            return "CTRL"
+        case "op", "opt", "option":
+            return "OPT"
+        case "sh", "shift":
+            return "SHIFT"
+        case "cm", "cmd", "command":
+            return "CMD"
+        default:
+            return nil
+        }
     }
 }
 
@@ -155,7 +390,9 @@ struct ContentView: View {
     @AppStorage("documentGridDimensionsData") private var documentGridDimensionsData = ""
     @AppStorage("backgroundImageOpacity") private var backgroundImageOpacity = 0.5
     @AppStorage("mainGridBackgroundOpacity") private var mainGridBackgroundOpacity = 1.0
+    @AppStorage("outputMode") private var outputModeRawValue = OutputMode.esp32.rawValue
     @StateObject private var ble = BLEKeyboardManager()
+    @StateObject private var macConnection = MacConnectionManager()
     @State private var functionKeys = ContentView.makeDefaultFunctionKeys()
     @State private var functionKeySlotLines = ContentView.defaultFunctionKeyTitles()
     @State private var loadedFunctionKeySlotCount = defaultNamedFunctionKeyCount
@@ -185,7 +422,12 @@ struct ContentView: View {
                 let containerHeight = geometry.size.height.isFinite ? max(0, geometry.size.height) : 0
 
                 ZStack {
-                    KeyboardScreen(ble: ble, isPresented: isKeyboardScreenPresented) {
+                    KeyboardScreen(
+                        ble: ble,
+                        macConnection: macConnection,
+                        outputMode: OutputMode(persistedValue: outputModeRawValue),
+                        isPresented: isKeyboardScreenPresented
+                    ) {
                         withAnimation(.easeInOut(duration: 0.25)) {
                             isKeyboardScreenPresented = false
                         }
@@ -197,6 +439,8 @@ struct ContentView: View {
 
                     MainScreen(
                         ble: ble,
+                        macConnection: macConnection,
+                        outputMode: OutputMode(persistedValue: outputModeRawValue),
                         functionKeys: functionKeys,
                         documentFiles: documentFiles,
                         selectedDocumentName: selectedDocumentName,
@@ -293,6 +537,7 @@ struct ContentView: View {
             refreshBackgroundImageFiles()
             updateLoadedBackgroundImageForVisibleScreen()
             refreshOrientationState()
+            updateMacConnectionStateForOutputMode()
         }
         .task {
             UIDevice.current.beginGeneratingDeviceOrientationNotifications()
@@ -327,7 +572,19 @@ struct ContentView: View {
                 saveBackgroundImageOpacity(for: selectedDocumentName)
             }
         }
+        .onChange(of: outputModeRawValue) {
+            updateMacConnectionStateForOutputMode()
+        }
     }
+
+    private func updateMacConnectionStateForOutputMode() {
+        if OutputMode(persistedValue: outputModeRawValue) == .mac {
+            macConnection.start()
+        } else {
+            macConnection.stop()
+        }
+    }
+
     private func refreshOrientationState() {
         if let activeScene = UIApplication.shared.connectedScenes
             .compactMap({ $0 as? UIWindowScene })
@@ -2378,6 +2635,8 @@ struct ContentView: View {
     private var launchedSettingsScreen: some View {
         SettingsScreen(
             ble: ble,
+            macConnection: macConnection,
+            outputModeRawValue: $outputModeRawValue,
             documentFiles: documentFiles,
             documentDirectorySnapshot: documentDirectorySnapshot,
             selectedDocumentName: selectedDocumentName,

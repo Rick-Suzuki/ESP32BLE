@@ -142,6 +142,8 @@ struct SettingsScreen: View {
     @AppStorage("keepScreenAwake") private var keepScreenAwake = false
     private let timingLabelWidth = 90.0
     @ObservedObject var ble: BLEKeyboardManager
+    @ObservedObject var macConnection: MacConnectionManager
+    @Binding var outputModeRawValue: String
     let documentFiles: [URL]
     let documentDirectorySnapshot: [URL]
     let selectedDocumentName: String
@@ -803,6 +805,8 @@ struct SettingsScreen: View {
     private var availableDevicesContent: some View {
         SettingsBottomControlsSection(
             ble: ble,
+            macConnection: macConnection,
+            outputModeRawValue: $outputModeRawValue,
             keepScreenAwake: $keepScreenAwake,
             isButtonClickEnabled: $isButtonClickEnabled,
             isBluetoothMonitorMode: $isBluetoothMonitorMode,

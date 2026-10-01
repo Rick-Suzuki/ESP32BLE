@@ -1,63 +1,112 @@
 FILES CHANGED
 
+ESP32BLE/Scrns/ContentView.swift
 ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift
+ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
+ESP32BLE/Scrns/Main_Screen/Speech Recognition/SR_Support.swift
+ESP32BLE/Scrns/Main_Screen/Toolbars/Main_BtmToolbar.swift
+ESP32BLE/Scrns/Set_Screen/Btm_Area/Set_AvailableDevices.swift
+ESP32BLE/Scrns/Set_Screen/Btm_Area/Set_SendTextSupport.swift
 
-Added one small MainScreen-level routing helper and routed the primary programmable MainScreen keyboard-output sends through it. No other production source files were changed by me.
+SPEECH RECOGNITION
 
-Note: ESP32BLE/codex.txt was already dirty in the worktree and was not touched.
+New routing path:
 
-NEW ROUTING BOUNDARY
+recognized speech
+-> matchingSpeechEntry(for:)
+-> bluetoothSendTexts(for:)
+-> sendKeyboardOutputTokens(...)
+-> ESP32/BLE or MacConnectionManager
 
-private func sendKeyboardOutputTokens(
-_ tokens: [String],
+applyRecognizedSpeech(_:) no longer checks BLE or calls ble.sendLine directly.
 
-respectsButtonMode: Bool
+sendModifierFunctionKey(_:) now routes ["ct", "sh", "op", "cm", functionKey] through sendKeyboardOutputTokens(...). No caller was added.
 
-) -> Bool
+SMART EDITOR TEST
 
-Current Stage 1 branch remains ESP32/BLE only. The helper still ends at:
+testEditingSlotText() non-wait output now calls sendKeyboardOutputTokens(..., respectsButtonMode: false).
 
-ble.sendLine(keyboardOutputToken)
+Mac mode no longer requires BLE for this test path. Wait behavior and parsing were preserved.
 
-CALL SITES ROUTED
+SETTINGS TEXT SEND
 
-1. MainScreen.sendMainGridEntry(_:)
-The nested sendBluetoothIfNeeded() now calls sendKeyboardOutputTokens(..., respectsButtonMode: true).
+sendEnteredText() now follows outputModeRawValue.
 
-2. sendBluetoothCommandToken(_:respectsBluetoothMode:)
-Still preserves the wait-chain single-token normalization/empty-token behavior, then routes through sendKeyboardOutputTokens(...).
+ESP32 selected:
+ca, if enabled, still sends through ble.sendLine("ca")
+text still sends through ble.sendString(trimmedText)
 
-3. mainGridButtonLabel(...)
-The timer-completion send closure now calls sendKeyboardOutputTokens(..., respectsButtonMode: false), preserving its previous behavior of not consulting mainGridButtonMode.
+Mac selected:
+["ca", text] or [text] goes through macConnection.sendKeyboardTokens(...)
 
-ESP32 BEHAVIOR
+ESP32 keyboard timing configuration remains BLE-only and was not changed.
 
-Existing behavior is preserved:
-mainGridButtonMode.sendsBluetooth is still honored where it was honored before.
-ble.isConnected is still checked before sending.
-isBluetoothSendableText is still checked before sending.
-normalizedBluetoothSendText(_:) is still used.
-Final output still calls ble.sendLine(...).
-Wait/delay chain timing/order remains in runWaitChainCommandTokens(...) and was not redesigned.
+OUTPUT MODE SWITCHING
+
+Press ESP32:
+selects ESP32 output mode
+calls macConnection.stop()
+does not auto-connect BLE
+leaves ESP32 device selection/connection to the device rows
+
+Press Mac:
+selects Mac output mode
+calls ble.disconnect()
+calls macConnection.start()
+
+Pressing the already-selected mode does not disconnect that mode. Pressing Mac while already in Mac mode may call start(), which is safe and preserves connection establishment.
+
+Deliberate Mac disconnect:
+MacConnectionManager now tracks an intentional stop. Browser failure, connection cancellation/failure, and send-completion errors do not restart search while deliberately stopped. Accidental/network loss still uses existing restart behavior.
+
+BLE reconnect:
+Selecting Mac calls ble.disconnect(). BLE scanning may continue through existing BLE manager behavior, but this does not immediately reconnect unless the existing device-selection flow requests a connection.
+
+DISCONNECT BUTTON
+
+Removed the explicit ESP32 disconnect UI button: the red xmark button above/near the ESP32 device area in SettingsAvailableDevicesPanel.
+
+BLEKeyboardManager.disconnect() remains intact and is still used internally when switching to Mac mode.
+
+BUTTON COLORS
+
+Selected ESP32 mode button is now blue.
+
+Selected Mac mode keeps the existing green selected appearance.
+
+Inactive mode buttons keep the existing gray appearance.
+
+MAINSCREEN LED
+
+The LED now represents the selected transport only.
+
+ESP32 selected + BLE connected: blue
+Mac selected + Mac helper canSend: green
+Selected transport disconnected: existing flashing red/black
+
+Grid edit mode still pulses, now using the selected transport’s connected color.
+
+DORMANT CODE
+
+TestArea.swift was not modified.
+CommandButtonsSection.swift was not modified.
+PhraseButtonsSection.swift was not modified.
 
 UNCHANGED
 
-BLEKeyboardManager: untouched.
-FunctionKeyEntry: untouched.
-.screen parsing/syntax: untouched.
-Network.framework: not added.
-MacConnectionManager: not created.
-Settings/output-mode UI: not added.
-iPadOS 17 performance code: untouched.
+Mac Helper untouched.
+F20 / SecondaryFn behavior untouched.
+Network protocol, Bonjour service, and Mac wire protocol untouched.
+.screen syntax and FunctionKeyEntry parsing untouched.
+ESP32 firmware untouched.
+iPadOS 17 performance work untouched.
 
 BUILD RESULT
 
-Final Xcode build succeeded.
+Production ESP build succeeded.
 
-Warnings reported by Xcode, not caused by this change:
-Main_Screen.swift:1295 unused immutable value selectedHomeDocument.
-App validation warning: all interface orientations must be supported unless the app requires full screen.
+Errors: none.
+New warnings caused by this work: none reported.
 
-git diff --check passed.
-
-Stage 1 is now a pure routing seam, with ESP32/BLE still the sole output.
+Known unrelated live diagnostic still exists:
+unused selectedHomeDocument in Main_Screen.swift.

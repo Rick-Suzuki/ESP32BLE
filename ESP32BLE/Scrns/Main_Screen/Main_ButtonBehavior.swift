@@ -418,7 +418,7 @@ extension MainScreen {
         )
     }
 
-    private func sendKeyboardOutputTokens(
+    func sendKeyboardOutputTokens(
         _ tokens: [String],
         respectsButtonMode: Bool
     ) -> Bool {
@@ -429,6 +429,16 @@ extension MainScreen {
         let keyboardOutputTokens = tokens.map(normalizedBluetoothSendText)
 
         guard !keyboardOutputTokens.isEmpty else {
+            return true
+        }
+
+        if outputMode == .mac {
+            guard macConnection.sendKeyboardTokens(keyboardOutputTokens) else {
+                alertTitle = "Mac helper not connected"
+                renameAlertMessage = "ESP needs to connect to ESP Mac Helper before sending keyboard output to the Mac."
+                return false
+            }
+
             return true
         }
 

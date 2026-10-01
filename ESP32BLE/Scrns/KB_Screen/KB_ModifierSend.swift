@@ -9,6 +9,10 @@ extension KeyboardScreen {
         popupMessage = bluetoothDisconnectedPopupMessage
     }
 
+    func showMacDisconnectedPopup() {
+        popupMessage = "Mac helper not connected.\nESP needs to connect to ESP Mac Helper before\nsending keyboard output to the Mac."
+    }
+
     var activeModifierTokens: [String] {
         KeyboardModifier.orderedCases
             .filter { activeModifiers.contains($0) }
@@ -46,7 +50,21 @@ extension KeyboardScreen {
             return
         }
 
-        sendTokensDirectlyToBLE(normalizedTokens)
+        sendTokensDirectly(normalizedTokens)
+    }
+
+    func sendTokensDirectly(_ tokens: [String]) {
+        if outputMode == .mac {
+            guard macConnection.sendKeyboardTokens(tokens) else {
+                showMacDisconnectedPopup()
+                return
+            }
+
+            resetModifierToggles()
+            return
+        }
+
+        sendTokensDirectlyToBLE(tokens)
     }
 
     func sendTokensDirectlyToBLE(_ tokens: [String]) {
@@ -68,6 +86,15 @@ extension KeyboardScreen {
             return
         }
 
+        if outputMode == .mac {
+            guard macConnection.sendKeyboardTokens([typingText]) else {
+                showMacDisconnectedPopup()
+                return
+            }
+
+            return
+        }
+
         guard ble.isConnected else {
             showBluetoothDisconnectedPopup()
             return
@@ -78,7 +105,7 @@ extension KeyboardScreen {
 
     func sendBufferedKeyboardContent() {
         if !bufferedSoftKeyTokens.isEmpty {
-            sendTokensDirectlyToBLE(bufferedSoftKeyTokens)
+            sendTokensDirectly(bufferedSoftKeyTokens)
             clearTypingArea()
             return
         }

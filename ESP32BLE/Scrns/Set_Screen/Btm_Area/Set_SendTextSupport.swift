@@ -52,6 +52,16 @@ extension SettingsScreen {
             return
         }
 
+        if OutputMode(persistedValue: outputModeRawValue) == .mac {
+            let tokens = sendControlABeforeText ? ["ca", trimmedText] : [trimmedText]
+            guard macConnection.sendKeyboardTokens(tokens) else {
+                db("Mac helper not connected.")
+                return
+            }
+
+            return
+        }
+
         guard ble.isConnected else {
             db("Bluetooth not connected.")
             return

@@ -2,6 +2,8 @@ import SwiftUI
 
 struct SettingsAvailableDevicesPanel: View {
     @ObservedObject var ble: BLEKeyboardManager
+    @ObservedObject var macConnection: MacConnectionManager
+    @Binding var outputModeRawValue: String
     @Binding var keepScreenAwake: Bool
     @Binding var isButtonClickEnabled: Bool
     @Binding var isBluetoothMonitorMode: Bool
@@ -12,26 +14,12 @@ struct SettingsAvailableDevicesPanel: View {
     var body: some View {
         HStack(alignment: .top, spacing: 32) {
             VStack(alignment: .leading, spacing: 12) {
-                HStack(spacing: 12) {
-                    if isPad {
-                        Text("ESP32")
-                            .font(.headline)
-                    }
-
-                    Button {
-                        ButtonClickFeedback.playIfEnabled()
-                        ble.disconnect()
-                    } label: {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundStyle(ble.isConnected ? .white : Color.gray)
-                            .frame(width: 30, height: 30)
-                            .background(ble.isConnected ? Color.red : Color.gray.opacity(0.45))
-                            .clipShape(Circle())
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(!ble.isConnected)
+                if isPad {
+                    Text("ESP32")
+                        .font(.headline)
                 }
+
+                outputModeControls
 
                 if ble.discoveredDevices.isEmpty {
                     Text("No ESP32 devices found yet")
@@ -100,6 +88,70 @@ struct SettingsAvailableDevicesPanel: View {
             .fixedSize(horizontal: false, vertical: true)
         }
         .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private var outputModeControls: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                outputModeButton(.esp32)
+                outputModeButton(.mac)
+            }
+
+            Text("Mac: \(macConnection.status.rawValue)")
+                .font(.caption)
+                .foregroundStyle(outputMode == .mac ? .white : .secondary)
+        }
+    }
+
+    private func outputModeButton(_ mode: OutputMode) -> some View {
+        Button(mode.title) {
+            ButtonClickFeedback.playIfEnabled()
+            selectOutputMode(mode)
+        }
+        .buttonStyle(.plain)
+        .font(.headline)
+        .foregroundStyle(.white)
+        .lineLimit(1)
+        .minimumScaleFactor(0.7)
+        .padding(.horizontal, 12)
+        .frame(width: 78, height: settingsActionButtonHeight-10)
+        .background(outputModeButtonBackground(for: mode))
+        .clipShape(.rect(cornerRadius: 18))
+    }
+
+    private func selectOutputMode(_ mode: OutputMode) {
+        guard outputMode != mode else {
+            if mode == .mac {
+                macConnection.start()
+            }
+            return
+        }
+
+        outputModeRawValue = mode.rawValue
+
+        switch mode {
+        case .esp32:
+            macConnection.stop()
+        case .mac:
+            ble.disconnect()
+            macConnection.start()
+        }
+    }
+
+    private func outputModeButtonBackground(for mode: OutputMode) -> Color {
+        guard outputMode == mode else {
+            return Color.gray.opacity(0.45)
+        }
+
+        if mode == .esp32 {
+            return .blue
+        }
+
+        return Color.green.opacity(0.6)
+    }
+
+    private var outputMode: OutputMode {
+        OutputMode(persistedValue: outputModeRawValue)
     }
 
     private var sleepWakeButton: some View {

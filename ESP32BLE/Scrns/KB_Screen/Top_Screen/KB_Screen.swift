@@ -16,6 +16,8 @@ struct KeyboardScreen: View {
     private let topMainButtonWidth: CGFloat = 64
 
     @ObservedObject var ble: BLEKeyboardManager
+    @ObservedObject var macConnection: MacConnectionManager
+    let outputMode: OutputMode
     let isPresented: Bool
     @AppStorage("keyboardModeNumber") var keyboardModeNumber = 1
     @AppStorage("keyboardSendImmediatelyEnabled") var isSendImmediatelyEnabled = true

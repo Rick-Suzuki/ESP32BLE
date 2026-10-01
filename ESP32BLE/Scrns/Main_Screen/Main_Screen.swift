@@ -813,6 +813,8 @@ sends F1, waits one send then sends sp(space)
     @StateObject var mainGridTimerState = MainGridSharedTimerState()
     @StateObject var mainGridAmbientSoundState = MainGridAmbientSoundState()
     @ObservedObject var ble: BLEKeyboardManager
+    @ObservedObject var macConnection: MacConnectionManager
+    let outputMode: OutputMode
     @State var displayMode: FunctionKeyDisplayMode = .right
     @State var isEditingDocumentName = false
     @State var documentNameDraft = ""
@@ -1380,7 +1382,9 @@ Tapping a row inserts the key code at the cursor.
             speechRecognitionDisplayText: speechRecognitionDisplayText,
             speechRecognitionDisplayColor: speechRecognitionDisplayColor,
             isSpeechRecognitionEnabled: isSpkRecEnabled,
+            outputMode: outputMode,
             isBluetoothConnected: ble.isConnected,
+            isMacConnected: macConnection.canSend,
             mainGridButtonMode: mainGridButtonMode,
             displayMode: displayMode,
             displayModeButtonColor: displayModeButtonColor,
@@ -2889,21 +2893,11 @@ Tapping a row inserts the key code at the cursor.
         let targetSpokenText = actionTokens.compactMap(targetSpokenTextForSendText).first
         let targetShortcutURL = actionTokens.compactMap(targetShortcutURLForSendText).first
 
-        if !bluetoothTokens.isEmpty {
-            guard ble.isConnected else {
-                alertTitle = "Bluetooth not connected"
-                renameAlertMessage = "Bluetooth needs to be connected\nbefore sending data to the ESP32."
-                return
-            }
-
-            guard bluetoothTokens.allSatisfy(isBluetoothSendableText(_:)) else {
-                showBluetoothUnsupportedTextBlockedPopup()
-                return
-            }
-
-            for bluetoothToken in bluetoothTokens {
-                ble.sendLine(bluetoothToken)
-            }
+        guard sendKeyboardOutputTokens(
+            bluetoothTokens,
+            respectsButtonMode: false
+        ) else {
+            return
         }
 
         if let targetSoundFilename {
