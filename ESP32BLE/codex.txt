@@ -1,38 +1,63 @@
-Implemented the final iOS 17 Settings top-button fix.
+FILES CHANGED
 
-1. Reusable UIKit component used:
-SettingsUIKitVisualButton in Set_TxtEditor.swift􀰓.
+ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift
 
-It wraps UIButton through UIViewRepresentable, and the UIButton owns:
-title, background color, title color, enabled state, alpha, corner radius, border, content insets, font, and .touchUpInside.
+Added one small MainScreen-level routing helper and routed the primary programmable MainScreen keyboard-output sends through it. No other production source files were changed by me.
 
-2. Exact five controls converted on iOS 17:
-Main, File Mode, Repair, and New through SettingsToolbarButton.
-Filename through settingsTitleControl.
+Note: ESP32BLE/codex.txt was already dirty in the worktree and was not touched.
 
-3. Original dimensions/appearance preserved:
-Main/File Mode/Repair/New use the same titles, colors, enabled states, font, border, corner radius, padding, and toolbar positions. iOS 17 now uses fixed UIKit button frames matching the existing toolbar sizes: Main 92 x 36, others 64.4 x 36.
+NEW ROUTING BOUNDARY
 
-Filename keeps its own titleWidth x 36 sizing and gray/border visual design.
+private func sendKeyboardOutputTokens(
+_ tokens: [String],
 
-4. Newer iOS unchanged:
-On iOS 18 and newer, the original SwiftUI Button implementations and styling modifiers are still used.
+respectsButtonMode: Bool
 
-5. Original action/state closures unchanged:
-Main still calls saveAndReturnToMain().
-Filename still sets documentNameDraft and isEditingDocumentName.
-File Mode still runs the same list-mode cycling logic.
-Repair still calls repairDocument().
-New still calls createNewDocument().
+) -> Bool
 
-6. Obsolete experimental code removed:
-Removed the unreliable SettingsCompatibilityTextButton path.
-Removed the temporary NakedUIKitSettingsToolbarButton experiment.
+Current Stage 1 branch remains ESP32/BLE only. The helper still ends at:
 
-Useful action logs remain for the final physical test.
+ble.sendLine(keyboardOutputToken)
 
-7. Build result:
-Project built successfully.
+CALL SITES ROUTED
 
-Build log:
-/var/folders/kj/8r83ch8d6dx88328fxn6sf5m0000gn/T/ActionArtifacts/1C6CE6DD-BE88-4D6E-A1BA-8A9B72F3264A/BuildProject/BuildProject-Log-20260925-154648.txt
+1. MainScreen.sendMainGridEntry(_:)
+The nested sendBluetoothIfNeeded() now calls sendKeyboardOutputTokens(..., respectsButtonMode: true).
+
+2. sendBluetoothCommandToken(_:respectsBluetoothMode:)
+Still preserves the wait-chain single-token normalization/empty-token behavior, then routes through sendKeyboardOutputTokens(...).
+
+3. mainGridButtonLabel(...)
+The timer-completion send closure now calls sendKeyboardOutputTokens(..., respectsButtonMode: false), preserving its previous behavior of not consulting mainGridButtonMode.
+
+ESP32 BEHAVIOR
+
+Existing behavior is preserved:
+mainGridButtonMode.sendsBluetooth is still honored where it was honored before.
+ble.isConnected is still checked before sending.
+isBluetoothSendableText is still checked before sending.
+normalizedBluetoothSendText(_:) is still used.
+Final output still calls ble.sendLine(...).
+Wait/delay chain timing/order remains in runWaitChainCommandTokens(...) and was not redesigned.
+
+UNCHANGED
+
+BLEKeyboardManager: untouched.
+FunctionKeyEntry: untouched.
+.screen parsing/syntax: untouched.
+Network.framework: not added.
+MacConnectionManager: not created.
+Settings/output-mode UI: not added.
+iPadOS 17 performance code: untouched.
+
+BUILD RESULT
+
+Final Xcode build succeeded.
+
+Warnings reported by Xcode, not caused by this change:
+Main_Screen.swift:1295 unused immutable value selectedHomeDocument.
+App validation warning: all interface orientations must be supported unless the app requires full screen.
+
+git diff --check passed.
+
+Stage 1 is now a pure routing seam, with ESP32/BLE still the sole output.

@@ -160,26 +160,16 @@ extension MainScreen {
                 return true
             }
 
-            guard mainGridButtonMode.sendsBluetooth, !bluetoothSendTexts.isEmpty else {
-                return true
-            }
-
-            guard ble.isConnected else {
-                alertTitle = "Bluetooth not connected"
-                renameAlertMessage = "Bluetooth needs to be connected\nin order to send data to the ESP32."
+            guard sendKeyboardOutputTokens(
+                bluetoothSendTexts,
+                respectsButtonMode: true
+            ) else {
                 return false
             }
 
-            guard bluetoothSendTexts.allSatisfy(isBluetoothSendableText(_:)) else {
-                showBluetoothUnsupportedTextBlockedPopup()
-                return false
+            if mainGridButtonMode.sendsBluetooth && !bluetoothSendTexts.isEmpty {
+                didSendBluetooth = true
             }
-
-            for sendText in bluetoothSendTexts {
-                ble.sendLine(sendText)
-            }
-
-            didSendBluetooth = true
             return true
         }
 
@@ -417,12 +407,28 @@ extension MainScreen {
         _ actionToken: String,
         respectsBluetoothMode: Bool
     ) -> Bool {
-        guard !respectsBluetoothMode || mainGridButtonMode.sendsBluetooth else {
+        let bluetoothSendText = normalizedBluetoothSendText(actionToken)
+        guard !bluetoothSendText.isEmpty else {
             return true
         }
 
-        let bluetoothSendText = normalizedBluetoothSendText(actionToken)
-        guard !bluetoothSendText.isEmpty else {
+        return sendKeyboardOutputTokens(
+            [bluetoothSendText],
+            respectsButtonMode: respectsBluetoothMode
+        )
+    }
+
+    private func sendKeyboardOutputTokens(
+        _ tokens: [String],
+        respectsButtonMode: Bool
+    ) -> Bool {
+        guard !respectsButtonMode || mainGridButtonMode.sendsBluetooth else {
+            return true
+        }
+
+        let keyboardOutputTokens = tokens.map(normalizedBluetoothSendText)
+
+        guard !keyboardOutputTokens.isEmpty else {
             return true
         }
 
@@ -432,12 +438,15 @@ extension MainScreen {
             return false
         }
 
-        guard isBluetoothSendableText(bluetoothSendText) else {
+        guard keyboardOutputTokens.allSatisfy(isBluetoothSendableText(_:)) else {
             showBluetoothUnsupportedTextBlockedPopup()
             return false
         }
 
-        ble.sendLine(bluetoothSendText)
+        for keyboardOutputToken in keyboardOutputTokens {
+            ble.sendLine(keyboardOutputToken)
+        }
+
         return true
     }
 
@@ -1435,26 +1444,10 @@ extension MainScreen {
             stopSoundPlayback: stopMainGridSoundPlayback,
             sendTimerCompletionAction: { entry in
                 let bluetoothSendTexts = bluetoothSendTexts(for: entry)
-                guard !bluetoothSendTexts.isEmpty else {
-                    return true
-                }
-
-                guard ble.isConnected else {
-                    alertTitle = "Bluetooth not connected"
-                    renameAlertMessage = "Bluetooth needs to be connected\nin order to send data to the ESP32."
-                    return false
-                }
-
-                guard bluetoothSendTexts.allSatisfy(isBluetoothSendableText(_:)) else {
-                    showBluetoothUnsupportedTextBlockedPopup()
-                    return false
-                }
-
-                for sendText in bluetoothSendTexts {
-                    ble.sendLine(sendText)
-                }
-
-                return true
+                return sendKeyboardOutputTokens(
+                    bluetoothSendTexts,
+                    respectsButtonMode: false
+                )
             },
             resolveSoundURL: { soundURL(named: $0) },
             activateAudioSession: activateAudioSessionForSpeechPlayback,
