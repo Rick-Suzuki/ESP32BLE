@@ -206,7 +206,7 @@ struct SettingsAvailableDevicesPanel: View {
     }
 
     private var buttonClickToggleButton: some View {
-        Button(isButtonClickEnabled ? (isPad ? "btn click" : "click") : "btn off") {
+        Button(isButtonClickEnabled ? (isPad ? "click" : "click") : "btn off") {
             let willEnableButtonClicks = !isButtonClickEnabled
             isButtonClickEnabled = willEnableButtonClicks
 

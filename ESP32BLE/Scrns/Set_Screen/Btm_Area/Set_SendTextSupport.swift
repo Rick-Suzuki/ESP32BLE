@@ -61,7 +61,6 @@ extension SettingsScreen {
             ble.sendLine("ca")
         }
 
-        db("Settings text sent: [\(trimmedText)]")
         ble.sendString(trimmedText)
     }
 

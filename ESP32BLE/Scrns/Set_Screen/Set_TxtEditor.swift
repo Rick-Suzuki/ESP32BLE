@@ -202,7 +202,7 @@ struct SettingsToolbarButton: View {
                 action()
             }
             .disabled(!isEnabled)
-            .font(.headline)
+            .font(.body)
             .foregroundStyle(isEnabled ? .white : Color(white: 0.8))
             .padding(.horizontal, 5)
             .frame(minWidth: minWidth, minHeight: 36)
@@ -221,7 +221,7 @@ struct SettingsToolbarButton: View {
                 width: minWidth,
                 height: 36,
                 isEnabled: isEnabled,
-                fontStyle: .headline,
+                fontStyle: .body,
                 titleColor: isEnabled ? .white : UIColor(white: 0.8, alpha: 1),
                 adjustsFontSizeToFitWidth: false,
                 contentInsets: UIEdgeInsets(top: 0, left: 5, bottom: 0, right: 5)

@@ -955,13 +955,6 @@ Tapping a row inserts the key code at the cursor.
                 smartButtonBrightness = 0.5
                 smartButtonBrightnessBaseHex = smartButtonColorHex
             }
-            .onChange(of: editingSlotText) { oldButtonCode, newButtonCode in
-                guard editingSlotIndex != nil else {
-                    return
-                }
-                db("Button code before change -> \(oldButtonCode)")
-                db("Button code changed -> \(newButtonCode)")
-            }
             .onChange(of: definedFunctionKeyCount) {
                 updateVisibleBoxCountToFitDefinedButtons()
             }
@@ -1004,15 +997,12 @@ Tapping a row inserts the key code at the cursor.
                     previewedFile: previewedFile,
                     onClose: {
                         ButtonClickFeedback.playIfEnabled()
-                        db("STATE MainScreen.previewFullScreenCover current presentedPreviewFile=\(previewedFile.id) new=nil thread=\(Thread.isMainThread ? "main" : "background")")
                         presentedPreviewFile = nil
                     }
                 )
                 .onAppear {
-                    db("DESTINATION MainScreenFilePreviewOverlay.onAppear current presentedPreviewFile=\(previewedFile.id) new=visible thread=\(Thread.isMainThread ? "main" : "background")")
                 }
                 .onDisappear {
-                    db("DESTINATION MainScreenFilePreviewOverlay.onDisappear current presentedPreviewFile=\(previewedFile.id) new=hidden thread=\(Thread.isMainThread ? "main" : "background")")
                 }
             }
     }
@@ -1060,10 +1050,8 @@ Tapping a row inserts the key code at the cursor.
 						commitDocumentRename: commitDocumentRename,
 						openSettings: AnyView(
 							Button {
-								db("ENTER MainScreen.settingsButton current isSettingsScreenPresented=\(isSettingsScreenPresented) new=true thread=\(Thread.isMainThread ? "main" : "background")")
 								ButtonClickFeedback.playIfEnabled()
 								openSettingsScreen()
-								db("EXIT MainScreen.settingsButton current isSettingsScreenPresented=\(isSettingsScreenPresented) new=true thread=\(Thread.isMainThread ? "main" : "background")")
 							} label: {
 								settingsToolbarButtonLabel
 							}
@@ -1301,45 +1289,37 @@ Tapping a row inserts the key code at the cursor.
     }
 
     private func openHomeDocumentFromMainScreenControl() {
-        db("ENTER MainScreen.openHomeDocumentFromMainScreenControl current selectedDocumentName=\(selectedDocumentName) new=home.txt thread=\(Thread.isMainThread ? "main" : "background")")
         if mainGridButtonMode == .speechActive {
             speakMainGridText("home")
         }
         let selectedHomeDocument = selectDocumentNamedFromGrid("home.txt")
-        db("EXIT MainScreen.openHomeDocumentFromMainScreenControl current selectedDocumentName=\(selectedDocumentName) new=home.txt result=\(selectedHomeDocument) thread=\(Thread.isMainThread ? "main" : "background")")
     }
 
     private func goBackToPreviousDocumentFromMainScreenControl() {
-        db("ENTER MainScreen.goBackToPreviousDocumentFromMainScreenControl current selectedDocumentName=\(selectedDocumentName) new=previousHistory thread=\(Thread.isMainThread ? "main" : "background")")
         if mainGridButtonMode == .speechActive,
            let previousDocumentDisplayName,
            !previousDocumentDisplayName.isEmpty {
             speakMainGridText(previousDocumentDisplayName)
         }
         goBackToPreviousDocument()
-        db("EXIT MainScreen.goBackToPreviousDocumentFromMainScreenControl current selectedDocumentName=\(selectedDocumentName) new=previousHistory complete thread=\(Thread.isMainThread ? "main" : "background")")
     }
 
     private func selectPreviousDocumentFromMainScreenControl() {
-        db("ENTER MainScreen.selectPreviousDocumentFromMainScreenControl current selectedDocumentName=\(selectedDocumentName) currentFileNumber=\(currentFileNumber) new=previousDocument thread=\(Thread.isMainThread ? "main" : "background")")
         if mainGridButtonMode == .speechActive,
            let adjacentPreviousDocumentDisplayName,
            !adjacentPreviousDocumentDisplayName.isEmpty {
             speakMainGridText(adjacentPreviousDocumentDisplayName)
         }
         selectPreviousDocument()
-        db("EXIT MainScreen.selectPreviousDocumentFromMainScreenControl current selectedDocumentName=\(selectedDocumentName) currentFileNumber=\(currentFileNumber) new=previousDocument complete thread=\(Thread.isMainThread ? "main" : "background")")
     }
 
     private func selectNextDocumentFromMainScreenControl() {
-        db("ENTER MainScreen.selectNextDocumentFromMainScreenControl current selectedDocumentName=\(selectedDocumentName) currentFileNumber=\(currentFileNumber) new=nextDocument thread=\(Thread.isMainThread ? "main" : "background")")
         if mainGridButtonMode == .speechActive,
            let adjacentNextDocumentDisplayName,
            !adjacentNextDocumentDisplayName.isEmpty {
             speakMainGridText(adjacentNextDocumentDisplayName)
         }
         selectNextDocument()
-        db("EXIT MainScreen.selectNextDocumentFromMainScreenControl current selectedDocumentName=\(selectedDocumentName) currentFileNumber=\(currentFileNumber) new=nextDocument complete thread=\(Thread.isMainThread ? "main" : "background")")
     }
 
     private func selectPreviousBackgroundImage() {
@@ -1755,7 +1735,6 @@ Tapping a row inserts the key code at the cursor.
     }
 
     func resetSmartScriptEditingModel() {
-        db("resetSmartScriptEditingModel")
         smartScriptEditingModel.setText(canonicalSmartScriptText(editorSmartScriptText(fromStoredText: displayActionTextReplacingModifierCodes(smartEditingTextParts.action))))
     }
 
@@ -3261,7 +3240,6 @@ private struct SmartScriptTextEditor: UIViewRepresentable {
     }
 
     func makeUIView(context: Context) -> UITextView {
-        db("SmartScriptTextEditor.makeUIView")
         let textView = ProbeTextView()
         textView.delegate = context.coordinator
         textView.textColor = .white
@@ -3310,16 +3288,12 @@ private struct SmartScriptTextEditor: UIViewRepresentable {
         }
 
         override func becomeFirstResponder() -> Bool {
-            db("UITextView.becomeFirstResponder")
             let result = super.becomeFirstResponder()
-            db("UITextView.becomeFirstResponder result=\(result)")
             return result
         }
 
         override func resignFirstResponder() -> Bool {
-            db("UITextView.resignFirstResponder")
             let result = super.resignFirstResponder()
-            db("UITextView.resignFirstResponder result=\(result)")
             return result
         }
 
@@ -3334,7 +3308,6 @@ private struct SmartScriptTextEditor: UIViewRepresentable {
 
             keyboardNotificationObservers = notifications.map { notificationName in
                 notificationCenter.addObserver(forName: notificationName, object: nil, queue: .main) { notification in
-                    db("Keyboard notification \(notification.name.rawValue)")
                 }
             }
         }
@@ -3351,11 +3324,9 @@ private struct SmartScriptTextEditor: UIViewRepresentable {
         }
 
         func textViewDidBeginEditing(_ textView: UITextView) {
-            db("UITextView.textViewDidBeginEditing")
         }
 
         func textViewDidEndEditing(_ textView: UITextView) {
-            db("UITextView.textViewDidEndEditing")
         }
 
         func textViewDidChange(_ textView: UITextView) {

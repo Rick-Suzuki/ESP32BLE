@@ -99,16 +99,7 @@ extension MainScreen {
         let hexDigits = "0123456789abcdefABCDEF"
         return trimmedText.allSatisfy { hexDigits.contains($0) }
     }
-
-    func logMainButtonPress(_ entry: FunctionKeyEntry) {
-        let leftText = entry.sendTexts.joined(separator: ":")
-        let rightText = entry.alternateDisplayText ?? ""
-		print("")
-        db("** GRID_BTN ** [\(leftText)]::[\(rightText)]")
-    }
-
     func sendMainGridEntry(_ entry: FunctionKeyEntry) {
-		logMainButtonPress(entry)
 		
         guard mainGridButtonMode != .disabled else {
             return
@@ -154,13 +145,9 @@ extension MainScreen {
         let targetSpokenFilename = targetSpokenFilenameForGridEntry(entry)
         let targetSpokenText = targetSpokenTextForGridEntry(entry)
         let targetShortcutURL = targetShortcutURLForGridEntry(entry)
-        db("SCREEN_LINK_TRACE button rawLine=\(entry.rawLine) sendTexts=\(entry.sendTexts) parsedTargetDocument=\(targetDocumentName ?? "nil") targetPreview=\(targetPreviewFilename ?? "nil")")
         if targetDocumentName != nil {
-            db("SCREEN_LINK_TRACE classification=screen navigation")
         } else if targetPreviewFilename != nil {
-            db("SCREEN_LINK_TRACE classification=text/file command")
         } else {
-            db("SCREEN_LINK_TRACE classification=other")
         }
         let hasPostBluetoothChainCommand = targetSoundFilename != nil ||
             targetSpokenText != nil ||
@@ -182,8 +169,6 @@ extension MainScreen {
                 renameAlertMessage = "Bluetooth needs to be connected\nin order to send data to the ESP32."
                 return false
             }
-
-            logMainButtonPress(entry)
 
             guard bluetoothSendTexts.allSatisfy(isBluetoothSendableText(_:)) else {
                 showBluetoothUnsupportedTextBlockedPopup()
@@ -252,9 +237,7 @@ extension MainScreen {
         )
 
         if let targetDocumentName {
-            db("SCREEN_LINK_TRACE will call selectDocumentNamedFromGrid target=\(targetDocumentName)")
             let didSelectDocument = selectDocumentNamedFromGrid(targetDocumentName)
-            db("SCREEN_LINK_TRACE selectDocumentNamedFromGrid result=\(didSelectDocument) target=\(targetDocumentName)")
             guard didSelectDocument else {
                 alertTitle = "File Not Found"
                 renameAlertMessage = "Couldn't find \(targetDocumentName.lowercased())."
@@ -319,11 +302,9 @@ extension MainScreen {
     @MainActor
     func runWaitChainCommandTokens(
         _ actionTokens: [String],
-        sourceEntry: FunctionKeyEntry?,
+        sourceEntry _: FunctionKeyEntry?,
         respectsBluetoothMode: Bool
     ) async {
-        var didLogBluetoothPress = false
-
         for actionToken in actionTokens {
             let trimmedActionToken = actionToken.trimmingCharacters(in: .whitespacesAndNewlines)
             let loweredActionToken = trimmedActionToken.lowercased()
@@ -410,10 +391,7 @@ extension MainScreen {
             }
 
             if let targetDocumentName = targetDocumentNameForSendText(trimmedActionToken) {
-                db("SCREEN_LINK_TRACE waitChain classification=screen navigation rawToken=\(trimmedActionToken) parsedTarget=\(targetDocumentName)")
-                db("SCREEN_LINK_TRACE waitChain will call selectDocumentNamedFromGrid target=\(targetDocumentName)")
                 let didSelectDocument = selectDocumentNamedFromGrid(targetDocumentName)
-                db("SCREEN_LINK_TRACE waitChain selectDocumentNamedFromGrid result=\(didSelectDocument) target=\(targetDocumentName)")
                 guard didSelectDocument else {
                     alertTitle = "File Not Found"
                     renameAlertMessage = "Couldn't find \(targetDocumentName.lowercased())."
@@ -428,9 +406,7 @@ extension MainScreen {
 
             guard sendBluetoothCommandToken(
                 trimmedActionToken,
-                sourceEntry: sourceEntry,
-                respectsBluetoothMode: respectsBluetoothMode,
-                didLogBluetoothPress: &didLogBluetoothPress
+                respectsBluetoothMode: respectsBluetoothMode
             ) else {
                 return
             }
@@ -439,9 +415,7 @@ extension MainScreen {
 
     private func sendBluetoothCommandToken(
         _ actionToken: String,
-        sourceEntry: FunctionKeyEntry?,
-        respectsBluetoothMode: Bool,
-        didLogBluetoothPress: inout Bool
+        respectsBluetoothMode: Bool
     ) -> Bool {
         guard !respectsBluetoothMode || mainGridButtonMode.sendsBluetooth else {
             return true
@@ -456,11 +430,6 @@ extension MainScreen {
             alertTitle = "Bluetooth not connected"
             renameAlertMessage = "Bluetooth needs to be connected\nin order to send data to the ESP32."
             return false
-        }
-
-        if let sourceEntry, !didLogBluetoothPress {
-            logMainButtonPress(sourceEntry)
-            didLogBluetoothPress = true
         }
 
         guard isBluetoothSendableText(bluetoothSendText) else {
@@ -548,7 +517,6 @@ extension MainScreen {
 
     func targetDocumentNameForGridEntry(_ entry: FunctionKeyEntry) -> String? {
         let target = entry.sendTexts.first(where: { targetDocumentNameForSendText($0) != nil })
-        db("SCREEN_LINK_TRACE targetDocumentNameForGridEntry rawSendTexts=\(entry.sendTexts) selectedTarget=\(target ?? "nil")")
         return target
     }
 
@@ -595,45 +563,37 @@ extension MainScreen {
             loweredSendText.hasSuffix(".\(legacyScreenDocumentFileExtension)") ||
             loweredSendText.hasSuffix(".\(screenDocumentFileExtension)")
         if isScreenLinkTraceCandidate {
-            db("SCREEN_LINK_TRACE targetDocumentNameForSendText raw=\(sendText) trimmed=\(trimmedSendText)")
         }
         guard !loweredSendText.hasPrefix("spk ") else {
             if isScreenLinkTraceCandidate {
-                db("SCREEN_LINK_TRACE parsedTarget=nil classification=other reason=spk_command")
             }
             return nil
         }
         guard !isWaitCommandText(loweredSendText) else {
             if isScreenLinkTraceCandidate {
-                db("SCREEN_LINK_TRACE parsedTarget=nil classification=other reason=wait_command")
             }
             return nil
         }
         guard !isShortcutCommandText(loweredSendText) else {
             if isScreenLinkTraceCandidate {
-                db("SCREEN_LINK_TRACE parsedTarget=nil classification=other reason=shortcut_command")
             }
             return nil
         }
         guard !loweredSendText.hasPrefix("file ") else {
             if isScreenLinkTraceCandidate {
-                db("SCREEN_LINK_TRACE parsedTarget=nil classification=text/file command reason=file_prefix")
             }
             return nil
         }
 
         if loweredSendText == "home" {
-            db("SCREEN_LINK_TRACE parsedTarget=home.txt classification=screen navigation")
             return "home.txt"
         }
 
         if loweredSendText.hasSuffix(".\(legacyScreenDocumentFileExtension)") {
-            db("SCREEN_LINK_TRACE parsedTarget=\(trimmedSendText) classification=screen navigation")
             return trimmedSendText
         }
 
         if loweredSendText.hasSuffix(".\(screenDocumentFileExtension)") {
-            db("SCREEN_LINK_RESOLVE requested=\(trimmedSendText) classification=screen navigation")
             return trimmedSendText
         }
 

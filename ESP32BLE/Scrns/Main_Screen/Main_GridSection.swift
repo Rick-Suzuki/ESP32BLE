@@ -239,7 +239,6 @@ struct MainScreenGridSection<ButtonLabel: View>: View {
                     onResetSlotSize(entry, index, gridDimensions)
                 }
 
-				db("\(tapCount)")
 					
                 resetPendingTapState()
             }

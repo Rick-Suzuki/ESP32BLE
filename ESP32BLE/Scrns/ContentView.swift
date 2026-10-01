@@ -175,8 +175,6 @@ struct ContentView: View {
     @State private var isKeyboardScreenPresented = false
     @State private var isSettingsScreenPresented = true
     @State private var didPresentInitialSettingsScreen = false
-    @State private var hasLoggedDeviceType = false
-    @State private var lastLoggedOrientationState: Bool?
     @State private var isDeletingAllData = false
     @AppStorage("settingsStatusBarVisible") private var isStatusBarVisible = true
 
@@ -189,18 +187,11 @@ struct ContentView: View {
                 ZStack {
                     KeyboardScreen(ble: ble, isPresented: isKeyboardScreenPresented) {
                         withAnimation(.easeInOut(duration: 0.25)) {
-                            db("STATE ContentView.KeyboardScreen.returnToMain current isKeyboardScreenPresented=\(isKeyboardScreenPresented) new=false thread=\(Thread.isMainThread ? "main" : "background")")
                             isKeyboardScreenPresented = false
                         }
                     }
                     .frame(width: containerWidth, height: containerHeight)
                     .offset(x: isKeyboardScreenPresented ? 0 : -containerWidth)
-                    .onAppear {
-                        db("DESTINATION KeyboardScreen.onAppear current isKeyboardScreenPresented=\(isKeyboardScreenPresented) new=visible thread=\(Thread.isMainThread ? "main" : "background")")
-                    }
-                    .onDisappear {
-                        db("DESTINATION KeyboardScreen.onDisappear current isKeyboardScreenPresented=\(isKeyboardScreenPresented) new=hidden thread=\(Thread.isMainThread ? "main" : "background")")
-                    }
 
                     let _ = documentFontSizeRefreshToken
 
@@ -262,7 +253,6 @@ struct ContentView: View {
                         },
                         openKeyboardScreen: {
                             withAnimation(.easeInOut(duration: 0.25)) {
-                                db("STATE ContentView.openKeyboardScreen current isKeyboardScreenPresented=\(isKeyboardScreenPresented) new=true thread=\(Thread.isMainThread ? "main" : "background")")
                                 isKeyboardScreenPresented = true
                             }
                         },
@@ -275,12 +265,6 @@ struct ContentView: View {
                     .frame(width: containerWidth, height: containerHeight)
                     .ignoresSafeArea(.keyboard)
                     .offset(x: isKeyboardScreenPresented ? containerWidth : 0)
-                    .onAppear {
-                        db("DESTINATION MainScreen.onAppear current isKeyboardScreenPresented=\(isKeyboardScreenPresented) isSettingsScreenPresented=\(isSettingsScreenPresented) new=visible thread=\(Thread.isMainThread ? "main" : "background")")
-                    }
-                    .onDisappear {
-                        db("DESTINATION MainScreen.onDisappear current isKeyboardScreenPresented=\(isKeyboardScreenPresented) isSettingsScreenPresented=\(isSettingsScreenPresented) new=hidden thread=\(Thread.isMainThread ? "main" : "background")")
-                    }
 
                     if isSettingsScreenPresented {
                         launchedSettingsScreen
@@ -291,9 +275,6 @@ struct ContentView: View {
                 .frame(width: containerWidth, height: containerHeight)
                 .clipped()
                 .ignoresSafeArea(.keyboard)
-                .onAppear {
-                    logDeviceTypeIfNeeded()
-                }
             }
             .ignoresSafeArea(.keyboard)
         }
@@ -311,9 +292,7 @@ struct ContentView: View {
             ensureDefaultFunctionKeysFile()
             refreshBackgroundImageFiles()
             updateLoadedBackgroundImageForVisibleScreen()
-            logDeviceTypeIfNeeded()
             refreshOrientationState()
-            logOrientationStateIfNeeded()
         }
         .task {
             UIDevice.current.beginGeneratingDeviceOrientationNotifications()
@@ -323,7 +302,6 @@ struct ContentView: View {
 
             for await _ in NotificationCenter.default.notifications(named: UIDevice.orientationDidChangeNotification) {
                 refreshOrientationState()
-                logOrientationStateIfNeeded()
             }
         }
         .onChange(of: selectedBackgroundImageIndex) {
@@ -342,14 +320,7 @@ struct ContentView: View {
             updateLoadedBackgroundImageForVisibleScreen()
         }
         .onChange(of: isSettingsScreenPresented) {
-            db("STATE ContentView.onChange isSettingsScreenPresented current=\(isSettingsScreenPresented) new=backgroundRefresh thread=\(Thread.isMainThread ? "main" : "background")")
             updateLoadedBackgroundImageForVisibleScreen()
-        }
-        .onChange(of: isKeyboardScreenPresented) { oldValue, newValue in
-            db("STATE ContentView.onChange isKeyboardScreenPresented current=\(oldValue) new=\(newValue) thread=\(Thread.isMainThread ? "main" : "background")")
-        }
-        .onChange(of: selectedDocumentName) { oldValue, newValue in
-            db("STATE ContentView.onChange selectedDocumentName current=\(oldValue) new=\(newValue) thread=\(Thread.isMainThread ? "main" : "background")")
         }
         .onChange(of: backgroundImageOpacity) {
             if !isRestoringBackgroundImageSelection {
@@ -357,13 +328,6 @@ struct ContentView: View {
             }
         }
     }
-
-    private func logDeviceTypeIfNeeded() {
-        guard !hasLoggedDeviceType else { return }
-        hasLoggedDeviceType = true
-        db("isPad: %@", isPad ? "iPad" : "iPhone")
-    }
-
     private func refreshOrientationState() {
         if let activeScene = UIApplication.shared.connectedScenes
             .compactMap({ $0 as? UIWindowScene })
@@ -396,14 +360,6 @@ struct ContentView: View {
 
         AppRuntimeFlags.orientationState = isPad
     }
-
-    private func logOrientationStateIfNeeded() {
-        let currentOrientationState = orientationState
-        guard lastLoggedOrientationState != currentOrientationState else { return }
-        lastLoggedOrientationState = currentOrientationState
-		db("orientationState: %@", currentOrientationState ? "horizontal" : "vertical")
-    }
-
     private static func defaultFunctionKeyTitles() -> [String] {
         (1...defaultNamedFunctionKeyCount).map { "F\($0)" }
     }
@@ -633,7 +589,6 @@ struct ContentView: View {
     }
 
     private func loadFunctionKeys(from fileURL: URL) {
-        db("ENTER ContentView.loadFunctionKeys current selectedDocumentName=\(selectedDocumentName) new=\(fileURL.lastPathComponent) thread=\(Thread.isMainThread ? "main" : "background")")
         do {
             let contents = try String(contentsOf: fileURL, encoding: .utf8)
             let loadedTitles = normalizedSlotLines(from: contents)
@@ -642,17 +597,12 @@ struct ContentView: View {
                 requiredBoxCount: min(max(loadedTitles.count, 1), maxFunctionKeyCount)
             )
             applySlotLines(loadedTitles)
-            db("STATE ContentView.loadFunctionKeys current selectedDocumentName=\(selectedDocumentName) new=\(fileURL.lastPathComponent) thread=\(Thread.isMainThread ? "main" : "background")")
             selectedDocumentName = fileURL.lastPathComponent
             restoreBackgroundImageSelection(for: selectedDocumentName)
-            db("EXIT ContentView.loadFunctionKeys current selectedDocumentName=\(selectedDocumentName) new=\(fileURL.lastPathComponent) thread=\(Thread.isMainThread ? "main" : "background")")
         } catch {
             loadedScreenConfig = nil
-            db("STATE ContentView.loadFunctionKeys error current functionKeySlotLines.count=\(functionKeySlotLines.count) new=0 thread=\(Thread.isMainThread ? "main" : "background")")
             functionKeySlotLines = []
-            db("STATE ContentView.loadFunctionKeys error current functionKeys.count=\(functionKeys.count) new=\(maxFunctionKeyCount) thread=\(Thread.isMainThread ? "main" : "background")")
             functionKeys = Array(repeating: FunctionKeyEntry(rawLine: "", sendTexts: [], alternateDisplayText: nil, buttonColorCode: nil, isBlankPlaceholder: false, isHiddenInNormalMode: false), count: maxFunctionKeyCount)
-            db("STATE ContentView.loadFunctionKeys error current loadedFunctionKeySlotCount=\(loadedFunctionKeySlotCount) new=0 thread=\(Thread.isMainThread ? "main" : "background")")
             loadedFunctionKeySlotCount = 0
         }
     }
@@ -681,12 +631,9 @@ struct ContentView: View {
     }
 
     private func applySlotLines(_ slotLines: [String]) {
-        db("STATE ContentView.applySlotLines current functionKeySlotLines.count=\(functionKeySlotLines.count) new=\(min(slotLines.count, maxFunctionKeyCount)) thread=\(Thread.isMainThread ? "main" : "background")")
         functionKeySlotLines = Array(slotLines.prefix(maxFunctionKeyCount))
         let parsedFunctionKeys = normalizedFunctionKeys(from: functionKeySlotLines)
-        db("STATE ContentView.applySlotLines current functionKeys.count=\(functionKeys.count) new=\(parsedFunctionKeys.entries.count) thread=\(Thread.isMainThread ? "main" : "background")")
         functionKeys = parsedFunctionKeys.entries
-        db("STATE ContentView.applySlotLines current loadedFunctionKeySlotCount=\(loadedFunctionKeySlotCount) new=\(parsedFunctionKeys.definedSlotCount) thread=\(Thread.isMainThread ? "main" : "background")")
         loadedFunctionKeySlotCount = parsedFunctionKeys.definedSlotCount
     }
 
@@ -724,11 +671,8 @@ struct ContentView: View {
     }
 
     private func persistSlotLines(_ slotLines: [String]) {
-        db("ENTER ContentView.persistSlotLines count=\(slotLines.count)")
         guard let selectedDocumentURL = selectedDocumentURL() else {
-            db("ENTER ContentView.persistSlotLines applySlotLines no selectedDocumentURL")
             applySlotLines(slotLines)
-            db("EXIT ContentView.persistSlotLines no selectedDocumentURL")
             return
         }
 
@@ -737,16 +681,11 @@ struct ContentView: View {
         let contents = normalizedLines.joined(separator: "\n")
 
         do {
-            db("ENTER ContentView.persistSlotLines write url=\(selectedDocumentURL.lastPathComponent) bytes=\(contents.utf8.count)")
             try contents.write(to: selectedDocumentURL, atomically: true, encoding: .utf8)
-            db("EXIT ContentView.persistSlotLines write")
-            db("ENTER ContentView.persistSlotLines applySlotLines")
             applySlotLines(normalizedLines)
-            db("EXIT ContentView.persistSlotLines")
         } catch {
-            db("ENTER ContentView.persistSlotLines loadFunctionKeys after write failure error=\(error.localizedDescription)")
+            db("ERROR ContentView.persistSlotLines write failed; reloading selected document error=\(error.localizedDescription)")
             loadFunctionKeys(from: selectedDocumentURL)
-            db("EXIT ContentView.persistSlotLines error")
         }
     }
 
@@ -788,7 +727,6 @@ struct ContentView: View {
             )
             updatedConfig.fontSize = newFontSize
             loadedScreenConfig = updatedConfig
-            logConfigCreationIfMissing(for: selectedDocumentURL, caller: "updateDocumentFontSize")
             _ = saveScreenConfig(updatedConfig, for: selectedDocumentURL)
         } else if var updatedConfig = loadedScreenConfig {
             updatedConfig.fontSize = newFontSize
@@ -836,7 +774,6 @@ struct ContentView: View {
 
     private func existingScreenDocumentURLForConfigWrite(documentName: String, caller: String) -> URL? {
         let trimmedDocumentName = documentName.trimmingCharacters(in: .whitespacesAndNewlines)
-        let configFileName = configFileName(forDocumentName: trimmedDocumentName)
 
         guard !trimmedDocumentName.isEmpty,
               isScreenDocumentFileName(trimmedDocumentName) else {
@@ -863,14 +800,6 @@ struct ContentView: View {
         return resolvedURL
     }
 
-    private func logConfigCreationIfMissing(for documentURL: URL, caller: String) {
-        let screenConfigURL = configURL(forDocumentURL: documentURL)
-        guard !FileManager.default.fileExists(atPath: screenConfigURL.path) else {
-            return
-        }
-
-    }
-
     private func loadScreenConfigForDocument(_ documentURL: URL, requiredBoxCount: Int) -> ScreenConfig {
         if let config = loadScreenConfig(for: documentURL) {
             return config
@@ -886,7 +815,6 @@ struct ContentView: View {
     private func ensureScreenConfigFilesFromAppStorageFallback(for documentURLs: [URL]) -> Bool {
         var didCreateConfigFile = false
         for documentURL in documentURLs {
-            let configURL = configURL(forDocumentURL: documentURL)
             guard FileManager.default.fileExists(atPath: documentURL.path),
                   isScreenDocumentURL(documentURL) else {
                 continue
@@ -1039,7 +967,6 @@ struct ContentView: View {
             loadedScreenConfig = updatedConfig
         }
 
-        logConfigCreationIfMissing(for: documentURL, caller: "saveGridDimensions")
         _ = saveScreenConfig(updatedConfig, for: documentURL)
     }
 
@@ -1072,7 +999,6 @@ struct ContentView: View {
             loadedScreenConfig = updatedConfig
         }
 
-        logConfigCreationIfMissing(for: documentURL, caller: "updateScreenConfig")
         _ = saveScreenConfig(updatedConfig, for: documentURL)
     }
 
@@ -2189,7 +2115,6 @@ struct ContentView: View {
 
     @discardableResult
     private func updateSelectedDocumentSlot(at index: Int, with line: String) -> Bool {
-        db("updateFunctionKeySlot index=\(index)")
         guard index >= 0, index < maxFunctionKeyCount else {
             return false
         }
@@ -2368,45 +2293,26 @@ struct ContentView: View {
     }
 
     private func selectDocument(_ fileURL: URL) {
-        db("ENTER ContentView.selectDocument current selectedDocumentName=\(selectedDocumentName) new=\(fileURL.lastPathComponent) recordHistory=false thread=\(Thread.isMainThread ? "main" : "background")")
         loadFunctionKeys(from: fileURL)
-        db("EXIT ContentView.selectDocument current selectedDocumentName=\(selectedDocumentName) new=\(fileURL.lastPathComponent) recordHistory=false thread=\(Thread.isMainThread ? "main" : "background")")
     }
 
     private func selectDocument(_ fileURL: URL, recordHistory: Bool) {
-        db("ENTER ContentView.selectDocument current selectedDocumentName=\(selectedDocumentName) new=\(fileURL.lastPathComponent) recordHistory=\(recordHistory) thread=\(Thread.isMainThread ? "main" : "background")")
         if recordHistory {
             recordDocumentHistory(beforeSwitchingTo: fileURL.lastPathComponent)
         }
         loadFunctionKeys(from: fileURL)
-        db("EXIT ContentView.selectDocument current selectedDocumentName=\(selectedDocumentName) new=\(fileURL.lastPathComponent) recordHistory=\(recordHistory) thread=\(Thread.isMainThread ? "main" : "background")")
     }
 
     private func recordDocumentHistory(beforeSwitchingTo targetDocumentName: String) {
-        db("ENTER ContentView.recordDocumentHistory current selectedDocumentName=\(selectedDocumentName) new=\(targetDocumentName) thread=\(Thread.isMainThread ? "main" : "background")")
-        printDocumentNavigationStacks("record requested -> \(targetDocumentName)")
         guard !selectedDocumentName.isEmpty,
               selectedDocumentName != targetDocumentName else {
-            db("EXIT ContentView.recordDocumentHistory skipped current documentNavigationHistory=\(documentNavigationHistory) new=no change thread=\(Thread.isMainThread ? "main" : "background")")
-            printDocumentNavigationStacks("record skipped")
             return
         }
-
-        let currentDocumentNavigationHistory = documentNavigationHistory
-        db("STATE ContentView.recordDocumentHistory current documentNavigationHistory=\(currentDocumentNavigationHistory) new=append \(selectedDocumentName) thread=\(Thread.isMainThread ? "main" : "background")")
         documentNavigationHistory = appendingDocumentHistoryName(
             selectedDocumentName,
             to: documentNavigationHistory
         )
-        db("STATE ContentView.recordDocumentHistory current documentNavigationHistory=\(currentDocumentNavigationHistory) new=\(documentNavigationHistory) thread=\(Thread.isMainThread ? "main" : "background")")
-        printDocumentNavigationStacks("record stored -> \(targetDocumentName)")
-        db("EXIT ContentView.recordDocumentHistory current selectedDocumentName=\(selectedDocumentName) new=\(targetDocumentName) thread=\(Thread.isMainThread ? "main" : "background")")
     }
-
-    private func printDocumentNavigationStacks(_ label: String) {
-        db("Doc nav \(label). current: [\(selectedDocumentName)] back: \(documentNavigationHistory) forw: \(documentForwardNavigationHistory)")
-    }
-
     private func appendingDocumentHistoryName(_ documentName: String, to history: [String]) -> [String] {
         guard history.last != documentName else {
             return history
@@ -2434,9 +2340,8 @@ struct ContentView: View {
     @discardableResult
     private func selectDocumentNamedFromGrid(_ rawName: String) -> Bool {
         let targetFileName = canonicalDocumentFileName(from: rawName)
-        db("ENTER ContentView.selectDocumentNamedFromGrid rawName=\(rawName) current selectedDocumentName=\(selectedDocumentName) new=\(targetFileName) documentFiles.count=\(documentFiles.count) thread=\(Thread.isMainThread ? "main" : "background")")
         guard !targetFileName.isEmpty else {
-            db("EXIT ContentView.selectDocumentNamedFromGrid failed rawName=\(rawName) current selectedDocumentName=\(selectedDocumentName) new=\(targetFileName) thread=\(Thread.isMainThread ? "main" : "background")")
+            db("ERROR ContentView.selectDocumentNamedFromGrid failed rawName=\(rawName) current selectedDocumentName=\(selectedDocumentName) new=\(targetFileName) thread=\(Thread.isMainThread ? "main" : "background")")
             return false
         }
 
@@ -2457,17 +2362,11 @@ struct ContentView: View {
         let fileURL = exactFileURL ?? fallbackScreenURL
 
         guard let fileURL else {
-            db("EXIT ContentView.selectDocumentNamedFromGrid failed rawName=\(rawName) current selectedDocumentName=\(selectedDocumentName) new=\(targetFileName) thread=\(Thread.isMainThread ? "main" : "background")")
+            db("ERROR ContentView.selectDocumentNamedFromGrid failed rawName=\(rawName) current selectedDocumentName=\(selectedDocumentName) new=\(targetFileName) thread=\(Thread.isMainThread ? "main" : "background")")
             return false
         }
 
-        if exactFileURL == nil,
-           let fallbackScreenURL {
-            db("SCREEN_NAV_RESOLVE requested=\(targetFileName) resolved=\(fallbackScreenURL.lastPathComponent)")
-        }
-
         selectDocument(fileURL, recordHistory: true)
-        db("EXIT ContentView.selectDocumentNamedFromGrid succeeded rawName=\(rawName) current selectedDocumentName=\(selectedDocumentName) new=\(targetFileName) thread=\(Thread.isMainThread ? "main" : "background")")
         return true
     }
 
@@ -2494,48 +2393,32 @@ struct ContentView: View {
             bleTextToSend: $settingsBLEText,
             returnToMain: {
                 withAnimation(.easeInOut(duration: 0.25)) {
-                    db("STATE ContentView.SettingsScreen.returnToMain current isSettingsScreenPresented=\(isSettingsScreenPresented) new=false thread=\(Thread.isMainThread ? "main" : "background")")
                     isSettingsScreenPresented = false
                 }
             }
         )
         .onAppear {
-            db("DESTINATION SettingsScreen.onAppear current isSettingsScreenPresented=\(isSettingsScreenPresented) new=true thread=\(Thread.isMainThread ? "main" : "background")")
-            db("STATE ContentView.launchedSettingsScreen.onAppear current isSettingsScreenPresented=\(isSettingsScreenPresented) new=true thread=\(Thread.isMainThread ? "main" : "background")")
             isSettingsScreenPresented = true
-        }
-        .onDisappear {
-            db("DESTINATION SettingsScreen.onDisappear current isSettingsScreenPresented=\(isSettingsScreenPresented) event=disappeared thread=\(Thread.isMainThread ? "main" : "background")")
-            db("STATE ContentView.launchedSettingsScreen.onDisappear current isSettingsScreenPresented=\(isSettingsScreenPresented) new=no change thread=\(Thread.isMainThread ? "main" : "background")")
         }
     }
 
     private func presentInitialSettingsScreenIfNeeded() {
-        db("ENTER ContentView.presentInitialSettingsScreenIfNeeded current isSettingsScreenPresented=\(isSettingsScreenPresented) didPresentInitialSettingsScreen=\(didPresentInitialSettingsScreen) new=initialSettingsCheck thread=\(Thread.isMainThread ? "main" : "background")")
         guard isSettingsScreenPresented, !didPresentInitialSettingsScreen else {
-            db("EXIT ContentView.presentInitialSettingsScreenIfNeeded skipped current isSettingsScreenPresented=\(isSettingsScreenPresented) didPresentInitialSettingsScreen=\(didPresentInitialSettingsScreen) new=no change thread=\(Thread.isMainThread ? "main" : "background")")
             return
         }
 
-        db("STATE ContentView.presentInitialSettingsScreenIfNeeded current didPresentInitialSettingsScreen=\(didPresentInitialSettingsScreen) new=true thread=\(Thread.isMainThread ? "main" : "background")")
         didPresentInitialSettingsScreen = true
-        db("STATE ContentView.presentInitialSettingsScreenIfNeeded current isSettingsScreenPresented=\(isSettingsScreenPresented) new=true thread=\(Thread.isMainThread ? "main" : "background")")
         isSettingsScreenPresented = true
-        db("EXIT ContentView.presentInitialSettingsScreenIfNeeded current isSettingsScreenPresented=\(isSettingsScreenPresented) didPresentInitialSettingsScreen=\(didPresentInitialSettingsScreen) new=initialSettingsPresented thread=\(Thread.isMainThread ? "main" : "background")")
     }
 
     private func showSettingsScreen() {
-        db("ENTER ContentView.showSettingsScreen current isSettingsScreenPresented=\(isSettingsScreenPresented) new=true thread=\(Thread.isMainThread ? "main" : "background")")
         guard !isSettingsScreenPresented else {
-            db("EXIT ContentView.showSettingsScreen skipped current isSettingsScreenPresented=\(isSettingsScreenPresented) new=no change thread=\(Thread.isMainThread ? "main" : "background")")
             return
         }
 
         withAnimation(.easeInOut(duration: 0.25)) {
-            db("STATE ContentView.showSettingsScreen current isSettingsScreenPresented=\(isSettingsScreenPresented) new=true thread=\(Thread.isMainThread ? "main" : "background")")
             isSettingsScreenPresented = true
         }
-        db("EXIT ContentView.showSettingsScreen current isSettingsScreenPresented=\(isSettingsScreenPresented) new=true thread=\(Thread.isMainThread ? "main" : "background")")
     }
 
     @ViewBuilder
@@ -2659,7 +2542,6 @@ struct ContentView: View {
             }
             loadFunctionKeys(from: targetURL)
             refreshDocumentFiles()
-            db("STATE ContentView.renameSelectedDocument succeeded current selectedDocumentName=\(sourceURL.lastPathComponent) new=\(targetURL.lastPathComponent) thread=\(Thread.isMainThread ? "main" : "background")")
             return nil
         } catch {
             db("ERROR ContentView.renameSelectedDocument failed current selectedDocumentName=\(selectedDocumentName) new=\(targetFileName) error=\(String(describing: error)) thread=\(Thread.isMainThread ? "main" : "background")")
@@ -2743,27 +2625,21 @@ struct ContentView: View {
     }
 
     private func selectPreviousDocument() {
-        db("ENTER ContentView.selectPreviousDocument current selectedDocumentName=\(selectedDocumentName) currentFileNumber=\(currentFileNumber) new=previousDocument thread=\(Thread.isMainThread ? "main" : "background")")
         guard let currentIndex = documentFiles.firstIndex(where: { $0.lastPathComponent == selectedDocumentName }),
               currentIndex > 0 else {
-            db("EXIT ContentView.selectPreviousDocument skipped current selectedDocumentName=\(selectedDocumentName) currentFileNumber=\(currentFileNumber) new=no change thread=\(Thread.isMainThread ? "main" : "background")")
             return
         }
 
         selectDocument(documentFiles[currentIndex - 1], recordHistory: true)
-        db("EXIT ContentView.selectPreviousDocument current selectedDocumentName=\(selectedDocumentName) currentFileNumber=\(currentFileNumber) new=previousDocument complete thread=\(Thread.isMainThread ? "main" : "background")")
     }
 
     private func selectNextDocument() {
-        db("ENTER ContentView.selectNextDocument current selectedDocumentName=\(selectedDocumentName) currentFileNumber=\(currentFileNumber) new=nextDocument thread=\(Thread.isMainThread ? "main" : "background")")
         guard let currentIndex = documentFiles.firstIndex(where: { $0.lastPathComponent == selectedDocumentName }),
               currentIndex < documentFiles.count - 1 else {
-            db("EXIT ContentView.selectNextDocument skipped current selectedDocumentName=\(selectedDocumentName) currentFileNumber=\(currentFileNumber) new=no change thread=\(Thread.isMainThread ? "main" : "background")")
             return
         }
 
         selectDocument(documentFiles[currentIndex + 1], recordHistory: true)
-        db("EXIT ContentView.selectNextDocument current selectedDocumentName=\(selectedDocumentName) currentFileNumber=\(currentFileNumber) new=nextDocument complete thread=\(Thread.isMainThread ? "main" : "background")")
     }
 
     private var canGoBackToPreviousDocument: Bool {
@@ -2805,72 +2681,44 @@ struct ContentView: View {
     }
 
     private func goBackToPreviousDocument() {
-        db("ENTER ContentView.goBackToPreviousDocument current selectedDocumentName=\(selectedDocumentName) documentNavigationHistory=\(documentNavigationHistory) documentForwardNavigationHistory=\(documentForwardNavigationHistory) new=previousHistory thread=\(Thread.isMainThread ? "main" : "background")")
-        printDocumentNavigationStacks("back requested")
         while let previousName = documentNavigationHistory.popLast() {
-            db("STATE ContentView.goBackToPreviousDocument current documentNavigationHistory=popLast new=\(documentNavigationHistory) thread=\(Thread.isMainThread ? "main" : "background")")
             guard previousName != selectedDocumentName,
                   let fileURL = documentFiles.first(where: { $0.lastPathComponent == previousName }) else {
-                db("Doc nav back skipped: [\(previousName)]")
                 continue
             }
 
             if !selectedDocumentName.isEmpty {
-                let currentDocumentForwardNavigationHistory = documentForwardNavigationHistory
-                db("STATE ContentView.goBackToPreviousDocument current documentForwardNavigationHistory=\(currentDocumentForwardNavigationHistory) new=append \(selectedDocumentName) thread=\(Thread.isMainThread ? "main" : "background")")
                 documentForwardNavigationHistory = appendingDocumentHistoryName(
                     selectedDocumentName,
                     to: documentForwardNavigationHistory
                 )
-                db("STATE ContentView.goBackToPreviousDocument current documentForwardNavigationHistory=\(currentDocumentForwardNavigationHistory) new=\(documentForwardNavigationHistory) thread=\(Thread.isMainThread ? "main" : "background")")
             }
-            printDocumentNavigationStacks("back selecting -> \(previousName)")
             selectDocument(fileURL)
-            printDocumentNavigationStacks("back finished")
-            db("EXIT ContentView.goBackToPreviousDocument current selectedDocumentName=\(selectedDocumentName) new=\(previousName) thread=\(Thread.isMainThread ? "main" : "background")")
             return
         }
-        printDocumentNavigationStacks("back no target")
-        db("EXIT ContentView.goBackToPreviousDocument noTarget current selectedDocumentName=\(selectedDocumentName) new=no change thread=\(Thread.isMainThread ? "main" : "background")")
     }
 
     private func goForwardToNextDocument() {
-        db("ENTER ContentView.goForwardToNextDocument current selectedDocumentName=\(selectedDocumentName) documentNavigationHistory=\(documentNavigationHistory) documentForwardNavigationHistory=\(documentForwardNavigationHistory) new=forwardHistory thread=\(Thread.isMainThread ? "main" : "background")")
-        printDocumentNavigationStacks("forw requested")
         while let nextName = documentForwardNavigationHistory.popLast() {
-            db("STATE ContentView.goForwardToNextDocument current documentForwardNavigationHistory=popLast new=\(documentForwardNavigationHistory) thread=\(Thread.isMainThread ? "main" : "background")")
             guard nextName != selectedDocumentName,
                   let fileURL = documentFiles.first(where: { $0.lastPathComponent == nextName }) else {
-                db("Doc nav forw skipped: [\(nextName)]")
                 continue
             }
 
             if !selectedDocumentName.isEmpty {
-                let currentDocumentNavigationHistory = documentNavigationHistory
-                db("STATE ContentView.goForwardToNextDocument current documentNavigationHistory=\(currentDocumentNavigationHistory) new=append \(selectedDocumentName) thread=\(Thread.isMainThread ? "main" : "background")")
                 documentNavigationHistory = appendingDocumentHistoryName(
                     selectedDocumentName,
                     to: documentNavigationHistory
                 )
-                db("STATE ContentView.goForwardToNextDocument current documentNavigationHistory=\(currentDocumentNavigationHistory) new=\(documentNavigationHistory) thread=\(Thread.isMainThread ? "main" : "background")")
             }
-            printDocumentNavigationStacks("forw selecting -> \(nextName)")
             selectDocument(fileURL)
-            printDocumentNavigationStacks("forw finished")
-            db("EXIT ContentView.goForwardToNextDocument current selectedDocumentName=\(selectedDocumentName) new=\(nextName) thread=\(Thread.isMainThread ? "main" : "background")")
             return
         }
 
-        if let (nextName, fileURL) = nextDocumentFromNavigationHistory() {
-            printDocumentNavigationStacks("forw selecting from history -> \(nextName)")
+        if let (_, fileURL) = nextDocumentFromNavigationHistory() {
             selectDocument(fileURL)
-            printDocumentNavigationStacks("forw history finished")
-            db("EXIT ContentView.goForwardToNextDocument history current selectedDocumentName=\(selectedDocumentName) new=\(nextName) thread=\(Thread.isMainThread ? "main" : "background")")
             return
         }
-
-        printDocumentNavigationStacks("forw no target")
-        db("EXIT ContentView.goForwardToNextDocument noTarget current selectedDocumentName=\(selectedDocumentName) new=no change thread=\(Thread.isMainThread ? "main" : "background")")
     }
 
     private func nextDocumentFromNavigationHistory() -> (name: String, fileURL: URL)? {
@@ -2885,7 +2733,6 @@ struct ContentView: View {
                 let nextName = documentNavigationHistory[nextIndex]
                 guard nextName != selectedDocumentName,
                       let fileURL = documentFiles.first(where: { $0.lastPathComponent == nextName }) else {
-                    db("Doc nav forw history skipped: [\(nextName)]")
                     nextIndex = documentNavigationHistory.index(after: nextIndex)
                     continue
                 }

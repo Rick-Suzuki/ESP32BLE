@@ -139,7 +139,6 @@ extension MainScreen {
 	//----------------------------------------
 	//
     func beginSlotEditing(at index: Int) {
-        db("MainScreen.beginSlotEditing index=\(index)")
         guard index >= 0, index < visibleBoxCount else {
             return
         }

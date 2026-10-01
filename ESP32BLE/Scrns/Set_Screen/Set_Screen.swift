@@ -212,6 +212,7 @@ struct SettingsScreen: View {
         configuredSettingsScreen
     }
 
+	// MARK: - BM:⬇️⬆️ SETTINGS - Top Toolbar
     private var settingsScreenBase: some View {
         GeometryReader { screenGeometry in
             VStack(spacing: 0) {
@@ -321,14 +322,14 @@ struct SettingsScreen: View {
 			//----------------------------------------
 			// show type of table
 			//
-			SettingsToolbarButton(title: listMode.buttonTitle, backgroundColor: Color.gray.opacity(0.45), minWidth: 64.4, isEnabled: true) {
+			SettingsToolbarButton(title: listMode.buttonTitle, backgroundColor: Color.gray.opacity(0.45), minWidth: 92, isEnabled: true) {
 					listMode.toggle(developerMode: developerMode)
 				}
 			//
 			//----------------------------------------
 			// repair btn
 			//
-				SettingsToolbarButton(title: "repair", backgroundColor: Color.red.opacity(0.5), minWidth: 64.4, isEnabled: listMode == .files) {
+				SettingsToolbarButton(title: "repair", backgroundColor: Color.red.opacity(0.5), minWidth: 70, isEnabled: listMode == .files) {
 				repairDocument()
 			}
 			//
@@ -359,7 +360,6 @@ struct SettingsScreen: View {
                 set: { isPresented in
                     guard !isPresented else { return }
                     cleanupSingleFileExportTemporaryURLIfNeeded()
-                    db("STATE SettingsScreen.singleFileExportSheet current singleFileExportURL=\(String(describing: singleFileExportURL?.lastPathComponent)) new=nil thread=\(Thread.isMainThread ? "main" : "background")")
                     singleFileExportURL = nil
                 }
             )
@@ -367,14 +367,11 @@ struct SettingsScreen: View {
             if let exportURL = singleFileExportURL {
                 SettingsSingleFileExportPicker(url: exportURL) {
                     cleanupSingleFileExportTemporaryURLIfNeeded()
-                    db("STATE SettingsScreen.singleFileExportSheet.onClose current singleFileExportURL=\(String(describing: singleFileExportURL?.lastPathComponent)) new=nil thread=\(Thread.isMainThread ? "main" : "background")")
                     singleFileExportURL = nil
                 }
                 .onAppear {
-                    db("DESTINATION SettingsSingleFileExportPicker.onAppear current singleFileExportURL=\(exportURL.lastPathComponent) new=visible thread=\(Thread.isMainThread ? "main" : "background")")
                 }
                 .onDisappear {
-                    db("DESTINATION SettingsSingleFileExportPicker.onDisappear current singleFileExportURL=\(exportURL.lastPathComponent) new=hidden thread=\(Thread.isMainThread ? "main" : "background")")
                 }
             }
         }
@@ -680,7 +677,7 @@ struct SettingsScreen: View {
             if isEditingDocumentName {
                 TextField("", text: $documentNameDraft)
                     .textFieldStyle(.roundedBorder)
-                    .font(.headline)
+                    //.font(.headline)
                     .foregroundStyle(.white)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
@@ -704,7 +701,7 @@ struct SettingsScreen: View {
 								.frame(maxWidth: .infinity)
 						}
 						.disabled(!canEditCurrentTitle)
-						.font(.headline)
+						//.font(.headline)
 						.foregroundStyle(canEditCurrentTitle ? .white : Color(white: 0.8))
 						.frame(width: titleWidth, height: 36)
 						.background(Color.gray.opacity(0.45))
@@ -1783,7 +1780,6 @@ struct SettingsScreen: View {
         saveCurrentDocumentText()
         do {
             let exportURL = try makeSingleFileExportURL()
-            db("STATE SettingsScreen.prepareSingleFileExport current singleFileExportURL=\(String(describing: singleFileExportURL?.lastPathComponent)) new=\(exportURL.lastPathComponent) thread=\(Thread.isMainThread ? "main" : "background")")
             singleFileExportURL = exportURL
         } catch {
             cleanupSingleFileExportTemporaryURLIfNeeded()
@@ -2115,34 +2111,22 @@ struct SettingsScreen: View {
         }
 
         do {
-            db("DELETE_ALL_TRACE documents_directory=\(directoryURL.path)")
             let allBeforeDeleteURLs = try FileManager.default.contentsOfDirectory(
                 at: directoryURL,
                 includingPropertiesForKeys: nil,
                 options: []
             )
-            db("DELETE_ALL_TRACE contents_before_delete count=\(allBeforeDeleteURLs.count) items=\(allBeforeDeleteURLs.map { $0.lastPathComponent }.joined(separator: ", "))")
 
             for itemURL in allBeforeDeleteURLs {
                 do {
-                    db("DELETE_ALL_TRACE remove_attempt item=\(itemURL.lastPathComponent) path=\(itemURL.path)")
                     try FileManager.default.removeItem(at: itemURL)
-                    db("DELETE_ALL_TRACE remove_success item=\(itemURL.lastPathComponent)")
                 } catch {
                     db("DELETE_ALL_TRACE remove_failed item=\(itemURL.lastPathComponent) path=\(itemURL.path) error=\(error)")
                     throw error
                 }
             }
 
-            let remainingAfterDeleteURLs = try FileManager.default.contentsOfDirectory(
-                at: directoryURL,
-                includingPropertiesForKeys: nil,
-                options: []
-            )
-            db("DELETE_ALL_TRACE contents_after_delete count=\(remainingAfterDeleteURLs.count) items=\(remainingAfterDeleteURLs.map { $0.lastPathComponent }.joined(separator: ", "))")
-
             resetSettingsStateAfterDeletingAllData()
-            db("DELETE_ALL_TRACE before_refresh_after_delete")
             markDeletedAllDataChanged()
         } catch {
             db("DELETE_ALL_TRACE delete_all_failed error=\(error)")
@@ -2231,17 +2215,10 @@ struct SettingsScreen: View {
 
     private func handleImportedSelection(_ result: Result<[URL], Error>, importMode: SettingsImportMode?) {
         guard case let .success(urls) = result else {
-            db("IMPORT_TRACE picker_result=failure")
             return
         }
 
-        db("IMPORT_TRACE picker_result=success selected_count=\(urls.count)")
-        for url in urls {
-            db("IMPORT_TRACE selected_url=\(url.path) filename=\(url.lastPathComponent) extension=\(url.pathExtension.lowercased())")
-        }
-
         guard let importMode else {
-            db("IMPORT_TRACE rejected reason=missing_import_mode")
             return
         }
 
@@ -2249,7 +2226,6 @@ struct SettingsScreen: View {
             db("IMPORT_TRACE rejected reason=missing_documents_directory")
             return
         }
-        db("IMPORT_TRACE documents_directory=\(directoryURL.path) import_mode=\(importMode)")
 
         switch importMode {
         case .screen:
@@ -2261,7 +2237,6 @@ struct SettingsScreen: View {
             )
             processPendingImportSession(session)
         case .allFiles:
-            db("IMPORT_TRACE all_files_archive_selected count=\(urls.count) first=\(urls.first?.path ?? "nil")")
             guard let zipURL = urls.first, urls.count == 1, zipURL.pathExtension.lowercased() == "zip" else {
                 db("IMPORT_TRACE all_files_archive_validation=invalid reason=expected_single_zip")
                 renameAlertMessage = "Restore All Files expects one exported ZIP file."
@@ -2270,10 +2245,6 @@ struct SettingsScreen: View {
 
             do {
                 let archiveImport = try extractFullArchiveImport(from: zipURL)
-                db("IMPORT_TRACE all_files_archive_validation=valid queued_count=\(archiveImport.fileURLs.count)")
-                db("IMPORT_FULL_COPY_START total=\(archiveImport.fileURLs.count)")
-                db("RESTORE_ALL_START total=\(archiveImport.fileURLs.count)")
-                db("IMPORT_ALL_QUEUE_CREATED total=\(archiveImport.fileURLs.count) items=[\(archiveImport.fileURLs.prefix(10).map { $0.lastPathComponent }.joined(separator: ", "))]")
                 var session = makePendingImportSession(
                     directoryURL: directoryURL,
                     importMode: .allFiles,
@@ -2281,7 +2252,6 @@ struct SettingsScreen: View {
                     selectedConfigURLsByName: archiveImport.configURLsByName
                 )
                 session.temporaryImportDirectoryURLs.append(archiveImport.temporaryDirectoryURL)
-                db("IMPORT_ALL_QUEUE_START")
                 processPendingImportSession(session)
             } catch {
                 db("IMPORT_TRACE all_files_archive_validation=invalid error=\(error.localizedDescription)")
@@ -2296,7 +2266,6 @@ struct SettingsScreen: View {
         remainingURLs: [URL],
         selectedConfigURLsByName: [String: URL]
     ) -> PendingImportSession {
-        db("IMPORT_QUEUE created count=\(remainingURLs.count)")
         return PendingImportSession(
             directoryURL: directoryURL,
             importListMode: importMode == .screen ? .files : nil,
@@ -2314,10 +2283,7 @@ struct SettingsScreen: View {
 
     private func processPendingImportSession(_ session: PendingImportSession) {
         var session = session
-        db("IMPORT_TRACE processPendingImportSession entered mode=\(session.importMode) queued=\(session.remainingURLs.map { $0.lastPathComponent }.joined(separator: ","))")
-        db("IMPORT_QUEUE_START total=\(session.remainingURLs.count) currentIndex=\(session.processedItemCount + 1)")
         if session.importMode == .allFiles {
-            db("IMPORT_ALL_QUEUE_START total=\(session.remainingURLs.count) currentIndex=\(session.processedItemCount + 1) items=[\(session.remainingURLs.prefix(10).map { $0.lastPathComponent }.joined(separator: ", "))]")
         }
 
         while !session.remainingURLs.isEmpty {
@@ -2327,25 +2293,15 @@ struct SettingsScreen: View {
             let targetFileName = sourceURL.lastPathComponent
             let targetFileNameKey = targetFileName.lowercased()
             let targetURL = session.directoryURL.appendingPathComponent(targetFileName)
-            db("IMPORT_QUEUE processing index=\(session.processedItemCount) filename=\(targetFileName)")
-            db("IMPORT_QUEUE_ITEM filename=\(targetFileName)")
             if session.importMode == .allFiles {
-                db("IMPORT_FULL_COPY_ITEM filename=\(targetFileName)")
-                db("IMPORT_ALL_PROCESSING index=\(session.processedItemCount) filename=\(targetFileName)")
             }
-            db("IMPORT_TRACE pipeline_stage=dequeue source=\(sourceURL.path) filename=\(targetFileName) extension=\(pathExtension) destination=\(targetURL.path)")
 
             if pathExtension == "zip" {
                 guard session.importMode == .screen || session.importMode == .allFiles else {
-                    db("IMPORT_TRACE file_rejected filename=\(targetFileName) reason=zip_not_allowed_for_mode mode=\(session.importMode)")
                     continue
                 }
 
-                db("IMPORT_TRACE zip_detected mode=\(session.importMode) filename=\(targetFileName)")
                 do {
-                    let queueBeforeZipExpand = [sourceURL] + session.remainingURLs
-                    db("IMPORT_QUEUE_BEFORE_ZIP_EXPAND [\(queueBeforeZipExpand.map { $0.lastPathComponent }.joined(separator: ", "))]")
-                    db("IMPORT_QUEUE_BEFORE_REPLACE total=\(session.processedItemCount + session.remainingURLs.count) currentIndex=\(session.processedItemCount) items=[\(queueBeforeZipExpand.map { $0.lastPathComponent }.joined(separator: ", "))]")
 
                     if let archiveImport = try extractFullArchiveImportIfPresent(from: sourceURL) {
                         session.importMode = .allFiles
@@ -2353,10 +2309,6 @@ struct SettingsScreen: View {
                         session.temporaryImportDirectoryURLs.append(archiveImport.temporaryDirectoryURL)
                         session.selectedConfigURLsByName.merge(archiveImport.configURLsByName) { _, newValue in newValue }
                         session.remainingURLs = archiveImport.fileURLs + session.remainingURLs
-                        db("IMPORT_QUEUE_AFTER_ZIP_EXPAND [\(session.remainingURLs.map { $0.lastPathComponent }.joined(separator: ", "))]")
-                        db("IMPORT_QUEUE_AFTER_ZIP_EXPAND total=\(session.processedItemCount + session.remainingURLs.count) currentIndex=\(session.processedItemCount)")
-                        db("IMPORT_QUEUE_AFTER_REPLACE total=\(session.processedItemCount + session.remainingURLs.count) currentIndex=\(session.processedItemCount) items=[\(session.remainingURLs.map { $0.lastPathComponent }.joined(separator: ", "))]")
-                        db("IMPORT_TRACE zip_classification=full_archive queued_count=\(archiveImport.fileURLs.count)")
                     } else {
                         let package = try extractScreenPackageImport(from: sourceURL)
                         session.temporaryImportDirectoryURLs.append(package.temporaryDirectoryURL)
@@ -2365,10 +2317,6 @@ struct SettingsScreen: View {
                         }
                         let packageFilePaths = Set([package.documentURL.path, package.configURL?.path].compactMap { $0 })
                         session.remainingURLs = [package.documentURL] + session.remainingURLs.filter { !packageFilePaths.contains($0.path) }
-                        db("IMPORT_QUEUE_AFTER_ZIP_EXPAND [\(session.remainingURLs.map { $0.lastPathComponent }.joined(separator: ", "))]")
-                        db("IMPORT_QUEUE_AFTER_ZIP_EXPAND total=\(session.processedItemCount + session.remainingURLs.count) currentIndex=\(session.processedItemCount)")
-                        db("IMPORT_QUEUE_AFTER_REPLACE total=\(session.processedItemCount + session.remainingURLs.count) currentIndex=\(session.processedItemCount) items=[\(session.remainingURLs.map { $0.lastPathComponent }.joined(separator: ", "))]")
-                        db("IMPORT_TRACE zip_classification=single_screen_package document=\(package.documentURL.lastPathComponent) config=\(package.configURL?.lastPathComponent ?? "nil")")
                     }
                 } catch {
                     db("IMPORT_TRACE zip_classification=invalid_archive filename=\(targetFileName) error=\(error.localizedDescription)")
@@ -2379,10 +2327,8 @@ struct SettingsScreen: View {
 
             if isScreenConfigFileName(targetFileName) {
                 guard session.importMode == .allFiles else {
-                    db("IMPORT_TRACE file_rejected filename=\(targetFileName) reason=config_not_allowed_for_mode mode=\(session.importMode)")
                     continue
                 }
-                db("IMPORT_TRACE file_accepted kind=config filename=\(targetFileName) destination=\(targetURL.path)")
 
                 if session.existingConfigNames.contains(targetFileNameKey) ||
                     FileManager.default.fileExists(atPath: targetURL.path) {
@@ -2414,7 +2360,6 @@ struct SettingsScreen: View {
             }
 
             if isScreenDocumentFileExtension(pathExtension) {
-                db("IMPORT_TRACE file_accepted kind=screen filename=\(targetFileName) destination=\(targetURL.path)")
                 if session.existingFileNames.contains(targetFileNameKey) ||
                     FileManager.default.fileExists(atPath: targetURL.path) {
                     if applyPendingImportConflictIfNeeded(
@@ -2447,10 +2392,8 @@ struct SettingsScreen: View {
 
             if pathExtension == legacyScreenDocumentFileExtension {
                 guard session.importMode == .allFiles else {
-                    db("IMPORT_TRACE file_rejected filename=\(targetFileName) reason=text_not_allowed_for_mode mode=\(session.importMode)")
                     continue
                 }
-                db("IMPORT_TRACE file_accepted kind=text filename=\(targetFileName) destination=\(targetURL.path)")
 
                 if session.existingTextNames.contains(targetFileNameKey) ||
                     FileManager.default.fileExists(atPath: targetURL.path) {
@@ -2483,10 +2426,8 @@ struct SettingsScreen: View {
 
             if supportedImportedImageExtensions.contains(pathExtension) {
                 guard session.importMode == .allFiles else {
-                    db("IMPORT_TRACE file_rejected filename=\(targetFileName) reason=image_not_allowed_for_mode mode=\(session.importMode)")
                     continue
                 }
-                db("IMPORT_TRACE file_accepted kind=image filename=\(targetFileName) destination=\(targetURL.path)")
 
                 if session.existingImageNames.contains(targetFileNameKey) ||
                     FileManager.default.fileExists(atPath: targetURL.path) {
@@ -2519,10 +2460,8 @@ struct SettingsScreen: View {
 
             if supportedImportedSoundExtensions.contains(pathExtension) {
                 guard session.importMode == .allFiles else {
-                    db("IMPORT_TRACE file_rejected filename=\(targetFileName) reason=sound_not_allowed_for_mode mode=\(session.importMode)")
                     continue
                 }
-                db("IMPORT_TRACE file_accepted kind=sound filename=\(targetFileName) destination=\(targetURL.path)")
 
                 if session.existingSoundNames.contains(targetFileNameKey) ||
                     FileManager.default.fileExists(atPath: targetURL.path) {
@@ -2555,10 +2494,8 @@ struct SettingsScreen: View {
 
             if supportedImportedPDFExtensions.contains(pathExtension) {
                 guard session.importMode == .allFiles else {
-                    db("IMPORT_TRACE file_rejected filename=\(targetFileName) reason=pdf_not_allowed_for_mode mode=\(session.importMode)")
                     continue
                 }
-                db("IMPORT_TRACE file_accepted kind=pdf filename=\(targetFileName) destination=\(targetURL.path)")
 
                 if session.existingPDFNames.contains(targetFileNameKey) ||
                     FileManager.default.fileExists(atPath: targetURL.path) {
@@ -2592,11 +2529,7 @@ struct SettingsScreen: View {
             db("IMPORT_TRACE file_rejected filename=\(targetFileName) reason=unsupported_extension extension=\(pathExtension) mode=\(session.importMode)")
         }
 
-        db("IMPORT_QUEUE_COMPLETE")
         if session.importMode == .allFiles {
-            db("IMPORT_ALL_COMPLETE imported=\(session.importedFileCount) replaced=\(session.replacedFileCount) failed=\(session.failedFileCount)")
-            db("RESTORE_ALL_COMPLETE restored=\(session.importedFileCount) replaced=\(session.replacedFileCount) failed=\(session.failedFileCount)")
-            db("IMPORT_FULL_COPY_COMPLETE imported=\(session.importedFileCount) failed=\(session.failedFileCount)")
         }
         finishPendingImportSession(session)
     }
@@ -2609,11 +2542,7 @@ struct SettingsScreen: View {
     ) {
         session.importedAnything = true
         session.importedFileCount += 1
-        db("IMPORT_TRACE record_success kind=\(contentKind) target=\(targetURL.path)")
-        db("IMPORT_QUEUE imported filename=\(targetURL.lastPathComponent) remaining=\(session.remainingURLs.count)")
-        db("IMPORT_COPY_SUCCESS filename=\(targetURL.lastPathComponent)")
         if session.importMode == .allFiles {
-            db("IMPORT_FULL_COPY_SUCCESS filename=\(targetURL.lastPathComponent)")
         }
 
         switch contentKind {
@@ -2662,10 +2591,6 @@ struct SettingsScreen: View {
         session: inout PendingImportSession
     ) -> Bool {
         if session.importMode == .allFiles {
-            db("IMPORT_ALL_REPLACE filename=\(fileName)")
-            db("RESTORE_ALL_REPLACE filename=\(fileName)")
-            db("IMPORT_CONFLICT filename=\(fileName) action=replace continuing=true")
-            db("IMPORT_FULL_CONFLICT_RESOLVED action=replace filename=\(fileName)")
             session.replacedFileCount += 1
             importReplacingExistingFile(
                 sourceURL: sourceURL,
@@ -2678,12 +2603,9 @@ struct SettingsScreen: View {
         }
 
         if let resolution = session.applyToAllResolution {
-            db("IMPORT_TRACE conflict_auto_resolve file=\(fileName) resolution=\(resolution)")
             switch resolution {
             case .replace:
-                db("IMPORT_CONFLICT filename=\(fileName) action=replace continuing=true")
                 if session.importMode == .allFiles {
-                    db("IMPORT_FULL_CONFLICT_RESOLVED action=replace filename=\(fileName)")
                 }
                 importReplacingExistingFile(
                     sourceURL: sourceURL,
@@ -2693,9 +2615,7 @@ struct SettingsScreen: View {
                     session: &session
                 )
             case .keepBoth:
-                db("IMPORT_CONFLICT filename=\(fileName) action=keepBoth continuing=true")
                 if session.importMode == .allFiles {
-                    db("IMPORT_FULL_CONFLICT_RESOLVED action=keepBoth filename=\(fileName)")
                 }
                 importKeepingBothFiles(
                     sourceURL: sourceURL,
@@ -2707,11 +2627,7 @@ struct SettingsScreen: View {
             return false
         }
 
-        db("IMPORT_TRACE conflict_presented file=\(fileName) kind=\(contentKind) destination=\(targetURL.path)")
-        db("IMPORT_QUEUE conflict filename=\(fileName) remaining=\(session.remainingURLs.count)")
-        db("IMPORT_CONFLICT_WAITING filename=\(fileName)")
         if session.importMode == .allFiles {
-            db("IMPORT_FULL_CONFLICT filename=\(fileName)")
         }
         pendingImportSession = session
         pendingImportConflict = PendingImportConflict(
@@ -2737,12 +2653,8 @@ struct SettingsScreen: View {
             session.applyToAllResolution = .replace
         }
 
-        db("IMPORT_CONFLICT filename=\(conflict.fileName) action=replace continuing=true")
-        db("IMPORT_CONFLICT_RESOLVED action=replace filename=\(conflict.fileName)")
         if session.importMode == .allFiles {
-            db("IMPORT_FULL_CONFLICT_RESOLVED action=replace filename=\(conflict.fileName)")
         }
-        db("IMPORT_QUEUE replace_pending filename=\(conflict.fileName) queue_count_before_continue=\(session.remainingURLs.count)")
         importReplacingExistingFile(
             sourceURL: conflict.sourceURL,
             targetURL: conflict.targetURL,
@@ -2750,8 +2662,6 @@ struct SettingsScreen: View {
             contentKind: conflict.contentKind,
             session: &session
         )
-        db("IMPORT_QUEUE replace_pending filename=\(conflict.fileName) queue_count_after_continue=\(session.remainingURLs.count)")
-        db("IMPORT_QUEUE_AFTER_CONFLICT remaining=\(session.remainingURLs.count) next=\(session.remainingURLs.first?.lastPathComponent ?? "nil")")
         processPendingImportSession(session)
     }
 
@@ -2769,9 +2679,7 @@ struct SettingsScreen: View {
             session.applyToAllResolution = .keepBoth
         }
 
-        db("IMPORT_CONFLICT filename=\(conflict.fileName) action=keepBoth continuing=true")
         if session.importMode == .allFiles {
-            db("IMPORT_FULL_CONFLICT_RESOLVED action=keepBoth filename=\(conflict.fileName)")
         }
         importKeepingBothFiles(
             sourceURL: conflict.sourceURL,
@@ -2873,9 +2781,7 @@ struct SettingsScreen: View {
             return
         }
 
-        db("IMPORT_CONFLICT filename=\(pendingImportConflict?.fileName ?? "nil") action=stop continuing=false")
         if session.importMode == .allFiles {
-            db("IMPORT_FULL_CONFLICT_RESOLVED action=stop filename=\(pendingImportConflict?.fileName ?? "nil")")
         }
         pendingImportConflict = nil
         pendingImportSession = nil
@@ -2883,7 +2789,6 @@ struct SettingsScreen: View {
     }
 
     private func finishPendingImportSession(_ session: PendingImportSession) {
-        db("IMPORT_TRACE finishPendingImportSession importedAnything=\(session.importedAnything) mode=\(session.importMode)")
         pendingImportConflict = nil
         pendingImportSession = nil
         importConflictApplyToAll = false
@@ -2964,14 +2869,8 @@ struct SettingsScreen: View {
     }
 
     private func extractScreenPackageImport(from zipURL: URL) throws -> ScreenPackageImport {
-        db("IMPORT_TRACE screen_package_extraction_started zip=\(zipURL.path)")
         let archiveData = try readImportedFileData(from: zipURL)
         let entries = try SettingsArchiveFileDocument.archiveEntries(from: archiveData)
-        db("IMPORT_TRACE screen_package_entry_count=\(entries.count)")
-        for entry in entries {
-            let fileName = sanitizedArchiveFileName(entry.fileName) ?? "nil"
-            db("IMPORT_TRACE extracted_entry relative_path=\(entry.fileName) filename=\(fileName) extension=\(URL(fileURLWithPath: fileName).pathExtension.lowercased())")
-        }
         guard let documentEntry = entries.first(where: { entry in
             guard let fileName = sanitizedArchiveFileName(entry.fileName) else {
                 return false
@@ -2985,7 +2884,6 @@ struct SettingsScreen: View {
 
         let temporaryDirectoryURL = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
-        db("IMPORT_TRACE screen_package_extraction_directory=\(temporaryDirectoryURL.path)")
 
         do {
             try FileManager.default.createDirectory(
@@ -2995,7 +2893,6 @@ struct SettingsScreen: View {
 
             let documentURL = temporaryDirectoryURL.appendingPathComponent(documentFileName)
             try documentEntry.data.write(to: documentURL, options: [.atomic])
-            db("IMPORT_TRACE screen_package_extracted_file relative_path=\(documentEntry.fileName) filename=\(documentURL.lastPathComponent) extension=\(documentURL.pathExtension.lowercased())")
 
             let matchingConfigFileName = configFileName(forDocumentName: documentFileName)
             let matchingConfigKey = matchingConfigFileName.lowercased()
@@ -3007,7 +2904,6 @@ struct SettingsScreen: View {
                 let extractedConfigURL = temporaryDirectoryURL.appendingPathComponent(matchingConfigFileName)
                 try configEntry.data.write(to: extractedConfigURL, options: [.atomic])
                 configURL = extractedConfigURL
-                db("IMPORT_TRACE screen_package_extracted_file relative_path=\(configEntry.fileName) filename=\(extractedConfigURL.lastPathComponent) extension=\(extractedConfigURL.pathExtension.lowercased())")
             }
 
             return ScreenPackageImport(
@@ -3032,25 +2928,16 @@ struct SettingsScreen: View {
     }
 
     private func extractFullArchiveImportIfPresent(from zipURL: URL) throws -> FullArchiveImport? {
-        db("IMPORT_TRACE full_archive_extraction_started zip=\(zipURL.path)")
         let archiveData = try readImportedFileData(from: zipURL)
         let entries = try SettingsArchiveFileDocument.archiveEntries(from: archiveData)
         let archiveStructure = fullArchiveStructure(in: entries)
 
-        db("IMPORT_TRACE full_archive_validation Archive.json=\(archiveStructure.hasManifest ? "yes" : "no") Screens=\(archiveStructure.hasScreensFolder ? "yes" : "no") Configs=\(archiveStructure.hasConfigsFolder ? "yes" : "no") Text=\(archiveStructure.hasTextFolder ? "yes" : "no") Images=\(archiveStructure.hasImagesFolder ? "yes" : "no") Sounds=\(archiveStructure.hasSoundsFolder ? "yes" : "no") PDFs=\(archiveStructure.hasPDFsFolder ? "yes" : "no")")
-        for entry in entries {
-            let fileName = sanitizedArchiveFileName(entry.fileName) ?? "nil"
-            db("IMPORT_TRACE extracted_entry relative_path=\(entry.fileName) filename=\(fileName) extension=\(URL(fileURLWithPath: fileName).pathExtension.lowercased())")
-        }
-
         guard archiveStructure.isFullArchive else {
             return nil
         }
-        db("IMPORT_TRACE zip_classification=full_archive")
 
         let temporaryDirectoryURL = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
-        db("IMPORT_TRACE full_archive_extraction_directory=\(temporaryDirectoryURL.path)")
 
         do {
             try FileManager.default.createDirectory(
@@ -3085,30 +2972,22 @@ struct SettingsScreen: View {
                 case "Configs" where isScreenConfigFileName(fileName):
                     configURLsByName[fileName.lowercased()] = extractedURL
                     configURLs.append(extractedURL)
-                    db("IMPORT_TRACE full_archive_extracted_file relative_path=\(entry.fileName) filename=\(fileName) extension=\(pathExtension) category=config")
                 case "Screens" where isScreenDocumentFileExtension(pathExtension):
                     screenURLs.append(extractedURL)
-                    db("IMPORT_TRACE full_archive_extracted_file relative_path=\(entry.fileName) filename=\(fileName) extension=\(pathExtension) category=screen")
                 case "Text" where pathExtension == legacyScreenDocumentFileExtension:
                     textURLs.append(extractedURL)
-                    db("IMPORT_TRACE full_archive_extracted_file relative_path=\(entry.fileName) filename=\(fileName) extension=\(pathExtension) category=text")
                 case "Images" where supportedImportedImageExtensions.contains(pathExtension):
                     imageURLs.append(extractedURL)
-                    db("IMPORT_TRACE full_archive_extracted_file relative_path=\(entry.fileName) filename=\(fileName) extension=\(pathExtension) category=image")
                 case "Sounds" where supportedImportedSoundExtensions.contains(pathExtension):
                     soundURLs.append(extractedURL)
-                    db("IMPORT_TRACE full_archive_extracted_file relative_path=\(entry.fileName) filename=\(fileName) extension=\(pathExtension) category=sound")
                 case "PDFs" where supportedImportedPDFExtensions.contains(pathExtension):
                     pdfURLs.append(extractedURL)
-                    db("IMPORT_TRACE full_archive_extracted_file relative_path=\(entry.fileName) filename=\(fileName) extension=\(pathExtension) category=pdf")
                 default:
-                    db("IMPORT_TRACE full_archive_entry_rejected relative_path=\(entry.fileName) filename=\(fileName) extension=\(pathExtension) folder=\(folderName)")
                     continue
                 }
             }
 
             let orderedURLs = configURLs + screenURLs + textURLs + imageURLs + soundURLs + pdfURLs
-            db("IMPORT_TRACE full_archive_queue_counts configs=\(configURLs.count) screens=\(screenURLs.count) text=\(textURLs.count) images=\(imageURLs.count) sounds=\(soundURLs.count) pdfs=\(pdfURLs.count) total=\(orderedURLs.count)")
             return FullArchiveImport(
                 fileURLs: orderedURLs,
                 configURLsByName: configURLsByName,
@@ -3486,17 +3365,13 @@ struct SettingsScreen: View {
     }
 
     private func markImportedContentChanged() {
-        db("IMPORT_TRACE final_refresh_call before_count=\(availableDocumentURLs.count)")
         refreshDocumentFiles()
         importRefreshID = UUID()
-        db("IMPORT_TRACE final_document_count_after_import=\(availableDocumentURLs.count)")
     }
 
     private func markDeletedAllDataChanged() {
-        db("DELETE_ALL_TRACE final_refresh_call before_count=\(availableDocumentURLs.count)")
         refreshDocumentFilesAfterDeletingAllData()
         importRefreshID = UUID()
-        db("DELETE_ALL_TRACE final_document_count_after_delete=\(availableDocumentURLs.count)")
     }
 
     private func readImportedFileData(from sourceURL: URL) throws -> Data {
@@ -3536,7 +3411,6 @@ struct SettingsScreen: View {
     }
 
     private func importFileData(from sourceURL: URL, to targetURL: URL) throws {
-        db("IMPORT_TRACE copy_started source=\(sourceURL.path) destination=\(targetURL.path)")
         let didAccessSecurityScopedResource = sourceURL.startAccessingSecurityScopedResource()
         defer {
             if didAccessSecurityScopedResource {
@@ -3571,7 +3445,6 @@ struct SettingsScreen: View {
                 }
 
                 try FileManager.default.moveItem(at: temporaryURL, to: targetURL)
-                db("IMPORT_TRACE copy_success source=\(coordinatedURL.path) destination=\(targetURL.path)")
             } catch {
                 db("IMPORT_TRACE copy_failure source=\(coordinatedURL.path) destination=\(targetURL.path) error=\(error.localizedDescription)")
                 importError = error

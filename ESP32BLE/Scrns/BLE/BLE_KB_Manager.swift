@@ -269,16 +269,9 @@ extension BLEKeyboardManager: CBCentralManagerDelegate {
 		rssi RSSI: NSNumber
 		) {
 			let name = peripheral.name ?? "Unknown ESP32"
-			let advertisedName = advertisementData[CBAdvertisementDataLocalNameKey] as? String ?? "nil"
-			let now = Date()
-		
-			if db_bt {
-				db("** Found peripheral: \(name)")
-				db("** Found advertised local name: \(advertisedName)")
-				db("** Peripheral identifier: \(peripheral.identifier.uuidString)")
-			}
-			
-			if let index = discoveredDevices.firstIndex(where: { $0.id == peripheral.identifier }) {
+				let now = Date()
+				
+				if let index = discoveredDevices.firstIndex(where: { $0.id == peripheral.identifier }) {
 				discoveredDevices[index] = BLEDiscoveredDevice(
 					id: peripheral.identifier,
 					peripheral: peripheral,
@@ -310,12 +303,10 @@ extension BLEKeyboardManager: CBCentralManagerDelegate {
 	func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
 		let isProbe = probePeripheralIDs.contains(peripheral.identifier)
 		
-		if isProbe {
-			db("Probe-connected to \(peripheral.identifier.uuidString)")
-		} else {
-			connectionText = "Connected, discovering services..."
-			isConnected = true
-			esp32Peripheral = peripheral
+			if !isProbe {
+				connectionText = "Connected, discovering services..."
+				isConnected = true
+				esp32Peripheral = peripheral
 		}
 		
 		peripheral.discoverServices([serviceUUID])
@@ -422,7 +413,6 @@ extension BLEKeyboardManager: CBPeripheralDelegate {
 			   let value = String(data: data, encoding: .utf8)?
 				.trimmingCharacters(in: .whitespacesAndNewlines) {
 			
-			db("Device ID read: \(value) for \(peripheral.identifier.uuidString)")
 			
 			if let index = discoveredDevices.firstIndex(where: { $0.id == peripheral.identifier }) {
 				discoveredDevices[index].deviceID = value
