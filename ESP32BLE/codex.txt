@@ -1,112 +1,157 @@
 FILES CHANGED
 
+ESP32BLE/Scrns/BLE/BLE_KB_Manager.swift
 ESP32BLE/Scrns/ContentView.swift
+ESP32BLE/Scrns/KB_Screen/KB_InputBehavior.swift
+ESP32BLE/Scrns/KB_Screen/KB_ModifierSend.swift
 ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift
-ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
-ESP32BLE/Scrns/Main_Screen/Speech Recognition/SR_Support.swift
 ESP32BLE/Scrns/Main_Screen/Toolbars/Main_BtmToolbar.swift
 ESP32BLE/Scrns/Set_Screen/Btm_Area/Set_AvailableDevices.swift
 ESP32BLE/Scrns/Set_Screen/Btm_Area/Set_SendTextSupport.swift
 
-SPEECH RECOGNITION
+STATE MODEL
 
-New routing path:
+OutputMode now represents all three states directly:
 
-recognized speech
--> matchingSpeechEntry(for:)
--> bluetoothSendTexts(for:)
--> sendKeyboardOutputTokens(...)
--> ESP32/BLE or MacConnectionManager
+none = Off / Startup
+esp32 = ESP32 mode
+mac = Mac mode
 
-applyRecognizedSpeech(_:) no longer checks BLE or calls ble.sendLine directly.
+No second independent connection state machine was added.
 
-sendModifierFunctionKey(_:) now routes ["ct", "sh", "op", "cm", functionKey] through sendKeyboardOutputTokens(...). No caller was added.
+STARTUP
 
-SMART EDITOR TEST
+Startup now forces outputMode to none.
+This is real Off, not ESP32 or Mac disguised visually.
+On startup, MacConnectionManager.stop() and BLEKeyboardManager.stop() are applied.
 
-testEditingSlotText() non-wait output now calls sendKeyboardOutputTokens(..., respectsButtonMode: false).
+BUTTON BEHAVIOR
 
-Mac mode no longer requires BLE for this test path. Wait behavior and parsing were preserved.
+ESP32 toggles ESP32 <-> Off.
+Mac toggles Mac <-> Off.
+Mac -> ESP32 stops Mac and starts ESP32 scan.
+ESP32 -> Mac stops BLE and starts Mac discovery.
+No fallback from one transport to the other was added.
 
-SETTINGS TEXT SEND
+CONNECTION BEHAVIOR
 
-sendEnteredText() now follows outputModeRawValue.
+Off:
+Mac discovery/connection stops.
+BLE scan stops.
+Active/probe BLE peripherals are cancelled.
+Keyboard output has no selected transport.
 
-ESP32 selected:
-ca, if enabled, still sends through ble.sendLine("ca")
-text still sends through ble.sendString(trimmedText)
+ESP32:
+Mac stops.
+BLE scan starts.
+The user still selects an ESP32 from the existing list.
+ESP32 mode does not auto-connect.
 
-Mac selected:
-["ca", text] or [text] goes through macConnection.sendKeyboardTokens(...)
+Mac:
+BLE stops/disconnects.
+MacConnectionManager starts its existing Bonjour/network discovery.
 
-ESP32 keyboard timing configuration remains BLE-only and was not changed.
+MAC RECONNECTION
 
-OUTPUT MODE SWITCHING
+MacConnectionManager intentional-stop behavior is preserved.
+Accidental Mac loss remains Mac mode and can restart search/reconnect.
+User toggling Mac Off deliberately stops discovery/reconnection.
 
-Press ESP32:
-selects ESP32 output mode
-calls macConnection.stop()
-does not auto-connect BLE
-leaves ESP32 device selection/connection to the device rows
+STATUS TEXT
 
-Press Mac:
-selects Mac output mode
-calls ble.disconnect()
-calls macConnection.start()
+Off:
+Not connected
 
-Pressing the already-selected mode does not disconnect that mode. Pressing Mac while already in Mac mode may call start(), which is safe and preserves connection establishment.
+ESP32 searching/disconnected:
+ESP32: Searching...
 
-Deliberate Mac disconnect:
-MacConnectionManager now tracks an intentional stop. Browser failure, connection cancellation/failure, and send-completion errors do not restart search while deliberately stopped. Accidental/network loss still uses existing restart behavior.
+ESP32 connected:
+ESP32: Connected
 
-BLE reconnect:
-Selecting Mac calls ble.disconnect(). BLE scanning may continue through existing BLE manager behavior, but this does not immediately reconnect unless the existing device-selection flow requests a connection.
+Mac searching/disconnected:
+Mac: Searching...
 
-DISCONNECT BUTTON
+Mac connected:
+Mac: Connected
 
-Removed the explicit ESP32 disconnect UI button: the red xmark button above/near the ESP32 device area in SettingsAvailableDevicesPanel.
+ESP32 DEVICE VISIBILITY
 
-BLEKeyboardManager.disconnect() remains intact and is still used internally when switching to Mac mode.
+Off: hidden
+Mac: hidden
+ESP32: visible
 
-BUTTON COLORS
+LIVE BLE DISCOVERY
 
-Selected ESP32 mode button is now blue.
+Root cause:
+BLEDiscoveredDevice already stored lastSeenAt, RSSI, deviceID, and peripheral identity.
+BLEKeyboardManager already had discoveredDeviceTimeout, staleDeviceCleanupInterval, and removeStaleDiscoveredDevices().
+But startStaleDeviceCleanupTimer() only invalidated the timer and never scheduled a new one.
+So CoreBluetooth discoveries were effectively additive during continuous scanning, and stale devices stayed in discoveredDevices until a fresh scan cleared the list.
 
-Selected Mac mode keeps the existing green selected appearance.
-
-Inactive mode buttons keep the existing gray appearance.
+Fix:
+startScan() now starts a lightweight cleanup timer.
+The timer runs every 2 seconds.
+Devices not seen for 8 seconds are removed unless they are the actively connected ESP32.
+If the removed device was selected, selectedPeripheralID is cleared.
+Returning ESP32s are restored by the existing didDiscover path when advertisements resume.
 
 MAINSCREEN LED
 
-The LED now represents the selected transport only.
+Off = existing flashing red/black
+ESP32 disconnected/searching = existing flashing red/black
+ESP32 connected = blue
+Mac searching/disconnected = existing flashing red/black
+Mac connected = green
 
-ESP32 selected + BLE connected: blue
-Mac selected + Mac helper canSend: green
-Selected transport disconnected: existing flashing red/black
+Grid-edit pulse behavior is preserved.
 
-Grid edit mode still pulses, now using the selected transport’s connected color.
+UI PRESERVATION
 
-DORMANT CODE
-
-TestArea.swift was not modified.
-CommandButtonsSection.swift was not modified.
-PhraseButtonsSection.swift was not modified.
+No controls added.
+No controls removed.
+No controls moved.
+No layout changes.
+No font changes.
+No spacing changes.
+No size changes.
+No Connection panel redesign.
+No MainScreen layout changes.
 
 UNCHANGED
 
 Mac Helper untouched.
-F20 / SecondaryFn behavior untouched.
-Network protocol, Bonjour service, and Mac wire protocol untouched.
-.screen syntax and FunctionKeyEntry parsing untouched.
 ESP32 firmware untouched.
+Network protocol untouched.
+F20 behavior untouched.
+.screen behavior untouched.
+Dormant demo views untouched.
 iPadOS 17 performance work untouched.
 
 BUILD RESULT
 
-Production ESP build succeeded.
+Production ESP project build succeeded.
+No new errors reported.
+No new warnings reported by the build tool.
 
-Errors: none.
-New warnings caused by this work: none reported.
+PHYSICAL TEST PLAN, NOT EXECUTED
 
-Known unrelated live diagnostic still exists:
-unused selectedHomeDocument in Main_Screen.swift.
+TEST 1 STARTUP:
+Launch ESP. Expect both buttons gray, Not connected, ESP32 area hidden, MainScreen LED flashing red.
+
+TEST 2 MAC:
+Press Mac. Expect Mac green, ESP32 gray, Mac: Searching..., then Mac: Connected, ESP32 area hidden, LED green when connected.
+
+TEST 3 MAC TO OFF:
+Press Mac again. Expect both buttons gray, Not connected, Mac deliberately stopped, no auto-reconnect, LED flashing red.
+
+TEST 4 ESP32:
+Press ESP32. Expect ESP32 blue, Mac gray, ESP32: Searching..., live ESP32 list visible. Select ESP32, expect ESP32: Connected and LED blue.
+
+TEST 5 ESP32 TO OFF:
+Press ESP32 again. Expect BLE disconnect, both buttons gray, list hidden, Not connected, LED flashing red.
+
+TEST 6 DIRECT SWITCH:
+Test Mac -> ESP32 and ESP32 -> Mac. Expect old transport stopped, new transport active, no fallback, no hidden simultaneous connection.
+
+TEST 7 LIVE DEVICE AVAILABILITY:
+Air in ESP32 mode sees ESP32 2 and ESP32 3. Pro connects to ESP32 3. Without switching modes, wait about 8 seconds plus cleanup interval. Expect ESP32 3 no longer available on Air. Disconnect Pro from ESP32 3. Expect Air to rediscover ESP32 3 automatically.

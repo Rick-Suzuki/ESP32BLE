@@ -432,7 +432,12 @@ extension MainScreen {
             return true
         }
 
-        if outputMode == .mac {
+        switch outputMode {
+        case .none:
+            alertTitle = "Not connected"
+            renameAlertMessage = "Select Mac or ESP32 before sending keyboard output."
+            return false
+        case .mac:
             guard macConnection.sendKeyboardTokens(keyboardOutputTokens) else {
                 alertTitle = "Mac helper not connected"
                 renameAlertMessage = "ESP needs to connect to ESP Mac Helper before sending keyboard output to the Mac."
@@ -440,6 +445,8 @@ extension MainScreen {
             }
 
             return true
+        case .esp32:
+            break
         }
 
         guard ble.isConnected else {

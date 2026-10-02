@@ -13,6 +13,10 @@ extension KeyboardScreen {
         popupMessage = "Mac helper not connected.\nESP needs to connect to ESP Mac Helper before\nsending keyboard output to the Mac."
     }
 
+    func showNoOutputModePopup() {
+        popupMessage = "Not connected.\nSelect Mac or ESP32 before\nsending keyboard output."
+    }
+
     var activeModifierTokens: [String] {
         KeyboardModifier.orderedCases
             .filter { activeModifiers.contains($0) }
@@ -54,7 +58,11 @@ extension KeyboardScreen {
     }
 
     func sendTokensDirectly(_ tokens: [String]) {
-        if outputMode == .mac {
+        switch outputMode {
+        case .none:
+            showNoOutputModePopup()
+            return
+        case .mac:
             guard macConnection.sendKeyboardTokens(tokens) else {
                 showMacDisconnectedPopup()
                 return
@@ -62,6 +70,8 @@ extension KeyboardScreen {
 
             resetModifierToggles()
             return
+        case .esp32:
+            break
         }
 
         sendTokensDirectlyToBLE(tokens)
@@ -86,13 +96,19 @@ extension KeyboardScreen {
             return
         }
 
-        if outputMode == .mac {
+        switch outputMode {
+        case .none:
+            showNoOutputModePopup()
+            return
+        case .mac:
             guard macConnection.sendKeyboardTokens([typingText]) else {
                 showMacDisconnectedPopup()
                 return
             }
 
             return
+        case .esp32:
+            break
         }
 
         guard ble.isConnected else {

@@ -52,7 +52,11 @@ extension SettingsScreen {
             return
         }
 
-        if OutputMode(persistedValue: outputModeRawValue) == .mac {
+        switch OutputMode(persistedValue: outputModeRawValue) {
+        case .none:
+            db("Not connected.")
+            return
+        case .mac:
             let tokens = sendControlABeforeText ? ["ca", trimmedText] : [trimmedText]
             guard macConnection.sendKeyboardTokens(tokens) else {
                 db("Mac helper not connected.")
@@ -60,6 +64,8 @@ extension SettingsScreen {
             }
 
             return
+        case .esp32:
+            break
         }
 
         guard ble.isConnected else {

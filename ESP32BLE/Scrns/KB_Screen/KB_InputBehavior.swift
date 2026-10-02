@@ -36,12 +36,16 @@ extension KeyboardScreen {
         }
 
         if isSendImmediatelyEnabled {
-            if outputMode == .mac {
+            switch outputMode {
+            case .none:
+                showNoOutputModePopup()
+                return
+            case .mac:
                 guard macConnection.sendKeyboardTokens([insertedText]) else {
                     showMacDisconnectedPopup()
                     return
                 }
-            } else {
+            case .esp32:
                 guard ble.isConnected else {
                     showBluetoothDisconnectedPopup()
                     return
@@ -61,12 +65,16 @@ extension KeyboardScreen {
 
     func handleBackspace() {
         if isSendImmediatelyEnabled {
-            if outputMode == .mac {
+            switch outputMode {
+            case .none:
+                showNoOutputModePopup()
+                return
+            case .mac:
                 guard macConnection.sendKeyboardTokens(["BS"]) else {
                     showMacDisconnectedPopup()
                     return
                 }
-            } else {
+            case .esp32:
                 guard ble.isConnected else {
                     showBluetoothDisconnectedPopup()
                     return
@@ -91,12 +99,16 @@ extension KeyboardScreen {
 
     func handleReturn() {
         guard isSendOnReturnMode else {
-            if outputMode == .mac {
+            switch outputMode {
+            case .none:
+                showNoOutputModePopup()
+                return
+            case .mac:
                 guard macConnection.sendKeyboardTokens(["ENTER"]) else {
                     showMacDisconnectedPopup()
                     return
                 }
-            } else {
+            case .esp32:
                 guard ble.isConnected else {
                     showBluetoothDisconnectedPopup()
                     return

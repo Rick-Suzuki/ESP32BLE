@@ -43,15 +43,18 @@ enum ButtonClickFeedback {
 }
 
 enum OutputMode: String, CaseIterable {
+    case none
     case esp32
     case mac
 
     init(persistedValue: String) {
-        self = OutputMode(rawValue: persistedValue) ?? .esp32
+        self = OutputMode(rawValue: persistedValue) ?? .none
     }
 
     var title: String {
         switch self {
+        case .none:
+            return ""
         case .esp32:
             return "ESP32"
         case .mac:
@@ -390,7 +393,7 @@ struct ContentView: View {
     @AppStorage("documentGridDimensionsData") private var documentGridDimensionsData = ""
     @AppStorage("backgroundImageOpacity") private var backgroundImageOpacity = 0.5
     @AppStorage("mainGridBackgroundOpacity") private var mainGridBackgroundOpacity = 1.0
-    @AppStorage("outputMode") private var outputModeRawValue = OutputMode.esp32.rawValue
+    @AppStorage("outputMode") private var outputModeRawValue = OutputMode.none.rawValue
     @StateObject private var ble = BLEKeyboardManager()
     @StateObject private var macConnection = MacConnectionManager()
     @State private var functionKeys = ContentView.makeDefaultFunctionKeys()
@@ -412,6 +415,7 @@ struct ContentView: View {
     @State private var isKeyboardScreenPresented = false
     @State private var isSettingsScreenPresented = true
     @State private var didPresentInitialSettingsScreen = false
+    @State private var didApplyStartupOutputMode = false
     @State private var isDeletingAllData = false
     @AppStorage("settingsStatusBarVisible") private var isStatusBarVisible = true
 
@@ -533,11 +537,12 @@ struct ContentView: View {
             presentInitialSettingsScreenIfNeeded()
         }
         .task {
+            applyStartupOutputModeIfNeeded()
             ensureDefaultFunctionKeysFile()
             refreshBackgroundImageFiles()
             updateLoadedBackgroundImageForVisibleScreen()
             refreshOrientationState()
-            updateMacConnectionStateForOutputMode()
+            updateTransportStateForOutputMode()
         }
         .task {
             UIDevice.current.beginGeneratingDeviceOrientationNotifications()
@@ -573,16 +578,28 @@ struct ContentView: View {
             }
         }
         .onChange(of: outputModeRawValue) {
-            updateMacConnectionStateForOutputMode()
+            updateTransportStateForOutputMode()
         }
     }
 
-    private func updateMacConnectionStateForOutputMode() {
-        if OutputMode(persistedValue: outputModeRawValue) == .mac {
-            macConnection.start()
-        } else {
+    private func updateTransportStateForOutputMode() {
+        switch OutputMode(persistedValue: outputModeRawValue) {
+        case .none:
             macConnection.stop()
+            ble.stop()
+        case .esp32:
+            macConnection.stop()
+            ble.startScan()
+        case .mac:
+            ble.stop()
+            macConnection.start()
         }
+    }
+
+    private func applyStartupOutputModeIfNeeded() {
+        guard !didApplyStartupOutputMode else { return }
+        didApplyStartupOutputMode = true
+        outputModeRawValue = OutputMode.none.rawValue
     }
 
     private func refreshOrientationState() {

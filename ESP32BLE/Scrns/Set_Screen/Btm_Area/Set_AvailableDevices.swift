@@ -15,51 +15,53 @@ struct SettingsAvailableDevicesPanel: View {
         HStack(alignment: .top, spacing: 32) {
             VStack(alignment: .leading, spacing: 12) {
                 if isPad {
-                    Text("ESP32")
+                    Text("Connection")
                         .font(.headline)
                 }
 
                 outputModeControls
 
-                if ble.discoveredDevices.isEmpty {
-                    Text("No ESP32 devices found yet")
-                        .foregroundStyle(.secondary)
-                }
-
-                ForEach(ble.discoveredDevices) { device in
-                    Button {
-                        ButtonClickFeedback.playIfEnabled()
-                        ble.selectedPeripheralID = device.id
-                        if !ble.isConnected {
-                            ble.connectToSelectedDevice()
-                        }
-                    } label: {
-                        HStack {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    VStack {
-                                        Text(settingsDeviceName(for: device))
-                                            .font(settingsDeviceFont)
-                                        .foregroundStyle(settingsDeviceNameColor(for: device))
-                                    }
-                                }
-                            Spacer()
-
-                            if showsDeviceCheckmark(for: device) {
-                                Image(systemName: "checkmark.circle.fill")
-									.foregroundStyle(.green)
-
-                            }
-                        }
-                        .padding(2)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(
-                            RoundedRectangle(cornerRadius: 12)
-                                .fill(settingsDeviceBackgroundColor(for: device))
-                        )
+                if outputMode == .esp32 {
+                    if ble.discoveredDevices.isEmpty {
+                        Text("No ESP32 devices found yet")
+                            .foregroundStyle(.secondary)
                     }
-                    .buttonStyle(.plain)
-                    .disabled(ble.isConnected && ble.selectedPeripheralID != device.id)
-                    .opacity(ble.isConnected && ble.selectedPeripheralID != device.id ? 0.45 : 1)
+
+                    ForEach(ble.discoveredDevices) { device in
+                        Button {
+                            ButtonClickFeedback.playIfEnabled()
+                            ble.selectedPeripheralID = device.id
+                            if !ble.isConnected {
+                                ble.connectToSelectedDevice()
+                            }
+                        } label: {
+                            HStack {
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        VStack {
+                                            Text(settingsDeviceName(for: device))
+                                                .font(settingsDeviceFont)
+                                            .foregroundStyle(settingsDeviceNameColor(for: device))
+                                        }
+                                    }
+                                Spacer()
+
+                                if showsDeviceCheckmark(for: device) {
+                                    Image(systemName: "checkmark.circle.fill")
+											.foregroundStyle(.green)
+
+                                }
+                            }
+                            .padding(2)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(settingsDeviceBackgroundColor(for: device))
+                            )
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(ble.isConnected && ble.selectedPeripheralID != device.id)
+                        .opacity(ble.isConnected && ble.selectedPeripheralID != device.id ? 0.45 : 1)
+                    }
                 }
             }
             .frame(maxWidth: .infinity, alignment: .topLeading)
@@ -97,9 +99,9 @@ struct SettingsAvailableDevicesPanel: View {
                 outputModeButton(.mac)
             }
 
-            Text("Mac: \(macConnection.status.rawValue)")
+            Text(connectionStatusText)
                 .font(.caption)
-                .foregroundStyle(outputMode == .mac ? .white : .secondary)
+                .foregroundStyle(outputMode == .none ? Color.secondary : Color.white)
         }
     }
 
@@ -120,20 +122,24 @@ struct SettingsAvailableDevicesPanel: View {
     }
 
     private func selectOutputMode(_ mode: OutputMode) {
-        guard outputMode != mode else {
-            if mode == .mac {
-                macConnection.start()
-            }
+        if outputMode == mode {
+            outputModeRawValue = OutputMode.none.rawValue
+            macConnection.stop()
+            ble.stop()
             return
         }
 
         outputModeRawValue = mode.rawValue
 
         switch mode {
+        case .none:
+            macConnection.stop()
+            ble.stop()
         case .esp32:
             macConnection.stop()
+            ble.startScan()
         case .mac:
-            ble.disconnect()
+            ble.stop()
             macConnection.start()
         }
     }
@@ -152,6 +158,17 @@ struct SettingsAvailableDevicesPanel: View {
 
     private var outputMode: OutputMode {
         OutputMode(persistedValue: outputModeRawValue)
+    }
+
+    private var connectionStatusText: String {
+        switch outputMode {
+        case .none:
+            return "Not connected"
+        case .esp32:
+            return ble.isConnected ? "ESP32: Connected" : "ESP32: Searching..."
+        case .mac:
+            return macConnection.canSend ? "Mac: Connected" : "Mac: Searching..."
+        }
     }
 
     private var sleepWakeButton: some View {

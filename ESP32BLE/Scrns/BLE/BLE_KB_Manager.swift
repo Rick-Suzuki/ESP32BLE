@@ -58,17 +58,18 @@ final class BLEKeyboardManager: NSObject, ObservableObject {
 		private var rxCharacteristic: CBCharacteristic?
 		private var txCharacteristic: CBCharacteristic?
 		private var idCharacteristic: CBCharacteristic?
-		private var outgoingLines: [QueuedBLELine] = []
-		private var sendQueueTask: Task<Void, Never>?
-		private let sendInterval: Duration = .milliseconds(25)
-		private var staleDeviceCleanupTimer: Timer?
+			private var outgoingLines: [QueuedBLELine] = []
+			private var sendQueueTask: Task<Void, Never>?
+			private let sendInterval: Duration = .milliseconds(25)
+			private var isDeliberatelyStopped = true
+			private var staleDeviceCleanupTimer: Timer?
 		private let discoveredDeviceTimeout: TimeInterval = 8
 		private let staleDeviceCleanupInterval: TimeInterval = 2
 	
 	//
 	// Track peripherals that are temporarily connected just to read device ID.
 	//
-	private var probePeripheralIDs: Set<UUID> = []
+		private var probePeripheralIDs: Set<UUID> = []
 	
 	//
 	// UART-style UUIDs matching your ESP32 sketch.
@@ -98,18 +99,26 @@ final class BLEKeyboardManager: NSObject, ObservableObject {
 			selectedPeripheralID = nil
 		}
 
-		private func startStaleDeviceCleanupTimer() {
+			private func startStaleDeviceCleanupTimer() {
 			staleDeviceCleanupTimer?.invalidate()
+			let timer = Timer(timeInterval: staleDeviceCleanupInterval, repeats: true) { [weak self] _ in
+				self?.removeStaleDiscoveredDevices()
+			}
+			staleDeviceCleanupTimer = timer
+			RunLoop.main.add(timer, forMode: .common)
 		}
 
 		private func removeStaleDiscoveredDevices() {
 			let cutoffDate = Date().addingTimeInterval(-discoveredDeviceTimeout)
 			discoveredDevices.removeAll { device in
-				if device.id == esp32Peripheral?.identifier {
+				let isConnectedDevice = device.id == esp32Peripheral?.identifier
+				let shouldExpire = !isConnectedDevice && device.lastSeenAt < cutoffDate
+
+				if isConnectedDevice {
 					return false
 				}
 
-				return device.lastSeenAt < cutoffDate
+				return shouldExpire
 			}
 
 			if let selectedPeripheralID,
@@ -123,21 +132,49 @@ final class BLEKeyboardManager: NSObject, ObservableObject {
 	// MARK: - Public actions
 	//-------------------------------------------------------------------------
 	
-	func startScan() {
+		func startScan() {
+			isDeliberatelyStopped = false
 		guard centralManager.state == .poweredOn else {
 			bluetoothStateText = "Bluetooth is not powered on"
 			return
 		}
 		
-		connectionText = "Scanning..."
-		clearDiscoveredDevices()
-		probePeripheralIDs.removeAll()
-		
-			centralManager.scanForPeripherals(
+			connectionText = "Scanning..."
+			clearDiscoveredDevices()
+			probePeripheralIDs.removeAll()
+			startStaleDeviceCleanupTimer()
+			
+				centralManager.scanForPeripherals(
 				withServices: [serviceUUID],
-				options: nil
+				options: [CBCentralManagerScanOptionAllowDuplicatesKey: true]
 			)
 	}
+
+		func stop() {
+			isDeliberatelyStopped = true
+			centralManager.stopScan()
+			staleDeviceCleanupTimer?.invalidate()
+			staleDeviceCleanupTimer = nil
+			for device in discoveredDevices {
+				centralManager.cancelPeripheralConnection(device.peripheral)
+			}
+			outgoingLines.removeAll()
+			sendQueueTask?.cancel()
+			sendQueueTask = nil
+			selectedPeripheralID = nil
+			isConnected = false
+			rxCharacteristic = nil
+			txCharacteristic = nil
+			idCharacteristic = nil
+			connectedDeviceID = "Unknown"
+			probePeripheralIDs.removeAll()
+			connectionText = "Not connected"
+
+			if let esp32Peripheral {
+				centralManager.cancelPeripheralConnection(esp32Peripheral)
+				self.esp32Peripheral = nil
+			}
+		}
 	
 	func connectToSelectedDevice() {
 		guard let selectedPeripheralID else {
@@ -157,17 +194,18 @@ final class BLEKeyboardManager: NSObject, ObservableObject {
 		centralManager.connect(match.peripheral, options: nil)
 	}
 	
-		func disconnect() {
-			outgoingLines.removeAll()
-			sendQueueTask?.cancel()
-			sendQueueTask = nil
-			selectedPeripheralID = nil
-			guard let esp32Peripheral else {
-				startScan()
-				return
+			func disconnect() {
+				isDeliberatelyStopped = true
+				outgoingLines.removeAll()
+				sendQueueTask?.cancel()
+				sendQueueTask = nil
+				selectedPeripheralID = nil
+				guard let esp32Peripheral else {
+					connectionText = "Not connected"
+					return
+				}
+				centralManager.cancelPeripheralConnection(esp32Peripheral)
 			}
-			centralManager.cancelPeripheralConnection(esp32Peripheral)
-		}
 	
 	//
 	// Send one full line to the ESP32.
@@ -219,7 +257,7 @@ final class BLEKeyboardManager: NSObject, ObservableObject {
 			sendLine(normalizedKeyboardText(text))
 	}
 
-	private func normalizedKeyboardText(_ text: String) -> String {
+		private func normalizedKeyboardText(_ text: String) -> String {
 		var normalizedText = ""
 		normalizedText.reserveCapacity(text.count)
 
@@ -234,9 +272,10 @@ final class BLEKeyboardManager: NSObject, ObservableObject {
 			}
 		}
 
-		return normalizedText
+			return normalizedText
+		}
+
 	}
-}
 
 //-----------------------------------------------------------------------------
 // MARK: - CBCentralManagerDelegate
@@ -256,10 +295,12 @@ extension BLEKeyboardManager: CBCentralManagerDelegate {
 				bluetoothStateText = "off"
 			case .poweredOn:
 				bluetoothStateText = "on"
-				startScan()
+				if !isDeliberatelyStopped {
+					startScan()
+				}
 			@unknown default:
 				bluetoothStateText = "unknown future case"
-		}
+			}
 	}
 	
 	func centralManager(
@@ -268,22 +309,22 @@ extension BLEKeyboardManager: CBCentralManagerDelegate {
 		advertisementData: [String : Any],
 		rssi RSSI: NSNumber
 		) {
-			let name = peripheral.name ?? "Unknown ESP32"
-				let now = Date()
-				
-				if let index = discoveredDevices.firstIndex(where: { $0.id == peripheral.identifier }) {
-				discoveredDevices[index] = BLEDiscoveredDevice(
-					id: peripheral.identifier,
-					peripheral: peripheral,
+					let name = peripheral.name ?? "Unknown ESP32"
+						let now = Date()
+						
+						if let index = discoveredDevices.firstIndex(where: { $0.id == peripheral.identifier }) {
+						discoveredDevices[index] = BLEDiscoveredDevice(
+							id: peripheral.identifier,
+							peripheral: peripheral,
 					name: name,
 					rssi: RSSI.intValue,
 					deviceID: discoveredDevices[index].deviceID,
-					lastSeenAt: now
-				)
-			} else {
-				let item = BLEDiscoveredDevice(
-					id: peripheral.identifier,
-					peripheral: peripheral,
+							lastSeenAt: now
+						)
+					} else {
+						let item = BLEDiscoveredDevice(
+							id: peripheral.identifier,
+						peripheral: peripheral,
 					name: name,
 					rssi: RSSI.intValue,
 					deviceID: nil,
@@ -326,7 +367,9 @@ extension BLEKeyboardManager: CBCentralManagerDelegate {
 				outgoingLines.removeAll()
 				sendQueueTask?.cancel()
 				sendQueueTask = nil
-				startScan()
+				if !isDeliberatelyStopped {
+					startScan()
+				}
 			}
 		}
 	
@@ -339,7 +382,9 @@ extension BLEKeyboardManager: CBCentralManagerDelegate {
 				outgoingLines.removeAll()
 				sendQueueTask?.cancel()
 				sendQueueTask = nil
-				startScan()
+				if !isDeliberatelyStopped {
+					startScan()
+				}
 			}
 		}
 }

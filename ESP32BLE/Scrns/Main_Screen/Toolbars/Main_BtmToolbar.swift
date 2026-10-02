@@ -594,6 +594,8 @@ struct MainScreenBottomBar: View {
 
     private var selectedTransportIsConnected: Bool {
         switch outputMode {
+        case .none:
+            return false
         case .esp32:
             return isBluetoothConnected
         case .mac:
@@ -603,6 +605,8 @@ struct MainScreenBottomBar: View {
 
     private var selectedTransportConnectedColor: Color {
         switch outputMode {
+        case .none:
+            return .red
         case .esp32:
             return .blue
         case .mac:
