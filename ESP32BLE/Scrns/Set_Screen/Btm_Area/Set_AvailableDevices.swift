@@ -102,6 +102,42 @@ struct SettingsAvailableDevicesPanel: View {
             Text(connectionStatusText)
                 .font(.caption)
                 .foregroundStyle(outputMode == .none ? Color.secondary : Color.white)
+
+            if outputMode == .mac {
+                macPairingControls
+            }
+        }
+    }
+
+    private var macPairingControls: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(macConnection.pairingStatusText)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(macConnection.isPaired ? Color.green : Color.secondary)
+
+            Button(macConnection.isPaired ? "Forget Mac Helper" : "Pair with Mac Helper") {
+                ButtonClickFeedback.playIfEnabled()
+                if macConnection.isPaired {
+                    macConnection.forgetPairedMacHelper()
+                } else {
+                    macConnection.requestPairing()
+                }
+            }
+            .buttonStyle(.plain)
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(.white)
+            .lineLimit(1)
+            .minimumScaleFactor(0.7)
+            .padding(.horizontal, 10)
+            .frame(height: settingsActionButtonHeight - 14)
+            .background(macConnection.isPaired ? Color.red.opacity(0.55) : Color.cyan.opacity(0.55))
+            .clipShape(.rect(cornerRadius: 14))
+
+            if macConnection.pairingStatusText == "Pairing Rejected" {
+                Text("Pairing rejected. Allow Pairing in ESP Mac Helper.")
+                    .font(.caption)
+                    .foregroundStyle(Color.white)
+            }
         }
     }
 

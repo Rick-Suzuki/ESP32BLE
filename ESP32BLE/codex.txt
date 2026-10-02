@@ -1,157 +1,303 @@
-FILES CHANGED
+ESP SECURITY INSPECTION REPORT
 
-ESP32BLE/Scrns/BLE/BLE_KB_Manager.swift
+1. Files inspected
+
 ESP32BLE/Scrns/ContentView.swift
+ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift
 ESP32BLE/Scrns/KB_Screen/KB_InputBehavior.swift
 ESP32BLE/Scrns/KB_Screen/KB_ModifierSend.swift
-ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift
-ESP32BLE/Scrns/Main_Screen/Toolbars/Main_BtmToolbar.swift
-ESP32BLE/Scrns/Set_Screen/Btm_Area/Set_AvailableDevices.swift
 ESP32BLE/Scrns/Set_Screen/Btm_Area/Set_SendTextSupport.swift
+ESP32BLE/Scrns/Set_Screen/Btm_Area/Set_AvailableDevices.swift
+Related searches across ESP32BLE/ESP32BLE/*.swift for Security, Keychain, SecItem, CryptoKit, TLS, UUID, UserDefaults, @AppStorage, and sendKeyboardTokens.
 
-STATE MODEL
+2. Mac-network discovery path
 
-OutputMode now represents all three states directly:
+File: ESP32BLE/Scrns/ContentView.swift
+Type: MacConnectionManager
 
-none = Off / Startup
-esp32 = ESP32 mode
-mac = Mac mode
+Discovery starts in:
 
-No second independent connection state machine was added.
+MacConnectionManager.start()
 
-STARTUP
+Relevant code path:
+static let serviceType = "_esp-network-test._tcp"
+let parameters = NWParameters.tcp
+parameters.includePeerToPeer = true
+let browser = NWBrowser(for: .bonjour(type: Self.serviceType, domain: nil), using: parameters)
+browser.start(queue: queue)
 
-Startup now forces outputMode to none.
-This is real Off, not ESP32 or Mac disguised visually.
-On startup, MacConnectionManager.stop() and BLEKeyboardManager.stop() are applied.
+The app browses Bonjour service type _esp-network-test._tcp using Network.framework.
 
-BUTTON BEHAVIOR
+3. Connection creation path
 
-ESP32 toggles ESP32 <-> Off.
-Mac toggles Mac <-> Off.
-Mac -> ESP32 stops Mac and starts ESP32 scan.
-ESP32 -> Mac stops BLE and starts Mac discovery.
-No fallback from one transport to the other was added.
+File: ContentView.swift
+Function: MacConnectionManager.start()
 
-CONNECTION BEHAVIOR
+Selection happens here:
 
-Off:
-Mac discovery/connection stops.
-BLE scan stops.
-Active/probe BLE peripherals are cancelled.
-Keyboard output has no selected transport.
+browser.browseResultsChangedHandler = { [weak self] results, _ in
+guard let endpoint = results.first?.endpoint else { return }
 
-ESP32:
-Mac stops.
-BLE scan starts.
-The user still selects an ESP32 from the existing list.
-ESP32 mode does not auto-connect.
+...
 
-Mac:
-BLE stops/disconnects.
-MacConnectionManager starts its existing Bonjour/network discovery.
+self.connect(to: endpoint)
 
-MAC RECONNECTION
+}
 
-MacConnectionManager intentional-stop behavior is preserved.
-Accidental Mac loss remains Mac mode and can restart search/reconnect.
-User toggling Mac Off deliberately stops discovery/reconnection.
+Then:
 
-STATUS TEXT
+MacConnectionManager.connect(to:)
 
-Off:
-Not connected
+Relevant path:
+browser?.cancel()
+browser = nil
+status = .connecting
+let parameters = NWParameters.tcp
+parameters.includePeerToPeer = true
+let connection = NWConnection(to: endpoint, using: parameters)
+self.connection = connection
+connection.stateUpdateHandler = ...
+connection.start(queue: queue)
 
-ESP32 searching/disconnected:
-ESP32: Searching...
+4. State/lifecycle path
 
-ESP32 connected:
-ESP32: Connected
+State enum:
+MacConnectionManager.ConnectionStatus
+• searching
+• connecting
+• connected
 
-Mac searching/disconnected:
-Mac: Searching...
+Stored state:
+@Published private(set) var status: ConnectionStatus = .searching
+private var browser: NWBrowser?
+private var connection: NWConnection?
+private var isDeliberatelyStopped = false
 
-Mac connected:
-Mac: Connected
+Disconnected/searching:
+status = .searching
 
-ESP32 DEVICE VISIBILITY
+Connecting:
+status = .connecting in connect(to:)
 
-Off: hidden
-Mac: hidden
-ESP32: visible
+Connected:
+status = .connected in handleConnectionState(_:) when NWConnection.State is .ready
 
-LIVE BLE DISCOVERY
+Readable send state:
+var canSend: Bool { status == .connected }
 
-Root cause:
-BLEDiscoveredDevice already stored lastSeenAt, RSSI, deviceID, and peripheral identity.
-BLEKeyboardManager already had discoveredDeviceTimeout, staleDeviceCleanupInterval, and removeStaleDiscoveredDevices().
-But startStaleDeviceCleanupTimer() only invalidated the timer and never scheduled a new one.
-So CoreBluetooth discoveries were effectively additive during continuous scanning, and stale devices stayed in discoveredDevices until a fresh scan cleared the list.
+Stop/disconnect:
+MacConnectionManager.stop()
+• isDeliberatelyStopped = true
+• browser?.cancel()
+• browser = nil
+• connection?.cancel()
+• connection = nil
+• status = .searching
 
-Fix:
-startScan() now starts a lightweight cleanup timer.
-The timer runs every 2 seconds.
-Devices not seen for 8 seconds are removed unless they are the actively connected ESP32.
-If the removed device was selected, selectedPeripheralID is cleared.
-Returning ESP32s are restored by the existing didDiscover path when advertisements resume.
+Reconnect:
+MacConnectionManager.restartSearch()
+• cancels connection/browser
+• nils both
+• status = .searching
+• calls start()
 
-MAINSCREEN LED
+5. Exact current service identity information available to ESP
 
-Off = existing flashing red/black
-ESP32 disconnected/searching = existing flashing red/black
-ESP32 connected = blue
-Mac searching/disconnected = existing flashing red/black
-Mac connected = green
+The code uses only:
 
-Grid-edit pulse behavior is preserved.
+Bonjour service type:
+_esp-network-test._tcp
 
-UI PRESERVATION
+Endpoint:
+results.first?.endpoint
 
-No controls added.
-No controls removed.
-No controls moved.
-No layout changes.
-No font changes.
-No spacing changes.
-No size changes.
-No Connection panel redesign.
-No MainScreen layout changes.
+The code does not inspect or persist:
+• Bonjour service name
+• TXT records
+• host
+• port
+• device name
+• UUID
+• certificate identity
+• previously paired identity
 
-UNCHANGED
+ESP currently has no reliable persistent identity for a particular Mac Helper across launches or network changes.
 
-Mac Helper untouched.
-ESP32 firmware untouched.
-Network protocol untouched.
-F20 behavior untouched.
-.screen behavior untouched.
-Dormant demo views untouched.
-iPadOS 17 performance work untouched.
+6. Current transport security
 
-BUILD RESULT
+Plain TCP.
 
-Production ESP project build succeeded.
-No new errors reported.
-No new warnings reported by the build tool.
+Evidence:
+ContentView.swift uses:
+let parameters = NWParameters.tcp
+let connection = NWConnection(to: endpoint, using: parameters)
 
-PHYSICAL TEST PLAN, NOT EXECUTED
+No NWParameters.tls, NWProtocolTLS, certificate handling, or TLS configuration was found.
 
-TEST 1 STARTUP:
-Launch ESP. Expect both buttons gray, Not connected, ESP32 area hidden, MainScreen LED flashing red.
+7. Existing authentication/trust mechanism
 
-TEST 2 MAC:
-Press Mac. Expect Mac green, ESP32 gray, Mac: Searching..., then Mac: Connected, ESP32 area hidden, LED green when connected.
+None found.
 
-TEST 3 MAC TO OFF:
-Press Mac again. Expect both buttons gray, Not connected, Mac deliberately stopped, no auto-reconnect, LED flashing red.
+I found no ESP-side use of:
+• password
+• token
+• shared secret
+• UUID allow-list
+• challenge/response
+• HMAC
+• cryptographic signatures
+• TLS
+• certificate checking
+• Bonjour TXT authentication data
+• Keychain credentials
+• previously paired-device records
 
-TEST 4 ESP32:
-Press ESP32. Expect ESP32 blue, Mac gray, ESP32: Searching..., live ESP32 list visible. Select ESP32, expect ESP32: Connected and LED blue.
+8. Exact final command-send path
 
-TEST 5 ESP32 TO OFF:
-Press ESP32 again. Expect BLE disconnect, both buttons gray, list hidden, Not connected, LED flashing red.
+All Mac command callers route through:
 
-TEST 6 DIRECT SWITCH:
-Test Mac -> ESP32 and ESP32 -> Mac. Expect old transport stopped, new transport active, no fallback, no hidden simultaneous connection.
+MacConnectionManager.sendKeyboardTokens(_:)
 
-TEST 7 LIVE DEVICE AVAILABILITY:
-Air in ESP32 mode sees ESP32 2 and ESP32 3. Pro connects to ESP32 3. Without switching modes, wait about 8 seconds plus cleanup interval. Expect ESP32 3 no longer available on Air. Disconnect Pro from ESP32 3. Expect Air to rediscover ESP32 3 automatically.
+That function converts tokens to messages:
+
+let messages = macMessages(from: tokens)
+
+Then sends each logical message:
+
+for message in messages {
+send(message)
+
+}
+
+Final Network.framework send:
+MacConnectionManager.send(_:)
+
+Relevant code:
+let framedMessage = message + "\n"
+guard let connection, canSend, let data = framedMessage.data(using: .utf8) else { return }
+ESPMacTransportProbe.printPayload(data)
+connection.send(content: data, completion: .contentProcessed { ... })
+
+9. Exact location where LF framing is applied
+
+File: ContentView.swift
+Function: MacConnectionManager.send(_:)
+
+Line:
+let framedMessage = message + "\n"
+
+That is the LF / byte 10 framing point.
+
+10. Whether all Mac commands share a common send path
+
+Yes, based on the inspected call sites.
+
+Common function:
+MacConnectionManager.sendKeyboardTokens(_:)
+
+Callers found include:
+• Main_ButtonBehavior.swift via macConnection.sendKeyboardTokens(keyboardOutputTokens)
+• KB_InputBehavior.swift
+• KB_ModifierSend.swift
+• Set_SendTextSupport.swift
+
+All of these use MacConnectionManager.sendKeyboardTokens(:), which then uses send(:) for final transmission.
+
+11. Best architectural location for future pre-command authentication gating
+
+Cleanest location:
+MacConnectionManager.sendKeyboardTokens(_:)
+
+Reason:
+It is the common public send entry point for normal Mac commands before conversion/final send. A future authenticated == true check there could reject normal commands before they become network payloads.
+
+Second useful location:
+MacConnectionManager.handleConnectionState(_:) at .ready
+
+Reason:
+That is where the TCP connection first becomes ready. A future handshake could begin there, with status/auth state separated so normal command sending is not allowed until the handshake completes.
+
+Conceptual future flow:
+NWConnection.State.ready
+start authentication handshake
+authenticated = true only after success
+sendKeyboardTokens(_:) permits normal CMD/TEXT/KEY traffic only when authenticated
+
+12. Existing Keychain/secure-storage support
+
+None found.
+
+No import Security.
+No SecItemAdd / SecItemCopyMatching / SecItemUpdate / SecItemDelete.
+No Keychain wrapper.
+No CryptoKit import.
+
+13. Existing persistent Mac Helper identity storage
+
+None found.
+
+The app persists output mode with:
+@AppStorage("outputMode")
+
+But I found no stored Mac helper endpoint, name, UUID, certificate, token, pairing record, or service identity.
+
+14. Existing persistent ESP installation/device identity
+
+None found for the ESP iOS/iPadOS app as a Mac-network client.
+
+There are temporary UUID() uses for UI/session/task identity, and BLE has ESP32-side deviceID handling, but I found no persistent app installation ID or Keychain-persisted identity suitable for distinguishing one ESP installation from another.
+
+15. Behavior when multiple Mac Helpers are discovered
+
+The code chooses the first Bonjour result:
+
+guard let endpoint = results.first?.endpoint else { return }
+
+It does not list Mac Helpers.
+It does not require user selection.
+It does not choose by name.
+It does not remember a previous helper.
+It automatically connects to the first endpoint returned by NWBrowser results.
+
+16. Behavior when disconnected/reconnecting
+
+If browser fails:
+browser.stateUpdateHandler checks .failed and calls restartSearch() unless deliberately stopped.
+
+If connection fails or is cancelled:
+handleConnectionState(_:) checks .failed and .cancelled and calls restartSearch() unless deliberately stopped.
+
+If send completion reports an error:
+connection.send completion calls restartSearch() unless deliberately stopped.
+
+Manual stop/output mode change:
+ContentView.updateTransportStateForOutputMode()
+• .none: macConnection.stop(), ble.stop()
+• .esp32: macConnection.stop(), ble.startScan()
+• .mac: ble.stop(), macConnection.start()
+
+Commands while not ready:
+sendKeyboardTokens(_:) checks canSend. If not connected, it returns false. There is no queue for Mac commands while disconnected/connecting.
+
+17. Architectural constraints relevant to future authentication
+
+Current status conflates “TCP connected” with “safe to send commands”:
+canSend is true when status == .connected.
+
+A future auth design probably needs a separate authentication state, because .ready currently immediately becomes .connected and canSend immediately becomes true.
+
+There is no receive path in MacConnectionManager visible in the inspected code, so any challenge/response handshake would likely need new receive handling on the ESP side.
+
+Current discovery has no persistent helper identity, because it connects to results.first?.endpoint only.
+
+Current transport is plain TCP, so any future secret-based protocol would need to account for local-network sniffing/replay unless transport security or an authenticated protocol is added later.
+
+18. Confirmation
+
+ZERO files were changed for this inspection.
+No probes were added.
+No logging was added.
+No build was run.
+ESPMacHelper was untouched.
+INO firmware was untouched.
+Test Area was untouched.
