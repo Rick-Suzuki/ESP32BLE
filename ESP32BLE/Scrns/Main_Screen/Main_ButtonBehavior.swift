@@ -14,6 +14,42 @@ import UIKit
 import Combine
 import PDFKit
 
+// MARK: - BM:🅱️🅱️🅱️ ESP-OUTPUT diagnostic probe
+private enum ESPOutputProbe {
+    private static var sequenceNumber = 0
+
+    static func printGeneratedItems(_ items: [String]) {
+        for item in items {
+            sequenceNumber += 1
+            print("[ESP-OUTPUT] #\(sequenceNumber) \"\(escapedString(item))\"")
+        }
+    }
+
+    private static func escapedString(_ string: String) -> String {
+        var escaped = ""
+        escaped.reserveCapacity(string.count)
+
+        for character in string {
+            switch character {
+            case "\\":
+                escaped += "\\\\"
+            case "\"":
+                escaped += "\\\""
+            case "\n":
+                escaped += "\\n"
+            case "\r":
+                escaped += "\\r"
+            case "\t":
+                escaped += "\\t"
+            default:
+                escaped.append(character)
+            }
+        }
+
+        return escaped
+    }
+}
+
 extension MainScreen {
 		// MARK: - BM:🔳 main scrn SF symbols
     private var supportedMainScreenSFSymbolNames: Set<String> {
@@ -431,6 +467,8 @@ extension MainScreen {
         guard !keyboardOutputTokens.isEmpty else {
             return true
         }
+
+        ESPOutputProbe.printGeneratedItems(keyboardOutputTokens)
 
         switch outputMode {
         case .none:

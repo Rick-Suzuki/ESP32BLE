@@ -124,24 +124,10 @@ struct SettingsAvailableDevicesPanel: View {
     private func selectOutputMode(_ mode: OutputMode) {
         if outputMode == mode {
             outputModeRawValue = OutputMode.none.rawValue
-            macConnection.stop()
-            ble.stop()
             return
         }
 
         outputModeRawValue = mode.rawValue
-
-        switch mode {
-        case .none:
-            macConnection.stop()
-            ble.stop()
-        case .esp32:
-            macConnection.stop()
-            ble.startScan()
-        case .mac:
-            ble.stop()
-            macConnection.start()
-        }
     }
 
     private func outputModeButtonBackground(for mode: OutputMode) -> Color {

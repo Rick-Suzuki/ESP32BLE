@@ -22,6 +22,39 @@ var isPad: Bool {
 private let maxDocumentNavigationHistoryCount = 50
 private let defaultStartupScreenBaseName = "sample"
 
+// MARK: - BM:🅱️🅱️🅱️ ESP-MAC-TX diagnostic probe
+private enum ESPMacTransportProbe {
+    static func printPayload(_ data: Data) {
+        let byteValues = data.map(String.init).joined(separator: ",")
+        print("[ESP-MAC-TX] payload=\"\(escapedPayload(data))\" bytes=\(data.count) values=[\(byteValues)]")
+    }
+
+    private static func escapedPayload(_ data: Data) -> String {
+        var escaped = ""
+
+        for byte in data {
+            switch byte {
+            case 0x09:
+                escaped += "\\t"
+            case 0x0A:
+                escaped += "\\n"
+            case 0x0D:
+                escaped += "\\r"
+            case 0x22:
+                escaped += "\\\""
+            case 0x5C:
+                escaped += "\\\\"
+            case 0x20...0x7E:
+                escaped.append(Character(UnicodeScalar(byte)))
+            default:
+                escaped += String(format: "\\x%02X", byte)
+            }
+        }
+
+        return escaped
+    }
+}
+
 private enum AppRuntimeFlags {
     static var orientationState = false
 }
@@ -146,7 +179,10 @@ final class MacConnectionManager: ObservableObject {
     }
 
     private func send(_ message: String) {
-        guard let connection, canSend, let data = message.data(using: .utf8) else { return }
+        let framedMessage = message + "\n"
+        guard let connection, canSend, let data = framedMessage.data(using: .utf8) else { return }
+
+        ESPMacTransportProbe.printPayload(data)
 
         connection.send(content: data, completion: .contentProcessed { [weak self] error in
             guard let self, error != nil else { return }
