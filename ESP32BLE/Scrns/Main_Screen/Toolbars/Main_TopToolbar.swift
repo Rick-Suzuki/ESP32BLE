@@ -260,6 +260,13 @@ struct MainScreenToolbarContent: View {
 			//
             if isPad {
                 Spacer()
+                MainTransportStatusIndicator(
+                    outputMode: outputMode,
+                    isBluetoothConnected: isBluetoothConnected,
+                    isMacConnected: isMacConnected,
+                    isGridEditModeEnabled: isGridEditModeEnabled,
+                    size: 24
+                )
             } else {
                 Spacer()
                     .frame(width: topToolbarGroupGap)

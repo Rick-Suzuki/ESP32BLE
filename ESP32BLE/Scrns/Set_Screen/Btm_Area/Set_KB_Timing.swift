@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SettingsKeyboardTimingSection: View {
     private let maximumSpeechRecognitionAutoOffMinutes = 31
+    private let iPadTimingRowsMaxWidth: CGFloat = 520
     let timingLabelWidth: Double
     @Binding var keyboardTimingOnMs: Double
     @Binding var keyboardTimingOffMs: Double
@@ -18,7 +19,17 @@ struct SettingsKeyboardTimingSection: View {
     var body: some View {
         VStack(alignment: .center, spacing: 5) {
             customKeyboardTimingControls
-            speechRecognitionAutoOffRow
+
+            if isPad {
+                HStack(alignment: .top, spacing: 12) {
+                    speechRecognitionAutoOffRow
+                        .frame(maxWidth: iPadTimingRowsMaxWidth, alignment: .leading)
+
+                    Spacer(minLength: 0)
+                }
+            } else {
+                speechRecognitionAutoOffRow
+            }
 
             if !isPad {
                 iPhoneImageControls
@@ -41,7 +52,7 @@ struct SettingsKeyboardTimingSection: View {
                     sliderRow(title: "on", value: $keyboardTimingOnMs, range: 0...1000)
                     sliderRow(title: "off", value: $keyboardTimingOffMs, range: 0...3000)
                 }
-                .frame(maxWidth: 520, alignment: .leading)
+                .frame(maxWidth: iPadTimingRowsMaxWidth, alignment: .leading)
 
                 Spacer(minLength: 0)
             }

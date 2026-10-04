@@ -1204,15 +1204,11 @@ Tapping a row inserts the key code at the cursor.
     private var settingsToolbarButtonLabel: some View {
 
         Group {
-            if isPad {
-                Text("settings >")
-            } else {
-                Image(systemName: "gearshape")
-            }
+            Image(systemName: "gearshape")
         }
         // .font(.headline)
         .foregroundStyle((isGridEditModeEnabled || editingSlotIndex != nil) ? Color(white: 0.65) : .white)
-        .frame(minWidth: isPad ? 92 : 44, minHeight: 36)
+        .frame(minWidth: 44, minHeight: 36)
         //  .background(Color.gray.opacity(0.45))
         .background(Color(red: 0.32, green: 0.32, blue: 0.34).opacity(0.4))
         .overlay {

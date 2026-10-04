@@ -388,24 +388,6 @@ struct MainScreenBottomBar: View {
 			}
 				//
 				//----------------------------------------
-				// indicator led
-				//
-                if isPad {
-                    HStack(spacing: isCompact ? 8 : 12) {
-                        MainTransportStatusIndicator(
-                            outputMode: outputMode,
-                            isBluetoothConnected: isBluetoothConnected,
-                            isMacConnected: isMacConnected,
-                            isGridEditModeEnabled: isGridEditModeEnabled,
-                            size: 24
-                        )
-                    }
-                    .padding(.leading, 25)
-
-                    Spacer(minLength: isCompact ? 6 : 12)
-                }
-				//
-				//----------------------------------------
 				// speech recog btn
 				//
             toggleButton(
