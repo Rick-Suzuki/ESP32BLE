@@ -820,6 +820,8 @@ sends F1, waits one send then sends sp(space)
     @State var documentNameDraft = ""
     @State var alertTitle = "Alert"
     @State var renameAlertMessage: String?
+    @State private var filenameToastText: String?
+    @State private var filenameToastDismissTask: Task<Void, Never>?
     @State var isGridEditModeEnabled = false
     @State var activeDragIndex: Int?
     @State var editingSlotIndex: Int?
@@ -953,6 +955,9 @@ Tapping a row inserts the key code at the cursor.
             .onChange(of: selectedDocumentDisplayName) {
                 handleSelectedDocumentDisplayNameChange()
             }
+            .onChange(of: selectedDocumentName) {
+                showFilenameToastIfNeeded()
+            }
             .onChange(of: editingSlotIndex) {
                 smartButtonBrightness = 0.5
                 smartButtonBrightnessBaseHex = smartButtonColorHex
@@ -983,6 +988,7 @@ Tapping a row inserts the key code at the cursor.
                 handleMainScreenDisappear()
                 mainGridAmbientSoundState.stopPlayback()
                 popupDismissTask?.cancel()
+                filenameToastDismissTask?.cancel()
                 presentedPreviewFile = nil
             }
             .task(id: definedFunctionKeyCount) {
@@ -1048,6 +1054,7 @@ Tapping a row inserts the key code at the cursor.
 						selectPreviousBackgroundImage: selectPreviousBackgroundImage,
 						selectRandomBackgroundImage: selectRandomBackgroundImage,
 						selectNextBackgroundImage: selectNextBackgroundImage,
+                        showCurrentFilename: showFilenameToastIfNeeded,
 						toggleGridEditMode: { isGridEditModeEnabled.toggle() },
 						commitDocumentRename: commitDocumentRename,
 						openSettings: AnyView(
@@ -1098,6 +1105,8 @@ Tapping a row inserts the key code at the cursor.
                     isSlotEditorPresented: editingSlotIndex != nil,
                     maskedScreenHeight: maskedScreenHeight
                 )
+
+                filenameToastOverlay(availableWidth: contentWidth)
 
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -1158,18 +1167,24 @@ Tapping a row inserts the key code at the cursor.
 
     private var settingsToolbarButtonLabel: some View {
 
-        Text(isPad ? "settings >" : ">")
-           // .font(.headline)
-            .foregroundStyle((isGridEditModeEnabled || editingSlotIndex != nil) ? Color(white: 0.65) : .white)
-            .frame(minWidth: isPad ? 92 : 44, minHeight: 36)
-          //  .background(Color.gray.opacity(0.45))
-            .background(Color(red: 0.32, green: 0.32, blue: 0.34).opacity(0.4))
-            .overlay {
-                RoundedRectangle(cornerRadius: 10)
-                    .stroke(Color.gray.opacity(0.5), lineWidth: 1.5)
+        Group {
+            if isPad {
+                Text("settings >")
+            } else {
+                Image(systemName: "gearshape")
             }
-            .clipShape(.rect(cornerRadius: 10))
-            .contentShape(.rect)
+        }
+        // .font(.headline)
+        .foregroundStyle((isGridEditModeEnabled || editingSlotIndex != nil) ? Color(white: 0.65) : .white)
+        .frame(minWidth: isPad ? 92 : 44, minHeight: 36)
+        //  .background(Color.gray.opacity(0.45))
+        .background(Color(red: 0.32, green: 0.32, blue: 0.34).opacity(0.4))
+        .overlay {
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(Color.gray.opacity(0.5), lineWidth: 1.5)
+        }
+        .clipShape(.rect(cornerRadius: 10))
+        .contentShape(.rect)
     }
 	//
 	//----------------------------------------
@@ -2957,6 +2972,24 @@ Tapping a row inserts the key code at the cursor.
         cancelSlotEditing()
     }
 
+    private func showFilenameToastIfNeeded() {
+        guard !isPad, !selectedDocumentName.isEmpty else { return }
+
+        filenameToastDismissTask?.cancel()
+        filenameToastText = selectedDocumentName
+        filenameToastDismissTask = Task {
+            try? await Task.sleep(for: .seconds(2))
+            guard !Task.isCancelled else {
+                return
+            }
+
+            await MainActor.run {
+                filenameToastText = nil
+                filenameToastDismissTask = nil
+            }
+        }
+    }
+
     private func handleDocumentNameFieldFocusChange() {
         guard isEditingDocumentName, !isDocumentNameFieldFocused else {
             return
@@ -3168,6 +3201,30 @@ Tapping a row inserts the key code at the cursor.
         }
         .clipShape(RoundedRectangle(cornerRadius: 14))
         .padding(.horizontal, 24)
+    }
+
+    @ViewBuilder
+    private func filenameToastOverlay(availableWidth: CGFloat) -> some View {
+        if !isPad, let filenameToastText {
+            Text(filenameToastText)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(.white)
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .minimumScaleFactor(0.8)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .frame(maxWidth: min(max(0, (availableWidth - 32) * 0.4489), 188.538))
+                .background(Color.black.opacity(0.88))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(Color.white.opacity(0.25), lineWidth: 1)
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .padding(.top, 48)
+                .transition(.opacity)
+                .allowsHitTesting(false)
+        }
     }
 
     private func schedulePopupDismissIfNeeded() {

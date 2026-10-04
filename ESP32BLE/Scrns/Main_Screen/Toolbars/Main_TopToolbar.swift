@@ -17,6 +17,17 @@ struct MainScreenToolbarContent: View {
     private let opacitySliderHitHeight: CGFloat = 44
     // Extra horizontal touch area on each side of the opacity slider.
     private let opacitySliderHitHorizontalPadding: CGFloat = 60
+    private var topToolbarGroupGap: CGFloat {
+        isPad ? 0 : 4
+    }
+
+    private var topToolbarOpacityHitHorizontalPadding: CGFloat {
+        isPad ? opacitySliderHitHorizontalPadding : 0
+    }
+
+    private var topToolbarEditMinWidth: CGFloat {
+        isPad ? 84 : 56
+    }
     
 	let isGridEditModeEnabled: Bool
     let editingSlotIndex: Int?
@@ -40,6 +51,7 @@ struct MainScreenToolbarContent: View {
     let selectPreviousBackgroundImage: () -> Void
     let selectRandomBackgroundImage: () -> Void
     let selectNextBackgroundImage: () -> Void
+    let showCurrentFilename: () -> Void
     let toggleGridEditMode: () -> Void
     let commitDocumentRename: () -> Void
     let openSettings: AnyView
@@ -50,7 +62,7 @@ struct MainScreenToolbarContent: View {
 		//
 		//----------------------------------------
 		//
-		HStack() {
+		HStack(spacing: isPad ? nil : 2) {
 			//
 			//----------------------------------------
 			// home btn
@@ -104,12 +116,29 @@ struct MainScreenToolbarContent: View {
 			//----------------------------------------
 			// document name
 			//
-			Text(selectedDocumentDisplayName)
-				.font(.headline)
-				.foregroundStyle(toolbarPrincipalForegroundColor)
-				.frame(maxWidth: 150)
-				.lineLimit(1) // <--- Restricts text to 1 line
-				.truncationMode(.tail) // Truncates with "..." if text exceeds width
+            if isPad {
+                Text(selectedDocumentDisplayName)
+                    .font(.headline)
+                    .foregroundStyle(toolbarPrincipalForegroundColor)
+                    .frame(maxWidth: 150)
+                    .lineLimit(1) // <--- Restricts text to 1 line
+                    .truncationMode(.tail) // Truncates with "..." if text exceeds width
+            } else {
+                Button("file") {
+                    ButtonClickFeedback.playIfEnabled()
+                    showCurrentFilename()
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(toolbarPrincipalForegroundColor)
+                .frame(minWidth: 52, minHeight: 36)
+                .background(toolbarButtonBackgroundColor(normalBackground: normalToolbarBackgroundColor))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(toolbarButtonBorderColor, lineWidth: 1.5)
+                }
+                .clipShape(.rect(cornerRadius: 10))
+                .contentShape(.rect)
+            }
 			//
 			//----------------------------------------
 			// next doc btn
@@ -130,7 +159,12 @@ struct MainScreenToolbarContent: View {
 			//----------------------------------------
 			// prev image
 			//
-			Spacer()
+            if isPad {
+                Spacer()
+            } else {
+                Spacer()
+                    .frame(width: topToolbarGroupGap)
+            }
 			Button {
 				ButtonClickFeedback.playIfEnabled()
 				selectPreviousBackgroundImage()
@@ -185,7 +219,7 @@ struct MainScreenToolbarContent: View {
 				value: $backgroundImageOpacity,
 				range: 0...1,
 				visualWidth: isPad ? 30 : 100,
-				hitHorizontalPadding: opacitySliderHitHorizontalPadding,
+				hitHorizontalPadding: topToolbarOpacityHitHorizontalPadding,
 				hitHeight: opacitySliderHitHeight,
 				isDisabled: editingSlotIndex != nil,
 				bc:.cyan
@@ -193,7 +227,12 @@ struct MainScreenToolbarContent: View {
 			//
 			//----------------------------------------
 			//
-			Spacer()
+            if isPad {
+                Spacer()
+            } else {
+                Spacer()
+                    .frame(width: topToolbarGroupGap)
+            }
 			//
 			//----------------------------------------
 			// grid opacity +/- btns
@@ -202,7 +241,7 @@ struct MainScreenToolbarContent: View {
 				value: $gridBackgroundOpacity,
 				range: 0...1,
 				visualWidth: isPad ? 30 : 100,
-				hitHorizontalPadding: opacitySliderHitHorizontalPadding,
+				hitHorizontalPadding: topToolbarOpacityHitHorizontalPadding,
 				hitHeight: opacitySliderHitHeight,
 				isDisabled: editingSlotIndex != nil,
 				bc:.yellow
@@ -210,7 +249,12 @@ struct MainScreenToolbarContent: View {
 			//
 			//----------------------------------------
 			//
-			Spacer()
+            if isPad {
+                Spacer()
+            } else {
+                Spacer()
+                    .frame(width: topToolbarGroupGap)
+            }
 			//
 			//----------------------------------------
 			// to keyboard btn
@@ -244,7 +288,7 @@ struct MainScreenToolbarContent: View {
 				Text(isGridEditModeEnabled ? "done" : "edit")
 					//.font(.headline)
 					.foregroundStyle(toolbarActionForegroundColor)
-					.frame(minWidth: 84, minHeight: 36)
+					.frame(minWidth: topToolbarEditMinWidth, minHeight: 36)
 					.background(toolbarButtonBackgroundColor(normalBackground: editModeButtonBackgroundColor))
 					.overlay {
 						RoundedRectangle(cornerRadius: 10)
