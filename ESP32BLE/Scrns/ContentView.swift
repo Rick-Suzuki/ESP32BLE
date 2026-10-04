@@ -572,19 +572,19 @@ final class MacConnectionManager: ObservableObject {
         var modifiers: [String] = []
 
         for token in tokens {
-            let trimmedToken = token.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !trimmedToken.isEmpty else {
+            let commandToken = token == " " ? token : token.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !commandToken.isEmpty else {
                 continue
             }
 
-            if let modifier = macModifierName(for: trimmedToken) {
+            if let modifier = macModifierName(for: commandToken) {
                 if !modifiers.contains(modifier) {
                     modifiers.append(modifier)
                 }
                 continue
             }
 
-            messages.append(macMessage(for: trimmedToken, modifiers: modifiers))
+            messages.append(macMessage(for: commandToken, modifiers: modifiers))
             modifiers.removeAll()
         }
 
@@ -602,16 +602,60 @@ final class MacConnectionManager: ObservableObject {
             return "KEY:RETURN"
         }
 
+        if token == " " || upperToken == "SP" || upperToken == "SPACE" {
+            return "KEY:SPACE"
+        }
+
+        if upperToken == "TAB" {
+            return "KEY:TAB"
+        }
+
         if upperToken == "BS" || upperToken == "BACKSPACE" || upperToken == "DELETE" {
             return "KEY:BACKSPACE"
+        }
+
+        if upperToken == "ESC" || upperToken == "ESCAPE" {
+            return "KEY:ESC"
         }
 
         if upperToken == "CA" {
             return "CTRL+A"
         }
 
+        if upperToken == "CC" {
+            return "CTRL+C"
+        }
+
+        if upperToken == "CV" {
+            return "CTRL+V"
+        }
+
+        if upperToken == "CX" {
+            return "CTRL+X"
+        }
+
+        if upperToken == "MA" {
+            return "CMD+A"
+        }
+
+        if upperToken == "MC" {
+            return "CMD+C"
+        }
+
+        if upperToken == "MV" {
+            return "CMD+V"
+        }
+
+        if upperToken == "MX" {
+            return "CMD+X"
+        }
+
         if upperToken == "UP" || upperToken == "DOWN" || upperToken == "LEFT" || upperToken == "RIGHT" {
             return "KEY:\(upperToken)"
+        }
+
+        if let keypadKeyName = macKeypadKeyName(for: upperToken) {
+            return "KEY:\(keypadKeyName)"
         }
 
         if upperToken.hasPrefix("F"), upperToken.dropFirst().allSatisfy(\.isNumber) {
@@ -625,6 +669,27 @@ final class MacConnectionManager: ObservableObject {
         return "TEXT:\(token)"
     }
 
+    private func macKeypadKeyName(for token: String) -> String? {
+        switch token {
+        case "KP0", "KP1", "KP2", "KP3", "KP4", "KP5", "KP6", "KP7", "KP8", "KP9":
+            return token
+        case "KP.":
+            return "KPDOT"
+        case "KP+":
+            return "KPPLUS"
+        case "KP-":
+            return "KPMINUS"
+        case "KP/":
+            return "KPSLASH"
+        case "KP*":
+            return "KPASTERISK"
+        case "KPE":
+            return "KPENTER"
+        default:
+            return nil
+        }
+    }
+
     private func macModifierName(for token: String) -> String? {
         switch token.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
         case "ct", "ctl", "ctrl", "control":
@@ -633,7 +698,7 @@ final class MacConnectionManager: ObservableObject {
             return "OPT"
         case "sh", "shift":
             return "SHIFT"
-        case "cm", "cmd", "command":
+        case "cm", "cmd", "command", "win":
             return "CMD"
         default:
             return nil

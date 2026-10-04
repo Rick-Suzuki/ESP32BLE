@@ -1,303 +1,148 @@
-ESP SECURITY INSPECTION REPORT
+Inspection only. No code changes made.
 
-1. Files inspected
+Relevant files/functions:
+
+ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift
+• sendMainGridEntry(_:)
+• bluetoothSendTexts(for:)
+• sendKeyboardOutputTokens(_:respectsButtonMode:)
+• normalizedBluetoothSendText(_:)
 
 ESP32BLE/Scrns/ContentView.swift
-ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift
-ESP32BLE/Scrns/KB_Screen/KB_InputBehavior.swift
-ESP32BLE/Scrns/KB_Screen/KB_ModifierSend.swift
-ESP32BLE/Scrns/Set_Screen/Btm_Area/Set_SendTextSupport.swift
-ESP32BLE/Scrns/Set_Screen/Btm_Area/Set_AvailableDevices.swift
-Related searches across ESP32BLE/ESP32BLE/*.swift for Security, Keychain, SecItem, CryptoKit, TLS, UUID, UserDefaults, @AppStorage, and sendKeyboardTokens.
+• parsedActionTokens(from:)
+• MacConnectionManager.sendKeyboardTokens(_:)
+• MacConnectionManager.macMessages(from:)
+• MacConnectionManager.macMessage(for:modifiers:)
+• MacConnectionManager.send(_:)
+• MacConnectionManager.sendFramedMessage(_:requiresAuthentication:)
 
-2. Mac-network discovery path
+Exact path for literal space " ":
 
-File: ESP32BLE/Scrns/ContentView.swift
-Type: MacConnectionManager
+1. Button action reaches:
+Main_ButtonBehavior.swift:300-320
+bluetoothSendTexts(for:) filters non-keyboard app/document/widget actions, then maps each token through normalizedBluetoothSendText.
 
-Discovery starts in:
+2. Space token normalization:
+Main_ButtonBehavior.swift:1402-1408
+normalizedBluetoothSendText(_:) trims for comparison.
+If token is "sp", it returns literal " ".
+If token is already literal " ", it falls through and returns original sendText at line 1428.
+So the literal " " survives this phase.
 
-MacConnectionManager.start()
+3. Output probe:
+Main_ButtonBehavior.swift:465-471
+sendKeyboardOutputTokens maps again through normalizedBluetoothSendText, then logs:
+[ESP-OUTPUT] " "
+This proves keyboardOutputTokens contains " ".
 
-Relevant code path:
-static let serviceType = "_esp-network-test._tcp"
-let parameters = NWParameters.tcp
-parameters.includePeerToPeer = true
-let browser = NWBrowser(for: .bonjour(type: Self.serviceType, domain: nil), using: parameters)
-browser.start(queue: queue)
+4. Mac mode dispatch:
+Main_ButtonBehavior.swift:473-485
+case .mac calls:
+macConnection.sendKeyboardTokens(keyboardOutputTokens)
 
-The app browses Bonjour service type _esp-network-test._tcp using Network.framework.
+5. Function that receives " " after [ESP-OUTPUT]:
+ContentView.swift:329
+MacConnectionManager.sendKeyboardTokens(_ tokens: [String])
 
-3. Connection creation path
-
-File: ContentView.swift
-Function: MacConnectionManager.start()
-
-Selection happens here:
-
-browser.browseResultsChangedHandler = { [weak self] results, _ in
-guard let endpoint = results.first?.endpoint else { return }
-
-...
-
-self.connect(to: endpoint)
-
-}
-
-Then:
-
-MacConnectionManager.connect(to:)
-
-Relevant path:
-browser?.cancel()
-browser = nil
-status = .connecting
-let parameters = NWParameters.tcp
-parameters.includePeerToPeer = true
-let connection = NWConnection(to: endpoint, using: parameters)
-self.connection = connection
-connection.stateUpdateHandler = ...
-connection.start(queue: queue)
-
-4. State/lifecycle path
-
-State enum:
-MacConnectionManager.ConnectionStatus
-• searching
-• connecting
-• connected
-
-Stored state:
-@Published private(set) var status: ConnectionStatus = .searching
-private var browser: NWBrowser?
-private var connection: NWConnection?
-private var isDeliberatelyStopped = false
-
-Disconnected/searching:
-status = .searching
-
-Connecting:
-status = .connecting in connect(to:)
-
-Connected:
-status = .connected in handleConnectionState(_:) when NWConnection.State is .ready
-
-Readable send state:
-var canSend: Bool { status == .connected }
-
-Stop/disconnect:
-MacConnectionManager.stop()
-• isDeliberatelyStopped = true
-• browser?.cancel()
-• browser = nil
-• connection?.cancel()
-• connection = nil
-• status = .searching
-
-Reconnect:
-MacConnectionManager.restartSearch()
-• cancels connection/browser
-• nils both
-• status = .searching
-• calls start()
-
-5. Exact current service identity information available to ESP
-
-The code uses only:
-
-Bonjour service type:
-_esp-network-test._tcp
-
-Endpoint:
-results.first?.endpoint
-
-The code does not inspect or persist:
-• Bonjour service name
-• TXT records
-• host
-• port
-• device name
-• UUID
-• certificate identity
-• previously paired identity
-
-ESP currently has no reliable persistent identity for a particular Mac Helper across launches or network changes.
-
-6. Current transport security
-
-Plain TCP.
-
-Evidence:
-ContentView.swift uses:
-let parameters = NWParameters.tcp
-let connection = NWConnection(to: endpoint, using: parameters)
-
-No NWParameters.tls, NWProtocolTLS, certificate handling, or TLS configuration was found.
-
-7. Existing authentication/trust mechanism
-
-None found.
-
-I found no ESP-side use of:
-• password
-• token
-• shared secret
-• UUID allow-list
-• challenge/response
-• HMAC
-• cryptographic signatures
-• TLS
-• certificate checking
-• Bonjour TXT authentication data
-• Keychain credentials
-• previously paired-device records
-
-8. Exact final command-send path
-
-All Mac command callers route through:
-
-MacConnectionManager.sendKeyboardTokens(_:)
-
-That function converts tokens to messages:
-
+6. Conversion to Mac messages:
+ContentView.swift:330
 let messages = macMessages(from: tokens)
 
-Then sends each logical message:
+7. Exact discard point:
+ContentView.swift:574-578
 
-for message in messages {
-send(message)
+for token in tokens {
+   let trimmedToken = token.trimmingCharacters(in: .whitespacesAndNewlines)
+
+   guard !trimmedToken.isEmpty else {
+
+       continue
+
+   }
+
+
+For token " ":
+• token is " "
+• trimmedToken becomes ""
+• guard fails
+• continue skips the token
+• no call to macMessage(for:modifiers:)
+• no message is appended
+
+8. Empty-message early return:
+ContentView.swift:330-333
+
+let messages = macMessages(from: tokens)
+guard !messages.isEmpty else {
+   return true
 
 }
 
-Final Network.framework send:
-MacConnectionManager.send(_:)
+Since the only token was skipped, messages is empty.
+sendKeyboardTokens returns true without sending anything.
 
-Relevant code:
-let framedMessage = message + "\n"
-guard let connection, canSend, let data = framedMessage.data(using: .utf8) else { return }
-ESPMacTransportProbe.printPayload(data)
-connection.send(content: data, completion: .contentProcessed { ... })
+9. Why no [ESP-MAC-TX]:
+[ESP-MAC-TX] is printed only in sendFramedMessage at ContentView.swift:361.
+Because messages is empty, send(_:) is never called, sendFramedMessage is never reached, and no network payload is logged.
 
-9. Exact location where LF framing is applied
+Why LEFT succeeds:
 
-File: ContentView.swift
-Function: MacConnectionManager.send(_:)
+LEFT follows the same route until macMessages(from:).
 
-Line:
-let framedMessage = message + "\n"
+For token "LEFT":
+• ContentView.swift:575 trims it to "LEFT", not empty.
+• ContentView.swift:580-585 checks modifier mapping; LEFT is not a modifier.
+• ContentView.swift:587 appends macMessage(for: "LEFT", modifiers: []).
+• ContentView.swift:613-615 maps LEFT to:
+KEY:LEFT
+• ContentView.swift:339-341 sends it.
+• ContentView.swift:355 adds "\n".
+• ContentView.swift:361 logs:
+[ESP-MAC-TX] payload="KEY:LEFT\n"
 
-That is the LF / byte 10 framing point.
+Existing Mac Helper Space representation:
 
-10. Whether all Mac commands share a common send path
+In this repo snapshot, I found no Mac Helper implementation/parser source. The workspace contains only the iOS sender side and logs/notes.
 
-Yes, based on the inspected call sites.
+No occurrence of KEY:SPACE was found in the project.
+The iOS sender currently emits KEY:RETURN, KEY:BACKSPACE, KEY:UP/DOWN/LEFT/RIGHT, KEY:F-number, and KEY:letter, but never KEY:SPACE.
 
-Common function:
-MacConnectionManager.sendKeyboardTokens(_:)
+So from available repo evidence:
+• Existing iOS-side protocol style strongly suggests KEY:SPACE would be the natural representation.
+• I cannot confirm the actual Mac Helper parser already supports KEY:SPACE because that parser is not present in this workspace.
+• There is no evidence in this repo that KEY:SPACE is currently supported or emitted.
 
-Callers found include:
-• Main_ButtonBehavior.swift via macConnection.sendKeyboardTokens(keyboardOutputTokens)
-• KB_InputBehavior.swift
-• KB_ModifierSend.swift
-• Set_SendTextSupport.swift
+Smallest proposed fix, not implemented:
 
-All of these use MacConnectionManager.sendKeyboardTokens(:), which then uses send(:) for final transmission.
+On the iOS sender side:
+• Preserve literal single-space tokens in MacConnectionManager.macMessages(from:) instead of trimming them into empty.
+• Convert a literal space token to KEY:SPACE in MacConnectionManager.macMessage(for:modifiers:) or equivalent conversion logic.
 
-11. Best architectural location for future pre-command authentication gating
+On the Mac Helper side, if not already supported:
+• Add KEY:SPACE to the existing KEY parser/special-key mapping, alongside KEY:LEFT, KEY:RETURN, KEY:BACKSPACE, etc.
+• It should map to the platform’s Space key event, not text framing or auth/network logic.
 
-Cleanest location:
-MacConnectionManager.sendKeyboardTokens(_:)
+No networking, LF framing, authentication, Bluetooth, timing, function-key handling, UI, or refactor changes are implicated.
 
-Reason:
-It is the common public send entry point for normal Mac commands before conversion/final send. A future authenticated == true check there could reject normal commands before they become network payloads.
+Other tokens with the same silent-drop problem:
 
-Second useful location:
-MacConnectionManager.handleConnectionState(_:) at .ready
+From the iOS sender path, anything that reaches MacConnectionManager.macMessages(from:) as whitespace-only is silently dropped by the same condition:
 
-Reason:
-That is where the TCP connection first becomes ready. A future handshake could begin there, with status/auth state separated so normal command sending is not allowed until the handshake completes.
+• literal " "
+• SP / sp after normalizedBluetoothSendText converts it to " "
+• literal tab "\t", if it ever reaches this path as a token
+• literal newline "\n" or other whitespace-only token, if it ever reaches this path as a token
 
-Conceptual future flow:
-NWConnection.State.ready
-start authentication handshake
-authenticated = true only after success
-sendKeyboardTokens(_:) permits normal CMD/TEXT/KEY traffic only when authenticated
+Other Bluetooth-supported ASCII tokens do not appear to be silently dropped by the iOS Mac sender. Unknown tokens fall through to:
+ContentView.swift:625
+TEXT:<token>
 
-12. Existing Keychain/secure-storage support
+Potential Mac-mode mismatches that are not silent drops:
+• TAB token becomes TEXT:TAB, not KEY:TAB.
+• ESC token becomes TEXT:ESC, not KEY:ESC.
+• keypad tokens like kp0, kp1, kp/, kp*, kp-, kp+, kp. become TEXT:kp0 etc. without modifiers, or CTRL+KP0 style strings with modifiers.
+• Whether those work depends on the Mac Helper parser, which is not present here.
 
-None found.
+Main conclusion:
 
-No import Security.
-No SecItemAdd / SecItemCopyMatching / SecItemUpdate / SecItemDelete.
-No Keychain wrapper.
-No CryptoKit import.
-
-13. Existing persistent Mac Helper identity storage
-
-None found.
-
-The app persists output mode with:
-@AppStorage("outputMode")
-
-But I found no stored Mac helper endpoint, name, UUID, certificate, token, pairing record, or service identity.
-
-14. Existing persistent ESP installation/device identity
-
-None found for the ESP iOS/iPadOS app as a Mac-network client.
-
-There are temporary UUID() uses for UI/session/task identity, and BLE has ESP32-side deviceID handling, but I found no persistent app installation ID or Keychain-persisted identity suitable for distinguishing one ESP installation from another.
-
-15. Behavior when multiple Mac Helpers are discovered
-
-The code chooses the first Bonjour result:
-
-guard let endpoint = results.first?.endpoint else { return }
-
-It does not list Mac Helpers.
-It does not require user selection.
-It does not choose by name.
-It does not remember a previous helper.
-It automatically connects to the first endpoint returned by NWBrowser results.
-
-16. Behavior when disconnected/reconnecting
-
-If browser fails:
-browser.stateUpdateHandler checks .failed and calls restartSearch() unless deliberately stopped.
-
-If connection fails or is cancelled:
-handleConnectionState(_:) checks .failed and .cancelled and calls restartSearch() unless deliberately stopped.
-
-If send completion reports an error:
-connection.send completion calls restartSearch() unless deliberately stopped.
-
-Manual stop/output mode change:
-ContentView.updateTransportStateForOutputMode()
-• .none: macConnection.stop(), ble.stop()
-• .esp32: macConnection.stop(), ble.startScan()
-• .mac: ble.stop(), macConnection.start()
-
-Commands while not ready:
-sendKeyboardTokens(_:) checks canSend. If not connected, it returns false. There is no queue for Mac commands while disconnected/connecting.
-
-17. Architectural constraints relevant to future authentication
-
-Current status conflates “TCP connected” with “safe to send commands”:
-canSend is true when status == .connected.
-
-A future auth design probably needs a separate authentication state, because .ready currently immediately becomes .connected and canSend immediately becomes true.
-
-There is no receive path in MacConnectionManager visible in the inspected code, so any challenge/response handshake would likely need new receive handling on the ESP side.
-
-Current discovery has no persistent helper identity, because it connects to results.first?.endpoint only.
-
-Current transport is plain TCP, so any future secret-based protocol would need to account for local-network sniffing/replay unless transport security or an authenticated protocol is added later.
-
-18. Confirmation
-
-ZERO files were changed for this inspection.
-No probes were added.
-No logging was added.
-No build was run.
-ESPMacHelper was untouched.
-INO firmware was untouched.
-Test Area was untouched.
+The space is not lost in generation. It is lost in MacConnectionManager.macMessages(from:) at ContentView.swift:575-578 because whitespace trimming converts " " to "", and the empty-string guard skips it before any Mac command is generated. LEFT succeeds because it survives trimming and has an explicit KEY:LEFT mapping.
