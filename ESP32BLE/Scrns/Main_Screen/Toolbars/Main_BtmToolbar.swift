@@ -70,6 +70,69 @@ enum MainGridButtonMode {
     }
 }
 
+struct MainTransportStatusIndicator: View {
+    let outputMode: OutputMode
+    let isBluetoothConnected: Bool
+    let isMacConnected: Bool
+    let isGridEditModeEnabled: Bool
+    let size: CGFloat
+
+    var body: some View {
+        TimelineView(.periodic(from: .now, by: 0.05)) { context in
+            Circle()
+                .fill(bluetoothIndicatorColor(at: context.date))
+                .frame(width: size, height: size)
+                .overlay {
+                    Circle()
+                        .stroke(Color.white, lineWidth: 1.5)
+                }
+        }
+        .frame(width: size, height: size)
+    }
+
+    private func bluetoothIndicatorColor(at date: Date) -> Color {
+        guard selectedTransportIsConnected else {
+            return isIndicatorPulseVisible(at: date, activeFraction: 0.1) ? .red : .black
+        }
+
+        let connectedColor = selectedTransportConnectedColor
+        guard isGridEditModeEnabled else {
+            return connectedColor
+        }
+
+        return isIndicatorPulseVisible(at: date, activeFraction: 0.5) ? connectedColor : .black
+    }
+
+    private var selectedTransportIsConnected: Bool {
+        switch outputMode {
+        case .none:
+            return false
+        case .esp32:
+            return isBluetoothConnected
+        case .mac:
+            return isMacConnected
+        }
+    }
+
+    private var selectedTransportConnectedColor: Color {
+        switch outputMode {
+        case .none:
+            return .red
+        case .esp32:
+            return .blue
+        case .mac:
+            return .green
+        }
+    }
+
+    private func isIndicatorPulseVisible(at date: Date, activeFraction: Double) -> Bool {
+        let normalizedFraction = min(max(activeFraction, 0), 1)
+        let seconds = date.timeIntervalSinceReferenceDate
+        let fractionalSecond = seconds - floor(seconds)
+        return fractionalSecond < normalizedFraction
+    }
+}
+
 private struct RepeatingToolbarButton<Label: View>: View {
     let isEnabled: Bool
     let actionVersion: Int
@@ -181,9 +244,9 @@ struct MainScreenBottomBar: View {
     let speechRecognitionDisplayText: String
     let speechRecognitionDisplayColor: Color
     let isSpeechRecognitionEnabled: Bool
-    let outputMode: OutputMode
-    let isBluetoothConnected: Bool
-    let isMacConnected: Bool
+	    let outputMode: OutputMode
+	    let isBluetoothConnected: Bool
+	    let isMacConnected: Bool
     let mainGridButtonMode: MainGridButtonMode
     let displayMode: FunctionKeyDisplayMode
     let displayModeButtonColor: Color
@@ -214,9 +277,9 @@ struct MainScreenBottomBar: View {
 
                 bottomBarLayout(
                     isCompact: true,
-                    speechBoxWidth: 180,
-                    toggleWidth: 92,
-                    displayModeWidth: 88
+                    speechBoxWidth: isPad ? 180 : 220,
+                    toggleWidth: isPad ? 92 : 104,
+                    displayModeWidth: isPad ? 88 : 108
                 )
 
                 bottomBarLayout(
@@ -226,11 +289,11 @@ struct MainScreenBottomBar: View {
                     displayModeWidth: 72
                 )
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: isPad ? .trailing : .bottomTrailing)
         }
-        .frame(height: 62)
-        .padding(.horizontal, 4)
-        .padding(.vertical, 6)
+        .frame(height: isPad ? 62 : 36)
+        .padding(.horizontal, isPad ? 4 : 0)
+        .padding(.vertical, isPad ? 6 : 0)
     }
 
     private func bottomBarLayout(
@@ -243,9 +306,11 @@ struct MainScreenBottomBar: View {
         let speechRecognitionButtonWidth: CGFloat? = isPad ? toggleWidth : nil
         let usesCompactSpeechRecognitionButton = !isPad
         let effectiveSpeechBoxWidth = isPad ? speechBoxWidth : (speechBoxWidth * 0.5)
-        let toolbarButtonHeight: CGFloat = isPad ? 40 : 35
+        let toolbarButtonHeight: CGFloat = isPad ? 40 : 36
         let bottomToolbarButtonFont: Font = isPad ? .body : .system(size: 14, weight: .regular)
+        let speechRecognitionDisplayFont: Font = isPad ? (isCompact ? .caption : .body) : .system(size: isCompact ? 9 : 12.75)
         let bottomToolbarMinimumScaleFactor: CGFloat = isPad ? 0.7 : 1
+        let bottomToolbarCornerRadius: CGFloat = isPad ? 12 : 10
 
         return HStack(spacing: isCompact ? 8 : 12) {
 			//
@@ -321,20 +386,28 @@ struct MainScreenBottomBar: View {
 					onIncreaseBoxFontSize()
 				}
 			}
-			//
-			//----------------------------------------
-			// indicator led
-			//
-            HStack(spacing: isCompact ? 8 : 12) {
-                bluetoothIndicator
-            }
-            .padding(.leading, 25)
+				//
+				//----------------------------------------
+				// indicator led
+				//
+                if isPad {
+                    HStack(spacing: isCompact ? 8 : 12) {
+                        MainTransportStatusIndicator(
+                            outputMode: outputMode,
+                            isBluetoothConnected: isBluetoothConnected,
+                            isMacConnected: isMacConnected,
+                            isGridEditModeEnabled: isGridEditModeEnabled,
+                            size: 24
+                        )
+                    }
+                    .padding(.leading, 25)
 
-            Spacer(minLength: isCompact ? 6 : 12)
-			//
-			//----------------------------------------
-			// speech recog btn
-			//
+                    Spacer(minLength: isCompact ? 6 : 12)
+                }
+				//
+				//----------------------------------------
+				// speech recog btn
+				//
             toggleButton(
                 title: speechRecognitionButtonTitle,
                 background: isSpeechRecognitionEnabled ? speechRecognitionActiveColor : normalToolbarBg,
@@ -342,6 +415,7 @@ struct MainScreenBottomBar: View {
                 isEnabled: !isGridEditModeEnabled,
                 usesCompactWidth: usesCompactSpeechRecognitionButton,
                 buttonHeight: toolbarButtonHeight,
+                cornerRadius: bottomToolbarCornerRadius,
                 font: bottomToolbarButtonFont,
                 minimumScaleFactor: bottomToolbarMinimumScaleFactor,
                 action: onToggleSpeechRecognition
@@ -349,30 +423,30 @@ struct MainScreenBottomBar: View {
             .frame(width: speechRecognitionButtonWidth)
 			//
 			//----------------------------------------
-			// report speech area
-			//
-            Text(speechRecognitionDisplayText)
-                .font(isCompact ? .caption : .body)
-                .foregroundStyle(speechRecognitionDisplayColor)
-                .opacity(0.9)
+				// report speech area
+				//
+	            Text(speechRecognitionDisplayText)
+	                .font(speechRecognitionDisplayFont)
+	                .foregroundStyle(speechRecognitionDisplayColor)
+	                .opacity(0.9)
                 .lineLimit(1)
                 .truncationMode(.tail)
                 .frame(width: effectiveSpeechBoxWidth, alignment: .leading)
                 .padding(.horizontal, isCompact ? 8 : 12)
-                .frame(minHeight: isCompact ? 40 : 40)
+                .frame(minHeight: isPad ? 40 : toolbarButtonHeight)
                 .background(Color.black.opacity(0.3))
                 .overlay {
-                    RoundedRectangle(cornerRadius: 12)
+                    RoundedRectangle(cornerRadius: bottomToolbarCornerRadius)
 						.stroke(Color.white.opacity(0.4), lineWidth: 1)
                 }
-                .clipShape(.rect(cornerRadius: 6))
+                .clipShape(.rect(cornerRadius: bottomToolbarCornerRadius))
 
             HStack(spacing: 8) {
 				//
-				//----------------------------------------
-				// stop speech
-				//
-                stopSpeechButton(buttonHeight: toolbarButtonHeight)
+                //----------------------------------------
+                // stop speech
+                //
+                stopSpeechButton(buttonHeight: toolbarButtonHeight, cornerRadius: bottomToolbarCornerRadius)
 				//
 				//----------------------------------------
 				// btn mode
@@ -383,6 +457,7 @@ struct MainScreenBottomBar: View {
                     border: normalToolbarBc,
                     isEnabled: !isGridEditModeEnabled,
                     buttonHeight: toolbarButtonHeight,
+                    cornerRadius: bottomToolbarCornerRadius,
                     font: bottomToolbarButtonFont,
                     minimumScaleFactor: bottomToolbarMinimumScaleFactor,
                     action: onCycleMainGridButtonMode
@@ -402,14 +477,14 @@ struct MainScreenBottomBar: View {
 							.frame(maxWidth: .infinity, minHeight: toolbarButtonHeight)
 							.foregroundStyle(.white)
 							.background(
-							RoundedRectangle(cornerRadius: 12)
+							RoundedRectangle(cornerRadius: bottomToolbarCornerRadius)
 							.fill(normalToolbarBg)
 					)
 					.overlay(
-						RoundedRectangle(cornerRadius: 12)
+						RoundedRectangle(cornerRadius: bottomToolbarCornerRadius)
 							.stroke(normalToolbarBc, lineWidth: 2)
 					)
-					.clipShape(RoundedRectangle(cornerRadius: 12))
+					.clipShape(RoundedRectangle(cornerRadius: bottomToolbarCornerRadius))
 					}
 					.opacity(0.8)
 					.buttonStyle(.plain)
@@ -488,6 +563,7 @@ struct MainScreenBottomBar: View {
         isEnabled: Bool = true,
         usesCompactWidth: Bool = false,
         buttonHeight: CGFloat = 50,
+        cornerRadius: CGFloat = 12,
         font: Font = .body,
         minimumScaleFactor: CGFloat = 0.7,
         action: @escaping () -> Void
@@ -506,22 +582,22 @@ struct MainScreenBottomBar: View {
         .buttonStyle(.plain)
         .disabled(!isEnabled)
         .foregroundStyle(.white)
-		.background(title=="disabled" ? .red : background)
+        .background(title=="disabled" ? .red : background)
         .overlay {
-            RoundedRectangle(cornerRadius: 12)
+            RoundedRectangle(cornerRadius: cornerRadius)
                 .stroke(border, lineWidth: 2)
         }
-        .clipShape(.rect(cornerRadius: 12))
+        .clipShape(.rect(cornerRadius: cornerRadius))
 			.opacity(isEnabled ? 0.7 : 0.35)
     }
 
-    private func stopSpeechButton(buttonHeight: CGFloat) -> some View {
+    private func stopSpeechButton(buttonHeight: CGFloat, cornerRadius: CGFloat) -> some View {
         Button {
             onStopSpeech()
         } label: {
             Image(systemName: "stop.fill")
                 .font(.headline)
-                .frame(width: 40, height: buttonHeight)
+                .frame(width: isPad ? 40 : 52, height: buttonHeight)
                 .contentShape(.rect)
         }
         .buttonStyle(.plain)
@@ -529,10 +605,10 @@ struct MainScreenBottomBar: View {
         .foregroundStyle(.white)
         .background(stopSpeechButtonBackgroundColor)
         .overlay {
-            RoundedRectangle(cornerRadius: 12)
+            RoundedRectangle(cornerRadius: cornerRadius)
                 .stroke(stopSpeechButtonBorderColor, lineWidth: 2)
         }
-        .clipShape(.rect(cornerRadius: 12))
+        .clipShape(.rect(cornerRadius: cornerRadius))
         .opacity(isStopSpeechEnabled ? 1 : 0.55)
     }
 
@@ -566,62 +642,7 @@ struct MainScreenBottomBar: View {
             .contentShape(.rect)
     }
 
-    private var bluetoothIndicator: some View {
-        TimelineView(.periodic(from: .now, by: 0.05)) { context in
-            Circle()
-                .fill(bluetoothIndicatorColor(at: context.date))
-                .frame(width: 24, height: 24)
-                .overlay {
-                    Circle()
-                        .stroke(Color.white, lineWidth: 1.5)
-                }
-        }
-        .frame(width: 24, height: 24)
-    }
-
-    private func bluetoothIndicatorColor(at date: Date) -> Color {
-        guard selectedTransportIsConnected else {
-            return isIndicatorPulseVisible(at: date, activeFraction: 0.1) ? .red : .black
-        }
-
-        let connectedColor = selectedTransportConnectedColor
-        guard isGridEditModeEnabled else {
-            return connectedColor
-        }
-
-        return isIndicatorPulseVisible(at: date, activeFraction: 0.5) ? connectedColor : .black
-    }
-
-    private var selectedTransportIsConnected: Bool {
-        switch outputMode {
-        case .none:
-            return false
-        case .esp32:
-            return isBluetoothConnected
-        case .mac:
-            return isMacConnected
-        }
-    }
-
-    private var selectedTransportConnectedColor: Color {
-        switch outputMode {
-        case .none:
-            return .red
-        case .esp32:
-            return .blue
-        case .mac:
-            return .green
-        }
-    }
-
-    private func isIndicatorPulseVisible(at date: Date, activeFraction: Double) -> Bool {
-        let normalizedFraction = min(max(activeFraction, 0), 1)
-        let seconds = date.timeIntervalSinceReferenceDate
-        let fractionalSecond = seconds - floor(seconds)
-        return fractionalSecond < normalizedFraction
-    }
-
-    private var mainGridButtonModeBackgroundColor: Color {
+	    private var mainGridButtonModeBackgroundColor: Color {
         switch mainGridButtonMode {
         case .active:
             return bleSendActiveColor

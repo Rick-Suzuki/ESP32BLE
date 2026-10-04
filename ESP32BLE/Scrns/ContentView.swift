@@ -852,8 +852,9 @@ struct ContentView: View {
             GeometryReader { geometry in
                 let containerWidth = geometry.size.width.isFinite ? max(0, geometry.size.width) : 0
                 let containerHeight = geometry.size.height.isFinite ? max(0, geometry.size.height) : 0
+                let containerClipHeight = isPad ? containerHeight : containerHeight + geometry.safeAreaInsets.bottom
 
-                ZStack {
+                ZStack(alignment: .top) {
                     KeyboardScreen(
                         ble: ble,
                         macConnection: macConnection,
@@ -948,7 +949,7 @@ struct ContentView: View {
                             .transition(.move(edge: .trailing))
                     }
                 }
-                .frame(width: containerWidth, height: containerHeight)
+                .frame(width: containerWidth, height: containerClipHeight, alignment: .top)
                 .clipped()
                 .ignoresSafeArea(.keyboard)
             }

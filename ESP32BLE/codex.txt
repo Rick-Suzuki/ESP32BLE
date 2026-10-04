@@ -1,58 +1,17 @@
-Build succeeded.
+1. File changed:
+ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
 
-1. IPHONE DELETE
+2. Confirmed removed:
+.offset(y: geometry.safeAreaInsets.bottom)
 
-• Edit is excluded on iPhone in SettingsAvailableDevicesPanel with an isPad branch:
-   • iPad shows the existing bluetoothMonitorToggleButton (edit / mon).
-   • iPhone shows the new compact delete button in the same position.
+3. Confirmed remains:
+.ignoresSafeArea(.container, edges: .bottom)
 
-• The compact iPhone Delete button:
-   • Label: delete
-   • Uses the same compact button sizing/shape pattern as the surrounding controls.
-   • Red background: Color.red.opacity(0.5)
+4. Confirmed no other layout values changed:
+No grid height, reserved toolbar space, toolbar height, button sizes, widths, spacing, corner radius, or top toolbar values were changed.
 
-• It reuses the existing delete-all-data presentation path:
-   • The compact button calls presentDeleteAllDataConfirmation().
-   • That sets the existing isDeleteAllDataConfirmationPresented = true.
-   • The existing DeleteAllDataConfirmationModifier still owns the destructive deleteAllData() call.
+5. Confirmed iPad untouched:
+The change is only inside the existing if !isPad bottom-toolbar overlay.
 
-• No second delete implementation was added.
-• The existing delete safety flow was not bypassed or weakened; the compact button enters the same confirmation mechanism as the old large button.
-• The large bottom delete all data button is now hidden only on iPhone via if isPad.
-
-2. IPAD
-
-• iPad edit / mon button remains unchanged in the compact controls area.
-• iPad large bottom delete all data button remains present.
-• No intentional iPad layout changes were made, except the requested functional Mac-mode timing disabled state.
-
-3. MAC CUSTOM KB TIMING
-
-• SettingsKeyboardTimingSection now receives isEnabled.
-• SettingsScreen passes:
-   • enabled when output mode is not .mac
-   • disabled when output mode is .mac
-
-• In Mac mode, the whole Custom KB Timing section remains visible but is:
-   • .disabled(true)
-   • .opacity(0.45)
-
-• This disables:
-   • Set & Test
-   • on timing arrows
-   • off timing arrows
-   • timing sliders
-   • speech recognition timeout controls in that section
-
-• Switching back from Mac to ESP32 re-enables the section using the same stored values. No timing values are changed when switching modes.
-
-4. Timing arrows were NOT removed in this pass.
-
-5. File-table width/layout was NOT changed.
-
-6. Files changed
-
-• ESP32BLE/ESP32BLE/Scrns/Set_Screen/Set_Screen.swift􀰓
-• ESP32BLE/ESP32BLE/Scrns/Set_Screen/Btm_Area/Set_BtmCtls.swift􀰓
-• ESP32BLE/ESP32BLE/Scrns/Set_Screen/Btm_Area/Set_AvailableDevices.swift􀰓
-• ESP32BLE/ESP32BLE/Scrns/Set_Screen/Btm_Area/Set_KB_Timing.swift􀰓
+6. Build result:
+The project built successfully.

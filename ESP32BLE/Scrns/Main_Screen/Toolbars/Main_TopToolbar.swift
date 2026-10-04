@@ -21,6 +21,10 @@ struct MainScreenToolbarContent: View {
         isPad ? 0 : 4
     }
 
+    private var topToolbarOpacityGroupGap: CGFloat {
+        isPad ? 0 : 0
+    }
+
     private var topToolbarOpacityHitHorizontalPadding: CGFloat {
         isPad ? opacitySliderHitHorizontalPadding : 0
     }
@@ -35,6 +39,9 @@ struct MainScreenToolbarContent: View {
     let totalFileCount: Int
     let currentBackgroundImageNumber: Int
     let totalBackgroundImageCount: Int
+    let outputMode: OutputMode
+    let isBluetoothConnected: Bool
+    let isMacConnected: Bool
     @Binding var backgroundImageOpacity: Double
     @Binding var gridBackgroundOpacity: Double
     @Binding var isEditingDocumentName: Bool
@@ -59,10 +66,11 @@ struct MainScreenToolbarContent: View {
 	//-----------------------------------------------------------------------------------------------
 	//
     var body: some View {
-		//
-		//----------------------------------------
-		//
-		HStack(spacing: isPad ? nil : 2) {
+			//
+			//----------------------------------------
+			//
+			HStack(spacing: isPad ? nil : 2) {
+                HStack(spacing: isPad ? nil : 0) {
 			//
 			//----------------------------------------
 			// home btn
@@ -151,19 +159,20 @@ struct MainScreenToolbarContent: View {
 					.rotationEffect(.degrees(90))
 					.frame(width: 44, height: 44)
 					.contentShape(.rect)
-			}
-			.buttonStyle(.plain)
-			.foregroundStyle(toolbarPrincipalForegroundColor)
-			.disabled(currentFileNumber >= totalFileCount)
-			//
-			//----------------------------------------
-			// prev image
+				}
+				.buttonStyle(.plain)
+				.foregroundStyle(toolbarPrincipalForegroundColor)
+				.disabled(currentFileNumber >= totalFileCount)
+                }
+				//
+				//----------------------------------------
+				// prev image
 			//
             if isPad {
                 Spacer()
             } else {
                 Spacer()
-                    .frame(width: topToolbarGroupGap)
+                    .frame(width: topToolbarOpacityGroupGap)
             }
 			Button {
 				ButtonClickFeedback.playIfEnabled()
@@ -252,6 +261,17 @@ struct MainScreenToolbarContent: View {
             if isPad {
                 Spacer()
             } else {
+                Spacer()
+                    .frame(width: topToolbarGroupGap)
+
+                MainTransportStatusIndicator(
+                    outputMode: outputMode,
+                    isBluetoothConnected: isBluetoothConnected,
+                    isMacConnected: isMacConnected,
+                    isGridEditModeEnabled: isGridEditModeEnabled,
+                    size: 18
+                )
+
                 Spacer()
                     .frame(width: topToolbarGroupGap)
             }

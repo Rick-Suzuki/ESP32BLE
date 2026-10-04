@@ -464,6 +464,10 @@ struct MainScreen: View {
 	// Vertical gap between the MainScreen top toolbar and the first button row.
     // Smaller value moves the button grid upward toward the toolbar.
     private let topToolbarToGridSpacing: CGFloat = 2
+    private let mainTopToolbarHeight: CGFloat = 44
+    private let iPhoneBottomToolbarRegionHeight: CGFloat = 36
+    private let iPhoneGridToBottomToolbarClearance: CGFloat = 4
+    private let iPhoneGridReservedBottomInset: CGFloat = 30
 		
 		// MARK: - BM:🟥 smart SF symbols
     
@@ -1021,6 +1025,15 @@ Tapping a row inserts the key code at the cursor.
             let contentWidth = max(0, geometry.size.width - (horizontalContentInset * 2))
             let topContentInset: CGFloat = 0
             let bottomContentInset: CGFloat = 0
+            let iPhonePhysicalContentHeight = geometry.size.height + geometry.safeAreaInsets.bottom
+            let iPhoneGridHeight = max(
+                0,
+                iPhonePhysicalContentHeight
+                - mainTopToolbarHeight
+                - topToolbarToGridSpacing
+                - iPhoneBottomToolbarRegionHeight
+                - iPhoneGridToBottomToolbarClearance
+            )
             
 			let containerFrame = geometry.frame(in: .global)
             
@@ -1038,6 +1051,9 @@ Tapping a row inserts the key code at the cursor.
 						totalFileCount: totalFileCount,
 						currentBackgroundImageNumber: selectedBackgroundImageIndex,
 						totalBackgroundImageCount: availableBackgroundImageURLs.count,
+                        outputMode: outputMode,
+                        isBluetoothConnected: ble.isConnected,
+                        isMacConnected: macConnection.canSend,
 						backgroundImageOpacity: $backgroundImageOpacity,
 						gridBackgroundOpacity: $mainGridBackgroundOpacity,
 						isEditingDocumentName: $isEditingDocumentName,
@@ -1072,18 +1088,38 @@ Tapping a row inserts the key code at the cursor.
                     Color.clear
                         .frame(height: topToolbarToGridSpacing)
 
-                    mainGridSection(availableWidth: contentWidth)
+                    if isPad {
+                        mainGridSection(availableWidth: contentWidth)
 
-                    Color.clear
-                        .frame(height: 20)
+                        Color.clear
+                            .frame(height: 20)
 
-                    displayModeButtonSection(availableWidth: contentWidth)
+                        displayModeButtonSection(availableWidth: contentWidth)
+                    } else {
+                        mainGridSection(
+                            availableWidth: contentWidth,
+                            reservedBottomInset: iPhoneGridReservedBottomInset
+                        )
+                            .frame(height: iPhoneGridHeight)
+                    }
                 }
                 .frame(width: contentWidth)
                 .frame(maxHeight: .infinity, alignment: .top)
                 .padding(.top, topContentInset)
                 .padding(.bottom, bottomContentInset)
                 .ignoresSafeArea(.keyboard)
+
+                if !isPad {
+                    VStack(spacing: 0) {
+                        Spacer(minLength: 0)
+
+                        displayModeButtonSection(availableWidth: contentWidth)
+                    }
+                    .frame(width: contentWidth)
+                    .frame(height: geometry.size.height, alignment: .bottom)
+                    .ignoresSafeArea(.keyboard)
+                    .ignoresSafeArea(.container, edges: .bottom)
+                }
 
                 if editingSlotIndex != nil {
                     Color.black.opacity(0.5)
@@ -1119,11 +1155,11 @@ Tapping a row inserts the key code at the cursor.
         }
     }
 
-    private func mainGridSection(availableWidth: CGFloat) -> some View {
+    private func mainGridSection(availableWidth: CGFloat, reservedBottomInset: CGFloat = 0) -> some View {
 
         MainScreenGridSection(
             availableWidth: availableWidth,
-            reservedBottomInset: 0,
+            reservedBottomInset: reservedBottomInset,
             functionKeys: functionKeys,
             visibleBoxCount: visibleBoxCount,
             visibleGridDimensions: visibleGridDimensions,
@@ -2960,7 +2996,8 @@ Tapping a row inserts the key code at the cursor.
     var mainGridButtonCornerRadius: CGFloat {
         let buttonCount = max(visibleGridDimensions.columns * visibleGridDimensions.rows, 1)
         let normalizedProgress = min(max(CGFloat(buttonCount - 1) / CGFloat(144 - 1), 0), 1)
-        return mainGridButtonCornerRadiusMaximum - ((mainGridButtonCornerRadiusMaximum - mainGridButtonCornerRadiusMinimum) * normalizedProgress)
+        let resolvedRadius = mainGridButtonCornerRadiusMaximum - ((mainGridButtonCornerRadiusMaximum - mainGridButtonCornerRadiusMinimum) * normalizedProgress)
+        return isPad ? resolvedRadius : resolvedRadius * 0.5
     }
 
     private func handleSelectedDocumentDisplayNameChange() {
