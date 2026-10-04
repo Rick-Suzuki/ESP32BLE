@@ -249,7 +249,7 @@ struct SettingsScreen: View {
 			// back to main
 		//
 				HStack(spacing: 8) {
-				SettingsToolbarButton(title: "main", backgroundColor: Color.gray.opacity(0.45), minWidth: 92, isEnabled: true) {
+						SettingsToolbarButton(title: "main", backgroundColor: Color.gray.opacity(0.45), minWidth: isPad ? 92 : 70, isEnabled: true) {
 				saveAndReturnToMain()
 			}
 			//
@@ -266,11 +266,15 @@ struct SettingsScreen: View {
 				//----------------------------------------
 				// title text
 				//
-			Spacer()
-                settingsTitleControl(availableWidth: availableWidth)
-						.padding(.horizontal, 12)
+				if isPad {
+					Spacer()
+				}
+						settingsTitleControl(availableWidth: availableWidth)
+							.padding(.horizontal, 12)
 
-			Spacer()
+				if isPad {
+					Spacer()
+				}
 			//
 			//----------------------------------------
 			// import btn
@@ -294,8 +298,10 @@ struct SettingsScreen: View {
 				.contentShape(.rect)
 				.accessibilityLabel("Import from iCloud")
 
-			Spacer()
-				.frame(width:10)
+				if isPad {
+					Spacer()
+						.frame(width:10)
+				}
 			//
 			//----------------------------------------
 			// export btn/menu
@@ -324,21 +330,21 @@ struct SettingsScreen: View {
 			//----------------------------------------
 			// show type of table
 			//
-			SettingsToolbarButton(title: listMode.buttonTitle, backgroundColor: Color.gray.opacity(0.45), minWidth: 92, isEnabled: true) {
+					SettingsToolbarButton(title: listMode.buttonTitle, backgroundColor: Color.gray.opacity(0.45), minWidth: isPad ? 92 : 74, isEnabled: true) {
 					listMode.toggle(developerMode: developerMode)
 				}
 			//
 			//----------------------------------------
 			// repair btn
 			//
-				SettingsToolbarButton(title: "repair", backgroundColor: Color.red.opacity(0.5), minWidth: 70, isEnabled: listMode == .files) {
+						SettingsToolbarButton(title: "repair", backgroundColor: Color.red.opacity(0.5), minWidth: isPad ? 70 : 60, isEnabled: listMode == .files) {
 				repairDocument()
 			}
 			//
 			//----------------------------------------
 			// new file
 			//
-				SettingsToolbarButton(title: "new", backgroundColor: Color.green.opacity(0.5), minWidth: 64.4, isEnabled: listMode == .files) {
+						SettingsToolbarButton(title: "new", backgroundColor: Color.green.opacity(0.5), minWidth: isPad ? 64.4 : 52, isEnabled: listMode == .files) {
 					createNewDocument()
 			}
 			}
@@ -738,7 +744,12 @@ struct SettingsScreen: View {
     private func settingsTitleWidth(for availableWidth: CGFloat) -> CGFloat {
         let safeWidth = availableWidth.isFinite ? max(0, availableWidth) : 0
         let preferredWidth = safeWidth * 0.22
-        return min(max(preferredWidth, 300), 500)
+
+        if isPad {
+            return min(max(preferredWidth, 300), 500)
+        }
+
+        return 140
     }
 
     private var textToSpeechVoiceMenu: some View {
@@ -3682,7 +3693,7 @@ struct SettingsScreen: View {
     }
 
     private var textToSpeechRateLabel: String {
-        "\(Int(clampedTextToSpeechPercentage.rounded()))%"
+        String(format: "%.1f", clampedTextToSpeechPercentage / 100)
     }
 
     private var speechRatePercentageBinding: Binding<Double> {

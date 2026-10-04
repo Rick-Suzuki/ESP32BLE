@@ -194,6 +194,18 @@ struct SettingsToolbarButton: View {
     let isEnabled: Bool
     let action: () -> Void
 
+    private var titleFont: Font {
+        isPad ? .body : .system(size: 15)
+    }
+
+    private var uiKitTitleFont: UIFont? {
+        isPad ? nil : .systemFont(ofSize: 15)
+    }
+
+    private var horizontalPadding: CGFloat {
+        isPad ? 5 : 2
+    }
+
     @ViewBuilder
     var body: some View {
         if #available(iOS 18, *) {
@@ -202,9 +214,9 @@ struct SettingsToolbarButton: View {
                 action()
             }
             .disabled(!isEnabled)
-            .font(.body)
+            .font(titleFont)
             .foregroundStyle(isEnabled ? .white : Color(white: 0.8))
-            .padding(.horizontal, 5)
+            .padding(.horizontal, horizontalPadding)
             .frame(minWidth: minWidth, minHeight: 36)
             .background(isEnabled ? backgroundColor : Color.gray.opacity(0.45))
             .overlay {
@@ -222,9 +234,10 @@ struct SettingsToolbarButton: View {
                 height: 36,
                 isEnabled: isEnabled,
                 fontStyle: .body,
+                font: uiKitTitleFont,
                 titleColor: isEnabled ? .white : UIColor(white: 0.8, alpha: 1),
                 adjustsFontSizeToFitWidth: false,
-                contentInsets: UIEdgeInsets(top: 0, left: 5, bottom: 0, right: 5)
+                contentInsets: UIEdgeInsets(top: 0, left: horizontalPadding, bottom: 0, right: horizontalPadding)
             ) {
                 ButtonClickFeedback.playIfEnabled()
                 action()
@@ -240,6 +253,7 @@ struct SettingsUIKitVisualButton: View {
     let height: CGFloat
     let isEnabled: Bool
     let fontStyle: UIFont.TextStyle
+    var font: UIFont? = nil
     let titleColor: UIColor
     let adjustsFontSizeToFitWidth: Bool
     let contentInsets: UIEdgeInsets
@@ -251,6 +265,7 @@ struct SettingsUIKitVisualButton: View {
             backgroundColor: backgroundColor,
             isEnabled: isEnabled,
             fontStyle: fontStyle,
+            font: font,
             titleColor: titleColor,
             adjustsFontSizeToFitWidth: adjustsFontSizeToFitWidth,
             contentInsets: contentInsets,
@@ -265,6 +280,7 @@ private struct SettingsUIKitVisualButtonRepresentable: UIViewRepresentable {
     let backgroundColor: Color
     let isEnabled: Bool
     let fontStyle: UIFont.TextStyle
+    let font: UIFont?
     let titleColor: UIColor
     let adjustsFontSizeToFitWidth: Bool
     let contentInsets: UIEdgeInsets
@@ -293,7 +309,7 @@ private struct SettingsUIKitVisualButtonRepresentable: UIViewRepresentable {
         context.coordinator.action = action
         button.setTitle(title, for: .normal)
         button.setTitleColor(titleColor, for: .normal)
-        button.titleLabel?.font = .preferredFont(forTextStyle: fontStyle)
+        button.titleLabel?.font = font ?? .preferredFont(forTextStyle: fontStyle)
         button.titleLabel?.adjustsFontSizeToFitWidth = adjustsFontSizeToFitWidth
         button.titleLabel?.minimumScaleFactor = adjustsFontSizeToFitWidth ? 0.7 : 1
         button.contentEdgeInsets = contentInsets

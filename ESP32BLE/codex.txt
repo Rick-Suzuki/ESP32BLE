@@ -1,148 +1,91 @@
-Inspection only. No code changes made.
+Build succeeded.
 
-Relevant files/functions:
+FINAL PIXEL CHANGE
 
-ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift
-• sendMainGridEntry(_:)
-• bluetoothSendTexts(for:)
-• sendKeyboardOutputTokens(_:respectsButtonMode:)
-• normalizedBluetoothSendText(_:)
+Main:
+• before: iPhone 70? no, inspected current code was 72
+• after: 70
 
-ESP32BLE/Scrns/ContentView.swift
-• parsedActionTokens(from:)
-• MacConnectionManager.sendKeyboardTokens(_:)
-• MacConnectionManager.macMessages(from:)
-• MacConnectionManager.macMessage(for:modifiers:)
-• MacConnectionManager.send(_:)
-• MacConnectionManager.sendFramedMessage(_:requiresAuthentication:)
+Screens:
+• before: inspected current code was 76
+• after: 74
 
-Exact path for literal space " ":
+Repair:
+• before: inspected current code was 62
+• after: 60
 
-1. Button action reaches:
-Main_ButtonBehavior.swift:300-320
-bluetoothSendTexts(for:) filters non-keyboard app/document/widget actions, then maps each token through normalizedBluetoothSendText.
+New:
+• before: inspected current code was 54
+• after: 52
 
-2. Space token normalization:
-Main_ButtonBehavior.swift:1402-1408
-normalizedBluetoothSendText(_:) trims for comparison.
-If token is "sp", it returns literal " ".
-If token is already literal " ", it falls through and returns original sendText at line 1428.
-So the literal " " survives this phase.
+Confirm:
+• iPhone font unchanged: still .system(size: 15)
+• button heights unchanged: still minHeight: 36 / UIKit height 36
+• iPhone title remains 140
+• speed control unchanged
+• iPad unchanged: iPad widths remain 92, 92, 70, 64.4
 
-3. Output probe:
-Main_ButtonBehavior.swift:465-471
-sendKeyboardOutputTokens maps again through normalizedBluetoothSendText, then logs:
-[ESP-OUTPUT] " "
-This proves keyboardOutputTokens contains " ".
+WIDTH REPORT
 
-4. Mac mode dispatch:
-Main_ButtonBehavior.swift:473-485
-case .mac calls:
-macConnection.sendKeyboardTokens(keyboardOutputTokens)
+Physical iPhone 17 / equivalent:
+• landscape bounds width: 874 pt
+• left safe-area inset: about 62 pt
+• right safe-area inset: about 62 pt
+• usable width: about 750 pt
 
-5. Function that receives " " after [ESP-OUTPUT]:
-ContentView.swift:329
-MacConnectionManager.sendKeyboardTokens(_ tokens: [String])
+iPhone SE (3rd generation):
+• landscape bounds width: 667 pt
+• left safe-area inset: 0 pt
+• right safe-area inset: 0 pt
+• usable width: 667 pt
 
-6. Conversion to Mac messages:
-ContentView.swift:330
-let messages = macMessages(from: tokens)
+Sources used:
+• Apple lists iPhone 17 at 2622-by-1206 pixels; at 3x that is 874 × 402 pt landscape.
+• Apple lists iPhone SE 3 at 1334-by-750 pixels; at 2x that is 667 × 375 pt landscape.
+• Safe-area references list iPhone 17/Dynamic Island class as 62 pt top in portrait, which maps to landscape side safe areas; SE 3 is home-button class with no left/right landscape inset.
 
-7. Exact discard point:
-ContentView.swift:574-578
+CURRENT LAYOUT REQUIREMENTS
 
-for token in tokens {
-   let trimmedToken = token.trimmingCharacters(in: .whitespacesAndNewlines)
+• Main:
+Main grid scales to available width. Bottom toolbar uses ViewThatFits, and iPhone-specific compact controls already exist. Not the limiting layout.
 
-   guard !trimmedToken.isEmpty else {
+• Keyboard:
+Keyboard grid scales to available width. Top row has several fixed controls, but physical testing says it is basically good. Not the limiting layout.
 
-       continue
+• Editor:
+Soft editor clamps top row width to available geometry and is physically viable. It is dense but not currently the width gate.
 
-   }
+• Settings:
+Settings top toolbar is the limiting layout. After the final button reductions, estimated practical minimum is roughly 728-735 pt usable width, depending on actual SF Symbol menu intrinsic widths.
 
+Most width-demanding layout:
+Settings top toolbar.
 
-For token " ":
-• token is " "
-• trimmedToken becomes ""
-• guard fails
-• continue skips the token
-• no call to macMessage(for:modifiers:)
-• no message is appended
+Reason:
+It is the only major iPhone layout that is still a single horizontal toolbar with many fixed/minimum-width controls: Main, voice menu, speed slider, 140-title plus padding, import/export icons, Screens, Repair, New, HStack gaps, and toolbar padding.
 
-8. Empty-message early return:
-ContentView.swift:330-333
+RECOMMENDED MINIMUM IPHONE USABLE WIDTH
 
-let messages = macMessages(from: tokens)
-guard !messages.isEmpty else {
-   return true
+Recommended threshold:
+730 pt usable landscape width.
 
-}
+Reason:
+• It accepts iPhone 17-class usable width of about 750 pt.
+• It rejects iPhone SE 3 usable width of 667 pt.
+• It is based on actual available layout space, not model names.
+• It leaves about 15-20 pt margin below the working iPhone 17 usable width.
 
-Since the only token was skipped, messages is empty.
-sendKeyboardTokens returns true without sending anything.
+Safety margin:
+Small but sensible for this UI. I would not set it lower than 720; 730 is the cleaner boundary.
 
-9. Why no [ESP-MAC-TX]:
-[ESP-MAC-TX] is printed only in sendFramedMessage at ContentView.swift:361.
-Because messages is empty, send(_:) is never called, sendFramedMessage is never reached, and no network payload is logged.
+RECOMMENDED SWIFT MEASUREMENT
 
-Why LEFT succeeds:
+Use safe-area-adjusted landscape width:
 
-LEFT follows the same route until macMessages(from:).
+usableWidth = geometry.size.width - geometry.safeAreaInsets.leading - geometry.safeAreaInsets.trailing
 
-For token "LEFT":
-• ContentView.swift:575 trims it to "LEFT", not empty.
-• ContentView.swift:580-585 checks modifier mapping; LEFT is not a modifier.
-• ContentView.swift:587 appends macMessage(for: "LEFT", modifiers: []).
-• ContentView.swift:613-615 maps LEFT to:
-KEY:LEFT
-• ContentView.swift:339-341 sends it.
-• ContentView.swift:355 adds "\n".
-• ContentView.swift:361 logs:
-[ESP-MAC-TX] payload="KEY:LEFT\n"
+Compare that to the threshold only when !isPad.
 
-Existing Mac Helper Space representation:
+This describes the horizontal space ESP can actually use, independent of iPhone model name. The future “Screen Too Small” gate could live cleanly near the top-level ContentView GeometryReader, before presenting KeyboardScreen, MainScreen, or SettingsScreen.
 
-In this repo snapshot, I found no Mac Helper implementation/parser source. The workspace contains only the iOS sender side and logs/notes.
-
-No occurrence of KEY:SPACE was found in the project.
-The iOS sender currently emits KEY:RETURN, KEY:BACKSPACE, KEY:UP/DOWN/LEFT/RIGHT, KEY:F-number, and KEY:letter, but never KEY:SPACE.
-
-So from available repo evidence:
-• Existing iOS-side protocol style strongly suggests KEY:SPACE would be the natural representation.
-• I cannot confirm the actual Mac Helper parser already supports KEY:SPACE because that parser is not present in this workspace.
-• There is no evidence in this repo that KEY:SPACE is currently supported or emitted.
-
-Smallest proposed fix, not implemented:
-
-On the iOS sender side:
-• Preserve literal single-space tokens in MacConnectionManager.macMessages(from:) instead of trimming them into empty.
-• Convert a literal space token to KEY:SPACE in MacConnectionManager.macMessage(for:modifiers:) or equivalent conversion logic.
-
-On the Mac Helper side, if not already supported:
-• Add KEY:SPACE to the existing KEY parser/special-key mapping, alongside KEY:LEFT, KEY:RETURN, KEY:BACKSPACE, etc.
-• It should map to the platform’s Space key event, not text framing or auth/network logic.
-
-No networking, LF framing, authentication, Bluetooth, timing, function-key handling, UI, or refactor changes are implicated.
-
-Other tokens with the same silent-drop problem:
-
-From the iOS sender path, anything that reaches MacConnectionManager.macMessages(from:) as whitespace-only is silently dropped by the same condition:
-
-• literal " "
-• SP / sp after normalizedBluetoothSendText converts it to " "
-• literal tab "\t", if it ever reaches this path as a token
-• literal newline "\n" or other whitespace-only token, if it ever reaches this path as a token
-
-Other Bluetooth-supported ASCII tokens do not appear to be silently dropped by the iOS Mac sender. Unknown tokens fall through to:
-ContentView.swift:625
-TEXT:<token>
-
-Potential Mac-mode mismatches that are not silent drops:
-• TAB token becomes TEXT:TAB, not KEY:TAB.
-• ESC token becomes TEXT:ESC, not KEY:ESC.
-• keypad tokens like kp0, kp1, kp/, kp*, kp-, kp+, kp. become TEXT:kp0 etc. without modifiers, or CTRL+KP0 style strings with modifiers.
-• Whether those work depends on the Mac Helper parser, which is not present here.
-
-Main conclusion:
-
-The space is not lost in generation. It is lost in MacConnectionManager.macMessages(from:) at ContentView.swift:575-578 because whitespace trimming converts " " to "", and the empty-string guard skips it before any Mac command is generated. LEFT succeeds because it survives trimming and has an explicit KEY:LEFT mapping.
+Do not gate by UIScreen.main.bounds.width alone; raw bounds includes unsafe side areas on modern iPhones.
