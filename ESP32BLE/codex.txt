@@ -1,91 +1,58 @@
 Build succeeded.
 
-FINAL PIXEL CHANGE
+1. IPHONE DELETE
 
-Main:
-• before: iPhone 70? no, inspected current code was 72
-• after: 70
+• Edit is excluded on iPhone in SettingsAvailableDevicesPanel with an isPad branch:
+   • iPad shows the existing bluetoothMonitorToggleButton (edit / mon).
+   • iPhone shows the new compact delete button in the same position.
 
-Screens:
-• before: inspected current code was 76
-• after: 74
+• The compact iPhone Delete button:
+   • Label: delete
+   • Uses the same compact button sizing/shape pattern as the surrounding controls.
+   • Red background: Color.red.opacity(0.5)
 
-Repair:
-• before: inspected current code was 62
-• after: 60
+• It reuses the existing delete-all-data presentation path:
+   • The compact button calls presentDeleteAllDataConfirmation().
+   • That sets the existing isDeleteAllDataConfirmationPresented = true.
+   • The existing DeleteAllDataConfirmationModifier still owns the destructive deleteAllData() call.
 
-New:
-• before: inspected current code was 54
-• after: 52
+• No second delete implementation was added.
+• The existing delete safety flow was not bypassed or weakened; the compact button enters the same confirmation mechanism as the old large button.
+• The large bottom delete all data button is now hidden only on iPhone via if isPad.
 
-Confirm:
-• iPhone font unchanged: still .system(size: 15)
-• button heights unchanged: still minHeight: 36 / UIKit height 36
-• iPhone title remains 140
-• speed control unchanged
-• iPad unchanged: iPad widths remain 92, 92, 70, 64.4
+2. IPAD
 
-WIDTH REPORT
+• iPad edit / mon button remains unchanged in the compact controls area.
+• iPad large bottom delete all data button remains present.
+• No intentional iPad layout changes were made, except the requested functional Mac-mode timing disabled state.
 
-Physical iPhone 17 / equivalent:
-• landscape bounds width: 874 pt
-• left safe-area inset: about 62 pt
-• right safe-area inset: about 62 pt
-• usable width: about 750 pt
+3. MAC CUSTOM KB TIMING
 
-iPhone SE (3rd generation):
-• landscape bounds width: 667 pt
-• left safe-area inset: 0 pt
-• right safe-area inset: 0 pt
-• usable width: 667 pt
+• SettingsKeyboardTimingSection now receives isEnabled.
+• SettingsScreen passes:
+   • enabled when output mode is not .mac
+   • disabled when output mode is .mac
 
-Sources used:
-• Apple lists iPhone 17 at 2622-by-1206 pixels; at 3x that is 874 × 402 pt landscape.
-• Apple lists iPhone SE 3 at 1334-by-750 pixels; at 2x that is 667 × 375 pt landscape.
-• Safe-area references list iPhone 17/Dynamic Island class as 62 pt top in portrait, which maps to landscape side safe areas; SE 3 is home-button class with no left/right landscape inset.
+• In Mac mode, the whole Custom KB Timing section remains visible but is:
+   • .disabled(true)
+   • .opacity(0.45)
 
-CURRENT LAYOUT REQUIREMENTS
+• This disables:
+   • Set & Test
+   • on timing arrows
+   • off timing arrows
+   • timing sliders
+   • speech recognition timeout controls in that section
 
-• Main:
-Main grid scales to available width. Bottom toolbar uses ViewThatFits, and iPhone-specific compact controls already exist. Not the limiting layout.
+• Switching back from Mac to ESP32 re-enables the section using the same stored values. No timing values are changed when switching modes.
 
-• Keyboard:
-Keyboard grid scales to available width. Top row has several fixed controls, but physical testing says it is basically good. Not the limiting layout.
+4. Timing arrows were NOT removed in this pass.
 
-• Editor:
-Soft editor clamps top row width to available geometry and is physically viable. It is dense but not currently the width gate.
+5. File-table width/layout was NOT changed.
 
-• Settings:
-Settings top toolbar is the limiting layout. After the final button reductions, estimated practical minimum is roughly 728-735 pt usable width, depending on actual SF Symbol menu intrinsic widths.
+6. Files changed
 
-Most width-demanding layout:
-Settings top toolbar.
-
-Reason:
-It is the only major iPhone layout that is still a single horizontal toolbar with many fixed/minimum-width controls: Main, voice menu, speed slider, 140-title plus padding, import/export icons, Screens, Repair, New, HStack gaps, and toolbar padding.
-
-RECOMMENDED MINIMUM IPHONE USABLE WIDTH
-
-Recommended threshold:
-730 pt usable landscape width.
-
-Reason:
-• It accepts iPhone 17-class usable width of about 750 pt.
-• It rejects iPhone SE 3 usable width of 667 pt.
-• It is based on actual available layout space, not model names.
-• It leaves about 15-20 pt margin below the working iPhone 17 usable width.
-
-Safety margin:
-Small but sensible for this UI. I would not set it lower than 720; 730 is the cleaner boundary.
-
-RECOMMENDED SWIFT MEASUREMENT
-
-Use safe-area-adjusted landscape width:
-
-usableWidth = geometry.size.width - geometry.safeAreaInsets.leading - geometry.safeAreaInsets.trailing
-
-Compare that to the threshold only when !isPad.
-
-This describes the horizontal space ESP can actually use, independent of iPhone model name. The future “Screen Too Small” gate could live cleanly near the top-level ContentView GeometryReader, before presenting KeyboardScreen, MainScreen, or SettingsScreen.
-
-Do not gate by UIScreen.main.bounds.width alone; raw bounds includes unsafe side areas on modern iPhones.
+• ESP32BLE/ESP32BLE/Scrns/Set_Screen/Set_Screen.swift􀰓
+• ESP32BLE/ESP32BLE/Scrns/Set_Screen/Btm_Area/Set_BtmCtls.swift􀰓
+• ESP32BLE/ESP32BLE/Scrns/Set_Screen/Btm_Area/Set_AvailableDevices.swift􀰓
+• ESP32BLE/ESP32BLE/Scrns/Set_Screen/Btm_Area/Set_KB_Timing.swift􀰓

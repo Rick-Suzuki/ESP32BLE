@@ -12,10 +12,12 @@ struct SettingsImageControlsSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("image")
-                .font(settingsCompactControlFont)
-                .foregroundStyle(.white)
-                .lineLimit(1)
+            if isPad {
+                Text("image")
+                    .font(settingsCompactControlFont)
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+            }
 
             HStack(spacing: 18) {
                 imageControlButton(systemName: "arrow.counterclockwise.circle", action: onReset)

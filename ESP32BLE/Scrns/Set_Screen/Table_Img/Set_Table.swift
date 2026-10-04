@@ -42,13 +42,16 @@ struct SettingsDocumentTableSection: View {
     let selectPDF: (URL) -> Void
     let deletePDF: (URL) -> Void
     let deleteAllFile: (URL) -> Void
+    let showsOuterBorder: Bool
 
 	// set table font size for iphone
     private var tableRowFont: Font? {
         isPad ? nil : .system(size: 15)
     }
 
-    private let itemCountReservedHeight: CGFloat = 44
+    private var itemCountReservedHeight: CGFloat {
+        isPad ? 44 : 22
+    }
 
     var body: some View {
         GeometryReader { geometry in
@@ -108,8 +111,15 @@ struct SettingsDocumentTableSection: View {
         .frame(maxHeight: .infinity, alignment: .top)
         .background(Color.black)
         .overlay {
-            Rectangle()
-                .stroke(Color.white, lineWidth: 1)
+            if showsOuterBorder {
+                Rectangle()
+                    .stroke(Color.white, lineWidth: 1)
+            } else {
+                Rectangle()
+                    .fill(Color.white)
+                    .frame(width: 1)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
         .clipShape(.rect(cornerRadius: 0))
     }
@@ -140,7 +150,7 @@ struct SettingsDocumentTableSection: View {
 		}
 		.padding(.leading, 10)
 		.frame(maxWidth: .infinity)
-		.frame(height: 40)
+		.frame(height: isPad ? 40 : 22)
 		.background(Color.gray.opacity(0.3))
 		.overlay(alignment: .top) {
 			Rectangle()

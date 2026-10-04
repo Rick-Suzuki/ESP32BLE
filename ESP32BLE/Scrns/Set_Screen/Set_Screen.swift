@@ -221,26 +221,60 @@ struct SettingsScreen: View {
                 settingsTopToolbar(availableWidth: screenGeometry.size.width)
 
                 GeometryReader { geometry in
-                    HStack(alignment: .top, spacing: 0) {
-                        VStack(spacing: 0) {
-                            if isPad {
+                    if isPad {
+                        HStack(alignment: .top, spacing: 0) {
+                            VStack(spacing: 0) {
                                 editableDocumentSection
-                            }
 
-                            if !isPad || !isDocumentEditorFocused {
-                                combinedBottomPanelSection
+                                if !isDocumentEditorFocused {
+                                    combinedBottomPanelSection
+                                }
                             }
+                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+
+                            documentTableSection
+                                .frame(width: documentTableWidth(for: geometry.size.width))
                         }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-
-                        documentTableSection
-                            .frame(width: documentTableWidth(for: geometry.size.width))
+                        .frame(maxHeight: .infinity, alignment: .top)
+                    } else {
+                        iPhoneSettingsBody(availableWidth: geometry.size.width)
                     }
-                    .frame(maxHeight: .infinity, alignment: .top)
                 }
             }
             .frame(width: screenGeometry.size.width, height: screenGeometry.size.height)
         }
+    }
+
+    private func iPhoneSettingsBody(availableWidth: CGFloat) -> some View {
+        let tableWidth = iPhoneDocumentTableWidth(for: availableWidth)
+
+        return HStack(alignment: .top, spacing: 0) {
+            VStack(spacing: 0) {
+                HStack(alignment: .top, spacing: 14) {
+                    availableDevicesContent
+                        .frame(width: 230, alignment: .topLeading)
+
+                    keyboardSettingsContent
+                        .frame(maxWidth: .infinity, alignment: .topLeading)
+                }
+
+                Spacer(minLength: 0)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .padding(.leading, 8)
+            .padding(.trailing, 12)
+            .padding(.vertical, 8)
+
+            documentTableSection
+                .frame(width: tableWidth)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .background(Color.black)
+        .overlay {
+            Rectangle()
+                .stroke(Color.white, lineWidth: 1)
+        }
+        .clipShape(.rect(cornerRadius: 0))
     }
 
     private func settingsTopToolbar(availableWidth: CGFloat) -> some View {
@@ -618,6 +652,11 @@ struct SettingsScreen: View {
         return min(max(safeWidth * widthRatio, 140), maximumWidth)
     }
 
+    private func iPhoneDocumentTableWidth(for availableWidth: CGFloat) -> CGFloat {
+        let safeWidth = availableWidth.isFinite ? max(0, availableWidth) : 0
+        return min(max(safeWidth * 0.2, 170), 190)
+    }
+
     @ViewBuilder
     private var editableDocumentSection: some View {
         if isBluetoothMonitorMode {
@@ -823,7 +862,8 @@ struct SettingsScreen: View {
             isBluetoothMonitorMode: $isBluetoothMonitorMode,
             isStatusBarVisible: $isStatusBarVisible,
             opacitySliderValue: $opacitySliderValue,
-            imageControlButtons: AnyView(imageControlButtons)
+            imageControlButtons: AnyView(imageControlButtons),
+            presentDeleteAllDataConfirmation: presentDeleteAllDataConfirmation
         )
     }
 
@@ -909,27 +949,29 @@ struct SettingsScreen: View {
 					.frame(maxWidth: .infinity, alignment: .topLeading)
 			}
 			
-				Spacer()
-				HStack(alignment: .top, spacing: 20) {
-					Spacer()
-					Button {
-						ButtonClickFeedback.playIfEnabled()
-                        isDeleteAllDataConfirmationPresented = true
-					} label: {
-						Text("delete all data")
-							.frame(width: 150, height:60)
-						.padding(.all,5)
-						.foregroundColor(Color.white)
-						.background(Color.red.opacity(0.5))
-						.cornerRadius(5)
-						.overlay(
-							RoundedRectangle(cornerRadius:5)
-								.stroke(Color.white, lineWidth:1)
-						)
-				}
-				.buttonStyle(PlainButtonStyle())
+                if isPad {
+                    Spacer()
+                        HStack(alignment: .top, spacing: 20) {
+                            Spacer()
+                            Button {
+                                ButtonClickFeedback.playIfEnabled()
+                                presentDeleteAllDataConfirmation()
+                            } label: {
+                                Text("delete all data")
+                                    .frame(width: 150, height:60)
+                                .padding(.all,5)
+                                .foregroundColor(Color.white)
+                                .background(Color.red.opacity(0.5))
+                                .cornerRadius(5)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius:5)
+                                        .stroke(Color.white, lineWidth:1)
+                                )
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                    }
+                }
 			}
-		}
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .padding()
         .background(Color.black)
@@ -973,7 +1015,8 @@ struct SettingsScreen: View {
             deleteSound: deleteSound,
             selectPDF: selectPDF,
             deletePDF: deletePDF,
-            deleteAllFile: deleteAllFile
+            deleteAllFile: deleteAllFile,
+            showsOuterBorder: isPad
         )
         .id(importRefreshID)
     }
@@ -1017,11 +1060,22 @@ struct SettingsScreen: View {
             keyboardTimingOnMs: $keyboardTimingOnMs,
             keyboardTimingOffMs: $keyboardTimingOffMs,
             speechRecognitionAutoOffMinutes: $speechRecognitionAutoOffMinutes,
+            opacitySliderValue: $opacitySliderValue,
+            imageControlButtons: AnyView(imageControlButtons),
+            isEnabled: isCustomKeyboardTimingEnabled,
             onSetAndTest: {
                 sendKeyboardTimingCommand()
                 ble.sendString("Hello World! Let's go. (test) 1!2\"3#4$5%6&7'8(9)")
             }
         )
+    }
+
+    private var isCustomKeyboardTimingEnabled: Bool {
+        OutputMode(persistedValue: outputModeRawValue) != .mac
+    }
+
+    private func presentDeleteAllDataConfirmation() {
+        isDeleteAllDataConfirmationPresented = true
     }
 
     private func sliderRow(title: String, value: Binding<Double>, range: ClosedRange<Double>) -> some View {

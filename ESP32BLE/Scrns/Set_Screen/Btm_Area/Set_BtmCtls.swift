@@ -10,6 +10,7 @@ struct SettingsBottomControlsSection: View {
     @Binding var isStatusBarVisible: Bool
     @Binding var opacitySliderValue: Double
     let imageControlButtons: AnyView
+    let presentDeleteAllDataConfirmation: () -> Void
 
     var body: some View {
         SettingsAvailableDevicesPanel(
@@ -21,7 +22,8 @@ struct SettingsBottomControlsSection: View {
             isBluetoothMonitorMode: $isBluetoothMonitorMode,
             isStatusBarVisible: $isStatusBarVisible,
             opacitySliderValue: $opacitySliderValue,
-            imageControlButtons: imageControlButtons
+            imageControlButtons: imageControlButtons,
+            presentDeleteAllDataConfirmation: presentDeleteAllDataConfirmation
         )
     }
 }

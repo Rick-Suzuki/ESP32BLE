@@ -10,59 +10,32 @@ struct SettingsAvailableDevicesPanel: View {
     @Binding var isStatusBarVisible: Bool
     @Binding var opacitySliderValue: Double
     let imageControlButtons: AnyView
+    let presentDeleteAllDataConfirmation: () -> Void
+    @State private var macPairingButtonWidth: CGFloat = 132
+
+    private var bodyButtonCornerRadius: CGFloat {
+        isPad ? 18 : 10
+    }
+
+    private var auxiliaryButtonCornerRadius: CGFloat {
+        isPad ? 14 : 10
+    }
 
     var body: some View {
+        if isPad {
+            iPadBody
+        } else {
+            iPhoneBody
+        }
+    }
+
+    private var iPadBody: some View {
         HStack(alignment: .top, spacing: 32) {
             VStack(alignment: .leading, spacing: 12) {
-                if isPad {
-                    Text("Connection")
-                        .font(.headline)
-                }
+                Text("Connection")
+                    .font(.headline)
 
-                outputModeControls
-
-                if outputMode == .esp32 {
-                    if ble.discoveredDevices.isEmpty {
-                        Text("No ESP32 devices found yet")
-                            .foregroundStyle(.secondary)
-                    }
-
-                    ForEach(ble.discoveredDevices) { device in
-                        Button {
-                            ButtonClickFeedback.playIfEnabled()
-                            ble.selectedPeripheralID = device.id
-                            if !ble.isConnected {
-                                ble.connectToSelectedDevice()
-                            }
-                        } label: {
-                            HStack {
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        VStack {
-                                            Text(settingsDeviceName(for: device))
-                                                .font(settingsDeviceFont)
-                                            .foregroundStyle(settingsDeviceNameColor(for: device))
-                                        }
-                                    }
-                                Spacer()
-
-                                if showsDeviceCheckmark(for: device) {
-                                    Image(systemName: "checkmark.circle.fill")
-											.foregroundStyle(.green)
-
-                                }
-                            }
-                            .padding(2)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .fill(settingsDeviceBackgroundColor(for: device))
-                            )
-                        }
-                        .buttonStyle(.plain)
-                        .disabled(ble.isConnected && ble.selectedPeripheralID != device.id)
-                        .opacity(ble.isConnected && ble.selectedPeripheralID != device.id ? 0.45 : 1)
-                    }
-                }
+                connectionContent
             }
             .frame(maxWidth: .infinity, alignment: .topLeading)
             .fixedSize(horizontal: false, vertical: true)
@@ -72,10 +45,10 @@ struct SettingsAvailableDevicesPanel: View {
                 settingsPlaceholderSlider(title: "opacity: 0.5", value: $opacitySliderValue)
 				
 					HStack(spacing: 18) {
-						VStack(spacing:10) {
-							sleepWakeButton
-							bluetoothMonitorToggleButton
-						}
+							VStack(spacing:10) {
+								sleepWakeButton
+								editorOrDeleteButton
+							}
 						VStack(spacing:10) {
 							buttonClickToggleButton
 							spareButtonPlaceholder
@@ -90,6 +63,71 @@ struct SettingsAvailableDevicesPanel: View {
             .fixedSize(horizontal: false, vertical: true)
         }
         .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private var iPhoneBody: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            connectionContent
+                .frame(maxWidth: .infinity, alignment: .topLeading)
+
+            Spacer(minLength: 0)
+
+            HStack(spacing: 8) {
+                buttonClickToggleButton
+                sleepWakeButton
+                compactDeleteAllDataButton
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .frame(maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    private var connectionContent: some View {
+        VStack(alignment: .leading, spacing: isPad ? 12 : 8) {
+            outputModeControls
+
+            if outputMode == .esp32 {
+                if ble.discoveredDevices.isEmpty {
+                    Text("No ESP32 devices found yet")
+                        .foregroundStyle(.secondary)
+                }
+
+                ForEach(ble.discoveredDevices) { device in
+                    Button {
+                        ButtonClickFeedback.playIfEnabled()
+                        ble.selectedPeripheralID = device.id
+                        if !ble.isConnected {
+                            ble.connectToSelectedDevice()
+                        }
+                    } label: {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 4) {
+                                VStack {
+                                    Text(settingsDeviceName(for: device))
+                                        .font(settingsDeviceFont)
+                                        .foregroundStyle(settingsDeviceNameColor(for: device))
+                                }
+                            }
+                            Spacer()
+
+                            if showsDeviceCheckmark(for: device) {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundStyle(.green)
+                            }
+                        }
+                        .padding(2)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(settingsDeviceBackgroundColor(for: device))
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(ble.isConnected && ble.selectedPeripheralID != device.id)
+                    .opacity(ble.isConnected && ble.selectedPeripheralID != device.id ? 0.45 : 1)
+                }
+            }
+        }
     }
 
     private var outputModeControls: some View {
@@ -114,6 +152,8 @@ struct SettingsAvailableDevicesPanel: View {
             Text(macConnection.pairingStatusText)
                 .font(.caption2.weight(.semibold))
                 .foregroundStyle(macConnection.isPaired ? Color.green : Color.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .multilineTextAlignment(.leading)
 
             Button(macConnection.isPaired ? "Forget Mac Helper" : "Pair with Mac Helper") {
                 ButtonClickFeedback.playIfEnabled()
@@ -131,12 +171,29 @@ struct SettingsAvailableDevicesPanel: View {
             .padding(.horizontal, 10)
             .frame(height: settingsActionButtonHeight - 14)
             .background(macConnection.isPaired ? Color.red.opacity(0.55) : Color.cyan.opacity(0.55))
-            .clipShape(.rect(cornerRadius: 14))
+            .background {
+                if isPad {
+                    Color.clear
+                } else {
+                    GeometryReader { geometry in
+                        Color.clear
+                            .preference(key: MacPairingButtonWidthPreferenceKey.self, value: geometry.size.width)
+                    }
+                }
+            }
+            .clipShape(.rect(cornerRadius: auxiliaryButtonCornerRadius))
+            .onPreferenceChange(MacPairingButtonWidthPreferenceKey.self) { width in
+                guard !isPad, width > 0 else { return }
+                macPairingButtonWidth = width
+            }
 
             if macConnection.pairingStatusText == "Pairing Rejected" {
                 Text("Pairing rejected. Allow Pairing in ESP Mac Helper.")
                     .font(.caption)
                     .foregroundStyle(Color.white)
+                    .frame(width: isPad ? nil : macPairingButtonWidth, alignment: .leading)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .multilineTextAlignment(.leading)
             }
         }
     }
@@ -154,7 +211,7 @@ struct SettingsAvailableDevicesPanel: View {
         .padding(.horizontal, 12)
         .frame(width: 78, height: settingsActionButtonHeight-10)
         .background(outputModeButtonBackground(for: mode))
-        .clipShape(.rect(cornerRadius: 18))
+        .clipShape(.rect(cornerRadius: bodyButtonCornerRadius))
     }
 
     private func selectOutputMode(_ mode: OutputMode) {
@@ -200,35 +257,61 @@ struct SettingsAvailableDevicesPanel: View {
             keepScreenAwake.toggle()
         }
         .buttonStyle(.plain)
-        .font(.headline)
+        .font(settingsBodyButtonFont)
         .foregroundStyle(.white)
         .lineLimit(1)
         .minimumScaleFactor(0.7)
-        .padding(.horizontal, 16)
-        .frame(width: settingsActionButtonWidth, height: settingsActionButtonHeight-10)
+        .padding(.horizontal, settingsBodyButtonHorizontalPadding)
+        .frame(width: settingsActionButtonWidth, height: settingsBodyButtonHeight)
         .background(sleepWakeButtonBackgroundColor)
-        .clipShape(.rect(cornerRadius: 18))
+        .clipShape(.rect(cornerRadius: bodyButtonCornerRadius))
         .disabled(!ble.isConnected)
     }
 	//
 	//----------------------------------------
 	// monitor/editor btn
 	//
+    @ViewBuilder
+    private var editorOrDeleteButton: some View {
+        if isPad {
+            bluetoothMonitorToggleButton
+        } else {
+            compactDeleteAllDataButton
+        }
+    }
+
     private var bluetoothMonitorToggleButton: some View {
 		Button(isBluetoothMonitorMode ? "mon" : "edit") {
             ButtonClickFeedback.playIfEnabled()
             isBluetoothMonitorMode.toggle()
         }
         .buttonStyle(.plain)
-        .font(.headline)
+        .font(settingsBodyButtonFont)
         .foregroundStyle(.white)
         .lineLimit(1)
         .minimumScaleFactor(0.7)
-        .padding(.horizontal, 16)
-        .frame(width: settingsActionButtonWidth, height: settingsActionButtonHeight-10)
+        .padding(.horizontal, settingsBodyButtonHorizontalPadding)
+        .frame(width: settingsActionButtonWidth, height: settingsBodyButtonHeight)
         .background(isBluetoothMonitorMode ? Color.green.opacity(0.5) : Color.blue.opacity(0.5))
-        .clipShape(.rect(cornerRadius: 18))
+        .clipShape(.rect(cornerRadius: bodyButtonCornerRadius))
         .accessibilityLabel(isBluetoothMonitorMode ? "Show settings editor" : "Show Bluetooth monitor")
+    }
+
+    private var compactDeleteAllDataButton: some View {
+        Button("delete") {
+            ButtonClickFeedback.playIfEnabled()
+            presentDeleteAllDataConfirmation()
+        }
+        .buttonStyle(.plain)
+        .font(settingsBodyButtonFont)
+        .foregroundStyle(.white)
+        .lineLimit(1)
+        .minimumScaleFactor(0.7)
+        .padding(.horizontal, settingsBodyButtonHorizontalPadding)
+        .frame(width: settingsActionButtonWidth, height: settingsBodyButtonHeight)
+        .background(Color.red.opacity(0.5))
+        .clipShape(.rect(cornerRadius: bodyButtonCornerRadius))
+        .accessibilityLabel("Delete all data")
     }
 
     private var spareButtonPlaceholder: some View {
@@ -237,14 +320,14 @@ struct SettingsAvailableDevicesPanel: View {
             isStatusBarVisible.toggle()
         }
         .buttonStyle(.plain)
-        .font(.headline)
+        .font(settingsBodyButtonFont)
         .foregroundStyle(.white)
         .lineLimit(1)
         .minimumScaleFactor(0.7)
-        .padding(.horizontal, 16)
-        .frame(width: settingsActionButtonWidth, height: settingsActionButtonHeight-10)
+        .padding(.horizontal, settingsBodyButtonHorizontalPadding)
+        .frame(width: settingsActionButtonWidth, height: settingsBodyButtonHeight)
         .background(isStatusBarVisible ? Color.green.opacity(0.5) : Color.gray.opacity(0.5))
-        .clipShape(.rect(cornerRadius: 18))
+        .clipShape(.rect(cornerRadius: bodyButtonCornerRadius))
         .accessibilityLabel(isStatusBarVisible ? "Hide status bar" : "Show status bar")
     }
 
@@ -306,18 +389,30 @@ struct SettingsAvailableDevicesPanel: View {
             }
         }
         .buttonStyle(.plain)
-        .font(.headline)
+        .font(settingsBodyButtonFont)
         .foregroundStyle(.white)
         .lineLimit(1)
         .minimumScaleFactor(0.7)
-        .padding(.horizontal, 16)
-        .frame(width: settingsActionButtonWidth, height: settingsActionButtonHeight-10)
+        .padding(.horizontal, settingsBodyButtonHorizontalPadding)
+        .frame(width: settingsActionButtonWidth, height: settingsBodyButtonHeight)
         .background(isButtonClickEnabled ? Color.blue.opacity(0.5) : Color.gray.opacity(0.5))
-        .clipShape(.rect(cornerRadius: 18))
+        .clipShape(.rect(cornerRadius: bodyButtonCornerRadius))
+    }
+
+    private var settingsBodyButtonFont: Font {
+        isPad ? .headline : .system(size: 15, weight: .semibold)
+    }
+
+    private var settingsBodyButtonHorizontalPadding: CGFloat {
+        isPad ? 16 : 10
     }
 
     private var settingsActionButtonWidth: CGFloat {
-        isPad ? 92 : 92
+        isPad ? 92 : 72
+    }
+
+    private var settingsBodyButtonHeight: CGFloat {
+        isPad ? settingsActionButtonHeight - 10 : (settingsActionButtonHeight - 10) * 1.5
     }
 
     private var settingsActionButtonHeight: CGFloat {
@@ -330,5 +425,13 @@ struct SettingsAvailableDevicesPanel: View {
                 .tint(.cyan)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+private struct MacPairingButtonWidthPreferenceKey: PreferenceKey {
+    static var defaultValue: CGFloat = 132
+
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
     }
 }
