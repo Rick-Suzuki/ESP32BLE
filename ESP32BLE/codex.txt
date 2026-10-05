@@ -1,17 +1,24 @@
-1. File changed:
-ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
+EXPERIMENT APPLIED
 
-2. Confirmed removed:
-.offset(y: geometry.safeAreaInsets.bottom)
+Changed only:
+• smartCommandPanel
+• smartColorPanel
+• smartButtonPanel
 
-3. Confirmed remains:
-.ignoresSafeArea(.container, edges: .bottom)
+Each root panel now has .clipped() applied after its existing border/background chain.
 
-4. Confirmed no other layout values changed:
-No grid height, reserved toolbar space, toolbar height, button sizes, widths, spacing, corner radius, or top toolbar values were changed.
+Unchanged:
+• Frames
+• Widths
+• Heights
+• Spacing
+• ScrollViews
+• GeometryReader
+• Panel borders
+• Behaviour/actions
 
-5. Confirmed iPad untouched:
-The change is only inside the existing if !isPad bottom-toolbar overlay.
+Build:
+Project build succeeded.
 
-6. Build result:
-The project built successfully.
+Result to check visually:
+If the overflow disappears but content is cut off at the bottom, the cause is confirmed as child content rendering outside the root panel bounds. The panel(s) that appear truncated will need internal layout adjustment next.

@@ -443,6 +443,19 @@ struct MainScreen: View {
     private let smartCommandEditorWidth: CGFloat = 343
     private let smartColorControlsWidth: CGFloat = 238
     private let smartSFPanelWidth: CGFloat = 238
+    // MARK: - BM:🅱️🅱️🅱️  Temporary editor geometry overlay
+    private let debugEditorGeometry = false
+    private var smartViewWidthPhone: CGFloat {
+        smartEditControlsWidthPhone +
+        smartCommandEditorWidthPhone +
+        smartColorControlsWidthPhone +
+        smartSFPanelWidthPhone
+    }
+    private let smartViewHeightPhone: CGFloat = 338
+    private let smartEditControlsWidthPhone: CGFloat = 322
+    private let smartCommandEditorWidthPhone: CGFloat = 322
+    private let smartColorControlsWidthPhone: CGFloat = 322
+    private let smartSFPanelWidthPhone: CGFloat = 0
     private let smartFunctionKeyColumnWidth: CGFloat = 58
     private let smartColorSliderColumnWidth: CGFloat = 48
     private let smartTopPlaceholderSymbols = [
@@ -460,6 +473,35 @@ struct MainScreen: View {
     ]
     // Adjust this to tune the height of the color/visibility cells in the smart button panel.
     private let smartButtonPanelColorCellHeight: CGFloat = 46
+    private let smartIPhoneButtonContentWidth: CGFloat = 322
+    private let smartIPhoneButtonPreviewWidth: CGFloat = 108
+    private let smartIPhoneButtonPreviewHeight: CGFloat = 72
+    private let smartIPhoneButtonEditorCellSize: CGFloat = 46
+    private var smartIPhoneButtonSwatchHexColors: [String] {
+        smartButtonSwatchHexColors + [
+            "FFFFFF",
+            "F2F2F2",
+            "BFBFBF",
+            "404040",
+            "1A1A1A",
+            "7F0000",
+            "CC3333",
+            "FF6666",
+            "7F3F00",
+            "CC6600",
+            "FFB266",
+            "336600",
+            "66CC33",
+            "B2FF66",
+            "003F7F",
+            "3366CC",
+            "66B2FF",
+            "33007F",
+            "6633CC",
+            "B266FF",
+            "FF66B2"
+        ]
+    }
   
 	// Vertical gap between the MainScreen top toolbar and the first button row.
     // Smaller value moves the button grid upward toward the toolbar.
@@ -891,7 +933,9 @@ Tapping a row inserts the key code at the cursor.
     @State private var smartButtonBrightnessBaseHex: String?
     @State private var smartButtonClearPreviewFallbackImageURL: URL?
     @State private var smartButtonPreviewFontSize = 34.0
+    @State private var isSmartPhoneSFSymbolMode = false
     @State private var keyboardMinY: CGFloat = .greatestFiniteMagnitude
+    @State private var editorGeometrySizes: [EditorGeometryProbeTarget: CGSize] = [:]
     @State private var popupDismissTask: Task<Void, Never>?
     @State var presentedPreviewFile: PreviewedFile?
     @AppStorage("selectedTextToSpeechVoiceIdentifier") var selectedTextToSpeechVoiceIdentifier = ""
@@ -1121,7 +1165,7 @@ Tapping a row inserts the key code at the cursor.
                     .ignoresSafeArea(.container, edges: .bottom)
                 }
 
-                if editingSlotIndex != nil {
+                if editingSlotIndex != nil, isPad {
                     Color.black.opacity(0.5)
                         .ignoresSafeArea()
                         .mask(alignment: .top) {
@@ -1134,7 +1178,13 @@ Tapping a row inserts the key code at the cursor.
                 }
 
                 if editingSlotIndex != nil {
-                    smartView(availableWidth: contentWidth)
+                    if isPad {
+                        smartView(availableWidth: contentWidth)
+                            .editorGeometryProbe(.editorContainer, isEnabled: debugEditorGeometry)
+                    } else {
+                        iPhoneSmartEditorPresentation(availableWidth: contentWidth)
+                            .editorGeometryProbe(.editorContainer, isEnabled: debugEditorGeometry)
+                    }
                 }
 
                 popupOverlay(
@@ -1146,7 +1196,12 @@ Tapping a row inserts the key code at the cursor.
 
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .editorGeometryProbe(.screen, isEnabled: debugEditorGeometry)
             .ignoresSafeArea(.keyboard)
+        }
+        .onPreferenceChange(EditorGeometryPreferenceKey.self) { sizes in
+            guard debugEditorGeometry else { return }
+            editorGeometrySizes = sizes
         }
         .padding(.horizontal, 2)
         .ignoresSafeArea(.keyboard)
@@ -1473,22 +1528,100 @@ Tapping a row inserts the key code at the cursor.
         .ignoresSafeArea(.keyboard)
     }
 
-    private func smartView(availableWidth: CGFloat) -> some View {
-        HStack(spacing: 0) {
+    private func smartView(availableWidth: CGFloat, availableHeight: CGFloat? = nil) -> some View {
+        let resolvedSmartViewWidth = isPad ? smartViewWidth : smartViewWidthPhone
+        let resolvedSmartViewHeight = isPad ? smartViewHeight : smartViewHeightPhone
+        let iPhoneEqualPanelWidth = availableWidth / 3
+        let resolvedSmartEditControlsWidth = isPad ? smartEditControlsWidth : iPhoneEqualPanelWidth
+        let resolvedSmartCommandEditorWidth = isPad ? smartCommandEditorWidth : iPhoneEqualPanelWidth
+        let resolvedSmartColorControlsWidth = isPad ? smartColorControlsWidth : iPhoneEqualPanelWidth
+        let resolvedSmartSFPanelWidth = isPad ? smartSFPanelWidth : smartSFPanelWidthPhone
+        let outerWidth = isPad ? min(resolvedSmartViewWidth, availableWidth) : nil
+        let outerHeight = isPad ? resolvedSmartViewHeight : availableHeight
+        let outerMaxWidth = isPad ? nil : CGFloat.infinity
+        let outerMaxHeight = isPad || availableHeight != nil ? nil : CGFloat.infinity
+        let panelHeight = isPad ? resolvedSmartViewHeight : availableHeight
+        let panelMaxHeight = isPad || availableHeight != nil ? nil : CGFloat.infinity
+
+        return HStack(spacing: 0) {
             smartCommandPanel
-                .frame(width: smartEditControlsWidth, height: smartViewHeight)
+                .frame(width: resolvedSmartEditControlsWidth, height: panelHeight)
+                .frame(maxHeight: panelMaxHeight)
+                .editorGeometryProbe(.leftPanel, isEnabled: debugEditorGeometry)
 
             smartColorPanel
-                .frame(width: smartCommandEditorWidth, height: smartViewHeight)
+                .frame(width: resolvedSmartCommandEditorWidth, height: panelHeight)
+                .frame(maxHeight: panelMaxHeight)
+                .editorGeometryProbe(.commandPanel, isEnabled: debugEditorGeometry)
 
-            smartButtonPanel
-                .frame(width: smartColorControlsWidth, height: smartViewHeight)
+            if isPad {
+                smartButtonPanel()
+                    .frame(width: resolvedSmartColorControlsWidth, height: panelHeight)
+                    .frame(maxHeight: panelMaxHeight)
+                    .editorGeometryProbe(.buttonPanel, isEnabled: debugEditorGeometry)
 
-            smartSFPanel
-                .frame(width: smartSFPanelWidth, height: smartViewHeight)
+                smartSFPanel
+                    .frame(width: resolvedSmartSFPanelWidth, height: panelHeight)
+                    .frame(maxHeight: panelMaxHeight)
+                    .editorGeometryProbe(.sfPanel, isEnabled: debugEditorGeometry)
+            } else {
+                smartButtonPanel(editorWidth: resolvedSmartColorControlsWidth)
+                    .frame(width: resolvedSmartColorControlsWidth, height: panelHeight)
+                    .frame(maxHeight: panelMaxHeight)
+                    .editorGeometryProbe(.buttonPanel, isEnabled: debugEditorGeometry)
+            }
         }
-        .frame(width: min(smartViewWidth, availableWidth), height: smartViewHeight)
+        .editorGeometryProbe(.hStack, isEnabled: debugEditorGeometry)
+        .frame(width: outerWidth, height: outerHeight, alignment: .topLeading)
+        .frame(maxWidth: outerMaxWidth, maxHeight: outerMaxHeight, alignment: .topLeading)
+        .editorGeometryProbe(.smartView, isEnabled: debugEditorGeometry)
         .ignoresSafeArea(.keyboard)
+    }
+
+    private func iPhoneSmartEditorPresentation(availableWidth: CGFloat) -> some View {
+        GeometryReader { geometry in
+            let visibleEditorHeight = max(0, geometry.size.height - geometry.safeAreaInsets.bottom)
+
+            ZStack {
+                Color.black
+
+                smartView(availableWidth: availableWidth, availableHeight: visibleEditorHeight)
+            }
+            .frame(width: geometry.size.width, height: geometry.size.height, alignment: .topLeading)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+        .editorGeometryProbe(.fullScreenZStack, isEnabled: debugEditorGeometry)
+        .overlay(alignment: .topLeading) {
+            if debugEditorGeometry {
+                DebugEditorGeometryOverlay(sizes: editorGeometrySizes)
+                    .padding(8)
+            }
+        }
+        .ignoresSafeArea(.keyboard)
+    }
+
+    private var dismissKeyboardButton: some View {
+        Button {
+            UIApplication.shared.sendAction(
+                #selector(UIResponder.resignFirstResponder),
+                to: nil,
+                from: nil,
+                for: nil
+            )
+        } label: {
+            Image(systemName: "keyboard.chevron.compact.down")
+                .font(.system(size: 22, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color.black)
+                .overlay {
+                    Rectangle()
+                        .stroke(Color.white, lineWidth: 1)
+                }
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Hide keyboard")
     }
 
     private func smartPanel(title: String) -> some View {
@@ -1503,6 +1636,39 @@ Tapping a row inserts the key code at the cursor.
                     .font(.headline)
                     .foregroundStyle(.white)
             }
+    }
+
+    private func smartPanelBorder(edges: Edge.Set = .all) -> some View {
+        ZStack {
+            if edges.contains(.top) {
+                Rectangle()
+                    .fill(Color.white)
+                    .frame(height: 1)
+                    .frame(maxHeight: .infinity, alignment: .top)
+            }
+
+            if edges.contains(.bottom) {
+                Rectangle()
+                    .fill(Color.white)
+                    .frame(height: 1)
+                    .frame(maxHeight: .infinity, alignment: .bottom)
+            }
+
+            if edges.contains(.leading) {
+                Rectangle()
+                    .fill(Color.white)
+                    .frame(width: 1)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
+            if edges.contains(.trailing) {
+                Rectangle()
+                    .fill(Color.white)
+                    .frame(width: 1)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+            }
+        }
+        .allowsHitTesting(false)
     }
 
     private var smartCommandEditorRow: some View {
@@ -1534,8 +1700,7 @@ Tapping a row inserts the key code at the cursor.
         }
         .background(Color.black)
         .overlay {
-            Rectangle()
-                .stroke(Color.white, lineWidth: 1)
+            smartPanelBorder()
         }
     }
 	//
@@ -1623,9 +1788,9 @@ Tapping a row inserts the key code at the cursor.
         }
         .background(Color.black)
         .overlay {
-            Rectangle()
-                .stroke(Color.white, lineWidth: 1)
+            smartPanelBorder(edges: isPad ? .all : [.top, .trailing, .bottom])
         }
+        .clipped()
     }
 
     private var smartScriptEditorTextBinding: Binding<String> {
@@ -1869,6 +2034,8 @@ Tapping a row inserts the key code at the cursor.
                 .scrollContentBackground(.hidden)
                 .background(Color.black)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .layoutPriority(isPad ? 0 : 1)
+                .editorGeometryProbe(.smartScriptTextEditor, isEnabled: debugEditorGeometry)
                 .overlay {
                     Rectangle()
                         .stroke(Color.white, lineWidth: 1)
@@ -1889,66 +2056,226 @@ Tapping a row inserts the key code at the cursor.
                 Rectangle()
                     .stroke(Color.white, lineWidth: 1)
             }
+
+            if !isPad {
+                smartIPhoneCommandActionControls
+            }
         }
+        .frame(maxWidth: .infinity, maxHeight: isPad ? nil : .infinity, alignment: .top)
         .background(Color.black)
         .overlay {
             Rectangle()
                 .stroke(Color.white, lineWidth: 1)
         }
+        .clipped()
     }
 
-    private var smartButtonPanel: some View {
-        VStack(spacing: 4) {
-            HStack(alignment: .top, spacing: 6) {
-                VStack(spacing: 4) {
-                    smartVerticalSliderLabel("")
-                    Slider(value: $smartButtonBrightness, in: 0...1)
-                        .rotationEffect(.degrees(-90))
-                        .frame(width: 126, height: 24)
-                        .tint(.yellow)
-                        .onChange(of: smartButtonBrightness) {
-                            applySmartButtonBrightness()
-                        }
-                }
-                .frame(width: smartColorSliderColumnWidth)
-
-                VStack(spacing: 8) {
-                    smartButtonPreview
-                }
-                .frame(maxWidth: .infinity)
+    private var smartIPhoneCommandActionControls: some View {
+        HStack(spacing: 0) {
+            smartControlButton("test", background: Color(red: 0.0, green: 0.5, blue: 0.0)) {
+                testEditingSlotText()
+                // Help text location: command panel test button.
+                smartCommandDescription = smartHelpSFTestButton
             }
-            .background {
-                smartButtonClearPreviewBackground
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            smartControlButton("close", background: Color.gray.opacity(0.45)) {
+                saveSlotEditing()
+                cancelSlotEditing()
             }
-
-            LazyVGrid(
-                columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 5),
-                spacing: 0
-            ) {
-                smartVisibilityButton
-                smartClearColorButton
-                smartRandomColorButton
-                smartColonButton
-                ForEach(Array(smartButtonSwatchHexColors), id: \.self) { hexColor in
-                    smartButtonColorSwatch(hexColor)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .top)
-            .frame(height: smartButtonPanelColorCellHeight * 5, alignment: .top)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
+        .frame(height: 46)
+    }
+
+    private func smartIPhoneButtonControlRow(editorWidth: CGFloat) -> some View {
+        HStack(spacing: 0) {
+            smartSlotPositionLabel
+                .frame(width: 64, height: 46)
+            smartArrowButton(systemName: "arrow.left") {
+                selectPreviousEditableSlot()
+                // Help text location: button panel left arrow.
+                smartCommandDescription = smartHelpSFArrows
+            }
+            .frame(width: 46, height: 46)
+            smartArrowButton(systemName: "arrow.right") {
+                selectNextEditableSlot()
+                // Help text location: button panel right arrow.
+                smartCommandDescription = smartHelpSFArrows
+            }
+            .frame(width: 46, height: 46)
+            smartIPhoneModePlaceholderButton
+            .frame(width: 46, height: 46)
+            dismissKeyboardButton
+                .frame(width: 46, height: 46)
+        }
+        .frame(width: editorWidth, height: 46)
+    }
+
+    private var smartIPhoneModePlaceholderButton: some View {
+        Button {
+            isSmartPhoneSFSymbolMode.toggle()
+        } label: {
+            Image(systemName: isSmartPhoneSFSymbolMode ? "command" : "paintpalette")
+                .font(.system(size: 22, weight: .semibold))
+                .foregroundStyle(isSmartPhoneSFSymbolMode ? .yellow : .green)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color.black)
+                .overlay {
+                    Rectangle()
+                        .stroke(Color.white, lineWidth: 1)
+                }
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(isSmartPhoneSFSymbolMode ? "Show colour palette" : "Show SF Symbols")
+    }
+
+    private func smartButtonPanel(editorWidth: CGFloat = 0) -> some View {
+        let resolvedEditorWidth = editorWidth > 0 ? editorWidth : smartIPhoneButtonContentWidth
+
+        return VStack(spacing: 4) {
+            if isPad {
+                HStack(alignment: .top, spacing: 6) {
+                    smartButtonBrightnessSliderColumn
+
+                    VStack(spacing: 8) {
+                        smartButtonPreview
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+                .background {
+                    smartButtonClearPreviewBackground
+                }
+            } else {
+                smartIPhoneButtonPreviewRow(editorWidth: resolvedEditorWidth)
+            }
+
+            if !isPad {
+                smartIPhoneButtonControlRow(editorWidth: resolvedEditorWidth)
+            }
+
+            smartButtonLowerEditingArea(editorWidth: resolvedEditorWidth)
+        }
+        .frame(maxWidth: isPad ? nil : .infinity, maxHeight: isPad ? nil : .infinity, alignment: .top)
         .background(Color.black)
         .overlay {
-            Rectangle()
-                .stroke(Color.white, lineWidth: 1)
+            smartPanelBorder(edges: isPad ? .all : [.top, .trailing, .bottom])
+        }
+        .clipped()
+    }
+
+    private var smartButtonBrightnessSliderColumn: some View {
+        VStack(spacing: 4) {
+            smartVerticalSliderLabel("")
+            Slider(value: $smartButtonBrightness, in: 0...1)
+                .rotationEffect(.degrees(-90))
+                .frame(width: 126, height: 24)
+                .tint(.yellow)
+                .onChange(of: smartButtonBrightness) {
+                    applySmartButtonBrightness()
+                }
+        }
+        .frame(width: smartColorSliderColumnWidth)
+    }
+
+    private func smartIPhoneButtonPreviewRow(editorWidth: CGFloat) -> some View {
+        HStack(alignment: .top, spacing: 6) {
+            smartButtonBrightnessSliderColumn
+
+            VStack(spacing: 8) {
+                smartButtonPreview
+            }
+            .frame(width: smartIPhoneButtonPreviewWidth)
+        }
+        .frame(width: editorWidth)
+        .background {
+            smartButtonClearPreviewBackground
         }
     }
 
     @ViewBuilder
+    private func smartButtonLowerEditingArea(editorWidth: CGFloat = 0) -> some View {
+        let resolvedEditorWidth = editorWidth > 0 ? editorWidth : smartIPhoneButtonContentWidth
+
+        if isPad {
+            smartButtonColorGrid
+                .frame(maxWidth: .infinity, alignment: .top)
+                .frame(height: smartButtonPanelColorCellHeight * 5, alignment: .top)
+        } else {
+            smartIPhoneButtonSharedEditingArea(editorWidth: resolvedEditorWidth)
+                .frame(width: resolvedEditorWidth)
+                .frame(maxHeight: .infinity, alignment: .top)
+                .layoutPriority(1)
+        }
+    }
+
+    @ViewBuilder
+    private func smartIPhoneButtonSharedEditingArea(editorWidth: CGFloat) -> some View {
+        if !isSmartPhoneSFSymbolMode {
+            smartIPhoneButtonColorGrid(editorWidth: editorWidth)
+        } else {
+            smartIPhoneSFSymbolGrid(editorWidth: editorWidth)
+        }
+    }
+
+    private var smartButtonColorGrid: some View {
+        LazyVGrid(
+            columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 5),
+            spacing: 0
+        ) {
+            smartVisibilityButton
+            smartClearColorButton
+            smartRandomColorButton
+            smartColonButton
+            ForEach(Array(smartButtonSwatchHexColors), id: \.self) { hexColor in
+                smartButtonColorSwatch(hexColor)
+            }
+        }
+    }
+
+    private func smartIPhoneButtonEditorGridItems(editorWidth: CGFloat) -> [GridItem] {
+        let columnCount = max(1, Int((editorWidth / smartIPhoneButtonEditorCellSize).rounded()))
+        return Array(repeating: GridItem(.flexible(), spacing: 0), count: columnCount)
+    }
+
+    private func smartIPhoneButtonColorGrid(editorWidth: CGFloat) -> some View {
+        smartIPhoneButtonSelectionGrid(editorWidth: editorWidth) {
+            smartVisibilityButton
+            smartClearColorButton
+            smartRandomColorButton
+            smartColonButton
+            ForEach(Array(smartIPhoneButtonSwatchHexColors), id: \.self) { hexColor in
+                smartButtonColorSwatch(hexColor)
+            }
+        }
+    }
+
+    private func smartIPhoneButtonSelectionGrid<Content: View>(
+        editorWidth: CGFloat,
+        @ViewBuilder content: @escaping () -> Content
+    ) -> some View {
+        ScrollView(.vertical) {
+            LazyVGrid(
+                columns: smartIPhoneButtonEditorGridItems(editorWidth: editorWidth),
+                spacing: 0
+            ) {
+                content()
+            }
+        }
+        .frame(width: editorWidth)
+    }
+
+    @ViewBuilder
     private var smartButtonPreview: some View {
+        let previewHeight: CGFloat = isPad ? 104 : smartIPhoneButtonPreviewHeight
+        let previewWidth: CGFloat? = isPad ? nil : smartIPhoneButtonPreviewWidth
+        let previewMaxWidth: CGFloat? = isPad ? .infinity : nil
+
         if smartIsButtonHidden {
             Color.clear
-                .frame(maxWidth: .infinity)
-                .frame(height: 104)
+                .frame(width: previewWidth)
+                .frame(maxWidth: previewMaxWidth)
+                .frame(height: previewHeight)
         } else {
             Group {
                 if let symbolDisplay = smartButtonSFSymbolDisplay {
@@ -1980,8 +2307,9 @@ Tapping a row inserts the key code at the cursor.
                         .padding(.horizontal, 8)
                 }
             }
-            .frame(maxWidth: .infinity)
-            .frame(height: 104)
+            .frame(width: previewWidth)
+            .frame(maxWidth: previewMaxWidth)
+            .frame(height: previewHeight)
             .background(smartButtonPreviewBackground)
             .clipShape(.rect(cornerRadius: 18))
             .overlay(alignment: .topLeading) {
@@ -2709,22 +3037,49 @@ Tapping a row inserts the key code at the cursor.
 
     private var smartSFPanel: some View {
         VStack(spacing: 0) {
-            ScrollView(.vertical) {
-                LazyVGrid(
-                    columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 4),
-                    spacing: 0
-                ) {
-                    ForEach(Array(smartSFPanelSymbols.enumerated()), id: \.offset) { index, symbolName in
-                        if index == 0 {
-                            smartSFSymbolDeleteCell
-                        } else {
-                            smartSFSymbolCell(symbolName)
-                        }
+            smartSFSymbolGrid
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            smartSFPanelControls
+        }
+        .background(Color.black)
+        .overlay {
+            Rectangle()
+                .stroke(Color.white, lineWidth: 1)
+        }
+    }
+
+    private var smartSFSymbolGrid: some View {
+        ScrollView(.vertical) {
+            LazyVGrid(
+                columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 4),
+                spacing: 0
+            ) {
+                ForEach(Array(smartSFPanelSymbols.enumerated()), id: \.offset) { index, symbolName in
+                    if index == 0 {
+                        smartSFSymbolDeleteCell
+                    } else {
+                        smartSFSymbolCell(symbolName)
                     }
                 }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+    }
 
+    private func smartIPhoneSFSymbolGrid(editorWidth: CGFloat) -> some View {
+        smartIPhoneButtonSelectionGrid(editorWidth: editorWidth) {
+            ForEach(Array(smartSFPanelSymbols.enumerated()), id: \.offset) { index, symbolName in
+                if index == 0 {
+                    smartSFSymbolDeleteCell
+                } else {
+                    smartSFSymbolCell(symbolName)
+                }
+            }
+        }
+    }
+
+    private var smartSFPanelControls: some View {
+        VStack(spacing: 0) {
             HStack(spacing: 0) {
                 smartSlotPositionLabel
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -2757,11 +3112,6 @@ Tapping a row inserts the key code at the cursor.
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             .frame(height: 46)
-        }
-        .background(Color.black)
-        .overlay {
-            Rectangle()
-                .stroke(Color.white, lineWidth: 1)
         }
     }
 
@@ -3314,6 +3664,97 @@ Tapping a row inserts the key code at the cursor.
     }
 }
 
+private enum EditorGeometryProbeTarget: String, CaseIterable {
+    case screen = "SCREEN"
+    case editorContainer = "EDITOR CONTAINER"
+    case fullScreenZStack = "FULL-SCREEN ZSTACK"
+    case smartView = "smartView"
+    case hStack = "HStack"
+    case leftPanel = "LEFT"
+    case commandPanel = "COMMAND"
+    case buttonPanel = "BUTTON"
+    case sfPanel = "SF"
+    case smartScriptTextEditor = "SmartScriptTextEditor"
+}
+
+private struct EditorGeometryPreferenceKey: PreferenceKey {
+    static var defaultValue: [EditorGeometryProbeTarget: CGSize] = [:]
+
+    static func reduce(
+        value: inout [EditorGeometryProbeTarget: CGSize],
+        nextValue: () -> [EditorGeometryProbeTarget: CGSize]
+    ) {
+        value.merge(nextValue()) { _, newValue in newValue }
+    }
+}
+
+private struct EditorGeometryProbeModifier: ViewModifier {
+    let target: EditorGeometryProbeTarget
+    let isEnabled: Bool
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if isEnabled {
+            content.background {
+                GeometryReader { geometry in
+                    Color.clear.preference(
+                        key: EditorGeometryPreferenceKey.self,
+                        value: [target: geometry.size]
+                    )
+                }
+            }
+        } else {
+            content
+        }
+    }
+}
+
+private extension View {
+    func editorGeometryProbe(_ target: EditorGeometryProbeTarget, isEnabled: Bool) -> some View {
+        modifier(EditorGeometryProbeModifier(target: target, isEnabled: isEnabled))
+    }
+}
+
+private struct DebugEditorGeometryOverlay: View {
+    let sizes: [EditorGeometryProbeTarget: CGSize]
+
+    var body: some View {
+        Text(lines.joined(separator: "\n"))
+            .font(.system(size: 10, weight: .regular, design: .monospaced))
+            .foregroundStyle(.white)
+            .padding(6)
+            .background(Color.black.opacity(0.72))
+            .allowsHitTesting(false)
+    }
+
+    private var lines: [String] {
+        var output: [String] = []
+
+        for target in EditorGeometryProbeTarget.allCases {
+            if !output.isEmpty {
+                output.append("------------")
+            }
+
+            output.append(target.rawValue)
+            output.append(sizeLine(for: target))
+        }
+
+        return output
+    }
+
+    private func sizeLine(for target: EditorGeometryProbeTarget) -> String {
+        guard let size = sizes[target] else {
+            return "w: -- h: --"
+        }
+
+        return "w: \(rounded(size.width)) h: \(rounded(size.height))"
+    }
+
+    private func rounded(_ value: CGFloat) -> String {
+        String(format: "%.1f", Double(value))
+    }
+}
+
 private struct SmartScriptTextEditor: UIViewRepresentable {
     @Binding var text: String
     @Binding var selectedRange: NSRange
@@ -3350,6 +3791,17 @@ private struct SmartScriptTextEditor: UIViewRepresentable {
         }
 
         context.coordinator.applySelectedRange(to: uiView)
+    }
+
+    func sizeThatFits(_ proposal: ProposedViewSize, uiView: UITextView, context: Context) -> CGSize? {
+        guard let width = proposal.width,
+              let height = proposal.height,
+              width.isFinite,
+              height.isFinite else {
+            return nil
+        }
+
+        return CGSize(width: width, height: height)
     }
 
     private final class ProbeTextView: UITextView {
