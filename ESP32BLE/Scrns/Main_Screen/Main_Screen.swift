@@ -477,6 +477,11 @@ struct MainScreen: View {
     private let smartIPhoneButtonPreviewWidth: CGFloat = 108
     private let smartIPhoneButtonPreviewHeight: CGFloat = 72
     private let smartIPhoneButtonEditorCellSize: CGFloat = 46
+    private let smartIPhoneButtonControlRowHeight: CGFloat = 46
+    private let smartIPhoneButtonPreviewToControlSpacing: CGFloat = 4
+    private var smartCommandDescriptionTopOffset: CGFloat {
+        44 * 4
+    }
     private var smartIPhoneButtonSwatchHexColors: [String] {
         smartButtonSwatchHexColors + [
             "FFFFFF",
@@ -2033,8 +2038,8 @@ Tapping a row inserts the key code at the cursor.
                 .foregroundStyle(.white)
                 .scrollContentBackground(.hidden)
                 .background(Color.black)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .layoutPriority(isPad ? 0 : 1)
+                .frame(maxWidth: .infinity)
+                .frame(height: smartCommandDescriptionTopOffset)
                 .editorGeometryProbe(.smartScriptTextEditor, isEnabled: debugEditorGeometry)
                 .overlay {
                     Rectangle()
@@ -2050,7 +2055,8 @@ Tapping a row inserts the key code at the cursor.
                     .frame(maxWidth: .infinity)
             }
             .frame(maxWidth: .infinity)
-            .frame(height: 80)
+            .frame(maxHeight: .infinity)
+            .layoutPriority(1)
             .background(Color.black)
             .overlay {
                 Rectangle()
@@ -2089,26 +2095,58 @@ Tapping a row inserts the key code at the cursor.
 
     private func smartIPhoneButtonControlRow(editorWidth: CGFloat) -> some View {
         HStack(spacing: 0) {
-            smartSlotPositionLabel
-                .frame(width: 64, height: 46)
+            smartIPhoneSlotPositionLabel
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             smartArrowButton(systemName: "arrow.left") {
                 selectPreviousEditableSlot()
                 // Help text location: button panel left arrow.
                 smartCommandDescription = smartHelpSFArrows
             }
-            .frame(width: 46, height: 46)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             smartArrowButton(systemName: "arrow.right") {
                 selectNextEditableSlot()
                 // Help text location: button panel right arrow.
                 smartCommandDescription = smartHelpSFArrows
             }
-            .frame(width: 46, height: 46)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             smartIPhoneModePlaceholderButton
-            .frame(width: 46, height: 46)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             dismissKeyboardButton
-                .frame(width: 46, height: 46)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .frame(width: editorWidth, height: 46)
+        .frame(width: editorWidth, height: smartIPhoneButtonControlRowHeight)
+    }
+
+    @ViewBuilder
+    private var smartIPhoneSlotPositionLabel: some View {
+        if let editingSlotIndex, visibleGridDimensions.columns > 0 {
+            let column = (editingSlotIndex % visibleGridDimensions.columns) + 1
+            let row = (editingSlotIndex / visibleGridDimensions.columns) + 1
+
+            HStack(spacing: 0) {
+                Text("\(column)")
+                    .foregroundStyle(.green)
+                Text(" : ")
+                    .foregroundStyle(.white)
+                Text("\(row)")
+                    .foregroundStyle(.red)
+            }
+            .font(.system(size: 19, weight: .semibold))
+            .minimumScaleFactor(0.75)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color.black)
+            .overlay {
+                Rectangle()
+                    .stroke(Color.white, lineWidth: 1)
+            }
+        } else {
+            Rectangle()
+                .fill(Color.black)
+                .overlay {
+                    Rectangle()
+                        .stroke(Color.white, lineWidth: 1)
+                }
+        }
     }
 
     private var smartIPhoneModePlaceholderButton: some View {
@@ -2133,7 +2171,7 @@ Tapping a row inserts the key code at the cursor.
     private func smartButtonPanel(editorWidth: CGFloat = 0) -> some View {
         let resolvedEditorWidth = editorWidth > 0 ? editorWidth : smartIPhoneButtonContentWidth
 
-        return VStack(spacing: 4) {
+        return VStack(spacing: isPad ? 4 : 0) {
             if isPad {
                 HStack(alignment: .top, spacing: 6) {
                     smartButtonBrightnessSliderColumn
@@ -2152,6 +2190,7 @@ Tapping a row inserts the key code at the cursor.
 
             if !isPad {
                 smartIPhoneButtonControlRow(editorWidth: resolvedEditorWidth)
+                    .padding(.top, smartIPhoneButtonPreviewToControlSpacing)
             }
 
             smartButtonLowerEditingArea(editorWidth: resolvedEditorWidth)
@@ -2772,6 +2811,10 @@ Tapping a row inserts the key code at the cursor.
 
     private func smartPlaceholderButton(systemName: String) -> some View {
         Button {
+            guard !smartPlaceholderButtonIsDisabled(systemName) else {
+                return
+            }
+
             if systemName == "xmark" {
                 ButtonClickFeedback.playIfEnabled()
                 smartActionTextBinding.wrappedValue = ""
@@ -2813,11 +2856,10 @@ Tapping a row inserts the key code at the cursor.
                 .background(Color.black)
                 .overlay {
                     Rectangle()
-                        .stroke(Color.white.opacity(0.55), lineWidth: 1)
+                        .stroke(Color.white, lineWidth: 1)
                 }
         }
         .buttonStyle(.plain)
-        .disabled(smartPlaceholderButtonIsDisabled(systemName))
         .accessibilityHidden(true)
     }
 
