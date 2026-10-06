@@ -2419,7 +2419,27 @@ Tapping a row inserts the key code at the cursor.
                     }
             }
             .buttonStyle(.plain)
-            smartRandomColorButton
+            Button {
+                ButtonClickFeedback.playIfEnabled()
+                let red = Int.random(in: 0...255)
+                let green = Int.random(in: 0...255)
+                let blue = Int.random(in: 0...255)
+                setSmartButtonColor(String(format: "%02X%02X%02X", red, green, blue))
+                // Help text location: btn panel rnd button.
+                smartCommandDescription = smartHelpButtonRandomColor
+            } label: {
+                Text("rnd")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity, minHeight: smartButtonPanelColorCellHeight)
+                    .background(Color.black)
+                    .overlay {
+                        Rectangle()
+                            .stroke(Color.white, lineWidth: 1)
+                    }
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Set random button color")
   //          smartColonButton
             ForEach(Array(smartIPadButtonSwatchHexColors), id: \.self) { hexColor in
                 smartButtonColorSwatch(hexColor)
