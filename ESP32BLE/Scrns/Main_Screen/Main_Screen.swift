@@ -2375,15 +2375,22 @@ Tapping a row inserts the key code at the cursor.
 
     private var smartButtonColorGrid: some View {
         LazyVGrid(
-            columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 5),
+            columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 4),
             spacing: 0
         ) {
             smartVisibilityButton
             smartClearColorButton
             smartRandomColorButton
-            ForEach(Array(smartButtonSwatchHexColorsWithWhite), id: \.self) { hexColor in
+  //          smartColonButton
+            ForEach(Array(smartIPadButtonSwatchHexColors), id: \.self) { hexColor in
                 smartButtonColorSwatch(hexColor)
             }
+        }
+    }
+
+    private var smartIPadButtonSwatchHexColors: [String] {
+        smartButtonSwatchHexColors.filter { hexColor in
+            hexColor != "000000" && hexColor != "FFFFFF"
         }
     }
 

@@ -1,6 +1,265 @@
-Update the Info.plist: Support for all orientations will soon be required.
-									API MISUSE: <CBCentralManager: 0x10e598780> can only accept this command while in the powered on state
-									non-launching port is incompatible with service identifier "com.apple.PointerUI.pointeruid.default-service"
-									AX Safe category class 'SFBarButtonGroupContainerAccessibility' was not found!
-									[ESP-OUTPUT] #1 "f13"
-									<0x10e5108c0> Gesture: System gesture gate timed out.
+ESP iPad Editor — BUTTON PANEL, FOUR-CELL ROW — MINIMAL CHANGE
+
+We are now back at the KNOWN-WORKING pre-Stage-1 version.
+
+The iPad editor works.
+The iPhone editor works.
+
+This change must therefore be extremely small.
+
+DO NOT repeat the previous Stage-1 implementation.
+
+==================================================
+OBJECTIVE
+==================================================
+
+In the iPad Button/preview panel, change the current first row:
+
+EYE | clr | rnd | black | white
+
+to:
+
+EYE | clr | rnd | :
+
+Exactly FOUR equal-width cells across the existing Button panel.
+
+There are NO black or white buttons in this row.
+
+==================================================
+CRITICAL IMPLEMENTATION RULE
+==================================================
+
+PRESERVE THE EXISTING WORKING GRID STRUCTURE.
+
+The current known-working iPad implementation uses the existing
+LazyVGrid.
+
+DO NOT replace it with:
+
+VStack + HStack + LazyVGrid
+
+DO NOT create a separate utility-row HStack.
+
+DO NOT restructure the Button panel.
+
+DO NOT extract/rebuild the grid.
+
+Make the smallest possible modification to the EXISTING working
+LazyVGrid so that it has four columns and its first four items are:
+
+1. smartVisibilityButton
+2. smartClearColorButton
+3. smartRandomColorButton
+4. colon control
+
+The remaining colour swatches continue in that SAME LazyVGrid.
+
+==================================================
+BLACK AND WHITE
+==================================================
+
+Remove black and white from this iPad Button panel.
+
+Do not relocate them.
+
+Do not add replacement controls for them.
+										
+										For this stage they simply do not exist in this panel.
+										
+										Be careful that removing black/white does not accidentally alter the
+										iPhone colour controls.
+										
+										==================================================
+										COLON CONTROL — VERY IMPORTANT
+										==================================================
+										
+										The fourth cell displays:
+											
+											:
+											
+											This is the RIGHT-SIDE Button/preview colon.
+										
+										It affects ONLY the Button/preview text belonging to THIS panel.
+										
+										Its operation must be equivalent to:
+											
+											insertSmartPreviewTextAtSelection(":")
+										
+										It must insert ":" at the current cursor/selection in the preview button
+										text.
+										
+										It must NOT call:
+											
+											insertSmartActionTextAtSelection(":")
+										
+										It must NOT alter the main command/script editor.
+										
+										It must NOT share the target of the LEFT-side command colon.
+										
+										The two colon buttons may display the same ":" symbol, but they are
+										functionally independent:
+											
+											LEFT colon:
+											command editor only
+										
+										RIGHT colon:
+											Button/preview text only
+										
+										==================================================
+										GEOMETRY
+										==================================================
+										
+										Do NOT alter the Button panel's:
+											
+											- overall width
+										- overall height
+										- preview dimensions
+										- slider dimensions
+										- slider position
+										- panel spacing
+										- colour-cell height
+										- surrounding editor geometry
+										
+										Only change the existing grid from five equal columns to four equal
+										columns as required for this panel.
+										
+										The four controls should naturally divide the existing panel width
+										equally:
+											
+											EYE | clr | rnd | :
+											
+											Do not introduce arbitrary new widths.
+										
+										==================================================
+										GEOMETRY DEBUG DISPLAY
+										==================================================
+										
+										Leave the currently visible geometry/debug data exactly as it is.
+										
+										Do NOT remove it.
+										Do NOT hide it.
+										Do NOT modify it.
+										
+										We may remove that later after the editor changes are complete.
+										
+										==================================================
+										IPHONE — ABSOLUTELY FROZEN
+										==================================================
+										
+										NO modifications whatsoever to the iPhone version.
+										
+										The iPhone editor is complete and working.
+										
+										Do not change its:
+											
+											- code path
+										- controls
+										- layout
+										- geometry
+										- dimensions
+										- bindings
+										- colon behavior
+										- colour controls
+										- preview
+										- slider
+										- appearance
+										- functionality
+										
+										IMPORTANT:
+											
+											If the iPhone and iPad currently share code for ANY part that must be
+										changed to implement this iPad four-button row, DO NOT modify that shared
+										code in a way that could affect the iPhone.
+										
+										Instead, split that small section into separate iPhone and iPad code.
+										
+										The iPad should have its own implementation for this small control/grid
+										section if separation is required.
+										
+										This is intentionally preferred even if it duplicates a few lines of
+										code.
+										
+										For a small UI fragment such as:
+											
+											EYE | clr | rnd | :
+											
+											a few duplicated lines are safer and clearer than modifying shared code
+										used by the already-finished iPhone editor.
+										
+										Do not unnecessarily duplicate substantial shared resources such as
+										images, data, models, or other large/common infrastructure.
+										
+										The separation requested here applies specifically to the small UI/control
+										code needed to protect the finished iPhone implementation.
+										
+										After the change, inspect the diff specifically for iPhone effects.
+										
+										If implementing the iPad change would require altering existing iPhone
+										behavior, STOP rather than modifying the iPhone.
+										==================================================
+										OTHER IPAD COLUMNS
+										==================================================
+										
+										Do not touch any other iPad editor column.
+										
+										In particular, do not alter:
+											
+											- command panel
+										- command/script editor
+										- SF panel
+										- Test/Close controls
+										- editor container
+										- overall editor layout
+										
+										This change is ONLY the iPad Button/preview panel grid.
+										
+										==================================================
+										NO DIAGNOSTICS / NO REFACTORING
+										==================================================
+										
+										Do NOT add:
+											
+											- probes
+										- logging
+										- isolation switches
+										- temporary views
+										- debug helpers
+										- diagnostic extraction
+										
+										Do not refactor unrelated code.
+										
+										We have a working baseline and want the smallest possible diff.
+										
+										==================================================
+										VERIFY
+										==================================================
+										
+										Build the project.
+										
+										Inspect the diff and confirm it is narrowly limited to this change.
+										
+										Do NOT claim runtime success merely because it builds.
+										
+										I will test the actual iPad editor.
+										
+										==================================================
+										REPORT
+										==================================================
+										
+										Report:
+											
+											1. Exact file changed.
+										2. Exact existing grid code changed.
+										3. Confirmation the existing LazyVGrid structure was preserved.
+										4. Confirmation it is now four equal columns.
+										5. Confirmation first row is:
+											
+											EYE | clr | rnd | :
+											
+											6. Confirmation black and white were removed from this iPad panel only.
+										7. Confirmation colon calls only the preview-text insertion operation.
+										8. Confirmation iPhone code/appearance/behavior was untouched.
+										9. Confirmation no other iPad editor column was changed.
+										10. Build result.
+										
+										STOP after this one change.

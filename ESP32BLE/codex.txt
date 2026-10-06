@@ -1,53 +1,35 @@
-Rollback complete and build succeeded.
-
-1. Source of truth used:
-There was no separate git commit for the exact pre-Stage-1 working point. I used the current working-tree diff plus the known Stage-1 boundary: the change from iPad EYE | clr | rnd | black | white to EYE | clr | rnd | :. I preserved changes that clearly predated Stage 1.
-
-2. Files changed by rollback:
-Final remaining modified source file:
+1. Exact file changed:
 ESP32BLE/Scrns/Main_Screen/Main_Screen.swift􀰓
 
-ESP32BLE/Scrns/ContentView.swift􀰓 was restored to remove the temporary home.txt caller probe and now has no remaining diff.
+2. Exact existing grid code changed:
+smartButtonColorGrid
 
-3. Stage-1 changes reverted:
-The iPad Button color grid is restored to the pre-Stage-1 five-column LazyVGrid.
-The dedicated iPad Button-preview colon helper was removed.
-The iPad Button utility row no longer contains :.
+3. Existing LazyVGrid structure preserved:
+Yes. It remains a single LazyVGrid.
 
-4. Crash-fix attempts reverted:
-Removed the iPad-only preview colon helper.
-Removed the smartCommandPanel inert Color.clear isolation branch.
-Removed smartCommandPanel diagnostic extraction helpers.
+4. Four equal columns:
+Yes. The grid column count changed from 5 to 4.
 
-5. Diagnostic/probe code removed:
-Removed all:
-IPAD-BUTTON-PROBE
-IPAD-BUTTON-PROBE2
-IPAD-BUTTON-PROBE3
-iPadButtonProbeIsolation
-isolateIPadSmartCommandPanelContent
-smartCommandTopControls
-smartCommandPlaceholderRow
-smartIPadButtonPreviewColonButton
-smartIPadButtonSwatchHexColors
+5. First row:
+smartVisibilityButton | smartClearColorButton | smartRandomColorButton | smartColonButton
 
-6. iPad utility row restored:
-Confirmed. The iPad grid now starts:
+So visually:
+EYE | clr | rnd | :
 
-smartVisibilityButton
-smartClearColorButton
-smartRandomColorButton
-then smartButtonSwatchHexColorsWithWhite
+6. Black and white removed from this iPad panel only:
+Yes. Added smartIPadButtonSwatchHexColors, filtering out 000000 and FFFFFF for this iPad grid only.
 
-So the first row is restored to:
+7. Colon operation:
+The fourth cell uses smartColonButton, which calls:
+insertSmartPreviewTextAtSelection(":")
 
-EYE | clr | rnd | black | white
+It does not call command insertion.
 
-7. iPhone preservation:
-I did not roll back the completed iPhone editor work. The iPhone colon control, preview selection handling, SmartActionTextField, iPhone swatch behavior, and position-indicator polish remain preserved.
+8. iPhone untouched:
+Confirmed. No iPhone grid/control code was modified.
 
-8. Ambiguity:
-The exact pre-Stage-1 point was not available as a distinct git revision, so I did not use a whole-file checkout. I preserved any change that appeared to predate Stage 1 rather than guessing.
+9. Other iPad columns untouched:
+Confirmed. Only the iPad Button panel grid block was changed.
 
-9. Build result:
+10. Build result:
 Build succeeded.
