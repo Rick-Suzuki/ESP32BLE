@@ -2378,7 +2378,26 @@ Tapping a row inserts the key code at the cursor.
             columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 4),
             spacing: 0
         ) {
-            smartVisibilityButton
+            Button {
+                ButtonClickFeedback.playIfEnabled()
+                smartButtonVisibilityBinding.wrappedValue.toggle()
+                // Help text location: iPad btn panel eye button.
+                smartCommandDescription = smartHelpButtonVisibility
+            } label: {
+                Image(systemName: smartButtonVisibilityBinding.wrappedValue ? "eye" : "eye.slash")
+                    .font(.system(size: 32, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity, minHeight: smartButtonPanelColorCellHeight)
+                    .background(Color.black)
+                    .overlay {
+                        Rectangle()
+                            .stroke(Color.white, lineWidth: 1)
+                    }
+                    .editorGeometryProbe(.rightUtilityVisibleCell, isEnabled: debugEditorGeometry)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(smartButtonVisibilityBinding.wrappedValue ? "Hide button" : "Show button")
+            .editorGeometryProbe(.rightUtilityRow, isEnabled: debugEditorGeometry)
             smartClearColorButton
             smartRandomColorButton
   //          smartColonButton

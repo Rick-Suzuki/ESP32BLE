@@ -1,35 +1,22 @@
 1. Exact file changed:
-ESP32BLE/Scrns/Main_Screen/Main_Screen.swift􀰓
+ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
 
-2. Exact existing grid code changed:
-smartButtonColorGrid
+2. Exact old expression:
+smartVisibilityButton
 
-3. Existing LazyVGrid structure preserved:
-Yes. It remains a single LazyVGrid.
+3. Exact new expression:
+Color.clear
+.frame(height: smartButtonPanelColorCellHeight)
 
-4. Four equal columns:
-Yes. The grid column count changed from 5 to 4.
 
-5. First row:
-smartVisibilityButton | smartClearColorButton | smartRandomColorButton | smartColonButton
+4. Surrounding LazyVGrid unchanged:
+Confirmed. Columns, spacing, remaining children, commented colon line, ForEach, colour data, and swatch view are unchanged.
 
-So visually:
-EYE | clr | rnd | :
+5. iPhone/shared code:
+No iPhone or shared helper code was modified. smartVisibilityButton itself is unchanged.
 
-6. Black and white removed from this iPad panel only:
-Yes. Added smartIPadButtonSwatchHexColors, filtering out 000000 and FFFFFF for this iPad grid only.
+6. Other source code:
+No other source code was modified.
 
-7. Colon operation:
-The fourth cell uses smartColonButton, which calls:
-insertSmartPreviewTextAtSelection(":")
-
-It does not call command insertion.
-
-8. iPhone untouched:
-Confirmed. No iPhone grid/control code was modified.
-
-9. Other iPad columns untouched:
-Confirmed. Only the iPad Button panel grid block was changed.
-
-10. Build result:
+7. Build result:
 Build succeeded.
