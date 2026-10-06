@@ -444,7 +444,7 @@ struct MainScreen: View {
     private let smartColorControlsWidth: CGFloat = 238
     private let smartSFPanelWidth: CGFloat = 238
     // MARK: - BM:🅱️🅱️🅱️  Temporary editor geometry overlay
-    private let debugEditorGeometry = false
+    private let debugEditorGeometry = true
     private var smartViewWidthPhone: CGFloat {
         smartEditControlsWidthPhone +
         smartCommandEditorWidthPhone +
@@ -486,12 +486,14 @@ struct MainScreen: View {
     }
     private let smartIPhoneButtonEditorCellSize: CGFloat = 46
     private let smartIPhoneButtonControlRowHeight: CGFloat = 46
+    private var smartPositionIndicatorHorizontalPadding: CGFloat {
+        smartButtonPanelColorCellHeight * 0.08
+    }
     private var smartCommandDescriptionTopOffset: CGFloat {
         44 * 4
     }
     private var smartIPhoneButtonSwatchHexColors: [String] {
-        smartButtonSwatchHexColors + [
-            "FFFFFF",
+        smartButtonSwatchHexColorsWithWhite + [
             "F2F2F2",
             "BFBFBF",
             "404040",
@@ -513,6 +515,15 @@ struct MainScreen: View {
             "B266FF",
             "FF66B2"
         ]
+    }
+    private var smartButtonSwatchHexColorsWithWhite: [String] {
+        var colors = smartButtonSwatchHexColors
+        if let blackIndex = colors.firstIndex(of: "000000") {
+            colors.insert("FFFFFF", at: colors.index(after: blackIndex))
+        } else {
+            colors.append("FFFFFF")
+        }
+        return colors
     }
   
 	// Vertical gap between the MainScreen top toolbar and the first button row.
@@ -945,6 +956,7 @@ Tapping a row inserts the key code at the cursor.
     @State private var smartButtonBrightnessBaseHex: String?
     @State private var smartButtonClearPreviewFallbackImageURL: URL?
     @State private var smartButtonPreviewFontSize = 34.0
+    @State private var smartButtonPreviewSelectionRange = NSRange(location: 0, length: 0)
     @State private var isSmartPhoneSFSymbolMode = false
     @State private var keyboardMinY: CGFloat = .greatestFiniteMagnitude
     @State private var editorGeometryFrames: [EditorGeometryProbeTarget: CGRect] = [:]
@@ -1225,6 +1237,12 @@ Tapping a row inserts the key code at the cursor.
         }
         .padding(.horizontal, isPad || editingSlotIndex == nil ? 2 : 0)
         .ignoresSafeArea(.keyboard)
+        .overlay(alignment: .topLeading) {
+            if debugEditorGeometry, isPad, editingSlotIndex != nil {
+                DebugEditorGeometryOverlay(frames: editorGeometryFrames)
+                    .padding(8)
+            }
+        }
         .overlay(alignment: .topLeading) {
             externalKeyboardShortcutLayer
         }
@@ -1757,11 +1775,13 @@ Tapping a row inserts the key code at the cursor.
                 .frame(height: 44)
 
                 HStack(spacing: 0) {
-                    ForEach(Array(smartTopPlaceholderSymbols.dropFirst(8)), id: \.self) { systemName in
-                        smartPlaceholderButton(systemName: systemName)
-                            .frame(width: keyCellWidth)
-                    }
+                    smartPlaceholderButton(systemName: "delete.backward.fill")
+                        .frame(width: keyCellWidth)
                     smartEscapeCodeToggleButton
+                        .frame(width: keyCellWidth)
+                    dismissKeyboardButton
+                        .frame(width: keyCellWidth)
+                    smartCommandColonButton
                         .frame(width: keyCellWidth)
                 }
                 .frame(height: 44)
@@ -2166,7 +2186,7 @@ Tapping a row inserts the key code at the cursor.
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             smartIPhoneModePlaceholderButton
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-            dismissKeyboardButton
+            smartColonButton
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .frame(width: editorWidth, height: smartIPhoneButtonControlRowHeight)
@@ -2182,13 +2202,16 @@ Tapping a row inserts the key code at the cursor.
             HStack(spacing: 0) {
                 Text("\(column)")
                     .foregroundStyle(.green)
-                Text(" : ")
+                Text(":")
                     .foregroundStyle(.white)
                 Text("\(row)")
                     .foregroundStyle(.red)
             }
             .font(.system(size: 19, weight: .semibold))
-            .minimumScaleFactor(0.75)
+            .lineLimit(1)
+            .minimumScaleFactor(0.35)
+            .allowsTightening(true)
+            .padding(.horizontal, smartPositionIndicatorHorizontalPadding)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Color.black)
             .overlay {
@@ -2231,15 +2254,18 @@ Tapping a row inserts the key code at the cursor.
             if isPad {
                 HStack(alignment: .top, spacing: 6) {
                     smartButtonBrightnessSliderColumn
+                        .editorGeometryProbe(.slider, isEnabled: debugEditorGeometry)
 
                     VStack(spacing: 8) {
                         smartButtonPreview()
                     }
                     .frame(maxWidth: .infinity)
+                    .editorGeometryProbe(.previewFootprint, isEnabled: debugEditorGeometry)
                 }
                 .background {
                     smartButtonClearPreviewBackground
                 }
+                .editorGeometryProbe(.rightPreviewArea, isEnabled: debugEditorGeometry)
             } else {
                 smartIPhoneButtonPreviewRow(editorWidth: resolvedEditorWidth)
             }
@@ -2328,6 +2354,7 @@ Tapping a row inserts the key code at the cursor.
             smartButtonColorGrid
                 .frame(maxWidth: .infinity, alignment: .top)
                 .frame(height: smartButtonPanelColorCellHeight * 5, alignment: .top)
+                .editorGeometryProbe(.rightTableRegion, isEnabled: debugEditorGeometry)
         } else {
             smartIPhoneButtonSharedEditingArea(editorWidth: resolvedEditorWidth)
                 .frame(width: resolvedEditorWidth)
@@ -2354,8 +2381,7 @@ Tapping a row inserts the key code at the cursor.
             smartVisibilityButton
             smartClearColorButton
             smartRandomColorButton
-            smartColonButton
-            ForEach(Array(smartButtonSwatchHexColors), id: \.self) { hexColor in
+            ForEach(Array(smartButtonSwatchHexColorsWithWhite), id: \.self) { hexColor in
                 smartButtonColorSwatch(hexColor)
             }
         }
@@ -2387,7 +2413,6 @@ Tapping a row inserts the key code at the cursor.
             smartVisibilityButton
             smartClearColorButton
             smartRandomColorButton
-            smartColonButton
             ForEach(Array(smartIPhoneButtonSwatchHexColors), id: \.self) { hexColor in
                 smartButtonColorSwatch(hexColor)
             }
@@ -2436,27 +2461,23 @@ Tapping a row inserts the key code at the cursor.
                         Image(systemName: symbolDisplay.name)
                             .font(.system(size: max(18, CGFloat(boxFontSize) * 0.9), weight: .semibold))
 
-                        TextField("", text: smartButtonEditablePreviewTextBinding, axis: .vertical)
-                            .font(.system(size: max(14, CGFloat(boxFontSize) * 0.55), weight: .semibold))
-                            .foregroundStyle(.white)
-                            .accentColor(.white)
-                            .multilineTextAlignment(.center)
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled()
-                            .lineLimit(1...2)
+                        SmartActionTextField(
+                            placeholder: "",
+                            text: smartButtonEditablePreviewTextBinding,
+                            selectedRange: $smartButtonPreviewSelectionRange,
+                            fontSize: max(14, CGFloat(boxFontSize) * 0.55)
+                        )
                             .padding(.horizontal, 8)
                     }
                     .foregroundStyle(.white)
                     .padding(.horizontal, 8)
                 } else {
-                    TextField("", text: smartButtonEditablePreviewTextBinding, axis: .vertical)
-                        .font(.system(size: CGFloat(boxFontSize), weight: .semibold))
-                        .foregroundStyle(.white)
-                        .accentColor(.white)
-                        .multilineTextAlignment(.center)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                        .lineLimit(1...3)
+                    SmartActionTextField(
+                        placeholder: "",
+                        text: smartButtonEditablePreviewTextBinding,
+                        selectedRange: $smartButtonPreviewSelectionRange,
+                        fontSize: CGFloat(boxFontSize)
+                    )
                         .padding(.horizontal, 8)
                 }
             }
@@ -2644,7 +2665,7 @@ Tapping a row inserts the key code at the cursor.
     private var smartColonButton: some View {
         Button {
             ButtonClickFeedback.playIfEnabled()
-            smartButtonEditablePreviewTextBinding.wrappedValue += ":"
+            insertSmartPreviewTextAtSelection(":")
             // Help text location: btn panel colon button.
             smartCommandDescription = smartHelpButtonColon
         } label: {
@@ -2662,14 +2683,43 @@ Tapping a row inserts the key code at the cursor.
         .accessibilityLabel("Insert colon")
     }
 
+    private func insertSmartPreviewTextAtSelection(_ insertedText: String) {
+        var previewText = smartButtonEditablePreviewTextBinding.wrappedValue
+        let textLength = previewText.utf16.count
+        let location = min(max(smartButtonPreviewSelectionRange.location, 0), textLength)
+        let length = max(0, min(smartButtonPreviewSelectionRange.length, textLength - location))
+        let replacementRange = NSRange(location: location, length: length)
+
+        if let range = Range(replacementRange, in: previewText) {
+            previewText.replaceSubrange(range, with: insertedText)
+        } else {
+            previewText.append(insertedText)
+        }
+
+        smartButtonEditablePreviewTextBinding.wrappedValue = previewText
+        smartButtonPreviewSelectionRange = NSRange(location: location + insertedText.utf16.count, length: 0)
+    }
+
     private func smartButtonColorSwatch(_ hexColor: String) -> some View {
-        Button {
+        let normalizedHexColor = hexColor.uppercased()
+
+        return Button {
             ButtonClickFeedback.playIfEnabled()
             setSmartButtonColor(hexColor)
             // Help text location: btn panel color swatches.
             smartCommandDescription = smartHelpButtonColor
         } label: {
-            Color(hex: adjustedSmartButtonColorHex(for: hexColor) ?? hexColor)
+            ZStack {
+                Color(hex: adjustedSmartButtonColorHex(for: hexColor) ?? hexColor)
+
+                if normalizedHexColor == "000000" {
+                    Text("black")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+                }
+            }
                 .frame(maxWidth: .infinity, minHeight: smartButtonPanelColorCellHeight)
                 .overlay {
                     Rectangle()
@@ -3055,6 +3105,26 @@ Tapping a row inserts the key code at the cursor.
         .accessibilityLabel(accessibilityLabel)
     }
 
+    private var smartCommandColonButton: some View {
+        Button {
+            ButtonClickFeedback.playIfEnabled()
+            insertSmartActionTextAtSelection(":")
+            smartCommandDescription = smartHelpButtonColon
+        } label: {
+            Text(":")
+                .font(.system(size: 28, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color.black)
+                .overlay {
+                    Rectangle()
+                        .stroke(Color.white, lineWidth: 1)
+                }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Insert colon")
+    }
+
     private var smartEscapeCodeToggleButton: some View {
         Button {
             ButtonClickFeedback.playIfEnabled()
@@ -3350,6 +3420,10 @@ Tapping a row inserts the key code at the cursor.
                     .foregroundStyle(.red)
             }
             .font(.system(size: 28, weight: .semibold))
+            .lineLimit(1)
+            .minimumScaleFactor(0.35)
+            .allowsTightening(true)
+            .padding(.horizontal, smartPositionIndicatorHorizontalPadding)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Color.black)
             .overlay {
@@ -3964,55 +4038,30 @@ private struct DebugEditorGeometryOverlay: View {
 
     private var lines: [String] {
         [
-            "Measured Frames (.global)",
+            "iPad BUTTON Column Geometry (.global)",
             "x y w h maxX maxY",
-            "TOP GRID",
-            frameLine(for: .leftTop),
-            frameLine(for: .centreCommandTop),
-            frameLine(for: .commandDescription),
-            frameLine(for: .rightPreviewArea),
-            frameLine(for: .rightControlRow),
-            "DELTAS",
-            deltaLine("commandTop - leftTop", .centreCommandTop, .leftTop, \.maxY, \.maxY),
-            deltaLine("desc.minY - commandTop", .commandDescription, .centreCommandTop, \.minY, \.maxY),
-            deltaLine("previewArea - commandTop", .rightPreviewArea, .centreCommandTop, \.maxY, \.maxY),
-            deltaLine("controlRow - previewArea", .rightControlRow, .rightPreviewArea, \.minY, \.maxY),
-            "BUTTON HEIGHTS",
-            heightLine("test outer", .testButton),
-            heightLine("test visible", .testVisibleButton),
-            heightLine("close outer", .closeButton),
-            heightLine("close visible", .closeVisibleButton),
-            heightLine("right table outer", .rightTableCell),
-            heightLine("right table visible", .rightTableVisibleCell),
-            heightLine("control-row cell", .rightControlRowCell),
-            heightLine("utility outer", .rightUtilityRow),
-            heightLine("utility visible", .rightUtilityVisibleCell),
-            heightDeltaLine("test visible - table visible", .testVisibleButton, .rightTableVisibleCell),
-            heightDeltaLine("close visible - table visible", .closeVisibleButton, .rightTableVisibleCell),
-            "PREVIEW",
+            "FRAMES",
+            frameLine(for: .buttonPanel),
             frameLine(for: .rightPreviewArea),
             frameLine(for: .previewFootprint),
             frameLine(for: .actualPreviewButton),
             frameLine(for: .slider),
-            deltaLine("button top - area top", .actualPreviewButton, .rightPreviewArea, \.minY, \.minY),
-            deltaLine("button bottom - area bottom", .actualPreviewButton, .rightPreviewArea, \.maxY, \.maxY),
-            deltaLine("button top - footprint top", .actualPreviewButton, .previewFootprint, \.minY, \.minY),
-            deltaLine("button bottom - footprint bottom", .actualPreviewButton, .previewFootprint, \.maxY, \.maxY),
-            "RIGHT FLOW",
-            frameLine(for: .rightPreviewArea),
-            frameLine(for: .rightControlRow),
-            frameLine(for: .rightUtilityRow),
             frameLine(for: .rightTableRegion),
-            "CONTAINERS",
-            frameLine(for: .screen),
-            frameLine(for: .editorContainer),
-            frameLine(for: .fullScreenZStack),
-            frameLine(for: .smartView),
-            frameLine(for: .hStack),
-            frameLine(for: .leftPanel),
-            frameLine(for: .commandPanel),
-            frameLine(for: .buttonPanel),
-            frameLine(for: .smartScriptTextEditor)
+            frameLine(for: .rightUtilityRow),
+            frameLine(for: .rightUtilityVisibleCell),
+            "RELATIONSHIPS",
+            deltaLine("preview.bottom -> colour.top", .rightTableRegion, .rightPreviewArea, \.minY, \.maxY),
+            deltaLine("colour.bottom -> column.bottom", .buttonPanel, .rightTableRegion, \.maxY, \.maxY),
+            deltaLine("preview button top - area top", .actualPreviewButton, .rightPreviewArea, \.minY, \.minY),
+            deltaLine("preview button bottom - area bottom", .actualPreviewButton, .rightPreviewArea, \.maxY, \.maxY),
+            deltaLine("slider top - preview area top", .slider, .rightPreviewArea, \.minY, \.minY),
+            deltaLine("slider bottom - preview area bottom", .slider, .rightPreviewArea, \.maxY, \.maxY),
+            "PROPORTIONS",
+            proportionLine("preview / column", .rightPreviewArea, .buttonPanel),
+            proportionLine("preview button / column", .actualPreviewButton, .buttonPanel),
+            proportionLine("slider / column", .slider, .buttonPanel),
+            proportionLine("colour / column", .rightTableRegion, .buttonPanel),
+            proportionLine("utility first cell / column", .rightUtilityRow, .buttonPanel)
         ]
     }
 
@@ -4058,6 +4107,20 @@ private struct DebugEditorGeometryOverlay: View {
         }
 
         return "\(label): \(rounded(firstFrame.height - secondFrame.height))"
+    }
+
+    private func proportionLine(
+        _ label: String,
+        _ firstTarget: EditorGeometryProbeTarget,
+        _ secondTarget: EditorGeometryProbeTarget
+    ) -> String {
+        guard let firstFrame = frames[firstTarget],
+              let secondFrame = frames[secondTarget],
+              secondFrame.height > 0 else {
+            return "\(label): --"
+        }
+
+        return "\(label): \(rounded(firstFrame.height / secondFrame.height))"
     }
 
     private func rounded(_ value: CGFloat) -> String {
