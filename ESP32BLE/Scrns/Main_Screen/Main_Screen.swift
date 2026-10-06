@@ -476,6 +476,9 @@ struct MainScreen: View {
     private let smartIPhoneButtonContentWidth: CGFloat = 322
     private let smartIPhoneButtonPreviewWidth: CGFloat = 108
     private let smartIPhoneButtonPreviewHeight: CGFloat = 72
+    private var smartIPhoneButtonPreviewEnclosureHeight: CGFloat {
+        smartCommandDescriptionTopOffset
+    }
     private let smartIPhoneButtonEditorCellSize: CGFloat = 46
     private let smartIPhoneButtonControlRowHeight: CGFloat = 46
     private let smartIPhoneButtonPreviewToControlSpacing: CGFloat = 4
@@ -1208,7 +1211,7 @@ Tapping a row inserts the key code at the cursor.
             guard debugEditorGeometry else { return }
             editorGeometrySizes = sizes
         }
-        .padding(.horizontal, 2)
+        .padding(.horizontal, isPad || editingSlotIndex == nil ? 2 : 0)
         .ignoresSafeArea(.keyboard)
         .overlay(alignment: .topLeading) {
             externalKeyboardShortcutLayer
@@ -1536,20 +1539,25 @@ Tapping a row inserts the key code at the cursor.
     private func smartView(availableWidth: CGFloat, availableHeight: CGFloat? = nil) -> some View {
         let resolvedSmartViewWidth = isPad ? smartViewWidth : smartViewWidthPhone
         let resolvedSmartViewHeight = isPad ? smartViewHeight : smartViewHeightPhone
-        let iPhoneEqualPanelWidth = availableWidth / 3
-        let resolvedSmartEditControlsWidth = isPad ? smartEditControlsWidth : iPhoneEqualPanelWidth
-        let resolvedSmartCommandEditorWidth = isPad ? smartCommandEditorWidth : iPhoneEqualPanelWidth
-        let resolvedSmartColorControlsWidth = isPad ? smartColorControlsWidth : iPhoneEqualPanelWidth
+        let iPhoneReferencePanelWidth = availableWidth / 3
+        let iPhoneLeftKeyCellWidth = smartIPhoneButtonEditorDynamicCellWidth(editorWidth: iPhoneReferencePanelWidth)
+        let iPhoneLeftPanelWidth = iPhoneLeftKeyCellWidth * 4
+        let iPhoneRightPanelWidth = iPhoneLeftKeyCellWidth * 5
+        let resolvedSmartEditControlsWidth = isPad ? smartEditControlsWidth : iPhoneLeftPanelWidth
+        let resolvedSmartCommandEditorWidth = isPad ? smartCommandEditorWidth : iPhoneReferencePanelWidth
+        let resolvedSmartColorControlsWidth = isPad ? smartColorControlsWidth : iPhoneRightPanelWidth
         let resolvedSmartSFPanelWidth = isPad ? smartSFPanelWidth : smartSFPanelWidthPhone
-        let outerWidth = isPad ? min(resolvedSmartViewWidth, availableWidth) : nil
+        let outerWidth = isPad ? min(resolvedSmartViewWidth, availableWidth) : availableWidth
         let outerHeight = isPad ? resolvedSmartViewHeight : availableHeight
-        let outerMaxWidth = isPad ? nil : CGFloat.infinity
+        let outerMaxWidth: CGFloat? = nil
         let outerMaxHeight = isPad || availableHeight != nil ? nil : CGFloat.infinity
         let panelHeight = isPad ? resolvedSmartViewHeight : availableHeight
         let panelMaxHeight = isPad || availableHeight != nil ? nil : CGFloat.infinity
+        let editorGroupWidth = isPad ? outerWidth : resolvedSmartEditControlsWidth + resolvedSmartCommandEditorWidth + resolvedSmartColorControlsWidth
+        let editorGroupAlignment: Alignment = isPad ? .topLeading : .top
 
         return HStack(spacing: 0) {
-            smartCommandPanel
+            smartCommandPanel(columnWidth: resolvedSmartEditControlsWidth)
                 .frame(width: resolvedSmartEditControlsWidth, height: panelHeight)
                 .frame(maxHeight: panelMaxHeight)
                 .editorGeometryProbe(.leftPanel, isEnabled: debugEditorGeometry)
@@ -1577,7 +1585,8 @@ Tapping a row inserts the key code at the cursor.
             }
         }
         .editorGeometryProbe(.hStack, isEnabled: debugEditorGeometry)
-        .frame(width: outerWidth, height: outerHeight, alignment: .topLeading)
+        .frame(width: editorGroupWidth, height: outerHeight, alignment: .topLeading)
+        .frame(width: outerWidth, height: outerHeight, alignment: editorGroupAlignment)
         .frame(maxWidth: outerMaxWidth, maxHeight: outerMaxHeight, alignment: .topLeading)
         .editorGeometryProbe(.smartView, isEnabled: debugEditorGeometry)
         .ignoresSafeArea(.keyboard)
@@ -1585,16 +1594,15 @@ Tapping a row inserts the key code at the cursor.
 
     private func iPhoneSmartEditorPresentation(availableWidth: CGFloat) -> some View {
         GeometryReader { geometry in
-            let visibleEditorHeight = max(0, geometry.size.height - geometry.safeAreaInsets.bottom)
-
             ZStack {
                 Color.black
+                    .ignoresSafeArea(.container)
 
-                smartView(availableWidth: availableWidth, availableHeight: visibleEditorHeight)
+                smartView(availableWidth: geometry.size.width, availableHeight: geometry.size.height)
             }
             .frame(width: geometry.size.width, height: geometry.size.height, alignment: .topLeading)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .editorGeometryProbe(.fullScreenZStack, isEnabled: debugEditorGeometry)
         .overlay(alignment: .topLeading) {
             if debugEditorGeometry {
@@ -1602,6 +1610,7 @@ Tapping a row inserts the key code at the cursor.
                     .padding(8)
             }
         }
+        .ignoresSafeArea(.container)
         .ignoresSafeArea(.keyboard)
     }
 
@@ -1713,11 +1722,15 @@ Tapping a row inserts the key code at the cursor.
 	// MARK: - BM: EDITOR 4*4 btns
 	//
 
-    private var smartCommandPanel: some View {
-        VStack(spacing: 0) {
+    private func smartCommandPanel(columnWidth: CGFloat = 0) -> some View {
+        let keyCellWidth: CGFloat? = isPad || columnWidth <= 0 ? nil : columnWidth / 4
+        let functionKeyColumnWidth = keyCellWidth ?? smartFunctionKeyColumnWidth
+
+        return VStack(spacing: 0) {
             HStack(spacing: 0) {
                 ForEach(Array(smartTopPlaceholderSymbols.prefix(4)), id: \.self) { systemName in
                     smartPlaceholderButton(systemName: systemName)
+                        .frame(width: keyCellWidth)
                 }
             }
             .frame(height: 44)
@@ -1725,6 +1738,7 @@ Tapping a row inserts the key code at the cursor.
             HStack(spacing: 0) {
                 ForEach(Array(smartTopPlaceholderSymbols.dropFirst(4).prefix(4)), id: \.self) { systemName in
                     smartPlaceholderButton(systemName: systemName)
+                        .frame(width: keyCellWidth)
                 }
             }
             .frame(height: 44)
@@ -1732,16 +1746,22 @@ Tapping a row inserts the key code at the cursor.
             HStack(spacing: 0) {
                 ForEach(Array(smartTopPlaceholderSymbols.dropFirst(8)), id: \.self) { systemName in
                     smartPlaceholderButton(systemName: systemName)
+                        .frame(width: keyCellWidth)
                 }
                 smartEscapeCodeToggleButton
+                    .frame(width: keyCellWidth)
             }
             .frame(height: 44)
 
             HStack(spacing: 0) {
 				smartModifierButton(systemName: "control", accessibilityLabel: "Control", prefix: "⌃")
+                    .frame(width: keyCellWidth)
 				smartModifierButton(systemName: "option", accessibilityLabel: "Option", prefix: "⌥")
+                    .frame(width: keyCellWidth)
                 smartModifierButton(systemName: "shift", accessibilityLabel: "Shift", prefix: "⇧")
+                    .frame(width: keyCellWidth)
                 smartModifierButton(systemName: "command", accessibilityLabel: "Command", prefix: "⌘")
+                    .frame(width: keyCellWidth)
             }
             .frame(height: 44)
 
@@ -1755,7 +1775,7 @@ Tapping a row inserts the key code at the cursor.
                         }
                     }
                 }
-                .frame(width: smartFunctionKeyColumnWidth)
+                .frame(width: functionKeyColumnWidth)
                 .background(Color.black)
                 .overlay {
                     Rectangle()
@@ -1793,7 +1813,7 @@ Tapping a row inserts the key code at the cursor.
         }
         .background(Color.black)
         .overlay {
-            smartPanelBorder(edges: isPad ? .all : [.top, .trailing, .bottom])
+            smartPanelBorder(edges: .all)
         }
         .clipped()
     }
@@ -2177,7 +2197,7 @@ Tapping a row inserts the key code at the cursor.
                     smartButtonBrightnessSliderColumn
 
                     VStack(spacing: 8) {
-                        smartButtonPreview
+                        smartButtonPreview()
                     }
                     .frame(maxWidth: .infinity)
                 }
@@ -2218,15 +2238,23 @@ Tapping a row inserts the key code at the cursor.
     }
 
     private func smartIPhoneButtonPreviewRow(editorWidth: CGFloat) -> some View {
-        HStack(alignment: .top, spacing: 6) {
+        let previewHorizontalMargin: CGFloat = 8
+        let previewSliderSpacing: CGFloat = 8
+        let previewFootprintWidth = max(
+            smartIPhoneButtonPreviewWidth,
+            editorWidth - smartColorSliderColumnWidth - previewSliderSpacing - (previewHorizontalMargin * 2)
+        )
+
+        return HStack(alignment: .top, spacing: previewSliderSpacing) {
             smartButtonBrightnessSliderColumn
 
             VStack(spacing: 8) {
-                smartButtonPreview
+                smartButtonPreview(footprintWidth: previewFootprintWidth)
             }
-            .frame(width: smartIPhoneButtonPreviewWidth)
+            .frame(width: previewFootprintWidth)
         }
-        .frame(width: editorWidth)
+        .padding(.horizontal, previewHorizontalMargin)
+        .frame(width: editorWidth, height: smartIPhoneButtonPreviewEnclosureHeight, alignment: .leading)
         .background {
             smartButtonClearPreviewBackground
         }
@@ -2272,8 +2300,24 @@ Tapping a row inserts the key code at the cursor.
         }
     }
 
+    private func smartIPhoneButtonEditorDynamicColumnCount(editorWidth: CGFloat) -> Int {
+        max(1, Int((editorWidth / smartIPhoneButtonEditorCellSize).rounded()))
+    }
+
+    private func smartIPhoneButtonEditorDynamicCellWidth(editorWidth: CGFloat) -> CGFloat {
+        editorWidth / CGFloat(smartIPhoneButtonEditorDynamicColumnCount(editorWidth: editorWidth))
+    }
+
+    private func smartIPhoneButtonEditorColumnCount(editorWidth: CGFloat) -> Int {
+        5
+    }
+
+    private func smartIPhoneButtonEditorCellWidth(editorWidth: CGFloat) -> CGFloat {
+        editorWidth / CGFloat(smartIPhoneButtonEditorColumnCount(editorWidth: editorWidth))
+    }
+
     private func smartIPhoneButtonEditorGridItems(editorWidth: CGFloat) -> [GridItem] {
-        let columnCount = max(1, Int((editorWidth / smartIPhoneButtonEditorCellSize).rounded()))
+        let columnCount = smartIPhoneButtonEditorColumnCount(editorWidth: editorWidth)
         return Array(repeating: GridItem(.flexible(), spacing: 0), count: columnCount)
     }
 
@@ -2305,16 +2349,20 @@ Tapping a row inserts the key code at the cursor.
     }
 
     @ViewBuilder
-    private var smartButtonPreview: some View {
-        let previewHeight: CGFloat = isPad ? 104 : smartIPhoneButtonPreviewHeight
-        let previewWidth: CGFloat? = isPad ? nil : smartIPhoneButtonPreviewWidth
+    private func smartButtonPreview(footprintWidth: CGFloat? = nil) -> some View {
+        let previewFootprintHeight: CGFloat = isPad ? 104 : smartIPhoneButtonPreviewEnclosureHeight
+        let resolvedPreviewFootprintWidth = footprintWidth ?? smartIPhoneButtonPreviewWidth
+        let previewHeight: CGFloat = isPad ? previewFootprintHeight : min(max(0, previewFootprintHeight - 24), max(0, resolvedPreviewFootprintWidth - 24))
+        let previewWidth: CGFloat? = isPad ? nil : previewHeight
         let previewMaxWidth: CGFloat? = isPad ? .infinity : nil
+        let previewFootprintWidth: CGFloat? = isPad ? nil : resolvedPreviewFootprintWidth
 
         if smartIsButtonHidden {
             Color.clear
                 .frame(width: previewWidth)
                 .frame(maxWidth: previewMaxWidth)
                 .frame(height: previewHeight)
+                .frame(width: previewFootprintWidth, height: previewFootprintHeight)
         } else {
             Group {
                 if let symbolDisplay = smartButtonSFSymbolDisplay {
@@ -2358,6 +2406,7 @@ Tapping a row inserts the key code at the cursor.
                 RoundedRectangle(cornerRadius: 18)
                     .stroke(Color.white, lineWidth: 1.5)
             }
+            .frame(width: previewFootprintWidth, height: previewFootprintHeight)
         }
     }
 

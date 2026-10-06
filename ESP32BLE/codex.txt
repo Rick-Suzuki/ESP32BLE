@@ -1,24 +1,29 @@
-EXPERIMENT APPLIED
+Done.
 
-Changed only:
-• smartCommandPanel
-• smartColorPanel
-• smartButtonPanel
+Files changed:
+ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
 
-Each root panel now has .clipped() applied after its existing border/background chain.
+Negative-padding / old-footprint code removed:
+Removed the iPhone preview row adjustment:
 
-Unchanged:
-• Frames
-• Widths
-• Heights
-• Spacing
-• ScrollViews
-• GeometryReader
-• Panel borders
-• Behaviour/actions
+smartIPhoneButtonPreviewHeight - smartIPhoneButtonPreviewEnclosureHeight
 
-Build:
-Project build succeeded.
+That was the -48 point top padding workaround.
 
-Result to check visually:
-If the overflow disappears but content is cut off at the bottom, the cause is confirmed as child content rendering outside the root panel bounds. The panel(s) that appear truncated will need internal layout adjustment next.
+Preview layout height:
+The iPhone Button Preview enclosure now occupies a genuine 120-point layout height.
+
+Control row and table:
+The right control row and Colour/SF table are now allowed to move downward naturally beneath the 120-point preview enclosure.
+
+Command Description:
+Not moved or resized.
+
+Horizontal geometry:
+Unchanged.
+
+iPad:
+Unchanged. The enlarged preview flow remains iPhone-only.
+
+Build result:
+Build succeeded.
