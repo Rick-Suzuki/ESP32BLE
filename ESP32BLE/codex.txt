@@ -1,29 +1,26 @@
-Done.
+The working tree still has codex.txt􀰓 modified from earlier notes, but I did not edit it in this pass. The app build passed, and the geometry overlay flag is now false again.1. Files changed:
+ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
 
-Files changed:
-ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
+2. Cause of Test/Close being taller:
+The previous pass forced Test/Close visible backgrounds to an exact smartButtonPanelColorCellHeight. The right colour cells use their final rendered SwiftUI grid cell height, so the exact forced height could render taller than the visible table cells.
 
-Negative-padding / old-footprint code removed:
-Removed the iPhone preview row adjustment:
+3. New Test/Close height source:
+Test/Close now use the measured rendered height of a representative visible right-hand colour table cell. The reader is a non-layout Color.clear background measurement on the existing right table cell.
 
-smartIPhoneButtonPreviewHeight - smartIPhoneButtonPreviewEnclosureHeight
+4. Bottom edge:
+Confirmed preserved. Test/Close remain in the same existing action row, and their visible backgrounds are bottom-aligned, so reducing height moves only the top edge down.
 
-That was the -48 point top padding workaround.
+5. Right-table geometry:
+Confirmed unchanged. The right table cells, grid, row sizing, and layout were not altered.
 
-Preview layout height:
-The iPhone Button Preview enclosure now occupies a genuine 120-point layout height.
+6. Slider/preview geometry:
+Confirmed untouched in this pass. No preview/slider code was changed.
 
-Control row and table:
-The right control row and Colour/SF table are now allowed to move downward naturally beneath the 120-point preview enclosure.
+7. Measured Frames overlay:
+Hidden again via debugEditorGeometry = false. The probe infrastructure remains in the source and can be re-enabled later.
 
-Command Description:
-Not moved or resized.
+8. iPad:
+Confirmed untouched. The new right-cell height reader is enabled only for non-iPad.
 
-Horizontal geometry:
-Unchanged.
-
-iPad:
-Unchanged. The enlarged preview flow remains iPhone-only.
-
-Build result:
+9. Build result:
 Build succeeded.
