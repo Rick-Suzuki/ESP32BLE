@@ -2398,7 +2398,27 @@ Tapping a row inserts the key code at the cursor.
             .buttonStyle(.plain)
             .accessibilityLabel(smartButtonVisibilityBinding.wrappedValue ? "Hide button" : "Show button")
             .editorGeometryProbe(.rightUtilityRow, isEnabled: debugEditorGeometry)
-            smartClearColorButton
+            Button {
+                ButtonClickFeedback.playIfEnabled()
+                setSmartButtonHidden(false)
+                smartButtonBrightnessBaseHex = nil
+                smartButtonBrightness = 0.5
+                smartButtonClearPreviewFallbackImageURL = availableBackgroundImageURLs.randomElement()
+                smartRightTextBinding.wrappedValue = rightTextWithoutColorPrefix(smartRightTextBinding.wrappedValue)
+                // Help text location: iPad btn panel clr button.
+                smartCommandDescription = smartHelpButtonClearColor
+            } label: {
+                Text("clr")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity, minHeight: smartButtonPanelColorCellHeight)
+                    .background(Color.black)
+                    .overlay {
+                        Rectangle()
+                            .stroke(Color.white, lineWidth: 1)
+                    }
+            }
+            .buttonStyle(.plain)
             smartRandomColorButton
   //          smartColonButton
             ForEach(Array(smartIPadButtonSwatchHexColors), id: \.self) { hexColor in
