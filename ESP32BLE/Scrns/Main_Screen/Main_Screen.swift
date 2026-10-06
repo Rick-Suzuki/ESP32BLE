@@ -2351,10 +2351,76 @@ Tapping a row inserts the key code at the cursor.
         let resolvedEditorWidth = editorWidth > 0 ? editorWidth : smartIPhoneButtonContentWidth
 
         if isPad {
-            smartButtonColorGrid
-                .frame(maxWidth: .infinity, alignment: .top)
-                .frame(height: smartButtonPanelColorCellHeight * 5, alignment: .top)
-                .editorGeometryProbe(.rightTableRegion, isEnabled: debugEditorGeometry)
+            VStack(spacing: 0) {
+                HStack(spacing: 0) {
+                    Button {
+                        ButtonClickFeedback.playIfEnabled()
+                        smartButtonVisibilityBinding.wrappedValue.toggle()
+                        // Help text location: iPad btn panel eye button.
+                        smartCommandDescription = smartHelpButtonVisibility
+                    } label: {
+                        Image(systemName: smartButtonVisibilityBinding.wrappedValue ? "eye" : "eye.slash")
+                            .font(.system(size: 32, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity, minHeight: smartButtonPanelColorCellHeight)
+                            .background(Color.black)
+                            .overlay {
+                                Rectangle()
+                                    .stroke(Color.white, lineWidth: 1)
+                            }
+                            .editorGeometryProbe(.rightUtilityVisibleCell, isEnabled: debugEditorGeometry)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(smartButtonVisibilityBinding.wrappedValue ? "Hide button" : "Show button")
+                    .editorGeometryProbe(.rightUtilityRow, isEnabled: debugEditorGeometry)
+                    Button {
+                        ButtonClickFeedback.playIfEnabled()
+                        setSmartButtonHidden(false)
+                        smartButtonBrightnessBaseHex = nil
+                        smartButtonBrightness = 0.5
+                        smartButtonClearPreviewFallbackImageURL = availableBackgroundImageURLs.randomElement()
+                        smartRightTextBinding.wrappedValue = rightTextWithoutColorPrefix(smartRightTextBinding.wrappedValue)
+                        // Help text location: iPad btn panel clr button.
+                        smartCommandDescription = smartHelpButtonClearColor
+                    } label: {
+                        Text("clr")
+                            .font(.system(size: 20, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity, minHeight: smartButtonPanelColorCellHeight)
+                            .background(Color.black)
+                            .overlay {
+                                Rectangle()
+                                    .stroke(Color.white, lineWidth: 1)
+                            }
+                    }
+                    .buttonStyle(.plain)
+                    Button {
+                        ButtonClickFeedback.playIfEnabled()
+                        let red = Int.random(in: 0...255)
+                        let green = Int.random(in: 0...255)
+                        let blue = Int.random(in: 0...255)
+                        setSmartButtonColor(String(format: "%02X%02X%02X", red, green, blue))
+                        // Help text location: btn panel rnd button.
+                        smartCommandDescription = smartHelpButtonRandomColor
+                    } label: {
+                        Text("rnd")
+                            .font(.system(size: 20, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity, minHeight: smartButtonPanelColorCellHeight)
+                            .background(Color.black)
+                            .overlay {
+                                Rectangle()
+                                    .stroke(Color.white, lineWidth: 1)
+                            }
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Set random button color")
+                }
+                smartButtonColorGrid
+            }
+            .frame(maxWidth: .infinity, alignment: .top)
+            .frame(height: smartButtonPanelColorCellHeight * 5, alignment: .top)
+            .editorGeometryProbe(.rightTableRegion, isEnabled: debugEditorGeometry)
         } else {
             smartIPhoneButtonSharedEditingArea(editorWidth: resolvedEditorWidth)
                 .frame(width: resolvedEditorWidth)
@@ -2378,69 +2444,6 @@ Tapping a row inserts the key code at the cursor.
             columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 4),
             spacing: 0
         ) {
-            Button {
-                ButtonClickFeedback.playIfEnabled()
-                smartButtonVisibilityBinding.wrappedValue.toggle()
-                // Help text location: iPad btn panel eye button.
-                smartCommandDescription = smartHelpButtonVisibility
-            } label: {
-                Image(systemName: smartButtonVisibilityBinding.wrappedValue ? "eye" : "eye.slash")
-                    .font(.system(size: 32, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity, minHeight: smartButtonPanelColorCellHeight)
-                    .background(Color.black)
-                    .overlay {
-                        Rectangle()
-                            .stroke(Color.white, lineWidth: 1)
-                    }
-                    .editorGeometryProbe(.rightUtilityVisibleCell, isEnabled: debugEditorGeometry)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(smartButtonVisibilityBinding.wrappedValue ? "Hide button" : "Show button")
-            .editorGeometryProbe(.rightUtilityRow, isEnabled: debugEditorGeometry)
-            Button {
-                ButtonClickFeedback.playIfEnabled()
-                setSmartButtonHidden(false)
-                smartButtonBrightnessBaseHex = nil
-                smartButtonBrightness = 0.5
-                smartButtonClearPreviewFallbackImageURL = availableBackgroundImageURLs.randomElement()
-                smartRightTextBinding.wrappedValue = rightTextWithoutColorPrefix(smartRightTextBinding.wrappedValue)
-                // Help text location: iPad btn panel clr button.
-                smartCommandDescription = smartHelpButtonClearColor
-            } label: {
-                Text("clr")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity, minHeight: smartButtonPanelColorCellHeight)
-                    .background(Color.black)
-                    .overlay {
-                        Rectangle()
-                            .stroke(Color.white, lineWidth: 1)
-                    }
-            }
-            .buttonStyle(.plain)
-            Button {
-                ButtonClickFeedback.playIfEnabled()
-                let red = Int.random(in: 0...255)
-                let green = Int.random(in: 0...255)
-                let blue = Int.random(in: 0...255)
-                setSmartButtonColor(String(format: "%02X%02X%02X", red, green, blue))
-                // Help text location: btn panel rnd button.
-                smartCommandDescription = smartHelpButtonRandomColor
-            } label: {
-                Text("rnd")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity, minHeight: smartButtonPanelColorCellHeight)
-                    .background(Color.black)
-                    .overlay {
-                        Rectangle()
-                            .stroke(Color.white, lineWidth: 1)
-                    }
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Set random button color")
-  //          smartColonButton
             ForEach(Array(smartIPadButtonSwatchHexColors), id: \.self) { hexColor in
                 smartButtonColorSwatch(hexColor)
             }
