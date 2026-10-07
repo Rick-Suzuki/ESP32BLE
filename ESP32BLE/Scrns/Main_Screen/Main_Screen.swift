@@ -2385,16 +2385,28 @@ Tapping a row inserts the key code at the cursor.
     }
 
     private var smartButtonColorGrid: some View {
-        LazyVGrid(
-            columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 4),
-            spacing: 0
-        ) {
-            smartVisibilityButton
-            smartClearColorButton
-            smartRandomColorButton
-            smartColonButton
-            ForEach(Array(smartIPadButtonSwatchHexColors), id: \.self) { hexColor in
-                smartButtonColorSwatch(hexColor)
+        VStack(spacing: 0) {
+            HStack(spacing: 0) {
+                smartVisibilityButton
+                    .frame(maxWidth: .infinity)
+                smartClearColorButton
+                    .frame(maxWidth: .infinity)
+                smartRandomColorButton
+                    .frame(maxWidth: .infinity)
+                smartColonButton
+                    .frame(maxWidth: .infinity)
+            }
+            .frame(height: smartButtonPanelColorCellHeight)
+
+            ScrollView(.vertical) {
+                LazyVGrid(
+                    columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 5),
+                    spacing: 0
+                ) {
+                    ForEach(Array(smartIPhoneButtonSwatchHexColors), id: \.self) { hexColor in
+                        smartButtonColorSwatch(hexColor)
+                    }
+                }
             }
         }
     }
