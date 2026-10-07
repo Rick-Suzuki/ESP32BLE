@@ -2296,17 +2296,14 @@ Tapping a row inserts the key code at the cursor.
     }
 
     private var smartButtonBrightnessSliderColumn: some View {
-        VStack(spacing: 4) {
-            smartVerticalSliderLabel("")
-            Slider(value: $smartButtonBrightness, in: 0...1)
-                .rotationEffect(.degrees(-90))
-                .frame(width: 126, height: 24)
-                .tint(.yellow)
-                .onChange(of: smartButtonBrightness) {
-                    applySmartButtonBrightness()
-                }
-        }
-        .frame(width: smartColorSliderColumnWidth)
+        Slider(value: $smartButtonBrightness, in: 0...1)
+            .rotationEffect(.degrees(-90))
+            .frame(width: 116, height: 24)
+            .tint(.yellow)
+            .onChange(of: smartButtonBrightness) {
+                applySmartButtonBrightness()
+            }
+            .frame(width: smartColorSliderColumnWidth, height: 121, alignment: .center)
     }
 
     private func smartIPhoneButtonBrightnessSlider(height: CGFloat, width: CGFloat) -> some View {
@@ -2364,7 +2361,7 @@ Tapping a row inserts the key code at the cursor.
         if isPad {
             smartButtonColorGrid
                 .frame(maxWidth: .infinity, alignment: .top)
-                .frame(height: smartButtonPanelColorCellHeight * 5, alignment: .top)
+                .frame(height: smartViewHeight - smartCommandDescriptionTopOffset + smartButtonPanelColorCellHeight, alignment: .top)
                 .editorGeometryProbe(.rightTableRegion, isEnabled: debugEditorGeometry)
         } else {
             smartIPhoneButtonSharedEditingArea(editorWidth: resolvedEditorWidth)
@@ -2404,7 +2401,7 @@ Tapping a row inserts the key code at the cursor.
                     spacing: 0
                 ) {
                     ForEach(Array(smartIPhoneButtonSwatchHexColors), id: \.self) { hexColor in
-                        smartButtonColorSwatch(hexColor)
+                        smartButtonColorSwatch(hexColor, usesBrightnessAdjustedFill: false)
                     }
                 }
             }
@@ -2444,7 +2441,7 @@ Tapping a row inserts the key code at the cursor.
             smartClearColorButton
             smartRandomColorButton
             ForEach(Array(smartIPhoneButtonSwatchHexColors), id: \.self) { hexColor in
-                smartButtonColorSwatch(hexColor)
+                smartButtonColorSwatch(hexColor, usesBrightnessAdjustedFill: false)
             }
         }
     }
@@ -2470,7 +2467,7 @@ Tapping a row inserts the key code at the cursor.
         previewHeight requestedPreviewHeight: CGFloat? = nil,
         aspectRatio: CGFloat = 1
     ) -> some View {
-        let previewFootprintHeight: CGFloat = isPad ? 104 : requestedPreviewHeight ?? smartIPhoneButtonPreviewEnclosureHeight
+        let previewFootprintHeight: CGFloat = isPad ? 121 : requestedPreviewHeight ?? smartIPhoneButtonPreviewEnclosureHeight
         let resolvedPreviewFootprintWidth = footprintWidth ?? smartIPhoneButtonPreviewWidth
         let previewHeight: CGFloat = isPad ? previewFootprintHeight : requestedPreviewHeight ?? min(max(0, previewFootprintHeight - 24), max(0, resolvedPreviewFootprintWidth - 24))
         let previewWidth: CGFloat? = isPad ? nil : min(previewHeight * aspectRatio, resolvedPreviewFootprintWidth)
@@ -2523,6 +2520,7 @@ Tapping a row inserts the key code at the cursor.
                 RoundedRectangle(cornerRadius: 18)
                     .stroke(Color.white, lineWidth: 1.5)
             }
+            .ipadButtonGeometryProbe(.previewActual, isEnabled: isPad)
             .editorGeometryProbe(.actualPreviewButton, isEnabled: debugEditorGeometry)
             .frame(width: previewFootprintWidth, height: previewFootprintHeight)
         }
@@ -2730,8 +2728,9 @@ Tapping a row inserts the key code at the cursor.
         smartButtonPreviewSelectionRange = NSRange(location: location + insertedText.utf16.count, length: 0)
     }
 
-    private func smartButtonColorSwatch(_ hexColor: String) -> some View {
+    private func smartButtonColorSwatch(_ hexColor: String, usesBrightnessAdjustedFill: Bool = true) -> some View {
         let normalizedHexColor = hexColor.uppercased()
+        let displayHexColor = usesBrightnessAdjustedFill ? (adjustedSmartButtonColorHex(for: hexColor) ?? hexColor) : hexColor
 
         return Button {
             ButtonClickFeedback.playIfEnabled()
@@ -2740,7 +2739,7 @@ Tapping a row inserts the key code at the cursor.
             smartCommandDescription = smartHelpButtonColor
         } label: {
             ZStack {
-                Color(hex: adjustedSmartButtonColorHex(for: hexColor) ?? hexColor)
+                Color(hex: displayHexColor)
 
                 if normalizedHexColor == "000000" {
                     Text("black")
@@ -3924,6 +3923,57 @@ Tapping a row inserts the key code at the cursor.
     }
 }
 
+private let iPadButtonGeometryCoordinateSpaceName = "IPadButtonGeometryCoordinateSpace"
+
+private enum IPadButtonGeometryProbeTarget: String, CaseIterable {
+    case upperContainer = "upper"
+    case previewWrapper = "previewWrapper"
+    case previewActual = "previewActual"
+    case sliderOuter = "sliderOuter"
+    case divider = "divider"
+}
+
+private struct IPadButtonGeometryPreferenceKey: PreferenceKey {
+    static var defaultValue: [IPadButtonGeometryProbeTarget: CGRect] = [:]
+
+    static func reduce(
+        value: inout [IPadButtonGeometryProbeTarget: CGRect],
+        nextValue: () -> [IPadButtonGeometryProbeTarget: CGRect]
+    ) {
+        value.merge(nextValue()) { _, newValue in newValue }
+    }
+}
+
+private struct IPadButtonGeometryProbeModifier: ViewModifier {
+    let target: IPadButtonGeometryProbeTarget
+    let isEnabled: Bool
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if isEnabled {
+            content.background {
+                GeometryReader { geometry in
+                    Color.clear.preference(
+                        key: IPadButtonGeometryPreferenceKey.self,
+                        value: [target: geometry.frame(in: .named(iPadButtonGeometryCoordinateSpaceName))]
+                    )
+                }
+            }
+        } else {
+            content
+        }
+    }
+}
+
+private extension View {
+    func ipadButtonGeometryProbe(
+        _ target: IPadButtonGeometryProbeTarget,
+        isEnabled: Bool = true
+    ) -> some View {
+        modifier(IPadButtonGeometryProbeModifier(target: target, isEnabled: isEnabled))
+    }
+}
+
 private struct IPadSmartButtonPanel<
     BrightnessSliderColumn: View,
     Preview: View,
@@ -3937,32 +3987,95 @@ private struct IPadSmartButtonPanel<
     @ViewBuilder let clearPreviewBackground: () -> ClearPreviewBackground
     @ViewBuilder let lowerEditingArea: () -> LowerEditingArea
     @ViewBuilder let panelBorder: () -> PanelBorder
+    @State private var lastGeometryReport = ""
+    private let previewButtonHeight: CGFloat = 121
+    private let upperTopPadding: CGFloat = 7
+    private let upperBottomPadding: CGFloat = 0
+    private let previewHorizontalPadding: CGFloat = 8
 
     var body: some View {
         VStack(spacing: 4) {
-            HStack(alignment: .top, spacing: 6) {
+            HStack(alignment: .bottom, spacing: 6) {
                 brightnessSliderColumn()
+                    .frame(height: previewButtonHeight)
+                    .padding(.top, 0)
+                    .padding(.bottom, upperBottomPadding)
+                    .ipadButtonGeometryProbe(.sliderOuter)
                     .editorGeometryProbe(.slider, isEnabled: debugEditorGeometry)
 
                 VStack(spacing: 8) {
                     preview()
                 }
                 .frame(maxWidth: .infinity)
+                .padding(.horizontal, previewHorizontalPadding)
+                .padding(.top, upperTopPadding)
+                .padding(.bottom, upperBottomPadding)
+                .ipadButtonGeometryProbe(.previewWrapper)
                 .editorGeometryProbe(.previewFootprint, isEnabled: debugEditorGeometry)
             }
             .background {
                 clearPreviewBackground()
             }
+            .ipadButtonGeometryProbe(.upperContainer)
             .editorGeometryProbe(.rightPreviewArea, isEnabled: debugEditorGeometry)
 
             lowerEditingArea()
+                .ipadButtonGeometryProbe(.divider)
         }
         .frame(maxWidth: nil, maxHeight: nil, alignment: .top)
+        .coordinateSpace(name: iPadButtonGeometryCoordinateSpaceName)
+        .onPreferenceChange(IPadButtonGeometryPreferenceKey.self) { frames in
+            reportIPadButtonGeometry(frames)
+        }
         .background(Color.black)
         .overlay {
             panelBorder()
         }
         .clipped()
+    }
+
+    private func reportIPadButtonGeometry(_ frames: [IPadButtonGeometryProbeTarget: CGRect]) {
+        let requiredTargets: [IPadButtonGeometryProbeTarget] = [
+            .upperContainer,
+            .previewWrapper,
+            .previewActual,
+            .sliderOuter,
+            .divider
+        ]
+        guard requiredTargets.allSatisfy({ frames[$0] != nil }) else {
+            return
+        }
+
+        let signature = requiredTargets
+            .compactMap { target -> String? in
+                guard let frame = frames[target] else { return nil }
+                return "\(target.rawValue):\(rounded(frame.minY)),\(rounded(frame.maxY)),\(rounded(frame.height))"
+            }
+            .joined(separator: "|")
+        guard signature != lastGeometryReport else {
+            return
+        }
+
+        lastGeometryReport = signature
+
+        let upper = frames[.upperContainer]!
+        let previewWrapper = frames[.previewWrapper]!
+        let previewActual = frames[.previewActual]!
+        let sliderOuter = frames[.sliderOuter]!
+        let divider = frames[.divider]!
+        let dividerY = divider.minY
+
+        print("[IPAD-BUTTON-GEOMETRY] coordinateSpace=\(iPadButtonGeometryCoordinateSpaceName)")
+        print("[IPAD-BUTTON-GEOMETRY] upper minY=\(rounded(upper.minY)) maxY=\(rounded(upper.maxY)) height=\(rounded(upper.height))")
+        print("[IPAD-BUTTON-GEOMETRY] previewWrapper minY=\(rounded(previewWrapper.minY)) maxY=\(rounded(previewWrapper.maxY)) height=\(rounded(previewWrapper.height))")
+        print("[IPAD-BUTTON-GEOMETRY] previewActual minY=\(rounded(previewActual.minY)) maxY=\(rounded(previewActual.maxY)) height=\(rounded(previewActual.height))")
+        print("[IPAD-BUTTON-GEOMETRY] sliderOuter minY=\(rounded(sliderOuter.minY)) maxY=\(rounded(sliderOuter.maxY)) height=\(rounded(sliderOuter.height))")
+        print("[IPAD-BUTTON-GEOMETRY] divider y=\(rounded(dividerY))")
+        print("[IPAD-BUTTON-GEOMETRY] calculated previewBottomGap=\(rounded(dividerY - previewActual.maxY)) sliderBottomGap=\(rounded(dividerY - sliderOuter.maxY)) topDifference=\(rounded(sliderOuter.minY - previewActual.minY)) bottomDifference=\(rounded(sliderOuter.maxY - previewActual.maxY))")
+    }
+
+    private func rounded(_ value: CGFloat) -> String {
+        String(format: "%.1f", Double(value))
     }
 }
 
