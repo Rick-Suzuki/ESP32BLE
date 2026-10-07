@@ -1,42 +1,97 @@
-Done. One measured iPad-only geometry correction applied, probe left installed.
+READ-ONLY investigation completed. I did not edit source or project files.
 
-Files changed:
-ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
+1. Main_Screen.swift files found:
+./ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
 
-Responsible preview constraint:
-The actual 104-point preview height came from smartButtonPreview(...), where the iPad path set:
+Only one physical Main_Screen.swift􀰓 exists in the worktree.
 
-previewFootprintHeight = 104
+2. [IPAD-BUTTON-GEOMETRY] / divider y= occurrences:
+ESP32BLE/Scrns/Main_Screen/Main_Screen.swift􀰓
+• lines 1659, 1685-1693: current probe code, using db(...)
+• no divider y= string in this source file
 
-That value also drove:
+ESP32BLE/console m2.txt􀰓
+• lines 5-11: saved old console output
+• line 10 contains [IPAD-BUTTON-GEOMETRY] divider y=132.0
 
-previewHeight = previewFootprintHeight
+ESP32BLE/codex.txt􀰓
+• contains prior report text mentioning divider y=...
 
-so the visible preview/background/clip/rounded border was capped at 104 before the outer iPad panel wrapper could provide its 121-point space.
+3. New probe strings:
+ESP32BLE/Scrns/Main_Screen/Main_Screen.swift􀰓
+• line 1682: buttonDividerY
+• line 1683: commandDividerY
+• line 1690: emits buttonDividerY
+• line 1691: emits commandDividerY
+• line 1692: emits dividerDifference
 
-Preview code changed:
-previewFootprintHeight for iPad changed from 104 to 121.
+ESP32BLE/codex.txt􀰓
+• contains prior report text mentioning those names
 
-Why this should move preview maxY:
-The iPad wrapper still applies upperTopPadding = 7, so a 121-point actual preview should lay out from approximately minY = 7 to maxY = 128.
+4. Xcode inclusion method:
+Traditional PBXFileReference / PBXBuildFile / PBXSourcesBuildPhase, not PBXFileSystemSynchronizedRootGroup.
 
-Slider outer-frame code changed:
-In IPadSmartButtonPanel:
-• HStack(alignment: .top, spacing: 6) changed to .bottom
-• slider top padding changed from upperTopPadding to 0
+Relevant project entries:
+• PBXFileReference: 1D9E1CE52FC92DC600DB3621 /* Main_Screen.swift */
+• path: Main_Screen.swift􀰓
+• sourceTree: <group>
+• PBXBuildFile: 1D9E1D182FC92DC600DB3621 /* Main_Screen.swift in Sources */
+• included once in PBXSourcesBuildPhase
 
-Why this should move sliderOuter:
-The slider measured frame should now remain 121 points tall, bottom-aligned inside the 128-point upper area, targeting approximately minY = 7, maxY = 128.
+Resolved project path:
+ESP32BLE/Scrns/Main_Screen/Main_Screen.swift􀰓
 
-The pre-rotation slider length 116 was unchanged.
+Absolute path:
+/Users/rick/00-Home/Xcode/Projects2/100_IOS PROJECTS/10_IN_PROG/ESP32_BLE/ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
 
-Confirmations:
-• Geometry probe remains installed and still measures actual frames.
-• Eye / clr / rnd / colon were untouched.
-• Color table was untouched.
-• iPhone was untouched.
-• No other editor column was modified.
-• IPadSmartButtonPanel and IPadSmartSFPanel remain intact.
+5. Target/scheme:
+• App target: ESP32BLE
+• Active scheme: ESP32BLE
+• One app target found
+• No second target containing another Main_Screen.swift􀰓
 
-Build result:
-Build succeeded.
+6. Build invocation evidence:
+Existing build logs show Xcode compiling:
+
+/Users/rick/00-Home/Xcode/Projects2/100_IOS PROJECTS/10_IN_PROG/ESP32_BLE/ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
+
+for target ESP32BLE.
+
+I also ran one harmless build for evidence; it succeeded, but it was effectively up to date and did not print a new SwiftCompile line.
+
+7. Multiple Main_Screen.swift files compiled:
+No evidence of multiple files. Project has one Main_Screen.swift in Sources.
+
+8. Compiled file contains:
+The file Xcode is configured to compile contains the new probe:
+• buttonDividerY
+• commandDividerY
+• dividerDifference
+
+It does not contain the old source string:
+• divider y=
+
+9. Same physical file:
+Yes. The file Codex has been editing is the same path Xcode compiles.
+
+File identity/hash:
+• inode: 791046390
+• SHA256: 422e66a7bace6cffc06a473196978e82a28ec4590079ccdb46aae9227581c42b
+
+10. Git status:
+M ESP32BLE.xcodeproj/project.pbxproj
+M ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
+D ESP32BLE/V62.07.txt
+AM ESP32BLE/VERSIONS.txt
+M ESP32BLE/codex.txt
+
+Tracked Main_Screen.swift􀰓:
+ESP32BLE/Scrns/Main_Screen/Main_Screen.swift􀰓
+
+11. Evidence-based explanation:
+The current source file that Xcode is configured to compile cannot emit [IPAD-BUTTON-GEOMETRY] divider y=...; that exact runtime line exists only in saved text files, especially ESP32BLE/console m2.txt􀰓.
+
+So the contradiction is not explained by a duplicate Main_Screen.swift􀰓 or an unexpected Xcode file reference. Evidence points to stale/old console text being observed or retained somewhere, not a second source file in the project.
+
+12. Confirmation:
+No source files, project files, UI, geometry, probes, or settings were modified by this investigation.

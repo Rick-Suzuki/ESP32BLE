@@ -960,6 +960,8 @@ Tapping a row inserts the key code at the cursor.
     @State private var isSmartPhoneSFSymbolMode = false
     @State private var keyboardMinY: CGFloat = .greatestFiniteMagnitude
     @State private var editorGeometryFrames: [EditorGeometryProbeTarget: CGRect] = [:]
+    @State private var lastIPadButtonGeometryReport = ""
+    @State private var lastIPadButtonGeometryMissingReport = ""
     @State private var smartIPhoneRightTableVisibleCellHeight: CGFloat?
     @State private var popupDismissTask: Task<Void, Never>?
     @State var presentedPreviewFile: PreviewedFile?
@@ -1622,11 +1624,77 @@ Tapping a row inserts the key code at the cursor.
             }
         }
         .editorGeometryProbe(.hStack, isEnabled: debugEditorGeometry)
+        .coordinateSpace(name: iPadButtonGeometryCoordinateSpaceName)
+        .onPreferenceChange(IPadButtonGeometryPreferenceKey.self) { frames in
+            reportIPadButtonGeometry(frames)
+        }
         .frame(width: editorGroupWidth, height: outerHeight, alignment: .topLeading)
         .frame(width: outerWidth, height: outerHeight, alignment: editorGroupAlignment)
         .frame(maxWidth: outerMaxWidth, maxHeight: outerMaxHeight, alignment: .topLeading)
         .editorGeometryProbe(.smartView, isEnabled: debugEditorGeometry)
         .ignoresSafeArea(.keyboard)
+    }
+
+    private func reportIPadButtonGeometry(_ frames: [IPadButtonGeometryProbeTarget: CGRect]) {
+        let requiredTargets: [IPadButtonGeometryProbeTarget] = [
+            .upperContainer,
+            .previewWrapper,
+            .previewActual,
+            .sliderOuter,
+            .buttonDivider,
+            .commandDivider
+        ]
+        let missingTargets = requiredTargets.filter { frames[$0] == nil }
+        if !missingTargets.isEmpty {
+            let availableSignature = IPadButtonGeometryProbeTarget.allCases
+                .filter { frames[$0] != nil }
+                .map(\.rawValue)
+                .joined(separator: ",")
+            let missingSignature = missingTargets
+                .map(\.rawValue)
+                .joined(separator: ",")
+            let diagnosticSignature = "\(missingSignature)|available:\(availableSignature)"
+            if diagnosticSignature != lastIPadButtonGeometryMissingReport {
+                lastIPadButtonGeometryMissingReport = diagnosticSignature
+                db("[IPAD-BUTTON-GEOMETRY] waitingFor=%@ available=%@", missingSignature, availableSignature)
+            }
+            return
+        }
+
+        let signature = requiredTargets
+            .compactMap { target -> String? in
+                guard let frame = frames[target] else { return nil }
+                return "\(target.rawValue):\(roundedIPadButtonGeometryValue(frame.minY)),\(roundedIPadButtonGeometryValue(frame.maxY)),\(roundedIPadButtonGeometryValue(frame.height))"
+            }
+            .joined(separator: "|")
+        guard signature != lastIPadButtonGeometryReport else {
+            return
+        }
+
+        lastIPadButtonGeometryReport = signature
+
+        let upper = frames[.upperContainer]!
+        let previewWrapper = frames[.previewWrapper]!
+        let previewActual = frames[.previewActual]!
+        let sliderOuter = frames[.sliderOuter]!
+        let buttonDivider = frames[.buttonDivider]!
+        let commandDivider = frames[.commandDivider]!
+        let buttonDividerY = buttonDivider.minY
+        let commandDividerY = commandDivider.minY
+
+        db("[IPAD-BUTTON-GEOMETRY] coordinateSpace=%@", iPadButtonGeometryCoordinateSpaceName)
+        db("[IPAD-BUTTON-GEOMETRY] upper minY=%@ maxY=%@ height=%@", roundedIPadButtonGeometryValue(upper.minY), roundedIPadButtonGeometryValue(upper.maxY), roundedIPadButtonGeometryValue(upper.height))
+        db("[IPAD-BUTTON-GEOMETRY] previewWrapper minY=%@ maxY=%@ height=%@", roundedIPadButtonGeometryValue(previewWrapper.minY), roundedIPadButtonGeometryValue(previewWrapper.maxY), roundedIPadButtonGeometryValue(previewWrapper.height))
+        db("[IPAD-BUTTON-GEOMETRY] previewActual minY=%@ maxY=%@ height=%@", roundedIPadButtonGeometryValue(previewActual.minY), roundedIPadButtonGeometryValue(previewActual.maxY), roundedIPadButtonGeometryValue(previewActual.height))
+        db("[IPAD-BUTTON-GEOMETRY] sliderOuter minY=%@ maxY=%@ height=%@", roundedIPadButtonGeometryValue(sliderOuter.minY), roundedIPadButtonGeometryValue(sliderOuter.maxY), roundedIPadButtonGeometryValue(sliderOuter.height))
+        db("[IPAD-BUTTON-GEOMETRY] buttonDividerY=%@", roundedIPadButtonGeometryValue(buttonDividerY))
+        db("[IPAD-BUTTON-GEOMETRY] commandDividerY=%@", roundedIPadButtonGeometryValue(commandDividerY))
+        db("[IPAD-BUTTON-GEOMETRY] dividerDifference=%@", roundedIPadButtonGeometryValue(buttonDividerY - commandDividerY))
+        db("[IPAD-BUTTON-GEOMETRY] calculated previewBottomGap=%@ sliderBottomGap=%@ topDifference=%@ bottomDifference=%@", roundedIPadButtonGeometryValue(buttonDividerY - previewActual.maxY), roundedIPadButtonGeometryValue(buttonDividerY - sliderOuter.maxY), roundedIPadButtonGeometryValue(sliderOuter.minY - previewActual.minY), roundedIPadButtonGeometryValue(sliderOuter.maxY - previewActual.maxY))
+    }
+
+    private func roundedIPadButtonGeometryValue(_ value: CGFloat) -> String {
+        String(format: "%.1f", Double(value))
     }
 
     private func iPhoneSmartEditorPresentation(availableWidth: CGFloat) -> some View {
@@ -2127,6 +2195,7 @@ Tapping a row inserts the key code at the cursor.
                     .scaleEffect(y: isPad ? 1 : smartIPhoneCommandLowerHeightScale, anchor: .top)
             }
             .editorGeometryProbe(.commandDescription, isEnabled: debugEditorGeometry)
+            .ipadButtonGeometryProbe(.commandDivider, isEnabled: isPad)
 
             if !isPad {
                 smartIPhoneCommandActionControls
@@ -2467,7 +2536,7 @@ Tapping a row inserts the key code at the cursor.
         previewHeight requestedPreviewHeight: CGFloat? = nil,
         aspectRatio: CGFloat = 1
     ) -> some View {
-        let previewFootprintHeight: CGFloat = isPad ? 121 : requestedPreviewHeight ?? smartIPhoneButtonPreviewEnclosureHeight
+        let previewFootprintHeight: CGFloat = isPad ? 118 : requestedPreviewHeight ?? smartIPhoneButtonPreviewEnclosureHeight
         let resolvedPreviewFootprintWidth = footprintWidth ?? smartIPhoneButtonPreviewWidth
         let previewHeight: CGFloat = isPad ? previewFootprintHeight : requestedPreviewHeight ?? min(max(0, previewFootprintHeight - 24), max(0, resolvedPreviewFootprintWidth - 24))
         let previewWidth: CGFloat? = isPad ? nil : min(previewHeight * aspectRatio, resolvedPreviewFootprintWidth)
@@ -2517,8 +2586,13 @@ Tapping a row inserts the key code at the cursor.
                 smartButtonPreviewClearButton
             }
             .overlay {
-                RoundedRectangle(cornerRadius: 18)
-                    .stroke(Color.white, lineWidth: 1.5)
+                if isPad {
+                    RoundedRectangle(cornerRadius: 18)
+                        .strokeBorder(Color.white, lineWidth: 1.5)
+                } else {
+                    RoundedRectangle(cornerRadius: 18)
+                        .stroke(Color.white, lineWidth: 1.5)
+                }
             }
             .ipadButtonGeometryProbe(.previewActual, isEnabled: isPad)
             .editorGeometryProbe(.actualPreviewButton, isEnabled: debugEditorGeometry)
@@ -3930,7 +4004,8 @@ private enum IPadButtonGeometryProbeTarget: String, CaseIterable {
     case previewWrapper = "previewWrapper"
     case previewActual = "previewActual"
     case sliderOuter = "sliderOuter"
-    case divider = "divider"
+    case buttonDivider = "buttonDivider"
+    case commandDivider = "commandDivider"
 }
 
 private struct IPadButtonGeometryPreferenceKey: PreferenceKey {
@@ -3987,7 +4062,6 @@ private struct IPadSmartButtonPanel<
     @ViewBuilder let clearPreviewBackground: () -> ClearPreviewBackground
     @ViewBuilder let lowerEditingArea: () -> LowerEditingArea
     @ViewBuilder let panelBorder: () -> PanelBorder
-    @State private var lastGeometryReport = ""
     private let previewButtonHeight: CGFloat = 121
     private let upperTopPadding: CGFloat = 7
     private let upperBottomPadding: CGFloat = 0
@@ -4020,62 +4094,14 @@ private struct IPadSmartButtonPanel<
             .editorGeometryProbe(.rightPreviewArea, isEnabled: debugEditorGeometry)
 
             lowerEditingArea()
-                .ipadButtonGeometryProbe(.divider)
+                .ipadButtonGeometryProbe(.buttonDivider)
         }
         .frame(maxWidth: nil, maxHeight: nil, alignment: .top)
-        .coordinateSpace(name: iPadButtonGeometryCoordinateSpaceName)
-        .onPreferenceChange(IPadButtonGeometryPreferenceKey.self) { frames in
-            reportIPadButtonGeometry(frames)
-        }
         .background(Color.black)
         .overlay {
             panelBorder()
         }
         .clipped()
-    }
-
-    private func reportIPadButtonGeometry(_ frames: [IPadButtonGeometryProbeTarget: CGRect]) {
-        let requiredTargets: [IPadButtonGeometryProbeTarget] = [
-            .upperContainer,
-            .previewWrapper,
-            .previewActual,
-            .sliderOuter,
-            .divider
-        ]
-        guard requiredTargets.allSatisfy({ frames[$0] != nil }) else {
-            return
-        }
-
-        let signature = requiredTargets
-            .compactMap { target -> String? in
-                guard let frame = frames[target] else { return nil }
-                return "\(target.rawValue):\(rounded(frame.minY)),\(rounded(frame.maxY)),\(rounded(frame.height))"
-            }
-            .joined(separator: "|")
-        guard signature != lastGeometryReport else {
-            return
-        }
-
-        lastGeometryReport = signature
-
-        let upper = frames[.upperContainer]!
-        let previewWrapper = frames[.previewWrapper]!
-        let previewActual = frames[.previewActual]!
-        let sliderOuter = frames[.sliderOuter]!
-        let divider = frames[.divider]!
-        let dividerY = divider.minY
-
-        print("[IPAD-BUTTON-GEOMETRY] coordinateSpace=\(iPadButtonGeometryCoordinateSpaceName)")
-        print("[IPAD-BUTTON-GEOMETRY] upper minY=\(rounded(upper.minY)) maxY=\(rounded(upper.maxY)) height=\(rounded(upper.height))")
-        print("[IPAD-BUTTON-GEOMETRY] previewWrapper minY=\(rounded(previewWrapper.minY)) maxY=\(rounded(previewWrapper.maxY)) height=\(rounded(previewWrapper.height))")
-        print("[IPAD-BUTTON-GEOMETRY] previewActual minY=\(rounded(previewActual.minY)) maxY=\(rounded(previewActual.maxY)) height=\(rounded(previewActual.height))")
-        print("[IPAD-BUTTON-GEOMETRY] sliderOuter minY=\(rounded(sliderOuter.minY)) maxY=\(rounded(sliderOuter.maxY)) height=\(rounded(sliderOuter.height))")
-        print("[IPAD-BUTTON-GEOMETRY] divider y=\(rounded(dividerY))")
-        print("[IPAD-BUTTON-GEOMETRY] calculated previewBottomGap=\(rounded(dividerY - previewActual.maxY)) sliderBottomGap=\(rounded(dividerY - sliderOuter.maxY)) topDifference=\(rounded(sliderOuter.minY - previewActual.minY)) bottomDifference=\(rounded(sliderOuter.maxY - previewActual.maxY))")
-    }
-
-    private func rounded(_ value: CGFloat) -> String {
-        String(format: "%.1f", Double(value))
     }
 }
 

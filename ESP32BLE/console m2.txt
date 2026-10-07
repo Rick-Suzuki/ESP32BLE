@@ -1,12 +1,19 @@
 Update the Info.plist: Support for all orientations will soon be required.
-									API MISUSE: <CBCentralManager: 0x14ed6c3c0> can only accept this command while in the powered on state
+									API MISUSE: <CBCentralManager: 0x10bd983c0> can only accept this command while in the powered on state
 									non-launching port is incompatible with service identifier "com.apple.PointerUI.pointeruid.default-service"
 									AX Safe category class 'SFBarButtonGroupContainerAccessibility' was not found!
-									[IPAD-BUTTON-GEOMETRY] coordinateSpace=IPadButtonGeometryCoordinateSpace
-									[IPAD-BUTTON-GEOMETRY] upper minY=0.0 maxY=128.0 height=128.0
-									[IPAD-BUTTON-GEOMETRY] previewWrapper minY=0.0 maxY=128.0 height=128.0
-									[IPAD-BUTTON-GEOMETRY] previewActual minY=7.0 maxY=128.0 height=121.0
-									[IPAD-BUTTON-GEOMETRY] sliderOuter minY=7.0 maxY=128.0 height=121.0
-									[IPAD-BUTTON-GEOMETRY] divider y=132.0
-									[IPAD-BUTTON-GEOMETRY] calculated previewBottomGap=4.0 sliderBottomGap=4.0 topDifference=0.0 bottomDifference=0.0
-									<0x14ecec8c0> Gesture: System gesture gate timed out.
+									261007_1225_864 🐞Main_Screen.swift:reportIPadButtonGeometry(_:):1685 [IPAD-BUTTON-GEOMETRY] coordinateSpace=IPadButtonGeometryCoordinateSpace
+									261007_1225_864 🐞Main_Screen.swift:reportIPadButtonGeometry(_:):1686 [IPAD-BUTTON-GEOMETRY] upper minY=0.5 maxY=125.5 height=125.0
+									261007_1225_864 🐞Main_Screen.swift:reportIPadButtonGeometry(_:):1687 [IPAD-BUTTON-GEOMETRY] previewWrapper minY=0.5 maxY=125.5 height=125.0
+									261007_1225_865 🐞Main_Screen.swift:reportIPadButtonGeometry(_:):1688 [IPAD-BUTTON-GEOMETRY] previewActual minY=7.5 maxY=125.5 height=118.0
+									261007_1225_865 🐞Main_Screen.swift:reportIPadButtonGeometry(_:):1689 [IPAD-BUTTON-GEOMETRY] sliderOuter minY=4.5 maxY=125.5 height=121.0
+									261007_1225_865 🐞Main_Screen.swift:reportIPadButtonGeometry(_:):1690 [IPAD-BUTTON-GEOMETRY] buttonDividerY=129.5
+									261007_1225_865 🐞Main_Screen.swift:reportIPadButtonGeometry(_:):1691 [IPAD-BUTTON-GEOMETRY] commandDividerY=176.0
+									261007_1225_865 🐞Main_Screen.swift:reportIPadButtonGeometry(_:):1692 [IPAD-BUTTON-GEOMETRY] dividerDifference=-46.5
+									261007_1225_865 🐞Main_Screen.swift:reportIPadButtonGeometry(_:):1693 [IPAD-BUTTON-GEOMETRY] calculated previewBottomGap=4.0 sliderBottomGap=4.0 topDifference=-3.0 bottomDifference=0.0
+									<0x10bd148c0> Gesture: System gesture gate timed out.
+									Potential Structural Swift Concurrency Issue: unsafeForcedSync called from Swift Concurrent context.
+									Potential Structural Swift Concurrency Issue: unsafeForcedSync called from Swift Concurrent context.
+									Got a keyboard will change frame notification, but keyboard was not even present.
+									Got a keyboard will hide notification, but keyboard was not even present.
+									Reading from public effective user settings.

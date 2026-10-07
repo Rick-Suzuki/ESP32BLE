@@ -9,7 +9,7 @@
 /* Begin PBXBuildFile section */
 		1D16CD11302F1954004E330E /* ScreenConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D16CD10302F1954004E330E /* ScreenConfig.swift */; };
 		1D16CD1330304347004E330E /* ScreenDocument.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D16CD1230304347004E330E /* ScreenDocument.swift */; };
-		1D23A17B3075B995003B646C /* V62.07.txt in Sources */ = {isa = PBXBuildFile; fileRef = 1D23A17A3075B984003B646C /* V62.07.txt */; };
+		1D23A17B3075B995003B646C /* VERSIONS.txt in Sources */ = {isa = PBXBuildFile; fileRef = 1D23A17A3075B984003B646C /* VERSIONS.txt */; };
 		1D23A17D3075C227003B646C /* console_iPhone.txt in Resources */ = {isa = PBXBuildFile; fileRef = 1D23A17C3075C212003B646C /* console_iPhone.txt */; };
 		1D2B666F2FE78E0400F10733 /* color.png in Resources */ = {isa = PBXBuildFile; fileRef = 1D2B666E2FE78E0400F10733 /* color.png */; };
 		1D590E582F61206100E430E0 /* CommandButtonsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D590E4D2F61206100E430E0 /* CommandButtonsSection.swift */; };
@@ -60,7 +60,7 @@
 /* Begin PBXFileReference section */
 		1D16CD10302F1954004E330E /* ScreenConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenConfig.swift; sourceTree = "<group>"; };
 		1D16CD1230304347004E330E /* ScreenDocument.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenDocument.swift; sourceTree = "<group>"; };
-		1D23A17A3075B984003B646C /* V62.07.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = V62.07.txt; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.plist; };
+		1D23A17A3075B984003B646C /* VERSIONS.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = VERSIONS.txt; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.plist; };
 		1D23A17C3075C212003B646C /* console_iPhone.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = console_iPhone.txt; sourceTree = "<group>"; };
 		1D2B666E2FE78E0400F10733 /* color.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = color.png; sourceTree = "<group>"; };
 		1D33C2D12F6145DC0098FD5C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -174,7 +174,7 @@
 		1D590E552F61206100E430E0 /* ESP32BLE */ = {
 			isa = PBXGroup;
 			children = (
-				1D23A17A3075B984003B646C /* V62.07.txt */,
+				1D23A17A3075B984003B646C /* VERSIONS.txt */,
 				1D9A8748302D3885005B5E36 /* codex.txt */,
 				1D590E532F61206100E430E0 /* console m2.txt */,
 				1D23A17C3075C212003B646C /* console_iPhone.txt */,
@@ -381,7 +381,7 @@
 				1D590E5C2F61206100E430E0 /* ESP32BLEApp.swift in Sources */,
 				1D590E5D2F61206100E430E0 /* PhraseButtonsSection.swift in Sources */,
 				1DDFB8112F87C64500776ED6 /* debug.swift in Sources */,
-				1D23A17B3075B995003B646C /* V62.07.txt in Sources */,
+				1D23A17B3075B995003B646C /* VERSIONS.txt in Sources */,
 				1D590E5E2F61206100E430E0 /* TestArea.swift in Sources */,
 				1D9E1CF42FC92DC600DB3621 /* Set_BtmCtls.swift in Sources */,
 				1D16CD11302F1954004E330E /* ScreenConfig.swift in Sources */,
