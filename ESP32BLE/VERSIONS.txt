@@ -1,4 +1,8 @@
 
+261007 Wed 1541
+V62.10
+the image only shows in preview btn, not the whole area
+
 261007 Wed 1535
 V62.09
 ipad/iphone preview btns: correct size

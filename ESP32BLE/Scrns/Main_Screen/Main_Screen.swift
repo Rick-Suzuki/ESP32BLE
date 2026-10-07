@@ -2957,15 +2957,19 @@ Tapping a row inserts the key code at the cursor.
 
     @ViewBuilder
     private var smartButtonPreviewBackground: some View {
-        if smartButtonColorHex == nil {
-            Color.clear
-        } else {
-            smartButtonPreviewColor
+        ZStack {
+            smartButtonClearPreviewImageBackground
+
+            if smartButtonColorHex == nil {
+                Color.clear
+            } else {
+                smartButtonPreviewColor
+            }
         }
     }
 
     @ViewBuilder
-    private var smartButtonClearPreviewBackground: some View {
+    private var smartButtonClearPreviewImageBackground: some View {
         if let image = smartButtonClearPreviewImage {
             Image(uiImage: image)
                 .resizable()
@@ -2975,6 +2979,10 @@ Tapping a row inserts the key code at the cursor.
         } else {
             Color.black
         }
+    }
+
+    private var smartButtonClearPreviewBackground: some View {
+        Color.black
     }
 
     private var smartButtonClearPreviewImage: UIImage? {
