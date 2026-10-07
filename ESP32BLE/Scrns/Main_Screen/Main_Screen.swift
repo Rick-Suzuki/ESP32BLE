@@ -2250,38 +2250,42 @@ Tapping a row inserts the key code at the cursor.
     private func smartButtonPanel(editorWidth: CGFloat = 0) -> some View {
         let resolvedEditorWidth = editorWidth > 0 ? editorWidth : smartIPhoneButtonContentWidth
 
-        return VStack(spacing: isPad ? 4 : 0) {
+        return Group {
             if isPad {
-                HStack(alignment: .top, spacing: 6) {
-                    smartButtonBrightnessSliderColumn
-                        .editorGeometryProbe(.slider, isEnabled: debugEditorGeometry)
-
-                    VStack(spacing: 8) {
+                IPadSmartButtonPanel(
+                    debugEditorGeometry: debugEditorGeometry,
+                    brightnessSliderColumn: {
+                        smartButtonBrightnessSliderColumn
+                    },
+                    preview: {
                         smartButtonPreview()
+                    },
+                    clearPreviewBackground: {
+                        smartButtonClearPreviewBackground
+                    },
+                    lowerEditingArea: {
+                        smartButtonLowerEditingArea(editorWidth: resolvedEditorWidth)
+                    },
+                    panelBorder: {
+                        smartPanelBorder(edges: .all)
                     }
-                    .frame(maxWidth: .infinity)
-                    .editorGeometryProbe(.previewFootprint, isEnabled: debugEditorGeometry)
-                }
-                .background {
-                    smartButtonClearPreviewBackground
-                }
-                .editorGeometryProbe(.rightPreviewArea, isEnabled: debugEditorGeometry)
+                )
             } else {
-                smartIPhoneButtonPreviewRow(editorWidth: resolvedEditorWidth)
-            }
+                VStack(spacing: 0) {
+                    smartIPhoneButtonPreviewRow(editorWidth: resolvedEditorWidth)
 
-            if !isPad {
-                smartIPhoneButtonControlRow(editorWidth: resolvedEditorWidth)
-            }
+                    smartIPhoneButtonControlRow(editorWidth: resolvedEditorWidth)
 
-            smartButtonLowerEditingArea(editorWidth: resolvedEditorWidth)
+                    smartButtonLowerEditingArea(editorWidth: resolvedEditorWidth)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                .background(Color.black)
+                .overlay {
+                    smartPanelBorder(edges: [.top, .trailing, .bottom])
+                }
+                .clipped()
+            }
         }
-        .frame(maxWidth: isPad ? nil : .infinity, maxHeight: isPad ? nil : .infinity, alignment: .top)
-        .background(Color.black)
-        .overlay {
-            smartPanelBorder(edges: isPad ? .all : [.top, .trailing, .bottom])
-        }
-        .clipped()
     }
 
     private var smartButtonBrightnessSliderColumn: some View {
@@ -2381,7 +2385,7 @@ Tapping a row inserts the key code at the cursor.
             smartVisibilityButton
             smartClearColorButton
             smartRandomColorButton
-  //          smartColonButton
+            smartColonButton
             ForEach(Array(smartIPadButtonSwatchHexColors), id: \.self) { hexColor in
                 smartButtonColorSwatch(hexColor)
             }
@@ -3912,6 +3916,48 @@ Tapping a row inserts the key code at the cursor.
             renameAlertMessage = "can't move btn"
             return
         }
+    }
+}
+
+private struct IPadSmartButtonPanel<
+    BrightnessSliderColumn: View,
+    Preview: View,
+    ClearPreviewBackground: View,
+    LowerEditingArea: View,
+    PanelBorder: View
+>: View {
+    let debugEditorGeometry: Bool
+    @ViewBuilder let brightnessSliderColumn: () -> BrightnessSliderColumn
+    @ViewBuilder let preview: () -> Preview
+    @ViewBuilder let clearPreviewBackground: () -> ClearPreviewBackground
+    @ViewBuilder let lowerEditingArea: () -> LowerEditingArea
+    @ViewBuilder let panelBorder: () -> PanelBorder
+
+    var body: some View {
+        VStack(spacing: 4) {
+            HStack(alignment: .top, spacing: 6) {
+                brightnessSliderColumn()
+                    .editorGeometryProbe(.slider, isEnabled: debugEditorGeometry)
+
+                VStack(spacing: 8) {
+                    preview()
+                }
+                .frame(maxWidth: .infinity)
+                .editorGeometryProbe(.previewFootprint, isEnabled: debugEditorGeometry)
+            }
+            .background {
+                clearPreviewBackground()
+            }
+            .editorGeometryProbe(.rightPreviewArea, isEnabled: debugEditorGeometry)
+
+            lowerEditingArea()
+        }
+        .frame(maxWidth: nil, maxHeight: nil, alignment: .top)
+        .background(Color.black)
+        .overlay {
+            panelBorder()
+        }
+        .clipped()
     }
 }
 

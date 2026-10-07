@@ -10,6 +10,7 @@
 		1D16CD11302F1954004E330E /* ScreenConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D16CD10302F1954004E330E /* ScreenConfig.swift */; };
 		1D16CD1330304347004E330E /* ScreenDocument.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D16CD1230304347004E330E /* ScreenDocument.swift */; };
 		1D23A17B3075B995003B646C /* version_V62.001.txt in Sources */ = {isa = PBXBuildFile; fileRef = 1D23A17A3075B984003B646C /* version_V62.001.txt */; };
+		1D23A17D3075C227003B646C /* console_iPhone.txt in Resources */ = {isa = PBXBuildFile; fileRef = 1D23A17C3075C212003B646C /* console_iPhone.txt */; };
 		1D2B666F2FE78E0400F10733 /* color.png in Resources */ = {isa = PBXBuildFile; fileRef = 1D2B666E2FE78E0400F10733 /* color.png */; };
 		1D590E582F61206100E430E0 /* CommandButtonsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D590E4D2F61206100E430E0 /* CommandButtonsSection.swift */; };
 		1D590E5A2F61206100E430E0 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D590E4F2F61206100E430E0 /* ContentView.swift */; };
@@ -60,6 +61,7 @@
 		1D16CD10302F1954004E330E /* ScreenConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenConfig.swift; sourceTree = "<group>"; };
 		1D16CD1230304347004E330E /* ScreenDocument.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenDocument.swift; sourceTree = "<group>"; };
 		1D23A17A3075B984003B646C /* version_V62.001.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = version_V62.001.txt; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.plist; };
+		1D23A17C3075C212003B646C /* console_iPhone.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = console_iPhone.txt; sourceTree = "<group>"; };
 		1D2B666E2FE78E0400F10733 /* color.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = color.png; sourceTree = "<group>"; };
 		1D33C2D12F6145DC0098FD5C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1D590E292F611FB700E430E0 /* ESP32BLE.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ESP32BLE.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -176,6 +178,7 @@
 				1D590E532F61206100E430E0 /* console m2.txt */,
 				1D9A8748302D3885005B5E36 /* codex.txt */,
 				1DA256FD3065FD1A008C934A /* console pro.txt */,
+				1D23A17C3075C212003B646C /* console_iPhone.txt */,
 				1D590E512F61206100E430E0 /* ESP32BLEApp.swift */,
 				1D33C2D12F6145DC0098FD5C /* Info.plist */,
 				1D590E4A2F61206100E430E0 /* Assets.xcassets */,
@@ -360,6 +363,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				1D590E5F2F61206100E430E0 /* Assets.xcassets in Resources */,
+				1D23A17D3075C227003B646C /* console_iPhone.txt in Resources */,
 				1DA256FE3065FD2A008C934A /* console pro.txt in Resources */,
 				1D2B666F2FE78E0400F10733 /* color.png in Resources */,
 			);

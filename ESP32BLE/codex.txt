@@ -1,35 +1,195 @@
-1. Exact file changed:
-ESP32BLE/Scrns/Main_Screen/Main_Screen.swift􀰓
+Update the Info.plist: Support for all orientations will soon be required.
+API MISUSE: <CBCentralManager: 0x11cdb0780> can only accept this command while in the powered on state
+non-launching port is incompatible with service identifier "com.apple.PointerUI.pointeruid.default-service"
+AX Safe category class 'SFBarButtonGroupContainerAccessibility' was not found!
+261007_0903_737 🐞ContentView.swift:selectDocumentNamedFromGrid(_:):3068 ERROR ContentView.selectDocumentNamedFromGrid failed rawName=home.txt current selectedDocumentName=sample.screen new=home.txt thread=main
+<0x11cd108c0> Gesture: System gesture gate timed out.
+Reading from public effective user settings.
+UIKeyboardLayoutStar implements focusItemsInRect: - caching for linear focus movement is limited as long as this view is on screen.
+isKeyboardMinorEdgeWidth may only be set for UIKBDynamicRenderFactory, changes not saved
+keyboardVerticalSizeClass may only be set for UIKBDynamicRenderFactory, changes not saved
+keyboardHorizontalSizeClass may only be set for UIKBDynamicRenderFactory, changes not saved
+currentHandBias may only be set for UIKBDynamicRenderFactory, changes not saved
+currentHeight may only be set for UIKBDynamicRenderFactory, changes not saved
+isKeyboardMinorEdgeWidth may only be set for UIKBDynamicRenderFactory, changes not saved
+keyboardVerticalSizeClass may only be set for UIKBDynamicRenderFactory, changes not saved
+keyboardHorizontalSizeClass may only be set for UIKBDynamicRenderFactory, changes not saved
+currentHandBias may only be set for UIKBDynamicRenderFactory, changes not saved
+currentHeight may only be set for UIKBDynamicRenderFactory, changes not saved
+isKeyboardMinorEdgeWidth may only be set for UIKBDynamicRenderFactory, changes not saved
+keyboardVerticalSizeClass may only be set for UIKBDynamicRenderFactory, changes not saved
+keyboardHorizontalSizeClass may only be set for UIKBDynamicRenderFactory, changes not saved
+currentHandBias may only be set for UIKBDynamicRenderFactory, changes not saved
+currentHeight may only be set for UIKBDynamicRenderFactory, changes not saved
+isKeyboardMinorEdgeWidth may only be set for UIKBDynamicRenderFactory, changes not saved
+keyboardVerticalSizeClass may only be set for UIKBDynamicRenderFactory, changes not saved
+keyboardHorizontalSizeClass may only be set for UIKBDynamicRenderFactory, changes not saved
+currentHandBias may only be set for UIKBDynamicRenderFactory, changes not saved
+currentHeight may only be set for UIKBDynamicRenderFactory, changes not saved
+Unable to simultaneously satisfy constraints.
+	Probably at least one of the constraints in the following list is one you don't want. 
+	Try this: 
+		(1) look at each constraint and try to figure out which you don't expect; 
+		(2) find the code that added the unwanted constraint or constraints and fix it. 
+	(Note: If you're seeing NSAutoresizingMaskLayoutConstraints that you don't understand, refer to the documentation for the UIView property translatesAutoresizingMaskIntoConstraints) 
+(
+    "<NSAutoresizingMaskLayoutConstraint:0x11db02850 h=--& v=--& TUIPredictionViewCell:0x11cc55200.width == 0   (active)>",
+    "<NSLayoutConstraint:0x11e64ddb0 TUICandidateGradientContentLabel:0x1203d0000.trailing == TUIPredictionViewCell:0x11cc55200.trailing - 6   (active)>",
+    "<NSLayoutConstraint:0x11e64dc70 H:|-(6)-[TUICandidateGradientContentLabel:0x1203d0000]   (active, names: '|':TUIPredictionViewCell:0x11cc55200 )>"
+)
 
-2. Exact existing grid code changed:
-smartButtonColorGrid
+Will attempt to recover by breaking constraint 
+<NSLayoutConstraint:0x11e64ddb0 TUICandidateGradientContentLabel:0x1203d0000.trailing == TUIPredictionViewCell:0x11cc55200.trailing - 6   (active)>
 
-3. Existing LazyVGrid structure preserved:
-Yes. It remains a single LazyVGrid.
+Make a symbolic breakpoint at UIViewAlertForUnsatisfiableConstraints to catch this in the debugger.
+The methods in the UIConstraintBasedLayoutDebugging category on UIView listed in <UIKitCore/UIView.h> may also be helpful.
+Unable to simultaneously satisfy constraints.
+	Probably at least one of the constraints in the following list is one you don't want. 
+	Try this: 
+		(1) look at each constraint and try to figure out which you don't expect; 
+		(2) find the code that added the unwanted constraint or constraints and fix it. 
+	(Note: If you're seeing NSAutoresizingMaskLayoutConstraints that you don't understand, refer to the documentation for the UIView property translatesAutoresizingMaskIntoConstraints) 
+(
+    "<NSAutoresizingMaskLayoutConstraint:0x11db03bb0 h=--& v=--& TUIPredictionViewCell:0x11cc55500.width == 0   (active)>",
+    "<NSLayoutConstraint:0x11ddaff20 TUICandidateGradientContentLabel:0x1203d1400.trailing == TUIPredictionViewCell:0x11cc55500.trailing - 6   (active)>",
+    "<NSLayoutConstraint:0x11ddaf200 H:|-(6)-[TUICandidateGradientContentLabel:0x1203d1400]   (active, names: '|':TUIPredictionViewCell:0x11cc55500 )>"
+)
 
-4. Four equal columns:
-Yes. The grid column count changed from 5 to 4.
+Will attempt to recover by breaking constraint 
+<NSLayoutConstraint:0x11ddaff20 TUICandidateGradientContentLabel:0x1203d1400.trailing == TUIPredictionViewCell:0x11cc55500.trailing - 6   (active)>
 
-5. First row:
-smartVisibilityButton | smartClearColorButton | smartRandomColorButton | smartColonButton
+Make a symbolic breakpoint at UIViewAlertForUnsatisfiableConstraints to catch this in the debugger.
+The methods in the UIConstraintBasedLayoutDebugging category on UIView listed in <UIKitCore/UIView.h> may also be helpful.
+Unable to simultaneously satisfy constraints.
+	Probably at least one of the constraints in the following list is one you don't want. 
+	Try this: 
+		(1) look at each constraint and try to figure out which you don't expect; 
+		(2) find the code that added the unwanted constraint or constraints and fix it. 
+	(Note: If you're seeing NSAutoresizingMaskLayoutConstraints that you don't understand, refer to the documentation for the UIView property translatesAutoresizingMaskIntoConstraints) 
+(
+    "<NSAutoresizingMaskLayoutConstraint:0x11cf94550 h=--& v=--& TUIPredictionViewCell:0x11cc55b00.width == 0   (active)>",
+    "<NSLayoutConstraint:0x11db015e0 H:|-(6)-[TUICandidateGradientContentLabel:0x1203d2800]   (active, names: '|':TUIPredictionViewCell:0x11cc55b00 )>",
+    "<NSLayoutConstraint:0x11db016d0 TUICandidateGradientContentLabel:0x1203d2800.trailing == TUIPredictionViewCell:0x11cc55b00.trailing - 6   (active)>",
+    "<NSLayoutConstraint:0x11ddaf160 'UIScrollView-frameLayoutGuide-width' UILayoutGuide:0x11c7fea00'UIScrollView-frameLayoutGuide'.width == TUICandidateGradientContentLabel:0x1203d2800.width   (active)>"
+)
 
-So visually:
-EYE | clr | rnd | :
+Will attempt to recover by breaking constraint 
+<NSLayoutConstraint:0x11ddaf160 'UIScrollView-frameLayoutGuide-width' UILayoutGuide:0x11c7fea00'UIScrollView-frameLayoutGuide'.width == TUICandidateGradientContentLabel:0x1203d2800.width   (active)>
 
-6. Black and white removed from this iPad panel only:
-Yes. Added smartIPadButtonSwatchHexColors, filtering out 000000 and FFFFFF for this iPad grid only.
+Make a symbolic breakpoint at UIViewAlertForUnsatisfiableConstraints to catch this in the debugger.
+The methods in the UIConstraintBasedLayoutDebugging category on UIView listed in <UIKitCore/UIView.h> may also be helpful.
+Unable to simultaneously satisfy constraints.
+	Probably at least one of the constraints in the following list is one you don't want. 
+	Try this: 
+		(1) look at each constraint and try to figure out which you don't expect; 
+		(2) find the code that added the unwanted constraint or constraints and fix it. 
+	(Note: If you're seeing NSAutoresizingMaskLayoutConstraints that you don't understand, refer to the documentation for the UIView property translatesAutoresizingMaskIntoConstraints) 
+(
+    "<NSAutoresizingMaskLayoutConstraint:0x11cf94550 h=--& v=--& TUIPredictionViewCell:0x11cc55b00.width == 0   (active)>",
+    "<NSLayoutConstraint:0x11db015e0 H:|-(6)-[TUICandidateGradientContentLabel:0x1203d2800]   (active, names: '|':TUIPredictionViewCell:0x11cc55b00 )>",
+    "<NSLayoutConstraint:0x11db016d0 TUICandidateGradientContentLabel:0x1203d2800.trailing == TUIPredictionViewCell:0x11cc55b00.trailing - 6   (active)>"
+)
 
-7. Colon operation:
-The fourth cell uses smartColonButton, which calls:
-insertSmartPreviewTextAtSelection(":")
+Will attempt to recover by breaking constraint 
+<NSLayoutConstraint:0x11db016d0 TUICandidateGradientContentLabel:0x1203d2800.trailing == TUIPredictionViewCell:0x11cc55b00.trailing - 6   (active)>
 
-It does not call command insertion.
+Make a symbolic breakpoint at UIViewAlertForUnsatisfiableConstraints to catch this in the debugger.
+The methods in the UIConstraintBasedLayoutDebugging category on UIView listed in <UIKitCore/UIView.h> may also be helpful.
+Reporter disconnected. { function=sendMessage, reporterID=24004572217346 }
+Reporter disconnected. { function=sendMessage, reporterID=24004572217346 }
+Reporter disconnected. { function=sendMessage, reporterID=24004572217346 }
+Reporter disconnected. { function=sendMessage, reporterID=24004572217346 }
+Reporter disconnected. { function=sendMessage, reporterID=24004572217346 }
+Reporter disconnected. { function=sendMessage, reporterID=24004572217346 }
+Reporter disconnected. { function=sendMessage, reporterID=24004572217346 }
+Reporter disconnected. { function=sendMessage, reporterID=24004572217346 }
+Reporter disconnected. { function=sendMessage, reporterID=24004572217346 }
+Received port for identifier response: <(null)> with error:Error Domain=RBSServiceErrorDomain Code=1 "Client not entitled" UserInfo={RBSEntitlement=com.apple.runningboard.process-state, NSLocalizedFailureReason=Client not entitled, RBSPermanent=false}
+elapsedCPUTimeForFrontBoard couldn't generate a task port
+Received port for identifier response: <(null)> with error:Error Domain=RBSServiceErrorDomain Code=1 "Client not entitled" UserInfo={RBSEntitlement=com.apple.runningboard.process-state, NSLocalizedFailureReason=Client not entitled, RBSPermanent=false}
+elapsedCPUTimeForFrontBoard couldn't generate a task port
+Reporter disconnected or already stopped. { func=stop, reporterID=24004572217346 }
+Unable to simultaneously satisfy constraints.
+	Probably at least one of the constraints in the following list is one you don't want. 
+	Try this: 
+		(1) look at each constraint and try to figure out which you don't expect; 
+		(2) find the code that added the unwanted constraint or constraints and fix it. 
+	(Note: If you're seeing NSAutoresizingMaskLayoutConstraints that you don't understand, refer to the documentation for the UIView property translatesAutoresizingMaskIntoConstraints) 
+(
+    "<NSAutoresizingMaskLayoutConstraint:0x11db02850 h=--& v=--& TUIPredictionViewCell:0x11cc55200.width == 0   (active)>",
+    "<NSLayoutConstraint:0x11e64dc70 H:|-(6)-[TUICandidateGradientContentLabel:0x1203d0000]   (active, names: '|':TUIPredictionViewCell:0x11cc55200 )>",
+    "<NSLayoutConstraint:0x11e64ddb0 TUICandidateGradientContentLabel:0x1203d0000.trailing == TUIPredictionViewCell:0x11cc55200.trailing - 6   (active)>"
+)
 
-8. iPhone untouched:
-Confirmed. No iPhone grid/control code was modified.
+Will attempt to recover by breaking constraint 
+<NSLayoutConstraint:0x11e64ddb0 TUICandidateGradientContentLabel:0x1203d0000.trailing == TUIPredictionViewCell:0x11cc55200.trailing - 6   (active)>
 
-9. Other iPad columns untouched:
-Confirmed. Only the iPad Button panel grid block was changed.
+Make a symbolic breakpoint at UIViewAlertForUnsatisfiableConstraints to catch this in the debugger.
+The methods in the UIConstraintBasedLayoutDebugging category on UIView listed in <UIKitCore/UIView.h> may also be helpful.
+Unable to simultaneously satisfy constraints.
+	Probably at least one of the constraints in the following list is one you don't want. 
+	Try this: 
+		(1) look at each constraint and try to figure out which you don't expect; 
+		(2) find the code that added the unwanted constraint or constraints and fix it. 
+	(Note: If you're seeing NSAutoresizingMaskLayoutConstraints that you don't understand, refer to the documentation for the UIView property translatesAutoresizingMaskIntoConstraints) 
+(
+    "<NSAutoresizingMaskLayoutConstraint:0x11db03bb0 h=--& v=--& TUIPredictionViewCell:0x11cc55500.width == 0   (active)>",
+    "<NSLayoutConstraint:0x11ddaf200 H:|-(6)-[TUICandidateGradientContentLabel:0x1203d1400]   (active, names: '|':TUIPredictionViewCell:0x11cc55500 )>",
+    "<NSLayoutConstraint:0x11ddaff20 TUICandidateGradientContentLabel:0x1203d1400.trailing == TUIPredictionViewCell:0x11cc55500.trailing - 6   (active)>"
+)
 
-10. Build result:
-Build succeeded.
+Will attempt to recover by breaking constraint 
+<NSLayoutConstraint:0x11ddaff20 TUICandidateGradientContentLabel:0x1203d1400.trailing == TUIPredictionViewCell:0x11cc55500.trailing - 6   (active)>
+
+Make a symbolic breakpoint at UIViewAlertForUnsatisfiableConstraints to catch this in the debugger.
+The methods in the UIConstraintBasedLayoutDebugging category on UIView listed in <UIKitCore/UIView.h> may also be helpful.
+Unable to simultaneously satisfy constraints.
+	Probably at least one of the constraints in the following list is one you don't want. 
+	Try this: 
+		(1) look at each constraint and try to figure out which you don't expect; 
+		(2) find the code that added the unwanted constraint or constraints and fix it. 
+	(Note: If you're seeing NSAutoresizingMaskLayoutConstraints that you don't understand, refer to the documentation for the UIView property translatesAutoresizingMaskIntoConstraints) 
+(
+    "<NSAutoresizingMaskLayoutConstraint:0x11cf94550 h=--& v=--& TUIPredictionViewCell:0x11cc55b00.width == 0   (active)>",
+    "<NSLayoutConstraint:0x11db015e0 H:|-(6)-[TUICandidateGradientContentLabel:0x1203d2800]   (active, names: '|':TUIPredictionViewCell:0x11cc55b00 )>",
+    "<NSLayoutConstraint:0x11db016d0 TUICandidateGradientContentLabel:0x1203d2800.trailing == TUIPredictionViewCell:0x11cc55b00.trailing - 6   (active)>"
+)
+
+Will attempt to recover by breaking constraint 
+<NSLayoutConstraint:0x11db016d0 TUICandidateGradientContentLabel:0x1203d2800.trailing == TUIPredictionViewCell:0x11cc55b00.trailing - 6   (active)>
+
+Make a symbolic breakpoint at UIViewAlertForUnsatisfiableConstraints to catch this in the debugger.
+The methods in the UIConstraintBasedLayoutDebugging category on UIView listed in <UIKitCore/UIView.h> may also be helpful.
+Reporter disconnected. { function=sendMessage, reporterID=24004572217347 }
+Reporter disconnected. { function=sendMessage, reporterID=24004572217347 }
+Reporter disconnected. { function=sendMessage, reporterID=24004572217347 }
+Received port for identifier response: <(null)> with error:Error Domain=RBSServiceErrorDomain Code=1 "Client not entitled" UserInfo={RBSEntitlement=com.apple.runningboard.process-state, NSLocalizedFailureReason=Client not entitled, RBSPermanent=false}
+elapsedCPUTimeForFrontBoard couldn't generate a task port
+Reporter disconnected. { function=sendMessage, reporterID=24004572217347 }
+Reporter disconnected. { function=sendMessage, reporterID=24004572217347 }
+Reporter disconnected. { function=sendMessage, reporterID=24004572217347 }
+Reporter disconnected. { function=sendMessage, reporterID=24004572217347 }
+Reporter disconnected. { function=sendMessage, reporterID=24004572217347 }
+Message send exceeds rate-limit threshold and will be dropped. { reporterID=24004572217347, rateLimit=32hz }
+Received port for identifier response: <(null)> with error:Error Domain=RBSServiceErrorDomain Code=1 "Client not entitled" UserInfo={RBSEntitlement=com.apple.runningboard.process-state, NSLocalizedFailureReason=Client not entitled, RBSPermanent=false}
+elapsedCPUTimeForFrontBoard couldn't generate a task port
+cannot add handler to 0 from 0 - dropping
+cannot add handler to 0 from 0 - dropping
+cannot add handler to 0 from 0 - dropping
+cannot add handler to 0 from 0 - dropping
+The variant selector cell index number could not be found.
+The variant selector cell index number could not be found.
+Reporter disconnected or already stopped. { func=stop, reporterID=24004572217347 }
+The variant selector cell index number could not be found.
+Reporter disconnected. { function=sendMessage, reporterID=24004572217348 }
+Reporter disconnected. { function=sendMessage, reporterID=24004572217348 }
+Reporter disconnected. { function=sendMessage, reporterID=24004572217348 }
+Reporter disconnected. { function=sendMessage, reporterID=24004572217348 }
+Reporter disconnected. { function=sendMessage, reporterID=24004572217348 }
+Reporter disconnected. { function=sendMessage, reporterID=24004572217348 }
+Reporter disconnected. { function=sendMessage, reporterID=24004572217348 }
+Reporter disconnected. { function=sendMessage, reporterID=24004572217348 }
+Reporter disconnected. { function=sendMessage, reporterID=24004572217348 }
+The variant selector cell index number could not be found.
+The variant selector cell index number could not be found.
+Reporter disconnected or already stopped. { func=stop, reporterID=24004572217348 }

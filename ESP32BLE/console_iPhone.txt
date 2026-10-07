@@ -1,0 +1,3 @@
+API MISUSE: <CBCentralManager: 0x109bfcdc0> can only accept this command while in the powered on state
+non-launching port is incompatible with service identifier "com.apple.PointerUI.pointeruid.default-service"
+<0x109a6fd40> Gesture: System gesture gate timed out.
