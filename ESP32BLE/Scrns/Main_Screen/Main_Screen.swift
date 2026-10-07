@@ -2082,7 +2082,28 @@ Tapping a row inserts the key code at the cursor.
 
         let actionText = String(textWithoutMetadata[..<separatorRange.lowerBound])
         let rightText = String(textWithoutMetadata[separatorRange.upperBound...])
-        return composeSmartEditingText(action: storedSmartScriptText(fromEditorText: canonicalSmartScriptText(editorSmartScriptText(fromStoredText: actionText))), right: rightText, isHidden: isHidden)
+        let canonicalRightText = canonicalSmartButtonRightTextForCommit(rightText)
+        return composeSmartEditingText(action: storedSmartScriptText(fromEditorText: canonicalSmartScriptText(editorSmartScriptText(fromStoredText: actionText))), right: canonicalRightText, isHidden: isHidden)
+    }
+
+    private func canonicalSmartButtonRightTextForCommit(_ rightText: String) -> String {
+        let components = rightText.components(separatedBy: ":")
+        guard components.count > 1,
+              let firstComponent = components.first,
+              isColorPrefix(firstComponent) else {
+            return canonicalSmartButtonTextForCommit(rightText)
+        }
+
+        let buttonText = components.dropFirst().joined(separator: ":")
+        return "\(firstComponent):\(canonicalSmartButtonTextForCommit(buttonText))"
+    }
+
+    private func canonicalSmartButtonTextForCommit(_ buttonText: String) -> String {
+        guard let symbolText = smartButtonEditorSFSymbolComponents(from: buttonText) else {
+            return buttonText
+        }
+
+        return "\(symbolText.name):\(symbolText.subtitle.trimmingCharacters(in: .whitespacesAndNewlines))"
     }
 
     func resetSmartScriptEditingModel() {
@@ -2574,16 +2595,24 @@ Tapping a row inserts the key code at the cursor.
         } else {
             Group {
                 if let symbolDisplay = smartButtonSFSymbolDisplay {
+                    let symbolSize = max(18, CGFloat(boxFontSize) * 1.5)
+                    let subtitleFontSize = max(14, CGFloat(boxFontSize) * 0.8)
+                    let subtitleTextFieldHeight = ceil(subtitleFontSize * 1.35)
+
                     VStack(spacing: 4) {
                         Image(systemName: symbolDisplay.name)
-                            .font(.system(size: max(18, CGFloat(boxFontSize) * 0.9), weight: .semibold))
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: symbolSize, height: symbolSize)
 
                         SmartActionTextField(
                             placeholder: "",
                             text: smartButtonEditablePreviewTextBinding,
                             selectedRange: $smartButtonPreviewSelectionRange,
-                            fontSize: max(14, CGFloat(boxFontSize) * 0.55)
+                            fontSize: subtitleFontSize,
+                            disablesAutomaticPeriodShortcut: true
                         )
+                            .frame(height: subtitleTextFieldHeight)
                             .padding(.horizontal, 8)
                     }
                     .foregroundStyle(.white)
@@ -2638,9 +2667,8 @@ Tapping a row inserts the key code at the cursor.
         .accessibilityLabel("Clear button symbol and text")
     }
 
-    private var smartButtonSFSymbolDisplay: (name: String, subtitle: String?)? {
-        let rightText = smartButtonTextBinding.wrappedValue.trimmingCharacters(in: .whitespacesAndNewlines)
-        let components = rightText.components(separatedBy: ":")
+    private func smartButtonEditorSFSymbolComponents(from text: String) -> (name: String, subtitle: String)? {
+        let components = text.components(separatedBy: ":")
         let candidateName = components.first?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
 
         guard !candidateName.isEmpty,
@@ -2652,9 +2680,16 @@ Tapping a row inserts the key code at the cursor.
         let subtitle = components
             .dropFirst()
             .joined(separator: ":")
-            .trimmingCharacters(in: .whitespacesAndNewlines)
 
-        return (candidateName, subtitle.isEmpty ? nil : subtitle)
+        return (candidateName, subtitle)
+    }
+
+    private var smartButtonSFSymbolDisplay: (name: String, subtitle: String?)? {
+        guard let symbolText = smartButtonEditorSFSymbolComponents(from: smartButtonTextBinding.wrappedValue) else {
+            return nil
+        }
+
+        return (symbolText.name, symbolText.subtitle.isEmpty ? nil : symbolText.subtitle)
     }
 
     private var smartButtonEditablePreviewTextBinding: Binding<String> {
@@ -2686,12 +2721,12 @@ Tapping a row inserts the key code at the cursor.
     }
 
     private func setSmartButtonSFSymbol(_ symbolName: String) {
-        let currentText = smartButtonTextBinding.wrappedValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        let currentText = smartButtonTextBinding.wrappedValue
         let symbolText = smartButtonSymbolTextComponents(from: currentText)
 
         if let symbolText {
             smartButtonTextBinding.wrappedValue = "\(symbolName):\(symbolText.subtitle)"
-        } else if currentText.isEmpty {
+        } else if currentText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             smartButtonTextBinding.wrappedValue = "\(symbolName):"
         } else {
             smartButtonTextBinding.wrappedValue = "\(symbolName):\(currentText)"
@@ -2699,19 +2734,7 @@ Tapping a row inserts the key code at the cursor.
     }
 
     private func smartButtonSymbolTextComponents(from text: String) -> (name: String, subtitle: String)? {
-        let components = text.components(separatedBy: ":")
-        let candidateName = components.first?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-
-        guard !candidateName.isEmpty,
-              !candidateName.contains(where: \.isWhitespace),
-              UIImage(systemName: candidateName) != nil else {
-            return nil
-        }
-
-        return (
-            candidateName,
-            components.dropFirst().joined(separator: ":").trimmingCharacters(in: .whitespacesAndNewlines)
-        )
+        smartButtonEditorSFSymbolComponents(from: text)
     }
 
     private var smartVisibilityButton: some View {
@@ -4541,6 +4564,21 @@ private struct SmartActionTextField: UIViewRepresentable {
     @Binding var text: String
     @Binding var selectedRange: NSRange
     let fontSize: CGFloat
+    let disablesAutomaticPeriodShortcut: Bool
+
+    init(
+        placeholder: String,
+        text: Binding<String>,
+        selectedRange: Binding<NSRange>,
+        fontSize: CGFloat,
+        disablesAutomaticPeriodShortcut: Bool = false
+    ) {
+        self.placeholder = placeholder
+        self._text = text
+        self._selectedRange = selectedRange
+        self.fontSize = fontSize
+        self.disablesAutomaticPeriodShortcut = disablesAutomaticPeriodShortcut
+    }
 
     func makeCoordinator() -> Coordinator {
         Coordinator(self)
@@ -4602,6 +4640,31 @@ private struct SmartActionTextField: UIViewRepresentable {
                     self.parent.selectedRange = newSelectedRange
                 }
             }
+        }
+
+        func textField(
+            _ textField: UITextField,
+            shouldChangeCharactersIn range: NSRange,
+            replacementString string: String
+        ) -> Bool {
+            guard parent.disablesAutomaticPeriodShortcut,
+                  string == ". ",
+                  range.length == 1,
+                  let currentText = textField.text,
+                  let replacementRange = Range(range, in: currentText),
+                  String(currentText[replacementRange]) == " " else {
+                return true
+            }
+
+            let updatedText = (currentText as NSString).replacingCharacters(in: range, with: "  ")
+            textField.text = updatedText
+
+            if let cursorPosition = textField.position(from: textField.beginningOfDocument, offset: range.location + 2) {
+                textField.selectedTextRange = textField.textRange(from: cursorPosition, to: cursorPosition)
+            }
+
+            textField.sendActions(for: .editingChanged)
+            return false
         }
 
         func textFieldDidChangeSelection(_ textField: UITextField) {

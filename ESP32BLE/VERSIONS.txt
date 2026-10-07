@@ -1,4 +1,8 @@
 
+261007 Wed 1730
+V62.11
+Improving SF symbols, typing in multiline text in progress.
+
 261007 Wed 1541
 V62.10
 the image only shows in preview btn, not the whole area

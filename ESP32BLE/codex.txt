@@ -1,27 +1,64 @@
-Done. iPhone preview button enlarged within its existing preview area, and build succeeded.
+Done.
 
-Files changed:
-ESP32BLE/Scrns/Main_Screen/Main_Screen.swift􀰓
+Changed file:
+ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
 
-Exact iPhone-specific values before -> after:
-• Preview height: previewAreaHeight * (37.0 / 44.0) -> previewAreaHeight * (38.0 / 44.0)
-• Preview vertical offset: previewAreaHeight * (0.5 / 44.0) -> previewAreaHeight * (0.0 / 44.0)
-• Left-side gap to slider via previewSliderSpacing: editorWidth * 0.025 -> editorWidth * 0.012
-• Right padding via previewTrailingMargin: editorWidth * 0.035 -> editorWidth * 0.012
+Changed sections:
+smartButtonPreview(...) around lines 2597-2616
+SmartActionTextField around lines 4562-4668
 
-Corrected/reversed from previous change:
-• Reversed the preview height reduction.
-• Reversed the increased right padding.
-• Reduced spacing between slider and preview so the preview extends left.
+SF subtitle font formula:
+fontSize: max(14, CGFloat(boxFontSize) * 0.8)
 
-Bottom geometry:
-Preserved. The preview height increase is paired with removing the previous downward offset, keeping the bottom position equivalent.
+Compact SF subtitle text-field height:
+let subtitleTextFieldHeight = ceil(subtitleFontSize * 1.35)
 
-Slider geometry:
-Preserved. I added sliderHeight = previewAreaHeight * (37.0 / 44.0) so the slider keeps the height it had immediately before this task while only the preview button grows.
+This is derived directly from the selected SF subtitle font size. It is applied only to the SmartActionTextField inside the SF-symbol preview branch.
 
-iPad:
-Untouched.
+Symbol formula preserved:
+let symbolSize = max(18, CGFloat(boxFontSize) * 1.5)
+
+No symbol shrinking by subtitle length was added.
+
+Double-space period fix:
+SmartActionTextField now has an opt-in disablesAutomaticPeriodShortcut flag.
+
+Only the SF-symbol subtitle preview field passes:
+disablesAutomaticPeriodShortcut: true
+
+The delegate intercepts only UIKit’s automatic replacement:
+replacementString == ". "
+range.length == 1
+the replaced character is already " "
+
+It replaces that transformation with two literal spaces and restores the cursor after them.
+
+Literal periods still work:
+Explicit "." input is not intercepted because replacementString is "." not ". ".
+
+Pasted ". " is not intercepted because it does not match the single-space replacement shape.
+
+SmartActionTextField was modified:
+Yes, narrowly. I added an explicit initializer, an opt-in flag, and one UITextFieldDelegate interception. Existing call sites default to false.
+
+Preserved:
+Live trailing-space preservation remains intact.
+Final commit trimming remains in canonicalSmartEditorStoredText.
+Colon insertion path remains unchanged.
+Selection/cursor update path remains intact.
+No multiline/newline work was performed.
+No offset/position hacks were introduced.
+No iPhone/iPad preview outer geometry was changed.
+No actual main-screen renderer/parser was changed.
+No project settings changed.
+No commit.
+No push.
 
 Build result:
 ESP32BLE built successfully.
+
+Current git status:
+M ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
+M ESP32BLE/codex.txt
+
+codex.txt was ignored as requested.
