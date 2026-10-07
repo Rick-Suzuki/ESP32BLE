@@ -1,3 +1,160 @@
-API MISUSE: <CBCentralManager: 0x109bfcdc0> can only accept this command while in the powered on state
+API MISUSE: <CBCentralManager: 0x10c7dcdc0> can only accept this command while in the powered on state
 non-launching port is incompatible with service identifier "com.apple.PointerUI.pointeruid.default-service"
-<0x109a6fd40> Gesture: System gesture gate timed out.
+Reading from public effective user settings.
+isKeyboardMinorEdgeWidth may only be set for UIKBDynamicRenderFactory, changes not saved
+keyboardVerticalSizeClass may only be set for UIKBDynamicRenderFactory, changes not saved
+keyboardHorizontalSizeClass may only be set for UIKBDynamicRenderFactory, changes not saved
+currentHandBias may only be set for UIKBDynamicRenderFactory, changes not saved
+currentHeight may only be set for UIKBDynamicRenderFactory, changes not saved
+isKeyboardMinorEdgeWidth may only be set for UIKBDynamicRenderFactory, changes not saved
+keyboardVerticalSizeClass may only be set for UIKBDynamicRenderFactory, changes not saved
+keyboardHorizontalSizeClass may only be set for UIKBDynamicRenderFactory, changes not saved
+currentHandBias may only be set for UIKBDynamicRenderFactory, changes not saved
+currentHeight may only be set for UIKBDynamicRenderFactory, changes not saved
+isKeyboardMinorEdgeWidth may only be set for UIKBDynamicRenderFactory, changes not saved
+keyboardVerticalSizeClass may only be set for UIKBDynamicRenderFactory, changes not saved
+keyboardHorizontalSizeClass may only be set for UIKBDynamicRenderFactory, changes not saved
+currentHandBias may only be set for UIKBDynamicRenderFactory, changes not saved
+currentHeight may only be set for UIKBDynamicRenderFactory, changes not saved
+<0x10c63fd40> Gesture: System gesture gate timed out.
+[ERROR] Took 0.77s to get the token
+Reporter disconnected. { function=sendMessage, reporterID=26757646254082 }
+Received port for identifier response: <(null)> with error:Error Domain=RBSServiceErrorDomain Code=1 "Client not entitled" UserInfo={RBSEntitlement=com.apple.runningboard.process-state, NSLocalizedFailureReason=Client not entitled, RBSPermanent=false}
+elapsedCPUTimeForFrontBoard couldn't generate a task port
+Reporter disconnected. { function=sendMessage, reporterID=26757646254082 }
+Reporter disconnected. { function=sendMessage, reporterID=26757646254082 }
+Received port for identifier response: <(null)> with error:Error Domain=RBSServiceErrorDomain Code=1 "Client not entitled" UserInfo={RBSEntitlement=com.apple.runningboard.process-state, NSLocalizedFailureReason=Client not entitled, RBSPermanent=false}
+elapsedCPUTimeForFrontBoard couldn't generate a task port
+Reporter disconnected. { function=sendMessage, reporterID=26757646254082 }
+Reporter disconnected. { function=sendMessage, reporterID=26757646254082 }
+Reporter disconnected. { function=sendMessage, reporterID=26757646254082 }
+Reporter disconnected. { function=sendMessage, reporterID=26757646254082 }
+Reporter disconnected. { function=sendMessage, reporterID=26757646254082 }
+Reporter disconnected. { function=sendMessage, reporterID=26757646254082 }
+Unable to simultaneously satisfy constraints.
+	Probably at least one of the constraints in the following list is one you don't want. 
+	Try this: 
+		(1) look at each constraint and try to figure out which you don't expect; 
+		(2) find the code that added the unwanted constraint or constraints and fix it. 
+	(Note: If you're seeing NSAutoresizingMaskLayoutConstraints that you don't understand, refer to the documentation for the UIView property translatesAutoresizingMaskIntoConstraints) 
+(
+    "<NSAutoresizingMaskLayoutConstraint:0x11660ec60 h=--& v=--& TUIPredictionViewCell:0x11afc5500.width == 0   (active)>",
+    "<NSLayoutConstraint:0x11765c640 TUICandidateGradientContentLabel:0x11c944000.trailing == TUIPredictionViewCell:0x11afc5500.trailing - 6   (active)>",
+    "<NSLayoutConstraint:0x11765c5f0 H:|-(6)-[TUICandidateGradientContentLabel:0x11c944000]   (active, names: '|':TUIPredictionViewCell:0x11afc5500 )>"
+)
+
+Will attempt to recover by breaking constraint 
+<NSLayoutConstraint:0x11765c640 TUICandidateGradientContentLabel:0x11c944000.trailing == TUIPredictionViewCell:0x11afc5500.trailing - 6   (active)>
+
+Make a symbolic breakpoint at UIViewAlertForUnsatisfiableConstraints to catch this in the debugger.
+The methods in the UIConstraintBasedLayoutDebugging category on UIView listed in <UIKitCore/UIView.h> may also be helpful.
+Unable to simultaneously satisfy constraints.
+	Probably at least one of the constraints in the following list is one you don't want. 
+	Try this: 
+		(1) look at each constraint and try to figure out which you don't expect; 
+		(2) find the code that added the unwanted constraint or constraints and fix it. 
+	(Note: If you're seeing NSAutoresizingMaskLayoutConstraints that you don't understand, refer to the documentation for the UIView property translatesAutoresizingMaskIntoConstraints) 
+(
+    "<NSAutoresizingMaskLayoutConstraint:0x11660f930 h=--& v=--& TUIPredictionViewCell:0x11afc5800.width == 0   (active)>",
+    "<NSLayoutConstraint:0x11765ce60 H:|-(6)-[TUICandidateGradientContentLabel:0x11c945400]   (active, names: '|':TUIPredictionViewCell:0x11afc5800 )>",
+    "<NSLayoutConstraint:0x11765ceb0 TUICandidateGradientContentLabel:0x11c945400.trailing == TUIPredictionViewCell:0x11afc5800.trailing - 6   (active)>",
+    "<NSLayoutConstraint:0x11765c8c0 'UIScrollView-frameLayoutGuide-width' UILayoutGuide:0x11c8d23e0'UIScrollView-frameLayoutGuide'.width == TUICandidateGradientContentLabel:0x11c945400.width   (active)>"
+)
+
+Will attempt to recover by breaking constraint 
+<NSLayoutConstraint:0x11765c8c0 'UIScrollView-frameLayoutGuide-width' UILayoutGuide:0x11c8d23e0'UIScrollView-frameLayoutGuide'.width == TUICandidateGradientContentLabel:0x11c945400.width   (active)>
+
+Make a symbolic breakpoint at UIViewAlertForUnsatisfiableConstraints to catch this in the debugger.
+The methods in the UIConstraintBasedLayoutDebugging category on UIView listed in <UIKitCore/UIView.h> may also be helpful.
+Unable to simultaneously satisfy constraints.
+	Probably at least one of the constraints in the following list is one you don't want. 
+	Try this: 
+		(1) look at each constraint and try to figure out which you don't expect; 
+		(2) find the code that added the unwanted constraint or constraints and fix it. 
+	(Note: If you're seeing NSAutoresizingMaskLayoutConstraints that you don't understand, refer to the documentation for the UIView property translatesAutoresizingMaskIntoConstraints) 
+(
+    "<NSAutoresizingMaskLayoutConstraint:0x11660f930 h=--& v=--& TUIPredictionViewCell:0x11afc5800.width == 0   (active)>",
+    "<NSLayoutConstraint:0x11765ce60 H:|-(6)-[TUICandidateGradientContentLabel:0x11c945400]   (active, names: '|':TUIPredictionViewCell:0x11afc5800 )>",
+    "<NSLayoutConstraint:0x11765ceb0 TUICandidateGradientContentLabel:0x11c945400.trailing == TUIPredictionViewCell:0x11afc5800.trailing - 6   (active)>"
+)
+
+Will attempt to recover by breaking constraint 
+<NSLayoutConstraint:0x11765ceb0 TUICandidateGradientContentLabel:0x11c945400.trailing == TUIPredictionViewCell:0x11afc5800.trailing - 6   (active)>
+
+Make a symbolic breakpoint at UIViewAlertForUnsatisfiableConstraints to catch this in the debugger.
+The methods in the UIConstraintBasedLayoutDebugging category on UIView listed in <UIKitCore/UIView.h> may also be helpful.
+Unable to simultaneously satisfy constraints.
+	Probably at least one of the constraints in the following list is one you don't want. 
+	Try this: 
+		(1) look at each constraint and try to figure out which you don't expect; 
+		(2) find the code that added the unwanted constraint or constraints and fix it. 
+	(Note: If you're seeing NSAutoresizingMaskLayoutConstraints that you don't understand, refer to the documentation for the UIView property translatesAutoresizingMaskIntoConstraints) 
+(
+    "<NSAutoresizingMaskLayoutConstraint:0x116cec460 h=--& v=--& TUIPredictionViewCell:0x11afc5b00.width == 0   (active)>",
+    "<NSLayoutConstraint:0x11765d860 H:|-(6)-[TUICandidateGradientContentLabel:0x11c946800]   (active, names: '|':TUIPredictionViewCell:0x11afc5b00 )>",
+    "<NSLayoutConstraint:0x11765da40 TUICandidateGradientContentLabel:0x11c946800.trailing == TUIPredictionViewCell:0x11afc5b00.trailing - 6   (active)>",
+    "<NSLayoutConstraint:0x11765d130 'UIScrollView-frameLayoutGuide-width' UILayoutGuide:0x11c8d2ae0'UIScrollView-frameLayoutGuide'.width == TUICandidateGradientContentLabel:0x11c946800.width   (active)>"
+)
+
+Will attempt to recover by breaking constraint 
+<NSLayoutConstraint:0x11765d130 'UIScrollView-frameLayoutGuide-width' UILayoutGuide:0x11c8d2ae0'UIScrollView-frameLayoutGuide'.width == TUICandidateGradientContentLabel:0x11c946800.width   (active)>
+
+Make a symbolic breakpoint at UIViewAlertForUnsatisfiableConstraints to catch this in the debugger.
+The methods in the UIConstraintBasedLayoutDebugging category on UIView listed in <UIKitCore/UIView.h> may also be helpful.
+Unable to simultaneously satisfy constraints.
+	Probably at least one of the constraints in the following list is one you don't want. 
+	Try this: 
+		(1) look at each constraint and try to figure out which you don't expect; 
+		(2) find the code that added the unwanted constraint or constraints and fix it. 
+	(Note: If you're seeing NSAutoresizingMaskLayoutConstraints that you don't understand, refer to the documentation for the UIView property translatesAutoresizingMaskIntoConstraints) 
+(
+    "<NSAutoresizingMaskLayoutConstraint:0x116cec460 h=--& v=--& TUIPredictionViewCell:0x11afc5b00.width == 0   (active)>",
+    "<NSLayoutConstraint:0x11765d860 H:|-(6)-[TUICandidateGradientContentLabel:0x11c946800]   (active, names: '|':TUIPredictionViewCell:0x11afc5b00 )>",
+    "<NSLayoutConstraint:0x11765da40 TUICandidateGradientContentLabel:0x11c946800.trailing == TUIPredictionViewCell:0x11afc5b00.trailing - 6   (active)>"
+)
+
+Will attempt to recover by breaking constraint 
+<NSLayoutConstraint:0x11765da40 TUICandidateGradientContentLabel:0x11c946800.trailing == TUIPredictionViewCell:0x11afc5b00.trailing - 6   (active)>
+
+Make a symbolic breakpoint at UIViewAlertForUnsatisfiableConstraints to catch this in the debugger.
+The methods in the UIConstraintBasedLayoutDebugging category on UIView listed in <UIKitCore/UIView.h> may also be helpful.
+cannot add handler to 0 from 0 - dropping
+Potential Structural Swift Concurrency Issue: unsafeForcedSync called from Swift Concurrent context.
+Potential Structural Swift Concurrency Issue: unsafeForcedSync called from Swift Concurrent context.
+The variant selector cell index number could not be found.
+The variant selector cell index number could not be found.
+The variant selector cell index number could not be found.
+The variant selector cell index number could not be found.
+The variant selector cell index number could not be found.
+-[RTIInputSystemClient remoteTextInputSessionWithID:performInputOperation:]  perform input operation requires a valid sessionID. inputModality = Keyboard, inputOperation = <null selector>, customInfoType = UIEmojiSearchOperations
+cannot add handler to 0 from 0 - dropping
+cannot add handler to 0 from 0 - dropping
+Reporter disconnected or already stopped. { func=stop, reporterID=26757646254082 }
+-[RTIInputSystemClient remoteTextInputSessionWithID:performInputOperation:]  perform input operation requires a valid sessionID. inputModality = Keyboard, inputOperation = <null selector>, customInfoType = UIEmojiSearchOperations
+-[RTIInputSystemClient remoteTextInputSessionWithID:performInputOperation:]  perform input operation requires a valid sessionID. inputModality = Keyboard, inputOperation = <null selector>, customInfoType = UIEmojiSearchOperations
+isKeyboardMinorEdgeWidth may only be set for UIKBDynamicRenderFactory, changes not saved
+keyboardVerticalSizeClass may only be set for UIKBDynamicRenderFactory, changes not saved
+keyboardHorizontalSizeClass may only be set for UIKBDynamicRenderFactory, changes not saved
+currentHandBias may only be set for UIKBDynamicRenderFactory, changes not saved
+currentHeight may only be set for UIKBDynamicRenderFactory, changes not saved
+isKeyboardMinorEdgeWidth may only be set for UIKBDynamicRenderFactory, changes not saved
+keyboardVerticalSizeClass may only be set for UIKBDynamicRenderFactory, changes not saved
+keyboardHorizontalSizeClass may only be set for UIKBDynamicRenderFactory, changes not saved
+currentHandBias may only be set for UIKBDynamicRenderFactory, changes not saved
+currentHeight may only be set for UIKBDynamicRenderFactory, changes not saved
+Reporter disconnected. { function=sendMessage, reporterID=26757646254083 }
+Reporter disconnected. { function=sendMessage, reporterID=26757646254083 }
+Reporter disconnected. { function=sendMessage, reporterID=26757646254083 }
+Reporter disconnected. { function=sendMessage, reporterID=26757646254083 }
+Reporter disconnected. { function=sendMessage, reporterID=26757646254083 }
+Reporter disconnected. { function=sendMessage, reporterID=26757646254083 }
+Reporter disconnected. { function=sendMessage, reporterID=26757646254083 }
+Reporter disconnected. { function=sendMessage, reporterID=26757646254083 }
+Reporter disconnected. { function=sendMessage, reporterID=26757646254083 }
+cannot add handler to 0 from 0 - dropping
+The variant selector cell index number could not be found.
+The variant selector cell index number could not be found.
+-[RTIInputSystemClient remoteTextInputSessionWithID:performInputOperation:]  perform input operation requires a valid sessionID. inputModality = Keyboard, inputOperation = <null selector>, customInfoType = UIEmojiSearchOperations
+cannot add handler to 0 from 0 - dropping
+cannot add handler to 0 from 0 - dropping
+Reporter disconnected or already stopped. { func=stop, reporterID=26757646254083 }

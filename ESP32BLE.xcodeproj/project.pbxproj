@@ -175,10 +175,10 @@
 			isa = PBXGroup;
 			children = (
 				1D23A17A3075B984003B646C /* version_V62.001.txt */,
-				1D590E532F61206100E430E0 /* console m2.txt */,
 				1D9A8748302D3885005B5E36 /* codex.txt */,
-				1DA256FD3065FD1A008C934A /* console pro.txt */,
+				1D590E532F61206100E430E0 /* console m2.txt */,
 				1D23A17C3075C212003B646C /* console_iPhone.txt */,
+				1DA256FD3065FD1A008C934A /* console pro.txt */,
 				1D590E512F61206100E430E0 /* ESP32BLEApp.swift */,
 				1D33C2D12F6145DC0098FD5C /* Info.plist */,
 				1D590E4A2F61206100E430E0 /* Assets.xcassets */,

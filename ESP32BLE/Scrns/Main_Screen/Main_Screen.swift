@@ -444,7 +444,7 @@ struct MainScreen: View {
     private let smartColorControlsWidth: CGFloat = 238
     private let smartSFPanelWidth: CGFloat = 238
     // MARK: - BM:🅱️🅱️🅱️  Temporary editor geometry overlay
-    private let debugEditorGeometry = true
+    private let debugEditorGeometry = false
     private var smartViewWidthPhone: CGFloat {
         smartEditControlsWidthPhone +
         smartCommandEditorWidthPhone +
@@ -1603,7 +1603,14 @@ Tapping a row inserts the key code at the cursor.
                     .frame(maxHeight: panelMaxHeight)
                     .editorGeometryProbe(.buttonPanel, isEnabled: debugEditorGeometry)
 
-                smartSFPanel
+                IPadSmartSFPanel(
+                    symbolGrid: {
+                        smartSFSymbolGrid
+                    },
+                    controls: {
+                        smartSFPanelControls
+                    }
+                )
                     .frame(width: resolvedSmartSFPanelWidth, height: panelHeight)
                     .frame(maxHeight: panelMaxHeight)
                     .editorGeometryProbe(.sfPanel, isEnabled: debugEditorGeometry)
@@ -3280,20 +3287,6 @@ Tapping a row inserts the key code at the cursor.
         return ([commandActionText] + components.dropFirst()).joined(separator: "::")
     }
 
-    private var smartSFPanel: some View {
-        VStack(spacing: 0) {
-            smartSFSymbolGrid
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-            smartSFPanelControls
-        }
-        .background(Color.black)
-        .overlay {
-            Rectangle()
-                .stroke(Color.white, lineWidth: 1)
-        }
-    }
-
     private var smartSFSymbolGrid: some View {
         ScrollView(.vertical) {
             LazyVGrid(
@@ -3958,6 +3951,25 @@ private struct IPadSmartButtonPanel<
             panelBorder()
         }
         .clipped()
+    }
+}
+
+private struct IPadSmartSFPanel<SymbolGrid: View, Controls: View>: View {
+    @ViewBuilder let symbolGrid: () -> SymbolGrid
+    @ViewBuilder let controls: () -> Controls
+
+    var body: some View {
+        VStack(spacing: 0) {
+            symbolGrid()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            controls()
+        }
+        .background(Color.black)
+        .overlay {
+            Rectangle()
+                .stroke(Color.white, lineWidth: 1)
+        }
     }
 }
 
