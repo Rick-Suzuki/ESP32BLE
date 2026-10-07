@@ -1,54 +1,167 @@
-PHASE 2 / STRUCTURAL EXTRACTION #2 COMPLETE
+STRUCTURAL REASSESSMENT AFTER EXTRACTIONS #1 AND #2
 
-1. Files changed
+READ-ONLY RESULT
 
-ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
+No source files were modified.
 
-2. New named View type created
+1. CURRENT SMARTVIEW HIERARCHY
 
-private struct IPadSmartSFPanel<SymbolGrid: View, Controls: View>: View
+Current smartView(...) structure:
 
-3. smartView instantiation
+MainScreen.body
+mainScreenContent
+GeometryReader
 
-smartView(...) now instantiates IPadSmartSFPanel in the iPad-only SF panel branch, where smartSFPanel was previously used.
+  ZStack
 
-4. Dependencies passed
+    named toolbar/grid/bottom bar boundaries
 
-Values:
-None.
+    editor overlay
 
-Bindings:
-None.
+      iPad:
 
-Closures/content:
-symbolGrid: supplies existing smartSFSymbolGrid
-controls: supplies existing smartSFPanelControls
+        smartView(...)
 
-5. Supporting changes
+      iPhone:
 
-Removed the old smartSFPanel computed helper because its wrapper body moved mechanically into IPadSmartSFPanel.
+        iPhoneSmartEditorPresentation(...)
 
-6. IPadSmartButtonPanel confirmation
+          smartView(...)
 
-IPadSmartButtonPanel was not intentionally changed.
 
-7. Current controls confirmation
+smartView(...)
+HStack(spacing: 0)
+smartCommandPanel(...)          some View helper, shared iPad/iPhone
 
-Eye remains present.
-Clear remains present.
-Random remains present.
-Colon remains present/active.
+smartColorPanel                 some View helper, shared iPad/iPhone
 
-8. iPhone confirmation
+if iPad:
 
-The iPhone editor and iPhone SF-symbol path were not intentionally changed.
+  smartButtonPanel()
 
-9. Build result
+    IPadSmartButtonPanel        named View
 
-Build succeeded.
+      supplied content:
 
-Elapsed build time: about 39 seconds.
+        smartButtonBrightnessSliderColumn
 
-10. Relevant warnings/errors
+        smartButtonPreview(...)
 
-No build errors were reported from this extraction. No further extraction or cleanup was performed.
+        smartButtonClearPreviewBackground
+
+        smartButtonLowerEditingArea(...)
+
+  IPadSmartSFPanel              named View
+
+    supplied content:
+
+      smartSFSymbolGrid
+
+      smartSFPanelControls
+
+else:
+
+  smartButtonPanel(editorWidth:)
+
+    existing iPhone branch
+
+
+2. EFFECT OF THE TWO EXTRACTIONS
+
+IPadSmartButtonPanel has genuinely moved the iPad button-panel wrapper structure behind a named View:
+• preview/slider HStack
+• preview footprint VStack
+• clear-preview background attachment
+• lower editing area placement
+• panel background/border/clipping
+
+The detailed child types still enter IPadSmartButtonPanel through generic content closures. So this is not full type erasure, and the child content remains part of that named View’s specialization. But the parent smartView no longer directly spells out the iPad button panel’s wrapper hierarchy. Empirically, this gave useful headroom: Eye / Clear / Random / Colon now coexist and the metadata crash has not returned.
+
+IPadSmartSFPanel similarly moved the SF panel wrapper behind a named View:
+• VStack wrapper
+• symbol-grid max frame
+• controls placement
+• black background
+• white stroke overlay
+
+Its grid and controls still arrive as generic content closures. Again, not total isolation, but smartView is simpler and the wrapper structure is no longer directly composed there.
+
+Net result:
+smartView is now noticeably smaller on iPad. The remaining direct complexity is concentrated in smartCommandPanel and smartColorPanel, with the button and SF branches partially isolated.
+
+3. REMAINING HOTSPOTS
+
+1. smartCommandPanel(...) — largest remaining hotspot
+• Shared iPad/iPhone.
+• Contains nested VStack/HStack structure.
+• Multiple command/control rows.
+• ForEach over placeholder symbols.
+• Two ScrollViews.
+• Two LazyVStacks.
+• ForEach over F1...F20.
+• Conditional command vs escape-code table.
+• Closures mutate smartScriptEditingModel, smartCommandDescription, and editing text.
+• Uses geometry probes and panel borders.
+
+This is now the biggest direct structural contributor inside smartView.
+
+2. smartColorPanel — medium hotspot
+• Shared iPad/iPhone.
+• Contains SmartScriptTextEditor, command description ScrollView, overlays, clipping.
+• Has iPhone-only smartIPhoneCommandActionControls branch.
+• Less structurally broad than smartCommandPanel, but directly composed by smartView.
+
+3. smartButtonPreview(...) — medium hotspot inside extracted iPad button panel and iPhone path
+• Shared iPad/iPhone.
+• @ViewBuilder hidden/visible branch.
+• SF-symbol vs plain text branch.
+• SmartActionTextField.
+• Background and overlays.
+• It no longer sits directly in smartView on iPad, but still matters inside IPadSmartButtonPanel and the iPhone panel.
+
+4. Full SmartEditorView / smartView extraction — broad architectural boundary
+• Would isolate smartView from mainScreenContent.
+• But it is shared iPad/iPhone and touches the entire editor geometry.
+• High risk relative to current need.
+
+4. EXTRACTION #3 OPTIONS
+
+Option: Extract smartCommandPanel into named View
+Benefit: HIGH
+Risk: HIGH
+iPhone impact risk: HIGH
+
+This would reduce the largest remaining direct smartView child. But it is shared with iPhone, has many editing actions, bindings, command tables, smartScriptEditingModel behavior, and geometry-sensitive layout. It is a real candidate only if crashes return or future command-panel work needs it.
+
+Option: Extract smartColorPanel into named View
+Benefit: MEDIUM
+Risk: MEDIUM
+iPhone impact risk: MEDIUM
+
+This would reduce another direct smartView child with less complexity than smartCommandPanel. But it is shared and includes iPhone-only action controls, so it still risks the frozen phone editor.
+
+Option: Extract smartButtonPreview into named View
+Benefit: LOW to MEDIUM
+Risk: MEDIUM
+iPhone impact risk: MEDIUM
+
+Useful eventually, but no longer the best structural target. The original failure was relieved by the iPad button-panel boundary, and preview is shared with iPhone.
+
+Option: Extract full SmartEditorView / smartView
+Benefit: HIGH
+Risk: HIGH
+iPhone impact risk: HIGH
+
+Architecturally clean, but too invasive now. It would move the entire shared editor layout after the crash has already disappeared.
+
+5. RECOMMENDATION
+
+A.
+
+STOP STRUCTURAL REFACTORING FOR NOW
+
+The original failure mode has been removed in practice: the four-button iPad panel now works, both iPad and iPhone runtime testing passed after both extractions, and the metadata crash has not returned.
+
+There is still structural complexity, especially in smartCommandPanel, but the next meaningful reductions all carry shared iPhone risk. Given the iPhone editor is frozen and working, another extraction is not currently justified unless the crash returns or new UI work again hits the metadata threshold.
+
+Best next action is runtime/use testing and normal development with caution, not Extraction #3.
