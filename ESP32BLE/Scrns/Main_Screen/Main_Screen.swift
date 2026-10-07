@@ -2388,19 +2388,34 @@ Tapping a row inserts the key code at the cursor.
 
     private func smartIPhoneButtonPreviewRow(editorWidth: CGFloat) -> some View {
         let previewAreaHeight = smartIPhoneButtonPreviewEnclosureHeight
-        let previewHeight = previewAreaHeight * (38.0 / 44.0)
-        let previewAspectRatio: CGFloat = 1.08
-        let previewLeadingMargin = editorWidth * 0.015
-        let previewSliderSpacing = editorWidth * 0.025
-        let previewTrailingMargin = editorWidth * 0.02
-        let sliderColumnWidth = editorWidth * 0.14
+       
+		// BUTTON HEIGHT
+		let previewHeight = previewAreaHeight * (38.0 / 44.0)
+		// BUTTON VERTICAL POSITION
+		let previewTopAdjustment = previewAreaHeight * (0.0 / 44.0)
+		// BUTTON WIDTH / RIGHT-SIDE SPACE
+		let previewTrailingMargin = editorWidth * 0.0402
+		//
+		//----------------------------------------
+		//
+		let previewLeadingMargin = editorWidth * 0.015
+
+		let sliderHeight = previewAreaHeight * (37.0 / 44.0)
+		let previewSliderSpacing = editorWidth * 0.0048
+		let sliderColumnWidth = editorWidth * 0.14
+		//
+		//----------------------------------------
+		//
         let previewFootprintWidth = max(
             0,
             editorWidth - previewLeadingMargin - sliderColumnWidth - previewSliderSpacing - previewTrailingMargin
         )
+        let previewVerticalPadding = (previewAreaHeight - previewHeight) / 2
+        let previewRightPaddingInsideFootprint = max(0, previewVerticalPadding - previewTrailingMargin)
+        let previewAspectRatio = max(0, (previewFootprintWidth - previewRightPaddingInsideFootprint) / previewHeight)
 
         return HStack(alignment: .top, spacing: previewSliderSpacing) {
-            smartIPhoneButtonBrightnessSlider(height: previewHeight, width: sliderColumnWidth)
+            smartIPhoneButtonBrightnessSlider(height: sliderHeight, width: sliderColumnWidth)
                 .editorGeometryProbe(.slider, isEnabled: debugEditorGeometry)
                 .frame(width: sliderColumnWidth, height: previewAreaHeight, alignment: .center)
 
@@ -2410,6 +2425,7 @@ Tapping a row inserts the key code at the cursor.
                 aspectRatio: previewAspectRatio
             )
             .frame(width: previewFootprintWidth, height: previewHeight, alignment: .leading)
+            .offset(y: previewTopAdjustment)
             .editorGeometryProbe(.previewFootprint, isEnabled: debugEditorGeometry)
             .frame(width: previewFootprintWidth, height: previewAreaHeight, alignment: .center)
         }
@@ -2536,8 +2552,13 @@ Tapping a row inserts the key code at the cursor.
         previewHeight requestedPreviewHeight: CGFloat? = nil,
         aspectRatio: CGFloat = 1
     ) -> some View {
-        let previewFootprintHeight: CGFloat = isPad ? 118 : requestedPreviewHeight ?? smartIPhoneButtonPreviewEnclosureHeight
-        let resolvedPreviewFootprintWidth = footprintWidth ?? smartIPhoneButtonPreviewWidth
+
+		// MARK: - BM:🔆 IPAD BUTTON HEIGHT (1st number)
+//        let previewFootprintHeight: CGFloat = isPad ? 118 : requestedPreviewHeight ?? smartIPhoneButtonPreviewEnclosureHeight
+        let previewFootprintHeight: CGFloat = isPad ? 110 : requestedPreviewHeight ?? smartIPhoneButtonPreviewEnclosureHeight
+        
+		
+		let resolvedPreviewFootprintWidth = footprintWidth ?? smartIPhoneButtonPreviewWidth
         let previewHeight: CGFloat = isPad ? previewFootprintHeight : requestedPreviewHeight ?? min(max(0, previewFootprintHeight - 24), max(0, resolvedPreviewFootprintWidth - 24))
         let previewWidth: CGFloat? = isPad ? nil : min(previewHeight * aspectRatio, resolvedPreviewFootprintWidth)
         let previewMaxWidth: CGFloat? = isPad ? .infinity : nil
@@ -4062,14 +4083,25 @@ private struct IPadSmartButtonPanel<
     @ViewBuilder let clearPreviewBackground: () -> ClearPreviewBackground
     @ViewBuilder let lowerEditingArea: () -> LowerEditingArea
     @ViewBuilder let panelBorder: () -> PanelBorder
-    private let previewButtonHeight: CGFloat = 121
-    private let upperTopPadding: CGFloat = 7
-    private let upperBottomPadding: CGFloat = 0
-    private let previewHorizontalPadding: CGFloat = 8
-
+    
+	// MARK: - BM:🔆 IPAD, slider column height (bad name)
+	private let previewButtonHeight: CGFloat = 121
+   
+	
+	// MARK: - BM:🔆 IPAD, Top padding
+	private let upperTopPadding: CGFloat = -2
+	
+	// MARK: - BM:🔆 IPAD, bottom padding
+//	private let upperBottomPadding: CGFloat = 0
+	private let upperBottomPadding: CGFloat = 5
+	
+	// MARK: - BM:🔆 IPAD, L+R padding
+	private let previewLeadingPadding: CGFloat = 0
+	private let previewTrailingPadding: CGFloat = 8
+	
     var body: some View {
         VStack(spacing: 4) {
-            HStack(alignment: .bottom, spacing: 6) {
+            HStack(alignment: .bottom, spacing: 0) {
                 brightnessSliderColumn()
                     .frame(height: previewButtonHeight)
                     .padding(.top, 0)
@@ -4081,8 +4113,9 @@ private struct IPadSmartButtonPanel<
                     preview()
                 }
                 .frame(maxWidth: .infinity)
-                .padding(.horizontal, previewHorizontalPadding)
-                .padding(.top, upperTopPadding)
+				.padding(.leading, previewLeadingPadding)
+				.padding(.trailing, previewTrailingPadding)
+				.padding(.top, upperTopPadding)
                 .padding(.bottom, upperBottomPadding)
                 .ipadButtonGeometryProbe(.previewWrapper)
                 .editorGeometryProbe(.previewFootprint, isEnabled: debugEditorGeometry)

@@ -1,97 +1,27 @@
-READ-ONLY investigation completed. I did not edit source or project files.
+Done. iPhone preview button enlarged within its existing preview area, and build succeeded.
 
-1. Main_Screen.swift files found:
-./ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
-
-Only one physical Main_Screen.swift􀰓 exists in the worktree.
-
-2. [IPAD-BUTTON-GEOMETRY] / divider y= occurrences:
-ESP32BLE/Scrns/Main_Screen/Main_Screen.swift􀰓
-• lines 1659, 1685-1693: current probe code, using db(...)
-• no divider y= string in this source file
-
-ESP32BLE/console m2.txt􀰓
-• lines 5-11: saved old console output
-• line 10 contains [IPAD-BUTTON-GEOMETRY] divider y=132.0
-
-ESP32BLE/codex.txt􀰓
-• contains prior report text mentioning divider y=...
-
-3. New probe strings:
-ESP32BLE/Scrns/Main_Screen/Main_Screen.swift􀰓
-• line 1682: buttonDividerY
-• line 1683: commandDividerY
-• line 1690: emits buttonDividerY
-• line 1691: emits commandDividerY
-• line 1692: emits dividerDifference
-
-ESP32BLE/codex.txt􀰓
-• contains prior report text mentioning those names
-
-4. Xcode inclusion method:
-Traditional PBXFileReference / PBXBuildFile / PBXSourcesBuildPhase, not PBXFileSystemSynchronizedRootGroup.
-
-Relevant project entries:
-• PBXFileReference: 1D9E1CE52FC92DC600DB3621 /* Main_Screen.swift */
-• path: Main_Screen.swift􀰓
-• sourceTree: <group>
-• PBXBuildFile: 1D9E1D182FC92DC600DB3621 /* Main_Screen.swift in Sources */
-• included once in PBXSourcesBuildPhase
-
-Resolved project path:
+Files changed:
 ESP32BLE/Scrns/Main_Screen/Main_Screen.swift􀰓
 
-Absolute path:
-/Users/rick/00-Home/Xcode/Projects2/100_IOS PROJECTS/10_IN_PROG/ESP32_BLE/ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
+Exact iPhone-specific values before -> after:
+• Preview height: previewAreaHeight * (37.0 / 44.0) -> previewAreaHeight * (38.0 / 44.0)
+• Preview vertical offset: previewAreaHeight * (0.5 / 44.0) -> previewAreaHeight * (0.0 / 44.0)
+• Left-side gap to slider via previewSliderSpacing: editorWidth * 0.025 -> editorWidth * 0.012
+• Right padding via previewTrailingMargin: editorWidth * 0.035 -> editorWidth * 0.012
 
-5. Target/scheme:
-• App target: ESP32BLE
-• Active scheme: ESP32BLE
-• One app target found
-• No second target containing another Main_Screen.swift􀰓
+Corrected/reversed from previous change:
+• Reversed the preview height reduction.
+• Reversed the increased right padding.
+• Reduced spacing between slider and preview so the preview extends left.
 
-6. Build invocation evidence:
-Existing build logs show Xcode compiling:
+Bottom geometry:
+Preserved. The preview height increase is paired with removing the previous downward offset, keeping the bottom position equivalent.
 
-/Users/rick/00-Home/Xcode/Projects2/100_IOS PROJECTS/10_IN_PROG/ESP32_BLE/ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
+Slider geometry:
+Preserved. I added sliderHeight = previewAreaHeight * (37.0 / 44.0) so the slider keeps the height it had immediately before this task while only the preview button grows.
 
-for target ESP32BLE.
+iPad:
+Untouched.
 
-I also ran one harmless build for evidence; it succeeded, but it was effectively up to date and did not print a new SwiftCompile line.
-
-7. Multiple Main_Screen.swift files compiled:
-No evidence of multiple files. Project has one Main_Screen.swift in Sources.
-
-8. Compiled file contains:
-The file Xcode is configured to compile contains the new probe:
-• buttonDividerY
-• commandDividerY
-• dividerDifference
-
-It does not contain the old source string:
-• divider y=
-
-9. Same physical file:
-Yes. The file Codex has been editing is the same path Xcode compiles.
-
-File identity/hash:
-• inode: 791046390
-• SHA256: 422e66a7bace6cffc06a473196978e82a28ec4590079ccdb46aae9227581c42b
-
-10. Git status:
-M ESP32BLE.xcodeproj/project.pbxproj
-M ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
-D ESP32BLE/V62.07.txt
-AM ESP32BLE/VERSIONS.txt
-M ESP32BLE/codex.txt
-
-Tracked Main_Screen.swift􀰓:
-ESP32BLE/Scrns/Main_Screen/Main_Screen.swift􀰓
-
-11. Evidence-based explanation:
-The current source file that Xcode is configured to compile cannot emit [IPAD-BUTTON-GEOMETRY] divider y=...; that exact runtime line exists only in saved text files, especially ESP32BLE/console m2.txt􀰓.
-
-So the contradiction is not explained by a duplicate Main_Screen.swift􀰓 or an unexpected Xcode file reference. Evidence points to stale/old console text being observed or retained somewhere, not a second source file in the project.
-
-12. Confirmation:
-No source files, project files, UI, geometry, probes, or settings were modified by this investigation.
+Build result:
+ESP32BLE built successfully.
