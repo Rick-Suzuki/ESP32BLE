@@ -3530,7 +3530,7 @@ struct SettingsScreen: View {
             throw coordinatorError
         }
     }
-
+	
     private var hasArchiveExportContent: Bool {
         !availableDocumentURLs.isEmpty ||
             !availableTextURLs.isEmpty ||

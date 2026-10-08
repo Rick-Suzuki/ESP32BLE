@@ -1,64 +1,70 @@
-Done.
+Cleanup complete. No commit or push.
 
-Changed file:
+Files changed:
 ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
+ESP32BLE/console m2.txt
 
-Changed sections:
-smartButtonPreview(...) around lines 2597-2616
-SmartActionTextField around lines 4562-4668
+Removed from Main_Screen.swift:
+• lastIPadButtonGeometryReport
+• lastIPadButtonGeometryMissingReport
+• reportIPadButtonGeometry(_:)
+• roundedIPadButtonGeometryValue(_:)
+• iPadButtonGeometryCoordinateSpaceName
+• IPadButtonGeometryProbeTarget
+• IPadButtonGeometryPreferenceKey
+• IPadButtonGeometryProbeModifier
+• View.ipadButtonGeometryProbe(...)
+• .coordinateSpace(name: iPadButtonGeometryCoordinateSpaceName)
+• .onPreferenceChange(IPadButtonGeometryPreferenceKey.self)
+• probe call sites for:
+   • .commandDivider
+   • .previewActual
+   • .sliderOuter
+   • .previewWrapper
+   • .upperContainer
+   • .buttonDivider
 
-SF subtitle font formula:
-fontSize: max(14, CGFloat(boxFontSize) * 0.8)
+Probe-only GeometryReader/PreferenceKey/state/helper code removed:
+• the GeometryReader inside IPadButtonGeometryProbeModifier
+• the geometry PreferenceKey
+• the coordinate-space measurement plumbing
+• the state used only to suppress duplicate geometry log output
+• all [IPAD-BUTTON-GEOMETRY] db output and gap/difference calculations
 
-Compact SF subtitle text-field height:
-let subtitleTextFieldHeight = ceil(subtitleFontSize * 1.35)
+Removed from console m2.txt:
+• stale obsolete [IPAD-BUTTON-GEOMETRY] log lines only.
+• unrelated console messages were left alone.
 
-This is derived directly from the selected SF subtitle font size. It is applied only to the SmartActionTextField inside the SF-symbol preview branch.
+Post-cleanup search confirmed no remaining references to:
+[IPAD-BUTTON-GEOMETRY]
+reportIPadButtonGeometry
+IPadButtonGeometryCoordinateSpace
 
-Symbol formula preserved:
-let symbolSize = max(18, CGFloat(boxFontSize) * 1.5)
+I also searched the broader probe terms:
+IPadButtonGeometry
+ipadButtonGeometryProbe
+previewWrapper
+previewActual
+sliderOuter
+previewBottomGap
+sliderBottomGap
+dividerDifference
+topDifference
+bottomDifference
 
-No symbol shrinking by subtitle length was added.
+No matches remain.
 
-Double-space period fix:
-SmartActionTextField now has an opt-in disablesAutomaticPeriodShortcut flag.
-
-Only the SF-symbol subtitle preview field passes:
-disablesAutomaticPeriodShortcut: true
-
-The delegate intercepts only UIKit’s automatic replacement:
-replacementString == ". "
-range.length == 1
-the replaced character is already " "
-
-It replaces that transformation with two literal spaces and restores the cursor after them.
-
-Literal periods still work:
-Explicit "." input is not intercepted because replacementString is "." not ". ".
-
-Pasted ". " is not intercepted because it does not match the single-space replacement shape.
-
-SmartActionTextField was modified:
-Yes, narrowly. I added an explicit initializer, an opt-in flag, and one UITextFieldDelegate interception. Existing call sites default to false.
-
-Preserved:
-Live trailing-space preservation remains intact.
-Final commit trimming remains in canonicalSmartEditorStoredText.
-Colon insertion path remains unchanged.
-Selection/cursor update path remains intact.
-No multiline/newline work was performed.
-No offset/position hacks were introduced.
-No iPhone/iPad preview outer geometry was changed.
-No actual main-screen renderer/parser was changed.
-No project settings changed.
-No commit.
-No push.
+Confirmed:
+• real layout geometry was not changed.
+• SmartPreviewTextView and shrink-to-fit behavior were not changed.
+• multiline/SF-symbol behavior was not changed.
+• unrelated logging was not cleaned up.
+• project settings were not modified.
 
 Build result:
-ESP32BLE built successfully.
+ESP32BLE built successfully in Xcode.
 
 Current git status:
 M ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
 M ESP32BLE/codex.txt
-
-codex.txt was ignored as requested.
+M ESP32BLE/console m2.txt

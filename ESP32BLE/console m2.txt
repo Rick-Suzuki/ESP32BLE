@@ -1,19 +1,203 @@
 Update the Info.plist: Support for all orientations will soon be required.
-									API MISUSE: <CBCentralManager: 0x10bd983c0> can only accept this command while in the powered on state
+									API MISUSE: <CBCentralManager: 0x10e1c4780> can only accept this command while in the powered on state
 									non-launching port is incompatible with service identifier "com.apple.PointerUI.pointeruid.default-service"
 									AX Safe category class 'SFBarButtonGroupContainerAccessibility' was not found!
-									261007_1225_864 🐞Main_Screen.swift:reportIPadButtonGeometry(_:):1685 [IPAD-BUTTON-GEOMETRY] coordinateSpace=IPadButtonGeometryCoordinateSpace
-									261007_1225_864 🐞Main_Screen.swift:reportIPadButtonGeometry(_:):1686 [IPAD-BUTTON-GEOMETRY] upper minY=0.5 maxY=125.5 height=125.0
-									261007_1225_864 🐞Main_Screen.swift:reportIPadButtonGeometry(_:):1687 [IPAD-BUTTON-GEOMETRY] previewWrapper minY=0.5 maxY=125.5 height=125.0
-									261007_1225_865 🐞Main_Screen.swift:reportIPadButtonGeometry(_:):1688 [IPAD-BUTTON-GEOMETRY] previewActual minY=7.5 maxY=125.5 height=118.0
-									261007_1225_865 🐞Main_Screen.swift:reportIPadButtonGeometry(_:):1689 [IPAD-BUTTON-GEOMETRY] sliderOuter minY=4.5 maxY=125.5 height=121.0
-									261007_1225_865 🐞Main_Screen.swift:reportIPadButtonGeometry(_:):1690 [IPAD-BUTTON-GEOMETRY] buttonDividerY=129.5
-									261007_1225_865 🐞Main_Screen.swift:reportIPadButtonGeometry(_:):1691 [IPAD-BUTTON-GEOMETRY] commandDividerY=176.0
-									261007_1225_865 🐞Main_Screen.swift:reportIPadButtonGeometry(_:):1692 [IPAD-BUTTON-GEOMETRY] dividerDifference=-46.5
-									261007_1225_865 🐞Main_Screen.swift:reportIPadButtonGeometry(_:):1693 [IPAD-BUTTON-GEOMETRY] calculated previewBottomGap=4.0 sliderBottomGap=4.0 topDifference=-3.0 bottomDifference=0.0
-									<0x10bd148c0> Gesture: System gesture gate timed out.
-									Potential Structural Swift Concurrency Issue: unsafeForcedSync called from Swift Concurrent context.
-									Potential Structural Swift Concurrency Issue: unsafeForcedSync called from Swift Concurrent context.
-									Got a keyboard will change frame notification, but keyboard was not even present.
-									Got a keyboard will hide notification, but keyboard was not even present.
+									UITextView 0x10b74d800 is switching to TextKit 1 compatibility mode because its layoutManager was accessed. Break on void _UITextViewEnablingCompatibilityMode(UITextView *__strong, BOOL) to debug.
+									<0x10e12c8c0> Gesture: System gesture gate timed out.
 									Reading from public effective user settings.
+									UIKeyboardLayoutStar implements focusItemsInRect: - caching for linear focus movement is limited as long as this view is on screen.
+									isKeyboardMinorEdgeWidth may only be set for UIKBDynamicRenderFactory, changes not saved
+									keyboardVerticalSizeClass may only be set for UIKBDynamicRenderFactory, changes not saved
+									keyboardHorizontalSizeClass may only be set for UIKBDynamicRenderFactory, changes not saved
+									currentHandBias may only be set for UIKBDynamicRenderFactory, changes not saved
+									currentHeight may only be set for UIKBDynamicRenderFactory, changes not saved
+									isKeyboardMinorEdgeWidth may only be set for UIKBDynamicRenderFactory, changes not saved
+									keyboardVerticalSizeClass may only be set for UIKBDynamicRenderFactory, changes not saved
+									keyboardHorizontalSizeClass may only be set for UIKBDynamicRenderFactory, changes not saved
+									currentHandBias may only be set for UIKBDynamicRenderFactory, changes not saved
+									currentHeight may only be set for UIKBDynamicRenderFactory, changes not saved
+									isKeyboardMinorEdgeWidth may only be set for UIKBDynamicRenderFactory, changes not saved
+									keyboardVerticalSizeClass may only be set for UIKBDynamicRenderFactory, changes not saved
+									keyboardHorizontalSizeClass may only be set for UIKBDynamicRenderFactory, changes not saved
+									currentHandBias may only be set for UIKBDynamicRenderFactory, changes not saved
+									currentHeight may only be set for UIKBDynamicRenderFactory, changes not saved
+									Unable to simultaneously satisfy constraints.
+									Probably at least one of the constraints in the following list is one you don't want.
+									Try this:
+										(1) look at each constraint and try to figure out which you don't expect;
+(2) find the code that added the unwanted constraint or constraints and fix it.
+(Note: If you're seeing NSAutoresizingMaskLayoutConstraints that you don't understand, refer to the documentation for the UIView property translatesAutoresizingMaskIntoConstraints)
+(
+	"<NSAutoresizingMaskLayoutConstraint:0x1230324e0 h=--& v=--& TUIPredictionViewCell:0x10e123900.width == 0   (active)>",
+	"<NSLayoutConstraint:0x116ef02d0 TUICandidateGradientContentLabel:0x10e33f200.trailing == TUIPredictionViewCell:0x10e123900.trailing - 6   (active)>",
+	"<NSLayoutConstraint:0x116ef03c0 H:|-(6)-[TUICandidateGradientContentLabel:0x10e33f200]   (active, names: '|':TUIPredictionViewCell:0x10e123900 )>"
+)
+
+Will attempt to recover by breaking constraint
+<NSLayoutConstraint:0x116ef02d0 TUICandidateGradientContentLabel:0x10e33f200.trailing == TUIPredictionViewCell:0x10e123900.trailing - 6   (active)>
+
+Make a symbolic breakpoint at UIViewAlertForUnsatisfiableConstraints to catch this in the debugger.
+																				The methods in the UIConstraintBasedLayoutDebugging category on UIView listed in <UIKitCore/UIView.h> may also be helpful.
+																				Unable to simultaneously satisfy constraints.
+																				Probably at least one of the constraints in the following list is one you don't want.
+																				Try this:
+																					(1) look at each constraint and try to figure out which you don't expect;
+(2) find the code that added the unwanted constraint or constraints and fix it.
+(Note: If you're seeing NSAutoresizingMaskLayoutConstraints that you don't understand, refer to the documentation for the UIView property translatesAutoresizingMaskIntoConstraints)
+(
+	"<NSAutoresizingMaskLayoutConstraint:0x123032d50 h=--& v=--& TUIPredictionViewCell:0x121cfc000.width == 0   (active)>",
+	"<NSLayoutConstraint:0x1165c8410 TUICandidateGradientContentLabel:0x1268f0a00.trailing == TUIPredictionViewCell:0x121cfc000.trailing - 6   (active)>",
+	"<NSLayoutConstraint:0x1165c82d0 H:|-(6)-[TUICandidateGradientContentLabel:0x1268f0a00]   (active, names: '|':TUIPredictionViewCell:0x121cfc000 )>"
+)
+
+Will attempt to recover by breaking constraint
+<NSLayoutConstraint:0x1165c8410 TUICandidateGradientContentLabel:0x1268f0a00.trailing == TUIPredictionViewCell:0x121cfc000.trailing - 6   (active)>
+
+Make a symbolic breakpoint at UIViewAlertForUnsatisfiableConstraints to catch this in the debugger.
+																				The methods in the UIConstraintBasedLayoutDebugging category on UIView listed in <UIKitCore/UIView.h> may also be helpful.
+																				Unable to simultaneously satisfy constraints.
+																				Probably at least one of the constraints in the following list is one you don't want.
+																				Try this:
+																					(1) look at each constraint and try to figure out which you don't expect;
+(2) find the code that added the unwanted constraint or constraints and fix it.
+(Note: If you're seeing NSAutoresizingMaskLayoutConstraints that you don't understand, refer to the documentation for the UIView property translatesAutoresizingMaskIntoConstraints)
+(
+	"<NSAutoresizingMaskLayoutConstraint:0x123033750 h=--& v=--& TUIPredictionViewCell:0x121cfc300.width == 0   (active)>",
+	"<NSLayoutConstraint:0x1165c8d70 H:|-(6)-[TUICandidateGradientContentLabel:0x1268f1e00]   (active, names: '|':TUIPredictionViewCell:0x121cfc300 )>",
+	"<NSLayoutConstraint:0x1165c8cd0 TUICandidateGradientContentLabel:0x1268f1e00.trailing == TUIPredictionViewCell:0x121cfc300.trailing - 6   (active)>",
+	"<NSLayoutConstraint:0x1165c87d0 'UIScrollView-frameLayoutGuide-width' UILayoutGuide:0x1269081c0'UIScrollView-frameLayoutGuide'.width == TUICandidateGradientContentLabel:0x1268f1e00.width   (active)>"
+)
+
+Will attempt to recover by breaking constraint
+<NSLayoutConstraint:0x1165c87d0 'UIScrollView-frameLayoutGuide-width' UILayoutGuide:0x1269081c0'UIScrollView-frameLayoutGuide'.width == TUICandidateGradientContentLabel:0x1268f1e00.width   (active)>
+
+Make a symbolic breakpoint at UIViewAlertForUnsatisfiableConstraints to catch this in the debugger.
+																				The methods in the UIConstraintBasedLayoutDebugging category on UIView listed in <UIKitCore/UIView.h> may also be helpful.
+																				Unable to simultaneously satisfy constraints.
+																				Probably at least one of the constraints in the following list is one you don't want.
+																				Try this:
+																					(1) look at each constraint and try to figure out which you don't expect;
+(2) find the code that added the unwanted constraint or constraints and fix it.
+(Note: If you're seeing NSAutoresizingMaskLayoutConstraints that you don't understand, refer to the documentation for the UIView property translatesAutoresizingMaskIntoConstraints)
+(
+	"<NSAutoresizingMaskLayoutConstraint:0x123033750 h=--& v=--& TUIPredictionViewCell:0x121cfc300.width == 0   (active)>",
+	"<NSLayoutConstraint:0x1165c8d70 H:|-(6)-[TUICandidateGradientContentLabel:0x1268f1e00]   (active, names: '|':TUIPredictionViewCell:0x121cfc300 )>",
+	"<NSLayoutConstraint:0x1165c8cd0 TUICandidateGradientContentLabel:0x1268f1e00.trailing == TUIPredictionViewCell:0x121cfc300.trailing - 6   (active)>"
+)
+
+Will attempt to recover by breaking constraint
+<NSLayoutConstraint:0x1165c8cd0 TUICandidateGradientContentLabel:0x1268f1e00.trailing == TUIPredictionViewCell:0x121cfc300.trailing - 6   (active)>
+
+Make a symbolic breakpoint at UIViewAlertForUnsatisfiableConstraints to catch this in the debugger.
+																				The methods in the UIConstraintBasedLayoutDebugging category on UIView listed in <UIKitCore/UIView.h> may also be helpful.
+																				Reporter disconnected. { function=sendMessage, reporterID=28196460298242 }
+Reporter disconnected. { function=sendMessage, reporterID=28196460298242 }
+Reporter disconnected. { function=sendMessage, reporterID=28196460298242 }
+Reporter disconnected. { function=sendMessage, reporterID=28196460298242 }
+Reporter disconnected. { function=sendMessage, reporterID=28196460298242 }
+Reporter disconnected. { function=sendMessage, reporterID=28196460298242 }
+Reporter disconnected. { function=sendMessage, reporterID=28196460298242 }
+Reporter disconnected. { function=sendMessage, reporterID=28196460298242 }
+Reporter disconnected. { function=sendMessage, reporterID=28196460298242 }
+Received port for identifier response: <(null)> with error:Error Domain=RBSServiceErrorDomain Code=1 "Client not entitled" UserInfo={RBSEntitlement=com.apple.runningboard.process-state, NSLocalizedFailureReason=Client not entitled, RBSPermanent=false}
+elapsedCPUTimeForFrontBoard couldn't generate a task port
+Received port for identifier response: <(null)> with error:Error Domain=RBSServiceErrorDomain Code=1 "Client not entitled" UserInfo={RBSEntitlement=com.apple.runningboard.process-state, NSLocalizedFailureReason=Client not entitled, RBSPermanent=false}
+elapsedCPUTimeForFrontBoard couldn't generate a task port
+cannot add handler to 0 from 0 - dropping
+cannot add handler to 0 from 0 - dropping
+cannot add handler to 0 from 0 - dropping
+cannot add handler to 0 from 0 - dropping
+Reporter disconnected or already stopped. { func=stop, reporterID=28196460298242 }
+Reporter disconnected. { function=sendMessage, reporterID=28196460298243 }
+Reporter disconnected. { function=sendMessage, reporterID=28196460298243 }
+Reporter disconnected. { function=sendMessage, reporterID=28196460298243 }
+Reporter disconnected. { function=sendMessage, reporterID=28196460298243 }
+Reporter disconnected. { function=sendMessage, reporterID=28196460298243 }
+Reporter disconnected. { function=sendMessage, reporterID=28196460298243 }
+Reporter disconnected. { function=sendMessage, reporterID=28196460298243 }
+Reporter disconnected. { function=sendMessage, reporterID=28196460298243 }
+Reporter disconnected. { function=sendMessage, reporterID=28196460298243 }
+UITextView 0x126920c00 is switching to TextKit 1 compatibility mode because its layoutManager was accessed. Break on void _UITextViewEnablingCompatibilityMode(UITextView *__strong, BOOL) to debug.
+Reporter disconnected or already stopped. { func=stop, reporterID=28196460298243 }
+cannot add handler to 0 from 0 - dropping
+cannot add handler to 0 from 0 - dropping
+-[RTIInputSystemClient remoteTextInputSessionWithID:performInputOperation:]  perform input operation requires a valid sessionID. inputModality = Keyboard, inputOperation = <null selector>, customInfoType = UIEmojiSearchOperations
+isKeyboardMinorEdgeWidth may only be set for UIKBDynamicRenderFactory, changes not saved
+												keyboardVerticalSizeClass may only be set for UIKBDynamicRenderFactory, changes not saved
+												keyboardHorizontalSizeClass may only be set for UIKBDynamicRenderFactory, changes not saved
+												currentHandBias may only be set for UIKBDynamicRenderFactory, changes not saved
+												currentHeight may only be set for UIKBDynamicRenderFactory, changes not saved
+												isKeyboardMinorEdgeWidth may only be set for UIKBDynamicRenderFactory, changes not saved
+												keyboardVerticalSizeClass may only be set for UIKBDynamicRenderFactory, changes not saved
+												keyboardHorizontalSizeClass may only be set for UIKBDynamicRenderFactory, changes not saved
+												currentHandBias may only be set for UIKBDynamicRenderFactory, changes not saved
+												currentHeight may only be set for UIKBDynamicRenderFactory, changes not saved
+												+[UAFCommonUtilities copyBootSessionUUID]_block_invoke Failed to get kern.bootsessionuuid length: [1: Operation not permitted]
+												-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Current boot UUID is empty when creating consistency token for asset set com.apple.linguisticdata
+												-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Treating empty boot UUID as current when creating consistency token for asset set com.apple.linguisticdata
+												Reporter disconnected. { function=sendMessage, reporterID=28196460298244 }
+Reporter disconnected. { function=sendMessage, reporterID=28196460298244 }
+Reporter disconnected. { function=sendMessage, reporterID=28196460298244 }
+Reporter disconnected. { function=sendMessage, reporterID=28196460298244 }
+Reporter disconnected. { function=sendMessage, reporterID=28196460298244 }
+Reporter disconnected. { function=sendMessage, reporterID=28196460298244 }
+Reporter disconnected. { function=sendMessage, reporterID=28196460298244 }
+Reporter disconnected. { function=sendMessage, reporterID=28196460298244 }
+Reporter disconnected. { function=sendMessage, reporterID=28196460298244 }
+cannot add handler to 0 from 0 - dropping
+cannot add handler to 0 from 0 - dropping
+cannot add handler to 0 from 0 - dropping
+cannot add handler to 0 from 0 - dropping
+-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Current boot UUID is empty when creating consistency token for asset set com.apple.linguisticdata
+																																																								-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Treating empty boot UUID as current when creating consistency token for asset set com.apple.linguisticdata
+																																																								-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Current boot UUID is empty when creating consistency token for asset set com.apple.linguisticdata
+																																																								-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Treating empty boot UUID as current when creating consistency token for asset set com.apple.linguisticdata
+																																																								-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Current boot UUID is empty when creating consistency token for asset set com.apple.linguisticdata
+																																																								-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Treating empty boot UUID as current when creating consistency token for asset set com.apple.linguisticdata
+																																																								-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Current boot UUID is empty when creating consistency token for asset set com.apple.linguisticdata
+																																																								-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Treating empty boot UUID as current when creating consistency token for asset set com.apple.linguisticdata
+																																																								-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Current boot UUID is empty when creating consistency token for asset set com.apple.linguisticdata
+																																																								-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Treating empty boot UUID as current when creating consistency token for asset set com.apple.linguisticdata
+																																																								-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Current boot UUID is empty when creating consistency token for asset set com.apple.linguisticdata
+																																																								-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Treating empty boot UUID as current when creating consistency token for asset set com.apple.linguisticdata
+																																																								-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Current boot UUID is empty when creating consistency token for asset set com.apple.linguisticdata
+																																																								-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Treating empty boot UUID as current when creating consistency token for asset set com.apple.linguisticdata
+																																																								-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Current boot UUID is empty when creating consistency token for asset set com.apple.linguisticdata
+																																																								-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Treating empty boot UUID as current when creating consistency token for asset set com.apple.linguisticdata
+																																																								-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Current boot UUID is empty when creating consistency token for asset set com.apple.linguisticdata
+																																																								-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Treating empty boot UUID as current when creating consistency token for asset set com.apple.linguisticdata
+																																																								-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Current boot UUID is empty when creating consistency token for asset set com.apple.linguisticdata
+																																																								-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Treating empty boot UUID as current when creating consistency token for asset set com.apple.linguisticdata
+																																																								-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Current boot UUID is empty when creating consistency token for asset set com.apple.linguisticdata
+																																																								-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Treating empty boot UUID as current when creating consistency token for asset set com.apple.linguisticdata
+																																																								-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Current boot UUID is empty when creating consistency token for asset set com.apple.linguisticdata
+																																																								-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Treating empty boot UUID as current when creating consistency token for asset set com.apple.linguisticdata
+																																																								-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Current boot UUID is empty when creating consistency token for asset set com.apple.linguisticdata
+																																																								-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Treating empty boot UUID as current when creating consistency token for asset set com.apple.linguisticdata
+																																																								-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Current boot UUID is empty when creating consistency token for asset set com.apple.linguisticdata
+																																																								-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Treating empty boot UUID as current when creating consistency token for asset set com.apple.linguisticdata
+																																																								-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Current boot UUID is empty when creating consistency token for asset set com.apple.linguisticdata
+																																																								-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Treating empty boot UUID as current when creating consistency token for asset set com.apple.linguisticdata
+																																																								-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Current boot UUID is empty when creating consistency token for asset set com.apple.linguisticdata
+																																																								-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Treating empty boot UUID as current when creating consistency token for asset set com.apple.linguisticdata
+																																																								-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Current boot UUID is empty when creating consistency token for asset set com.apple.linguisticdata
+																																																								-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Treating empty boot UUID as current when creating consistency token for asset set com.apple.linguisticdata
+																																																								-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Current boot UUID is empty when creating consistency token for asset set com.apple.linguisticdata
+																																																								-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Treating empty boot UUID as current when creating consistency token for asset set com.apple.linguisticdata
+																																																								-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Current boot UUID is empty when creating consistency token for asset set com.apple.linguisticdata
+																																																								-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Treating empty boot UUID as current when creating consistency token for asset set com.apple.linguisticdata
+																																																								-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Current boot UUID is empty when creating consistency token for asset set com.apple.linguisticdata
+																																																								-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Treating empty boot UUID as current when creating consistency token for asset set com.apple.linguisticdata
+																																																								-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Current boot UUID is empty when creating consistency token for asset set com.apple.linguisticdata
+																																																								-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Treating empty boot UUID as current when creating consistency token for asset set com.apple.linguisticdata
+																																																								-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Current boot UUID is empty when creating consistency token for asset set com.apple.linguisticdata
+																																																								-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Treating empty boot UUID as current when creating consistency token for asset set com.apple.linguisticdata
+																																																								-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Current boot UUID is empty when creating consistency token for asset set com.apple.linguisticdata
+																																																								-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Treating empty boot UUID as current when creating consistency token for asset set com.apple.linguisticdata
+																																																								-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Current boot UUID is empty when creating consistency token for asset set com.apple.linguisticdata
+																																																								-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Treating empty boot UUID as current when creating consistency token for asset set com.apple.linguisticdata
+																																																								-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Current boot UUID is empty when creating consistency token for asset set com.apple.linguisticdata
+																																																								-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Treating empty boot UUID as current when creating consistency token for asset set com.apple.linguisticdata
+																																																								-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Current boot UUID is empty when creating consistency token for asset set com.apple.linguisticdata
+																																																								-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Treating empty boot UUID as current when creating consistency token for asset set com.apple.linguisticdata
+																																																								Reporter disconnected or already stopped. { func=stop, reporterID=28196460298244 }

@@ -960,10 +960,12 @@ Tapping a row inserts the key code at the cursor.
     @State private var isSmartPhoneSFSymbolMode = false
     @State private var keyboardMinY: CGFloat = .greatestFiniteMagnitude
     @State private var editorGeometryFrames: [EditorGeometryProbeTarget: CGRect] = [:]
-    @State private var lastIPadButtonGeometryReport = ""
-    @State private var lastIPadButtonGeometryMissingReport = ""
     @State private var smartIPhoneRightTableVisibleCellHeight: CGFloat?
     @State private var popupDismissTask: Task<Void, Never>?
+    private let iPhoneOrdinaryPreviewFontMultiplier: CGFloat = 1.5
+    private let iPadSFSymbolPreviewGroupYOffset: CGFloat = 5
+    private let iPadSFPreviewSizeMultiplier: CGFloat = 1.10
+    private let iPhoneSFSymbolPreviewGroupMultiplier: CGFloat = 1.25
     @State var presentedPreviewFile: PreviewedFile?
     @AppStorage("selectedTextToSpeechVoiceIdentifier") var selectedTextToSpeechVoiceIdentifier = ""
     @AppStorage("textToSpeechRate") var textToSpeechRate = Double(AVSpeechUtteranceDefaultSpeechRate)
@@ -1624,77 +1626,11 @@ Tapping a row inserts the key code at the cursor.
             }
         }
         .editorGeometryProbe(.hStack, isEnabled: debugEditorGeometry)
-        .coordinateSpace(name: iPadButtonGeometryCoordinateSpaceName)
-        .onPreferenceChange(IPadButtonGeometryPreferenceKey.self) { frames in
-            reportIPadButtonGeometry(frames)
-        }
         .frame(width: editorGroupWidth, height: outerHeight, alignment: .topLeading)
         .frame(width: outerWidth, height: outerHeight, alignment: editorGroupAlignment)
         .frame(maxWidth: outerMaxWidth, maxHeight: outerMaxHeight, alignment: .topLeading)
         .editorGeometryProbe(.smartView, isEnabled: debugEditorGeometry)
         .ignoresSafeArea(.keyboard)
-    }
-
-    private func reportIPadButtonGeometry(_ frames: [IPadButtonGeometryProbeTarget: CGRect]) {
-        let requiredTargets: [IPadButtonGeometryProbeTarget] = [
-            .upperContainer,
-            .previewWrapper,
-            .previewActual,
-            .sliderOuter,
-            .buttonDivider,
-            .commandDivider
-        ]
-        let missingTargets = requiredTargets.filter { frames[$0] == nil }
-        if !missingTargets.isEmpty {
-            let availableSignature = IPadButtonGeometryProbeTarget.allCases
-                .filter { frames[$0] != nil }
-                .map(\.rawValue)
-                .joined(separator: ",")
-            let missingSignature = missingTargets
-                .map(\.rawValue)
-                .joined(separator: ",")
-            let diagnosticSignature = "\(missingSignature)|available:\(availableSignature)"
-            if diagnosticSignature != lastIPadButtonGeometryMissingReport {
-                lastIPadButtonGeometryMissingReport = diagnosticSignature
-                db("[IPAD-BUTTON-GEOMETRY] waitingFor=%@ available=%@", missingSignature, availableSignature)
-            }
-            return
-        }
-
-        let signature = requiredTargets
-            .compactMap { target -> String? in
-                guard let frame = frames[target] else { return nil }
-                return "\(target.rawValue):\(roundedIPadButtonGeometryValue(frame.minY)),\(roundedIPadButtonGeometryValue(frame.maxY)),\(roundedIPadButtonGeometryValue(frame.height))"
-            }
-            .joined(separator: "|")
-        guard signature != lastIPadButtonGeometryReport else {
-            return
-        }
-
-        lastIPadButtonGeometryReport = signature
-
-        let upper = frames[.upperContainer]!
-        let previewWrapper = frames[.previewWrapper]!
-        let previewActual = frames[.previewActual]!
-        let sliderOuter = frames[.sliderOuter]!
-        let buttonDivider = frames[.buttonDivider]!
-        let commandDivider = frames[.commandDivider]!
-        let buttonDividerY = buttonDivider.minY
-        let commandDividerY = commandDivider.minY
-
-        db("[IPAD-BUTTON-GEOMETRY] coordinateSpace=%@", iPadButtonGeometryCoordinateSpaceName)
-        db("[IPAD-BUTTON-GEOMETRY] upper minY=%@ maxY=%@ height=%@", roundedIPadButtonGeometryValue(upper.minY), roundedIPadButtonGeometryValue(upper.maxY), roundedIPadButtonGeometryValue(upper.height))
-        db("[IPAD-BUTTON-GEOMETRY] previewWrapper minY=%@ maxY=%@ height=%@", roundedIPadButtonGeometryValue(previewWrapper.minY), roundedIPadButtonGeometryValue(previewWrapper.maxY), roundedIPadButtonGeometryValue(previewWrapper.height))
-        db("[IPAD-BUTTON-GEOMETRY] previewActual minY=%@ maxY=%@ height=%@", roundedIPadButtonGeometryValue(previewActual.minY), roundedIPadButtonGeometryValue(previewActual.maxY), roundedIPadButtonGeometryValue(previewActual.height))
-        db("[IPAD-BUTTON-GEOMETRY] sliderOuter minY=%@ maxY=%@ height=%@", roundedIPadButtonGeometryValue(sliderOuter.minY), roundedIPadButtonGeometryValue(sliderOuter.maxY), roundedIPadButtonGeometryValue(sliderOuter.height))
-        db("[IPAD-BUTTON-GEOMETRY] buttonDividerY=%@", roundedIPadButtonGeometryValue(buttonDividerY))
-        db("[IPAD-BUTTON-GEOMETRY] commandDividerY=%@", roundedIPadButtonGeometryValue(commandDividerY))
-        db("[IPAD-BUTTON-GEOMETRY] dividerDifference=%@", roundedIPadButtonGeometryValue(buttonDividerY - commandDividerY))
-        db("[IPAD-BUTTON-GEOMETRY] calculated previewBottomGap=%@ sliderBottomGap=%@ topDifference=%@ bottomDifference=%@", roundedIPadButtonGeometryValue(buttonDividerY - previewActual.maxY), roundedIPadButtonGeometryValue(buttonDividerY - sliderOuter.maxY), roundedIPadButtonGeometryValue(sliderOuter.minY - previewActual.minY), roundedIPadButtonGeometryValue(sliderOuter.maxY - previewActual.maxY))
-    }
-
-    private func roundedIPadButtonGeometryValue(_ value: CGFloat) -> String {
-        String(format: "%.1f", Double(value))
     }
 
     private func iPhoneSmartEditorPresentation(availableWidth: CGFloat) -> some View {
@@ -2216,7 +2152,6 @@ Tapping a row inserts the key code at the cursor.
                     .scaleEffect(y: isPad ? 1 : smartIPhoneCommandLowerHeightScale, anchor: .top)
             }
             .editorGeometryProbe(.commandDescription, isEnabled: debugEditorGeometry)
-            .ipadButtonGeometryProbe(.commandDivider, isEnabled: isPad)
 
             if !isPad {
                 smartIPhoneCommandActionControls
@@ -2595,9 +2530,26 @@ Tapping a row inserts the key code at the cursor.
         } else {
             Group {
                 if let symbolDisplay = smartButtonSFSymbolDisplay {
-                    let symbolSize = max(18, CGFloat(boxFontSize) * 1.5)
-                    let subtitleFontSize = max(14, CGFloat(boxFontSize) * 0.8)
-                    let subtitleTextFieldHeight = ceil(subtitleFontSize * 1.35)
+                    let sfGroupMultiplier = isPad ? iPadSFPreviewSizeMultiplier : iPhoneSFSymbolPreviewGroupMultiplier
+                    let sfGroupYOffset = isPad ? iPadSFSymbolPreviewGroupYOffset : 0
+                    let preferredSymbolSize = max(18, CGFloat(boxFontSize) * 1.0 * sfGroupMultiplier)
+                    let subtitleFontSize = max(14, CGFloat(boxFontSize) * 0.8 * sfGroupMultiplier)
+                    let subtitleVisibleLineCount = smartPreviewVisibleLineCount(
+                        for: smartButtonEditablePreviewTextBinding.wrappedValue
+                    )
+                    let preferredSubtitleTextHeight = SmartPreviewTextView.preferredHeight(
+                        fontSize: subtitleFontSize,
+                        maximumVisibleLines: subtitleVisibleLineCount
+                    )
+                    let preferredGroupHeight = preferredSymbolSize + 4 + preferredSubtitleTextHeight
+                    let fittingPreviewHeight = max(1, previewHeight - (sfGroupYOffset * 2))
+                    let groupScale = min(1, fittingPreviewHeight / preferredGroupHeight)
+                    let symbolSize = max(14, preferredSymbolSize * groupScale)
+                    let fittedSubtitleFontSize = subtitleFontSize * groupScale
+                    let subtitleTextFieldHeight = SmartPreviewTextView.preferredHeight(
+                        fontSize: fittedSubtitleFontSize,
+                        maximumVisibleLines: subtitleVisibleLineCount
+                    )
 
                     VStack(spacing: 4) {
                         Image(systemName: symbolDisplay.name)
@@ -2605,11 +2557,11 @@ Tapping a row inserts the key code at the cursor.
                             .scaledToFit()
                             .frame(width: symbolSize, height: symbolSize)
 
-                        SmartActionTextField(
-                            placeholder: "",
+                        SmartPreviewTextView(
                             text: smartButtonEditablePreviewTextBinding,
                             selectedRange: $smartButtonPreviewSelectionRange,
-                            fontSize: subtitleFontSize,
+                            fontSize: fittedSubtitleFontSize,
+                            maximumVisibleLines: subtitleVisibleLineCount,
                             disablesAutomaticPeriodShortcut: true
                         )
                             .frame(height: subtitleTextFieldHeight)
@@ -2617,13 +2569,24 @@ Tapping a row inserts the key code at the cursor.
                     }
                     .foregroundStyle(.white)
                     .padding(.horizontal, 8)
+                    .offset(y: sfGroupYOffset)
                 } else {
-                    SmartActionTextField(
-                        placeholder: "",
+                    let ordinaryPreviewFontSize = CGFloat(boxFontSize) * (isPad ? 1 : iPhoneOrdinaryPreviewFontMultiplier)
+                    let ordinaryVisibleLineCount = smartPreviewVisibleLineCount(
+                        for: smartButtonEditablePreviewTextBinding.wrappedValue
+                    )
+
+                    SmartPreviewTextView(
                         text: smartButtonEditablePreviewTextBinding,
                         selectedRange: $smartButtonPreviewSelectionRange,
-                        fontSize: CGFloat(boxFontSize)
+                        fontSize: ordinaryPreviewFontSize,
+                        maximumVisibleLines: ordinaryVisibleLineCount,
+                        disablesAutomaticPeriodShortcut: true
                     )
+                        .frame(height: min(previewHeight, SmartPreviewTextView.preferredHeight(
+                            fontSize: ordinaryPreviewFontSize,
+                            maximumVisibleLines: ordinaryVisibleLineCount
+                        )))
                         .padding(.horizontal, 8)
                 }
             }
@@ -2644,7 +2607,6 @@ Tapping a row inserts the key code at the cursor.
                         .stroke(Color.white, lineWidth: 1.5)
                 }
             }
-            .ipadButtonGeometryProbe(.previewActual, isEnabled: isPad)
             .editorGeometryProbe(.actualPreviewButton, isEnabled: debugEditorGeometry)
             .frame(width: previewFootprintWidth, height: previewFootprintHeight)
         }
@@ -2718,6 +2680,10 @@ Tapping a row inserts the key code at the cursor.
             .replacingOccurrences(of: "\r", with: "\\n")
             .replacingOccurrences(of: "\n", with: "\\n")
             .replacingOccurrences(of: "\t", with: "\\t")
+    }
+
+    private func smartPreviewVisibleLineCount(for text: String) -> Int {
+        min(max(text.components(separatedBy: .newlines).count, 1), 4)
     }
 
     private func setSmartButtonSFSymbol(_ symbolName: String) {
@@ -4049,58 +4015,6 @@ Tapping a row inserts the key code at the cursor.
     }
 }
 
-private let iPadButtonGeometryCoordinateSpaceName = "IPadButtonGeometryCoordinateSpace"
-
-private enum IPadButtonGeometryProbeTarget: String, CaseIterable {
-    case upperContainer = "upper"
-    case previewWrapper = "previewWrapper"
-    case previewActual = "previewActual"
-    case sliderOuter = "sliderOuter"
-    case buttonDivider = "buttonDivider"
-    case commandDivider = "commandDivider"
-}
-
-private struct IPadButtonGeometryPreferenceKey: PreferenceKey {
-    static var defaultValue: [IPadButtonGeometryProbeTarget: CGRect] = [:]
-
-    static func reduce(
-        value: inout [IPadButtonGeometryProbeTarget: CGRect],
-        nextValue: () -> [IPadButtonGeometryProbeTarget: CGRect]
-    ) {
-        value.merge(nextValue()) { _, newValue in newValue }
-    }
-}
-
-private struct IPadButtonGeometryProbeModifier: ViewModifier {
-    let target: IPadButtonGeometryProbeTarget
-    let isEnabled: Bool
-
-    @ViewBuilder
-    func body(content: Content) -> some View {
-        if isEnabled {
-            content.background {
-                GeometryReader { geometry in
-                    Color.clear.preference(
-                        key: IPadButtonGeometryPreferenceKey.self,
-                        value: [target: geometry.frame(in: .named(iPadButtonGeometryCoordinateSpaceName))]
-                    )
-                }
-            }
-        } else {
-            content
-        }
-    }
-}
-
-private extension View {
-    func ipadButtonGeometryProbe(
-        _ target: IPadButtonGeometryProbeTarget,
-        isEnabled: Bool = true
-    ) -> some View {
-        modifier(IPadButtonGeometryProbeModifier(target: target, isEnabled: isEnabled))
-    }
-}
-
 private struct IPadSmartButtonPanel<
     BrightnessSliderColumn: View,
     Preview: View,
@@ -4137,7 +4051,6 @@ private struct IPadSmartButtonPanel<
                     .frame(height: previewButtonHeight)
                     .padding(.top, 0)
                     .padding(.bottom, upperBottomPadding)
-                    .ipadButtonGeometryProbe(.sliderOuter)
                     .editorGeometryProbe(.slider, isEnabled: debugEditorGeometry)
 
                 VStack(spacing: 8) {
@@ -4148,17 +4061,14 @@ private struct IPadSmartButtonPanel<
 				.padding(.trailing, previewTrailingPadding)
 				.padding(.top, upperTopPadding)
                 .padding(.bottom, upperBottomPadding)
-                .ipadButtonGeometryProbe(.previewWrapper)
                 .editorGeometryProbe(.previewFootprint, isEnabled: debugEditorGeometry)
             }
             .background {
                 clearPreviewBackground()
             }
-            .ipadButtonGeometryProbe(.upperContainer)
             .editorGeometryProbe(.rightPreviewArea, isEnabled: debugEditorGeometry)
 
             lowerEditingArea()
-                .ipadButtonGeometryProbe(.buttonDivider)
         }
         .frame(maxWidth: nil, maxHeight: nil, alignment: .top)
         .background(Color.black)
@@ -4556,6 +4466,359 @@ private struct SmartScriptTextEditor: UIViewRepresentable {
             textView.selectedRange = clampedRange
             isApplyingSelectedRange = false
         }
+    }
+}
+
+private struct SmartPreviewTextView: UIViewRepresentable {
+    @Binding var text: String
+    @Binding var selectedRange: NSRange
+    let fontSize: CGFloat
+    let maximumVisibleLines: Int
+    let disablesAutomaticPeriodShortcut: Bool
+    private static let maximumManualLogicalLineCount = 4
+    private static let minimumVerticalInset: CGFloat = 1
+
+    static func preferredHeight(fontSize: CGFloat, maximumVisibleLines: Int) -> CGFloat {
+        ceil(fontSize * 1.35 * CGFloat(max(maximumVisibleLines, 1)))
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+
+    func makeUIView(context: Context) -> UITextView {
+        let textView = PreviewTextView()
+        textView.delegate = context.coordinator
+        textView.onLayout = { [weak coordinator = context.coordinator] textView in
+            coordinator?.updateFittedFont(for: textView)
+            coordinator?.updateVerticalTextInsets(for: textView)
+        }
+        textView.textColor = .white
+        textView.tintColor = .white
+        textView.backgroundColor = .clear
+        textView.textAlignment = .center
+        textView.font = .systemFont(ofSize: fontSize, weight: .semibold)
+        textView.autocorrectionType = .no
+        textView.autocapitalizationType = .none
+        textView.smartQuotesType = .no
+        textView.smartDashesType = .no
+        textView.smartInsertDeleteType = .no
+        textView.textContainerInset = UIEdgeInsets(
+            top: Self.minimumVerticalInset,
+            left: 0,
+            bottom: Self.minimumVerticalInset,
+            right: 0
+        )
+        textView.textContainer.lineFragmentPadding = 0
+        textView.textContainer.lineBreakMode = .byTruncatingTail
+        textView.isScrollEnabled = true
+        textView.showsVerticalScrollIndicator = false
+        textView.showsHorizontalScrollIndicator = false
+        textView.clipsToBounds = true
+        textView.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        textView.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        return textView
+    }
+
+    func updateUIView(_ uiView: UITextView, context: Context) {
+        context.coordinator.parent = self
+        context.coordinator.isUpdatingView = true
+        defer {
+            context.coordinator.isUpdatingView = false
+        }
+
+        if uiView.text != text {
+            uiView.text = text
+        }
+
+        context.coordinator.updateDisplayTruncation(for: uiView)
+        context.coordinator.updateFittedFont(for: uiView)
+        context.coordinator.applySelectedRange(to: uiView)
+        context.coordinator.updateVerticalTextInsets(for: uiView)
+    }
+
+    func sizeThatFits(_ proposal: ProposedViewSize, uiView: UITextView, context: Context) -> CGSize? {
+        guard let width = proposal.width,
+              width.isFinite else {
+            return nil
+        }
+
+        let height = proposal.height?.isFinite == true
+            ? proposal.height ?? Self.preferredHeight(fontSize: fontSize, maximumVisibleLines: maximumVisibleLines)
+            : Self.preferredHeight(fontSize: fontSize, maximumVisibleLines: maximumVisibleLines)
+        return CGSize(width: width, height: height)
+    }
+
+    private final class PreviewTextView: UITextView {
+        var onLayout: ((UITextView) -> Void)?
+        var isHandlingPaste = false
+
+        override func layoutSubviews() {
+            super.layoutSubviews()
+            onLayout?(self)
+        }
+
+        override func paste(_ sender: Any?) {
+            isHandlingPaste = true
+            super.paste(sender)
+            isHandlingPaste = false
+        }
+    }
+
+    final class Coordinator: NSObject, UITextViewDelegate {
+        var parent: SmartPreviewTextView
+        var isUpdatingView = false
+        private var isApplyingSelectedRange = false
+
+        init(_ parent: SmartPreviewTextView) {
+            self.parent = parent
+            super.init()
+        }
+
+        func textViewDidChange(_ textView: UITextView) {
+            updateFittedFont(for: textView)
+            updateVerticalTextInsets(for: textView)
+            syncTextAndSelection(from: textView)
+        }
+
+        func textViewDidBeginEditing(_ textView: UITextView) {
+            updateDisplayTruncation(for: textView)
+            updateFittedFont(for: textView)
+            updateVerticalTextInsets(for: textView)
+        }
+
+        func textViewDidEndEditing(_ textView: UITextView) {
+            updateDisplayTruncation(for: textView)
+            updateFittedFont(for: textView)
+            updateVerticalTextInsets(for: textView)
+        }
+
+        func textViewDidChangeSelection(_ textView: UITextView) {
+            guard !isUpdatingView, !isApplyingSelectedRange else {
+                return
+            }
+
+            let newSelectedRange = textView.selectedRange
+            DispatchQueue.main.async {
+                self.parent.selectedRange = newSelectedRange
+            }
+        }
+
+        func textView(
+            _ textView: UITextView,
+            shouldChangeTextIn range: NSRange,
+            replacementText text: String
+        ) -> Bool {
+            if shouldRejectManualNewline(in: textView, range: range, replacementText: text) {
+                return false
+            }
+
+            guard parent.disablesAutomaticPeriodShortcut,
+                  text == ". ",
+                  range.length == 1,
+                  let currentText = textView.text,
+                  let replacementRange = Range(range, in: currentText),
+                  String(currentText[replacementRange]) == " " else {
+                return true
+            }
+
+            let updatedText = (currentText as NSString).replacingCharacters(in: range, with: "  ")
+            textView.text = updatedText
+            textView.selectedRange = NSRange(location: range.location + 2, length: 0)
+            updateFittedFont(for: textView)
+            updateVerticalTextInsets(for: textView)
+            syncTextAndSelection(from: textView)
+            return false
+        }
+
+        func updateFittedFont(for textView: UITextView) {
+            updateDisplayTruncation(for: textView)
+
+            guard textView.bounds.width > 0,
+                  textView.bounds.height > 0 else {
+                applyFont(parent.fontSize, to: textView)
+                return
+            }
+
+            let preferredFontSize = parent.fontSize
+            let minimumFontSize = max(12, preferredFontSize * 0.45)
+            let availableWidth = max(
+                1,
+                textView.bounds.width
+                    - textView.textContainerInset.left
+                    - textView.textContainerInset.right
+                    - (textView.textContainer.lineFragmentPadding * 2)
+            )
+            let availableHeight = max(
+                1,
+                textView.bounds.height - (SmartPreviewTextView.minimumVerticalInset * 2)
+            )
+            let fittingText = fittingText(from: textView.text ?? "")
+
+            if measuredSize(
+                for: fittingText,
+                fontSize: preferredFontSize,
+                width: availableWidth
+            ).fits(width: availableWidth, height: availableHeight) {
+                applyFont(preferredFontSize, to: textView)
+                return
+            }
+
+            var low = minimumFontSize
+            var high = preferredFontSize
+
+            for _ in 0..<8 {
+                let candidate = (low + high) / 2
+                let measuredSize = measuredSize(
+                    for: fittingText,
+                    fontSize: candidate,
+                    width: availableWidth
+                )
+
+                if measuredSize.fits(width: availableWidth, height: availableHeight) {
+                    low = candidate
+                } else {
+                    high = candidate
+                }
+            }
+
+            applyFont(low, to: textView)
+        }
+
+        func applySelectedRange(to textView: UITextView) {
+            let textLength = textView.text.utf16.count
+            let location = min(max(parent.selectedRange.location, 0), textLength)
+            let length = max(0, min(parent.selectedRange.length, textLength - location))
+            let clampedRange = NSRange(location: location, length: length)
+
+            guard textView.selectedRange != clampedRange else {
+                return
+            }
+
+            isApplyingSelectedRange = true
+            textView.selectedRange = clampedRange
+            isApplyingSelectedRange = false
+        }
+
+        func updateVerticalTextInsets(for textView: UITextView) {
+            guard textView.bounds.height > 0,
+                  textView.bounds.width > 0 else {
+                return
+            }
+
+            textView.layoutManager.ensureLayout(for: textView.textContainer)
+            let usedHeight = ceil(textView.layoutManager.usedRect(for: textView.textContainer).height)
+            let fallbackLineHeight = ceil(textView.font?.lineHeight ?? parent.fontSize * 1.2)
+            let renderedTextHeight = max(usedHeight, fallbackLineHeight)
+            let centeredInset = max(
+                SmartPreviewTextView.minimumVerticalInset,
+                floor((textView.bounds.height - renderedTextHeight) / 2)
+            )
+            let targetInsets = UIEdgeInsets(
+                top: centeredInset,
+                left: 0,
+                bottom: centeredInset,
+                right: 0
+            )
+
+            guard abs(textView.textContainerInset.top - targetInsets.top) > 0.5 ||
+                    abs(textView.textContainerInset.bottom - targetInsets.bottom) > 0.5 else {
+                return
+            }
+
+            textView.textContainerInset = targetInsets
+
+            if renderedTextHeight <= textView.bounds.height {
+                textView.setContentOffset(.zero, animated: false)
+            } else {
+                textView.scrollRangeToVisible(textView.selectedRange)
+            }
+        }
+
+        func updateDisplayTruncation(for textView: UITextView) {
+            textView.isScrollEnabled = textView.isFirstResponder
+            textView.textContainer.maximumNumberOfLines = textView.isFirstResponder ? 0 : max(parent.maximumVisibleLines, 1)
+            textView.textContainer.lineBreakMode = textView.isFirstResponder ? .byWordWrapping : .byTruncatingTail
+        }
+
+        private func shouldRejectManualNewline(
+            in textView: UITextView,
+            range: NSRange,
+            replacementText: String
+        ) -> Bool {
+            guard replacementText == "\n",
+                  (textView as? PreviewTextView)?.isHandlingPaste != true,
+                  let currentText = textView.text else {
+                return false
+            }
+
+            let currentLineCount = logicalLineCount(in: currentText)
+            let proposedText = (currentText as NSString).replacingCharacters(in: range, with: replacementText)
+            let proposedLineCount = logicalLineCount(in: proposedText)
+
+            if proposedLineCount <= SmartPreviewTextView.maximumManualLogicalLineCount {
+                return false
+            }
+
+            return proposedLineCount > currentLineCount
+        }
+
+        private func logicalLineCount(in text: String) -> Int {
+            text.components(separatedBy: .newlines).count
+        }
+
+        private func fittingText(from text: String) -> String {
+            let visibleLineCount = max(parent.maximumVisibleLines, 1)
+            let lines = text.components(separatedBy: .newlines)
+            let fittingLines = lines.prefix(visibleLineCount)
+            let fittingText = fittingLines.joined(separator: "\n")
+            return fittingText.isEmpty ? " " : fittingText
+        }
+
+        private func measuredSize(for text: String, fontSize: CGFloat, width: CGFloat) -> CGSize {
+            let paragraphStyle = NSMutableParagraphStyle()
+            paragraphStyle.alignment = .center
+            paragraphStyle.lineBreakMode = .byWordWrapping
+            let attributes: [NSAttributedString.Key: Any] = [
+                .font: UIFont.systemFont(ofSize: fontSize, weight: .semibold),
+                .paragraphStyle: paragraphStyle
+            ]
+            let rect = (text as NSString).boundingRect(
+                with: CGSize(width: width, height: .greatestFiniteMagnitude),
+                options: [.usesLineFragmentOrigin, .usesFontLeading],
+                attributes: attributes,
+                context: nil
+            )
+            return CGSize(width: ceil(rect.width), height: ceil(rect.height))
+        }
+
+        private func applyFont(_ fontSize: CGFloat, to textView: UITextView) {
+            let currentFontSize = textView.font?.pointSize ?? 0
+            guard abs(currentFontSize - fontSize) > 0.25 else {
+                return
+            }
+
+            textView.font = .systemFont(ofSize: fontSize, weight: .semibold)
+        }
+
+        private func syncTextAndSelection(from textView: UITextView) {
+            guard !isUpdatingView, !isApplyingSelectedRange else {
+                return
+            }
+
+            let newText = textView.text ?? ""
+            let newSelectedRange = textView.selectedRange
+            DispatchQueue.main.async {
+                self.parent.text = newText
+                self.parent.selectedRange = newSelectedRange
+            }
+        }
+    }
+}
+
+private extension CGSize {
+    func fits(width: CGFloat, height: CGFloat) -> Bool {
+        self.width <= width + 0.5 && self.height <= height + 0.5
     }
 }
 
