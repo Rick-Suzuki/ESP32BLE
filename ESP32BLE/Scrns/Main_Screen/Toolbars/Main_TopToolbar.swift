@@ -29,6 +29,14 @@ struct MainScreenToolbarContent: View {
         isPad ? opacitySliderHitHorizontalPadding : 0
     }
 
+    private var topToolbarOpacityVisualWidth: CGFloat {
+        isPad ? 30 : 84
+    }
+
+    private var topToolbarStatusMinimumGap: CGFloat {
+        isPad ? 12 : 8
+    }
+
     private var topToolbarEditMinWidth: CGFloat {
         isPad ? 84 : 56
     }
@@ -227,7 +235,7 @@ struct MainScreenToolbarContent: View {
 			minusPlusBtns(
 				value: $backgroundImageOpacity,
 				range: 0...1,
-				visualWidth: isPad ? 30 : 100,
+				visualWidth: topToolbarOpacityVisualWidth,
 				hitHorizontalPadding: topToolbarOpacityHitHorizontalPadding,
 				hitHeight: opacitySliderHitHeight,
 				isDisabled: editingSlotIndex != nil,
@@ -249,7 +257,7 @@ struct MainScreenToolbarContent: View {
 			minusPlusBtns(
 				value: $gridBackgroundOpacity,
 				range: 0...1,
-				visualWidth: isPad ? 30 : 100,
+				visualWidth: topToolbarOpacityVisualWidth,
 				hitHorizontalPadding: topToolbarOpacityHitHorizontalPadding,
 				hitHeight: opacitySliderHitHeight,
 				isDisabled: editingSlotIndex != nil,
@@ -258,30 +266,17 @@ struct MainScreenToolbarContent: View {
 			//
 			//----------------------------------------
 			//
-            if isPad {
-                Spacer()
-                MainTransportStatusIndicator(
-                    outputMode: outputMode,
-                    isBluetoothConnected: isBluetoothConnected,
-                    isMacConnected: isMacConnected,
-                    isGridEditModeEnabled: isGridEditModeEnabled,
-                    size: 24
-                )
-            } else {
-                Spacer()
-                    .frame(width: topToolbarGroupGap)
+            Spacer(minLength: topToolbarStatusMinimumGap)
 
-                MainTransportStatusIndicator(
-                    outputMode: outputMode,
-                    isBluetoothConnected: isBluetoothConnected,
-                    isMacConnected: isMacConnected,
-                    isGridEditModeEnabled: isGridEditModeEnabled,
-                    size: 18
-                )
+            MainTransportStatusIndicator(
+                outputMode: outputMode,
+                isBluetoothConnected: isBluetoothConnected,
+                isMacConnected: isMacConnected,
+                isGridEditModeEnabled: isGridEditModeEnabled,
+                size: isPad ? 24 : 18
+            )
 
-                Spacer()
-                    .frame(width: topToolbarGroupGap)
-            }
+            Spacer(minLength: topToolbarStatusMinimumGap)
 			//
 			//----------------------------------------
 			// to keyboard btn

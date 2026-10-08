@@ -815,6 +815,7 @@ nonisolated func downsampledUIImage(at url: URL, maxPixelDimension: CGFloat) -> 
 
 struct ContentView: View {
     private let defaultDocumentFontSize: Double = 20
+    @Environment(\.scenePhase) private var scenePhase
     @AppStorage("selectedBackgroundImageIndex") private var selectedBackgroundImageIndex = 0
     @AppStorage("selectedBackgroundImageName") private var selectedBackgroundImageName = ""
     @AppStorage("selectedBackgroundImagePath") private var selectedBackgroundImagePath = ""
@@ -822,6 +823,7 @@ struct ContentView: View {
     @AppStorage("backgroundImageOpacity") private var backgroundImageOpacity = 0.5
     @AppStorage("mainGridBackgroundOpacity") private var mainGridBackgroundOpacity = 1.0
     @AppStorage("outputMode") private var outputModeRawValue = OutputMode.none.rawValue
+    @AppStorage("keepScreenAwake") private var keepScreenAwake = false
     @StateObject private var ble = BLEKeyboardManager()
     @StateObject private var macConnection = MacConnectionManager()
     @State private var functionKeys = ContentView.makeDefaultFunctionKeys()
@@ -964,6 +966,7 @@ struct ContentView: View {
         .statusBarHidden(!isStatusBarVisible)
         .onAppear {
             presentInitialSettingsScreenIfNeeded()
+            applyKeepScreenAwakePreference()
         }
         .task {
             applyStartupOutputModeIfNeeded()
@@ -1009,6 +1012,18 @@ struct ContentView: View {
         .onChange(of: outputModeRawValue) {
             updateTransportStateForOutputMode()
         }
+        .onChange(of: keepScreenAwake) {
+            applyKeepScreenAwakePreference()
+        }
+        .onChange(of: scenePhase) {
+            if scenePhase == .active {
+                applyKeepScreenAwakePreference()
+            }
+        }
+    }
+
+    private func applyKeepScreenAwakePreference() {
+        UIApplication.shared.isIdleTimerDisabled = keepScreenAwake
     }
 
     private func updateTransportStateForOutputMode() {

@@ -149,9 +149,9 @@ struct SettingsAvailableDevicesPanel: View {
 
     private var macPairingControls: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(macConnection.pairingStatusText)
+            Text(macPairingStatusText)
                 .font(.caption2.weight(.semibold))
-                .foregroundStyle(macConnection.isPaired ? Color.green : Color.secondary)
+                .foregroundStyle(macPairingStatusColor)
                 .fixedSize(horizontal: false, vertical: true)
                 .multilineTextAlignment(.leading)
 
@@ -196,6 +196,26 @@ struct SettingsAvailableDevicesPanel: View {
                     .multilineTextAlignment(.leading)
             }
         }
+    }
+
+    private var macPairingStatusText: String {
+        if macConnection.pairingStatusText == "Paired",
+           macConnection.isPaired,
+           !macConnection.isAuthenticated {
+            return "Pairing saved"
+        }
+
+        return macConnection.pairingStatusText
+    }
+
+    private var macPairingStatusColor: Color {
+        if macPairingStatusText == "Paired",
+           macConnection.isPaired,
+           macConnection.isAuthenticated {
+            return .green
+        }
+
+        return .secondary
     }
 
     private func outputModeButton(_ mode: OutputMode) -> some View {
@@ -251,8 +271,8 @@ struct SettingsAvailableDevicesPanel: View {
     }
 
     private var sleepWakeButton: some View {
-        Button(ble.isConnected && keepScreenAwake ? "wake" : "sleep") {
-            guard ble.isConnected else { return }
+        Button(canControlSleepWake && keepScreenAwake ? "wake" : "sleep") {
+            guard canControlSleepWake else { return }
             ButtonClickFeedback.playIfEnabled()
             keepScreenAwake.toggle()
         }
@@ -265,7 +285,7 @@ struct SettingsAvailableDevicesPanel: View {
         .frame(width: settingsActionButtonWidth, height: settingsBodyButtonHeight)
         .background(sleepWakeButtonBackgroundColor)
         .clipShape(.rect(cornerRadius: bodyButtonCornerRadius))
-        .disabled(!ble.isConnected)
+        .disabled(!canControlSleepWake)
     }
 	//
 	//----------------------------------------
@@ -368,7 +388,7 @@ struct SettingsAvailableDevicesPanel: View {
     }
 
     private var sleepWakeButtonBackgroundColor: Color {
-        guard ble.isConnected else {
+        guard canControlSleepWake else {
             return Color.gray.opacity(0.5)
         }
 
@@ -377,6 +397,17 @@ struct SettingsAvailableDevicesPanel: View {
         }
 
         return Color(red: 0.0, green: 0.25, blue: 0.55)
+    }
+
+    private var canControlSleepWake: Bool {
+        switch outputMode {
+        case .none:
+            return false
+        case .esp32:
+            return ble.isConnected
+        case .mac:
+            return macConnection.canSend
+        }
     }
 
     private var buttonClickToggleButton: some View {

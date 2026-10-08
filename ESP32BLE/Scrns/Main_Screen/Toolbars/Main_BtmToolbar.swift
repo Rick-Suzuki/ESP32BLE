@@ -302,94 +302,124 @@ struct MainScreenBottomBar: View {
         toggleWidth: CGFloat,
         displayModeWidth: CGFloat
     ) -> some View {
-        let speechRecognitionButtonTitle = isPad ? (isSpeechRecognitionEnabled ? "spk rec on" : "spk rec off") : "rec"
-        let speechRecognitionButtonWidth: CGFloat? = isPad ? toggleWidth : nil
-        let usesCompactSpeechRecognitionButton = !isPad
-        let effectiveSpeechBoxWidth = isPad ? speechBoxWidth : (speechBoxWidth * 0.5)
         let toolbarButtonHeight: CGFloat = isPad ? 40 : 36
         let bottomToolbarButtonFont: Font = isPad ? .body : .system(size: 14, weight: .regular)
         let speechRecognitionDisplayFont: Font = isPad ? (isCompact ? .caption : .body) : .system(size: isCompact ? 9 : 12.75)
         let bottomToolbarMinimumScaleFactor: CGFloat = isPad ? 0.7 : 1
         let bottomToolbarCornerRadius: CGFloat = isPad ? 12 : 10
 
-        return HStack(spacing: isCompact ? 8 : 12) {
-			//
-			//----------------------------------------
-			// columns
-			//
-            HStack(spacing: isCompact ? 8 : 12) {
-                singleStepTriangle(
-                    rotationDegrees: -90,
-                    foreground: columnControlColor,
-                    isEnabled: visibleGridDimensions.columns > 1,
-                    action: onDecreaseColumns
-                )
+        return HStack(spacing: 0) {
+            columnControls(isCompact: isCompact)
 
-                Text("\(visibleGridDimensions.columns)")
-                    .font(.headline)
-                    .foregroundStyle(.white)
-                    .frame(minWidth: isCompact ? 28 : 32)
+            Spacer()
 
-                singleStepTriangle(
-                    rotationDegrees: 90,
-                    foreground: columnControlColor,
-                    isEnabled: visibleGridDimensions.columns < maxGridDimension,
-                    action: onIncreaseColumns
-                )
+            rowControls(isCompact: isCompact)
+
+            Spacer()
+
+            fontSizeControls(isCompact: isCompact)
+
+            Spacer()
+
+            bottomToolbarSpeechControls(
+                isCompact: isCompact,
+                speechBoxWidth: speechBoxWidth,
+                toggleWidth: toggleWidth,
+                displayModeWidth: displayModeWidth,
+                toolbarButtonHeight: toolbarButtonHeight,
+                bottomToolbarButtonFont: bottomToolbarButtonFont,
+                speechRecognitionDisplayFont: speechRecognitionDisplayFont,
+                bottomToolbarMinimumScaleFactor: bottomToolbarMinimumScaleFactor,
+                bottomToolbarCornerRadius: bottomToolbarCornerRadius
+            )
+        }
+	}
+
+    private func columnControls(isCompact: Bool) -> some View {
+        HStack(spacing: isCompact ? 8 : 12) {
+            singleStepTriangle(
+                rotationDegrees: -90,
+                foreground: columnControlColor,
+                isEnabled: visibleGridDimensions.columns > 1,
+                action: onDecreaseColumns
+            )
+
+            Text("\(visibleGridDimensions.columns)")
+                .font(.headline)
+                .foregroundStyle(.white)
+                .frame(minWidth: isCompact ? 28 : 32)
+
+            singleStepTriangle(
+                rotationDegrees: 90,
+                foreground: columnControlColor,
+                isEnabled: visibleGridDimensions.columns < maxGridDimension,
+                action: onIncreaseColumns
+            )
+        }
+    }
+
+    private func rowControls(isCompact: Bool) -> some View {
+        HStack(spacing: isCompact ? 8 : 12) {
+            singleStepTriangle(
+                rotationDegrees: 0,
+                foreground: rowControlColor,
+                isEnabled: visibleGridDimensions.rows > 1,
+                action: onDecreaseRows
+            )
+
+            Text("\(visibleGridDimensions.rows)")
+                .font(.headline)
+                .foregroundStyle(.white)
+                .frame(minWidth: isCompact ? 28 : 32)
+
+            singleStepTriangle(
+                rotationDegrees: 180,
+                foreground: rowControlColor,
+                isEnabled: visibleGridDimensions.rows < maxGridDimension,
+                action: onIncreaseRows
+            )
+        }
+    }
+
+    private func fontSizeControls(isCompact: Bool) -> some View {
+        HStack(spacing: isCompact ? 8 : 12) {
+            fontSizeButton(
+                systemName: "minus.circle.fill",
+                isEnabled: boxFontSize > minimumBoxFontSize,
+                actionVersion: Int(boxFontSize)
+            ) {
+                onDecreaseBoxFontSize()
             }
-			//
-			//----------------------------------------
-			// rows
-			//
-			Spacer()
-			HStack(spacing: isCompact ? 8 : 12) {
-				singleStepTriangle(
-					rotationDegrees: 0,
-					foreground: rowControlColor,
-					isEnabled: visibleGridDimensions.rows > 1,
-					action: onDecreaseRows
-				)
-				
-				Text("\(visibleGridDimensions.rows)")
-					.font(.headline)
-					.foregroundStyle(.white)
-					.frame(minWidth: isCompact ? 28 : 32)
-				
-				singleStepTriangle(
-					rotationDegrees: 180,
-					foreground: rowControlColor,
-					isEnabled: visibleGridDimensions.rows < maxGridDimension,
-					action: onIncreaseRows
-				)
-			}
-			//
-			//----------------------------------------
-			// font size
-			//
-			Spacer()
-			HStack(spacing: isCompact ? 8 : 12) {
-				fontSizeButton(
-					systemName: "minus.circle.fill",
-					isEnabled: boxFontSize > minimumBoxFontSize,
-					actionVersion: Int(boxFontSize)
-				) {
-					onDecreaseBoxFontSize()
-				}
-				
-				fontSizeValueLabel(isCompact: isCompact)
-				
-				fontSizeButton(
-					systemName: "plus.circle.fill",
-					isEnabled: boxFontSize < maximumBoxFontSize,
-					actionVersion: Int(boxFontSize)
-				) {
-					onIncreaseBoxFontSize()
-				}
-			}
-				//
-				//----------------------------------------
-				// speech recog btn
-				//
+
+            fontSizeValueLabel(isCompact: isCompact)
+
+            fontSizeButton(
+                systemName: "plus.circle.fill",
+                isEnabled: boxFontSize < maximumBoxFontSize,
+                actionVersion: Int(boxFontSize)
+            ) {
+                onIncreaseBoxFontSize()
+            }
+        }
+    }
+
+    private func bottomToolbarSpeechControls(
+        isCompact: Bool,
+        speechBoxWidth: CGFloat,
+        toggleWidth: CGFloat,
+        displayModeWidth: CGFloat,
+        toolbarButtonHeight: CGFloat,
+        bottomToolbarButtonFont: Font,
+        speechRecognitionDisplayFont: Font,
+        bottomToolbarMinimumScaleFactor: CGFloat,
+        bottomToolbarCornerRadius: CGFloat
+    ) -> some View {
+        let speechRecognitionButtonTitle = isPad ? (isSpeechRecognitionEnabled ? "spk rec on" : "spk rec off") : "rec"
+        let speechRecognitionButtonWidth: CGFloat? = isPad ? toggleWidth : nil
+        let usesCompactSpeechRecognitionButton = !isPad
+        let effectiveSpeechBoxWidth = isPad ? speechBoxWidth : (speechBoxWidth * 0.5)
+
+        return HStack(spacing: isCompact ? 8 : 12) {
             toggleButton(
                 title: speechRecognitionButtonTitle,
                 background: isSpeechRecognitionEnabled ? speechRecognitionActiveColor : normalToolbarBg,
@@ -403,14 +433,11 @@ struct MainScreenBottomBar: View {
                 action: onToggleSpeechRecognition
             )
             .frame(width: speechRecognitionButtonWidth)
-			//
-			//----------------------------------------
-				// report speech area
-				//
-	            Text(speechRecognitionDisplayText)
-	                .font(speechRecognitionDisplayFont)
-	                .foregroundStyle(speechRecognitionDisplayColor)
-	                .opacity(0.9)
+
+            Text(speechRecognitionDisplayText)
+                .font(speechRecognitionDisplayFont)
+                .foregroundStyle(speechRecognitionDisplayColor)
+                .opacity(0.9)
                 .lineLimit(1)
                 .truncationMode(.tail)
                 .frame(width: effectiveSpeechBoxWidth, alignment: .leading)
@@ -419,20 +446,13 @@ struct MainScreenBottomBar: View {
                 .background(Color.black.opacity(0.3))
                 .overlay {
                     RoundedRectangle(cornerRadius: bottomToolbarCornerRadius)
-						.stroke(Color.white.opacity(0.4), lineWidth: 1)
+                        .stroke(Color.white.opacity(0.4), lineWidth: 1)
                 }
                 .clipShape(.rect(cornerRadius: bottomToolbarCornerRadius))
 
             HStack(spacing: 8) {
-				//
-                //----------------------------------------
-                // stop speech
-                //
                 stopSpeechButton(buttonHeight: toolbarButtonHeight, cornerRadius: bottomToolbarCornerRadius)
-				//
-				//----------------------------------------
-				// btn mode
-				//
+
                 toggleButton(
                     title: mainGridButtonMode.title,
                     background: normalToolbarBg,
@@ -446,38 +466,32 @@ struct MainScreenBottomBar: View {
                 )
                 .frame(width: toggleWidth)
             }
-			//
-			//----------------------------------------
-			//
-				Button {
-					onAdvanceDisplayMode()
-				} label: {
-						Text(displayMode.title)
-                            .font(bottomToolbarButtonFont)
-							.lineLimit(1)
-							.minimumScaleFactor(bottomToolbarMinimumScaleFactor)
-							.frame(maxWidth: .infinity, minHeight: toolbarButtonHeight)
-							.foregroundStyle(.white)
-							.background(
-							RoundedRectangle(cornerRadius: bottomToolbarCornerRadius)
-							.fill(normalToolbarBg)
-					)
-					.overlay(
-						RoundedRectangle(cornerRadius: bottomToolbarCornerRadius)
-							.stroke(normalToolbarBc, lineWidth: 2)
-					)
-					.clipShape(RoundedRectangle(cornerRadius: bottomToolbarCornerRadius))
-					}
-					.opacity(0.8)
-					.buttonStyle(.plain)
-					.frame(width: displayModeWidth)
-				//
-				//----------------------------------------
-			//
-		}
+
+            Button {
+                onAdvanceDisplayMode()
+            } label: {
+                Text(displayMode.title)
+                    .font(bottomToolbarButtonFont)
+                    .lineLimit(1)
+                    .minimumScaleFactor(bottomToolbarMinimumScaleFactor)
+                    .frame(maxWidth: .infinity, minHeight: toolbarButtonHeight)
+                    .foregroundStyle(.white)
+                    .background(
+                        RoundedRectangle(cornerRadius: bottomToolbarCornerRadius)
+                            .fill(normalToolbarBg)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: bottomToolbarCornerRadius)
+                            .stroke(normalToolbarBc, lineWidth: 2)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: bottomToolbarCornerRadius))
+            }
+            .opacity(0.8)
+            .buttonStyle(.plain)
+            .frame(width: displayModeWidth)
+        }
     }
 
-	
 	private func fontSizeButton(
 		systemName: String,
 		isEnabled: Bool,

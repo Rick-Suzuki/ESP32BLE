@@ -954,7 +954,6 @@ Tapping a row inserts the key code at the cursor.
     @State private var smartScriptEditingModel = SmartScriptEditingModel()
     @State private var smartButtonBrightness = 0.5
     @State private var smartButtonBrightnessBaseHex: String?
-    @State private var smartButtonClearPreviewFallbackImageURL: URL?
     @State private var smartButtonPreviewFontSize = 34.0
     @State private var smartButtonPreviewSelectionRange = NSRange(location: 0, length: 0)
     @State private var isSmartPhoneSFSymbolMode = false
@@ -2732,7 +2731,6 @@ Tapping a row inserts the key code at the cursor.
             setSmartButtonHidden(false)
             smartButtonBrightnessBaseHex = nil
             smartButtonBrightness = 0.5
-            smartButtonClearPreviewFallbackImageURL = availableBackgroundImageURLs.randomElement()
             smartRightTextBinding.wrappedValue = rightTextWithoutColorPrefix(smartRightTextBinding.wrappedValue)
             // Help text location: btn panel clr button.
             smartCommandDescription = smartHelpButtonClearColor
@@ -2979,23 +2977,13 @@ Tapping a row inserts the key code at the cursor.
             return mainBackgroundImage
         }
 
-        if let smartButtonClearPreviewFallbackImageURL,
-           let image = UIImage(contentsOfFile: smartButtonClearPreviewFallbackImageURL.path) {
-            return image
-        }
-
-        guard let randomImageURL = availableBackgroundImageURLs.randomElement() else {
-            return nil
-        }
-
-        return UIImage(contentsOfFile: randomImageURL.path)
+        return nil
     }
 
     private func setSmartButtonColor(_ hexColor: String) {
         setSmartButtonHidden(false)
         let normalizedHex = hexColor.uppercased()
         smartButtonBrightnessBaseHex = normalizedHex
-        smartButtonClearPreviewFallbackImageURL = nil
         smartRightTextBinding.wrappedValue = rightTextReplacingColorPrefix(
             with: adjustedSmartButtonColorHex(for: normalizedHex) ?? normalizedHex
         )

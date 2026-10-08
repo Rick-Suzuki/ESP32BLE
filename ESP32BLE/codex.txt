@@ -1,70 +1,42 @@
-Cleanup complete. No commit or push.
+Implemented and verified.
 
-Files changed:
+1. Exact source files modified:
 ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
-ESP32BLE/console m2.txt
 
-Removed from Main_Screen.swift:
-• lastIPadButtonGeometryReport
-• lastIPadButtonGeometryMissingReport
-• reportIPadButtonGeometry(_:)
-• roundedIPadButtonGeometryValue(_:)
-• iPadButtonGeometryCoordinateSpaceName
-• IPadButtonGeometryProbeTarget
-• IPadButtonGeometryPreferenceKey
-• IPadButtonGeometryProbeModifier
-• View.ipadButtonGeometryProbe(...)
-• .coordinateSpace(name: iPadButtonGeometryCoordinateSpaceName)
-• .onPreferenceChange(IPadButtonGeometryPreferenceKey.self)
-• probe call sites for:
-   • .commandDivider
-   • .previewActual
-   • .sliderOuter
-   • .previewWrapper
-   • .upperContainer
-   • .buttonDivider
+2. Approximate line numbers:
+Around 956, 2728-2736, 2975-2980, 2983-2988.
 
-Probe-only GeometryReader/PreferenceKey/state/helper code removed:
-• the GeometryReader inside IPadButtonGeometryProbeModifier
-• the geometry PreferenceKey
-• the coordinate-space measurement plumbing
-• the state used only to suppress duplicate geometry log output
-• all [IPAD-BUTTON-GEOMETRY] db output and gap/difference calculations
+3. Random preview fallback removed:
+smartButtonClearPreviewImage now returns mainBackgroundImage when present, otherwise nil. It no longer chooses from availableBackgroundImageURLs.randomElement().
 
-Removed from console m2.txt:
-• stale obsolete [IPAD-BUTTON-GEOMETRY] log lines only.
-• unrelated console messages were left alone.
+4. CLR corrected:
+CLR no longer assigns a random imported image. It still preserves its existing clear-color behavior.
 
-Post-cleanup search confirmed no remaining references to:
-[IPAD-BUTTON-GEOMETRY]
-reportIPadButtonGeometry
-IPadButtonGeometryCoordinateSpace
+5. smartButtonClearPreviewFallbackImageURL:
+Removed because it only supported the unwanted random preview image behavior.
 
-I also searched the broader probe terms:
-IPadButtonGeometry
-ipadButtonGeometryProbe
-previewWrapper
-previewActual
-sliderOuter
-previewBottomGap
-sliderBottomGap
-dividerDifference
-topDifference
-bottomDifference
+6. Brightness slider:
+Unchanged. It still uses smartButtonBrightness and applySmartButtonBrightness().
 
-No matches remain.
+7. Explicit backgrounds:
+Still supported through the existing mainBackgroundImage path.
 
-Confirmed:
-• real layout geometry was not changed.
-• SmartPreviewTextView and shrink-to-fit behavior were not changed.
-• multiline/SF-symbol behavior was not changed.
-• unrelated logging was not cleaned up.
-• project settings were not modified.
+8. Image import:
+Unchanged.
 
-Build result:
-ESP32BLE built successfully in Xcode.
+9. UI layout:
+No layout, geometry, toolbar, or text-handling code changed.
 
-Current git status:
+10. Build result:
+Build succeeded.
+
+11. Limitations:
+No physical-device testing performed.
+
+12. Text files:
+No .txt files were modified.
+
+Git status:
 M ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
-M ESP32BLE/codex.txt
-M ESP32BLE/console m2.txt
+
+No commit or push performed.
