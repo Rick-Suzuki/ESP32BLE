@@ -908,6 +908,7 @@ sends F1, waits one send then sends sp(space)
     @State var activeDragIndex: Int?
     @State var editingSlotIndex: Int?
     @State var editingSlotText = ""
+    @State var didModifyCurrentSlotEditorSession = false
     @State private var mainGridActionMenuTarget: MainGridActionMenuTarget?
 	//
 	//----------------------------------------
@@ -1361,6 +1362,9 @@ Tapping a row inserts the key code at the cursor.
             MainGridEditActionMenu(cornerRadius: menuCornerRadius) {
                 ButtonClickFeedback.playIfEnabled()
                 dismissMainGridActionMenu()
+            } onEdit: {
+                ButtonClickFeedback.playIfEnabled()
+                openMainGridActionMenuEditor()
             }
             .frame(width: menuSize.width, height: menuSize.height)
             .position(menuPosition.center)
@@ -1394,6 +1398,19 @@ Tapping a row inserts the key code at the cursor.
 
     func dismissMainGridActionMenu() {
         mainGridActionMenuTarget = nil
+    }
+
+    private func openMainGridActionMenuEditor() {
+        guard let target = mainGridActionMenuTarget,
+              target.index >= 0,
+              target.index < visibleBoxCount else {
+            dismissMainGridActionMenu()
+            return
+        }
+
+        let selectedIndex = target.index
+        dismissMainGridActionMenu()
+        beginSlotEditing(at: selectedIndex)
     }
 
     private func mainGridActionMenuPosition(
@@ -1892,6 +1909,7 @@ Tapping a row inserts the key code at the cursor.
             onTest: testEditingSlotText,
             onCopy: showSlotCopiedPopup,
             onPaste: showSlotPastedPopup,
+            onModify: markSlotEditorSessionModified,
             onVisibilityChange: showSlotVisibilityPopup,
             onSelectPreviousButton: selectPreviousEditableSlot,
             onSelectNextButton: selectNextEditableSlot
@@ -2202,11 +2220,11 @@ Tapping a row inserts the key code at the cursor.
                 let parts = smartEditingTextParts
                 let canonicalScriptText = canonicalSmartScriptText(newText)
                 smartScriptEditingModel.setKeyboardEditedText(canonicalScriptText)
-                editingSlotText = composeSmartEditingText(
+                setEditingSlotTextFromUserEdit(composeSmartEditingText(
                     action: storedSmartScriptText(fromEditorText: canonicalScriptText),
                     right: parts.right,
                     isHidden: parts.isHidden
-                )
+                ))
 
                 guard let editingSlotIndex else {
                     return
@@ -2237,11 +2255,11 @@ Tapping a row inserts the key code at the cursor.
                 let parts = smartEditingTextParts
                 let canonicalScriptText = canonicalSmartScriptText(newActionText)
                 smartScriptEditingModel.setEditedText(canonicalScriptText)
-                editingSlotText = composeSmartEditingText(
+                setEditingSlotTextFromUserEdit(composeSmartEditingText(
                     action: storedSmartScriptText(fromEditorText: canonicalScriptText),
                     right: parts.right,
                     isHidden: parts.isHidden
-                )
+                ))
             }
         )
     }
@@ -2253,13 +2271,30 @@ Tapping a row inserts the key code at the cursor.
             },
             set: { newRightText in
                 let parts = smartEditingTextParts
-                editingSlotText = composeSmartEditingText(
+                setEditingSlotTextFromUserEdit(composeSmartEditingText(
                     action: parts.action,
                     right: newRightText,
                     isHidden: parts.isHidden
-                )
+                ))
             }
         )
+    }
+
+    func markSlotEditorSessionModified() {
+        guard editingSlotIndex != nil else {
+            return
+        }
+
+        didModifyCurrentSlotEditorSession = true
+    }
+
+    private func setEditingSlotTextFromUserEdit(_ newText: String) {
+        guard editingSlotText != newText else {
+            return
+        }
+
+        markSlotEditorSessionModified()
+        editingSlotText = newText
     }
 
     private var smartButtonTextBinding: Binding<String> {
@@ -2377,11 +2412,11 @@ Tapping a row inserts the key code at the cursor.
 
     private func syncSmartEditingTextFromScriptModel() {
         let parts = smartEditingTextParts
-        editingSlotText = composeSmartEditingText(
+        setEditingSlotTextFromUserEdit(composeSmartEditingText(
             action: storedSmartScriptText(fromEditorText: smartScriptEditingModel.scriptText),
             right: parts.right,
             isHidden: parts.isHidden
-        )
+        ))
 
         guard let editingSlotIndex else {
             return
@@ -3412,11 +3447,11 @@ Tapping a row inserts the key code at the cursor.
 
     private func setSmartButtonHidden(_ isHidden: Bool) {
         let parts = smartEditingTextParts
-        editingSlotText = composeSmartEditingText(
+        setEditingSlotTextFromUserEdit(composeSmartEditingText(
             action: parts.action,
             right: parts.right,
             isHidden: isHidden
-        )
+        ))
     }
 
     private func smartPlaceholderButton(systemName: String) -> some View {
@@ -5296,22 +5331,23 @@ private struct MainGridEditActionMenu: View {
         static let close = Color(white: 0.45)
         static let edit = Color.cyan
         static let undo = Color(red: 1.0, green: 0.68, blue: 0.18)
-        static let copy = Color(red: 0.52, green: 0.62, blue: 0.72)
+        static let copy = Color.white
         static let cut = Color.orange
         static let paste = Color.green
-        static let duplicate = Color.teal
+        static let duplicate = Color.yellow
         static let resize = Color.purple
         static let delete = Color.red
     }
 
     let cornerRadius: CGFloat
     let onClose: () -> Void
+    let onEdit: () -> Void
 
     var body: some View {
         VStack(spacing: Metrics.spacing) {
             HStack(spacing: Metrics.spacing) {
                 menuButton(systemName: "xmark", accessibilityLabel: "Close action menu", foregroundColor: SymbolColor.close, action: onClose)
-                menuButton(systemName: "pencil", accessibilityLabel: "Edit button", foregroundColor: SymbolColor.edit)
+                menuButton(systemName: "pencil", accessibilityLabel: "Edit button", foregroundColor: SymbolColor.edit, action: onEdit)
                 menuButton(systemName: "arrow.uturn.backward", accessibilityLabel: "Undo", foregroundColor: SymbolColor.undo)
             }
 

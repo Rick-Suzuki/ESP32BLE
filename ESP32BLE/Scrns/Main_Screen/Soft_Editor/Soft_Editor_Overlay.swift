@@ -18,6 +18,7 @@ struct MainScreenSlotEditorOverlay: View {
     let onTest: () -> Void
     let onCopy: () -> Void
     let onPaste: () -> Void
+    let onModify: () -> Void
     let onVisibilityChange: (Bool) -> Void
     let onSelectPreviousButton: () -> Void
     let onSelectNextButton: () -> Void
@@ -27,6 +28,7 @@ struct MainScreenSlotEditorOverlay: View {
     @State private var actionDraft = ""
     @State private var rightDraft = ""
     @State private var isHiddenInNormalMode = false
+    @State private var isSyncingDraftsFromCombinedText = false
     @AppStorage("slotEditorClipboardAction") private var clipboardActionDraft = ""
     @AppStorage("slotEditorClipboardRight") private var clipboardRightDraft = ""
     private let rightColumnButtonWidth: CGFloat = 90
@@ -869,6 +871,7 @@ struct MainScreenSlotEditorOverlay: View {
     }
 
     private func syncDraftsFromCombinedText() {
+        isSyncingDraftsFromCombinedText = true
         isHiddenInNormalMode = editingSlotText.components(separatedBy: "::").contains(hiddenButtonMetadataToken)
         let splitText = splitEditingText
         if actionDraft != splitText.action {
@@ -878,11 +881,20 @@ struct MainScreenSlotEditorOverlay: View {
         if rightDraft != normalizedRightText {
             rightDraft = normalizedRightText
         }
+
+        DispatchQueue.main.async {
+            isSyncingDraftsFromCombinedText = false
+        }
     }
 
     private func syncCombinedTextFromDrafts() {
+        guard !isSyncingDraftsFromCombinedText else {
+            return
+        }
+
         let combinedText = composeEditingText(action: actionDraft, text: rightDraft)
         if editingSlotText != combinedText {
+            onModify()
             editingSlotText = combinedText
         }
     }

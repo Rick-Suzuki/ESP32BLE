@@ -1,119 +1,227 @@
-B. SOURCE MAP
+A. MESSAGE LOCATION
 
+Exact message currently used:
+btn has been\nsaved to file
+
+Primary source:
+ESP32BLE/Scrns/Main_Screen/Main_DocumentActions.swift􀰓
+Function: saveSlotEditing()
+Lines 184-188
+
+Current code path:
+saveSlotEditing() calls commitSlotEditing(), then sets:
+
+alertTitle = ""
+renameAlertMessage = "btn has been\nsaved to file"
+
+Display mechanism:
+This is shown by popupOverlay(...) in ESP32BLE/Scrns/Main_Screen/Main_Screen.swift􀰓, around lines 4213-4230.
+
+It is a custom in-app popup/toast-style overlay, not a system alert.
+
+The overlay treats this message specially while the editor is presented:
+renameAlertMessage == "btn has been\nsaved to file" makes it appear as a slot-editor top popup.
+
+Other related message:
+Main_Screen.swift􀰓 has showSlotSavedPopup() with typo text:
+btn hasbeen\naved to file
+I did not find this function wired into the current editor save path.
+
+B. CURRENT CLOSE SEQUENCE
+
+Primary close path inside MainScreenSlotEditorOverlay:
+Soft_Editor_Overlay.swift􀰓
+
+Close button:
+1. ButtonClickFeedback.playIfEnabled()
+2. onSave()
+3. onCancel()
+
+Those closures are supplied from Main_Screen.swift􀰓:
+onSave: saveSlotEditing
+onCancel: cancelSlotEditing
+
+So close sequence is:
+
+closeButton
+-> onSave()
+-> MainScreen.saveSlotEditing()
+-> commitSlotEditing()
+-> updateFunctionKeySlot(...)
+-> document persistence
+-> renameAlertMessage = "btn has been\nsaved to file"
+-> onCancel()
+-> cancelSlotEditing()
+-> editor state cleared
+
+There are also Main_Screen close controls:
 Main_Screen.swift􀰓
-Lines 12-23: popup target/result structs.
-Lines 907-912: edit mode, drag, editor, popup target state.
-Lines 1247-1253: popup overlay placement.
-Lines 1286-1334: grid closure wiring.
-Lines 1338-1397: popup presentation/dismissal.
-Lines 5286-5357: MainGridEditActionMenu; only Close receives a real action, other buttons use default {}.
-Lines 4308-4333: drag-ended movement path.
-Lines 25-318, 3440-3445: Button Editor text undo/redo only.
+Main_Screen.swift􀰓
 
+Both call:
+saveSlotEditing()
+then
+cancelSlotEditing()
+
+C. CURRENT SAVE BEHAVIOUR
+
+commitSlotEditing() is in Main_DocumentActions.swift􀰓.
+
+It always:
+1. Resolves the editable anchor index.
+2. Calculates current span.
+3. Calls updateFunctionKeySlot(editableIndex, normalizedSlotEditorTextForCommit(editingSlotText)).
+4. Reapplies span continuation markers if the button is multi-cell.
+
+updateFunctionKeySlot is supplied by ContentView as updateSelectedDocumentSlot, wired at ContentView.swift􀰓.
+
+updateSelectedDocumentSlot(...) at ContentView.swift􀰓:
+1. Normalizes the line.
+2. Updates functionKeySlotLines.
+3. Calls persistSlotLines(updatedLines).
+
+persistSlotLines(...) at ContentView.swift􀰓 writes the selected document file and reapplies loaded slot lines.
+
+So yes: close currently invokes Save, and Save currently persists even when no user edit occurred.
+
+D. CURRENT CHANGE TRACKING
+
+No existing Button Editor session-dirty flag was found.
+
+Searches for dirty/change concepts found no relevant editor-session tracking:
+isDirty
+hasChanges
+isModified
+needsSave
+unsaved
+modified
+changeCount
+revision
+
+There is an undo stack, but it is only for SmartScriptEditingModel text editing in Main_Screen.swift􀰓. It does not represent overall Button Editor session modification.
+
+E. EDITING OPERATIONS
+
+Confirmed editor state flow:
+
+The editor loads state in beginSlotEditing(at:), Main_DocumentActions.swift􀰓:
+editingSlotText = editableText(for: functionKeys[editableIndex])
+resetSmartScriptEditingModel()
+editingSlotIndex = index
+isSlotEditorFocused = true
+
+Soft editor draft syncing:
+Soft_Editor_Overlay.swift􀰓
+onAppear calls syncDraftsFromCombinedText().
+Changes to actionDraft, rightDraft, or isHiddenInNormalMode call syncCombinedTextFromDrafts(), which updates editingSlotText only if the composed text differs.
+
+Genuine editing action candidates:
+• Typing in SlotEditorTextField.
+• Helper insert buttons.
+• Modifier buttons.
+• Newline/backspace/delete buttons.
+• Color buttons.
+• SF Symbol buttons.
+• Visibility toggle.
+• Paste button.
+• Smart script editor text changes.
+• Smart button text/color/visibility changes.
+
+Inspection-only actions:
+• Opening editor.
+• Focusing fields.
+• Switching active field.
+• Selecting/caret movement.
+• Tapping a field without changing text.
+These should not mark modified.
+
+Important complication:
+Some Main_Screen smart bindings update persistence immediately. Example:
+smartScriptEditorTextBinding setter at Main_Screen.swift􀰓 updates editingSlotText and calls updateFunctionKeySlot(...).
+syncSmartEditingTextFromScriptModel() at Main_Screen.swift􀰓 also persists.
+Other soft-editor operations update draft/editing text and rely on saveSlotEditing().
+
+F. THREE OPENING METHODS
+
+All three opening methods converge on the same editor state:
+
+Normal Mode long press:
 Main_GridSection.swift􀰓
-Lines 117-121: edit operation closures.
-Lines 199-221: tap registration; single tap opens popup immediately.
-Lines 234-260: delayed multi-tap resolver for duplicate/resize/reset.
-Lines 277-327: continuation and shape detection.
-Lines 392-420: tap and long-press gestures.
+slotEditorLongPressGesture(index:)
+-> onBeginSlotEditing(index)
+-> beginSlotEditing(at:)
 
-Main_DocumentActions.swift􀰓
-Lines 141-152: open Button Editor.
-Lines 290-312: duplicate.
-Lines 316-325: delete, also copies raw line.
-Lines 329-343: reset to 1x1.
-Lines 347-379: resize.
-Lines 455-477: old copy/paste single-tap action.
-Lines 537-579, 643-659, 663-836: span, collision, continuation assignment helpers.
+Edit Mode long press:
+Same long-press gesture path. No separate save/close path found.
 
-ContentView.swift􀰓
-Lines 709-724: FunctionKeyEntry.
-Lines 1391-1407: persistence via document write and reload.
-Lines 1937-2006: document slot movement.
-Lines 2805-2831: low-level duplicate slot line.
-Lines 2834-2850: low-level update slot.
-Lines 2874-2919: raw line parsing into FunctionKeyEntry.
+Popup Edit:
+Main_Screen.swift􀰓
+openMainGridActionMenuEditor()
+-> beginSlotEditing(at: selectedIndex)
 
-C. BUTTON DATA MODEL
+All three use the same editingSlotIndex, editingSlotText, editor presentation, saveSlotEditing(), and cancelSlotEditing().
 
-The grid button model is FunctionKeyEntry: rawLine, sendTexts, alternateDisplayText, buttonColorCode, isBlankPlaceholder, and isHiddenInNormalMode.
+G. ROOT CAUSE
 
-Most button-specific data is encoded in rawLine. That includes action/send text, alternate/right display text, color prefix, hidden metadata, SF Symbol display text, file/sound/URL/clipboard commands, and multiline text escaped as text. Multi-cell size is not stored inside the anchor line; it is represented by neighbouring continuation tokens: @@wide and @@block.
+The message appears without editing because every close path calls saveSlotEditing() unconditionally.
 
-D. EXISTING CLIPBOARD SUPPORT
+saveSlotEditing() always:
+1. Commits the current editor text.
+2. Persists through updateFunctionKeySlot.
+3. Sets renameAlertMessage = "btn has been\nsaved to file".
 
-There are two clipboard systems.
+There is no current check for “was anything edited during this editor session?”
 
-Main grid edit clipboard:
-@AppStorage("mainGridEditClipboardText") at Main_Screen.swift􀰓.
-It stores only one string: entry.rawLine.
+H. RECOMMENDED MINIMAL FIX
 
-Button Editor clipboard:
-slotEditorClipboardAction and slotEditorClipboardRight in Soft_Editor_Overlay.swift􀰓.
-It copies/pastes editor drafts only, not grid placement/span.
+Smallest safe future approach:
 
-Important limitation: existing main-grid copy does not store button span. A copied 2x1, 2x2, 3x1, or 3x3 button will paste only the anchor raw line unless new clipboard metadata or span-aware paste logic is added.
+1. Add a session flag in MainScreen, for example:
+@State private var didModifyCurrentSlotEditorSession = false
 
-E. EXISTING UNDO SUPPORT
+2. Initialize it to false in beginSlotEditing(at:), after loading the selected button.
 
-No general grid/document undo system was found. There is no UndoManager usage or grid operation history. The only undo stack is SmartScriptEditingModel, scoped to Button Editor script text editing.
+3. Set it to true only from genuine editing actions, not from initial sync or focus/inspection.
 
-Popup Undo therefore needs a new small grid-operation history or a wrapper around document slot-line snapshots. Existing undo cannot safely undo move/copy/paste/duplicate/resize/delete.
+Best places to set it:
+• In user-action button handlers before they mutate drafts/text.
+• In text-field binding setters when the new value differs due to user input.
+• In smart editor bindings that represent actual user edits.
+• In visibility/color/SF Symbol/paste/helper insert handlers.
 
-F. GRID AND MULTI-CELL HANDLING
+4. Do not clear the flag if the user changes a value back to the original. That satisfies Case C.
 
-Multi-cell buttons use an anchor entry plus continuation cells. Rendering skips continuation cells in Main_GridSection.swift􀰓. Shapes are inferred from nearby @@wide and @@block tokens.
+5. On close, still consider calling commitSlotEditing() if persistence/normalization is required, but display the save message only if the session flag is true.
 
-Supported spans in current resize logic are [1, 2, 3, 4, 5], where 4 means 2x2 and 5 means 3x3. Collision checks are already present in canSetSlotSpan, hasAvailableBlankSpan, duplicateTargetIndex, and movement planning.
+Safest minimal behavior:
+• Keep close calling save/commit to avoid disrupting existing persistence/normalization.
+• Gate only the confirmation message initially.
 
-G. PERSISTENCE
+Cleaner later behavior:
+• Split saveSlotEditing() into “commit” and “show saved message” variants, or add a parameter such as showConfirmation.
 
-Mutations should go through existing closures from ContentView:
-updateFunctionKeySlot, duplicateFunctionKeySlot, moveFunctionKeySlot, or existing Main_DocumentActions helpers that call those closures.
+I. RISKS
 
-Actual saving happens through persistSlotLines() in ContentView.swift􀰓, writing the selected document and reloading in-memory entries. Changes affect the current document immediately.
+Do not disturb:
+• Existing close buttons.
+• Existing save button.
+• Long-press editor opening in normal and edit modes.
+• Popup Edit opening.
+• Smart editor immediate persistence paths.
+• Multi-cell span preservation in commitSlotEditing().
+• cancelSlotEditing() cleanup.
+• Existing popup/toast overlay behavior.
 
-H. SELECTION STATE
+Main risk:
+If a future dirty flag is set by initial sync, the false save message will remain. The flag must be initialized after loading and not set by syncDraftsFromCombinedText() during editor appearance.
 
-Popup selection is mainGridActionMenuTarget, storing index, button frame, grid dimensions, and probe ID. The grid receives selectedActionMenuIndex. Empty cells are selectable. Continuation cells are not rendered as independent buttons, so they should not normally become popup targets. Document changes/edit-mode off/editor opening dismiss the popup.
+J. FILE STATUS
 
-Risk: the popup target stores an index and an entry is not stored. Future actions should resolve the current functionKeys[index] at action time to avoid stale data after document changes.
+No files were modified during this investigation.
 
-I. IMPLEMENTATION PLAN
+No build was run.
 
-Recommended sequence:
-
-Phase 1: Close, Edit, Duplicate, Resize, Delete.
-These can call existing helpers with the current selected index and current entry.
-
-Phase 2: Copy and Paste.
-First decide whether the clipboard must preserve span. If yes, replace or extend mainGridEditClipboardText with span-aware data before wiring Paste.
-
-Phase 3: Cut.
-Implement as span-aware Copy plus existing clear logic. Do not reuse Delete blindly if Delete remains “copy then clear” and Cut needs different user messaging.
-
-Phase 4: Undo.
-Add a minimal grid-operation snapshot/history after the basic operations are stable.
-
-J. DESIGN DECISIONS REQUIRED
-
-1. Should Copy/Paste preserve button size/span, or only the anchor button content as today?
-2. Should Paste be allowed only into empty cells, or can it replace occupied cells?
-3. Should Delete continue copying to clipboard, or should only Cut copy?
-4. Should Duplicate use the existing automatic destination rule only, or should a future menu allow choosing destination?
-5. Should Undo cover only popup operations, or also existing drag/multi-tap operations?
-
-K. REGRESSION RISKS
-
-Do not change gesture recognition, drag movement, long press, tap timing, popup geometry, diagnostics, document parsing, continuation-cell rules, or Button Editor internals. Resize and Paste are the highest-risk actions because they interact with continuation tokens and occupied-cell checks.
-
-L. FILE STATUS
-
-No files were modified during this read-only probe. No build was run.
-
-Current working tree already has modified source files from prior work:
-ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift􀰓
-ESP32BLE/Scrns/Main_Screen/Main_GridSection.swift􀰓
+Existing working-tree status still shows prior modified source:
 ESP32BLE/Scrns/Main_Screen/Main_Screen.swift􀰓
 
 No commit or push was performed.

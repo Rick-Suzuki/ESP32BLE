@@ -146,6 +146,7 @@ extension MainScreen {
         let editableIndex = editableAnchorIndex(containing: index) ?? index
         activeDragIndex = nil
         editingSlotText = editableText(for: functionKeys[editableIndex])
+        didModifyCurrentSlotEditorSession = false
         resetSmartScriptEditingModel()
         editingSlotIndex = index
         isSlotEditorFocused = true
@@ -183,8 +184,10 @@ extension MainScreen {
 	//
     func saveSlotEditing() {
         commitSlotEditing()
-        alertTitle = ""
-        renameAlertMessage = "btn has been\nsaved to file"
+        if didModifyCurrentSlotEditorSession {
+            alertTitle = ""
+            renameAlertMessage = "btn has been\nsaved to file"
+        }
     }
 	//
 	//----------------------------------------
@@ -192,6 +195,7 @@ extension MainScreen {
     func cancelSlotEditing() {
         editingSlotIndex = nil
         editingSlotText = ""
+        didModifyCurrentSlotEditorSession = false
         resetSmartScriptEditingModel()
         isSlotEditorFocused = false
     }
