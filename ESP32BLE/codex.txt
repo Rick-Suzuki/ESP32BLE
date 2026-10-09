@@ -1,42 +1,119 @@
-Implemented and verified.
+B. SOURCE MAP
 
-1. Exact source files modified:
-ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
+Main_Screen.swift􀰓
+Lines 12-23: popup target/result structs.
+Lines 907-912: edit mode, drag, editor, popup target state.
+Lines 1247-1253: popup overlay placement.
+Lines 1286-1334: grid closure wiring.
+Lines 1338-1397: popup presentation/dismissal.
+Lines 5286-5357: MainGridEditActionMenu; only Close receives a real action, other buttons use default {}.
+Lines 4308-4333: drag-ended movement path.
+Lines 25-318, 3440-3445: Button Editor text undo/redo only.
 
-2. Approximate line numbers:
-Around 956, 2728-2736, 2975-2980, 2983-2988.
+Main_GridSection.swift􀰓
+Lines 117-121: edit operation closures.
+Lines 199-221: tap registration; single tap opens popup immediately.
+Lines 234-260: delayed multi-tap resolver for duplicate/resize/reset.
+Lines 277-327: continuation and shape detection.
+Lines 392-420: tap and long-press gestures.
 
-3. Random preview fallback removed:
-smartButtonClearPreviewImage now returns mainBackgroundImage when present, otherwise nil. It no longer chooses from availableBackgroundImageURLs.randomElement().
+Main_DocumentActions.swift􀰓
+Lines 141-152: open Button Editor.
+Lines 290-312: duplicate.
+Lines 316-325: delete, also copies raw line.
+Lines 329-343: reset to 1x1.
+Lines 347-379: resize.
+Lines 455-477: old copy/paste single-tap action.
+Lines 537-579, 643-659, 663-836: span, collision, continuation assignment helpers.
 
-4. CLR corrected:
-CLR no longer assigns a random imported image. It still preserves its existing clear-color behavior.
+ContentView.swift􀰓
+Lines 709-724: FunctionKeyEntry.
+Lines 1391-1407: persistence via document write and reload.
+Lines 1937-2006: document slot movement.
+Lines 2805-2831: low-level duplicate slot line.
+Lines 2834-2850: low-level update slot.
+Lines 2874-2919: raw line parsing into FunctionKeyEntry.
 
-5. smartButtonClearPreviewFallbackImageURL:
-Removed because it only supported the unwanted random preview image behavior.
+C. BUTTON DATA MODEL
 
-6. Brightness slider:
-Unchanged. It still uses smartButtonBrightness and applySmartButtonBrightness().
+The grid button model is FunctionKeyEntry: rawLine, sendTexts, alternateDisplayText, buttonColorCode, isBlankPlaceholder, and isHiddenInNormalMode.
 
-7. Explicit backgrounds:
-Still supported through the existing mainBackgroundImage path.
+Most button-specific data is encoded in rawLine. That includes action/send text, alternate/right display text, color prefix, hidden metadata, SF Symbol display text, file/sound/URL/clipboard commands, and multiline text escaped as text. Multi-cell size is not stored inside the anchor line; it is represented by neighbouring continuation tokens: @@wide and @@block.
 
-8. Image import:
-Unchanged.
+D. EXISTING CLIPBOARD SUPPORT
 
-9. UI layout:
-No layout, geometry, toolbar, or text-handling code changed.
+There are two clipboard systems.
 
-10. Build result:
-Build succeeded.
+Main grid edit clipboard:
+@AppStorage("mainGridEditClipboardText") at Main_Screen.swift􀰓.
+It stores only one string: entry.rawLine.
 
-11. Limitations:
-No physical-device testing performed.
+Button Editor clipboard:
+slotEditorClipboardAction and slotEditorClipboardRight in Soft_Editor_Overlay.swift􀰓.
+It copies/pastes editor drafts only, not grid placement/span.
 
-12. Text files:
-No .txt files were modified.
+Important limitation: existing main-grid copy does not store button span. A copied 2x1, 2x2, 3x1, or 3x3 button will paste only the anchor raw line unless new clipboard metadata or span-aware paste logic is added.
 
-Git status:
-M ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
+E. EXISTING UNDO SUPPORT
 
-No commit or push performed.
+No general grid/document undo system was found. There is no UndoManager usage or grid operation history. The only undo stack is SmartScriptEditingModel, scoped to Button Editor script text editing.
+
+Popup Undo therefore needs a new small grid-operation history or a wrapper around document slot-line snapshots. Existing undo cannot safely undo move/copy/paste/duplicate/resize/delete.
+
+F. GRID AND MULTI-CELL HANDLING
+
+Multi-cell buttons use an anchor entry plus continuation cells. Rendering skips continuation cells in Main_GridSection.swift􀰓. Shapes are inferred from nearby @@wide and @@block tokens.
+
+Supported spans in current resize logic are [1, 2, 3, 4, 5], where 4 means 2x2 and 5 means 3x3. Collision checks are already present in canSetSlotSpan, hasAvailableBlankSpan, duplicateTargetIndex, and movement planning.
+
+G. PERSISTENCE
+
+Mutations should go through existing closures from ContentView:
+updateFunctionKeySlot, duplicateFunctionKeySlot, moveFunctionKeySlot, or existing Main_DocumentActions helpers that call those closures.
+
+Actual saving happens through persistSlotLines() in ContentView.swift􀰓, writing the selected document and reloading in-memory entries. Changes affect the current document immediately.
+
+H. SELECTION STATE
+
+Popup selection is mainGridActionMenuTarget, storing index, button frame, grid dimensions, and probe ID. The grid receives selectedActionMenuIndex. Empty cells are selectable. Continuation cells are not rendered as independent buttons, so they should not normally become popup targets. Document changes/edit-mode off/editor opening dismiss the popup.
+
+Risk: the popup target stores an index and an entry is not stored. Future actions should resolve the current functionKeys[index] at action time to avoid stale data after document changes.
+
+I. IMPLEMENTATION PLAN
+
+Recommended sequence:
+
+Phase 1: Close, Edit, Duplicate, Resize, Delete.
+These can call existing helpers with the current selected index and current entry.
+
+Phase 2: Copy and Paste.
+First decide whether the clipboard must preserve span. If yes, replace or extend mainGridEditClipboardText with span-aware data before wiring Paste.
+
+Phase 3: Cut.
+Implement as span-aware Copy plus existing clear logic. Do not reuse Delete blindly if Delete remains “copy then clear” and Cut needs different user messaging.
+
+Phase 4: Undo.
+Add a minimal grid-operation snapshot/history after the basic operations are stable.
+
+J. DESIGN DECISIONS REQUIRED
+
+1. Should Copy/Paste preserve button size/span, or only the anchor button content as today?
+2. Should Paste be allowed only into empty cells, or can it replace occupied cells?
+3. Should Delete continue copying to clipboard, or should only Cut copy?
+4. Should Duplicate use the existing automatic destination rule only, or should a future menu allow choosing destination?
+5. Should Undo cover only popup operations, or also existing drag/multi-tap operations?
+
+K. REGRESSION RISKS
+
+Do not change gesture recognition, drag movement, long press, tap timing, popup geometry, diagnostics, document parsing, continuation-cell rules, or Button Editor internals. Resize and Paste are the highest-risk actions because they interact with continuation tokens and occupied-cell checks.
+
+L. FILE STATUS
+
+No files were modified during this read-only probe. No build was run.
+
+Current working tree already has modified source files from prior work:
+ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift􀰓
+ESP32BLE/Scrns/Main_Screen/Main_GridSection.swift􀰓
+ESP32BLE/Scrns/Main_Screen/Main_Screen.swift􀰓
+
+No commit or push was performed.

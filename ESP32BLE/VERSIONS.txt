@@ -1,8 +1,11 @@
+261009 Fri 0914
+V62.14
+ESP edit popup UI complete
+
 
 261008 Thu 1447
 V62.13
 main screen: top/btm toolbars spacing fixed. editor: slider random images fixed.
-
 
 261008 Thu 1137
 V62.12

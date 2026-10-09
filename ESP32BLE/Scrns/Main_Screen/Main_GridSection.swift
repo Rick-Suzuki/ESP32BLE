@@ -101,18 +101,21 @@ struct MainScreenGridSection<ButtonLabel: View>: View {
     let visibleBoxCount: Int
     let visibleGridDimensions: GridDimensions
     let mainGridButtonSpacing: CGFloat
+    let mainGridButtonCornerRadius: CGFloat
     let boxFontSize: Double
     let isGridEditModeEnabled: Bool
+    let selectedActionMenuIndex: Int?
     let bleSendEnabled: Bool
     let onButtonClick: () -> Void
     let isHiddenEntry: (FunctionKeyEntry) -> Bool
+    let isEmptyEntry: (FunctionKeyEntry) -> Bool
     let isInteractiveWidgetEntry: (FunctionKeyEntry) -> Bool
     let sendLine: (FunctionKeyEntry) -> Void
     let onBeginSlotEditing: (Int) -> Void
     let buttonLabel: (FunctionKeyEntry, Int, CGFloat) -> ButtonLabel
     let dragGesture: (FunctionKeyEntry, Int, GridDimensions) -> AnyGesture<DragGesture.Value>
+    let onSingleEditTap: (FunctionKeyEntry, Int, CGRect, GridDimensions) -> Void
     let onDuplicateSlot: (FunctionKeyEntry, Int, GridDimensions) -> Void
-    let onCopyPasteSlot: (FunctionKeyEntry, Int) -> Void
     let onResizeSlot: (FunctionKeyEntry, Int, GridDimensions) -> Void
     let onResetSlotSize: (FunctionKeyEntry, Int, GridDimensions) -> Void
     let onDeleteSlot: (FunctionKeyEntry, Int) -> Void
@@ -161,9 +164,22 @@ struct MainScreenGridSection<ButtonLabel: View>: View {
                             entry: entry,
                             index: index,
                             buttonHeight: resolvedButtonHeight,
+                            buttonFrame: CGRect(
+                                x: origin.x,
+                                y: origin.y,
+                                width: resolvedButtonWidth,
+                                height: resolvedButtonHeight
+                            ),
                             gridDimensions: gridDimensions
                         )
                         .frame(width: resolvedButtonWidth, height: resolvedButtonHeight)
+                        .overlay {
+                            if selectedActionMenuIndex == index {
+                                RoundedRectangle(cornerRadius: mainGridButtonCornerRadius)
+                                    .strokeBorder(Color.white, lineWidth: 2)
+                                    .allowsHitTesting(false)
+                            }
+                        }
                         .position(
                             x: origin.x + (resolvedButtonWidth / 2),
                             y: origin.y + (resolvedButtonHeight / 2)
@@ -183,6 +199,7 @@ struct MainScreenGridSection<ButtonLabel: View>: View {
     private func registerEditTap(
         entry: FunctionKeyEntry,
         index: Int,
+        buttonFrame: CGRect,
         gridDimensions: GridDimensions
     ) {
         if pendingTapIndex == index {
@@ -191,6 +208,7 @@ struct MainScreenGridSection<ButtonLabel: View>: View {
             pendingTapTask?.cancel()
             pendingTapIndex = index
             pendingTapCount = 1
+            onSingleEditTap(entry, index, buttonFrame, gridDimensions)
         }
 
         guard pendingTapCount < 5 else {
@@ -200,13 +218,14 @@ struct MainScreenGridSection<ButtonLabel: View>: View {
             return
         }
 
-        schedulePendingTapResolution(entry: entry, index: index, gridDimensions: gridDimensions)
+        schedulePendingTapResolution(entry: entry, index: index, buttonFrame: buttonFrame, gridDimensions: gridDimensions)
     }
 
 	// MARK: - BM:🟨 taps 1,2,3,4,5: main scrn
     private func schedulePendingTapResolution(
         entry: FunctionKeyEntry,
         index: Int,
+        buttonFrame: CGRect,
         gridDimensions: GridDimensions
     ) {
         pendingTapTask?.cancel()
@@ -223,10 +242,6 @@ struct MainScreenGridSection<ButtonLabel: View>: View {
                     return
                 }
 
-						if tapCount == 1 {
-							onCopyPasteSlot(entry, index)
-						}
-						
                 if tapCount == 2 {
                     onDuplicateSlot(entry, index, gridDimensions)
                 }
@@ -343,6 +358,7 @@ struct MainScreenGridSection<ButtonLabel: View>: View {
         entry: FunctionKeyEntry,
         index: Int,
         buttonHeight: CGFloat,
+        buttonFrame: CGRect,
         gridDimensions: GridDimensions
     ) -> some View {
         if !isGridEditModeEnabled && isInteractiveWidgetEntry(entry) {
@@ -384,6 +400,7 @@ struct MainScreenGridSection<ButtonLabel: View>: View {
                         registerEditTap(
                             entry: entry,
                             index: index,
+                            buttonFrame: buttonFrame,
                             gridDimensions: gridDimensions
                         )
                     }
@@ -397,6 +414,8 @@ struct MainScreenGridSection<ButtonLabel: View>: View {
     private func slotEditorLongPressGesture(index: Int) -> some Gesture {
         LongPressGesture(minimumDuration: 0.4)
             .onEnded { _ in
+                pendingTapTask?.cancel()
+                resetPendingTapState()
                 longPressedEditIndex = index
                 onBeginSlotEditing(index)
             }

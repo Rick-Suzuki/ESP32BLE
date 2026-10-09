@@ -9,6 +9,19 @@ private enum MainScreenPersistedModeFiles {
     static let buttonActionMode = ".main_screen_button_action_mode.cfg"
 }
 
+private struct MainGridActionMenuTarget {
+    let index: Int
+    let buttonFrame: CGRect
+    let gridDimensions: GridDimensions
+    let probeID: UUID
+}
+
+private struct MainGridActionMenuPositionResult {
+    let center: CGPoint
+    let iPhoneProbeID: String?
+    let iPhoneProbeMessage: String?
+}
+
 private struct SmartScriptEditingModel {
     private struct EditingState {
         var scriptText: String
@@ -895,6 +908,7 @@ sends F1, waits one send then sends sp(space)
     @State var activeDragIndex: Int?
     @State var editingSlotIndex: Int?
     @State var editingSlotText = ""
+    @State private var mainGridActionMenuTarget: MainGridActionMenuTarget?
 	//
 	//----------------------------------------
 	// MARK: - BM:👨‍👩‍👧‍👦 commands help text area
@@ -1035,8 +1049,16 @@ Tapping a row inserts the key code at the cursor.
                 showFilenameToastIfNeeded()
             }
             .onChange(of: editingSlotIndex) {
+                if editingSlotIndex != nil {
+                    dismissMainGridActionMenu()
+                }
                 smartButtonBrightness = 0.5
                 smartButtonBrightnessBaseHex = smartButtonColorHex
+            }
+            .onChange(of: isGridEditModeEnabled) {
+                if !isGridEditModeEnabled {
+                    dismissMainGridActionMenu()
+                }
             }
             .onChange(of: definedFunctionKeyCount) {
                 updateVisibleBoxCountToFitDefinedButtons()
@@ -1222,6 +1244,14 @@ Tapping a row inserts the key code at the cursor.
 
                 filenameToastOverlay(availableWidth: contentWidth)
 
+                mainGridActionMenuOverlay(
+                    availableWidth: contentWidth,
+                    availableHeight: geometry.size.height,
+                    safeAreaInsets: geometry.safeAreaInsets,
+                    gridTopY: topContentInset + mainTopToolbarHeight + topToolbarToGridSpacing,
+                    gridHeight: iPhoneGridHeight
+                )
+
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .editorGeometryProbe(.screen, isEnabled: debugEditorGeometry)
@@ -1260,11 +1290,14 @@ Tapping a row inserts the key code at the cursor.
             visibleBoxCount: visibleBoxCount,
             visibleGridDimensions: visibleGridDimensions,
             mainGridButtonSpacing: mainGridButtonSpacing,
+            mainGridButtonCornerRadius: mainGridButtonCornerRadius,
             boxFontSize: boxFontSize,
             isGridEditModeEnabled: isGridEditModeEnabled,
+            selectedActionMenuIndex: mainGridActionMenuTarget?.index,
             bleSendEnabled: mainGridButtonMode != .disabled,
             onButtonClick: { ButtonClickFeedback.playIfEnabled() },
             isHiddenEntry: isMainGridEntryHidden,
+            isEmptyEntry: isEmptyButtonEntry,
             isInteractiveWidgetEntry: isInteractiveMainGridWidgetEntry,
             sendLine: sendMainGridEntry,
             onBeginSlotEditing: beginSlotEditing,
@@ -1279,11 +1312,16 @@ Tapping a row inserts the key code at the cursor.
             dragGesture: { entry, index, gridDimensions in
                 AnyGesture(mainGridButtonDragGesture(entry: entry, index: index, gridDimensions: gridDimensions))
             },
+            onSingleEditTap: { entry, index, buttonFrame, gridDimensions in
+                presentMainGridActionMenu(
+                    entry: entry,
+                    index: index,
+                    buttonFrame: buttonFrame,
+                    gridDimensions: gridDimensions
+                )
+            },
             onDuplicateSlot: { entry, index, gridDimensions in
                 duplicateSlotIfPossible(entry: entry, index: index, gridDimensions: gridDimensions)
-            },
-            onCopyPasteSlot: { entry, index in
-                handleThreeTapEditAction(entry: entry, index: index)
             },
             onResizeSlot: { entry, index, gridDimensions in
                 resizeSlotIfPossible(entry: entry, index: index, gridDimensions: gridDimensions)
@@ -1294,6 +1332,298 @@ Tapping a row inserts the key code at the cursor.
             onDeleteSlot: { entry, index in
                 deleteSlotIfPossible(entry: entry, index: index)
             }
+        )
+    }
+
+    @ViewBuilder
+    private func mainGridActionMenuOverlay(
+        availableWidth: CGFloat,
+        availableHeight: CGFloat,
+        safeAreaInsets: EdgeInsets,
+        gridTopY: CGFloat,
+        gridHeight: CGFloat
+    ) -> some View {
+        if let mainGridActionMenuTarget {
+            let menuSize = MainGridEditActionMenu.Metrics.menuSize
+            let menuCornerRadius = isPad ? MainGridEditActionMenu.Metrics.cornerRadius : mainGridButtonCornerRadius
+            let menuPosition = mainGridActionMenuPosition(
+                selectedIndex: mainGridActionMenuTarget.index,
+                probeID: mainGridActionMenuTarget.probeID,
+                for: mainGridActionMenuTarget.buttonFrame,
+                menuSize: menuSize,
+                availableWidth: availableWidth,
+                availableHeight: availableHeight,
+                safeAreaInsets: safeAreaInsets,
+                gridTopY: gridTopY,
+                gridHeight: gridHeight
+            )
+
+            MainGridEditActionMenu(cornerRadius: menuCornerRadius) {
+                ButtonClickFeedback.playIfEnabled()
+                dismissMainGridActionMenu()
+            }
+            .frame(width: menuSize.width, height: menuSize.height)
+            .position(menuPosition.center)
+            .zIndex(50)
+            .task(id: menuPosition.iPhoneProbeID) {
+                if let message = menuPosition.iPhoneProbeMessage {
+                    db("%@", message)
+                }
+            }
+        }
+    }
+
+    private func presentMainGridActionMenu(
+        entry: FunctionKeyEntry,
+        index: Int,
+        buttonFrame: CGRect,
+        gridDimensions: GridDimensions
+    ) {
+        guard isGridEditModeEnabled,
+              editingSlotIndex == nil else {
+            return
+        }
+
+        mainGridActionMenuTarget = MainGridActionMenuTarget(
+            index: index,
+            buttonFrame: buttonFrame,
+            gridDimensions: gridDimensions,
+            probeID: UUID()
+        )
+    }
+
+    func dismissMainGridActionMenu() {
+        mainGridActionMenuTarget = nil
+    }
+
+    private func mainGridActionMenuPosition(
+        selectedIndex: Int,
+        probeID: UUID,
+        for buttonFrame: CGRect,
+        menuSize: CGSize,
+        availableWidth: CGFloat,
+        availableHeight: CGFloat,
+        safeAreaInsets: EdgeInsets,
+        gridTopY: CGFloat,
+        gridHeight: CGFloat
+    ) -> MainGridActionMenuPositionResult {
+        if isPad {
+            let center = iPadMainGridActionMenuPosition(
+                for: buttonFrame,
+                menuSize: menuSize,
+                availableWidth: availableWidth,
+                availableHeight: availableHeight,
+                safeAreaInsets: safeAreaInsets,
+                gridTopY: gridTopY
+            )
+
+            return MainGridActionMenuPositionResult(
+                center: center,
+                iPhoneProbeID: nil,
+                iPhoneProbeMessage: nil
+            )
+        }
+
+        return iPhoneMainGridActionMenuPosition(
+            selectedIndex: selectedIndex,
+            probeID: probeID,
+            for: buttonFrame,
+            menuSize: menuSize,
+            availableWidth: availableWidth,
+            availableHeight: availableHeight,
+            safeAreaInsets: safeAreaInsets,
+            gridTopY: gridTopY,
+            gridHeight: gridHeight
+        )
+    }
+
+    private func iPadMainGridActionMenuPosition(
+        for buttonFrame: CGRect,
+        menuSize: CGSize,
+        availableWidth: CGFloat,
+        availableHeight: CGFloat,
+        safeAreaInsets: EdgeInsets,
+        gridTopY: CGFloat
+    ) -> CGPoint {
+        let margin: CGFloat = 6
+        let horizontalGap: CGFloat = 0
+        let selectedFrame = buttonFrame.offsetBy(dx: 0, dy: gridTopY)
+        let minimumX = safeAreaInsets.leading + margin + (menuSize.width / 2)
+        let maximumX = max(minimumX, availableWidth - safeAreaInsets.trailing - margin - (menuSize.width / 2))
+        let rightX = selectedFrame.maxX + horizontalGap + (menuSize.width / 2)
+        let leftX = selectedFrame.minX - horizontalGap - (menuSize.width / 2)
+        let resolvedX: CGFloat
+
+        if rightX <= maximumX {
+            resolvedX = rightX
+        } else if leftX >= minimumX {
+            resolvedX = leftX
+        } else {
+            resolvedX = min(max(selectedFrame.midX, minimumX), maximumX)
+        }
+
+        let minimumY = safeAreaInsets.top + margin + (menuSize.height / 2)
+        let bottomToolbarClearance = isPad ? margin : iPhoneBottomToolbarRegionHeight + iPhoneGridToBottomToolbarClearance + margin
+        let maximumY = max(minimumY, availableHeight - safeAreaInsets.bottom - bottomToolbarClearance - (menuSize.height / 2))
+        let resolvedY: CGFloat
+
+        if isPad {
+            let topAlignedY = selectedFrame.minY + (menuSize.height / 2)
+            let bottomAlignedY = selectedFrame.maxY - (menuSize.height / 2)
+
+            if topAlignedY >= minimumY, topAlignedY <= maximumY {
+                resolvedY = topAlignedY
+            } else if bottomAlignedY >= minimumY, bottomAlignedY <= maximumY {
+                resolvedY = bottomAlignedY
+            } else {
+                resolvedY = min(max(topAlignedY, minimumY), maximumY)
+            }
+        } else {
+            resolvedY = min(max(selectedFrame.midY, minimumY), maximumY)
+        }
+
+        return CGPoint(
+            x: resolvedX,
+            y: resolvedY
+        )
+    }
+
+    private func iPhoneMainGridActionMenuPosition(
+        selectedIndex: Int,
+        probeID: UUID,
+        for buttonFrame: CGRect,
+        menuSize: CGSize,
+        availableWidth: CGFloat,
+        availableHeight: CGFloat,
+        safeAreaInsets: EdgeInsets,
+        gridTopY: CGFloat,
+        gridHeight: CGFloat
+    ) -> MainGridActionMenuPositionResult {
+        let margin: CGFloat = 6
+        let horizontalGap: CGFloat = 0
+        let selectedFrame = buttonFrame.offsetBy(dx: 0, dy: gridTopY)
+        let minimumX = safeAreaInsets.leading + margin + (menuSize.width / 2)
+        let maximumX = max(minimumX, availableWidth - safeAreaInsets.trailing - margin - (menuSize.width / 2))
+        let rightX = selectedFrame.maxX + horizontalGap + (menuSize.width / 2)
+        let leftX = selectedFrame.minX - horizontalGap - (menuSize.width / 2)
+        let resolvedX: CGFloat
+
+        if rightX <= maximumX {
+            resolvedX = rightX
+        } else if leftX >= minimumX {
+            resolvedX = leftX
+        } else {
+            resolvedX = min(max(selectedFrame.midX, minimumX), maximumX)
+        }
+
+        let gridMinimumY = max(gridTopY, safeAreaInsets.top)
+        let gridMaximumY = gridTopY + gridHeight
+        let minimumY = gridMinimumY + (menuSize.height / 2)
+        let maximumY = max(minimumY, gridMaximumY - (menuSize.height / 2))
+        let topAlignedY = selectedFrame.minY + (menuSize.height / 2)
+        let bottomAlignedY = selectedFrame.maxY - (menuSize.height / 2)
+        let resolvedY: CGFloat
+        let branch: String
+
+        if topAlignedY >= minimumY, topAlignedY <= maximumY {
+            resolvedY = topAlignedY
+            branch = "TOP"
+        } else if bottomAlignedY >= minimumY, bottomAlignedY <= maximumY {
+            resolvedY = bottomAlignedY
+            branch = "BOTTOM"
+        } else {
+            resolvedY = min(max(topAlignedY, minimumY), maximumY)
+            branch = "CLAMP"
+        }
+
+        let center = CGPoint(
+            x: resolvedX,
+            y: resolvedY
+        )
+
+        return MainGridActionMenuPositionResult(
+            center: center,
+            iPhoneProbeID: "\(probeID.uuidString)-\(selectedIndex)",
+            iPhoneProbeMessage: iPhonePopupProbeMessage(
+                selectedIndex: selectedIndex,
+                buttonFrame: buttonFrame,
+                selectedFrame: selectedFrame,
+                gridTopY: gridTopY,
+                gridHeight: gridHeight,
+                gridMinimumY: gridMinimumY,
+                gridMaximumY: gridMaximumY,
+                menuSize: menuSize,
+                topAlignedY: topAlignedY,
+                bottomAlignedY: bottomAlignedY,
+                minimumY: minimumY,
+                maximumY: maximumY,
+                branch: branch,
+                resolvedCenter: center
+            )
+        )
+    }
+
+    private func iPhonePopupProbeMessage(
+        selectedIndex: Int,
+        buttonFrame: CGRect,
+        selectedFrame: CGRect,
+        gridTopY: CGFloat,
+        gridHeight: CGFloat,
+        gridMinimumY: CGFloat,
+        gridMaximumY: CGFloat,
+        menuSize: CGSize,
+        topAlignedY: CGFloat,
+        bottomAlignedY: CGFloat,
+        minimumY: CGFloat,
+        maximumY: CGFloat,
+        branch: String,
+        resolvedCenter: CGPoint
+    ) -> String {
+        let popupRect = CGRect(
+            x: resolvedCenter.x - (menuSize.width / 2),
+            y: resolvedCenter.y - (menuSize.height / 2),
+            width: menuSize.width,
+            height: menuSize.height
+        )
+
+        return String(
+            format: "[IPHONE-POPUP-PROBE] index=%d buttonFrame=(minX: %.2f minY: %.2f maxX: %.2f maxY: %.2f width: %.2f height: %.2f) selectedFrame=(minX: %.2f minY: %.2f maxX: %.2f maxY: %.2f width: %.2f height: %.2f) gridTopY=%.2f gridHeight=%.2f gridMinimumY=%.2f gridMaximumY=%.2f menuSize=(width: %.2f height: %.2f) topAlignedY=%.2f bottomAlignedY=%.2f minimumY=%.2f maximumY=%.2f branch=%@ resolvedCenter=(x: %.2f y: %.2f) popupRect=(minX: %.2f minY: %.2f maxX: %.2f maxY: %.2f) selectedButtonRect=(minX: %.2f minY: %.2f maxX: %.2f maxY: %.2f) verticalDiffs=(popupMinYMinusSelectedMinY: %.2f popupMaxYMinusSelectedMaxY: %.2f)",
+            selectedIndex,
+            Double(buttonFrame.minX),
+            Double(buttonFrame.minY),
+            Double(buttonFrame.maxX),
+            Double(buttonFrame.maxY),
+            Double(buttonFrame.width),
+            Double(buttonFrame.height),
+            Double(selectedFrame.minX),
+            Double(selectedFrame.minY),
+            Double(selectedFrame.maxX),
+            Double(selectedFrame.maxY),
+            Double(selectedFrame.width),
+            Double(selectedFrame.height),
+            Double(gridTopY),
+            Double(gridHeight),
+            Double(gridMinimumY),
+            Double(gridMaximumY),
+            Double(menuSize.width),
+            Double(menuSize.height),
+            Double(topAlignedY),
+            Double(bottomAlignedY),
+            Double(minimumY),
+            Double(maximumY),
+            branch,
+            Double(resolvedCenter.x),
+            Double(resolvedCenter.y),
+            Double(popupRect.minX),
+            Double(popupRect.minY),
+            Double(popupRect.maxX),
+            Double(popupRect.maxY),
+            Double(selectedFrame.minX),
+            Double(selectedFrame.minY),
+            Double(selectedFrame.maxX),
+            Double(selectedFrame.maxY),
+            Double(popupRect.minY - selectedFrame.minY),
+            Double(popupRect.maxY - selectedFrame.maxY)
         )
     }
 
@@ -4950,6 +5280,79 @@ private struct SmartActionTextField: UIViewRepresentable {
             textField.selectedTextRange = textField.textRange(from: start, to: end)
             isApplyingSelectedRange = false
         }
+    }
+}
+
+private struct MainGridEditActionMenu: View {
+    enum Metrics {
+        static let menuSize = CGSize(width: 146, height: 146)
+        static let buttonSize: CGFloat = 44
+        static let spacing: CGFloat = 2
+        static let cornerRadius: CGFloat = 14
+        static let borderWidth: CGFloat = 2
+    }
+
+    enum SymbolColor {
+        static let close = Color(white: 0.45)
+        static let edit = Color.cyan
+        static let undo = Color(red: 1.0, green: 0.68, blue: 0.18)
+        static let copy = Color(red: 0.52, green: 0.62, blue: 0.72)
+        static let cut = Color.orange
+        static let paste = Color.green
+        static let duplicate = Color.teal
+        static let resize = Color.purple
+        static let delete = Color.red
+    }
+
+    let cornerRadius: CGFloat
+    let onClose: () -> Void
+
+    var body: some View {
+        VStack(spacing: Metrics.spacing) {
+            HStack(spacing: Metrics.spacing) {
+                menuButton(systemName: "xmark", accessibilityLabel: "Close action menu", foregroundColor: SymbolColor.close, action: onClose)
+                menuButton(systemName: "pencil", accessibilityLabel: "Edit button", foregroundColor: SymbolColor.edit)
+                menuButton(systemName: "arrow.uturn.backward", accessibilityLabel: "Undo", foregroundColor: SymbolColor.undo)
+            }
+
+            HStack(spacing: Metrics.spacing) {
+                menuButton(systemName: "doc.on.doc", accessibilityLabel: "Copy button", foregroundColor: SymbolColor.copy)
+                menuButton(systemName: "scissors", accessibilityLabel: "Cut button", foregroundColor: SymbolColor.cut)
+                menuButton(systemName: "doc.on.clipboard", accessibilityLabel: "Paste button", foregroundColor: SymbolColor.paste)
+            }
+
+            HStack(spacing: Metrics.spacing) {
+                menuButton(systemName: "plus.square.on.square", accessibilityLabel: "Duplicate button", foregroundColor: SymbolColor.duplicate)
+                menuButton(systemName: "arrow.up.left.and.arrow.down.right", accessibilityLabel: "Resize button", foregroundColor: SymbolColor.resize)
+                menuButton(systemName: "trash", accessibilityLabel: "Delete button", foregroundColor: SymbolColor.delete)
+            }
+        }
+        .padding(5)
+        .background(Color.black)
+        .overlay {
+            RoundedRectangle(cornerRadius: cornerRadius)
+                .strokeBorder(Color.white, lineWidth: Metrics.borderWidth)
+        }
+        .clipShape(.rect(cornerRadius: cornerRadius))
+        .shadow(color: .black.opacity(0.35), radius: 8, x: 0, y: 3)
+    }
+
+    private func menuButton(
+        systemName: String,
+        accessibilityLabel: String,
+        foregroundColor: Color,
+        action: @escaping () -> Void = {}
+    ) -> some View {
+        Button(action: action) {
+            Image(systemName: systemName)
+                .font(.system(size: 21, weight: .semibold))
+                .foregroundStyle(foregroundColor)
+                .frame(width: Metrics.buttonSize, height: Metrics.buttonSize)
+                .background(Color.white.opacity(0.13))
+                .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(accessibilityLabel)
     }
 }
 

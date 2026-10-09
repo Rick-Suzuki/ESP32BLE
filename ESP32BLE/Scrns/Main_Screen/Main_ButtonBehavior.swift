@@ -1489,6 +1489,7 @@ extension MainScreen {
             buttonHeight: buttonHeight,
             cornerRadius: mainGridButtonCornerRadius,
             borderWidth: mainGridButtonBorderWidth,
+            usesInsetBorder: !isPad,
             isGridEditModeEnabled: isGridEditModeEnabled,
             activeDragIndex: activeDragIndex,
             backgroundOpacity: backgroundOpacity,
@@ -1567,6 +1568,7 @@ extension MainScreen {
                         return
                     }
 
+                    dismissMainGridActionMenu()
                     activeDragIndex = index
                 }
                 .onEnded { value in
@@ -1680,6 +1682,7 @@ struct MainScreenButtonLabelView: View {
     let buttonHeight: CGFloat
     let cornerRadius: CGFloat
     let borderWidth: CGFloat
+    let usesInsetBorder: Bool
     let isGridEditModeEnabled: Bool
     let activeDragIndex: Int?
     let backgroundOpacity: Double
@@ -1713,8 +1716,7 @@ struct MainScreenButtonLabelView: View {
             if entry.isBlankPlaceholder || isEmptyButtonEntry {
                 Group {
                     if isGridEditModeEnabled {
-                        RoundedRectangle(cornerRadius: cornerRadius)
-                            .stroke(Color.white.opacity(0.5), lineWidth: borderWidth)
+                        emptyButtonBorder
                     } else {
                         Color.clear
                     }
@@ -1730,8 +1732,7 @@ struct MainScreenButtonLabelView: View {
                     RoundedRectangle(cornerRadius: cornerRadius)
                         .fill(buttonBackgroundColor)
 
-                    RoundedRectangle(cornerRadius: cornerRadius)
-                        .stroke(borderColor, lineWidth: borderWidth)
+                    normalButtonBorder
 
                     buttonContent
                         .padding(8)
@@ -1739,6 +1740,28 @@ struct MainScreenButtonLabelView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
+        }
+    }
+
+    @ViewBuilder
+    private var emptyButtonBorder: some View {
+        if usesInsetBorder {
+            RoundedRectangle(cornerRadius: cornerRadius)
+                .strokeBorder(Color.white.opacity(0.5), lineWidth: borderWidth)
+        } else {
+            RoundedRectangle(cornerRadius: cornerRadius)
+                .stroke(Color.white.opacity(0.5), lineWidth: borderWidth)
+        }
+    }
+
+    @ViewBuilder
+    private var normalButtonBorder: some View {
+        if usesInsetBorder {
+            RoundedRectangle(cornerRadius: cornerRadius)
+                .strokeBorder(borderColor, lineWidth: borderWidth)
+        } else {
+            RoundedRectangle(cornerRadius: cornerRadius)
+                .stroke(borderColor, lineWidth: borderWidth)
         }
     }
 
