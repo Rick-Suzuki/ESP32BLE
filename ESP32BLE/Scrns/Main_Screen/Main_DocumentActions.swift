@@ -318,14 +318,32 @@ extension MainScreen {
 	//----------------------------------------
 	//
     func deleteSlotIfPossible(entry: FunctionKeyEntry, index: Int) {
+        _ = deleteSlotIfPossible(entry: entry, index: index, gridDimensions: visibleGridDimensions, copiesToClipboard: true)
+    }
+
+    @discardableResult
+    func deleteSlotForPopupIfPossible(entry: FunctionKeyEntry, index: Int, gridDimensions: GridDimensions) -> Bool {
+        deleteSlotIfPossible(entry: entry, index: index, gridDimensions: gridDimensions, copiesToClipboard: false)
+    }
+
+    @discardableResult
+    private func deleteSlotIfPossible(
+        entry: FunctionKeyEntry,
+        index: Int,
+        gridDimensions: GridDimensions,
+        copiesToClipboard: Bool
+    ) -> Bool {
         guard isGridEditModeEnabled,
               !entry.isBlankPlaceholder,
               !isEmptyButtonEntry(entry) else {
-            return
+            return false
         }
 
-        mainGridEditClipboardText = entry.rawLine
-        clearWideSlot(startingAt: index, gridDimensions: visibleGridDimensions)
+        if copiesToClipboard {
+            mainGridEditClipboardText = entry.rawLine
+        }
+
+        return clearWideSlot(startingAt: index, gridDimensions: gridDimensions)
     }
 	//
 	//----------------------------------------
@@ -782,15 +800,22 @@ extension MainScreen {
 	//
 	//----------------------------------------
 	//
-    private func clearWideSlot(startingAt index: Int, gridDimensions: GridDimensions) {
+    @discardableResult
+    private func clearWideSlot(startingAt index: Int, gridDimensions: GridDimensions) -> Bool {
         let shape = buttonShape(startingAt: index, gridDimensions: gridDimensions)
+        var didAttemptClear = false
+        var didFailClear = false
+
         for slotIndex in indexes(startingAt: index, shape: shape, gridDimensions: gridDimensions) {
             guard slotIndex < visibleBoxCount else {
                 continue
             }
 
-            _ = updateFunctionKeySlot(slotIndex, "_")
+            didAttemptClear = true
+            didFailClear = !updateFunctionKeySlot(slotIndex, "_") || didFailClear
         }
+
+        return didAttemptClear && !didFailClear
     }
 	//
 	//----------------------------------------

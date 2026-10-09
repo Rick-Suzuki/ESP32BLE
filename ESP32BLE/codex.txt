@@ -1,227 +1,28 @@
-A. MESSAGE LOCATION
-
-Exact message currently used:
-btn has been\nsaved to file
-
-Primary source:
-ESP32BLE/Scrns/Main_Screen/Main_DocumentActions.swift􀰓
-Function: saveSlotEditing()
-Lines 184-188
-
-Current code path:
-saveSlotEditing() calls commitSlotEditing(), then sets:
-
-alertTitle = ""
-renameAlertMessage = "btn has been\nsaved to file"
-
-Display mechanism:
-This is shown by popupOverlay(...) in ESP32BLE/Scrns/Main_Screen/Main_Screen.swift􀰓, around lines 4213-4230.
-
-It is a custom in-app popup/toast-style overlay, not a system alert.
-
-The overlay treats this message specially while the editor is presented:
-renameAlertMessage == "btn has been\nsaved to file" makes it appear as a slot-editor top popup.
-
-Other related message:
-Main_Screen.swift􀰓 has showSlotSavedPopup() with typo text:
-btn hasbeen\naved to file
-I did not find this function wired into the current editor save path.
-
-B. CURRENT CLOSE SEQUENCE
-
-Primary close path inside MainScreenSlotEditorOverlay:
-Soft_Editor_Overlay.swift􀰓
-
-Close button:
-1. ButtonClickFeedback.playIfEnabled()
-2. onSave()
-3. onCancel()
-
-Those closures are supplied from Main_Screen.swift􀰓:
-onSave: saveSlotEditing
-onCancel: cancelSlotEditing
-
-So close sequence is:
-
-closeButton
--> onSave()
--> MainScreen.saveSlotEditing()
--> commitSlotEditing()
--> updateFunctionKeySlot(...)
--> document persistence
--> renameAlertMessage = "btn has been\nsaved to file"
--> onCancel()
--> cancelSlotEditing()
--> editor state cleared
-
-There are also Main_Screen close controls:
-Main_Screen.swift􀰓
-Main_Screen.swift􀰓
-
-Both call:
-saveSlotEditing()
-then
-cancelSlotEditing()
-
-C. CURRENT SAVE BEHAVIOUR
-
-commitSlotEditing() is in Main_DocumentActions.swift􀰓.
-
-It always:
-1. Resolves the editable anchor index.
-2. Calculates current span.
-3. Calls updateFunctionKeySlot(editableIndex, normalizedSlotEditorTextForCommit(editingSlotText)).
-4. Reapplies span continuation markers if the button is multi-cell.
-
-updateFunctionKeySlot is supplied by ContentView as updateSelectedDocumentSlot, wired at ContentView.swift􀰓.
-
-updateSelectedDocumentSlot(...) at ContentView.swift􀰓:
-1. Normalizes the line.
-2. Updates functionKeySlotLines.
-3. Calls persistSlotLines(updatedLines).
-
-persistSlotLines(...) at ContentView.swift􀰓 writes the selected document file and reapplies loaded slot lines.
-
-So yes: close currently invokes Save, and Save currently persists even when no user edit occurred.
-
-D. CURRENT CHANGE TRACKING
-
-No existing Button Editor session-dirty flag was found.
-
-Searches for dirty/change concepts found no relevant editor-session tracking:
-isDirty
-hasChanges
-isModified
-needsSave
-unsaved
-modified
-changeCount
-revision
-
-There is an undo stack, but it is only for SmartScriptEditingModel text editing in Main_Screen.swift􀰓. It does not represent overall Button Editor session modification.
-
-E. EDITING OPERATIONS
-
-Confirmed editor state flow:
-
-The editor loads state in beginSlotEditing(at:), Main_DocumentActions.swift􀰓:
-editingSlotText = editableText(for: functionKeys[editableIndex])
-resetSmartScriptEditingModel()
-editingSlotIndex = index
-isSlotEditorFocused = true
-
-Soft editor draft syncing:
-Soft_Editor_Overlay.swift􀰓
-onAppear calls syncDraftsFromCombinedText().
-Changes to actionDraft, rightDraft, or isHiddenInNormalMode call syncCombinedTextFromDrafts(), which updates editingSlotText only if the composed text differs.
-
-Genuine editing action candidates:
-• Typing in SlotEditorTextField.
-• Helper insert buttons.
-• Modifier buttons.
-• Newline/backspace/delete buttons.
-• Color buttons.
-• SF Symbol buttons.
-• Visibility toggle.
-• Paste button.
-• Smart script editor text changes.
-• Smart button text/color/visibility changes.
-
-Inspection-only actions:
-• Opening editor.
-• Focusing fields.
-• Switching active field.
-• Selecting/caret movement.
-• Tapping a field without changing text.
-These should not mark modified.
-
-Important complication:
-Some Main_Screen smart bindings update persistence immediately. Example:
-smartScriptEditorTextBinding setter at Main_Screen.swift􀰓 updates editingSlotText and calls updateFunctionKeySlot(...).
-syncSmartEditingTextFromScriptModel() at Main_Screen.swift􀰓 also persists.
-Other soft-editor operations update draft/editing text and rely on saveSlotEditing().
-
-F. THREE OPENING METHODS
-
-All three opening methods converge on the same editor state:
-
-Normal Mode long press:
-Main_GridSection.swift􀰓
-slotEditorLongPressGesture(index:)
--> onBeginSlotEditing(index)
--> beginSlotEditing(at:)
-
-Edit Mode long press:
-Same long-press gesture path. No separate save/close path found.
-
-Popup Edit:
-Main_Screen.swift􀰓
-openMainGridActionMenuEditor()
--> beginSlotEditing(at: selectedIndex)
-
-All three use the same editingSlotIndex, editingSlotText, editor presentation, saveSlotEditing(), and cancelSlotEditing().
-
-G. ROOT CAUSE
-
-The message appears without editing because every close path calls saveSlotEditing() unconditionally.
-
-saveSlotEditing() always:
-1. Commits the current editor text.
-2. Persists through updateFunctionKeySlot.
-3. Sets renameAlertMessage = "btn has been\nsaved to file".
-
-There is no current check for “was anything edited during this editor session?”
-
-H. RECOMMENDED MINIMAL FIX
-
-Smallest safe future approach:
-
-1. Add a session flag in MainScreen, for example:
-@State private var didModifyCurrentSlotEditorSession = false
-
-2. Initialize it to false in beginSlotEditing(at:), after loading the selected button.
-
-3. Set it to true only from genuine editing actions, not from initial sync or focus/inspection.
-
-Best places to set it:
-• In user-action button handlers before they mutate drafts/text.
-• In text-field binding setters when the new value differs due to user input.
-• In smart editor bindings that represent actual user edits.
-• In visibility/color/SF Symbol/paste/helper insert handlers.
-
-4. Do not clear the flag if the user changes a value back to the original. That satisfies Case C.
-
-5. On close, still consider calling commitSlotEditing() if persistence/normalization is required, but display the save message only if the session flag is true.
-
-Safest minimal behavior:
-• Keep close calling save/commit to avoid disrupting existing persistence/normalization.
-• Gate only the confirmation message initially.
-
-Cleaner later behavior:
-• Split saveSlotEditing() into “commit” and “show saved message” variants, or add a parameter such as showConfirmation.
-
-I. RISKS
-
-Do not disturb:
-• Existing close buttons.
-• Existing save button.
-• Long-press editor opening in normal and edit modes.
-• Popup Edit opening.
-• Smart editor immediate persistence paths.
-• Multi-cell span preservation in commitSlotEditing().
-• cancelSlotEditing() cleanup.
-• Existing popup/toast overlay behavior.
-
-Main risk:
-If a future dirty flag is set by initial sync, the false save message will remain. The flag must be initialized after loading and not set by syncDraftsFromCombinedText() during editor appearance.
-
-J. FILE STATUS
-
-No files were modified during this investigation.
-
-No build was run.
-
-Existing working-tree status still shows prior modified source:
+A. Files changed
 ESP32BLE/Scrns/Main_Screen/Main_Screen.swift􀰓
 
-No commit or push was performed.
+B. Undo availability
+The popup now receives isUndoAvailable: !popupUndoHistory.isEmpty from the existing undo history. No new undo state was added.
+
+C. Colour selection
+Undo uses:
+• SymbolColor.close dark grey when history is empty
+• SymbolColor.undo amber when history exists
+
+D. Undo functionality
+Existing Undo behavior was not changed. Empty-history Undo still does nothing and keeps the popup open.
+
+E. Preserved UI/behavior
+Popup geometry, positioning, layout, selection behavior, Delete behavior, diagnostics, and all other icon colours were preserved.
+
+F. Build result
+iOS build succeeded.
+
+G. Git status
+Modified files currently shown:
+• ESP32BLE/Scrns/ContentView.swift􀰓
+• ESP32BLE/Scrns/Main_Screen/Main_DocumentActions.swift􀰓
+• ESP32BLE/Scrns/Main_Screen/Main_Screen.swift􀰓
+• ESP32BLE/codex.txt already appears modified; I did not edit it.
+
+No commit or push performed.

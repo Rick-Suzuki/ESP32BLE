@@ -926,6 +926,12 @@ struct ContentView: View {
                         },
                         duplicateFunctionKeySlot: duplicateSelectedDocumentSlot,
                         updateFunctionKeySlot: updateSelectedDocumentSlot,
+                        currentFunctionKeySlotLines: {
+                            functionKeySlotLines
+                        },
+                        restoreFunctionKeySlotLines: { slotLines in
+                            persistSlotLines(slotLines)
+                        },
                         loadGridDimensions: loadStoredGridDimensions,
                         saveGridDimensions: { documentName, gridDimensions in
                             saveGridDimensions(gridDimensions, for: documentName)
@@ -1388,10 +1394,11 @@ struct ContentView: View {
         return documentsDirectoryURL()?.appendingPathComponent(documentName)
     }
 
-    private func persistSlotLines(_ slotLines: [String]) {
+    @discardableResult
+    private func persistSlotLines(_ slotLines: [String]) -> Bool {
         guard let selectedDocumentURL = selectedDocumentURL() else {
             applySlotLines(slotLines)
-            return
+            return true
         }
 
         let normalizedLines = Array(slotLines.prefix(maxFunctionKeyCount))
@@ -1401,9 +1408,11 @@ struct ContentView: View {
         do {
             try contents.write(to: selectedDocumentURL, atomically: true, encoding: .utf8)
             applySlotLines(normalizedLines)
+            return true
         } catch {
             db("ERROR ContentView.persistSlotLines write failed; reloading selected document error=\(error.localizedDescription)")
             loadFunctionKeys(from: selectedDocumentURL)
+            return false
         }
     }
 
@@ -2846,8 +2855,7 @@ struct ContentView: View {
         }
 
         updatedLines[index] = persistedLine
-        persistSlotLines(updatedLines)
-        return true
+        return persistSlotLines(updatedLines)
     }
 
     private func isBlankPlaceholderLine(_ line: String) -> Bool {

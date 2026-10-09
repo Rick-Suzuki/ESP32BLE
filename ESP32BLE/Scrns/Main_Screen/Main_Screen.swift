@@ -16,6 +16,11 @@ private struct MainGridActionMenuTarget {
     let probeID: UUID
 }
 
+private struct PopupUndoEntry {
+    let documentName: String
+    let slotLines: [String]
+}
+
 private struct MainGridActionMenuPositionResult {
     let center: CGPoint
     let iPhoneProbeID: String?
@@ -910,6 +915,10 @@ sends F1, waits one send then sends sp(space)
     @State var editingSlotText = ""
     @State var didModifyCurrentSlotEditorSession = false
     @State private var mainGridActionMenuTarget: MainGridActionMenuTarget?
+    @State private var popupUndoHistory: [PopupUndoEntry] = []
+    // MARK: - BM:🅱️ ADD COMMENTS HERE
+    // Increase or decrease this value to adjust how many popup edits Undo retains.
+    private let popupUndoHistoryLimit = 20
 	//
 	//----------------------------------------
 	// MARK: - BM:👨‍👩‍👧‍👦 commands help text area
@@ -1020,6 +1029,8 @@ Tapping a row inserts the key code at the cursor.
     let moveFunctionKeySlot: (Int, Int, Int, GridDimensions) -> Bool
     let duplicateFunctionKeySlot: (Int, Int) -> Bool
     let updateFunctionKeySlot: (Int, String) -> Bool
+    let currentFunctionKeySlotLines: () -> [String]
+    let restoreFunctionKeySlotLines: ([String]) -> Bool
     let loadGridDimensions: (String, Int) -> GridDimensions
     let saveGridDimensions: (String, GridDimensions) -> Void
     let openKeyboardScreen: () -> Void
@@ -1047,6 +1058,7 @@ Tapping a row inserts the key code at the cursor.
                 handleSelectedDocumentDisplayNameChange()
             }
             .onChange(of: selectedDocumentName) {
+                clearPopupUndoHistory()
                 showFilenameToastIfNeeded()
             }
             .onChange(of: editingSlotIndex) {
@@ -1359,12 +1371,18 @@ Tapping a row inserts the key code at the cursor.
                 gridHeight: gridHeight
             )
 
-            MainGridEditActionMenu(cornerRadius: menuCornerRadius) {
+            MainGridEditActionMenu(cornerRadius: menuCornerRadius, isUndoAvailable: !popupUndoHistory.isEmpty) {
                 ButtonClickFeedback.playIfEnabled()
                 dismissMainGridActionMenu()
             } onEdit: {
                 ButtonClickFeedback.playIfEnabled()
                 openMainGridActionMenuEditor()
+            } onUndo: {
+                ButtonClickFeedback.playIfEnabled()
+                undoMainGridActionMenuOperation()
+            } onDelete: {
+                ButtonClickFeedback.playIfEnabled()
+                deleteMainGridActionMenuSelection()
             }
             .frame(width: menuSize.width, height: menuSize.height)
             .position(menuPosition.center)
@@ -1411,6 +1429,57 @@ Tapping a row inserts the key code at the cursor.
         let selectedIndex = target.index
         dismissMainGridActionMenu()
         beginSlotEditing(at: selectedIndex)
+    }
+
+    private func deleteMainGridActionMenuSelection() {
+        guard isGridEditModeEnabled,
+              let target = mainGridActionMenuTarget,
+              target.index >= 0,
+              target.index < functionKeys.count,
+              target.index < visibleBoxCount else {
+            return
+        }
+
+        let beforeSnapshot = currentFunctionKeySlotLines()
+        guard deleteSlotForPopupIfPossible(
+            entry: functionKeys[target.index],
+            index: target.index,
+            gridDimensions: target.gridDimensions
+        ) else {
+            return
+        }
+
+        recordPopupUndoSnapshot(beforeSnapshot)
+    }
+
+    private func undoMainGridActionMenuOperation() {
+        guard isGridEditModeEnabled,
+              let undoEntry = popupUndoHistory.last else {
+            return
+        }
+
+        guard undoEntry.documentName == selectedDocumentName else {
+            clearPopupUndoHistory()
+            return
+        }
+
+        guard restoreFunctionKeySlotLines(undoEntry.slotLines) else {
+            return
+        }
+
+        popupUndoHistory.removeLast()
+    }
+
+    private func recordPopupUndoSnapshot(_ slotLines: [String]) {
+        popupUndoHistory.append(PopupUndoEntry(documentName: selectedDocumentName, slotLines: slotLines))
+
+        if popupUndoHistory.count > popupUndoHistoryLimit {
+            popupUndoHistory.removeFirst(popupUndoHistory.count - popupUndoHistoryLimit)
+        }
+    }
+
+    private func clearPopupUndoHistory() {
+        popupUndoHistory.removeAll()
     }
 
     private func mainGridActionMenuPosition(
@@ -5340,15 +5409,18 @@ private struct MainGridEditActionMenu: View {
     }
 
     let cornerRadius: CGFloat
+    let isUndoAvailable: Bool
     let onClose: () -> Void
     let onEdit: () -> Void
+    let onUndo: () -> Void
+    let onDelete: () -> Void
 
     var body: some View {
         VStack(spacing: Metrics.spacing) {
             HStack(spacing: Metrics.spacing) {
                 menuButton(systemName: "xmark", accessibilityLabel: "Close action menu", foregroundColor: SymbolColor.close, action: onClose)
                 menuButton(systemName: "pencil", accessibilityLabel: "Edit button", foregroundColor: SymbolColor.edit, action: onEdit)
-                menuButton(systemName: "arrow.uturn.backward", accessibilityLabel: "Undo", foregroundColor: SymbolColor.undo)
+                menuButton(systemName: "arrow.uturn.backward", accessibilityLabel: "Undo", foregroundColor: isUndoAvailable ? SymbolColor.undo : SymbolColor.close, action: onUndo)
             }
 
             HStack(spacing: Metrics.spacing) {
@@ -5360,7 +5432,7 @@ private struct MainGridEditActionMenu: View {
             HStack(spacing: Metrics.spacing) {
                 menuButton(systemName: "plus.square.on.square", accessibilityLabel: "Duplicate button", foregroundColor: SymbolColor.duplicate)
                 menuButton(systemName: "arrow.up.left.and.arrow.down.right", accessibilityLabel: "Resize button", foregroundColor: SymbolColor.resize)
-                menuButton(systemName: "trash", accessibilityLabel: "Delete button", foregroundColor: SymbolColor.delete)
+                menuButton(systemName: "trash", accessibilityLabel: "Delete button", foregroundColor: SymbolColor.delete, action: onDelete)
             }
         }
         .padding(5)
