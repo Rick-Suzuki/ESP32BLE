@@ -1,28 +1,301 @@
-A. Files changed
+A. EXECUTIVE SUMMARY
+
+Yes, Copy, Cut, and Paste can share one clipboard mechanism, but the current grid clipboard is not enough for multi-cell buttons.
+
+Current mainGridEditClipboardText stores only one raw anchor line. That preserves button content encoded in rawLine, but it does not preserve dimensions. The safest future implementation is to keep one grid-edit clipboard, but store a small versioned payload containing at least:
+
+• anchor rawLine
+• button span or shape
+• possibly version metadata
+
+The reader should support the old plain-string clipboard format as a 1x1 legacy value.
+
+B. SOURCE MAP
+
+Relevant current files and locations:
+
 ESP32BLE/Scrns/Main_Screen/Main_Screen.swift􀰓
+• @AppStorage("mainGridEditClipboardText"): line 999
+• PopupUndoEntry, popupUndoHistory: lines 19, 918-921
+• popup action wiring: lines 1374-1386
+• Delete/Undo handlers: lines 1434-1482
+• MainGridEditActionMenu: lines 5390-5455
+• centered popup overlay: lines 4301-4359
+• message auto-dismiss: lines 4386-4404
 
-B. Undo availability
-The popup now receives isUndoAvailable: !popupUndoHistory.isEmpty from the existing undo history. No new undo state was added.
+ESP32BLE/Scrns/Main_Screen/Main_DocumentActions.swift􀰓
+• legacy Delete / popup Delete split: lines 320-347
+• legacy Copy/Paste handleThreeTapEditAction(...): lines 477-499
+• span/shape helpers: lines 541-680
+• resize occupancy helper: lines 697-735
+• clear helper: lines 803-819
+• hasAvailableBlankSpan(...): lines 823-849
+• duplicateWideSlot(...): lines 853-866
 
-C. Colour selection
-Undo uses:
-• SymbolColor.close dark grey when history is empty
-• SymbolColor.undo amber when history exists
+ESP32BLE/Scrns/Main_Screen/Main_GridSection.swift􀰓
+• continuation cells skipped: lines 140-143
+• real cell/button frame rendering: lines 144-180
+• local shape detection: lines 286-320
 
-D. Undo functionality
-Existing Undo behavior was not changed. Empty-history Undo still does nothing and keeps the popup open.
+ESP32BLE/Scrns/ContentView.swift􀰓
+• FunctionKeyEntry: lines 709-724
+• MainScreen snapshot callbacks: lines 927-934
+• loadFunctionKeys(from:): lines 1315-1325
+• persistSlotLines(...): lines 1397-1415
+• functionKeyEntry(from:): lines 2882-2928
 
-E. Preserved UI/behavior
-Popup geometry, positioning, layout, selection behavior, Delete behavior, diagnostics, and all other icon colours were preserved.
+C. CURRENT CLIPBOARD
 
-F. Build result
-iOS build succeeded.
+Current grid clipboard:
 
-G. Git status
-Modified files currently shown:
-• ESP32BLE/Scrns/ContentView.swift􀰓
-• ESP32BLE/Scrns/Main_Screen/Main_DocumentActions.swift􀰓
-• ESP32BLE/Scrns/Main_Screen/Main_Screen.swift􀰓
-• ESP32BLE/codex.txt already appears modified; I did not edit it.
+@AppStorage("mainGridEditClipboardText") var mainGridEditClipboardText = ""
 
-No commit or push performed.
+It survives screen changes and app restarts because it uses AppStorage.
+
+Current writers:
+• legacy Delete writes entry.rawLine before clearing, line 343
+• legacy Copy writes entry.rawLine, line 496
+
+Current reader:
+• legacy Paste reads trimmed mainGridEditClipboardText, lines 483-490
+
+Limitation: it stores only the anchor raw line. It does not store @@wide / @@block continuation footprint or span metadata, so a copied 2x1, 3x1, 2x2, or 3x3 button cannot currently be pasted with its original size.
+
+D. MULTI-CELL REPRESENTATION
+
+Dimensions are represented by continuation cells after the anchor:
+
+• horizontal continuation: @@wide
+• block continuation: @@block
+
+Existing shape mapping:
+• 1x1: anchor only
+• 2x1: anchor + one @@wide
+• 3x1: anchor + two @@wide
+• 2x2: anchor + right @@wide, below/right-below @@block
+• 3x3: anchor + two top-row @@wide, remaining cells @@block
+
+Existing helpers can reconstruct dimensions from the anchor:
+• slotSpan(...): lines 559-566
+• buttonShape(...): lines 605-646
+• shape(for:): lines 591-600
+• continuationAssignments(...): lines 665-680
+• indexes(...): lines 650-660
+
+E. COPY
+
+Reusable:
+• entry.rawLine preserves button content/properties encoded in the slot line.
+• slotSpan(...) or buttonShape(...) can capture size.
+
+Gap:
+• current Copy only saves entry.rawLine, so it loses dimensions.
+• Copy should reject empty/blank cells.
+• Copy should not create Undo history.
+• Copy can keep popup open and show "Button copied" via renameAlertMessage.
+
+Recommended future Copy:
+• validate selected entry is occupied and not continuation
+• store one shared clipboard payload { rawLine, span }
+• no grid mutation
+• no Undo entry
+
+F. CUT
+
+Existing legacy Delete behaves like partial Cut because it writes entry.rawLine to clipboard before clearing, but it loses dimensions.
+
+Reusable:
+• popup Delete helper already clears without modifying clipboard.
+• clearWideSlot(...) clears full multi-cell footprints.
+• Undo snapshot system can record Cut.
+
+Gap:
+• need clipboard payload with span before clearing.
+• need one successful Undo entry only if the grid changed.
+• current legacy Delete clipboard behavior must remain separate from popup Delete.
+
+Recommended future Cut:
+• validate occupied selected button
+• capture clipboard payload from selected anchor + span
+• capture undo snapshot
+• clear full footprint
+• record Undo only on successful mutation
+• leave clipboard containing the cut button even after Undo
+
+G. PASTE
+
+Existing legacy Paste:
+• pastes only raw anchor text with updateFunctionKeySlot(index, clipboardEntryText)
+• does not preserve dimensions
+• does not validate multi-cell footprint
+• can only distinguish empty clipboard from not empty
+
+Reusable:
+• shape(for:), indexes(...), continuationAssignments(...)
+• hasAvailableBlankSpan(...) as a starting point
+• restoreFunctionKeySlotLines(...) for one-shot persistence
+
+Gap:
+• hasAvailableBlankSpan(...) returns only Bool, so it cannot distinguish “not enough space” from “space occupied.”
+• existing Paste is not atomic for multi-cell placement.
+
+Recommended future Paste:
+• decode clipboard payload
+• selected cell becomes top-left anchor
+• validate full footprint first
+• build an updated raw slot-line array in memory
+• persist once via restoreFunctionKeySlotLines(...)
+• record Undo only if restore succeeds and snapshot changed
+
+H. DESTINATION VALIDATION
+
+Current hasAvailableBlankSpan(...) performs both checks:
+• boundary check: lines 829-834
+• occupancy check: lines 837-845
+
+But it collapses both into false.
+
+For required messages, add a small result enum later, for example:
+• .ok
+• .outOfBounds
+• .occupied
+
+Use the same existing calculations:
+• shape(for:)
+• indexes(...)
+• grid columns/rows
+• visibleBoxCount
+• entry.isBlankPlaceholder || isEmptyButtonEntry(entry)
+
+I. EMPTY-CELL SELECTION
+
+Paste can target empty cells.
+
+Main_GridSection skips only continuation cells with EmptyView() at lines 140-143. Ordinary empty cells still render through gridButtonView(...) and have frames/gestures. The popup already opens on empty positions.
+
+Copy/Cut should reject empty cells. Paste should allow them.
+
+J. UNDO INTEGRATION
+
+Current Undo system is suitable:
+• snapshots are raw slot-line arrays
+• entries are document-scoped
+• limit is 20
+• restore uses restoreFunctionKeySlotLines(...)
+• history clears on selectedDocumentName change
+• failed restore preserves the Undo entry
+
+For future operations:
+• Copy: no Undo
+• Cut: capture before snapshot, mutate, record if successful
+• Paste: capture before snapshot, mutate, record if successful
+
+Undo should not alter clipboard.
+
+K. CROSS-SCREEN CLIPBOARD
+
+Current mainGridEditClipboardText is AppStorage, so it survives:
+• screen/document changes
+• app restarts
+
+That supports cross-screen clipboard behavior. However, it needs an extended payload to preserve size across screens.
+
+Undo history already clears on document changes; clipboard should not.
+
+L. CENTRED NOTIFICATIONS
+
+Existing notification mechanism:
+• controlled by renameAlertMessage
+• displayed by popupOverlay(...), lines 4301-4335
+• rendered by popupCard(...), lines 4338-4359
+• auto-dismissed by schedulePopupDismissIfNeeded(), lines 4386-4404
+
+This can safely show:
+• "Button copied"
+• "Button cut"
+• "Button pasted"
+• "Not enough space"
+• "Space occupied"
+• "Nothing to paste"
+
+Set alertTitle = "" and assign renameAlertMessage.
+
+M. ATOMICITY
+
+Safest future sequence:
+
+Copy:
+• no mutation; just write clipboard payload
+
+Cut:
+• validate source
+• build clipboard payload
+• capture undo snapshot
+• clear footprint
+• if clear succeeds, write clipboard and record Undo
+• if clear fails, do not record Undo
+
+Paste:
+• decode clipboard
+• validate boundary and occupancy before mutation
+• build complete updated slot-line array
+• persist once via snapshot restore closure
+• record Undo only after successful restore
+
+Avoid using repeated updateFunctionKeySlot(...) for Paste if possible, because multi-cell placement should be one logical persistence operation.
+
+N. RISKS
+
+Main risks:
+• old clipboard plain strings are spanless
+• changing mainGridEditClipboardText format could break legacy paste unless backward-compatible
+• hasAvailableBlankSpan(...) cannot provide required failure messages as-is
+• repeated per-cell mutation can partially apply changes if persistence fails mid-operation
+• continuation markers must not be copied as independent buttons
+• Cut must not accidentally reuse popup Delete in a way that skips clipboard
+• Undo must restore grid only, not clipboard
+• cross-screen Paste must validate against the destination screen’s grid dimensions
+
+O. RECOMMENDED IMPLEMENTATION PLAN
+
+1. Add a small grid clipboard payload type and helper methods:
+   • encode rawLine + span
+   • decode new payload
+   • decode legacy plain string as span 1
+
+2. Add destination validation helper returning:
+   • ok
+   • not enough space
+   • space occupied
+
+3. Add a one-shot paste builder:
+   • takes current raw slot lines
+   • target index
+   • clipboard payload
+   • grid dimensions
+   • returns updated slot lines or validation failure
+
+4. Connect popup Copy:
+   • write payload
+   • show "Button copied"
+   • no Undo
+
+5. Connect popup Cut:
+   • capture Undo snapshot
+   • write clipboard payload
+   • clear full footprint
+   • record Undo on success
+   • show "Button cut"
+
+6. Connect popup Paste:
+   • decode clipboard
+   • validate destination
+   • persist full updated slot-line snapshot
+   • record Undo on success
+   • show success/failure message
+
+7. Leave legacy multi-tap behavior alone unless explicitly asked to migrate it to the new shared clipboard helpers.
+
+P. FILE STATUS
+
+No files were modified during this read-only probe. No build was run. No commit or push was performed. Existing working-tree modifications were left untouched.

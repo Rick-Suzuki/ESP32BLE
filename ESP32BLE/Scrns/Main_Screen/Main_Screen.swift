@@ -1380,6 +1380,15 @@ Tapping a row inserts the key code at the cursor.
             } onUndo: {
                 ButtonClickFeedback.playIfEnabled()
                 undoMainGridActionMenuOperation()
+            } onCopy: {
+                ButtonClickFeedback.playIfEnabled()
+                copyMainGridActionMenuSelection()
+            } onCut: {
+                ButtonClickFeedback.playIfEnabled()
+                cutMainGridActionMenuSelection()
+            } onPaste: {
+                ButtonClickFeedback.playIfEnabled()
+                pasteMainGridActionMenuSelection()
             } onDelete: {
                 ButtonClickFeedback.playIfEnabled()
                 deleteMainGridActionMenuSelection()
@@ -1452,6 +1461,85 @@ Tapping a row inserts the key code at the cursor.
         recordPopupUndoSnapshot(beforeSnapshot)
     }
 
+    private func copyMainGridActionMenuSelection() {
+        guard isGridEditModeEnabled,
+              let target = mainGridActionMenuTarget,
+              target.index >= 0,
+              target.index < functionKeys.count,
+              target.index < visibleBoxCount else {
+            return
+        }
+
+        guard copySlotForPopupIfPossible(
+            entry: functionKeys[target.index],
+            index: target.index,
+            gridDimensions: target.gridDimensions
+        ) else {
+            return
+        }
+
+        showMainGridActionMenuMessage("Button copied")
+    }
+
+    private func cutMainGridActionMenuSelection() {
+        guard isGridEditModeEnabled,
+              let target = mainGridActionMenuTarget,
+              target.index >= 0,
+              target.index < functionKeys.count,
+              target.index < visibleBoxCount else {
+            return
+        }
+
+        let beforeSnapshot = currentFunctionKeySlotLines()
+        guard let cutResult = updatedSlotLinesForPopupCut(
+            entry: functionKeys[target.index],
+            index: target.index,
+            gridDimensions: target.gridDimensions,
+            slotLines: beforeSnapshot
+        ) else {
+            return
+        }
+
+        guard restoreFunctionKeySlotLines(cutResult.slotLines) else {
+            return
+        }
+
+        mainGridEditClipboardText = cutResult.clipboardText
+        recordPopupUndoSnapshot(beforeSnapshot)
+        showMainGridActionMenuMessage("Button cut")
+    }
+
+    private func pasteMainGridActionMenuSelection() {
+        guard isGridEditModeEnabled,
+              let target = mainGridActionMenuTarget,
+              target.index >= 0,
+              target.index < visibleBoxCount else {
+            return
+        }
+
+        let beforeSnapshot = currentFunctionKeySlotLines()
+        switch updatedSlotLinesForPopupPaste(
+            at: target.index,
+            gridDimensions: target.gridDimensions,
+            slotLines: beforeSnapshot
+        ) {
+        case let .success(updatedSlotLines):
+            guard updatedSlotLines != beforeSnapshot,
+                  restoreFunctionKeySlotLines(updatedSlotLines) else {
+                return
+            }
+
+            recordPopupUndoSnapshot(beforeSnapshot)
+            showMainGridActionMenuMessage("Button pasted")
+        case .nothingToPaste:
+            showMainGridActionMenuMessage("Nothing to paste")
+        case .notEnoughSpace:
+            showMainGridActionMenuMessage("Not enough space")
+        case .spaceOccupied:
+            showMainGridActionMenuMessage("Space occupied")
+        }
+    }
+
     private func undoMainGridActionMenuOperation() {
         guard isGridEditModeEnabled,
               let undoEntry = popupUndoHistory.last else {
@@ -1480,6 +1568,11 @@ Tapping a row inserts the key code at the cursor.
 
     private func clearPopupUndoHistory() {
         popupUndoHistory.removeAll()
+    }
+
+    private func showMainGridActionMenuMessage(_ message: String) {
+        alertTitle = ""
+        renameAlertMessage = message
     }
 
     private func mainGridActionMenuPosition(
@@ -5413,6 +5506,9 @@ private struct MainGridEditActionMenu: View {
     let onClose: () -> Void
     let onEdit: () -> Void
     let onUndo: () -> Void
+    let onCopy: () -> Void
+    let onCut: () -> Void
+    let onPaste: () -> Void
     let onDelete: () -> Void
 
     var body: some View {
@@ -5424,9 +5520,9 @@ private struct MainGridEditActionMenu: View {
             }
 
             HStack(spacing: Metrics.spacing) {
-                menuButton(systemName: "doc.on.doc", accessibilityLabel: "Copy button", foregroundColor: SymbolColor.copy)
-                menuButton(systemName: "scissors", accessibilityLabel: "Cut button", foregroundColor: SymbolColor.cut)
-                menuButton(systemName: "doc.on.clipboard", accessibilityLabel: "Paste button", foregroundColor: SymbolColor.paste)
+                menuButton(systemName: "doc.on.doc", accessibilityLabel: "Copy button", foregroundColor: SymbolColor.copy, action: onCopy)
+                menuButton(systemName: "scissors", accessibilityLabel: "Cut button", foregroundColor: SymbolColor.cut, action: onCut)
+                menuButton(systemName: "doc.on.clipboard", accessibilityLabel: "Paste button", foregroundColor: SymbolColor.paste, action: onPaste)
             }
 
             HStack(spacing: Metrics.spacing) {

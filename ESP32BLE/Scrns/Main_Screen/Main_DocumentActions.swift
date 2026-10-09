@@ -5,6 +5,33 @@ import SwiftUI
 //
 //-----------------------------------------------------------------------------------------------
 //
+struct MainGridEditClipboardPayload: Codable {
+    static let encodedPrefix = "ESP32BLE_GRID_CLIPBOARD_V1:"
+
+    let version: Int
+    let rawLine: String
+    let span: Int
+
+    init(rawLine: String, span: Int) {
+        self.version = 1
+        self.rawLine = rawLine
+        self.span = span
+    }
+}
+
+enum MainGridPopupPasteOutcome {
+    case success([String])
+    case nothingToPaste
+    case notEnoughSpace
+    case spaceOccupied
+}
+
+private enum MainGridPasteDestinationResult {
+    case available
+    case outOfBounds
+    case occupied
+}
+
 extension MainScreen {
     func updateVisibleBoxCountToFitDefinedButtons() {
         let requiredBoxCount = max(definedFunctionKeyCount, 1)
@@ -326,6 +353,78 @@ extension MainScreen {
         deleteSlotIfPossible(entry: entry, index: index, gridDimensions: gridDimensions, copiesToClipboard: false)
     }
 
+    func copySlotForPopupIfPossible(entry: FunctionKeyEntry, index: Int, gridDimensions: GridDimensions) -> Bool {
+        guard let clipboardText = encodedGridEditClipboardText(entry: entry, index: index, gridDimensions: gridDimensions) else {
+            return false
+        }
+
+        mainGridEditClipboardText = clipboardText
+        return true
+    }
+
+    func updatedSlotLinesForPopupCut(
+        entry: FunctionKeyEntry,
+        index: Int,
+        gridDimensions: GridDimensions,
+        slotLines: [String]
+    ) -> (clipboardText: String, slotLines: [String])? {
+        guard let anchorIndex = editableAnchorIndex(containing: index),
+              functionKeys.indices.contains(anchorIndex),
+              let clipboardText = encodedGridEditClipboardText(entry: entry, index: anchorIndex, gridDimensions: gridDimensions) else {
+            return nil
+        }
+
+        let shape = buttonShape(startingAt: anchorIndex, gridDimensions: gridDimensions)
+        let footprintIndexes = indexes(startingAt: anchorIndex, shape: shape, gridDimensions: gridDimensions)
+        guard let maximumIndex = footprintIndexes.max(),
+              maximumIndex < visibleBoxCount else {
+            return nil
+        }
+
+        var updatedLines = slotLinesExpanded(slotLines, through: maximumIndex)
+        for slotIndex in footprintIndexes {
+            updatedLines[slotIndex] = "_"
+        }
+
+        guard updatedLines != slotLines else {
+            return nil
+        }
+
+        return (clipboardText, updatedLines)
+    }
+
+    func updatedSlotLinesForPopupPaste(
+        at index: Int,
+        gridDimensions: GridDimensions,
+        slotLines: [String]
+    ) -> MainGridPopupPasteOutcome {
+        guard let payload = decodedGridEditClipboardPayload(),
+              !payload.rawLine.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return .nothingToPaste
+        }
+
+        switch pasteDestinationResult(startingAt: index, span: payload.span, gridDimensions: gridDimensions) {
+        case .available:
+            let shape = shape(for: payload.span)
+            let footprintIndexes = indexes(startingAt: index, shape: shape, gridDimensions: gridDimensions)
+            guard let maximumIndex = footprintIndexes.max() else {
+                return .notEnoughSpace
+            }
+
+            var updatedLines = slotLinesExpanded(slotLines, through: maximumIndex)
+            updatedLines[index] = payload.rawLine
+            for assignment in continuationAssignments(startingAt: index, shape: shape, gridDimensions: gridDimensions) {
+                updatedLines[assignment.index] = assignment.token
+            }
+
+            return .success(updatedLines)
+        case .outOfBounds:
+            return .notEnoughSpace
+        case .occupied:
+            return .spaceOccupied
+        }
+    }
+
     @discardableResult
     private func deleteSlotIfPossible(
         entry: FunctionKeyEntry,
@@ -480,14 +579,14 @@ extension MainScreen {
         }
 
         if entry.isBlankPlaceholder || isEmptyButtonEntry(entry) {
-            let clipboardEntryText = mainGridEditClipboardText.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !clipboardEntryText.isEmpty else {
+            guard let clipboardPayload = decodedGridEditClipboardPayload(),
+                  !clipboardPayload.rawLine.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
                 alertTitle = ""
                 renameAlertMessage = "no btn data available\nto create new btn"
                 return
             }
 
-            _ = updateFunctionKeySlot(index, clipboardEntryText)
+            _ = updateFunctionKeySlot(index, clipboardPayload.rawLine)
             alertTitle = ""
             renameAlertMessage = "btn pasted"
             return
@@ -552,6 +651,54 @@ extension MainScreen {
 	//
     private func isButtonContinuationEntry(_ entry: FunctionKeyEntry) -> Bool {
         isWideButtonContinuationEntry(entry) || isBlockButtonContinuationEntry(entry)
+    }
+
+    private func encodedGridEditClipboardText(entry: FunctionKeyEntry, index: Int, gridDimensions: GridDimensions) -> String? {
+        guard isGridEditModeEnabled,
+              let anchorIndex = editableAnchorIndex(containing: index),
+              functionKeys.indices.contains(anchorIndex) else {
+            return nil
+        }
+
+        let anchorEntry = functionKeys[anchorIndex]
+        guard !anchorEntry.isBlankPlaceholder,
+              !isEmptyButtonEntry(anchorEntry),
+              !isButtonContinuationEntry(anchorEntry) else {
+            return nil
+        }
+
+        let payload = MainGridEditClipboardPayload(
+            rawLine: anchorEntry.rawLine,
+            span: slotSpan(startingAt: anchorIndex, gridDimensions: gridDimensions)
+        )
+
+        guard let payloadData = try? JSONEncoder().encode(payload) else {
+            return nil
+        }
+
+        return MainGridEditClipboardPayload.encodedPrefix + payloadData.base64EncodedString()
+    }
+
+    private func decodedGridEditClipboardPayload() -> MainGridEditClipboardPayload? {
+        let clipboardText = mainGridEditClipboardText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !clipboardText.isEmpty else {
+            return nil
+        }
+
+        guard clipboardText.hasPrefix(MainGridEditClipboardPayload.encodedPrefix) else {
+            return MainGridEditClipboardPayload(rawLine: clipboardText, span: 1)
+        }
+
+        let encodedPayload = String(clipboardText.dropFirst(MainGridEditClipboardPayload.encodedPrefix.count))
+        guard let payloadData = Data(base64Encoded: encodedPayload),
+              let payload = try? JSONDecoder().decode(MainGridEditClipboardPayload.self, from: payloadData),
+              payload.version == 1,
+              (1...5).contains(payload.span),
+              !payload.rawLine.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return nil
+        }
+
+        return payload
     }
 	//
 	//----------------------------------------
@@ -821,6 +968,10 @@ extension MainScreen {
 	//----------------------------------------
 	//
     private func hasAvailableBlankSpan(startingAt index: Int, span: Int, gridDimensions: GridDimensions) -> Bool {
+        pasteDestinationResult(startingAt: index, span: span, gridDimensions: gridDimensions) == .available
+    }
+
+    private func pasteDestinationResult(startingAt index: Int, span: Int, gridDimensions: GridDimensions) -> MainGridPasteDestinationResult {
         let shape = shape(for: span)
         let columns = max(gridDimensions.columns, 1)
         let startColumn = index % columns
@@ -831,21 +982,29 @@ extension MainScreen {
               (index / columns) + shape.height <= gridDimensions.rows,
               let maximumTargetIndex = targetIndexes.max(),
               maximumTargetIndex < visibleBoxCount else {
-            return false
+            return .outOfBounds
         }
 
         for slotIndex in targetIndexes {
             guard functionKeys.indices.contains(slotIndex) else {
-                return false
+                return .outOfBounds
             }
 
             let entry = functionKeys[slotIndex]
             guard entry.isBlankPlaceholder || isEmptyButtonEntry(entry) else {
-                return false
+                return .occupied
             }
         }
 
-        return true
+        return .available
+    }
+
+    private func slotLinesExpanded(_ slotLines: [String], through maximumIndex: Int) -> [String] {
+        guard maximumIndex >= slotLines.count else {
+            return slotLines
+        }
+
+        return slotLines + Array(repeating: "_", count: maximumIndex - slotLines.count + 1)
     }
 	//
 	//----------------------------------------

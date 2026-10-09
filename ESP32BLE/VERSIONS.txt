@@ -1,3 +1,8 @@
+261009 Fri 1107
+V62.17
+copy, cut, paste complete
+
+
 261009 Fri 1027
 V62.16
 popup: undo, delete complete
