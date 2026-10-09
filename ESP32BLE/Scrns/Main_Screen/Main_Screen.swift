@@ -3,6 +3,44 @@ import SwiftUI
 import UIKit
 import AVFoundation
 import PDFKit
+import Darwin
+
+private enum ESP001MiniEditorTest: String {
+    case empty
+    case commandOnly
+    case buttonOnly
+    case colorOnly
+    case sfOnly
+    case commandAndButton
+    case commandAndColor
+    case allPanels
+}
+
+private enum ESP001DiagnosticDevice {
+    // MARK: - BM:🅱️ ADD COMMENTS HERE
+    // Change this one value to select the active iPad Mini editor diagnostic configuration.
+    static let activeMiniEditorTest: ESP001MiniEditorTest = .allPanels
+
+    static var isIPadMini5: Bool {
+        let identifier = UIDevice.current.hardwareModelIdentifier
+        return identifier == "iPad11,1" || identifier == "iPad11,2"
+    }
+}
+
+private extension UIDevice {
+    var hardwareModelIdentifier: String {
+        var systemInfo = utsname()
+        uname(&systemInfo)
+
+        return Mirror(reflecting: systemInfo.machine).children.reduce(into: "") { identifier, element in
+            guard let value = element.value as? Int8, value != 0 else {
+                return
+            }
+
+            identifier.append(Character(UnicodeScalar(UInt8(value))))
+        }
+    }
+}
 
 private enum MainScreenPersistedModeFiles {
     static let displayMode = ".main_screen_view_mode.cfg"
@@ -1291,11 +1329,26 @@ Tapping a row inserts the key code at the cursor.
 
                 if editingSlotIndex != nil {
                     if isPad {
-                        smartView(availableWidth: contentWidth)
-                            .editorGeometryProbe(.editorContainer, isEnabled: debugEditorGeometry)
+                        if ESP001DiagnosticDevice.isIPadMini5 {
+                            esp001MiniDiagnosticEditor(availableWidth: contentWidth)
+                                .editorGeometryProbe(.editorContainer, isEnabled: debugEditorGeometry)
+                                .task(id: editingSlotIndex) {
+                                    logESP001Test3EditorPresentation(presentation: "diagnostic")
+                                    logESP001Test4MiniEditorPresentation()
+                                }
+                        } else {
+                            smartView(availableWidth: contentWidth)
+                                .editorGeometryProbe(.editorContainer, isEnabled: debugEditorGeometry)
+                                .task(id: editingSlotIndex) {
+                                    logESP001Test3EditorPresentation(presentation: "smartView")
+                                }
+                        }
                     } else {
                         iPhoneSmartEditorPresentation(availableWidth: contentWidth)
                             .editorGeometryProbe(.editorContainer, isEnabled: debugEditorGeometry)
+                            .task(id: editingSlotIndex) {
+                                logESP001Test3EditorPresentation(presentation: "iPhoneSmartEditorPresentation")
+                            }
                     }
                 }
 
@@ -2605,6 +2658,117 @@ Tapping a row inserts the key code at the cursor.
         )
     }
 
+    private func logESP001Test3EditorPresentation(presentation: String) {
+        let modelIdentifier = UIDevice.current.hardwareModelIdentifier
+        db("[ESP-001-TEST3] model=\(modelIdentifier)")
+        db("[ESP-001-TEST3] isPad=\(isPad)")
+        db("[ESP-001-TEST3] isIPadMini5=\(ESP001DiagnosticDevice.isIPadMini5)")
+        db("[ESP-001-TEST3] editingSlotIndexNonNil=\(editingSlotIndex != nil)")
+        db("[ESP-001-TEST3] presentation=\(presentation)")
+    }
+
+    private func logESP001Test4MiniEditorPresentation() {
+        let modelIdentifier = UIDevice.current.hardwareModelIdentifier
+        db("[ESP-001-TEST4] model=\(modelIdentifier)")
+        db("[ESP-001-TEST4] configuration=\(ESP001DiagnosticDevice.activeMiniEditorTest.rawValue)")
+        db("[ESP-001-TEST4] presentation=diagnostic")
+        db("[ESP-001-TEST4] appeared=true")
+    }
+
+    private func esp001MiniDiagnosticEditor(availableWidth: CGFloat) -> some View {
+        let panels = esp001MiniDiagnosticPanels(for: ESP001DiagnosticDevice.activeMiniEditorTest)
+
+        return ESP001MiniDiagnosticEditorShell(
+            width: min(smartViewWidth, availableWidth),
+            height: smartViewHeight,
+            commandWidth: smartEditControlsWidth,
+            colorWidth: smartCommandEditorWidth,
+            buttonWidth: smartColorControlsWidth,
+            sfWidth: smartSFPanelWidth,
+            debugEditorGeometry: debugEditorGeometry,
+            commandPanel: panels.command,
+            colorPanel: panels.color,
+            buttonPanel: panels.button,
+            sfPanel: panels.sf
+        )
+    }
+
+    private func esp001MiniDiagnosticPanels(for test: ESP001MiniEditorTest) -> ESP001MiniDiagnosticPanels {
+        switch test {
+        case .empty:
+            return ESP001MiniDiagnosticPanels(
+                command: esp001MiniDiagnosticEmptyPanel(label: "ESP-001 TEST 4\nEMPTY"),
+                color: esp001MiniDiagnosticEmptyPanel(),
+                button: esp001MiniDiagnosticEmptyPanel(),
+                sf: esp001MiniDiagnosticEmptyPanel()
+            )
+        case .commandOnly:
+            return ESP001MiniDiagnosticPanels(
+                command: AnyView(smartCommandPanel(columnWidth: smartEditControlsWidth)),
+                color: esp001MiniDiagnosticEmptyPanel(),
+                button: esp001MiniDiagnosticEmptyPanel(),
+                sf: esp001MiniDiagnosticEmptyPanel()
+            )
+        case .buttonOnly:
+            return ESP001MiniDiagnosticPanels(
+                command: esp001MiniDiagnosticEmptyPanel(),
+                color: esp001MiniDiagnosticEmptyPanel(),
+                button: AnyView(smartButtonPanel()),
+                sf: esp001MiniDiagnosticEmptyPanel()
+            )
+        case .colorOnly:
+            return ESP001MiniDiagnosticPanels(
+                command: esp001MiniDiagnosticEmptyPanel(),
+                color: AnyView(smartColorPanel),
+                button: esp001MiniDiagnosticEmptyPanel(),
+                sf: esp001MiniDiagnosticEmptyPanel()
+            )
+        case .sfOnly:
+            return ESP001MiniDiagnosticPanels(
+                command: esp001MiniDiagnosticEmptyPanel(),
+                color: esp001MiniDiagnosticEmptyPanel(),
+                button: esp001MiniDiagnosticEmptyPanel(),
+                sf: esp001MiniDiagnosticSFPanel()
+            )
+        case .commandAndButton:
+            return ESP001MiniDiagnosticPanels(
+                command: AnyView(smartCommandPanel(columnWidth: smartEditControlsWidth)),
+                color: esp001MiniDiagnosticEmptyPanel(),
+                button: AnyView(smartButtonPanel()),
+                sf: esp001MiniDiagnosticEmptyPanel()
+            )
+        case .commandAndColor:
+            return ESP001MiniDiagnosticPanels(
+                command: AnyView(smartCommandPanel(columnWidth: smartEditControlsWidth)),
+                color: AnyView(smartColorPanel),
+                button: esp001MiniDiagnosticEmptyPanel(),
+                sf: esp001MiniDiagnosticEmptyPanel()
+            )
+        case .allPanels:
+            return ESP001MiniDiagnosticPanels(
+                command: AnyView(smartCommandPanel(columnWidth: smartEditControlsWidth)),
+                color: AnyView(smartColorPanel),
+                button: AnyView(smartButtonPanel()),
+                sf: esp001MiniDiagnosticSFPanel()
+            )
+        }
+    }
+
+    private func esp001MiniDiagnosticEmptyPanel(label: String? = nil) -> AnyView {
+        AnyView(ESP001MiniDiagnosticEmptyPanel(label: label))
+    }
+
+    private func esp001MiniDiagnosticSFPanel() -> AnyView {
+        AnyView(IPadSmartSFPanel(
+            symbolGrid: {
+                smartSFSymbolGrid
+            },
+            controls: {
+                smartSFPanelControls
+            }
+        ))
+    }
+
     private var slotEditorSection: some View {
         MainScreenSlotEditorOverlay(
             editingSlotText: $editingSlotText,
@@ -2646,12 +2810,21 @@ Tapping a row inserts the key code at the cursor.
         let panelMaxHeight = isPad || availableHeight != nil ? nil : CGFloat.infinity
         let editorGroupWidth = isPad ? outerWidth : resolvedSmartEditControlsWidth + resolvedSmartCommandEditorWidth + resolvedSmartColorControlsWidth
         let editorGroupAlignment: Alignment = isPad ? .topLeading : .top
+        let isESP001DiagnosticIPadMini5 = ESP001DiagnosticDevice.isIPadMini5
 
         return HStack(spacing: 0) {
-            smartCommandPanel(columnWidth: resolvedSmartEditControlsWidth)
-                .frame(width: resolvedSmartEditControlsWidth, height: panelHeight)
-                .frame(maxHeight: panelMaxHeight)
-                .editorGeometryProbe(.leftPanel, isEnabled: debugEditorGeometry)
+            if isESP001DiagnosticIPadMini5 {
+                Rectangle()
+                    .fill(Color.black)
+                    .frame(width: resolvedSmartEditControlsWidth, height: panelHeight)
+                    .frame(maxHeight: panelMaxHeight)
+                    .editorGeometryProbe(.leftPanel, isEnabled: debugEditorGeometry)
+            } else {
+                smartCommandPanel(columnWidth: resolvedSmartEditControlsWidth)
+                    .frame(width: resolvedSmartEditControlsWidth, height: panelHeight)
+                    .frame(maxHeight: panelMaxHeight)
+                    .editorGeometryProbe(.leftPanel, isEnabled: debugEditorGeometry)
+            }
 
             smartColorPanel
                 .frame(width: resolvedSmartCommandEditorWidth, height: panelHeight)
@@ -2825,48 +2998,75 @@ Tapping a row inserts the key code at the cursor.
         let functionKeyColumnWidth = keyCellWidth ?? smartFunctionKeyColumnWidth
 
         return VStack(spacing: 0) {
-            VStack(spacing: 0) {
-                HStack(spacing: 0) {
-                    ForEach(Array(smartTopPlaceholderSymbols.prefix(4)), id: \.self) { systemName in
+            if isPad {
+                IPadSmartCommandKeypad(
+                    topPlaceholderSymbols: smartTopPlaceholderSymbols,
+                    keyCellWidth: keyCellWidth,
+                    debugEditorGeometry: debugEditorGeometry,
+                    placeholderButton: { systemName in
                         smartPlaceholderButton(systemName: systemName)
+                    },
+                    escapeCodeToggleButton: {
+                        smartEscapeCodeToggleButton
+                    },
+                    dismissKeyboardButton: {
+                        dismissKeyboardButton
+                    },
+                    commandColonButton: {
+                        smartCommandColonButton
+                    },
+                    modifierButton: { systemName, accessibilityLabel, prefix in
+                        smartModifierButton(
+                            systemName: systemName,
+                            accessibilityLabel: accessibilityLabel,
+                            prefix: prefix
+                        )
+                    }
+                )
+            } else {
+                VStack(spacing: 0) {
+                    HStack(spacing: 0) {
+                        ForEach(Array(smartTopPlaceholderSymbols.prefix(4)), id: \.self) { systemName in
+                            smartPlaceholderButton(systemName: systemName)
+                                .frame(width: keyCellWidth)
+                        }
+                    }
+                    .frame(height: 44)
+
+                    HStack(spacing: 0) {
+                        ForEach(Array(smartTopPlaceholderSymbols.dropFirst(4).prefix(4)), id: \.self) { systemName in
+                            smartPlaceholderButton(systemName: systemName)
+                                .frame(width: keyCellWidth)
+                        }
+                    }
+                    .frame(height: 44)
+
+                    HStack(spacing: 0) {
+                        smartPlaceholderButton(systemName: "delete.backward.fill")
+                            .frame(width: keyCellWidth)
+                        smartEscapeCodeToggleButton
+                            .frame(width: keyCellWidth)
+                        dismissKeyboardButton
+                            .frame(width: keyCellWidth)
+                        smartCommandColonButton
                             .frame(width: keyCellWidth)
                     }
-                }
-                .frame(height: 44)
+                    .frame(height: 44)
 
-                HStack(spacing: 0) {
-                    ForEach(Array(smartTopPlaceholderSymbols.dropFirst(4).prefix(4)), id: \.self) { systemName in
-                        smartPlaceholderButton(systemName: systemName)
+                    HStack(spacing: 0) {
+                        smartModifierButton(systemName: "control", accessibilityLabel: "Control", prefix: "⌃")
+                            .frame(width: keyCellWidth)
+                        smartModifierButton(systemName: "option", accessibilityLabel: "Option", prefix: "⌥")
+                            .frame(width: keyCellWidth)
+                        smartModifierButton(systemName: "shift", accessibilityLabel: "Shift", prefix: "⇧")
+                            .frame(width: keyCellWidth)
+                        smartModifierButton(systemName: "command", accessibilityLabel: "Command", prefix: "⌘")
                             .frame(width: keyCellWidth)
                     }
+                    .frame(height: 44)
                 }
-                .frame(height: 44)
-
-                HStack(spacing: 0) {
-                    smartPlaceholderButton(systemName: "delete.backward.fill")
-                        .frame(width: keyCellWidth)
-                    smartEscapeCodeToggleButton
-                        .frame(width: keyCellWidth)
-                    dismissKeyboardButton
-                        .frame(width: keyCellWidth)
-                    smartCommandColonButton
-                        .frame(width: keyCellWidth)
-                }
-                .frame(height: 44)
-
-                HStack(spacing: 0) {
-                    smartModifierButton(systemName: "control", accessibilityLabel: "Control", prefix: "⌃")
-                        .frame(width: keyCellWidth)
-                    smartModifierButton(systemName: "option", accessibilityLabel: "Option", prefix: "⌥")
-                        .frame(width: keyCellWidth)
-                    smartModifierButton(systemName: "shift", accessibilityLabel: "Shift", prefix: "⇧")
-                        .frame(width: keyCellWidth)
-                    smartModifierButton(systemName: "command", accessibilityLabel: "Command", prefix: "⌘")
-                        .frame(width: keyCellWidth)
-                }
-                .frame(height: 44)
+                .editorGeometryProbe(.leftTop, isEnabled: debugEditorGeometry)
             }
-            .editorGeometryProbe(.leftTop, isEnabled: debugEditorGeometry)
 
             HStack(spacing: 0) {
                 ScrollView(.vertical) {
@@ -5131,6 +5331,130 @@ Tapping a row inserts the key code at the cursor.
                 span: sourceSpan
             )
         }
+    }
+}
+
+private struct ESP001MiniDiagnosticPanels {
+    let command: AnyView
+    let color: AnyView
+    let button: AnyView
+    let sf: AnyView
+}
+
+private struct ESP001MiniDiagnosticEditorShell: View {
+    let width: CGFloat
+    let height: CGFloat
+    let commandWidth: CGFloat
+    let colorWidth: CGFloat
+    let buttonWidth: CGFloat
+    let sfWidth: CGFloat
+    let debugEditorGeometry: Bool
+    let commandPanel: AnyView
+    let colorPanel: AnyView
+    let buttonPanel: AnyView
+    let sfPanel: AnyView
+
+    var body: some View {
+        HStack(spacing: 0) {
+            commandPanel
+                .frame(width: commandWidth, height: height)
+                .editorGeometryProbe(.leftPanel, isEnabled: debugEditorGeometry)
+
+            colorPanel
+                .frame(width: colorWidth, height: height)
+                .editorGeometryProbe(.commandPanel, isEnabled: debugEditorGeometry)
+
+            buttonPanel
+                .frame(width: buttonWidth, height: height)
+                .editorGeometryProbe(.buttonPanel, isEnabled: debugEditorGeometry)
+
+            sfPanel
+                .frame(width: sfWidth, height: height)
+                .editorGeometryProbe(.sfPanel, isEnabled: debugEditorGeometry)
+        }
+        .frame(width: width, height: height, alignment: .topLeading)
+        .background(Color.black)
+        .editorGeometryProbe(.smartView, isEnabled: debugEditorGeometry)
+        .ignoresSafeArea(.keyboard)
+    }
+}
+
+private struct ESP001MiniDiagnosticEmptyPanel: View {
+    let label: String?
+
+    var body: some View {
+        ZStack {
+            Color.black
+
+            if let label {
+                Text(label)
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                    .multilineTextAlignment(.center)
+            }
+        }
+    }
+}
+
+private struct IPadSmartCommandKeypad<
+    PlaceholderButton: View,
+    EscapeCodeToggleButton: View,
+    DismissKeyboardButton: View,
+    CommandColonButton: View,
+    ModifierButton: View
+>: View {
+    let topPlaceholderSymbols: [String]
+    let keyCellWidth: CGFloat?
+    let debugEditorGeometry: Bool
+    let placeholderButton: (String) -> PlaceholderButton
+    let escapeCodeToggleButton: () -> EscapeCodeToggleButton
+    let dismissKeyboardButton: () -> DismissKeyboardButton
+    let commandColonButton: () -> CommandColonButton
+    let modifierButton: (String, String, String) -> ModifierButton
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 0) {
+                ForEach(Array(topPlaceholderSymbols.prefix(4)), id: \.self) { systemName in
+                    placeholderButton(systemName)
+                        .frame(width: keyCellWidth)
+                }
+            }
+            .frame(height: 44)
+
+            HStack(spacing: 0) {
+                ForEach(Array(topPlaceholderSymbols.dropFirst(4).prefix(4)), id: \.self) { systemName in
+                    placeholderButton(systemName)
+                        .frame(width: keyCellWidth)
+                }
+            }
+            .frame(height: 44)
+
+            HStack(spacing: 0) {
+                placeholderButton("delete.backward.fill")
+                    .frame(width: keyCellWidth)
+                escapeCodeToggleButton()
+                    .frame(width: keyCellWidth)
+                dismissKeyboardButton()
+                    .frame(width: keyCellWidth)
+                commandColonButton()
+                    .frame(width: keyCellWidth)
+            }
+            .frame(height: 44)
+
+            HStack(spacing: 0) {
+                modifierButton("control", "Control", "⌃")
+                    .frame(width: keyCellWidth)
+                modifierButton("option", "Option", "⌥")
+                    .frame(width: keyCellWidth)
+                modifierButton("shift", "Shift", "⇧")
+                    .frame(width: keyCellWidth)
+                modifierButton("command", "Command", "⌘")
+                    .frame(width: keyCellWidth)
+            }
+            .frame(height: 44)
+        }
+        .editorGeometryProbe(.leftTop, isEnabled: debugEditorGeometry)
     }
 }
 

@@ -1,72 +1,62 @@
-Looking up debug dylib relative path
-Found debug dylib relative path string `ESP32BLE.debug.dylib`
-Looking up debug dylib entry point name
-No debug dylib entry point name defined.
-Looking up debug dylib install name
-Found debug dylib install name string `@rpath/ESP32BLE.debug.dylib`
-Looking for Previews JIT link entry point.
-No Previews JIT entry point found.
-Gave PreviewsInjection a chance to run and it returned, continuing with debug dylib.
-Looking for main entry point.
-Opening debug dylib with '@rpath/ESP32BLE.debug.dylib'
-Debug dylib handle: 0x7487d010
-No entry point found. Checking for alias.
-Calling provided entry point.
-Update the Info.plist: Support for all orientations will soon be required.
-API MISUSE: <CBCentralManager: 0x103210200> can only accept this command while in the powered on state
-API MISUSE: <CBCentralManager: 0x103210200> can only accept this command while in the powered on state
-Failed to send CA Event for app launch measurements for ca_event_type: 1 event_name: com.apple.app_launch_measurement.ExtendedLaunchMetrics
-[ESP-MAC-TX] payload="AUTH:RESPONSE:1:esp-13bfcaa07427f22334ceac2e1d3880e0:f1bcc60ad20b7178677040b8cc6ab1921ad2ffe61bc32239abacad8e0c3f7010\n" bytes=118 values=[65,85,84,72,58,82,69,83,80,79,78,83,69,58,49,58,101,115,112,45,49,51,98,102,99,97,97,48,55,52,50,55,102,50,50,51,51,52,99,101,97,99,50,101,49,100,51,56,56,48,101,48,58,102,49,98,99,99,54,48,97,100,50,48,98,55,49,55,56,54,55,55,48,52,48,98,56,99,99,54,97,98,49,57,50,49,97,100,50,102,102,101,54,49,98,99,51,50,50,51,57,97,98,97,99,97,100,56,101,48,99,51,102,55,48,49,48,10]
-[ESP-AUTH] authentication response sent
-[ESP-AUTH] authenticated with Mac Helper
-[ESP-AUTH] forgot paired Mac Helper
-[ESP-MAC-TX] payload="PAIR:REQUEST:1:esp-13bfcaa07427f22334ceac2e1d3880e0\n" bytes=52 values=[80,65,73,82,58,82,69,81,85,69,83,84,58,49,58,101,115,112,45,49,51,98,102,99,97,97,48,55,52,50,55,102,50,50,51,51,52,99,101,97,99,50,101,49,100,51,56,56,48,101,48,10]
-[ESP-AUTH] pairing request sent
-[ESP-AUTH] pairing rejected
-[ESP-MAC-TX] payload="PAIR:REQUEST:1:esp-13bfcaa07427f22334ceac2e1d3880e0\n" bytes=52 values=[80,65,73,82,58,82,69,81,85,69,83,84,58,49,58,101,115,112,45,49,51,98,102,99,97,97,48,55,52,50,55,102,50,50,51,51,52,99,101,97,99,50,101,49,100,51,56,56,48,101,48,10]
-[ESP-AUTH] pairing request sent
-[ESP-AUTH] pairing rejected
-[ESP-AUTH] no stored pairing for challenged Helper
-[ESP-MAC-TX] payload="PAIR:REQUEST:1:esp-13bfcaa07427f22334ceac2e1d3880e0\n" bytes=52 values=[80,65,73,82,58,82,69,81,85,69,83,84,58,49,58,101,115,112,45,49,51,98,102,99,97,97,48,55,52,50,55,102,50,50,51,51,52,99,101,97,99,50,101,49,100,51,56,56,48,101,48,10]
-[ESP-AUTH] pairing request sent
-[ESP-AUTH] pairing rejected
-[ESP-AUTH] no stored pairing for challenged Helper
-[ESP-MAC-TX] payload="PAIR:REQUEST:1:esp-13bfcaa07427f22334ceac2e1d3880e0\n" bytes=52 values=[80,65,73,82,58,82,69,81,85,69,83,84,58,49,58,101,115,112,45,49,51,98,102,99,97,97,48,55,52,50,55,102,50,50,51,51,52,99,101,97,99,50,101,49,100,51,56,56,48,101,48,10]
-[ESP-AUTH] pairing request sent
-[ESP-AUTH] pairing rejected
-[ESP-MAC-TX] payload="PAIR:REQUEST:1:esp-13bfcaa07427f22334ceac2e1d3880e0\n" bytes=52 values=[80,65,73,82,58,82,69,81,85,69,83,84,58,49,58,101,115,112,45,49,51,98,102,99,97,97,48,55,52,50,55,102,50,50,51,51,52,99,101,97,99,50,101,49,100,51,56,56,48,101,48,10]
-[ESP-AUTH] pairing request sent
-[ESP-AUTH] paired with Mac Helper
-[ESP-MAC-TX] payload="AUTH:RESPONSE:1:esp-13bfcaa07427f22334ceac2e1d3880e0:53e5a74fe47031c7fed22706ec8ab98adf27d4e37f9a30e110fbebdb86355ce5\n" bytes=118 values=[65,85,84,72,58,82,69,83,80,79,78,83,69,58,49,58,101,115,112,45,49,51,98,102,99,97,97,48,55,52,50,55,102,50,50,51,51,52,99,101,97,99,50,101,49,100,51,56,56,48,101,48,58,53,51,101,53,97,55,52,102,101,52,55,48,51,49,99,55,102,101,100,50,50,55,48,54,101,99,56,97,98,57,56,97,100,102,50,55,100,52,101,51,55,102,57,97,51,48,101,49,49,48,102,98,101,98,100,98,56,54,51,53,53,99,101,53,10]
-[ESP-AUTH] authentication response sent
-[ESP-AUTH] authenticated with Mac Helper
-<0x103219e00> Gesture: System gesture gate timed out.
-[ESP-OUTPUT] #1 "ct"
-[ESP-OUTPUT] #2 "op"
-[ESP-OUTPUT] #3 "f20"
-[ESP-MAC-TX] payload="CTRL+OPT+F20\n" bytes=13 values=[67,84,82,76,43,79,80,84,43,70,50,48,10]
-[ESP-OUTPUT] #4 " "
-[ESP-OUTPUT] #5 " "
-[ESP-OUTPUT] #6 " "
-[ESP-OUTPUT] #7 " "
-[ESP-OUTPUT] #8 "LEFT"
-[ESP-MAC-TX] payload="KEY:LEFT\n" bytes=9 values=[75,69,89,58,76,69,70,84,10]
-[ESP-OUTPUT] #9 " "
-<0x103219f40> Touch: System gesture gate timed out.
-<0x103219e00> Gesture: System gesture gate timed out.
-[ESP-OUTPUT] #10 " "
-[ESP-OUTPUT] #11 " "
-[ESP-OUTPUT] #12 "f2"
-[ESP-OUTPUT] #13 " "
-<0x103219f40> Touch: System gesture gate timed out.
-<0x103219e00> Gesture: System gesture gate timed out.
-[ESP-MAC-TX] payload="AUTH:RESPONSE:1:esp-13bfcaa07427f22334ceac2e1d3880e0:faafbfa98d619f75b6f50e6cca2b31c860c87b0eea636dab19c867e2d99036f1\n" bytes=118 values=[65,85,84,72,58,82,69,83,80,79,78,83,69,58,49,58,101,115,112,45,49,51,98,102,99,97,97,48,55,52,50,55,102,50,50,51,51,52,99,101,97,99,50,101,49,100,51,56,56,48,101,48,58,102,97,97,102,98,102,97,57,56,100,54,49,57,102,55,53,98,54,102,53,48,101,54,99,99,97,50,98,51,49,99,56,54,48,99,56,55,98,48,101,101,97,54,51,54,100,97,98,49,57,99,56,54,55,101,50,100,57,57,48,51,54,102,49,10]
-[ESP-AUTH] authentication response sent
-[ESP-AUTH] authenticated with Mac Helper
-[ESP-OUTPUT] #14 " "
-[ESP-OUTPUT] #15 "LEFT"
-[ESP-MAC-TX] payload="KEY:LEFT\n" bytes=9 values=[75,69,89,58,76,69,70,84,10]
-[ESP-OUTPUT] #16 " "
-[ESP-OUTPUT] #17 "LEFT"
-[ESP-MAC-TX] payload="KEY:LEFT\n" bytes=9 values=[75,69,89,58,76,69,70,84,10]
-[ESP-OUTPUT] #18 " "
+(lldb) bt 50
+* thread #1, queue = 'com.apple.main-thread', stop reason = EXC_BAD_ACCESS (code=2, address=0x16f637fd0)
+     frame #0: 0x0000000182a0053c libswiftCore.dylib`_findExtendedTypeContextDescriptor(swift::TargetContextDescriptor<swift::InProcess> const*, swift::Demangle::__runtime::Demangler&, swift::Demangle::__runtime::Node**) + 8
+     frame #1: 0x0000000182a03d6c libswiftCore.dylib`swift::SubstGenericParametersFromMetadata::buildDescriptorPath(swift::TargetContextDescriptor<swift::InProcess> const*, swift::Demangle::__runtime::Demangler&) const + 264
+     frame #2: 0x0000000182a03e10 libswiftCore.dylib`swift::SubstGenericParametersFromMetadata::buildDescriptorPath(swift::TargetContextDescriptor<swift::InProcess> const*, swift::Demangle::__runtime::Demangler&) const + 428
+     frame #3: 0x0000000182a03b30 libswiftCore.dylib`swift::SubstGenericParametersFromMetadata::setup() const + 272
+     frame #4: 0x0000000182a1583c libswiftCore.dylib`swift::SubstGenericParametersFromMetadata::getMetadata(unsigned int, unsigned int) const + 44
+     frame #5: 0x0000000182a1324c libswiftCore.dylib`(anonymous namespace)::DecodedMetadataBuilder::createGenericTypeParameterType(unsigned int, unsigned int) const + 76
+     frame #6: 0x0000000182a0b390 libswiftCore.dylib`swift::Demangle::__runtime::TypeDecoder<(anonymous namespace)::DecodedMetadataBuilder>::decodeMangledType(swift::Demangle::__runtime::Node*, unsigned int, bool) + 6968
+     frame #7: 0x0000000182a096a4 libswiftCore.dylib`swift_getTypeByMangledNodeImpl(swift::MetadataRequest, swift::Demangle::__runtime::Demangler&, swift::Demangle::__runtime::Node*, void const* const*, std::__1::function<void const* (unsigned int, unsigned int)>, std::__1::function<swift::TargetWitnessTable<swift::InProcess> const* (swift::TargetMetadata<swift::InProcess> const*, unsigned int)>) + 784
+     frame #8: 0x0000000182a09218 libswiftCore.dylib`swift_getTypeByMangledNode + 336
+     frame #9: 0x00000001829fff7c libswiftCore.dylib`swift_getTypeByMangledNameImpl(swift::MetadataRequest, __swift::__runtime::llvm::StringRef, void const* const*, std::__1::function<void const* (unsigned int, unsigned int)>, std::__1::function<swift::TargetWitnessTable<swift::InProcess> const* (swift::TargetMetadata<swift::InProcess> const*, unsigned int)>) + 1164
+     frame #10: 0x00000001829ff974 libswiftCore.dylib`swift_getTypeByMangledName + 336
+     frame #11: 0x0000000182a012ac libswiftCore.dylib`swift::_checkGenericRequirements(__swift::__runtime::llvm::ArrayRef<swift::GenericParamDescriptor>, __swift::__runtime::llvm::ArrayRef<swift::TargetGenericRequirementDescriptor<swift::InProcess>>, __swift::__runtime::llvm::SmallVectorImpl<void const*>&, std::__1::function<void const* (unsigned int, unsigned int)>, std::__1::function<void const* (unsigned int, unsigned int)>, std::__1::function<swift::TargetWitnessTable<swift::InProcess> const* (swift::TargetMetadata<swift::InProcess> const*, unsigned int)>, swift::ConformanceExecutionContext*) + 2268
+     frame #12: 0x0000000182a0388c libswiftCore.dylib`checkInvertibleRequirements(swift::TargetMetadata<swift::InProcess> const*, swift::InvertibleProtocolSet) + 1220
+     frame #13: 0x0000000182a03280 libswiftCore.dylib`swift::_checkGenericRequirements(__swift::__runtime::llvm::ArrayRef<swift::GenericParamDescriptor>, __swift::__runtime::llvm::ArrayRef<swift::TargetGenericRequirementDescriptor<swift::InProcess>>, __swift::__runtime::llvm::SmallVectorImpl<void const*>&, std::__1::function<void const* (unsigned int, unsigned int)>, std::__1::function<void const* (unsigned int, unsigned int)>, std::__1::function<swift::TargetWitnessTable<swift::InProcess> const* (swift::TargetMetadata<swift::InProcess> const*, unsigned int)>, swift::ConformanceExecutionContext*) + 10416
+     frame #14: 0x0000000182a07e58 libswiftCore.dylib`_gatherGenericParameters(swift::TargetContextDescriptor<swift::InProcess> const*, __swift::__runtime::llvm::ArrayRef<swift::MetadataPackOrValue>, swift::TargetMetadata<swift::InProcess> const*, __swift::__runtime::llvm::SmallVectorImpl<unsigned int>&, __swift::__runtime::llvm::SmallVectorImpl<void const*>&, swift::Demangle::__runtime::Demangler&) + 2260
+     frame #15: 0x0000000182a082a0 libswiftCore.dylib`(anonymous namespace)::DecodedMetadataBuilder::createBoundGenericType(swift::TargetContextDescriptor<swift::InProcess> const*, __swift::__runtime::llvm::ArrayRef<swift::MetadataPackOrValue>, swift::MetadataPackOrValue) const + 264
+     frame #16: 0x0000000182a0bd98 libswiftCore.dylib`swift::Demangle::__runtime::TypeDecoder<(anonymous namespace)::DecodedMetadataBuilder>::decodeMangledType(swift::Demangle::__runtime::Node*, unsigned int, bool) + 9536
+     frame #17: 0x0000000182a051a0 libswiftCore.dylib`swift::Demangle::__runtime::TypeDecoder<(anonymous namespace)::DecodedMetadataBuilder>::decodeGenericArgs(swift::Demangle::__runtime::Node*, unsigned int, __swift::__runtime::llvm::SmallVectorImpl<swift::MetadataPackOrValue>&) + 360
+     frame #18: 0x0000000182a09be8 libswiftCore.dylib`swift::Demangle::__runtime::TypeDecoder<(anonymous namespace)::DecodedMetadataBuilder>::decodeMangledType(swift::Demangle::__runtime::Node*, unsigned int, bool) + 912
+     frame #19: 0x0000000182a051a0 libswiftCore.dylib`swift::Demangle::__runtime::TypeDecoder<(anonymous namespace)::DecodedMetadataBuilder>::decodeGenericArgs(swift::Demangle::__runtime::Node*, unsigned int, __swift::__runtime::llvm::SmallVectorImpl<swift::MetadataPackOrValue>&) + 360
+     frame #20: 0x0000000182a09be8 libswiftCore.dylib`swift::Demangle::__runtime::TypeDecoder<(anonymous namespace)::DecodedMetadataBuilder>::decodeMangledType(swift::Demangle::__runtime::Node*, unsigned int, bool) + 912
+     frame #21: 0x0000000182a051a0 libswiftCore.dylib`swift::Demangle::__runtime::TypeDecoder<(anonymous namespace)::DecodedMetadataBuilder>::decodeGenericArgs(swift::Demangle::__runtime::Node*, unsigned int, __swift::__runtime::llvm::SmallVectorImpl<swift::MetadataPackOrValue>&) + 360
+     frame #22: 0x0000000182a09be8 libswiftCore.dylib`swift::Demangle::__runtime::TypeDecoder<(anonymous namespace)::DecodedMetadataBuilder>::decodeMangledType(swift::Demangle::__runtime::Node*, unsigned int, bool) + 912
+     frame #23: 0x0000000182a051a0 libswiftCore.dylib`swift::Demangle::__runtime::TypeDecoder<(anonymous namespace)::DecodedMetadataBuilder>::decodeGenericArgs(swift::Demangle::__runtime::Node*, unsigned int, __swift::__runtime::llvm::SmallVectorImpl<swift::MetadataPackOrValue>&) + 360
+     frame #24: 0x0000000182a09be8 libswiftCore.dylib`swift::Demangle::__runtime::TypeDecoder<(anonymous namespace)::DecodedMetadataBuilder>::decodeMangledType(swift::Demangle::__runtime::Node*, unsigned int, bool) + 912
+     frame #25: 0x0000000182a051a0 libswiftCore.dylib`swift::Demangle::__runtime::TypeDecoder<(anonymous namespace)::DecodedMetadataBuilder>::decodeGenericArgs(swift::Demangle::__runtime::Node*, unsigned int, __swift::__runtime::llvm::SmallVectorImpl<swift::MetadataPackOrValue>&) + 360
+     frame #26: 0x0000000182a09be8 libswiftCore.dylib`swift::Demangle::__runtime::TypeDecoder<(anonymous namespace)::DecodedMetadataBuilder>::decodeMangledType(swift::Demangle::__runtime::Node*, unsigned int, bool) + 912
+     frame #27: 0x0000000182a051a0 libswiftCore.dylib`swift::Demangle::__runtime::TypeDecoder<(anonymous namespace)::DecodedMetadataBuilder>::decodeGenericArgs(swift::Demangle::__runtime::Node*, unsigned int, __swift::__runtime::llvm::SmallVectorImpl<swift::MetadataPackOrValue>&) + 360
+     frame #28: 0x0000000182a09be8 libswiftCore.dylib`swift::Demangle::__runtime::TypeDecoder<(anonymous namespace)::DecodedMetadataBuilder>::decodeMangledType(swift::Demangle::__runtime::Node*, unsigned int, bool) + 912
+     frame #29: 0x0000000182a0d908 libswiftCore.dylib`swift::Demangle::__runtime::TypeDecoder<(anonymous namespace)::DecodedMetadataBuilder>::decodeMangledType(swift::Demangle::__runtime::Node*, unsigned int, bool) + 16560
+     frame #30: 0x0000000182a051a0 libswiftCore.dylib`swift::Demangle::__runtime::TypeDecoder<(anonymous namespace)::DecodedMetadataBuilder>::decodeGenericArgs(swift::Demangle::__runtime::Node*, unsigned int, __swift::__runtime::llvm::SmallVectorImpl<swift::MetadataPackOrValue>&) + 360
+     frame #31: 0x0000000182a09be8 libswiftCore.dylib`swift::Demangle::__runtime::TypeDecoder<(anonymous namespace)::DecodedMetadataBuilder>::decodeMangledType(swift::Demangle::__runtime::Node*, unsigned int, bool) + 912
+     frame #32: 0x0000000182a051a0 libswiftCore.dylib`swift::Demangle::__runtime::TypeDecoder<(anonymous namespace)::DecodedMetadataBuilder>::decodeGenericArgs(swift::Demangle::__runtime::Node*, unsigned int, __swift::__runtime::llvm::SmallVectorImpl<swift::MetadataPackOrValue>&) + 360
+     frame #33: 0x0000000182a09be8 libswiftCore.dylib`swift::Demangle::__runtime::TypeDecoder<(anonymous namespace)::DecodedMetadataBuilder>::decodeMangledType(swift::Demangle::__runtime::Node*, unsigned int, bool) + 912
+     frame #34: 0x0000000182a051a0 libswiftCore.dylib`swift::Demangle::__runtime::TypeDecoder<(anonymous namespace)::DecodedMetadataBuilder>::decodeGenericArgs(swift::Demangle::__runtime::Node*, unsigned int, __swift::__runtime::llvm::SmallVectorImpl<swift::MetadataPackOrValue>&) + 360
+     frame #35: 0x0000000182a09be8 libswiftCore.dylib`swift::Demangle::__runtime::TypeDecoder<(anonymous namespace)::DecodedMetadataBuilder>::decodeMangledType(swift::Demangle::__runtime::Node*, unsigned int, bool) + 912
+     frame #36: 0x0000000182a051a0 libswiftCore.dylib`swift::Demangle::__runtime::TypeDecoder<(anonymous namespace)::DecodedMetadataBuilder>::decodeGenericArgs(swift::Demangle::__runtime::Node*, unsigned int, __swift::__runtime::llvm::SmallVectorImpl<swift::MetadataPackOrValue>&) + 360
+     frame #37: 0x0000000182a09be8 libswiftCore.dylib`swift::Demangle::__runtime::TypeDecoder<(anonymous namespace)::DecodedMetadataBuilder>::decodeMangledType(swift::Demangle::__runtime::Node*, unsigned int, bool) + 912
+     frame #38: 0x0000000182a051a0 libswiftCore.dylib`swift::Demangle::__runtime::TypeDecoder<(anonymous namespace)::DecodedMetadataBuilder>::decodeGenericArgs(swift::Demangle::__runtime::Node*, unsigned int, __swift::__runtime::llvm::SmallVectorImpl<swift::MetadataPackOrValue>&) + 360
+     frame #39: 0x0000000182a09be8 libswiftCore.dylib`swift::Demangle::__runtime::TypeDecoder<(anonymous namespace)::DecodedMetadataBuilder>::decodeMangledType(swift::Demangle::__runtime::Node*, unsigned int, bool) + 912
+     frame #40: 0x0000000182a096a4 libswiftCore.dylib`swift_getTypeByMangledNodeImpl(swift::MetadataRequest, swift::Demangle::__runtime::Demangler&, swift::Demangle::__runtime::Node*, void const* const*, std::__1::function<void const* (unsigned int, unsigned int)>, std::__1::function<swift::TargetWitnessTable<swift::InProcess> const* (swift::TargetMetadata<swift::InProcess> const*, unsigned int)>) + 784
+     frame #41: 0x0000000182a09218 libswiftCore.dylib`swift_getTypeByMangledNode + 336
+     frame #42: 0x00000001829fff7c libswiftCore.dylib`swift_getTypeByMangledNameImpl(swift::MetadataRequest, __swift::__runtime::llvm::StringRef, void const* const*, std::__1::function<void const* (unsigned int, unsigned int)>, std::__1::function<swift::TargetWitnessTable<swift::InProcess> const* (swift::TargetMetadata<swift::InProcess> const*, unsigned int)>) + 1164
+     frame #43: 0x00000001829ff974 libswiftCore.dylib`swift_getTypeByMangledName + 336
+     frame #44: 0x00000001829ff1a8 libswiftCore.dylib`swift_getTypeByMangledNameInContextImpl(char const*, unsigned long, swift::TargetContextDescriptor<swift::InProcess> const*, void const* const*) + 188
+     frame #45: 0x00000001024005ec ESP32BLE.debug.dylib`__swift_instantiateConcreteTypeFromMangledNameV2 at <compiler-generated>:0
+     frame #46: 0x0000000102897a24 ESP32BLE.debug.dylib`closure #1 in closure #1 in MainScreen.smartCommandPanel(, keyCellWidth=0) at <stdin>:0
+     frame #47: 0x000000019014e448 SwiftUICore`closure #1 in VStack.init(alignment:spacing:content:) + 196
+     frame #48: 0x00000001900b9624 SwiftUICore`_VariadicView.Tree.init(_:content:) + 188
+     frame #49: 0x000000019014e378 SwiftUICore`VStack.init(alignment:spacing:content:) + 88
+(lldb) frame select 41
+frame #41: 0x0000000182a09218 libswiftCore.dylib`swift_getTypeByMangledNode + 336
+libswiftCore.dylib`swift_getTypeByMangledNode:
+->  0x182a09218 <+336>: ldr    x0, [sp, #0xa0]
+    0x182a0921c <+340>: cmp    x0, x24
+    0x182a09220 <+344>: b.eq   0x182a09248               ; <+384>
+    0x182a09224 <+348>: cbz    x0, 0x182a09264           ; <+412>
+(lldb) image lookup -a $pc
+      Address: libswiftCore.dylib[0x0000000180215218] (libswiftCore.dylib.__TEXT.__text + 213048)
+      Summary: libswiftCore.dylib`swift_getTypeByMangledNode + 336

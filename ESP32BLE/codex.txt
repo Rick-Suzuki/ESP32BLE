@@ -1,693 +1,467 @@
-ESP32BLE — BUTTON EDITOR
-ADD DELETE ALL BUTTON
+ESP32BLE — ESP-001
+IPAD MINI BUTTON EDITOR CRASH
+PHASE 2 STRUCTURAL COMPARISON REPORT
 
-MODE: CONTROLLED IMPLEMENTATION
-PLATFORMS: IPAD AND IPHONE
+A. EXECUTIVE SUMMARY
 
+The original iPad Button Editor crashes on the iPad Mini 5 when presented through smartView.
 
-CRITICAL — EDITOR GEOMETRY IS FROZEN
+The Mini-only diagnostic editor, with active configuration .allPanels, now presents all four original editor panels successfully on the physical iPad Mini. The user confirmed that all panels are visible, all buttons and controls tested successfully, and no crash occurred.
 
-The iPad and iPhone Button Editors are
-considered complete.
+This is a strong signal that the crash is not caused by any single editor panel in isolation. It is also not caused simply by the presence of all four functional panels. The same four panel builders can coexist successfully when wrapped in the diagnostic editor structure.
 
-DO NOT CHANGE ANY EDITOR GEOMETRY.
+The most important source-level difference is structural. The original smartView directly composes all editor panels inside one large SwiftUI ViewBuilder return type that also contains iPad/iPhone layout branching and dynamic frame calculations. The diagnostic editor constructs the same panel builders, erases each panel to AnyView, and passes those erased views into a small dedicated shell view.
 
-This includes:
+The successful diagnostic result makes it plausible that the original crash is related to SwiftUI generic view-type complexity, metadata instantiation, or the specific composition shape of smartView. This remains a hypothesis, not a proven root cause.
 
-- Editor dimensions.
-- Column widths.
-- Panel heights.
-- Panel positions.
-- Preview button dimensions.
-- Slider positions.
-- Table dimensions.
-- Toolbar positions.
-- Existing padding.
-- Existing spacing.
-- Existing alignment.
-- Existing screen layout.
+The diagnostic structure could potentially become the basis for a shared iPad editor, but it should not be promoted to all iPads immediately. The iPad Air and iPad Pro currently work with the original editor, and the diagnostic editor has at least one observed layout difference on the Mini: the SF Symbols panel extends approximately 1-2 pixels beyond the right screen edge.
 
-The ONLY permitted visual modification
-is inside the existing Test / Close
-button row.
+The safest next controlled experiment is to keep the new structure iPad Mini-only and replace the selectable diagnostic framework with a fixed Mini-only all-panels editor shell. That would test whether the passing structure remains stable when treated less like a test harness, while still protecting iPad Air, iPad Pro, and iPhone.
 
-That row must retain its EXACT existing:
+B. ORIGINAL smartView STRUCTURE
 
-- Position.
-- Total width.
-- Total height.
+The original editor is implemented by smartView in Main_Screen.swift, approximately lines 2794-2864.
 
-Replace the two existing buttons with
-three equal-width buttons:
+smartView begins by calculating separate iPad and iPhone dimensions. For iPad it uses fixed editor dimensions. For iPhone it calculates dynamic panel widths from the available width.
 
-Delete All | Test | Close
+The relevant iPad constants are near lines 522-527:
 
-Adjust ONLY the internal button widths,
-font sizes and Delete All styling.
+smartViewWidth is 1024.
+smartViewHeight is 338.
+smartEditControlsWidth is 205.
+smartCommandEditorWidth is 343.
+smartColorControlsWidth is 238.
+smartSFPanelWidth is 238.
 
-Do not move, resize or reposition
-anything outside this row.
+In smartView, the resolved iPad layout is calculated around lines 2795-2813.
 
-If the three buttons cannot fit within
-the existing row, STOP and report.
+The root editor layout is an HStack with spacing 0, beginning around line 2815.
 
-DO NOT attempt to make room by changing
-the surrounding editor layout.
-==================================================
-OBJECTIVE
-==================================================
+The first panel is smartCommandPanel, constructed around lines 2823-2826. It uses resolvedSmartEditControlsWidth. On iPad that resolves to 205.
 
-Add a new "Delete All" button to the
-existing Button Editor.
+The second panel is smartColorPanel, constructed around lines 2829-2832. It uses resolvedSmartCommandEditorWidth. On iPad that resolves to 343. Despite the function name, this panel displays the command text editor and command description, not the colour palette.
 
-The existing buttons are:
+The third panel is smartButtonPanel, constructed around lines 2834-2838. It uses resolvedSmartColorControlsWidth. On iPad that resolves to 238. This panel contains the button preview, brightness slider, button controls, and the colour palette.
 
-Test
-Close
+The fourth panel is IPadSmartSFPanel, constructed around lines 2840-2850. It uses resolvedSmartSFPanelWidth. On iPad that resolves to 238. This panel contains the SF Symbols grid and lower SF controls.
 
-The new arrangement must be:
+After constructing the HStack, smartView applies geometry probing and several frame modifiers around lines 2858-2862. It then ignores the keyboard safe area at line 2863.
 
-Delete All | Test | Close
+The original smartView is not iPad-only. It contains both iPad and iPhone layout branches. Even when used for iPad, the returned SwiftUI type includes conditional structure for iPhone paths. The iPhone full-screen editor also calls smartView from iPhoneSmartEditorPresentation around lines 2866-2886.
 
-Apply to BOTH iPad and iPhone editors.
+C. DIAGNOSTIC EDITOR STRUCTURE
 
-Delete All removes every button from
-the CURRENT screen only.
+The diagnostic configuration is defined near the beginning of Main_Screen.swift.
 
-A confirmation is mandatory.
+ESP001MiniEditorTest is declared around lines 8-17. Its cases include empty, commandOnly, buttonOnly, colorOnly, sfOnly, commandAndButton, commandAndColor, and allPanels.
 
-The complete deletion must be
-reversible using ONE Undo operation.
+The current active diagnostic configuration is allPanels, set around line 22.
 
-==================================================
-PHASE 1 — INSPECT EXISTING IMPLEMENTATION
-==================================================
+ESP001DiagnosticDevice.isIPadMini5 is defined around lines 24-27. It identifies hardware models iPad11,1 and iPad11,2.
 
-Before making changes, inspect:
+The Mini-only presentation branch is in mainScreenContent around lines 1330-1338. If editingSlotIndex is non-nil, isPad is true, and ESP001DiagnosticDevice.isIPadMini5 is true, the code presents esp001MiniDiagnosticEditor instead of smartView.
 
-1. iPad Button Editor layout.
-2. iPhone Button Editor layout.
-3. Existing Test and Close buttons.
-4. Existing button styling.
-5. Existing screen data storage.
-6. Existing Delete implementation.
-7. Existing 20-level Undo system.
-8. Existing screen persistence.
-9. Existing Edit Mode popup behaviour.
+Non-Mini iPads still call smartView around lines 1339-1344.
 
-Identify the smallest safe implementation.
+The iPhone still calls iPhoneSmartEditorPresentation around lines 1346-1351.
 
-IMPORTANT:
+The diagnostic editor itself is built by esp001MiniDiagnosticEditor around lines 2678-2693.
 
-Do not introduce a second deletion system.
+That function obtains the selected diagnostic panels from esp001MiniDiagnosticPanels and passes them into ESP001MiniDiagnosticEditorShell.
 
-Reuse existing screen-data mutation and
-Undo mechanisms wherever possible.
+The diagnostic editor passes these dimensions into the shell:
 
-Do not restructure the Button Editor.
+width is min(smartViewWidth, availableWidth).
+height is smartViewHeight.
+commandWidth is smartEditControlsWidth.
+colorWidth is smartCommandEditorWidth.
+buttonWidth is smartColorControlsWidth.
+sfWidth is smartSFPanelWidth.
 
-If implementing this safely requires
-a major architectural change, STOP
-and report before modifying anything.
+For .allPanels, esp001MiniDiagnosticPanels constructs all four original panel builders around lines 2747-2753.
 
-==================================================
-PART 1 — BUTTON LAYOUT
-==================================================
+The command slot receives smartCommandPanel.
 
-Add three horizontally arranged buttons:
+The color slot receives smartColorPanel.
 
-+------------+------------+------------+
-|   Delete   |            |            |
-|    All     |    Test    |   Close    |
-+------------+------------+------------+
+The button slot receives smartButtonPanel.
 
-REQUIREMENTS:
+The SF slot receives IPadSmartSFPanel via esp001MiniDiagnosticSFPanel.
 
-- Exactly three buttons.
-- All three have equal widths.
-- All three have equal heights.
-- Equal spacing between buttons.
-- Use the existing available row width.
-- Do not enlarge the editor.
-- Do not change surrounding geometry.
-- Do not change other panels.
+ESP001MiniDiagnosticPanels is declared around lines 5337-5341. It stores four AnyView values.
 
-Adjust font sizes to fit.
+ESP001MiniDiagnosticEditorShell is declared around lines 5344-5379. Its body is a simple HStack with spacing 0. It places the four AnyView panels in order, applies fixed width and height frames to each panel, applies geometry probes, then applies one outer frame, a black background, a smartView geometry probe, and ignores the keyboard safe area.
 
-Delete All may use two lines:
+The diagnostic shell does not contain iPhone layout logic. It is a small iPad-shaped shell.
 
-Delete
-All
+D. DIRECT STRUCTURAL COMPARISON
 
-Test and Close should remain on one line.
+The original smartView and the diagnostic editor both present the same four functional panel implementations in the same visual order when the diagnostic configuration is .allPanels.
 
-Use relative sizing rather than
-device-specific pixel offsets.
+The major difference is the wrapper structure.
 
-The iPad and iPhone editors have
-independent layouts.
+The original smartView directly constructs the editor panel tree inside one function returning some View. It includes conditional branches for iPad and iPhone, dynamic width calculations, direct panel construction, and a multi-stage frame chain.
 
-Modify each layout only as necessary.
+The diagnostic editor first constructs the chosen panel views, erases each panel to AnyView, and passes those four erased panels into a separate View struct named ESP001MiniDiagnosticEditorShell. The shell itself has a small and stable body: one HStack, four framed child views, a background, a geometry probe, and keyboard safe-area ignoring.
 
-Do not alter the completed geometry
-of either editor.
+The original smartView exposes the concrete generic types of smartCommandPanel, smartColorPanel, smartButtonPanel, IPadSmartSFPanel, and its own conditionals in one returned view type.
 
-==================================================
-PART 2 — BUTTON APPEARANCE
-==================================================
+The diagnostic editor hides each panel behind AnyView before the shell composes them. This likely reduces the generic type exposed to the shell.
 
-DELETE ALL:
+The original smartView contains both iPad and iPhone paths. The diagnostic editor is Mini-only and does not include iPhone branches inside the shell.
 
-Background:
-Subdued, dark red.
+The original smartView applies an HStack geometry probe around line 2858. The diagnostic shell does not apply the HStack probe, only the individual panel probes and the smartView probe.
 
-Not bright red.
+The original smartView has no shell-level background directly on the HStack frame. The diagnostic shell applies Color.black as a background around line 5376.
 
-Suggested colour:
+The original smartView applies a two-stage frame chain: first frame to editorGroupWidth and outerHeight, then frame to outerWidth and outerHeight, then a max frame. The diagnostic shell applies one outer frame using width and height.
 
-#8B3030
+The original smartView uses editorGroupWidth and outerWidth. For iPad both are intended to be the same clipped available width, but the code path is still different.
 
-Foreground:
-White.
+The diagnostic shell uses width min(smartViewWidth, availableWidth), but its child panels still sum to the fixed full editor width of 1024. This is relevant to the observed SF panel clipping.
 
-Text:
-"Delete All"
+E. FUNCTIONAL DIFFERENCES
 
-Allow two lines if necessary.
+Most core editor functionality is shared because the diagnostic .allPanels path calls the same panel builders.
 
-Use the same corner radius and general
-button styling as Test and Close.
+Command keypad and command tables come from smartCommandPanel around lines 2996-3122.
 
-TEST:
+Command text editing and command description come from smartColorPanel around lines 3391-3441.
 
-Preserve existing colours and behaviour.
+Button preview, slider, controls, and colour palette come from smartButtonPanel around lines 3567-3606, with the iPad colour grid in smartButtonLowerEditingArea and smartButtonColorGrid around lines 3683-3735.
 
-CLOSE:
+SF Symbols come from IPadSmartSFPanel around lines 5525-5541, using smartSFSymbolGrid around lines 4665-4680 and smartSFPanelControls around lines 4694-4733.
 
-Preserve existing colours and behaviour.
+The diagnostic editor uses the same bindings and closures because the panel builders are still methods/properties on MainScreen.
 
-All three buttons must have identical
-outer dimensions.
+Command editing still uses smartScriptEditorTextBinding, smartScriptSelectionRangeBinding, and smartActionTextBinding around lines 3124-3175.
 
-==================================================
-PART 3 — CONFIRMATION
-==================================================
+Button text and colour state still use smartButtonTextBinding, smartButtonVisibilityBinding, smartButtonColorHex, setSmartButtonColor, and related helpers around lines 3210-3225 and 4209-4286.
 
-Pressing Delete All must NOT
-immediately delete anything.
+SF Symbol selection still uses setSmartButtonSFSymbol, smartSFSymbolCell, smartSFSymbolDeleteCell, and clearSmartButtonSFSymbol around lines 3972-3983 and 4755-4809.
 
-Display a confirmation dialog.
+Close and test actions still route through shared controls. The SF panel controls call testEditingSlotText, saveSlotEditing, and cancelSlotEditing around lines 4717-4727.
 
-TITLE:
+The Mini diagnostic editor does not add new close, save, test, or commit behavior. It relies on the original panel controls.
 
-Delete all buttons?
+Potential functional differences are indirect.
 
-MESSAGE:
+Because the diagnostic editor changes the view hierarchy, focus behavior, layout proposal behavior, and SwiftUI identity may differ. This could affect text editor focus, keyboard avoidance, GeometryReader preferences, or subtle update timing.
 
-This will delete every button on the
-current screen. You can restore them
-using Undo.
+The diagnostic shell does not include the original smartView HStack probe. If debugEditorGeometry is enabled, the diagnostic geometry data will not be exactly the same as original smartView.
 
-ACTIONS:
+The diagnostic editor has extra logging tasks from TEST3 and TEST4 when presented on the Mini. These are diagnostic side effects, not editor functionality.
 
-Cancel
-Delete All
+F. LAYOUT AND PRESENTATION DIFFERENCES
 
-CANCEL:
+Both editors are presented from mainScreenContent after editingSlotIndex becomes non-nil.
 
-- Dismiss confirmation.
-- Make no changes.
-- Keep Button Editor open.
-- Preserve current selection.
-- Preserve Undo history.
-- Preserve clipboard.
+The broader presentation stack includes a GeometryReader, a ZStack aligned to top, the main toolbar/grid content, a black translucent iPad overlay, the editor, popup overlays, filename toast, and action menu overlay.
 
-DELETE ALL:
+The iPad overlay appears when editingSlotIndex is non-nil and isPad is true, around lines 1318-1328. This overlay remains shared for both the original and diagnostic Mini editor.
 
-- Perform the deletion.
-- Record one Undo operation.
-- Close the Button Editor.
-- Return to Main Screen.
+The diagnostic editor replaces only the editor view at the presentation branch. It does not change the state transition into editing mode.
 
-Use a standard SwiftUI confirmation
-mechanism compatible with the existing
-iOS deployment target.
+The original smartView is used for non-Mini iPads. The diagnostic editor is used only for iPad Mini 5.
 
-Mark the confirmation's Delete All
-action as destructive.
+The iPhone editor remains separate. It is presented through iPhoneSmartEditorPresentation, which wraps smartView in a full-screen GeometryReader and ZStack with black background around lines 2866-2886.
 
-Do not use a custom confirmation
-window unless required by the
-existing architecture.
+The original iPad smartView and the diagnostic shell both intend to occupy a 1024 by 338 editor area.
 
-==================================================
-PART 4 — DELETE ALL BEHAVIOUR
-==================================================
+However, the parent mainScreenContent applies horizontal padding for iPad around line 1386. This means the effective available content width may be slightly smaller than the physical screen width.
 
-After confirmation:
+The diagnostic shell’s outer width is min(smartViewWidth, availableWidth), but its child panels retain fixed widths totaling 1024. If availableWidth is slightly less than 1024, the shell can be narrower than its children.
 
-Delete EVERY button from the
-CURRENT screen.
+This is likely important for the reported SF Symbols right-edge issue.
 
-This includes:
+G. SF SYMBOLS RIGHT-EDGE CLIPPING INVESTIGATION
 
-- Ordinary 1×1 buttons.
-- Multi-cell buttons.
-- All eight supported button shapes.
-- Button text.
-- SF Symbols.
-- Button images.
-- Button commands.
-- Button-specific colours.
-- Button-specific settings.
-- Continuation/occupancy markers.
+The user observed that the SF Symbols panel extends approximately 1-2 pixels beyond the right screen edge on the Mini.
 
-Clear the complete button data
-for the current screen.
+The source suggests a plausible explanation.
 
-Do not leave orphaned continuation
-cells or hidden button properties.
+The fixed iPad panel widths sum to 1024:
 
-Do not delete the screen itself.
+smartEditControlsWidth is 205.
+smartCommandEditorWidth is 343.
+smartColorControlsWidth is 238.
+smartSFPanelWidth is 238.
 
-Do not delete any files containing
-images or other resources.
+Total is 1024.
 
-==================================================
-PART 5 — PRESERVE SCREEN SETTINGS
-==================================================
+The diagnostic editor shell width is set to min(smartViewWidth, availableWidth), around line 2682.
 
-Delete All must NOT change:
+The four child panels are still framed to 205, 343, 238, and 238 around lines 5359-5373.
 
-- Current filename.
-- Current document identity.
-- Background image.
-- Background opacity.
-- Grid dimensions.
-- Row count.
-- Column count.
-- Screen configuration.
-- Global application settings.
-- BLE settings.
-- Mac Helper settings.
-- Speech recognition settings.
-- Clipboard contents.
+The parent mainScreenContent applies horizontal padding on iPad around line 1386.
 
-Do not change another screen.
+If the iPad Mini contentWidth or effective visible width is 1020, 1022, or otherwise slightly below 1024 because of padding/safe-area behavior, the diagnostic shell may be constrained narrower than the sum of its fixed child panels. Since the HStack children still occupy 1024 total points, the rightmost SF panel can overflow by a tiny amount.
 
-Do not modify any other document.
+This source-level explanation matches the 1-2 pixel observation. It is plausible but not proven without geometry logs or screenshots.
 
-Do not reset the entire application.
+The report should not recommend arbitrary pixel offsets. The right correction, if one is later needed, should be based on measured available width, parent padding, and intended editor anchoring.
 
-Only remove button data from the
-currently open screen.
+H. SWIFTUI GENERIC COMPLEXITY ANALYSIS
 
-==================================================
-PART 6 — UNDO
-==================================================
+The original crash stack points into Swift runtime generic metadata processing, with calls involving mangled type decoding and concrete type instantiation.
 
-CRITICAL REQUIREMENT:
+The original smartView is a likely contributor to generic complexity because it directly composes:
 
-The entire Delete All operation must
-create exactly ONE Undo entry.
+The command panel.
+The command editor panel.
+The button panel.
+The SF panel.
+The iPad and iPhone layout branches.
+Conditional content based on isPad.
+Nested panel functions that themselves contain ScrollViews, LazyVStacks, LazyVGrids, ForEach, UIKit representables, and many modifier chains.
 
-Use the existing document-scoped
-20-level Undo system.
+The diagnostic editor still uses the same panels, so the panel internals are not removed.
 
-Before deleting anything:
+However, it introduces a type-erased boundary around each panel before composing the shell. ESP001MiniDiagnosticPanels stores each panel as AnyView. ESP001MiniDiagnosticEditorShell then sees four AnyView children instead of the full concrete generic type of each child panel.
 
-Capture the complete current screen
-button-data snapshot.
+The diagnostic shell is also a separate View struct with a simple body.
 
-After successful deletion:
+This makes it reasonable to hypothesize that the diagnostic editor reduces the size or complexity of the generated concrete SwiftUI type that the Mini has to instantiate during editor presentation.
 
-Store ONE Undo entry.
+The success of Test 9 supports this hypothesis, but it does not prove it. Other structural differences may also matter, including the different frame chain, the absence of iPhone branches inside the shell, changed view identity, changed layout proposal behavior, or changed metadata instantiation order.
 
-Do not create one Undo entry
-per individual button.
+Any future fix should preserve the working evidence but avoid overclaiming that AnyView alone is the cause or solution.
 
-Do not clear existing Undo history.
+I. RISKS FOR OTHER IPADS
 
-Do not replace the Undo system.
+The iPad Air M2 and iPad Pro currently work with the original smartView editor.
 
-Undo must restore:
+Changing them to use the diagnostic structure could introduce regressions even if the Mini benefits.
 
-- All deleted buttons.
-- Their original positions.
-- Their original dimensions.
-- Their original text.
-- Their SF Symbols.
-- Their images.
-- Their commands.
-- Their colours.
-- Their settings.
-- Their multi-cell footprints.
+Risks include altered layout proposal behavior, slight width/position differences, different geometry probe output, different clipping behavior, and changed SwiftUI identity for panel views.
 
-Restore the exact original raw
-button-slot data.
+Because the diagnostic editor currently has a known 1-2 pixel Mini clipping issue, using it on wider iPads without careful measurement could still be visually safe, but it would be an unproven layout path.
 
-Do not reconstruct buttons from
-partial information.
+The diagnostic structure is currently named and organized as temporary ESP-001 code. Promoting it directly would leave diagnostic concepts in the production path unless cleaned up in a controlled later phase.
 
-==================================================
-PART 7 — UNDO ACCESS AFTER DELETE ALL
-==================================================
+The safest path is not to switch all iPads immediately. First stabilize a Mini-only production-shaped shell, then test that shell on Mini. Only after that should a controlled all-iPad experiment be considered.
 
-IMPORTANT:
+J. RISKS FOR IPHONE
 
-The existing Undo control is located
-in the Edit Mode popup.
+The iPhone editor is separate in presentation. mainScreenContent routes iPhone to iPhoneSmartEditorPresentation around lines 1346-1351.
 
-After Delete All, the screen will
-contain no buttons.
+iPhoneSmartEditorPresentation then calls smartView with iPhone-specific available width and height around lines 2866-2886.
 
-The user must still be able to Undo.
+The diagnostic editor is not currently used by iPhone.
 
-Inspect how the popup is opened
-on an empty grid cell.
+Future iPad refactors could still affect iPhone if they modify shared functions such as smartView, smartCommandPanel, smartColorPanel, smartButtonPanel, smartSFSymbolGrid, smartSFPanelControls, bindings, or shared state.
 
-Ensure the user can access Undo
-after Delete All.
+The highest iPhone risk would come from changing smartView directly, because iPhone still depends on smartView internally.
 
-Preferred behaviour:
+A Mini-only or iPad-only shell that does not alter smartView would be safer for iPhone protection.
 
-1. Confirm Delete All.
+K. ARCHITECTURE OPTIONS
 
-2. Delete all button data.
+OPTION A: Keep diagnostic structure exclusive to the iPad Mini.
 
-3. Close Button Editor.
+This is the lowest-risk option.
 
-4. Remain in Main Screen Edit Mode.
+Expected changes would be small. A future implementation could replace the selectable diagnostic test framework with a fixed Mini-only all-panels shell.
 
-5. Keep Undo history available.
+Maintenance cost would be moderate because the app would keep a Mini-specific editor wrapper. The upside is that iPad Air, iPad Pro, and iPhone remain untouched.
 
-6. Allow selection of an empty grid cell.
+Device compatibility risk is lowest because only the failing device gets the alternate structure.
 
-7. Show the existing Action popup.
+Functional regression risk appears low because Test 9 already verified all four panels and controls on the Mini, but it still requires repeated testing of open, edit, save, close, Delete All, test command, command insertion, colour selection, SF selection, keyboard behavior, and persistence.
 
-8. Enable Undo.
+Implementation complexity is low to moderate.
 
-9. One Undo restores all buttons.
+OPTION B: Use the successful diagnostic structure for all iPads.
 
-If the current popup cannot be opened
-on an empty cell, make the smallest
-possible adjustment to permit Undo.
+This could reduce branching and potentially move all iPads to the safer structure.
 
-Do not add a new Undo button.
+Expected changes would route all isPad devices to the shell-style editor rather than the original smartView iPad path.
 
-Do not redesign the popup.
+Maintenance could improve if the shell becomes the only iPad editor structure, but only after diagnostic naming and configuration are removed.
 
-Do not automatically exit Edit Mode.
+Device compatibility risk is higher than Option A because it changes devices that are currently working.
 
-Do not clear Undo history when the
-Button Editor closes.
+Functional regression risk is moderate. The same panel builders are used, but layout proposal behavior and view identity change.
 
-==================================================
-PART 8 — EMPTY SCREEN
-==================================================
+Testing requirements are broad. It would need visual and functional testing on iPad Mini, iPad Air, and iPad Pro, including geometry, SF panel edge alignment, keyboard behavior, panel controls, close/save behavior, and existing diagnostic probes.
 
-If the screen already contains
-no buttons:
+Implementation complexity is moderate.
 
-Delete All must not create an
-unnecessary Undo entry.
+OPTION C: Refactor original smartView to use smaller independently defined SwiftUI View components.
 
-It may either:
+This is architecturally cleaner in the long term.
 
-- Disable Delete All.
+Expected changes would extract the original smartView iPad structure into smaller dedicated View structs, ideally with narrow inputs and actions. This could reduce generic complexity while avoiding broad AnyView use.
 
-OR
+Maintenance could improve because smartView would be smaller and easier to reason about.
 
-- Allow confirmation but perform
-  no mutation and create no Undo.
+Device compatibility risk depends on scope. If smartView is modified directly, iPhone risk increases because iPhone still uses smartView. If only the iPad branch is extracted carefully, risk is lower.
 
-Prefer disabling the button if
-existing state makes that simple.
+Functional regression risk is moderate to high because this is a broader refactor.
 
-Do not introduce complex state
-management solely for this case.
+Testing requirements are broad across all devices.
 
-==================================================
-PART 9 — PERSISTENCE
-==================================================
+Implementation complexity is highest of the three options.
 
-Use the existing document-save
-mechanism.
+L. RECOMMENDED NEXT CONTROLLED EXPERIMENT
 
-Delete All must persist correctly.
+The recommended next experiment is Option A, narrowed further:
 
-After deleting all buttons:
+Keep the new structure exclusive to the iPad Mini 5.
 
-- The current screen remains valid.
-- The grid remains unchanged.
-- The screen can be saved.
-- The screen can be reopened.
-- The deleted buttons do not reappear
-  unless restored using Undo.
+Replace the selectable diagnostic configuration with a fixed Mini-only all-panels editor shell, still using the same four original panel builders and the same dimensions.
 
-Do not change the .screen file format.
+Do not change geometry yet.
 
-Do not alter unrelated document data.
+Do not route iPad Air or iPad Pro to the new shell yet.
 
-Do not introduce new persistence keys.
+Do not modify the iPhone path.
 
-==================================================
-PART 10 — IPAD / IPHONE SEPARATION
-==================================================
+Purpose:
 
-IPAD:
+Confirm that the passing Test 9 structure remains stable as a single fixed Mini editor structure rather than a selectable diagnostic test harness.
 
-Add Delete All beside the existing
-Test and Close controls.
+This is the smallest sensible step toward a possible Mini-specific fix while preserving all working devices.
 
-Preserve the floating Button Editor.
+After that passes on the physical Mini, a later experiment could either measure/fix the 1-2 pixel SF panel clipping or trial the shell on one non-Mini iPad under controlled conditions.
 
-Preserve existing panel geometry.
+M. EXACT SOURCE REFERENCES
 
-IPHONE:
+Main_Screen.swift:
 
-Add Delete All beside the existing
-Test and Close controls.
+ESP001MiniEditorTest:
+Lines 8-17.
 
-Preserve the full-screen landscape
-Button Editor.
+activeMiniEditorTest:
+Line 22.
 
-Preserve the black editor background.
+iPad Mini 5 hardware detection:
+Lines 24-27.
 
-Preserve all existing column widths
-and alignment.
+iPad editor dimensions:
+Lines 522-527.
 
-IMPORTANT:
+Editor-related state:
+Lines 998-1060.
 
-The iPad and iPhone editor layouts
-must remain independent.
+mainScreenContent:
+Starts around line 1216.
 
-Do not allow iPad layout changes
-to disturb the iPhone editor.
+iPad overlay while editor is open:
+Lines 1318-1328.
 
-Do not allow iPhone layout changes
-to disturb the iPad editor.
+Editor presentation branch:
+Lines 1330-1351.
 
-Shared deletion logic is acceptable.
+Parent horizontal padding:
+Line 1386.
 
-Shared layout changes are not required.
+Main grid passes long-press editing callback:
+Line 1418.
 
-==================================================
-PART 11 — REGRESSION PROTECTION
-==================================================
+Action popup Edit path:
+Lines 1479-1484 and 1580-1582.
 
-DO NOT CHANGE:
+Diagnostic logging:
+Lines 2661-2675.
 
-- Test button functionality.
-- Close button functionality.
-- Button preview rendering.
-- Preview slider.
-- Colour palettes.
-- SF Symbols tables.
-- Emoji handling.
-- Four-line text behaviour.
-- Button text autosizing.
-- Button images.
-- Main Screen grid geometry.
-- Main Screen popup positioning.
-- Copy/Cut/Paste.
-- Duplicate.
-- Resize.
-- Individual Delete.
-- Directional Delete.
-- Drag-to-move.
-- Existing Undo behaviour.
-- BLE keyboard commands.
-- Mac Helper communication.
-- Speech recognition.
+esp001MiniDiagnosticEditor:
+Lines 2678-2693.
 
-Preserve all existing diagnostic code,
-including:
+esp001MiniDiagnosticPanels:
+Lines 2696-2755.
 
-[IPHONE-POPUP-PROBE]
+Diagnostic .allPanels case:
+Lines 2747-2753.
 
-Do not modify unrelated functionality.
+Diagnostic SF panel helper:
+Lines 2761-2769.
 
-==================================================
-PART 12 — BUILD AND VERIFICATION
-==================================================
+Original smartView:
+Lines 2794-2864.
 
-Build the iOS application.
+iPhoneSmartEditorPresentation:
+Lines 2866-2886.
 
-Verify from the implementation:
+smartCommandPanel:
+Lines 2996-3122.
 
-1. iPad shows three equal-width buttons.
-2. iPhone shows three equal-width buttons.
-3. Delete All has subdued red background.
-4. Delete All text is white.
-5. Confirmation appears before deletion.
-6. Cancel changes nothing.
-7. Confirm deletes all button data.
-8. Multi-cell footprints are fully cleared.
-9. Filename remains unchanged.
-10. Background remains unchanged.
-11. Grid dimensions remain unchanged.
-12. Clipboard remains unchanged.
-13. One Undo entry is created.
-14. Undo restores the complete screen.
-15. Undo remains accessible afterward.
-16. Existing Test functionality is unchanged.
-17. Existing Close functionality is unchanged.
-18. No unrelated screens are modified.
-19. Screen persistence remains correct.
-20. iPad and iPhone layouts remain independent.
+Smart script bindings:
+Lines 3124-3175.
 
-Do not claim physical-device testing
-unless actually performed.
+Commit/canonical helpers:
+Lines 3288-3336.
 
-==================================================
-PART 13 — REQUIRED REPORT
-==================================================
+smartColorPanel:
+Lines 3391-3441.
 
-Report:
+iPhone command action controls:
+Lines 3443-3485.
 
-A. FILES MODIFIED
+smartButtonPanel:
+Lines 3567-3606.
 
-List all modified Swift files.
+smartButtonLowerEditingArea:
+Lines 3683-3699.
 
-B. LAYOUT
+smartButtonColorGrid:
+Lines 3710-3735.
 
-Explain how equal button widths
-were achieved on iPad and iPhone.
+Button preview:
+Lines 3788-3896.
 
-C. DELETE ALL
+Colour button actions:
+Lines 3989-4129.
 
-Explain how the current screen's
-button data is cleared.
+Colour parsing and brightness:
+Lines 4209-4286.
 
-D. CONFIRMATION
+Command keypad button actions:
+Lines 4376-4542.
 
-Describe the confirmation behaviour.
+smartSFSymbolGrid:
+Lines 4665-4680.
 
-E. UNDO
+smartSFPanelControls:
+Lines 4694-4733.
 
-Confirm that Delete All produces
-exactly one Undo entry.
+SF Symbol cell and delete cell:
+Lines 4755-4809.
 
-F. UNDO ACCESS
+ESP001MiniDiagnosticPanels struct:
+Lines 5337-5341.
 
-Explain how Undo remains accessible
-after the screen becomes empty.
+ESP001MiniDiagnosticEditorShell:
+Lines 5344-5379.
 
-G. PERSISTENCE
+IPadSmartCommandKeypad:
+Lines 5399-5459.
 
-Explain how the deletion is saved.
+IPadSmartButtonPanel:
+Lines 5461-5523.
 
-H. REGRESSION PROTECTION
+IPadSmartSFPanel:
+Lines 5525-5541.
 
-Confirm Test and Close are unchanged.
+Geometry probe modifier:
+Lines 5620-5643.
 
-I. BUILD RESULT
+N. CONFIRMATION
 
-Report success or failure.
+No files were modified.
 
-J. DEVICE TESTING
+No build was run.
 
-List any remaining device tests.
+No app was run.
 
-K. GIT STATUS
+No project settings were changed.
 
-List modified files.
+No .txt files were created, modified, appended to, replaced, or deleted.
 
-Do not commit or push.
+No commits, resets, checkouts, rebases, pulls, or pushes were performed.
 
-==================================================
-STRICT SAFETY RULES
-==================================================
+The iPhone editor was not modified.
 
-MAKE THE SMALLEST POSSIBLE CHANGES.
+The iPad editor geometry was not modified.
 
-ALL .txt FILES ARE READ-ONLY.
-
-Including:
-
-codex.txt
-console.txt
-console m2.txt
-
-Do not modify, overwrite, rename
-or delete any .txt files.
-
-IGNORE EXISTING MODIFICATIONS TO:
-
-ESP32BLE.xcodeproj/project.pbxproj
-
-Do not modify, restore, reset
-or revert this file.
-
-Do not change Xcode project settings.
-
-DO NOT RESET.
-DO NOT RESTORE.
-DO NOT REVERT.
-DO NOT CHECKOUT.
-DO NOT REBASE.
-DO NOT PULL.
-
-DO NOT COMMIT.
-DO NOT PUSH.
-
-Preserve all unrelated modifications.
-
-Do not modify ESPMacHelper.
-
-Do not modify the Test Area helper.
-
-==================================================
-FINAL INSTRUCTION
-==================================================
-
-Add Delete All to BOTH Button Editors.
-
-Layout:
-
-Delete All | Test | Close
-
-Three equal-width buttons.
-
-Subdued dark red Delete All background.
-White Delete All text.
-
-Mandatory confirmation.
-
-Delete every button on the CURRENT
-screen only.
-
-Preserve all screen settings.
-
-Create exactly ONE Undo entry.
-
-Close the Button Editor after deletion.
-
-Keep Edit Mode and Undo accessible.
-
-Preserve existing Test and Close actions.
-
-Build and report.
-
-DO NOT COMMIT OR PUSH.
+Existing diagnostics were preserved.
