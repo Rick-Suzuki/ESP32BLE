@@ -25,6 +25,18 @@ private enum ESP001DiagnosticDevice {
         let identifier = UIDevice.current.hardwareModelIdentifier
         return identifier == "iPad11,1" || identifier == "iPad11,2"
     }
+
+    static var isIPadAirM2: Bool {
+        let identifier = UIDevice.current.hardwareModelIdentifier
+        return identifier == "iPad14,8" ||
+            identifier == "iPad14,9" ||
+            identifier == "iPad14,10" ||
+            identifier == "iPad14,11"
+    }
+
+    static var usesESP001DiagnosticEditor: Bool {
+        isIPadMini5 || isIPadAirM2
+    }
 }
 
 private extension UIDevice {
@@ -1329,7 +1341,7 @@ Tapping a row inserts the key code at the cursor.
 
                 if editingSlotIndex != nil {
                     if isPad {
-                        if ESP001DiagnosticDevice.isIPadMini5 {
+                        if ESP001DiagnosticDevice.usesESP001DiagnosticEditor {
                             esp001MiniDiagnosticEditor(availableWidth: contentWidth)
                                 .editorGeometryProbe(.editorContainer, isEnabled: debugEditorGeometry)
                                 .task(id: editingSlotIndex) {
@@ -2663,6 +2675,7 @@ Tapping a row inserts the key code at the cursor.
         db("[ESP-001-TEST3] model=\(modelIdentifier)")
         db("[ESP-001-TEST3] isPad=\(isPad)")
         db("[ESP-001-TEST3] isIPadMini5=\(ESP001DiagnosticDevice.isIPadMini5)")
+        db("[ESP-001-TEST3] isIPadAirM2=\(ESP001DiagnosticDevice.isIPadAirM2)")
         db("[ESP-001-TEST3] editingSlotIndexNonNil=\(editingSlotIndex != nil)")
         db("[ESP-001-TEST3] presentation=\(presentation)")
     }

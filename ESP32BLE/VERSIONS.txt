@@ -1,3 +1,9 @@
+
+261009 Fri 2058
+V62.32
+iPad Air added - new solution
+
+
 261009 Fri 1953
 V62.31
 iPadMini crash fixed - temporary solution for now
