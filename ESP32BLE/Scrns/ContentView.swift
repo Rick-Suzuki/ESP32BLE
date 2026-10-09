@@ -2702,78 +2702,71 @@ struct ContentView: View {
         gridDimensions: GridDimensions,
         claimedIndexes: Set<Int>
     ) -> ButtonStorageShape {
-        let columns = max(gridDimensions.columns, 1)
-        let column = index % columns
-        let rightIndex = index + 1
-        let secondRightIndex = index + 2
-        let belowIndex = index + columns
-        let belowRightIndex = index + columns + 1
-        let hasRight = column + 1 < columns &&
-            lines.indices.contains(rightIndex) &&
-            !claimedIndexes.contains(rightIndex) &&
-            isWideButtonContinuationLine(lines[rightIndex])
-        let hasSecondRight = column + 2 < columns &&
-            lines.indices.contains(secondRightIndex) &&
-            !claimedIndexes.contains(secondRightIndex) &&
-            isWideButtonContinuationLine(lines[secondRightIndex])
-        let hasBelow = lines.indices.contains(belowIndex) &&
-            !claimedIndexes.contains(belowIndex) &&
-            isBlockButtonContinuationLine(lines[belowIndex])
-        let hasBelowRight = column + 1 < columns &&
-            lines.indices.contains(belowRightIndex) &&
-            !claimedIndexes.contains(belowRightIndex) &&
-            isBlockButtonContinuationLine(lines[belowRightIndex])
-        let hasThreeByThreeBlock = (1...2).allSatisfy { rowOffset in
-            (0...2).allSatisfy { columnOffset in
-                let blockIndex = index + (rowOffset * columns) + columnOffset
-                return column + columnOffset < columns &&
-                    lines.indices.contains(blockIndex) &&
-                    !claimedIndexes.contains(blockIndex) &&
-                    isBlockButtonContinuationLine(lines[blockIndex])
-            }
-        }
+        let candidateShapes = [
+            ButtonStorageShape(width: 3, height: 3),
+            ButtonStorageShape(width: 3, height: 2),
+            ButtonStorageShape(width: 2, height: 2),
+            ButtonStorageShape(width: 1, height: 3),
+            ButtonStorageShape(width: 3, height: 1),
+            ButtonStorageShape(width: 1, height: 2),
+            ButtonStorageShape(width: 2, height: 1)
+        ]
 
-        if hasRight && hasSecondRight && hasThreeByThreeBlock {
-            return ButtonStorageShape(width: 3, height: 3)
-        }
-
-        if hasRight && hasBelow && hasBelowRight {
-            return ButtonStorageShape(width: 2, height: 2)
-        }
-
-        if hasRight {
-            return ButtonStorageShape(width: hasSecondRight ? 3 : 2, height: 1)
+        for shape in candidateShapes where shapeFits(shape, startingAt: index, gridDimensions: gridDimensions) &&
+            continuationTokensMatch(
+                startingAt: index,
+                shape: shape,
+                in: lines,
+                claimedIndexes: claimedIndexes,
+                gridDimensions: gridDimensions
+            ) {
+            return shape
         }
 
         return ButtonStorageShape(width: 1, height: 1)
     }
 
     private func buttonShape(startingAt index: Int, in lines: [String], gridDimensions: GridDimensions) -> ButtonStorageShape {
-        let columns = max(gridDimensions.columns, 1)
-        let hasRight = lines.indices.contains(index + 1) && isWideButtonContinuationLine(lines[index + 1])
-        let hasBelow = lines.indices.contains(index + columns) && isBlockButtonContinuationLine(lines[index + columns])
-        let hasBelowRight = lines.indices.contains(index + columns + 1) && isBlockButtonContinuationLine(lines[index + columns + 1])
-        let hasSecondRight = lines.indices.contains(index + 2) && isWideButtonContinuationLine(lines[index + 2])
-        let hasThreeByThreeBlock = (1...2).allSatisfy { rowOffset in
-            (0...2).allSatisfy { columnOffset in
-                let blockIndex = index + (rowOffset * columns) + columnOffset
-                return lines.indices.contains(blockIndex) && isBlockButtonContinuationLine(lines[blockIndex])
-            }
-        }
+        let candidateShapes = [
+            ButtonStorageShape(width: 3, height: 3),
+            ButtonStorageShape(width: 3, height: 2),
+            ButtonStorageShape(width: 2, height: 2),
+            ButtonStorageShape(width: 1, height: 3),
+            ButtonStorageShape(width: 3, height: 1),
+            ButtonStorageShape(width: 1, height: 2),
+            ButtonStorageShape(width: 2, height: 1)
+        ]
 
-        if hasRight && hasSecondRight && hasThreeByThreeBlock {
-            return ButtonStorageShape(width: 3, height: 3)
-        }
-
-        if hasRight && hasBelow && hasBelowRight {
-            return ButtonStorageShape(width: 2, height: 2)
-        }
-
-        if hasRight {
-            return ButtonStorageShape(width: hasSecondRight ? 3 : 2, height: 1)
+        for shape in candidateShapes where shapeFits(shape, startingAt: index, gridDimensions: gridDimensions) &&
+            continuationTokensMatch(
+                startingAt: index,
+                shape: shape,
+                in: lines,
+                claimedIndexes: [],
+                gridDimensions: gridDimensions
+            ) {
+            return shape
         }
 
         return ButtonStorageShape(width: 1, height: 1)
+    }
+
+    private func continuationTokensMatch(
+        startingAt index: Int,
+        shape: ButtonStorageShape,
+        in lines: [String],
+        claimedIndexes: Set<Int>,
+        gridDimensions: GridDimensions
+    ) -> Bool {
+        for assignment in continuationAssignments(startingAt: index, shape: shape, gridDimensions: gridDimensions) {
+            guard lines.indices.contains(assignment.index),
+                  !claimedIndexes.contains(assignment.index),
+                  lines[assignment.index].trimmingCharacters(in: .whitespacesAndNewlines) == assignment.token else {
+                return false
+            }
+        }
+
+        return true
     }
 
     private func buttonIndexes(startingAt index: Int, shape: ButtonStorageShape, gridDimensions: GridDimensions) -> [Int] {

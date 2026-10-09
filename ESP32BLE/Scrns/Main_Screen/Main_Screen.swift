@@ -19,12 +19,18 @@ private struct MainGridActionMenuTarget {
 private struct PopupUndoEntry {
     let documentName: String
     let slotLines: [String]
+    let duplicateSourceTarget: MainGridActionMenuTarget?
 }
 
 private struct MainGridActionMenuPositionResult {
     let center: CGPoint
     let iPhoneProbeID: String?
     let iPhoneProbeMessage: String?
+}
+
+private enum MainGridActionMenuMode {
+    case actions
+    case resize
 }
 
 private struct SmartScriptEditingModel {
@@ -915,6 +921,7 @@ sends F1, waits one send then sends sp(space)
     @State var editingSlotText = ""
     @State var didModifyCurrentSlotEditorSession = false
     @State private var mainGridActionMenuTarget: MainGridActionMenuTarget?
+    @State private var mainGridActionMenuMode: MainGridActionMenuMode = .actions
     @State private var popupUndoHistory: [PopupUndoEntry] = []
     // MARK: - BM:🅱️ ADD COMMENTS HERE
     // Increase or decrease this value to adjust how many popup edits Undo retains.
@@ -1371,27 +1378,49 @@ Tapping a row inserts the key code at the cursor.
                 gridHeight: gridHeight
             )
 
-            MainGridEditActionMenu(cornerRadius: menuCornerRadius, isUndoAvailable: !popupUndoHistory.isEmpty) {
-                ButtonClickFeedback.playIfEnabled()
-                dismissMainGridActionMenu()
-            } onEdit: {
-                ButtonClickFeedback.playIfEnabled()
-                openMainGridActionMenuEditor()
-            } onUndo: {
-                ButtonClickFeedback.playIfEnabled()
-                undoMainGridActionMenuOperation()
-            } onCopy: {
-                ButtonClickFeedback.playIfEnabled()
-                copyMainGridActionMenuSelection()
-            } onCut: {
-                ButtonClickFeedback.playIfEnabled()
-                cutMainGridActionMenuSelection()
-            } onPaste: {
-                ButtonClickFeedback.playIfEnabled()
-                pasteMainGridActionMenuSelection()
-            } onDelete: {
-                ButtonClickFeedback.playIfEnabled()
-                deleteMainGridActionMenuSelection()
+            Group {
+                switch mainGridActionMenuMode {
+                case .actions:
+                    MainGridEditActionMenu(cornerRadius: menuCornerRadius, isUndoAvailable: !popupUndoHistory.isEmpty) {
+                        ButtonClickFeedback.playIfEnabled()
+                        dismissMainGridActionMenu()
+                    } onEdit: {
+                        ButtonClickFeedback.playIfEnabled()
+                        openMainGridActionMenuEditor()
+                    } onUndo: {
+                        ButtonClickFeedback.playIfEnabled()
+                        undoMainGridActionMenuOperation()
+                    } onCopy: {
+                        ButtonClickFeedback.playIfEnabled()
+                        copyMainGridActionMenuSelection()
+                    } onCut: {
+                        ButtonClickFeedback.playIfEnabled()
+                        cutMainGridActionMenuSelection()
+                    } onPaste: {
+                        ButtonClickFeedback.playIfEnabled()
+                        pasteMainGridActionMenuSelection()
+                    } onDuplicate: {
+                        ButtonClickFeedback.playIfEnabled()
+                        duplicateMainGridActionMenuSelection()
+                    } onResize: {
+                        ButtonClickFeedback.playIfEnabled()
+                        openMainGridResizeActionMenu()
+                    } onDelete: {
+                        ButtonClickFeedback.playIfEnabled()
+                        deleteMainGridActionMenuSelection()
+                    }
+                case .resize:
+                    MainGridResizeActionMenu(
+                        cornerRadius: menuCornerRadius,
+                        selectedShape: currentMainGridActionMenuShape()
+                    ) {
+                        ButtonClickFeedback.playIfEnabled()
+                        mainGridActionMenuMode = .actions
+                    } onSelectShape: { shape in
+                        ButtonClickFeedback.playIfEnabled()
+                        resizeMainGridActionMenuSelection(to: shape)
+                    }
+                }
             }
             .frame(width: menuSize.width, height: menuSize.height)
             .position(menuPosition.center)
@@ -1421,10 +1450,12 @@ Tapping a row inserts the key code at the cursor.
             gridDimensions: gridDimensions,
             probeID: UUID()
         )
+        mainGridActionMenuMode = .actions
     }
 
     func dismissMainGridActionMenu() {
         mainGridActionMenuTarget = nil
+        mainGridActionMenuMode = .actions
     }
 
     private func openMainGridActionMenuEditor() {
@@ -1438,6 +1469,16 @@ Tapping a row inserts the key code at the cursor.
         let selectedIndex = target.index
         dismissMainGridActionMenu()
         beginSlotEditing(at: selectedIndex)
+    }
+
+    private func openMainGridResizeActionMenu() {
+        guard isGridEditModeEnabled,
+              let target = mainGridActionMenuTarget,
+              popupButtonShapeForActionMenu(at: target.index, gridDimensions: target.gridDimensions) != nil else {
+            return
+        }
+
+        mainGridActionMenuMode = .resize
     }
 
     private func deleteMainGridActionMenuSelection() {
@@ -1540,6 +1581,100 @@ Tapping a row inserts the key code at the cursor.
         }
     }
 
+    private func duplicateMainGridActionMenuSelection() {
+        guard isGridEditModeEnabled,
+              let target = mainGridActionMenuTarget,
+              target.index >= 0,
+              target.index < functionKeys.count,
+              target.index < visibleBoxCount else {
+            return
+        }
+
+        let beforeSnapshot = currentFunctionKeySlotLines()
+        let duplicateOutcome = updatedSlotLinesForPopupDuplicate(
+            entry: functionKeys[target.index],
+            index: target.index,
+            gridDimensions: target.gridDimensions,
+            slotLines: beforeSnapshot
+        )
+
+        let duplicateResult: MainGridPopupDuplicateResult
+        switch duplicateOutcome {
+        case let .success(result):
+            duplicateResult = result
+        case .invalidSource:
+            return
+        case .noSpace:
+            showMainGridActionMenuMessage("No space to duplicate")
+            return
+        }
+
+        guard duplicateResult.slotLines != beforeSnapshot,
+              restoreFunctionKeySlotLines(duplicateResult.slotLines) else {
+            return
+        }
+
+        let duplicateTarget = mainGridActionMenuTargetForDuplicate(
+            from: target,
+            result: duplicateResult
+        )
+        let sourceTarget = MainGridActionMenuTarget(
+            index: duplicateResult.sourceIndex,
+            buttonFrame: target.buttonFrame,
+            gridDimensions: target.gridDimensions,
+            probeID: UUID()
+        )
+
+        recordPopupUndoSnapshot(beforeSnapshot, duplicateSourceTarget: sourceTarget)
+        mainGridActionMenuTarget = duplicateTarget
+        showMainGridActionMenuMessage("Button duplicated")
+    }
+
+    private func resizeMainGridActionMenuSelection(to shape: MainGridPopupButtonShape) {
+        guard isGridEditModeEnabled,
+              let target = mainGridActionMenuTarget,
+              target.index >= 0,
+              target.index < functionKeys.count,
+              target.index < visibleBoxCount else {
+            return
+        }
+
+        let beforeSnapshot = currentFunctionKeySlotLines()
+        let resizeOutcome = updatedSlotLinesForPopupResize(
+            entry: functionKeys[target.index],
+            index: target.index,
+            gridDimensions: target.gridDimensions,
+            slotLines: beforeSnapshot,
+            targetShape: shape
+        )
+
+        let resizeResult: MainGridPopupResizeResult
+        switch resizeOutcome {
+        case let .success(result):
+            resizeResult = result
+        case .invalidSource, .sameSize:
+            return
+        case .notEnoughSpace:
+            showMainGridActionMenuMessage("Not enough space")
+            return
+        case .spaceOccupied:
+            showMainGridActionMenuMessage("Space occupied")
+            return
+        }
+
+        guard resizeResult.slotLines != beforeSnapshot,
+              restoreFunctionKeySlotLines(resizeResult.slotLines) else {
+            return
+        }
+
+        recordPopupUndoSnapshot(beforeSnapshot)
+        mainGridActionMenuTarget = mainGridActionMenuTargetForResize(
+            from: target,
+            result: resizeResult
+        )
+        showMainGridActionMenuMessage("Button resized")
+    }
+
     private func undoMainGridActionMenuOperation() {
         guard isGridEditModeEnabled,
               let undoEntry = popupUndoHistory.last else {
@@ -1556,10 +1691,26 @@ Tapping a row inserts the key code at the cursor.
         }
 
         popupUndoHistory.removeLast()
+
+        if let duplicateSourceTarget = undoEntry.duplicateSourceTarget {
+            mainGridActionMenuTarget = MainGridActionMenuTarget(
+                index: duplicateSourceTarget.index,
+                buttonFrame: duplicateSourceTarget.buttonFrame,
+                gridDimensions: duplicateSourceTarget.gridDimensions,
+                probeID: UUID()
+            )
+        }
     }
 
-    private func recordPopupUndoSnapshot(_ slotLines: [String]) {
-        popupUndoHistory.append(PopupUndoEntry(documentName: selectedDocumentName, slotLines: slotLines))
+    private func recordPopupUndoSnapshot(
+        _ slotLines: [String],
+        duplicateSourceTarget: MainGridActionMenuTarget? = nil
+    ) {
+        popupUndoHistory.append(PopupUndoEntry(
+            documentName: selectedDocumentName,
+            slotLines: slotLines,
+            duplicateSourceTarget: duplicateSourceTarget
+        ))
 
         if popupUndoHistory.count > popupUndoHistoryLimit {
             popupUndoHistory.removeFirst(popupUndoHistory.count - popupUndoHistoryLimit)
@@ -1573,6 +1724,64 @@ Tapping a row inserts the key code at the cursor.
     private func showMainGridActionMenuMessage(_ message: String) {
         alertTitle = ""
         renameAlertMessage = message
+    }
+
+    private func currentMainGridActionMenuShape() -> MainGridPopupButtonShape? {
+        guard let target = mainGridActionMenuTarget else {
+            return nil
+        }
+
+        return popupButtonShapeForActionMenu(at: target.index, gridDimensions: target.gridDimensions)
+    }
+
+    private func mainGridActionMenuTargetForDuplicate(
+        from sourceTarget: MainGridActionMenuTarget,
+        result: MainGridPopupDuplicateResult
+    ) -> MainGridActionMenuTarget {
+        let columns = max(sourceTarget.gridDimensions.columns, 1)
+        let sourceColumn = result.sourceIndex % columns
+        let sourceRow = result.sourceIndex / columns
+        let targetColumn = result.targetIndex % columns
+        let targetRow = result.targetIndex / columns
+        let width = max(result.sourceWidth, 1)
+        let height = max(result.sourceHeight, 1)
+        let cellWidth = (sourceTarget.buttonFrame.width - (mainGridButtonSpacing * CGFloat(width - 1))) / CGFloat(width)
+        let cellHeight = (sourceTarget.buttonFrame.height - (mainGridButtonSpacing * CGFloat(height - 1))) / CGFloat(height)
+        let xOffset = CGFloat(targetColumn - sourceColumn) * (cellWidth + mainGridButtonSpacing)
+        let yOffset = CGFloat(targetRow - sourceRow) * (cellHeight + mainGridButtonSpacing)
+        let duplicateFrame = sourceTarget.buttonFrame.offsetBy(dx: xOffset, dy: yOffset)
+
+        return MainGridActionMenuTarget(
+            index: result.targetIndex,
+            buttonFrame: duplicateFrame,
+            gridDimensions: sourceTarget.gridDimensions,
+            probeID: UUID()
+        )
+    }
+
+    private func mainGridActionMenuTargetForResize(
+        from sourceTarget: MainGridActionMenuTarget,
+        result: MainGridPopupResizeResult
+    ) -> MainGridActionMenuTarget {
+        let sourceWidth = max(result.sourceWidth, 1)
+        let sourceHeight = max(result.sourceHeight, 1)
+        let targetWidth = max(result.targetWidth, 1)
+        let targetHeight = max(result.targetHeight, 1)
+        let cellWidth = (sourceTarget.buttonFrame.width - (mainGridButtonSpacing * CGFloat(sourceWidth - 1))) / CGFloat(sourceWidth)
+        let cellHeight = (sourceTarget.buttonFrame.height - (mainGridButtonSpacing * CGFloat(sourceHeight - 1))) / CGFloat(sourceHeight)
+        let resizedFrame = CGRect(
+            x: sourceTarget.buttonFrame.minX,
+            y: sourceTarget.buttonFrame.minY,
+            width: (cellWidth * CGFloat(targetWidth)) + (mainGridButtonSpacing * CGFloat(targetWidth - 1)),
+            height: (cellHeight * CGFloat(targetHeight)) + (mainGridButtonSpacing * CGFloat(targetHeight - 1))
+        )
+
+        return MainGridActionMenuTarget(
+            index: result.sourceIndex,
+            buttonFrame: resizedFrame,
+            gridDimensions: sourceTarget.gridDimensions,
+            probeID: UUID()
+        )
     }
 
     private func mainGridActionMenuPosition(
@@ -5509,6 +5718,8 @@ private struct MainGridEditActionMenu: View {
     let onCopy: () -> Void
     let onCut: () -> Void
     let onPaste: () -> Void
+    let onDuplicate: () -> Void
+    let onResize: () -> Void
     let onDelete: () -> Void
 
     var body: some View {
@@ -5526,8 +5737,8 @@ private struct MainGridEditActionMenu: View {
             }
 
             HStack(spacing: Metrics.spacing) {
-                menuButton(systemName: "plus.square.on.square", accessibilityLabel: "Duplicate button", foregroundColor: SymbolColor.duplicate)
-                menuButton(systemName: "arrow.up.left.and.arrow.down.right", accessibilityLabel: "Resize button", foregroundColor: SymbolColor.resize)
+                menuButton(systemName: "plus.square.on.square", accessibilityLabel: "Duplicate button", foregroundColor: SymbolColor.duplicate, action: onDuplicate)
+                menuButton(systemName: "arrow.up.left.and.arrow.down.right", accessibilityLabel: "Resize button", foregroundColor: SymbolColor.resize, action: onResize)
                 menuButton(systemName: "trash", accessibilityLabel: "Delete button", foregroundColor: SymbolColor.delete, action: onDelete)
             }
         }
@@ -5557,6 +5768,107 @@ private struct MainGridEditActionMenu: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(accessibilityLabel)
+    }
+}
+
+private struct MainGridResizeActionMenu: View {
+    private let rows: [[MainGridPopupButtonShape?]] = [
+        [nil, MainGridPopupButtonShape(width: 1, height: 1), MainGridPopupButtonShape(width: 2, height: 1)],
+        [MainGridPopupButtonShape(width: 3, height: 1), MainGridPopupButtonShape(width: 1, height: 2), MainGridPopupButtonShape(width: 2, height: 2)],
+        [MainGridPopupButtonShape(width: 3, height: 2), MainGridPopupButtonShape(width: 1, height: 3), MainGridPopupButtonShape(width: 3, height: 3)]
+    ]
+
+    let cornerRadius: CGFloat
+    let selectedShape: MainGridPopupButtonShape?
+    let onCancel: () -> Void
+    let onSelectShape: (MainGridPopupButtonShape) -> Void
+
+    var body: some View {
+        VStack(spacing: MainGridEditActionMenu.Metrics.spacing) {
+            ForEach(rows.indices, id: \.self) { rowIndex in
+                HStack(spacing: MainGridEditActionMenu.Metrics.spacing) {
+                    ForEach(rows[rowIndex].indices, id: \.self) { columnIndex in
+                        if let shape = rows[rowIndex][columnIndex] {
+                            shapeButton(shape)
+                        } else {
+                            cancelButton
+                        }
+                    }
+                }
+            }
+        }
+        .padding(5)
+        .background(Color.black)
+        .overlay {
+            RoundedRectangle(cornerRadius: cornerRadius)
+                .strokeBorder(Color.white, lineWidth: MainGridEditActionMenu.Metrics.borderWidth)
+        }
+        .clipShape(.rect(cornerRadius: cornerRadius))
+        .shadow(color: .black.opacity(0.35), radius: 8, x: 0, y: 3)
+    }
+
+    private var cancelButton: some View {
+        Button(action: onCancel) {
+            Image(systemName: "xmark")
+                .font(.system(size: 21, weight: .semibold))
+                .foregroundStyle(MainGridEditActionMenu.SymbolColor.close)
+                .frame(width: MainGridEditActionMenu.Metrics.buttonSize, height: MainGridEditActionMenu.Metrics.buttonSize)
+                .background(Color.white.opacity(0.13))
+                .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Back to action menu")
+    }
+
+    private func shapeButton(_ shape: MainGridPopupButtonShape) -> some View {
+        let isSelected = selectedShape == shape
+
+        return Button {
+            onSelectShape(shape)
+        } label: {
+            VStack(spacing: 2) {
+                shapeDiagram(shape)
+                Text(shape.label)
+                    .font(.system(size: 8.5, weight: .semibold))
+                    .foregroundStyle(Color.white)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+            }
+            .frame(width: MainGridEditActionMenu.Metrics.buttonSize, height: MainGridEditActionMenu.Metrics.buttonSize)
+            .background(isSelected ? MainGridEditActionMenu.SymbolColor.resize.opacity(0.34) : Color.white.opacity(0.13))
+            .overlay {
+                if isSelected {
+                    RoundedRectangle(cornerRadius: 4)
+                        .strokeBorder(MainGridEditActionMenu.SymbolColor.resize, lineWidth: 1.5)
+                }
+            }
+            .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Resize to \(shape.label)")
+    }
+
+    private func shapeDiagram(_ shape: MainGridPopupButtonShape) -> some View {
+        let gap: CGFloat = 1.5
+        let maxWidth: CGFloat = 22
+        let maxHeight: CGFloat = 18
+        let cellSize = min(
+            (maxWidth - (CGFloat(shape.width - 1) * gap)) / CGFloat(shape.width),
+            (maxHeight - (CGFloat(shape.height - 1) * gap)) / CGFloat(shape.height)
+        )
+
+        return VStack(spacing: gap) {
+            ForEach(0..<shape.height, id: \.self) { _ in
+                HStack(spacing: gap) {
+                    ForEach(0..<shape.width, id: \.self) { _ in
+                        RoundedRectangle(cornerRadius: 1.2)
+                            .fill(MainGridEditActionMenu.SymbolColor.resize)
+                            .frame(width: cellSize, height: cellSize)
+                    }
+                }
+            }
+        }
+        .frame(width: maxWidth, height: maxHeight)
     }
 }
 

@@ -289,41 +289,54 @@ struct MainScreenGridSection<ButtonLabel: View>: View {
             return ButtonGridShape(width: 1, height: 1)
         }
 
-        let columns = max(gridDimensions.columns, 1)
-        let hasRight = functionKeys.indices.contains(index + 1) &&
-            index + 1 < visibleBoxCount &&
-            isWideButtonContinuationEntry(functionKeys[index + 1])
-        let hasBelow = functionKeys.indices.contains(index + columns) &&
-            index + columns < visibleBoxCount &&
-            isBlockButtonContinuationEntry(functionKeys[index + columns])
-        let hasBelowRight = functionKeys.indices.contains(index + columns + 1) &&
-            index + columns + 1 < visibleBoxCount &&
-            isBlockButtonContinuationEntry(functionKeys[index + columns + 1])
-        let hasSecondRight = functionKeys.indices.contains(index + 2) &&
-            index + 2 < visibleBoxCount &&
-            isWideButtonContinuationEntry(functionKeys[index + 2])
-        let hasThreeByThreeBlock = (1...2).allSatisfy { rowOffset in
-            (0...2).allSatisfy { columnOffset in
-                let blockIndex = index + (rowOffset * columns) + columnOffset
-                return functionKeys.indices.contains(blockIndex) &&
-                    blockIndex < visibleBoxCount &&
-                    isBlockButtonContinuationEntry(functionKeys[blockIndex])
-            }
-        }
+        let candidateShapes = [
+            ButtonGridShape(width: 3, height: 3),
+            ButtonGridShape(width: 3, height: 2),
+            ButtonGridShape(width: 2, height: 2),
+            ButtonGridShape(width: 1, height: 3),
+            ButtonGridShape(width: 3, height: 1),
+            ButtonGridShape(width: 1, height: 2),
+            ButtonGridShape(width: 2, height: 1)
+        ]
 
-        if hasRight && hasSecondRight && hasThreeByThreeBlock {
-            return ButtonGridShape(width: 3, height: 3)
-        }
-
-        if hasRight && hasBelow && hasBelowRight {
-            return ButtonGridShape(width: 2, height: 2)
-        }
-
-        if hasRight {
-            return ButtonGridShape(width: hasSecondRight ? 3 : 2, height: 1)
+        for shape in candidateShapes where shapeFits(shape, startingAt: index, gridDimensions: gridDimensions) &&
+            continuationTokensMatch(startingAt: index, shape: shape, gridDimensions: gridDimensions) {
+            return shape
         }
 
         return ButtonGridShape(width: 1, height: 1)
+    }
+
+    private func shapeFits(_ shape: ButtonGridShape, startingAt index: Int, gridDimensions: GridDimensions) -> Bool {
+        let columns = max(gridDimensions.columns, 1)
+        let startColumn = index % columns
+        let startRow = index / columns
+
+        return index >= 0 &&
+            startColumn + shape.width <= columns &&
+            startRow + shape.height <= gridDimensions.rows
+    }
+
+    private func continuationTokensMatch(startingAt index: Int, shape: ButtonGridShape, gridDimensions: GridDimensions) -> Bool {
+        let columns = max(gridDimensions.columns, 1)
+
+        for rowOffset in 0..<shape.height {
+            for columnOffset in 0..<shape.width {
+                guard rowOffset != 0 || columnOffset != 0 else {
+                    continue
+                }
+
+                let slotIndex = index + (rowOffset * columns) + columnOffset
+                let token = rowOffset == 0 ? wideButtonContinuationToken : blockButtonContinuationToken
+                guard functionKeys.indices.contains(slotIndex),
+                      slotIndex < visibleBoxCount,
+                      functionKeys[slotIndex].rawLine.trimmingCharacters(in: .whitespacesAndNewlines) == token else {
+                    return false
+                }
+            }
+        }
+
+        return true
     }
 
     private func resolvedWidth(buttonWidth: CGFloat, spacing: CGFloat, span: Int) -> CGFloat {

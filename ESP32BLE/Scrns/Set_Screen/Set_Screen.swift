@@ -1451,8 +1451,11 @@ struct SettingsScreen: View {
     ) -> SettingsButtonStorageShape {
         let candidateShapes = [
             SettingsButtonStorageShape(width: 3, height: 3),
+            SettingsButtonStorageShape(width: 3, height: 2),
             SettingsButtonStorageShape(width: 2, height: 2),
+            SettingsButtonStorageShape(width: 1, height: 3),
             SettingsButtonStorageShape(width: 3, height: 1),
+            SettingsButtonStorageShape(width: 1, height: 2),
             SettingsButtonStorageShape(width: 2, height: 1),
             SettingsButtonStorageShape(width: 1, height: 1)
         ]

@@ -6,16 +6,30 @@ import SwiftUI
 //-----------------------------------------------------------------------------------------------
 //
 struct MainGridEditClipboardPayload: Codable {
-    static let encodedPrefix = "ESP32BLE_GRID_CLIPBOARD_V1:"
+    static let encodedPrefixV1 = "ESP32BLE_GRID_CLIPBOARD_V1:"
+    static let encodedPrefixV2 = "ESP32BLE_GRID_CLIPBOARD_V2:"
+    static let encodedPrefix = encodedPrefixV2
 
     let version: Int
     let rawLine: String
     let span: Int
+    let width: Int?
+    let height: Int?
 
     init(rawLine: String, span: Int) {
         self.version = 1
         self.rawLine = rawLine
         self.span = span
+        self.width = nil
+        self.height = nil
+    }
+
+    init(rawLine: String, span: Int, width: Int, height: Int) {
+        self.version = 2
+        self.rawLine = rawLine
+        self.span = span
+        self.width = width
+        self.height = height
     }
 }
 
@@ -24,6 +38,61 @@ enum MainGridPopupPasteOutcome {
     case nothingToPaste
     case notEnoughSpace
     case spaceOccupied
+}
+
+enum MainGridPopupDuplicateOutcome {
+    case success(MainGridPopupDuplicateResult)
+    case invalidSource
+    case noSpace
+}
+
+struct MainGridPopupButtonShape: Equatable, Identifiable {
+    let width: Int
+    let height: Int
+
+    var id: String {
+        "\(width)x\(height)"
+    }
+
+    var label: String {
+        "\(width)×\(height)"
+    }
+
+    static let resizeOptions = [
+        MainGridPopupButtonShape(width: 1, height: 1),
+        MainGridPopupButtonShape(width: 2, height: 1),
+        MainGridPopupButtonShape(width: 3, height: 1),
+        MainGridPopupButtonShape(width: 1, height: 2),
+        MainGridPopupButtonShape(width: 2, height: 2),
+        MainGridPopupButtonShape(width: 3, height: 2),
+        MainGridPopupButtonShape(width: 1, height: 3),
+        MainGridPopupButtonShape(width: 3, height: 3)
+    ]
+}
+
+struct MainGridPopupDuplicateResult {
+    let sourceIndex: Int
+    let targetIndex: Int
+    let sourceWidth: Int
+    let sourceHeight: Int
+    let slotLines: [String]
+}
+
+enum MainGridPopupResizeOutcome {
+    case success(MainGridPopupResizeResult)
+    case invalidSource
+    case sameSize
+    case notEnoughSpace
+    case spaceOccupied
+}
+
+struct MainGridPopupResizeResult {
+    let sourceIndex: Int
+    let sourceWidth: Int
+    let sourceHeight: Int
+    let targetWidth: Int
+    let targetHeight: Int
+    let slotLines: [String]
 }
 
 private enum MainGridPasteDestinationResult {
@@ -403,9 +472,9 @@ extension MainScreen {
             return .nothingToPaste
         }
 
-        switch pasteDestinationResult(startingAt: index, span: payload.span, gridDimensions: gridDimensions) {
+        let shape = shape(for: payload)
+        switch pasteDestinationResult(startingAt: index, shape: shape, gridDimensions: gridDimensions) {
         case .available:
-            let shape = shape(for: payload.span)
             let footprintIndexes = indexes(startingAt: index, shape: shape, gridDimensions: gridDimensions)
             guard let maximumIndex = footprintIndexes.max() else {
                 return .notEnoughSpace
@@ -423,6 +492,154 @@ extension MainScreen {
         case .occupied:
             return .spaceOccupied
         }
+    }
+
+    func updatedSlotLinesForPopupDuplicate(
+        entry: FunctionKeyEntry,
+        index: Int,
+        gridDimensions: GridDimensions,
+        slotLines: [String]
+    ) -> MainGridPopupDuplicateOutcome {
+        guard isGridEditModeEnabled,
+              let sourceIndex = editableAnchorIndex(containing: index),
+              functionKeys.indices.contains(sourceIndex) else {
+            return .invalidSource
+        }
+
+        let sourceEntry = functionKeys[sourceIndex]
+        guard !sourceEntry.isBlankPlaceholder,
+              !isEmptyButtonEntry(sourceEntry),
+              !isButtonContinuationEntry(sourceEntry) else {
+            return .invalidSource
+        }
+
+        let sourceSpan = slotSpan(startingAt: sourceIndex, gridDimensions: gridDimensions)
+        let sourceShape = shape(for: sourceSpan)
+        guard let targetIndex = popupDuplicateTargetIndex(
+            from: sourceIndex,
+            shape: sourceShape,
+            span: sourceSpan,
+            gridDimensions: gridDimensions
+        ) else {
+            return .noSpace
+        }
+
+        let footprintIndexes = indexes(startingAt: targetIndex, shape: sourceShape, gridDimensions: gridDimensions)
+        guard let maximumIndex = footprintIndexes.max(),
+              maximumIndex < visibleBoxCount else {
+            return .noSpace
+        }
+
+        var updatedLines = slotLinesExpanded(slotLines, through: maximumIndex)
+        updatedLines[targetIndex] = sourceEntry.rawLine
+        for assignment in continuationAssignments(startingAt: targetIndex, shape: sourceShape, gridDimensions: gridDimensions) {
+            updatedLines[assignment.index] = assignment.token
+        }
+
+        guard updatedLines != slotLines else {
+            return .noSpace
+        }
+
+        return .success(MainGridPopupDuplicateResult(
+            sourceIndex: sourceIndex,
+            targetIndex: targetIndex,
+            sourceWidth: sourceShape.width,
+            sourceHeight: sourceShape.height,
+            slotLines: updatedLines
+        ))
+    }
+
+    func popupButtonShapeForActionMenu(
+        at index: Int,
+        gridDimensions: GridDimensions
+    ) -> MainGridPopupButtonShape? {
+        guard let anchorIndex = editableAnchorIndex(containing: index),
+              functionKeys.indices.contains(anchorIndex) else {
+            return nil
+        }
+
+        let anchorEntry = functionKeys[anchorIndex]
+        guard !anchorEntry.isBlankPlaceholder,
+              !isEmptyButtonEntry(anchorEntry),
+              !isButtonContinuationEntry(anchorEntry) else {
+            return nil
+        }
+
+        let shape = buttonShape(startingAt: anchorIndex, gridDimensions: gridDimensions)
+        return MainGridPopupButtonShape(width: shape.width, height: shape.height)
+    }
+
+    func updatedSlotLinesForPopupResize(
+        entry: FunctionKeyEntry,
+        index: Int,
+        gridDimensions: GridDimensions,
+        slotLines: [String],
+        targetShape: MainGridPopupButtonShape
+    ) -> MainGridPopupResizeOutcome {
+        guard isGridEditModeEnabled,
+              isSupportedShape(width: targetShape.width, height: targetShape.height),
+              let sourceIndex = editableAnchorIndex(containing: index),
+              functionKeys.indices.contains(sourceIndex) else {
+            return .invalidSource
+        }
+
+        let sourceEntry = functionKeys[sourceIndex]
+        guard !sourceEntry.isBlankPlaceholder,
+              !isEmptyButtonEntry(sourceEntry),
+              !isButtonContinuationEntry(sourceEntry) else {
+            return .invalidSource
+        }
+
+        let sourceShape = buttonShape(startingAt: sourceIndex, gridDimensions: gridDimensions)
+        guard sourceShape.width != targetShape.width || sourceShape.height != targetShape.height else {
+            return .sameSize
+        }
+
+        let targetGridShape = ButtonGridShape(width: targetShape.width, height: targetShape.height)
+        guard shapeFits(targetGridShape, startingAt: sourceIndex, gridDimensions: gridDimensions) else {
+            return .notEnoughSpace
+        }
+
+        let sourceIndexes = Set(indexes(startingAt: sourceIndex, shape: sourceShape, gridDimensions: gridDimensions))
+        let targetIndexes = indexes(startingAt: sourceIndex, shape: targetGridShape, gridDimensions: gridDimensions)
+        let maximumIndex = max(sourceIndexes.max() ?? sourceIndex, targetIndexes.max() ?? sourceIndex)
+        guard maximumIndex < visibleBoxCount else {
+            return .notEnoughSpace
+        }
+
+        for slotIndex in targetIndexes where !sourceIndexes.contains(slotIndex) {
+            guard functionKeys.indices.contains(slotIndex) else {
+                return .notEnoughSpace
+            }
+
+            let entry = functionKeys[slotIndex]
+            guard entry.isBlankPlaceholder || isEmptyButtonEntry(entry) else {
+                return .spaceOccupied
+            }
+        }
+
+        var updatedLines = slotLinesExpanded(slotLines, through: maximumIndex)
+        for slotIndex in sourceIndexes where slotIndex < updatedLines.count {
+            updatedLines[slotIndex] = "_"
+        }
+
+        updatedLines[sourceIndex] = sourceEntry.rawLine
+        for assignment in continuationAssignments(startingAt: sourceIndex, shape: targetGridShape, gridDimensions: gridDimensions) {
+            updatedLines[assignment.index] = assignment.token
+        }
+
+        guard updatedLines != slotLines else {
+            return .sameSize
+        }
+
+        return .success(MainGridPopupResizeResult(
+            sourceIndex: sourceIndex,
+            sourceWidth: sourceShape.width,
+            sourceHeight: sourceShape.height,
+            targetWidth: targetShape.width,
+            targetHeight: targetShape.height,
+            slotLines: updatedLines
+        ))
     }
 
     @discardableResult
@@ -634,6 +851,45 @@ extension MainScreen {
 
         return nil
     }
+
+    private func popupDuplicateTargetIndex(
+        from sourceIndex: Int,
+        shape: ButtonGridShape,
+        span: Int,
+        gridDimensions: GridDimensions
+    ) -> Int? {
+        let columns = max(gridDimensions.columns, 1)
+        let sourceColumn = sourceIndex % columns
+        let sourceRow = sourceIndex / columns
+        let candidateCoordinates = [
+            (row: sourceRow, column: sourceColumn + shape.width),
+            (row: sourceRow + shape.height, column: sourceColumn),
+            (row: sourceRow, column: sourceColumn - shape.width),
+            (row: sourceRow - shape.height, column: sourceColumn)
+        ]
+
+        for coordinate in candidateCoordinates {
+            guard coordinate.row >= 0,
+                  coordinate.column >= 0,
+                  coordinate.row < gridDimensions.rows,
+                  coordinate.column < columns else {
+                continue
+            }
+
+            let candidateIndex = (coordinate.row * columns) + coordinate.column
+            guard candidateIndex >= 0,
+                  candidateIndex < visibleBoxCount,
+                  functionKeys.indices.contains(candidateIndex) else {
+                continue
+            }
+
+            if pasteDestinationResult(startingAt: candidateIndex, span: span, gridDimensions: gridDimensions) == .available {
+                return candidateIndex
+            }
+        }
+
+        return nil
+    }
 	//
 	//----------------------------------------
 	//
@@ -667,9 +923,12 @@ extension MainScreen {
             return nil
         }
 
+        let shape = buttonShape(startingAt: anchorIndex, gridDimensions: gridDimensions)
         let payload = MainGridEditClipboardPayload(
             rawLine: anchorEntry.rawLine,
-            span: slotSpan(startingAt: anchorIndex, gridDimensions: gridDimensions)
+            span: shapeSpan(shape),
+            width: shape.width,
+            height: shape.height
         )
 
         guard let payloadData = try? JSONEncoder().encode(payload) else {
@@ -685,15 +944,19 @@ extension MainScreen {
             return nil
         }
 
-        guard clipboardText.hasPrefix(MainGridEditClipboardPayload.encodedPrefix) else {
+        let payloadPrefix: String
+        if clipboardText.hasPrefix(MainGridEditClipboardPayload.encodedPrefixV2) {
+            payloadPrefix = MainGridEditClipboardPayload.encodedPrefixV2
+        } else if clipboardText.hasPrefix(MainGridEditClipboardPayload.encodedPrefixV1) {
+            payloadPrefix = MainGridEditClipboardPayload.encodedPrefixV1
+        } else {
             return MainGridEditClipboardPayload(rawLine: clipboardText, span: 1)
         }
 
-        let encodedPayload = String(clipboardText.dropFirst(MainGridEditClipboardPayload.encodedPrefix.count))
+        let encodedPayload = String(clipboardText.dropFirst(payloadPrefix.count))
         guard let payloadData = Data(base64Encoded: encodedPayload),
               let payload = try? JSONDecoder().decode(MainGridEditClipboardPayload.self, from: payloadData),
-              payload.version == 1,
-              (1...5).contains(payload.span),
+              isValidClipboardPayload(payload),
               !payload.rawLine.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             return nil
         }
@@ -726,6 +989,18 @@ extension MainScreen {
             return 5
         }
 
+        if shape.width == 3 && shape.height == 2 {
+            return 8
+        }
+
+        if shape.width == 1 && shape.height == 3 {
+            return 7
+        }
+
+        if shape.width == 1 && shape.height == 2 {
+            return 6
+        }
+
         if shape.width == 2 && shape.height == 2 {
             return 4
         }
@@ -740,56 +1015,98 @@ extension MainScreen {
             return ButtonGridShape(width: 3, height: 3)
         }
 
+        if span == 8 {
+            return ButtonGridShape(width: 3, height: 2)
+        }
+
+        if span == 7 {
+            return ButtonGridShape(width: 1, height: 3)
+        }
+
+        if span == 6 {
+            return ButtonGridShape(width: 1, height: 2)
+        }
+
         if span == 4 {
             return ButtonGridShape(width: 2, height: 2)
         }
 
         return ButtonGridShape(width: max(1, min(span, 3)), height: 1)
     }
+
+    private func shape(for payload: MainGridEditClipboardPayload) -> ButtonGridShape {
+        if payload.version == 2,
+           let width = payload.width,
+           let height = payload.height,
+           isSupportedShape(width: width, height: height) {
+            return ButtonGridShape(width: width, height: height)
+        }
+
+        return shape(for: payload.span)
+    }
+
+    private func isValidClipboardPayload(_ payload: MainGridEditClipboardPayload) -> Bool {
+        if payload.version == 1 {
+            return (1...5).contains(payload.span)
+        }
+
+        if payload.version == 2,
+           let width = payload.width,
+           let height = payload.height,
+           isSupportedShape(width: width, height: height) {
+            return payload.span == shapeSpan(ButtonGridShape(width: width, height: height))
+        }
+
+        return false
+    }
+
+    private func isSupportedShape(width: Int, height: Int) -> Bool {
+        switch (width, height) {
+        case (1, 1), (2, 1), (3, 1), (1, 2), (2, 2), (3, 2), (1, 3), (3, 3):
+            return true
+        default:
+            return false
+        }
+    }
 	//
 	//----------------------------------------
 	//
     private func buttonShape(startingAt index: Int, gridDimensions: GridDimensions) -> ButtonGridShape {
-        let columns = max(gridDimensions.columns, 1)
-      
-		let hasRight = functionKeys.indices.contains(index + 1) &&
-            index + 1 < visibleBoxCount &&
-            isWideButtonContinuationEntry(functionKeys[index + 1])
-        
-		let hasBelow = functionKeys.indices.contains(index + columns) &&
-            index + columns < visibleBoxCount &&
-            isBlockButtonContinuationEntry(functionKeys[index + columns])
-        
-		let hasBelowRight = functionKeys.indices.contains(index + columns + 1) &&
-            index + columns + 1 < visibleBoxCount &&
-            isBlockButtonContinuationEntry(functionKeys[index + columns + 1])
-        
-		let hasSecondRight = functionKeys.indices.contains(index + 2) &&
-            index + 2 < visibleBoxCount &&
-            isWideButtonContinuationEntry(functionKeys[index + 2])
-        
-		let hasThreeByThreeBlock = (1...2).allSatisfy { rowOffset in
-            (0...2).allSatisfy { columnOffset in
-                let blockIndex = index + (rowOffset * columns) + columnOffset
-                return functionKeys.indices.contains(blockIndex) &&
-                    blockIndex < visibleBoxCount &&
-                    isBlockButtonContinuationEntry(functionKeys[blockIndex])
-            }
-        }
+        let candidateShapes = [
+            ButtonGridShape(width: 3, height: 3),
+            ButtonGridShape(width: 3, height: 2),
+            ButtonGridShape(width: 2, height: 2),
+            ButtonGridShape(width: 1, height: 3),
+            ButtonGridShape(width: 3, height: 1),
+            ButtonGridShape(width: 1, height: 2),
+            ButtonGridShape(width: 2, height: 1)
+        ]
 
-        if hasRight && hasSecondRight && hasThreeByThreeBlock {
-            return ButtonGridShape(width: 3, height: 3)
-        }
-
-        if hasRight && hasBelow && hasBelowRight {
-            return ButtonGridShape(width: 2, height: 2)
-        }
-
-        if hasRight {
-            return ButtonGridShape(width: hasSecondRight ? 3 : 2, height: 1)
+        for shape in candidateShapes where shapeFits(shape, startingAt: index, gridDimensions: gridDimensions) &&
+            continuationTokensMatch(startingAt: index, shape: shape, gridDimensions: gridDimensions) {
+            return shape
         }
 
         return ButtonGridShape(width: 1, height: 1)
+    }
+
+    private func shapeFits(_ shape: ButtonGridShape, startingAt index: Int, gridDimensions: GridDimensions) -> Bool {
+        let columns = max(gridDimensions.columns, 1)
+        let startColumn = index % columns
+        let startRow = index / columns
+
+        return index >= 0 &&
+            startColumn + shape.width <= columns &&
+            startRow + shape.height <= gridDimensions.rows
+    }
+
+    private func continuationTokensMatch(startingAt index: Int, shape: ButtonGridShape, gridDimensions: GridDimensions) -> Bool {
+        continuationAssignments(startingAt: index, shape: shape, gridDimensions: gridDimensions)
+            .allSatisfy { assignment in
+                functionKeys.indices.contains(assignment.index) &&
+                    assignment.index < visibleBoxCount &&
+                    functionKeys[assignment.index].rawLine.trimmingCharacters(in: .whitespacesAndNewlines) == assignment.token
+            }
     }
 	//
 	//----------------------------------------
@@ -968,11 +1285,15 @@ extension MainScreen {
 	//----------------------------------------
 	//
     private func hasAvailableBlankSpan(startingAt index: Int, span: Int, gridDimensions: GridDimensions) -> Bool {
-        pasteDestinationResult(startingAt: index, span: span, gridDimensions: gridDimensions) == .available
+        pasteDestinationResult(startingAt: index, shape: shape(for: span), gridDimensions: gridDimensions) == .available
     }
 
     private func pasteDestinationResult(startingAt index: Int, span: Int, gridDimensions: GridDimensions) -> MainGridPasteDestinationResult {
         let shape = shape(for: span)
+        return pasteDestinationResult(startingAt: index, shape: shape, gridDimensions: gridDimensions)
+    }
+
+    private func pasteDestinationResult(startingAt index: Int, shape: ButtonGridShape, gridDimensions: GridDimensions) -> MainGridPasteDestinationResult {
         let columns = max(gridDimensions.columns, 1)
         let startColumn = index % columns
         let targetIndexes = indexes(startingAt: index, shape: shape, gridDimensions: gridDimensions)
