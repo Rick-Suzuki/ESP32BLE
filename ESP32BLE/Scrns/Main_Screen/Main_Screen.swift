@@ -33,6 +33,26 @@ private enum MainGridActionMenuMode {
     case resize
 }
 
+private enum MainGridDirectionalDeleteDirection {
+    case up
+    case down
+    case left
+    case right
+}
+
+private struct MainGridDeleteFootprint {
+    let anchor: Int
+    let row: Int
+    let column: Int
+    let width: Int
+    let height: Int
+
+    var minRow: Int { row }
+    var maxRow: Int { row + height - 1 }
+    var minColumn: Int { column }
+    var maxColumn: Int { column + width - 1 }
+}
+
 private struct SmartScriptEditingModel {
     private struct EditingState {
         var scriptText: String
@@ -607,6 +627,10 @@ struct MainScreen: View {
         "arrowshape.left", "arrowshape.right", "arrowshape.turn.up.left", "arrowshape.turn.up.right",
         "arrow.uturn.left", "arrow.uturn.right", "arrow.turn.up.left", "arrow.turn.up.right"
     ]
+
+    private var smartIPhoneSFPanelSymbols: [String] {
+        smartSFPanelSymbols + ["heart.fill", "star.fill", "paperclip"]
+    }
 	
 	// MARK: - BM:🟥 btn colors
 private let smartButtonSwatchHexColors = [
@@ -923,6 +947,9 @@ sends F1, waits one send then sends sp(space)
     @State private var mainGridActionMenuTarget: MainGridActionMenuTarget?
     @State private var mainGridActionMenuMode: MainGridActionMenuMode = .actions
     @State private var popupUndoHistory: [PopupUndoEntry] = []
+    @State private var directionalDeleteLastFootprint: MainGridDeleteFootprint?
+    @State private var directionalDeleteDirection: MainGridDirectionalDeleteDirection?
+    @State private var directionalDeleteExpectedAnchor: Int?
     // MARK: - BM:🅱️ ADD COMMENTS HERE
     // Increase or decrease this value to adjust how many popup edits Undo retains.
     private let popupUndoHistoryLimit = 20
@@ -1066,10 +1093,12 @@ Tapping a row inserts the key code at the cursor.
             }
             .onChange(of: selectedDocumentName) {
                 clearPopupUndoHistory()
+                resetDirectionalDeleteState()
                 showFilenameToastIfNeeded()
             }
             .onChange(of: editingSlotIndex) {
                 if editingSlotIndex != nil {
+                    resetDirectionalDeleteState()
                     dismissMainGridActionMenu()
                 }
                 smartButtonBrightness = 0.5
@@ -1077,6 +1106,7 @@ Tapping a row inserts the key code at the cursor.
             }
             .onChange(of: isGridEditModeEnabled) {
                 if !isGridEditModeEnabled {
+                    resetDirectionalDeleteState()
                     dismissMainGridActionMenu()
                 }
             }
@@ -1341,7 +1371,7 @@ Tapping a row inserts the key code at the cursor.
                 )
             },
             onDuplicateSlot: { entry, index, gridDimensions in
-                duplicateSlotIfPossible(entry: entry, index: index, gridDimensions: gridDimensions)
+                duplicateMainGridSlotFromTap(entry: entry, index: index, gridDimensions: gridDimensions)
             },
             onResizeSlot: { entry, index, gridDimensions in
                 resizeSlotIfPossible(entry: entry, index: index, gridDimensions: gridDimensions)
@@ -1444,18 +1474,34 @@ Tapping a row inserts the key code at the cursor.
             return
         }
 
+        let hadActionMenuTarget = mainGridActionMenuTarget != nil
+        if directionalDeleteDirection != nil,
+           directionalDeleteExpectedAnchor != index {
+            resetDirectionalDeleteState()
+        }
+
         mainGridActionMenuTarget = MainGridActionMenuTarget(
             index: index,
             buttonFrame: buttonFrame,
             gridDimensions: gridDimensions,
             probeID: UUID()
         )
-        mainGridActionMenuMode = .actions
+        if !hadActionMenuTarget {
+            mainGridActionMenuMode = .actions
+        }
     }
 
     func dismissMainGridActionMenu() {
         mainGridActionMenuTarget = nil
         mainGridActionMenuMode = .actions
+    }
+
+    func dismissMainGridActionMenuUnlessTargeted(at index: Int) {
+        guard mainGridActionMenuTarget?.index != index else {
+            return
+        }
+
+        dismissMainGridActionMenu()
     }
 
     private func openMainGridActionMenuEditor() {
@@ -1486,11 +1532,14 @@ Tapping a row inserts the key code at the cursor.
               let target = mainGridActionMenuTarget,
               target.index >= 0,
               target.index < functionKeys.count,
-              target.index < visibleBoxCount else {
+              target.index < visibleBoxCount,
+              let deletedFootprint = mainGridDeleteFootprint(at: target.index, gridDimensions: target.gridDimensions) else {
             return
         }
 
         let beforeSnapshot = currentFunctionKeySlotLines()
+        let previousFootprint = directionalDeleteLastFootprint
+        let previousDirection = directionalDeleteDirection
         guard deleteSlotForPopupIfPossible(
             entry: functionKeys[target.index],
             index: target.index,
@@ -1500,6 +1549,31 @@ Tapping a row inserts the key code at the cursor.
         }
 
         recordPopupUndoSnapshot(beforeSnapshot)
+
+        let resolvedDirection = previousDirection ?? previousFootprint.flatMap {
+            directionalDeleteDirection(from: $0, to: deletedFootprint)
+        }
+
+        guard let resolvedDirection,
+              let nextFootprint = nextDirectionalDeleteFootprint(
+                after: deletedFootprint,
+                direction: resolvedDirection,
+                gridDimensions: target.gridDimensions
+              ) else {
+            directionalDeleteLastFootprint = deletedFootprint
+            directionalDeleteDirection = nil
+            directionalDeleteExpectedAnchor = nil
+            return
+        }
+
+        directionalDeleteLastFootprint = deletedFootprint
+        directionalDeleteDirection = resolvedDirection
+        directionalDeleteExpectedAnchor = nextFootprint.anchor
+        mainGridActionMenuTarget = mainGridActionMenuTargetForDeleteSelection(
+            from: target,
+            deletedFootprint: deletedFootprint,
+            nextFootprint: nextFootprint
+        )
     }
 
     private func copyMainGridActionMenuSelection() {
@@ -1545,6 +1619,7 @@ Tapping a row inserts the key code at the cursor.
             return
         }
 
+        resetDirectionalDeleteState()
         mainGridEditClipboardText = cutResult.clipboardText
         recordPopupUndoSnapshot(beforeSnapshot)
         showMainGridActionMenuMessage("Button cut")
@@ -1570,6 +1645,7 @@ Tapping a row inserts the key code at the cursor.
                 return
             }
 
+            resetDirectionalDeleteState()
             recordPopupUndoSnapshot(beforeSnapshot)
             showMainGridActionMenuMessage("Button pasted")
         case .nothingToPaste:
@@ -1625,9 +1701,37 @@ Tapping a row inserts the key code at the cursor.
             probeID: UUID()
         )
 
+        resetDirectionalDeleteState()
         recordPopupUndoSnapshot(beforeSnapshot, duplicateSourceTarget: sourceTarget)
         mainGridActionMenuTarget = duplicateTarget
         showMainGridActionMenuMessage("Button duplicated")
+    }
+
+    private func duplicateMainGridSlotFromTap(
+        entry: FunctionKeyEntry,
+        index: Int,
+        gridDimensions: GridDimensions
+    ) {
+        let preservedActionMenuTarget = mainGridActionMenuTarget?.index == index ? mainGridActionMenuTarget : nil
+        let beforeSnapshot = currentFunctionKeySlotLines()
+        let sourceSpan = slotSpan(startingAt: index, gridDimensions: gridDimensions)
+        let targetIndex = duplicateTargetIndex(from: index, span: sourceSpan, gridDimensions: gridDimensions)
+
+        duplicateSlotIfPossible(entry: entry, index: index, gridDimensions: gridDimensions)
+
+        guard let preservedActionMenuTarget,
+              let targetIndex,
+              currentFunctionKeySlotLines() != beforeSnapshot else {
+            return
+        }
+
+        resetDirectionalDeleteState()
+        mainGridActionMenuTarget = mainGridActionMenuTargetForMove(
+            from: preservedActionMenuTarget,
+            sourceIndex: index,
+            targetIndex: targetIndex,
+            span: sourceSpan
+        )
     }
 
     private func resizeMainGridActionMenuSelection(to shape: MainGridPopupButtonShape) {
@@ -1667,6 +1771,7 @@ Tapping a row inserts the key code at the cursor.
             return
         }
 
+        resetDirectionalDeleteState()
         recordPopupUndoSnapshot(beforeSnapshot)
         mainGridActionMenuTarget = mainGridActionMenuTargetForResize(
             from: target,
@@ -1691,6 +1796,7 @@ Tapping a row inserts the key code at the cursor.
         }
 
         popupUndoHistory.removeLast()
+        resetDirectionalDeleteState()
 
         if let duplicateSourceTarget = undoEntry.duplicateSourceTarget {
             mainGridActionMenuTarget = MainGridActionMenuTarget(
@@ -1732,6 +1838,129 @@ Tapping a row inserts the key code at the cursor.
         }
 
         return popupButtonShapeForActionMenu(at: target.index, gridDimensions: target.gridDimensions)
+    }
+
+    private func resetDirectionalDeleteState() {
+        directionalDeleteLastFootprint = nil
+        directionalDeleteDirection = nil
+        directionalDeleteExpectedAnchor = nil
+    }
+
+    private func mainGridDeleteFootprint(
+        at index: Int,
+        gridDimensions: GridDimensions
+    ) -> MainGridDeleteFootprint? {
+        guard index >= 0,
+              index < functionKeys.count,
+              index < visibleBoxCount,
+              !isMainGridContinuationEntry(at: index),
+              !functionKeys[index].isBlankPlaceholder,
+              !isEmptyButtonEntry(functionKeys[index]) else {
+            return nil
+        }
+
+        let columns = max(gridDimensions.columns, 1)
+        let shape = mainGridPopupShapeDimensions(for: slotSpan(startingAt: index, gridDimensions: gridDimensions))
+        return MainGridDeleteFootprint(
+            anchor: index,
+            row: index / columns,
+            column: index % columns,
+            width: max(shape.width, 1),
+            height: max(shape.height, 1)
+        )
+    }
+
+    private func isMainGridContinuationEntry(at index: Int) -> Bool {
+        guard functionKeys.indices.contains(index) else {
+            return false
+        }
+
+        let rawLine = functionKeys[index].rawLine.trimmingCharacters(in: .whitespacesAndNewlines)
+        return rawLine == wideButtonContinuationToken || rawLine == blockButtonContinuationToken
+    }
+
+    private func directionalDeleteDirection(
+        from first: MainGridDeleteFootprint,
+        to second: MainGridDeleteFootprint
+    ) -> MainGridDirectionalDeleteDirection? {
+        if second.minColumn == first.maxColumn + 1,
+           rangesOverlap(first.minRow...first.maxRow, second.minRow...second.maxRow) {
+            return .right
+        }
+
+        if second.maxColumn + 1 == first.minColumn,
+           rangesOverlap(first.minRow...first.maxRow, second.minRow...second.maxRow) {
+            return .left
+        }
+
+        if second.minRow == first.maxRow + 1,
+           rangesOverlap(first.minColumn...first.maxColumn, second.minColumn...second.maxColumn) {
+            return .down
+        }
+
+        if second.maxRow + 1 == first.minRow,
+           rangesOverlap(first.minColumn...first.maxColumn, second.minColumn...second.maxColumn) {
+            return .up
+        }
+
+        return nil
+    }
+
+    private func rangesOverlap(_ first: ClosedRange<Int>, _ second: ClosedRange<Int>) -> Bool {
+        first.lowerBound <= second.upperBound && second.lowerBound <= first.upperBound
+    }
+
+    private func nextDirectionalDeleteFootprint(
+        after footprint: MainGridDeleteFootprint,
+        direction: MainGridDirectionalDeleteDirection,
+        gridDimensions: GridDimensions
+    ) -> MainGridDeleteFootprint? {
+        let maximumIndex = min(visibleBoxCount, functionKeys.count)
+        let candidates = (0..<maximumIndex).compactMap {
+            mainGridDeleteFootprint(at: $0, gridDimensions: gridDimensions)
+        }
+
+        return candidates
+            .filter { directionalDeleteDirection(from: footprint, to: $0) == direction }
+            .sorted {
+                let lhs = directionalDeleteCandidateScore($0, after: footprint, direction: direction)
+                let rhs = directionalDeleteCandidateScore($1, after: footprint, direction: direction)
+                if lhs.anchorOverlap != rhs.anchorOverlap {
+                    return lhs.anchorOverlap < rhs.anchorOverlap
+                }
+
+                if lhs.distance != rhs.distance {
+                    return lhs.distance < rhs.distance
+                }
+
+                return lhs.anchor < rhs.anchor
+            }
+            .first
+    }
+
+    private func directionalDeleteCandidateScore(
+        _ candidate: MainGridDeleteFootprint,
+        after footprint: MainGridDeleteFootprint,
+        direction: MainGridDirectionalDeleteDirection
+    ) -> (anchorOverlap: Int, distance: Int, anchor: Int) {
+        switch direction {
+        case .left, .right:
+            let anchorOverlap = (candidate.minRow...candidate.maxRow).contains(footprint.row) ? 0 : 1
+            let distance = rangeDistance(footprint.row, to: candidate.minRow...candidate.maxRow)
+            return (anchorOverlap, distance, candidate.anchor)
+        case .up, .down:
+            let anchorOverlap = (candidate.minColumn...candidate.maxColumn).contains(footprint.column) ? 0 : 1
+            let distance = rangeDistance(footprint.column, to: candidate.minColumn...candidate.maxColumn)
+            return (anchorOverlap, distance, candidate.anchor)
+        }
+    }
+
+    private func rangeDistance(_ value: Int, to range: ClosedRange<Int>) -> Int {
+        if range.contains(value) {
+            return 0
+        }
+
+        return min(abs(value - range.lowerBound), abs(value - range.upperBound))
     }
 
     private func mainGridActionMenuTargetForDuplicate(
@@ -1782,6 +2011,75 @@ Tapping a row inserts the key code at the cursor.
             gridDimensions: sourceTarget.gridDimensions,
             probeID: UUID()
         )
+    }
+
+    private func mainGridActionMenuTargetForMove(
+        from sourceTarget: MainGridActionMenuTarget,
+        sourceIndex: Int,
+        targetIndex: Int,
+        span: Int
+    ) -> MainGridActionMenuTarget {
+        let columns = max(sourceTarget.gridDimensions.columns, 1)
+        let sourceColumn = sourceIndex % columns
+        let sourceRow = sourceIndex / columns
+        let targetColumn = targetIndex % columns
+        let targetRow = targetIndex / columns
+        let shape = mainGridPopupShapeDimensions(for: span)
+        let width = max(shape.width, 1)
+        let height = max(shape.height, 1)
+        let cellWidth = (sourceTarget.buttonFrame.width - (mainGridButtonSpacing * CGFloat(width - 1))) / CGFloat(width)
+        let cellHeight = (sourceTarget.buttonFrame.height - (mainGridButtonSpacing * CGFloat(height - 1))) / CGFloat(height)
+        let xOffset = CGFloat(targetColumn - sourceColumn) * (cellWidth + mainGridButtonSpacing)
+        let yOffset = CGFloat(targetRow - sourceRow) * (cellHeight + mainGridButtonSpacing)
+        let movedFrame = sourceTarget.buttonFrame.offsetBy(dx: xOffset, dy: yOffset)
+
+        return MainGridActionMenuTarget(
+            index: targetIndex,
+            buttonFrame: movedFrame,
+            gridDimensions: sourceTarget.gridDimensions,
+            probeID: UUID()
+        )
+    }
+
+    private func mainGridActionMenuTargetForDeleteSelection(
+        from sourceTarget: MainGridActionMenuTarget,
+        deletedFootprint: MainGridDeleteFootprint,
+        nextFootprint: MainGridDeleteFootprint
+    ) -> MainGridActionMenuTarget {
+        let cellWidth = (sourceTarget.buttonFrame.width - (mainGridButtonSpacing * CGFloat(max(deletedFootprint.width - 1, 0)))) / CGFloat(max(deletedFootprint.width, 1))
+        let cellHeight = (sourceTarget.buttonFrame.height - (mainGridButtonSpacing * CGFloat(max(deletedFootprint.height - 1, 0)))) / CGFloat(max(deletedFootprint.height, 1))
+        let xOffset = CGFloat(nextFootprint.column - deletedFootprint.column) * (cellWidth + mainGridButtonSpacing)
+        let yOffset = CGFloat(nextFootprint.row - deletedFootprint.row) * (cellHeight + mainGridButtonSpacing)
+        let nextFrame = CGRect(
+            x: sourceTarget.buttonFrame.minX + xOffset,
+            y: sourceTarget.buttonFrame.minY + yOffset,
+            width: (cellWidth * CGFloat(nextFootprint.width)) + (mainGridButtonSpacing * CGFloat(max(nextFootprint.width - 1, 0))),
+            height: (cellHeight * CGFloat(nextFootprint.height)) + (mainGridButtonSpacing * CGFloat(max(nextFootprint.height - 1, 0)))
+        )
+
+        return MainGridActionMenuTarget(
+            index: nextFootprint.anchor,
+            buttonFrame: nextFrame,
+            gridDimensions: sourceTarget.gridDimensions,
+            probeID: UUID()
+        )
+    }
+
+    private func mainGridPopupShapeDimensions(for span: Int) -> (width: Int, height: Int) {
+        switch span {
+        case 5:
+            return (3, 3)
+        case 8:
+            return (3, 2)
+        case 7:
+            return (1, 3)
+        case 6:
+            return (1, 2)
+        case 4:
+            return (2, 2)
+        default:
+            return (max(1, min(span, 3)), 1)
+        }
     }
 
     private func mainGridActionMenuPosition(
@@ -3176,7 +3474,7 @@ Tapping a row inserts the key code at the cursor.
                     columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 5),
                     spacing: 0
                 ) {
-                    ForEach(Array(smartIPhoneButtonSwatchHexColors), id: \.self) { hexColor in
+                    ForEach(Array(isPad ? smartIPadButtonSwatchHexColors : smartIPhoneButtonSwatchHexColors), id: \.self) { hexColor in
                         smartButtonColorSwatch(hexColor, usesBrightnessAdjustedFill: false)
                     }
                 }
@@ -3185,9 +3483,7 @@ Tapping a row inserts the key code at the cursor.
     }
 
     private var smartIPadButtonSwatchHexColors: [String] {
-        smartButtonSwatchHexColors.filter { hexColor in
-            hexColor != "000000" && hexColor != "FFFFFF"
-        }
+        smartIPhoneButtonSwatchHexColors + ["00E5FF", "7CFC00", "FFD700"]
     }
 
     private func smartIPhoneButtonEditorDynamicColumnCount(editorWidth: CGFloat) -> Int {
@@ -4133,7 +4429,7 @@ Tapping a row inserts the key code at the cursor.
 
     private func smartIPhoneSFSymbolGrid(editorWidth: CGFloat) -> some View {
         smartIPhoneButtonSelectionGrid(editorWidth: editorWidth) {
-            ForEach(Array(smartSFPanelSymbols.enumerated()), id: \.offset) { index, symbolName in
+            ForEach(Array(smartIPhoneSFPanelSymbols.enumerated()), id: \.offset) { index, symbolName in
                 if index == 0 {
                     smartSFSymbolDeleteCell
                 } else {
@@ -4730,11 +5026,22 @@ Tapping a row inserts the key code at the cursor.
             return
         }
 
+        let preservedActionMenuTarget = mainGridActionMenuTarget?.index == sourceIndex ? mainGridActionMenuTarget : nil
         let sourceSpan = slotSpan(startingAt: sourceIndex, gridDimensions: gridDimensions)
         guard moveFunctionKeySlot(sourceIndex, targetIndex, sourceSpan, gridDimensions) else {
             alertTitle = ""
             renameAlertMessage = "can't move btn"
             return
+        }
+
+        resetDirectionalDeleteState()
+        if let preservedActionMenuTarget {
+            mainGridActionMenuTarget = mainGridActionMenuTargetForMove(
+                from: preservedActionMenuTarget,
+                sourceIndex: sourceIndex,
+                targetIndex: targetIndex,
+                span: sourceSpan
+            )
         }
     }
 }
@@ -5856,6 +6163,7 @@ private struct MainGridResizeActionMenu: View {
             (maxWidth - (CGFloat(shape.width - 1) * gap)) / CGFloat(shape.width),
             (maxHeight - (CGFloat(shape.height - 1) * gap)) / CGFloat(shape.height)
         )
+        let resolvedCellSize = shape.width == 1 && shape.height == 1 ? min(cellSize, 5) : cellSize
 
         return VStack(spacing: gap) {
             ForEach(0..<shape.height, id: \.self) { _ in
@@ -5863,7 +6171,7 @@ private struct MainGridResizeActionMenu: View {
                     ForEach(0..<shape.width, id: \.self) { _ in
                         RoundedRectangle(cornerRadius: 1.2)
                             .fill(MainGridEditActionMenu.SymbolColor.resize)
-                            .frame(width: cellSize, height: cellSize)
+                            .frame(width: resolvedCellSize, height: resolvedCellSize)
                     }
                 }
             }

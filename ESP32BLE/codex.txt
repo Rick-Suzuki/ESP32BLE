@@ -1,128 +1,125 @@
-A. FILES MODIFIED
+1. Exact Locations Of The Three Colours
 
-Phase 3 modified:
+The three colours currently exist only here:
 
-ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
-ESP32BLE/Scrns/Main_Screen/Main_DocumentActions.swift
+ESP32BLE/Scrns/Main_Screen/Soft_Editor/Soft_Editor_Overlay.swift􀰓
 
-B. POPUP IMPLEMENTATION
+Lines:
+• 118: 00E5FF
+• 119: 7CFC00
+• 120: FFD700
 
-Added a small popup mode state:
+They are appended to:
 
-Action popup
-Resize popup
+colorKeyCodes
 
-Tapping the purple Resize icon switches the existing popup target into Resize mode. The Resize popup reuses the same 146x146 size, position calculation, black background, border, clipping and corner radius.
+at lines 75-121.
 
-The X cell returns to the normal action popup without dismissing selection or changing the grid.
+2. Actual Colour Array Used By The iPad Button Editor
 
-C. GRAPHICAL SIZE BUTTONS
+The visible iPad Button Editor is rendered from:
 
-Added a second 3x3 popup with this layout:
+ESP32BLE/Scrns/Main_Screen/Main_Screen.swift􀰓
 
-X, 1x1, 2x1
-3x1, 1x2, 2x2
-3x2, 1x3, 3x3
+Path:
 
-Each size cell draws a proportional mini rectangle grid in purple plus a compact white size label. No emoji, images or assets were added.
+• Line 1280: editor is shown when editingSlotIndex != nil
+• Line 1282: iPad uses smartView(...)
+• Line 2626: iPad smart view includes smartButtonPanel()
+• Line 3320: iPad path uses IPadSmartButtonPanel
+• Line 3332: lower area is smartButtonLowerEditingArea(...)
+• Line 3436: iPad lower area renders smartButtonColorGrid
+• Line 3477: table data source is smartIPhoneButtonSwatchHexColors
 
-D. CURRENT SIZE HIGHLIGHT
+The active rendered colour source is therefore:
 
-The current selected button size is highlighted in purple inside the Resize popup.
+Main_Screen.swift􀰓
+• smartButtonSwatchHexColors at lines 636-662
+• wrapped by smartButtonSwatchHexColorsWithWhite at lines 563-571
+• extended by smartIPhoneButtonSwatchHexColors at lines 539-562
+• rendered by smartButtonColorGrid at lines 3458-3483
 
-After successful resize, the selected button frame is refreshed and the highlight updates with the current grid state.
+3. Whether The Colours Reach That Array
 
-Same-size selection is a no-op.
+No.
 
-E. RESIZE VALIDATION
+The three new colours are not present in Main_Screen.swift􀰓.
 
-Popup resize validates the full requested footprint.
+Search found them only in Soft_Editor_Overlay.swift􀰓, lines 118-120.
 
-Allowed:
+They do not reach:
+• smartButtonSwatchHexColors
+• smartButtonSwatchHexColorsWithWhite
+• smartIPhoneButtonSwatchHexColors
+• smartButtonColorGrid
 
-Cells already belonging to the selected button
-Empty cells
+4. Whether The Colours Reach SwiftUI Table Rendering
 
-Rejected:
+No.
 
-Out-of-bounds footprint -> “Not enough space”
-Cells occupied by another button -> “Space occupied”
+The rendered iPad table uses:
 
-The selected button’s own continuation markers are not treated as obstacles.
+Main_Screen.swift􀰓
 
-F. ATOMIC PERSISTENCE
+ForEach(Array(smartIPhoneButtonSwatchHexColors), id: \.self)
 
-Resize builds a complete updated raw slot-line array in memory.
+Since the three colours are not in smartIPhoneButtonSwatchHexColors, SwiftUI never receives them for rendering.
 
-It clears the old footprint, preserves the anchor rawLine exactly, writes new continuation markers, and persists once through the existing complete-grid restore path.
+5. Filtering, Clipping Or Row-Count Limitation
 
-No repeated per-cell persistence was added.
+No evidence that the three colours are hidden by clipping or row-count logic.
 
-G. UNDO
+Important findings:
 
-Each successful resize records one existing popup Undo snapshot.
+• Soft_Editor_Overlay.swift􀰓 does render colorKeyCodes via colorRows:
+   • colorRows is built at lines 359-363
+   • rendered at lines 191-199
+• But that is not the visible iPad smart Button Editor colour table path.
 
-No new Undo stack was added.
-Duplicate’s special Undo selection restoration remains preserved.
-Clipboard is not modified by Resize.
+In Main_Screen.swift􀰓:
+• No prefix(), suffix(), slicing, or duplicate removal affects these three colours.
+• The problem occurs before rendering: the active data source does not contain them.
+• There is an unused-looking iPad-specific colour array:
+   • smartIPadButtonSwatchHexColors at lines 3485-3489
+   • It filters smartButtonSwatchHexColors
+   • I found no rendering use of it.
+• The active grid currently renders smartIPhoneButtonSwatchHexColors even on iPad.
 
-H. POPUP POSITIONING
+6. Precise Reason The Colours Are Not Visible
 
-The Resize popup uses the existing popup positioning path.
+The three colours were added to the wrong palette.
 
-After successful resize, the cached selected-button frame is recalculated from the old frame, grid spacing and new width/height so the popup remains attached to the resized button.
+They were added to:
 
-I. REGRESSION PROTECTION
+Soft_Editor_Overlay.swift􀰓
+colorKeyCodes
 
-Did not change:
+But the visible iPad Button Editor colour table is rendered from:
 
-Copy
-Cut
-Paste
-Duplicate
-Delete
-Existing Undo logic
-Legacy multi-tap actions
-Button Editor
-Main Screen layout
-Grid rendering style
-Document navigation
-BLE / Mac Helper
-Existing diagnostics, including [IPHONE-POPUP-PROBE]
+Main_Screen.swift􀰓
+smartButtonColorGrid
 
-J. BUILD RESULT
+and its ForEach uses:
 
-Build succeeded.
+smartIPhoneButtonSwatchHexColors
 
-K. DEVICE TESTING
+The three colours are therefore missing from the actual iPad table data source.
 
-Physical-device testing was not performed.
+7. Smallest Recommended Fix
 
-Still needs manual iPhone/iPad testing for:
+For an iPad-only fix, update Main_Screen.swift􀰓, not the iPhone palette.
 
-Resize popup layout
-Current-size highlight
-Shrink and expand cases
-Occupied and out-of-bounds failures
-Undo after resize
-Existing Copy/Cut/Paste/Duplicate/Delete behavior
+Smallest safe direction:
 
-L. FILE STATUS
+• Add the three colours to the iPad-specific source, likely smartIPadButtonSwatchHexColors.
+• Change the iPad-only grid smartButtonColorGrid to render the iPad-specific array instead of smartIPhoneButtonSwatchHexColors.
 
-No .txt files were modified by me.
-No Xcode project file was modified.
+Do not add them to smartButtonSwatchHexColors unless iPhone should also receive them, because iPhone derives from that base list.
 
-M. GIT STATUS
+8. Files That Would Need Modification
 
-Currently modified files shown by git:
+Likely only:
 
-ESP32BLE/Scrns/ContentView.swift
-ESP32BLE/Scrns/Main_Screen/Main_DocumentActions.swift
-ESP32BLE/Scrns/Main_Screen/Main_GridSection.swift
-ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
-ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
-ESP32BLE/codex.txt
+ESP32BLE/Scrns/Main_Screen/Main_Screen.swift􀰓
 
-Note: ContentView.swift, Main_GridSection.swift and Set_Screen.swift are from the previous Phase 2 shape-support work. codex.txt was already modified and was not touched.
-
-No commit or push was performed.
+No fix was implemented. No files were modified.

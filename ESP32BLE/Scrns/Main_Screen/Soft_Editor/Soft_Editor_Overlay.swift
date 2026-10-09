@@ -115,6 +115,9 @@ struct MainScreenSlotEditorOverlay: View {
 			("635387", "",     	Color(hex: "635387")),
 			("9999FF", "",     	Color(hex: "9999FF")),
 			("20A663", "",     	Color(hex: "20A663")),
+			("00E5FF", "",     	Color(hex: "00E5FF")),
+			("7CFC00", "",     	Color(hex: "7CFC00")),
+			("FFD700", "",     	Color(hex: "FFD700")),
     ]
 
     var body: some View {

@@ -1568,7 +1568,7 @@ extension MainScreen {
                         return
                     }
 
-                    dismissMainGridActionMenu()
+                    dismissMainGridActionMenuUnlessTargeted(at: index)
                     activeDragIndex = index
                 }
                 .onEnded { value in

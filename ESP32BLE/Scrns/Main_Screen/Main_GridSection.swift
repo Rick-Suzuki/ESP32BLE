@@ -211,17 +211,10 @@ struct MainScreenGridSection<ButtonLabel: View>: View {
             onSingleEditTap(entry, index, buttonFrame, gridDimensions)
         }
 
-        guard pendingTapCount < 5 else {
-            pendingTapTask?.cancel()
-            resetPendingTapState()
-            onDeleteSlot(entry, index)
-            return
-        }
-
         schedulePendingTapResolution(entry: entry, index: index, buttonFrame: buttonFrame, gridDimensions: gridDimensions)
     }
 
-	// MARK: - BM:🟨 taps 1,2,3,4,5: main scrn
+	// MARK: - BM:🟨 taps 1,2: main scrn
     private func schedulePendingTapResolution(
         entry: FunctionKeyEntry,
         index: Int,
@@ -244,14 +237,6 @@ struct MainScreenGridSection<ButtonLabel: View>: View {
 
                 if tapCount == 2 {
                     onDuplicateSlot(entry, index, gridDimensions)
-                }
-
-                if tapCount == 3 {
-                    onResizeSlot(entry, index, gridDimensions)
-                }
-
-                if tapCount == 4 {
-                    onResetSlotSize(entry, index, gridDimensions)
                 }
 
 					

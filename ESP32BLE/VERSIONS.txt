@@ -1,3 +1,7 @@
+261009 Fri 1512
+V62.19
+pop-up delete btn, tables even
+
 261009 Fri 1259
 V62.18
 popup resize complete
