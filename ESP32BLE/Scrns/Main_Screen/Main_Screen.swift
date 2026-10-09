@@ -1019,6 +1019,7 @@ Tapping a row inserts the key code at the cursor.
     @State private var editorGeometryFrames: [EditorGeometryProbeTarget: CGRect] = [:]
     @State private var smartIPhoneRightTableVisibleCellHeight: CGFloat?
     @State private var popupDismissTask: Task<Void, Never>?
+    @State private var isDeleteAllButtonsConfirmationPresented = false
     private let iPhoneOrdinaryPreviewFontMultiplier: CGFloat = 1.5
     private let iPadSFSymbolPreviewGroupYOffset: CGFloat = 5
     private let iPadSFPreviewSizeMultiplier: CGFloat = 1.10
@@ -1160,6 +1161,17 @@ Tapping a row inserts the key code at the cursor.
                 }
                 .onDisappear {
                 }
+            }
+            .alert(
+                "Delete all buttons?",
+                isPresented: $isDeleteAllButtonsConfirmationPresented
+            ) {
+                Button("Cancel", role: .cancel) {}
+                Button("Delete All", role: .destructive) {
+                    deleteAllButtonsOnCurrentScreen()
+                }
+            } message: {
+                Text("This will delete every button on the current screen. You can restore them using Undo.")
             }
     }
 
@@ -1805,6 +1817,35 @@ Tapping a row inserts the key code at the cursor.
                 gridDimensions: duplicateSourceTarget.gridDimensions,
                 probeID: UUID()
             )
+        }
+    }
+
+    private func deleteAllButtonsOnCurrentScreen() {
+        guard currentScreenContainsButtonData() else {
+            return
+        }
+
+        let beforeSnapshot = currentFunctionKeySlotLines()
+        let clearedSlotLines = Array(repeating: "", count: beforeSnapshot.count)
+
+        guard clearedSlotLines != beforeSnapshot,
+              restoreFunctionKeySlotLines(clearedSlotLines) else {
+            return
+        }
+
+        resetDirectionalDeleteState()
+        recordPopupUndoSnapshot(beforeSnapshot)
+        isGridEditModeEnabled = true
+        cancelSlotEditing()
+    }
+
+    private func currentScreenContainsButtonData() -> Bool {
+        let maximumIndex = min(visibleBoxCount, functionKeys.count)
+
+        return (0..<maximumIndex).contains { index in
+            !isMainGridContinuationEntry(at: index)
+                && !functionKeys[index].isBlankPlaceholder
+                && !isEmptyButtonEntry(functionKeys[index])
         }
     }
 
@@ -3203,8 +3244,15 @@ Tapping a row inserts the key code at the cursor.
         let visibleButtonHeight = (smartIPhoneRightTableVisibleCellHeight ?? smartButtonPanelColorCellHeight) * smartIPhoneActionButtonHeightScale
 
         return HStack(spacing: 0) {
+            smartDeleteAllButton(
+                visibleHeight: visibleButtonHeight,
+                visibleAlignment: .bottom,
+                probeTarget: nil
+            )
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             smartControlButton(
                 "test",
+                systemName: "play.fill",
                 background: Color(red: 0.0, green: 0.5, blue: 0.0),
                 visibleHeight: visibleButtonHeight,
                 visibleAlignment: .bottom,
@@ -3215,10 +3263,13 @@ Tapping a row inserts the key code at the cursor.
                 smartCommandDescription = smartHelpSFTestButton
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .accessibilityLabel("Test")
             .editorGeometryProbe(.testButton, isEnabled: debugEditorGeometry)
             smartControlButton(
                 "close",
+                systemName: "xmark",
                 background: Color.gray.opacity(0.45),
+                iconWeight: .bold,
                 visibleHeight: visibleButtonHeight,
                 visibleAlignment: .bottom,
                 probeTarget: .closeVisibleButton
@@ -3227,6 +3278,7 @@ Tapping a row inserts the key code at the cursor.
                 cancelSlotEditing()
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .accessibilityLabel("Close")
             .editorGeometryProbe(.closeButton, isEnabled: debugEditorGeometry)
         }
         .frame(height: smartButtonPanelColorCellHeight)
@@ -4460,20 +4512,44 @@ Tapping a row inserts the key code at the cursor.
             .frame(height: 46)
 
             HStack(spacing: 0) {
-                smartControlButton("test", background: Color(red: 0.0, green: 0.5, blue: 0.0)) {
+                smartDeleteAllButton()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                smartControlButton("test", systemName: "play.fill", background: Color(red: 0.0, green: 0.5, blue: 0.0)) {
                     testEditingSlotText()
                     // Help text location: SF panel test button.
                     smartCommandDescription = smartHelpSFTestButton
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                smartControlButton("close", background: Color.gray.opacity(0.45)) {
+                .accessibilityLabel("Test")
+                smartControlButton("close", systemName: "xmark", background: Color.gray.opacity(0.45), iconWeight: .bold) {
                     saveSlotEditing()
                     cancelSlotEditing()
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .accessibilityLabel("Close")
             }
             .frame(height: 46)
         }
+    }
+
+    private func smartDeleteAllButton(
+        visibleHeight: CGFloat? = nil,
+        visibleAlignment: Alignment = .center,
+        probeTarget: EditorGeometryProbeTarget? = nil
+    ) -> some View {
+        smartControlButton(
+            "Delete\nAll",
+            systemName: "trash.fill",
+            background: Color(hex: "8B3030"),
+            fontSize: 15,
+            lineLimit: 2,
+            visibleHeight: visibleHeight,
+            visibleAlignment: visibleAlignment,
+            probeTarget: probeTarget
+        ) {
+            isDeleteAllButtonsConfirmationPresented = true
+        }
+        .accessibilityLabel("Delete All")
     }
 
     private func smartSFSymbolCell(_ symbolName: String) -> some View {
@@ -4569,8 +4645,12 @@ Tapping a row inserts the key code at the cursor.
 
     private func smartControlButton(
         _ title: String,
+        systemName: String? = nil,
         foreground: Color = .white,
         background: Color = .black,
+        fontSize: CGFloat = 22,
+        iconWeight: Font.Weight = .semibold,
+        lineLimit: Int = 1,
         visibleHeight: CGFloat? = nil,
         visibleAlignment: Alignment = .center,
         probeTarget: EditorGeometryProbeTarget? = nil,
@@ -4580,11 +4660,19 @@ Tapping a row inserts the key code at the cursor.
             ButtonClickFeedback.playIfEnabled()
             action()
         } label: {
-            Text(title)
-                .font(.system(size: 22, weight: .semibold))
+            Group {
+                if let systemName {
+                    Image(systemName: systemName)
+                        .font(.system(size: 22, weight: iconWeight))
+                } else {
+                    Text(title)
+                        .font(.system(size: fontSize, weight: .semibold))
+                        .lineLimit(lineLimit)
+                        .minimumScaleFactor(0.75)
+                        .multilineTextAlignment(.center)
+                }
+            }
                 .foregroundStyle(foreground)
-                .lineLimit(1)
-                .minimumScaleFactor(0.75)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .frame(height: visibleHeight)
                 .background(background)

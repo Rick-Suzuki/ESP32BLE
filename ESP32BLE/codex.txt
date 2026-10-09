@@ -1,125 +1,693 @@
-1. Exact Locations Of The Three Colours
+ESP32BLE — BUTTON EDITOR
+ADD DELETE ALL BUTTON
 
-The three colours currently exist only here:
+MODE: CONTROLLED IMPLEMENTATION
+PLATFORMS: IPAD AND IPHONE
 
-ESP32BLE/Scrns/Main_Screen/Soft_Editor/Soft_Editor_Overlay.swift􀰓
 
-Lines:
-• 118: 00E5FF
-• 119: 7CFC00
-• 120: FFD700
+CRITICAL — EDITOR GEOMETRY IS FROZEN
 
-They are appended to:
+The iPad and iPhone Button Editors are
+considered complete.
 
-colorKeyCodes
+DO NOT CHANGE ANY EDITOR GEOMETRY.
 
-at lines 75-121.
+This includes:
 
-2. Actual Colour Array Used By The iPad Button Editor
+- Editor dimensions.
+- Column widths.
+- Panel heights.
+- Panel positions.
+- Preview button dimensions.
+- Slider positions.
+- Table dimensions.
+- Toolbar positions.
+- Existing padding.
+- Existing spacing.
+- Existing alignment.
+- Existing screen layout.
 
-The visible iPad Button Editor is rendered from:
+The ONLY permitted visual modification
+is inside the existing Test / Close
+button row.
 
-ESP32BLE/Scrns/Main_Screen/Main_Screen.swift􀰓
+That row must retain its EXACT existing:
 
-Path:
+- Position.
+- Total width.
+- Total height.
 
-• Line 1280: editor is shown when editingSlotIndex != nil
-• Line 1282: iPad uses smartView(...)
-• Line 2626: iPad smart view includes smartButtonPanel()
-• Line 3320: iPad path uses IPadSmartButtonPanel
-• Line 3332: lower area is smartButtonLowerEditingArea(...)
-• Line 3436: iPad lower area renders smartButtonColorGrid
-• Line 3477: table data source is smartIPhoneButtonSwatchHexColors
+Replace the two existing buttons with
+three equal-width buttons:
 
-The active rendered colour source is therefore:
+Delete All | Test | Close
 
-Main_Screen.swift􀰓
-• smartButtonSwatchHexColors at lines 636-662
-• wrapped by smartButtonSwatchHexColorsWithWhite at lines 563-571
-• extended by smartIPhoneButtonSwatchHexColors at lines 539-562
-• rendered by smartButtonColorGrid at lines 3458-3483
+Adjust ONLY the internal button widths,
+font sizes and Delete All styling.
 
-3. Whether The Colours Reach That Array
+Do not move, resize or reposition
+anything outside this row.
 
-No.
+If the three buttons cannot fit within
+the existing row, STOP and report.
 
-The three new colours are not present in Main_Screen.swift􀰓.
+DO NOT attempt to make room by changing
+the surrounding editor layout.
+==================================================
+OBJECTIVE
+==================================================
 
-Search found them only in Soft_Editor_Overlay.swift􀰓, lines 118-120.
+Add a new "Delete All" button to the
+existing Button Editor.
 
-They do not reach:
-• smartButtonSwatchHexColors
-• smartButtonSwatchHexColorsWithWhite
-• smartIPhoneButtonSwatchHexColors
-• smartButtonColorGrid
+The existing buttons are:
 
-4. Whether The Colours Reach SwiftUI Table Rendering
+Test
+Close
 
-No.
+The new arrangement must be:
 
-The rendered iPad table uses:
+Delete All | Test | Close
 
-Main_Screen.swift􀰓
+Apply to BOTH iPad and iPhone editors.
 
-ForEach(Array(smartIPhoneButtonSwatchHexColors), id: \.self)
+Delete All removes every button from
+the CURRENT screen only.
 
-Since the three colours are not in smartIPhoneButtonSwatchHexColors, SwiftUI never receives them for rendering.
+A confirmation is mandatory.
 
-5. Filtering, Clipping Or Row-Count Limitation
+The complete deletion must be
+reversible using ONE Undo operation.
 
-No evidence that the three colours are hidden by clipping or row-count logic.
+==================================================
+PHASE 1 — INSPECT EXISTING IMPLEMENTATION
+==================================================
 
-Important findings:
+Before making changes, inspect:
 
-• Soft_Editor_Overlay.swift􀰓 does render colorKeyCodes via colorRows:
-   • colorRows is built at lines 359-363
-   • rendered at lines 191-199
-• But that is not the visible iPad smart Button Editor colour table path.
+1. iPad Button Editor layout.
+2. iPhone Button Editor layout.
+3. Existing Test and Close buttons.
+4. Existing button styling.
+5. Existing screen data storage.
+6. Existing Delete implementation.
+7. Existing 20-level Undo system.
+8. Existing screen persistence.
+9. Existing Edit Mode popup behaviour.
 
-In Main_Screen.swift􀰓:
-• No prefix(), suffix(), slicing, or duplicate removal affects these three colours.
-• The problem occurs before rendering: the active data source does not contain them.
-• There is an unused-looking iPad-specific colour array:
-   • smartIPadButtonSwatchHexColors at lines 3485-3489
-   • It filters smartButtonSwatchHexColors
-   • I found no rendering use of it.
-• The active grid currently renders smartIPhoneButtonSwatchHexColors even on iPad.
+Identify the smallest safe implementation.
 
-6. Precise Reason The Colours Are Not Visible
+IMPORTANT:
 
-The three colours were added to the wrong palette.
+Do not introduce a second deletion system.
 
-They were added to:
+Reuse existing screen-data mutation and
+Undo mechanisms wherever possible.
 
-Soft_Editor_Overlay.swift􀰓
-colorKeyCodes
+Do not restructure the Button Editor.
 
-But the visible iPad Button Editor colour table is rendered from:
+If implementing this safely requires
+a major architectural change, STOP
+and report before modifying anything.
 
-Main_Screen.swift􀰓
-smartButtonColorGrid
+==================================================
+PART 1 — BUTTON LAYOUT
+==================================================
 
-and its ForEach uses:
+Add three horizontally arranged buttons:
 
-smartIPhoneButtonSwatchHexColors
++------------+------------+------------+
+|   Delete   |            |            |
+|    All     |    Test    |   Close    |
++------------+------------+------------+
 
-The three colours are therefore missing from the actual iPad table data source.
+REQUIREMENTS:
 
-7. Smallest Recommended Fix
+- Exactly three buttons.
+- All three have equal widths.
+- All three have equal heights.
+- Equal spacing between buttons.
+- Use the existing available row width.
+- Do not enlarge the editor.
+- Do not change surrounding geometry.
+- Do not change other panels.
 
-For an iPad-only fix, update Main_Screen.swift􀰓, not the iPhone palette.
+Adjust font sizes to fit.
 
-Smallest safe direction:
+Delete All may use two lines:
 
-• Add the three colours to the iPad-specific source, likely smartIPadButtonSwatchHexColors.
-• Change the iPad-only grid smartButtonColorGrid to render the iPad-specific array instead of smartIPhoneButtonSwatchHexColors.
+Delete
+All
 
-Do not add them to smartButtonSwatchHexColors unless iPhone should also receive them, because iPhone derives from that base list.
+Test and Close should remain on one line.
 
-8. Files That Would Need Modification
+Use relative sizing rather than
+device-specific pixel offsets.
 
-Likely only:
+The iPad and iPhone editors have
+independent layouts.
 
-ESP32BLE/Scrns/Main_Screen/Main_Screen.swift􀰓
+Modify each layout only as necessary.
 
-No fix was implemented. No files were modified.
+Do not alter the completed geometry
+of either editor.
+
+==================================================
+PART 2 — BUTTON APPEARANCE
+==================================================
+
+DELETE ALL:
+
+Background:
+Subdued, dark red.
+
+Not bright red.
+
+Suggested colour:
+
+#8B3030
+
+Foreground:
+White.
+
+Text:
+"Delete All"
+
+Allow two lines if necessary.
+
+Use the same corner radius and general
+button styling as Test and Close.
+
+TEST:
+
+Preserve existing colours and behaviour.
+
+CLOSE:
+
+Preserve existing colours and behaviour.
+
+All three buttons must have identical
+outer dimensions.
+
+==================================================
+PART 3 — CONFIRMATION
+==================================================
+
+Pressing Delete All must NOT
+immediately delete anything.
+
+Display a confirmation dialog.
+
+TITLE:
+
+Delete all buttons?
+
+MESSAGE:
+
+This will delete every button on the
+current screen. You can restore them
+using Undo.
+
+ACTIONS:
+
+Cancel
+Delete All
+
+CANCEL:
+
+- Dismiss confirmation.
+- Make no changes.
+- Keep Button Editor open.
+- Preserve current selection.
+- Preserve Undo history.
+- Preserve clipboard.
+
+DELETE ALL:
+
+- Perform the deletion.
+- Record one Undo operation.
+- Close the Button Editor.
+- Return to Main Screen.
+
+Use a standard SwiftUI confirmation
+mechanism compatible with the existing
+iOS deployment target.
+
+Mark the confirmation's Delete All
+action as destructive.
+
+Do not use a custom confirmation
+window unless required by the
+existing architecture.
+
+==================================================
+PART 4 — DELETE ALL BEHAVIOUR
+==================================================
+
+After confirmation:
+
+Delete EVERY button from the
+CURRENT screen.
+
+This includes:
+
+- Ordinary 1×1 buttons.
+- Multi-cell buttons.
+- All eight supported button shapes.
+- Button text.
+- SF Symbols.
+- Button images.
+- Button commands.
+- Button-specific colours.
+- Button-specific settings.
+- Continuation/occupancy markers.
+
+Clear the complete button data
+for the current screen.
+
+Do not leave orphaned continuation
+cells or hidden button properties.
+
+Do not delete the screen itself.
+
+Do not delete any files containing
+images or other resources.
+
+==================================================
+PART 5 — PRESERVE SCREEN SETTINGS
+==================================================
+
+Delete All must NOT change:
+
+- Current filename.
+- Current document identity.
+- Background image.
+- Background opacity.
+- Grid dimensions.
+- Row count.
+- Column count.
+- Screen configuration.
+- Global application settings.
+- BLE settings.
+- Mac Helper settings.
+- Speech recognition settings.
+- Clipboard contents.
+
+Do not change another screen.
+
+Do not modify any other document.
+
+Do not reset the entire application.
+
+Only remove button data from the
+currently open screen.
+
+==================================================
+PART 6 — UNDO
+==================================================
+
+CRITICAL REQUIREMENT:
+
+The entire Delete All operation must
+create exactly ONE Undo entry.
+
+Use the existing document-scoped
+20-level Undo system.
+
+Before deleting anything:
+
+Capture the complete current screen
+button-data snapshot.
+
+After successful deletion:
+
+Store ONE Undo entry.
+
+Do not create one Undo entry
+per individual button.
+
+Do not clear existing Undo history.
+
+Do not replace the Undo system.
+
+Undo must restore:
+
+- All deleted buttons.
+- Their original positions.
+- Their original dimensions.
+- Their original text.
+- Their SF Symbols.
+- Their images.
+- Their commands.
+- Their colours.
+- Their settings.
+- Their multi-cell footprints.
+
+Restore the exact original raw
+button-slot data.
+
+Do not reconstruct buttons from
+partial information.
+
+==================================================
+PART 7 — UNDO ACCESS AFTER DELETE ALL
+==================================================
+
+IMPORTANT:
+
+The existing Undo control is located
+in the Edit Mode popup.
+
+After Delete All, the screen will
+contain no buttons.
+
+The user must still be able to Undo.
+
+Inspect how the popup is opened
+on an empty grid cell.
+
+Ensure the user can access Undo
+after Delete All.
+
+Preferred behaviour:
+
+1. Confirm Delete All.
+
+2. Delete all button data.
+
+3. Close Button Editor.
+
+4. Remain in Main Screen Edit Mode.
+
+5. Keep Undo history available.
+
+6. Allow selection of an empty grid cell.
+
+7. Show the existing Action popup.
+
+8. Enable Undo.
+
+9. One Undo restores all buttons.
+
+If the current popup cannot be opened
+on an empty cell, make the smallest
+possible adjustment to permit Undo.
+
+Do not add a new Undo button.
+
+Do not redesign the popup.
+
+Do not automatically exit Edit Mode.
+
+Do not clear Undo history when the
+Button Editor closes.
+
+==================================================
+PART 8 — EMPTY SCREEN
+==================================================
+
+If the screen already contains
+no buttons:
+
+Delete All must not create an
+unnecessary Undo entry.
+
+It may either:
+
+- Disable Delete All.
+
+OR
+
+- Allow confirmation but perform
+  no mutation and create no Undo.
+
+Prefer disabling the button if
+existing state makes that simple.
+
+Do not introduce complex state
+management solely for this case.
+
+==================================================
+PART 9 — PERSISTENCE
+==================================================
+
+Use the existing document-save
+mechanism.
+
+Delete All must persist correctly.
+
+After deleting all buttons:
+
+- The current screen remains valid.
+- The grid remains unchanged.
+- The screen can be saved.
+- The screen can be reopened.
+- The deleted buttons do not reappear
+  unless restored using Undo.
+
+Do not change the .screen file format.
+
+Do not alter unrelated document data.
+
+Do not introduce new persistence keys.
+
+==================================================
+PART 10 — IPAD / IPHONE SEPARATION
+==================================================
+
+IPAD:
+
+Add Delete All beside the existing
+Test and Close controls.
+
+Preserve the floating Button Editor.
+
+Preserve existing panel geometry.
+
+IPHONE:
+
+Add Delete All beside the existing
+Test and Close controls.
+
+Preserve the full-screen landscape
+Button Editor.
+
+Preserve the black editor background.
+
+Preserve all existing column widths
+and alignment.
+
+IMPORTANT:
+
+The iPad and iPhone editor layouts
+must remain independent.
+
+Do not allow iPad layout changes
+to disturb the iPhone editor.
+
+Do not allow iPhone layout changes
+to disturb the iPad editor.
+
+Shared deletion logic is acceptable.
+
+Shared layout changes are not required.
+
+==================================================
+PART 11 — REGRESSION PROTECTION
+==================================================
+
+DO NOT CHANGE:
+
+- Test button functionality.
+- Close button functionality.
+- Button preview rendering.
+- Preview slider.
+- Colour palettes.
+- SF Symbols tables.
+- Emoji handling.
+- Four-line text behaviour.
+- Button text autosizing.
+- Button images.
+- Main Screen grid geometry.
+- Main Screen popup positioning.
+- Copy/Cut/Paste.
+- Duplicate.
+- Resize.
+- Individual Delete.
+- Directional Delete.
+- Drag-to-move.
+- Existing Undo behaviour.
+- BLE keyboard commands.
+- Mac Helper communication.
+- Speech recognition.
+
+Preserve all existing diagnostic code,
+including:
+
+[IPHONE-POPUP-PROBE]
+
+Do not modify unrelated functionality.
+
+==================================================
+PART 12 — BUILD AND VERIFICATION
+==================================================
+
+Build the iOS application.
+
+Verify from the implementation:
+
+1. iPad shows three equal-width buttons.
+2. iPhone shows three equal-width buttons.
+3. Delete All has subdued red background.
+4. Delete All text is white.
+5. Confirmation appears before deletion.
+6. Cancel changes nothing.
+7. Confirm deletes all button data.
+8. Multi-cell footprints are fully cleared.
+9. Filename remains unchanged.
+10. Background remains unchanged.
+11. Grid dimensions remain unchanged.
+12. Clipboard remains unchanged.
+13. One Undo entry is created.
+14. Undo restores the complete screen.
+15. Undo remains accessible afterward.
+16. Existing Test functionality is unchanged.
+17. Existing Close functionality is unchanged.
+18. No unrelated screens are modified.
+19. Screen persistence remains correct.
+20. iPad and iPhone layouts remain independent.
+
+Do not claim physical-device testing
+unless actually performed.
+
+==================================================
+PART 13 — REQUIRED REPORT
+==================================================
+
+Report:
+
+A. FILES MODIFIED
+
+List all modified Swift files.
+
+B. LAYOUT
+
+Explain how equal button widths
+were achieved on iPad and iPhone.
+
+C. DELETE ALL
+
+Explain how the current screen's
+button data is cleared.
+
+D. CONFIRMATION
+
+Describe the confirmation behaviour.
+
+E. UNDO
+
+Confirm that Delete All produces
+exactly one Undo entry.
+
+F. UNDO ACCESS
+
+Explain how Undo remains accessible
+after the screen becomes empty.
+
+G. PERSISTENCE
+
+Explain how the deletion is saved.
+
+H. REGRESSION PROTECTION
+
+Confirm Test and Close are unchanged.
+
+I. BUILD RESULT
+
+Report success or failure.
+
+J. DEVICE TESTING
+
+List any remaining device tests.
+
+K. GIT STATUS
+
+List modified files.
+
+Do not commit or push.
+
+==================================================
+STRICT SAFETY RULES
+==================================================
+
+MAKE THE SMALLEST POSSIBLE CHANGES.
+
+ALL .txt FILES ARE READ-ONLY.
+
+Including:
+
+codex.txt
+console.txt
+console m2.txt
+
+Do not modify, overwrite, rename
+or delete any .txt files.
+
+IGNORE EXISTING MODIFICATIONS TO:
+
+ESP32BLE.xcodeproj/project.pbxproj
+
+Do not modify, restore, reset
+or revert this file.
+
+Do not change Xcode project settings.
+
+DO NOT RESET.
+DO NOT RESTORE.
+DO NOT REVERT.
+DO NOT CHECKOUT.
+DO NOT REBASE.
+DO NOT PULL.
+
+DO NOT COMMIT.
+DO NOT PUSH.
+
+Preserve all unrelated modifications.
+
+Do not modify ESPMacHelper.
+
+Do not modify the Test Area helper.
+
+==================================================
+FINAL INSTRUCTION
+==================================================
+
+Add Delete All to BOTH Button Editors.
+
+Layout:
+
+Delete All | Test | Close
+
+Three equal-width buttons.
+
+Subdued dark red Delete All background.
+White Delete All text.
+
+Mandatory confirmation.
+
+Delete every button on the CURRENT
+screen only.
+
+Preserve all screen settings.
+
+Create exactly ONE Undo entry.
+
+Close the Button Editor after deletion.
+
+Keep Edit Mode and Undo accessible.
+
+Preserve existing Test and Close actions.
+
+Build and report.
+
+DO NOT COMMIT OR PUSH.

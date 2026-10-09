@@ -1,3 +1,8 @@
+261009 Fri 1555
+V62.20
+Btn Editor: delete all added, text changed to icons
+
+
 261009 Fri 1512
 V62.19
 pop-up delete btn, tables even
