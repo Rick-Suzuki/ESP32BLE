@@ -1,467 +1,456 @@
-ESP32BLE — ESP-001
-IPAD MINI BUTTON EDITOR CRASH
-PHASE 2 STRUCTURAL COMPARISON REPORT
+A. Executive Summary
 
-A. EXECUTIVE SUMMARY
+Read-only investigation only. No files were modified. No build was run.
 
-The original iPad Button Editor crashes on the iPad Mini 5 when presented through smartView.
+The iPhone brightness slider is a native SwiftUI Slider shared by both the original and experimental iPhone editor structures. The strongest source-based diagnosis is that the iPhone-only vertical slider has an unreliable or too-small interactive region because it is rotated before its sizing frames and then constrained into a narrow dynamic slider column.
 
-The Mini-only diagnostic editor, with active configuration .allPanels, now presents all four original editor panels successfully on the physical iPad Mini. The user confirmed that all panels are visible, all buttons and controls tested successfully, and no crash occurred.
+The preview button being too close is possible, but the source does not show direct overlap or an obvious preview overlay covering the slider. Parent gesture interception also looks unlikely from source inspection.
 
-This is a strong signal that the crash is not caused by any single editor panel in isolation. It is also not caused simply by the presence of all four functional panels. The same four panel builders can coexist successfully when wrapped in the diagnostic editor structure.
+A separate finding: the current brightness implementation does not only adjust a temporary preview-only value. When it works, it writes an adjusted hex colour back through smartRightTextBinding, which updates editingSlotText. That may be intentional existing behaviour, but it differs from the stated requirement that brightness should adjust only the preview button and not the saved colour.
 
-The most important source-level difference is structural. The original smartView directly composes all editor panels inside one large SwiftUI ViewBuilder return type that also contains iPad/iPhone layout branching and dynamic frame calculations. The diagnostic editor constructs the same panel builders, erases each panel to AnyView, and passes those erased views into a small dedicated shell view.
+B. Exact Slider Implementation
 
-The successful diagnostic result makes it plausible that the original crash is related to SwiftUI generic view-type complexity, metadata instantiation, or the specific composition shape of smartView. This remains a hypothesis, not a proven root cause.
+File:
 
-The diagnostic structure could potentially become the basis for a shared iPad editor, but it should not be promoted to all iPads immediately. The iPad Air and iPad Pro currently work with the original editor, and the diagnostic editor has at least one observed layout difference on the Mini: the SF Symbols panel extends approximately 1-2 pixels beyond the right screen edge.
+ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
 
-The safest next controlled experiment is to keep the new structure iPad Mini-only and replace the selectable diagnostic framework with a fixed Mini-only all-panels editor shell. That would test whether the passing structure remains stable when treated less like a test harness, while still protecting iPad Air, iPad Pro, and iPhone.
+iPhone slider:
 
-B. ORIGINAL smartView STRUCTURE
+Lines 3695–3704:
 
-The original editor is implemented by smartView in Main_Screen.swift, approximately lines 2794-2864.
+smartIPhoneButtonBrightnessSlider(height:width:)
 
-smartView begins by calculating separate iPad and iPhone dimensions. For iPad it uses fixed editor dimensions. For iPhone it calculates dynamic panel widths from the available width.
+It uses:
 
-The relevant iPad constants are near lines 522-527:
+Native SwiftUI Slider.
 
-smartViewWidth is 1024.
-smartViewHeight is 338.
-smartEditControlsWidth is 205.
-smartCommandEditorWidth is 343.
-smartColorControlsWidth is 238.
-smartSFPanelWidth is 238.
+Binding:
 
-In smartView, the resolved iPad layout is calculated around lines 2795-2813.
+$smartButtonBrightness
 
-The root editor layout is an HStack with spacing 0, beginning around line 2815.
+Range:
 
-The first panel is smartCommandPanel, constructed around lines 2823-2826. It uses resolvedSmartEditControlsWidth. On iPad that resolves to 205.
+0...1
 
-The second panel is smartColorPanel, constructed around lines 2829-2832. It uses resolvedSmartCommandEditorWidth. On iPad that resolves to 343. Despite the function name, this panel displays the command text editor and command description, not the colour palette.
+Modifier order:
 
-The third panel is smartButtonPanel, constructed around lines 2834-2838. It uses resolvedSmartColorControlsWidth. On iPad that resolves to 238. This panel contains the button preview, brightness slider, button controls, and the colour palette.
+Slider
+rotationEffect(-90)
+frame(width: height, height: width * 0.55)
+tint yellow
+onChange of smartButtonBrightness -> applySmartButtonBrightness()
+frame(width: width, height: height)
 
-The fourth panel is IPadSmartSFPanel, constructed around lines 2840-2850. It uses resolvedSmartSFPanelWidth. On iPad that resolves to 238. This panel contains the SF Symbols grid and lower SF controls.
+There is no custom gesture, no contentShape, no allowsHitTesting override, no disabled modifier, no opacity modifier, no overlay, and no clipping directly on the slider.
 
-After constructing the HStack, smartView applies geometry probing and several frame modifiers around lines 2858-2862. It then ignores the keyboard safe area at line 2863.
+State:
 
-The original smartView is not iPad-only. It contains both iPad and iPhone layout branches. Even when used for iPad, the returned SwiftUI type includes conditional structure for iPhone paths. The iPhone full-screen editor also calls smartView from iPhoneSmartEditorPresentation around lines 2866-2886.
+smartButtonBrightness is declared at line 1077.
 
-C. DIAGNOSTIC EDITOR STRUCTURE
+smartButtonBrightnessBaseHex is declared at line 1078.
 
-The diagnostic configuration is defined near the beginning of Main_Screen.swift.
+Initial/reset behaviour:
 
-ESP001MiniEditorTest is declared around lines 8-17. Its cases include empty, commandOnly, buttonOnly, colorOnly, sfOnly, commandAndButton, commandAndColor, and allPanels.
+When editingSlotIndex changes, smartButtonBrightness resets to 0.5 and smartButtonBrightnessBaseHex is set from smartButtonColorHex at lines 1164–1170.
 
-The current active diagnostic configuration is allPanels, set around line 22.
+C. Slider Frame And Rotation Analysis
 
-ESP001DiagnosticDevice.isIPadMini5 is defined around lines 24-27. It identifies hardware models iPad11,1 and iPad11,2.
+The iPhone slider is built in smartIPhoneButtonPreviewRow(editorWidth:) at lines 3706–3757.
 
-The Mini-only presentation branch is in mainScreenContent around lines 1330-1338. If editingSlotIndex is non-nil, isPad is true, and ESP001DiagnosticDevice.isIPadMini5 is true, the code presents esp001MiniDiagnosticEditor instead of smartView.
+Relevant calculations:
 
-Non-Mini iPads still call smartView around lines 1339-1344.
+previewAreaHeight = smartIPhoneButtonPreviewEnclosureHeight, line 3707.
 
-The iPhone still calls iPhoneSmartEditorPresentation around lines 1346-1351.
+previewHeight = previewAreaHeight * 38 / 44, line 3710.
 
-The diagnostic editor itself is built by esp001MiniDiagnosticEditor around lines 2678-2693.
+sliderHeight = previewAreaHeight * 37 / 44, line 3720.
 
-That function obtains the selected diagnostic panels from esp001MiniDiagnosticPanels and passes them into ESP001MiniDiagnosticEditorShell.
+previewSliderSpacing = editorWidth * 0.0048, line 3721.
 
-The diagnostic editor passes these dimensions into the shell:
+sliderColumnWidth = editorWidth * 0.14, line 3722.
 
-width is min(smartViewWidth, availableWidth).
-height is smartViewHeight.
-commandWidth is smartEditControlsWidth.
-colorWidth is smartCommandEditorWidth.
-buttonWidth is smartColorControlsWidth.
-sfWidth is smartSFPanelWidth.
+The slider is placed at lines 3734–3737 inside an HStack. It gets a final row slot of:
 
-For .allPanels, esp001MiniDiagnosticPanels constructs all four original panel builders around lines 2747-2753.
+width = sliderColumnWidth
+height = previewAreaHeight
 
-The command slot receives smartCommandPanel.
+The slider function itself gives the rotated slider an inner frame of:
 
-The color slot receives smartColorPanel.
+width = sliderHeight
+height = sliderColumnWidth * 0.55
 
-The button slot receives smartButtonPanel.
+Then it receives a final outer frame of:
 
-The SF slot receives IPadSmartSFPanel via esp001MiniDiagnosticSFPanel.
+width = sliderColumnWidth
+height = sliderHeight
 
-ESP001MiniDiagnosticPanels is declared around lines 5337-5341. It stores four AnyView values.
+This is the most suspicious source pattern.
 
-ESP001MiniDiagnosticEditorShell is declared around lines 5344-5379. Its body is a simple HStack with spacing 0. It places the four AnyView panels in order, applies fixed width and height frames to each panel, applies geometry probes, then applies one outer frame, a black background, a smartView geometry probe, and ignores the keyboard safe area.
+The iPhone right panel width is dynamic. In smartView, the iPhone right panel width is based on:
 
-The diagnostic shell does not contain iPhone layout logic. It is a small iPad-shaped shell.
+availableWidth / 3
+smartIPhoneButtonEditorDynamicCellWidth(...)
+iPhoneRightPanelWidth = iPhoneLeftKeyCellWidth * 5
 
-D. DIRECT STRUCTURAL COMPARISON
+See lines 2824–2830.
 
-The original smartView and the diagnostic editor both present the same four functional panel implementations in the same visual order when the diagnostic configuration is .allPanels.
+The dynamic cell width is calculated at lines 3817–3823 by rounding the editorWidth / 46 column count and dividing the width by that count.
 
-The major difference is the wrapper structure.
+Because sliderColumnWidth is only 14% of the right panel width, the slider’s interactive thickness can become quite narrow. The inner slider height is then reduced further to width * 0.55. Source inspection cannot prove the final UIKit/SwiftUI hit region, but this is a credible cause of a drag target that visually appears present but is difficult or impossible to grab reliably.
 
-The original smartView directly constructs the editor panel tree inside one function returning some View. It includes conditional branches for iPad and iPhone, dynamic width calculations, direct panel construction, and a multi-stage frame chain.
+D. Preview Button Hit-Testing Analysis
 
-The diagnostic editor first constructs the chosen panel views, erases each panel to AnyView, and passes those four erased panels into a separate View struct named ESP001MiniDiagnosticEditorShell. The shell itself has a small and stable body: one HStack, four framed child views, a background, a geometry probe, and keyboard safe-area ignoring.
+The preview row places the slider first, then the preview button second, in an HStack with spacing previewSliderSpacing. See lines 3734–3748.
 
-The original smartView exposes the concrete generic types of smartCommandPanel, smartColorPanel, smartButtonPanel, IPadSmartSFPanel, and its own conditionals in one returned view type.
+The preview button is built by smartButtonPreview(...) at lines 3864–3971.
 
-The diagnostic editor hides each panel behind AnyView before the shell composes them. This likely reduces the generic type exposed to the shell.
+The preview uses:
 
-The original smartView contains both iPad and iPhone paths. The diagnostic editor is Mini-only and does not include iPhone branches inside the shell.
+SmartPreviewTextView for editable preview text, lines 3919–3927 and 3938–3949.
 
-The original smartView applies an HStack geometry probe around line 2858. The diagnostic shell does not apply the HStack probe, only the individual panel probes and the smartView probe.
+A background from smartButtonPreviewBackground, line 3955.
 
-The original smartView has no shell-level background directly on the HStack frame. The diagnostic shell applies Color.black as a background around line 5376.
+clipShape with corner radius 18, line 3956.
 
-The original smartView applies a two-stage frame chain: first frame to editorGroupWidth and outerHeight, then frame to outerWidth and outerHeight, then a max frame. The diagnostic shell applies one outer frame using width and height.
+A top-leading clear button overlay, lines 3957–3959.
 
-The original smartView uses editorGroupWidth and outerWidth. For iPad both are intended to be the same clipped available width, but the code path is still different.
+A border overlay, lines 3960–3968.
 
-The diagnostic shell uses width min(smartViewWidth, availableWidth), but its child panels still sum to the fixed full editor width of 1024. This is relevant to the observed SF panel clipping.
+Final preview footprint frame, line 3970.
 
-E. FUNCTIONAL DIFFERENCES
+The clear button overlay is defined at lines 3974–3989. It has a 46 x 46 frame and contentShape(Rectangle()), but it lives inside the preview button overlay, not in the slider column.
 
-Most core editor functionality is shared because the diagnostic .allPanels path calls the same panel builders.
+From source inspection, the preview is not intentionally overlaying the slider. The preview begins after the slider column plus spacing. I did not find a high-priority or simultaneous gesture attached to the preview row that would obviously steal slider drags.
 
-Command keypad and command tables come from smartCommandPanel around lines 2996-3122.
+However, because the preview contains a UIKit-backed SmartPreviewTextView, physical testing is still needed to confirm there is no platform-level hit-test expansion or accidental overlap at runtime.
 
-Command text editing and command description come from smartColorPanel around lines 3391-3441.
+E. Parent Container And Gesture Analysis
 
-Button preview, slider, controls, and colour palette come from smartButtonPanel around lines 3567-3606, with the iPad colour grid in smartButtonLowerEditingArea and smartButtonColorGrid around lines 3683-3735.
+The iPhone button panel is built in smartButtonPanel(editorWidth:) at lines 3643–3682.
 
-SF Symbols come from IPadSmartSFPanel around lines 5525-5541, using smartSFSymbolGrid around lines 4665-4680 and smartSFPanelControls around lines 4694-4733.
+The iPhone branch uses:
 
-The diagnostic editor uses the same bindings and closures because the panel builders are still methods/properties on MainScreen.
+VStack(spacing: 0)
+smartIPhoneButtonPreviewRow
+smartIPhoneButtonControlRow
+smartButtonLowerEditingArea
+frame maxWidth/maxHeight
+black background
+panel border overlay
+clipped
 
-Command editing still uses smartScriptEditorTextBinding, smartScriptSelectionRangeBinding, and smartActionTextBinding around lines 3124-3175.
+No parent drag gesture is attached there.
 
-Button text and colour state still use smartButtonTextBinding, smartButtonVisibilityBinding, smartButtonColorHex, setSmartButtonColor, and related helpers around lines 3210-3225 and 4209-4286.
+The panel border uses allowsHitTesting(false), lines 3002–3032.
 
-SF Symbol selection still uses setSmartButtonSFSymbol, smartSFSymbolCell, smartSFSymbolDeleteCell, and clearSmartButtonSFSymbol around lines 3972-3983 and 4755-4809.
+The iPhone editor presentation uses iPhoneSmartEditorPresentation at lines 2893–2920:
 
-Close and test actions still route through shared controls. The SF panel controls call testEditingSlotText, saveSlotEditing, and cancelSlotEditing around lines 4717-4727.
+GeometryReader
+ZStack
+Color.black
+original or experimental editor
+outer frame
+geometry probe
+debug overlay only if debugEditorGeometry
+ignoresSafeArea container and keyboard
 
-The Mini diagnostic editor does not add new close, save, test, or commit behavior. It relies on the original panel controls.
+No gesture in this presentation appears to intercept slider drags.
 
-Potential functional differences are indirect.
+Main screen presentation routes the iPhone editor at lines 1356–1378. The iPad dimming overlay at lines 1344–1354 is iPad-only and has allowsHitTesting(false), so it is not the iPhone issue.
 
-Because the diagnostic editor changes the view hierarchy, focus behavior, layout proposal behavior, and SwiftUI identity may differ. This could affect text editor focus, keyboard avoidance, GeometryReader preferences, or subtle update timing.
+A grep for gesture modifiers found main grid drag gesture setup and an ImagePreviewGestureSurface used elsewhere around lines 6758 and 6969–7010. That image preview gesture surface is not part of the iPhone button editor slider path.
 
-The diagnostic shell does not include the original smartView HStack probe. If debugEditorGeometry is enabled, the diagnostic geometry data will not be exactly the same as original smartView.
+F. Slider Binding And Value Flow
 
-The diagnostic editor has extra logging tasks from TEST3 and TEST4 when presented on the Mini. These are diagnostic side effects, not editor functionality.
+The slider updates:
 
-F. LAYOUT AND PRESENTATION DIFFERENCES
+smartButtonBrightness
 
-Both editors are presented from mainScreenContent after editingSlotIndex becomes non-nil.
+Declared line 1077.
 
-The broader presentation stack includes a GeometryReader, a ZStack aligned to top, the main toolbar/grid content, a black translucent iPad overlay, the editor, popup overlays, filename toast, and action menu overlay.
+On change:
 
-The iPad overlay appears when editingSlotIndex is non-nil and isPad is true, around lines 1318-1328. This overlay remains shared for both the original and diagnostic Mini editor.
+smartIPhoneButtonBrightnessSlider calls applySmartButtonBrightness(), lines 3700–3702.
 
-The diagnostic editor replaces only the editor view at the presentation branch. It does not change the state transition into editing mode.
+applySmartButtonBrightness is at lines 4352–4362.
 
-The original smartView is used for non-Mini iPads. The diagnostic editor is used only for iPad Mini 5.
+It reads:
 
-The iPhone editor remains separate. It is presented through iPhoneSmartEditorPresentation, which wraps smartView in a full-screen GeometryReader and ZStack with black background around lines 2866-2886.
+smartButtonBrightnessBaseHex ?? smartButtonColorHex
 
-The original iPad smartView and the diagnostic shell both intend to occupy a 1024 by 338 editor area.
+Then computes an adjusted hex value using adjustedSmartButtonColorHex(for:) at lines 4364–4366.
 
-However, the parent mainScreenContent applies horizontal padding for iPad around line 1386. This means the effective available content width may be slightly smaller than the physical screen width.
+The adjustment clamps brightness to 0...1 and moves each RGB component darker below 0.5 or lighter above 0.5. See lines 4368–4390.
 
-The diagnostic shell’s outer width is min(smartViewWidth, availableWidth), but its child panels retain fixed widths totaling 1024. If availableWidth is slightly less than 1024, the shell can be narrower than its children.
+Then it writes:
 
-This is likely important for the reported SF Symbols right-edge issue.
+smartRightTextBinding.wrappedValue = rightTextReplacingColorPrefix(with: adjustedHex)
 
-G. SF SYMBOLS RIGHT-EDGE CLIPPING INVESTIGATION
+smartRightTextBinding is at lines 3253–3267. Its setter writes through setEditingSlotTextFromUserEdit, lines 3277–3284, which marks the editor session modified and updates editingSlotText.
 
-The user observed that the SF Symbols panel extends approximately 1-2 pixels beyond the right screen edge on the Mini.
+Preview rendering reads the current colour through smartButtonColorHex, lines 4285–4295. The preview colour is smartButtonPreviewColor at lines 4297–4303 and is used by smartButtonPreviewBackground at lines 4305–4316.
 
-The source suggests a plausible explanation.
+Important source finding:
 
-The fixed iPad panel widths sum to 1024:
+If the selected button has no six-digit colour prefix and smartButtonBrightnessBaseHex is nil, applySmartButtonBrightness returns without changing anything. In that situation, dragging the slider should still move the thumb if the touch is recognized, but the preview colour may not visibly change.
 
-smartEditControlsWidth is 205.
-smartCommandEditorWidth is 343.
-smartColorControlsWidth is 238.
-smartSFPanelWidth is 238.
+Also important:
 
-Total is 1024.
+The source currently changes the edited right-side text colour prefix, not a preview-only colour value. That means a working brightness slider can affect the edited button text and potentially the saved colour when the edit is committed. That is separate from the touch responsiveness bug, but it conflicts with the stated desired behaviour.
 
-The diagnostic editor shell width is set to min(smartViewWidth, availableWidth), around line 2682.
+G. iPad Versus iPhone Comparison
 
-The four child panels are still framed to 205, 343, 238, and 238 around lines 5359-5373.
+iPad slider:
 
-The parent mainScreenContent applies horizontal padding on iPad around line 1386.
+smartButtonBrightnessSliderColumn, lines 3684–3693.
 
-If the iPad Mini contentWidth or effective visible width is 1020, 1022, or otherwise slightly below 1024 because of padding/safe-area behavior, the diagnostic shell may be constrained narrower than the sum of its fixed child panels. Since the HStack children still occupy 1024 total points, the rightmost SF panel can overflow by a tiny amount.
+Uses the same native Slider, same $smartButtonBrightness binding, same 0...1 range, same -90 degree rotation, same onChange -> applySmartButtonBrightness.
 
-This source-level explanation matches the 1-2 pixel observation. It is plausible but not proven without geometry logs or screenshots.
+But the iPad slider has fixed sizing:
 
-The report should not recommend arbitrary pixel offsets. The right correction, if one is later needed, should be based on measured available width, parent padding, and intended editor anchoring.
+inner frame 116 x 24
+outer frame smartColorSliderColumnWidth x 121
 
-H. SWIFTUI GENERIC COMPLEXITY ANALYSIS
+smartColorSliderColumnWidth is 48, line 568.
 
-The original crash stack points into Swift runtime generic metadata processing, with calls involving mangled type decoding and concrete type instantiation.
+iPhone slider:
 
-The original smartView is a likely contributor to generic complexity because it directly composes:
+smartIPhoneButtonBrightnessSlider, lines 3695–3704.
 
-The command panel.
-The command editor panel.
-The button panel.
-The SF panel.
-The iPad and iPhone layout branches.
-Conditional content based on isPad.
-Nested panel functions that themselves contain ScrollViews, LazyVStacks, LazyVGrids, ForEach, UIKit representables, and many modifier chains.
+Uses dynamic sizing:
 
-The diagnostic editor still uses the same panels, so the panel internals are not removed.
+inner frame width = sliderHeight
+inner frame height = sliderColumnWidth * 0.55
+outer frame width = sliderColumnWidth
+outer frame height = sliderHeight
 
-However, it introduces a type-erased boundary around each panel before composing the shell. ESP001MiniDiagnosticPanels stores each panel as AnyView. ESP001MiniDiagnosticEditorShell then sees four AnyView children instead of the full concrete generic type of each child panel.
+The major difference is not the binding. It is the iPhone slider’s much tighter dynamic frame and the frame/rotation order.
 
-The diagnostic shell is also a separate View struct with a simple body.
+The iPad implementation has a taller, more forgiving fixed outer column and a 24-point inner slider thickness. The iPhone implementation may reduce the effective thickness below that.
 
-This makes it reasonable to hypothesize that the diagnostic editor reduces the size or complexity of the generated concrete SwiftUI type that the Mini has to instantiate during editor presentation.
+H. Original Versus Experimental iPhone Comparison
 
-The success of Test 9 supports this hypothesis, but it does not prove it. Other structural differences may also matter, including the different frame chain, the absence of iPhone branches inside the shell, changed view identity, changed layout proposal behavior, or changed metadata instantiation order.
+Current source note:
 
-Any future fix should preserve the working evidence but avoid overclaiming that AnyView alone is the cause or solution.
+The current file has:
 
-I. RISKS FOR OTHER IPADS
+activeIPhoneEditorStructure = .experimental
 
-The iPad Air M2 and iPad Pro currently work with the original smartView editor.
+at lines 19–26.
 
-Changing them to use the diagnostic structure could introduce regressions even if the Mini benefits.
+So the current selected iPhone path is experimental unless that constant is changed.
 
-Risks include altered layout proposal behavior, slight width/position differences, different geometry probe output, different clipping behavior, and changed SwiftUI identity for panel views.
+Original path:
 
-Because the diagnostic editor currently has a known 1-2 pixel Mini clipping issue, using it on wider iPads without careful measurement could still be visually safe, but it would be an unproven layout path.
+iPhoneSmartEditorPresentation
+smartView
+smartButtonPanel(editorWidth:)
 
-The diagnostic structure is currently named and organized as temporary ESP-001 code. Promoting it directly would leave diagnostic concepts in the production path unless cleaned up in a controlled later phase.
+See lines 2899–2901 and 2878–2882.
 
-The safest path is not to switch all iPads immediately. First stabilize a Mini-only production-shaped shell, then test that shell on Mini. Only after that should a controlled all-iPad experiment be considered.
+Experimental path:
 
-J. RISKS FOR IPHONE
+iPhoneSmartEditorPresentation
+esp001ExperimentalIPhoneEditor
+ESP001ExperimentalIPhoneEditorShell
+AnyView(smartButtonPanel(editorWidth: resolvedSmartColorControlsWidth))
 
-The iPhone editor is separate in presentation. mainScreenContent routes iPhone to iPhoneSmartEditorPresentation around lines 1346-1351.
+See lines 2902–2906, 2923–2961, and 5460–5498.
 
-iPhoneSmartEditorPresentation then calls smartView with iPhone-specific available width and height around lines 2866-2886.
+Both paths use the same smartButtonPanel, smartIPhoneButtonPreviewRow, and smartIPhoneButtonBrightnessSlider. This matches the user report that the issue occurs in both original and experimental editors.
 
-The diagnostic editor is not currently used by iPhone.
+The experimental shell changes composition boundaries, but it preserves the same right panel builder and dynamic width math. Therefore the shared slider implementation remains the leading suspect.
 
-Future iPad refactors could still affect iPhone if they modify shared functions such as smartView, smartCommandPanel, smartColorPanel, smartButtonPanel, smartSFSymbolGrid, smartSFPanelControls, bindings, or shared state.
+I. Ranked Likely Causes
 
-The highest iPhone risk would come from changing smartView directly, because iPhone still depends on smartView internally.
+1. Most likely: rotated Slider layout/hit-test mismatch in the iPhone-only slider.
 
-A Mini-only or iPad-only shell that does not alter smartView would be safer for iPhone protection.
+Evidence for:
 
-K. ARCHITECTURE OPTIONS
+The slider is rotated before the explicit sizing frames.
+The visible vertical control is being produced by transform plus constrained frames.
+No contentShape or enlarged interactive target is present.
+The iPad version uses larger fixed sizing and reportedly works.
 
-OPTION A: Keep diagnostic structure exclusive to the iPad Mini.
+Evidence against:
 
-This is the lowest-risk option.
+Source inspection alone cannot prove the final SwiftUI/UIKit hit-test region.
 
-Expected changes would be small. A future implementation could replace the selectable diagnostic test framework with a fixed Mini-only all-panels shell.
+2. Very likely contributor: slider column is too narrow for reliable touch input.
 
-Maintenance cost would be moderate because the app would keep a Mini-specific editor wrapper. The upside is that iPad Air, iPad Pro, and iPhone remain untouched.
+Evidence for:
 
-Device compatibility risk is lowest because only the failing device gets the alternate structure.
+sliderColumnWidth is only editorWidth * 0.14.
+The inner slider thickness is sliderColumnWidth * 0.55.
+The iPhone layout is compact and dynamic.
 
-Functional regression risk appears low because Test 9 already verified all four panels and controls on the Mini, but it still requires repeated testing of open, edit, save, close, Delete All, test command, command insertion, colour selection, SF selection, keyboard behavior, and persistence.
+Evidence against:
 
-Implementation complexity is low to moderate.
+The exact iPhone 17 runtime width is not captured in this read-only pass, so the final point sizes must be verified on device.
 
-OPTION B: Use the successful diagnostic structure for all iPads.
+3. Possible but less likely: preview button or SmartPreviewTextView intercepts nearby touches.
 
-This could reduce branching and potentially move all iPads to the safer structure.
+Evidence for:
 
-Expected changes would route all isPad devices to the shell-style editor rather than the original smartView iPad path.
+The preview contains UIKit-backed editable text and a clear-button overlay.
 
-Maintenance could improve if the shell becomes the only iPad editor structure, but only after diagnostic naming and configuration are removed.
+Evidence against:
 
-Device compatibility risk is higher than Option A because it changes devices that are currently working.
+The source places slider and preview in separate HStack slots.
+The preview overlay belongs to the preview view.
+No direct overlay spans the slider column in the inspected code.
 
-Functional regression risk is moderate. The same panel builders are used, but layout proposal behavior and view identity change.
+4. Unlikely: parent gesture interception.
 
-Testing requirements are broad. It would need visual and functional testing on iPad Mini, iPad Air, and iPad Pro, including geometry, SF panel edge alignment, keyboard behavior, panel controls, close/save behavior, and existing diagnostic probes.
+Evidence for:
 
-Implementation complexity is moderate.
+There are gestures elsewhere in the file.
 
-OPTION C: Refactor original smartView to use smaller independently defined SwiftUI View components.
+Evidence against:
 
-This is architecturally cleaner in the long term.
+The relevant editor containers do not show gesture, highPriorityGesture, or simultaneousGesture modifiers.
+The image preview gesture surface is unrelated to this slider path.
+The panel border disables hit testing.
 
-Expected changes would extract the original smartView iPad structure into smaller dedicated View structs, ideally with narrow inputs and actions. This could reduce generic complexity while avoiding broad AnyView use.
+5. Unlikely as the primary “cannot drag” cause: binding failure.
 
-Maintenance could improve because smartView would be smaller and easier to reason about.
+Evidence for:
 
-Device compatibility risk depends on scope. If smartView is modified directly, iPhone risk increases because iPhone still uses smartView. If only the iPad branch is extracted carefully, risk is lower.
+Some selected buttons with no colour prefix may produce no visible brightness change.
 
-Functional regression risk is moderate to high because this is a broader refactor.
+Evidence against:
 
-Testing requirements are broad across all devices.
+The Slider has a direct @State binding. If touches reach it, the thumb should still move.
 
-Implementation complexity is highest of the three options.
+6. Possible secondary behaviour issue: value updates but preview does not visibly change.
 
-L. RECOMMENDED NEXT CONTROLLED EXPERIMENT
+Evidence for:
 
-The recommended next experiment is Option A, narrowed further:
+If no base colour exists, applySmartButtonBrightness returns.
+If the preview is image-only or has clear colour, visible change could be subtle or absent.
 
-Keep the new structure exclusive to the iPad Mini 5.
+Evidence against:
 
-Replace the selectable diagnostic configuration with a fixed Mini-only all-panels editor shell, still using the same four original panel builders and the same dimensions.
+The user reports the slider itself does not respond to dragging, which points earlier than value propagation.
 
-Do not change geometry yet.
+7. No source evidence found: transparent overlay intercepting the slider.
 
-Do not route iPad Air or iPad Pro to the new shell yet.
+The inspected overlay candidates either do not cover the iPhone editor or have allowsHitTesting(false).
 
-Do not modify the iPhone path.
+J. Smallest Safe Correction Proposal
 
-Purpose:
+Recommended first future experiment:
 
-Confirm that the passing Test 9 structure remains stable as a single fixed Mini editor structure rather than a selectable diagnostic test harness.
+Modify only smartIPhoneButtonBrightnessSlider(height:width:).
 
-This is the smallest sensible step toward a possible Mini-specific fix while preserving all working devices.
+Do not move the slider.
+Do not change the preview button.
+Do not change panel widths.
+Do not change visible layout intentionally.
+Do not touch iPad slider code.
 
-After that passes on the physical Mini, a later experiment could either measure/fix the 1-2 pixel SF panel clipping or trial the shell on one non-Mini iPad under controlled conditions.
+The smallest likely correction is to change the iPhone slider’s internal layout so the native Slider is given a reliable horizontal layout size before rotation, then placed back into the same final outer frame.
 
-M. EXACT SOURCE REFERENCES
+In practical terms, the future experiment should keep the same outer width and height supplied by smartIPhoneButtonPreviewRow, but adjust the modifier order and/or hit-test shape inside smartIPhoneButtonBrightnessSlider so the rotated control has a stable interactive region.
 
-Main_Screen.swift:
+A second safe experiment, if the first does not work, would be to preserve the visible slider geometry but expand the touch target inside the existing slider column. That should be done without moving the preview or changing the row geometry.
 
-ESP001MiniEditorTest:
-Lines 8-17.
+I would not start by moving the slider away from the preview. The source does not yet prove visual closeness is the cause.
 
-activeMiniEditorTest:
-Line 22.
+K. Uncertainty Requiring Physical-Device Testing
 
-iPad Mini 5 hardware detection:
-Lines 24-27.
+Source inspection cannot determine the exact runtime hit-test rectangle after SwiftUI applies rotationEffect and frames.
 
-iPad editor dimensions:
-Lines 522-527.
+Source inspection cannot determine whether the iPhone 17’s actual right-panel width makes the slider’s effective target too small in practice.
 
-Editor-related state:
-Lines 998-1060.
+Source inspection cannot confirm whether SmartPreviewTextView or UIKit internals overlap the slider’s hit area at runtime.
 
-mainScreenContent:
-Starts around line 1216.
+A future fix should be tested on the physical iPhone 17 in both .original and .experimental iPhone structures, because both share the same slider implementation.
 
-iPad overlay while editor is open:
-Lines 1318-1328.
+L. Exact Source References
 
-Editor presentation branch:
-Lines 1330-1351.
+ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
 
-Parent horizontal padding:
-Line 1386.
+iPhone editor structure config:
+lines 19–26
 
-Main grid passes long-press editing callback:
-Line 1418.
+iPhone selected presentation:
+lines 2893–2920
 
-Action popup Edit path:
-Lines 1479-1484 and 1580-1582.
+Original iPhone route to smartView:
+lines 2899–2901
 
-Diagnostic logging:
-Lines 2661-2675.
+Experimental iPhone route:
+lines 2902–2906
 
-esp001MiniDiagnosticEditor:
-Lines 2678-2693.
+Experimental iPhone editor panel construction:
+lines 2923–2961
 
-esp001MiniDiagnosticPanels:
-Lines 2696-2755.
+Experimental iPhone shell:
+lines 5460–5498
 
-Diagnostic .allPanels case:
-Lines 2747-2753.
+smartView iPhone width calculations:
+lines 2821–2839
 
-Diagnostic SF panel helper:
-Lines 2761-2769.
+iPhone right panel construction in smartView:
+lines 2878–2882
 
-Original smartView:
-Lines 2794-2864.
+iPhone button panel:
+lines 3643–3682
 
-iPhoneSmartEditorPresentation:
-Lines 2866-2886.
+iPad brightness slider:
+lines 3684–3693
 
-smartCommandPanel:
-Lines 2996-3122.
+iPhone brightness slider:
+lines 3695–3704
 
-Smart script bindings:
-Lines 3124-3175.
+iPhone preview row:
+lines 3706–3757
 
-Commit/canonical helpers:
-Lines 3288-3336.
+iPhone dynamic cell width:
+lines 3817–3823
 
-smartColorPanel:
-Lines 3391-3441.
+Preview button:
+lines 3864–3971
 
-iPhone command action controls:
-Lines 3443-3485.
+Preview clear button:
+lines 3974–3989
 
-smartButtonPanel:
-Lines 3567-3606.
+Editable preview binding:
+lines 4016–4033
 
-smartButtonLowerEditingArea:
-Lines 3683-3699.
+Colour prefix replacement:
+lines 4281–4282
 
-smartButtonColorGrid:
-Lines 3710-3735.
+Button colour extraction:
+lines 4285–4295
 
-Button preview:
-Lines 3788-3896.
+Preview colour/background:
+lines 4297–4316
 
-Colour button actions:
-Lines 3989-4129.
+Set button colour:
+lines 4343–4350
 
-Colour parsing and brightness:
-Lines 4209-4286.
+Apply brightness:
+lines 4352–4362
 
-Command keypad button actions:
-Lines 4376-4542.
+Brightness colour adjustment:
+lines 4364–4390
 
-smartSFSymbolGrid:
-Lines 4665-4680.
+Panel border hit testing disabled:
+lines 3002–3032
 
-smartSFPanelControls:
-Lines 4694-4733.
+Main iPhone editor presentation boundary:
+lines 1356–1378
 
-SF Symbol cell and delete cell:
-Lines 4755-4809.
-
-ESP001MiniDiagnosticPanels struct:
-Lines 5337-5341.
-
-ESP001MiniDiagnosticEditorShell:
-Lines 5344-5379.
-
-IPadSmartCommandKeypad:
-Lines 5399-5459.
-
-IPadSmartButtonPanel:
-Lines 5461-5523.
-
-IPadSmartSFPanel:
-Lines 5525-5541.
-
-Geometry probe modifier:
-Lines 5620-5643.
-
-N. CONFIRMATION
+M. Confirmation
 
 No files were modified.
 
-No build was run.
-
-No app was run.
+No .txt files were touched.
 
 No project settings were changed.
 
-No .txt files were created, modified, appended to, replaced, or deleted.
+No build was run.
 
-No commits, resets, checkouts, rebases, pulls, or pushes were performed.
-
-The iPhone editor was not modified.
-
-The iPad editor geometry was not modified.
-
-Existing diagnostics were preserved.
+No fix was implemented.

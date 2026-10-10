@@ -16,6 +16,15 @@ private enum ESP001MiniEditorTest: String {
     case allPanels
 }
 
+private enum ESP001IPhoneEditorStructure {
+    case original
+    case experimental
+}
+
+private enum ESP001IPhoneEditorDiagnostic {
+    static let activeIPhoneEditorStructure: ESP001IPhoneEditorStructure = .experimental
+}
+
 private enum ESP001DiagnosticDevice {
     // MARK: - BM:🅱️ ADD COMMENTS HERE
     // Change this one value to select the active iPad Mini editor diagnostic configuration.
@@ -34,8 +43,13 @@ private enum ESP001DiagnosticDevice {
             identifier == "iPad14,11"
     }
 
+    static var isIPadProTest11: Bool {
+        let identifier = UIDevice.current.hardwareModelIdentifier
+        return identifier == "iPad7,1"
+    }
+
     static var usesESP001DiagnosticEditor: Bool {
-        isIPadMini5 || isIPadAirM2
+        isIPadMini5 || isIPadAirM2 || isIPadProTest11
     }
 }
 
@@ -2882,7 +2896,15 @@ Tapping a row inserts the key code at the cursor.
                 Color.black
                     .ignoresSafeArea(.container)
 
-                smartView(availableWidth: geometry.size.width, availableHeight: geometry.size.height)
+                switch ESP001IPhoneEditorDiagnostic.activeIPhoneEditorStructure {
+                case .original:
+                    smartView(availableWidth: geometry.size.width, availableHeight: geometry.size.height)
+                case .experimental:
+                    esp001ExperimentalIPhoneEditor(
+                        availableWidth: geometry.size.width,
+                        availableHeight: geometry.size.height
+                    )
+                }
             }
             .frame(width: geometry.size.width, height: geometry.size.height, alignment: .topLeading)
         }
@@ -2896,6 +2918,47 @@ Tapping a row inserts the key code at the cursor.
         }
         .ignoresSafeArea(.container)
         .ignoresSafeArea(.keyboard)
+    }
+
+    private func esp001ExperimentalIPhoneEditor(
+        availableWidth: CGFloat,
+        availableHeight: CGFloat? = nil
+    ) -> some View {
+        let iPhoneReferencePanelWidth = availableWidth / 3
+        let iPhoneLeftKeyCellWidth = smartIPhoneButtonEditorDynamicCellWidth(editorWidth: iPhoneReferencePanelWidth)
+        let iPhoneLeftPanelWidth = iPhoneLeftKeyCellWidth * 4
+        let iPhoneRightPanelWidth = iPhoneLeftKeyCellWidth * 5
+        let resolvedSmartEditControlsWidth = iPhoneLeftPanelWidth
+        let resolvedSmartCommandEditorWidth = iPhoneReferencePanelWidth
+        let resolvedSmartColorControlsWidth = iPhoneRightPanelWidth
+        let resolvedSmartSFPanelWidth = smartSFPanelWidthPhone
+        let outerWidth = availableWidth
+        let outerHeight = availableHeight
+        let outerMaxWidth: CGFloat? = nil
+        let outerMaxHeight: CGFloat? = availableHeight != nil ? nil : CGFloat.infinity
+        let panelHeight = availableHeight
+        let panelMaxHeight: CGFloat? = availableHeight != nil ? nil : CGFloat.infinity
+        let editorGroupWidth = resolvedSmartEditControlsWidth + resolvedSmartCommandEditorWidth + resolvedSmartColorControlsWidth
+        let editorGroupAlignment: Alignment = .top
+        _ = resolvedSmartSFPanelWidth
+
+        return ESP001ExperimentalIPhoneEditorShell(
+            editorGroupWidth: editorGroupWidth,
+            outerWidth: outerWidth,
+            outerHeight: outerHeight,
+            outerMaxWidth: outerMaxWidth,
+            outerMaxHeight: outerMaxHeight,
+            panelHeight: panelHeight,
+            panelMaxHeight: panelMaxHeight,
+            editorGroupAlignment: editorGroupAlignment,
+            commandWidth: resolvedSmartEditControlsWidth,
+            commandEditorWidth: resolvedSmartCommandEditorWidth,
+            buttonWidth: resolvedSmartColorControlsWidth,
+            debugEditorGeometry: debugEditorGeometry,
+            commandPanel: AnyView(smartCommandPanel(columnWidth: resolvedSmartEditControlsWidth)),
+            commandEditorPanel: AnyView(smartColorPanel),
+            buttonPanel: AnyView(smartButtonPanel(editorWidth: resolvedSmartColorControlsWidth))
+        )
     }
 
     private var dismissKeyboardButton: some View {
@@ -5387,6 +5450,49 @@ private struct ESP001MiniDiagnosticEditorShell: View {
         }
         .frame(width: width, height: height, alignment: .topLeading)
         .background(Color.black)
+        .editorGeometryProbe(.smartView, isEnabled: debugEditorGeometry)
+        .ignoresSafeArea(.keyboard)
+    }
+}
+
+private struct ESP001ExperimentalIPhoneEditorShell: View {
+    let editorGroupWidth: CGFloat
+    let outerWidth: CGFloat
+    let outerHeight: CGFloat?
+    let outerMaxWidth: CGFloat?
+    let outerMaxHeight: CGFloat?
+    let panelHeight: CGFloat?
+    let panelMaxHeight: CGFloat?
+    let editorGroupAlignment: Alignment
+    let commandWidth: CGFloat
+    let commandEditorWidth: CGFloat
+    let buttonWidth: CGFloat
+    let debugEditorGeometry: Bool
+    let commandPanel: AnyView
+    let commandEditorPanel: AnyView
+    let buttonPanel: AnyView
+
+    var body: some View {
+        HStack(spacing: 0) {
+            commandPanel
+                .frame(width: commandWidth, height: panelHeight)
+                .frame(maxHeight: panelMaxHeight)
+                .editorGeometryProbe(.leftPanel, isEnabled: debugEditorGeometry)
+
+            commandEditorPanel
+                .frame(width: commandEditorWidth, height: panelHeight)
+                .frame(maxHeight: panelMaxHeight)
+                .editorGeometryProbe(.commandPanel, isEnabled: debugEditorGeometry)
+
+            buttonPanel
+                .frame(width: buttonWidth, height: panelHeight)
+                .frame(maxHeight: panelMaxHeight)
+                .editorGeometryProbe(.buttonPanel, isEnabled: debugEditorGeometry)
+        }
+        .editorGeometryProbe(.hStack, isEnabled: debugEditorGeometry)
+        .frame(width: editorGroupWidth, height: outerHeight, alignment: .topLeading)
+        .frame(width: outerWidth, height: outerHeight, alignment: editorGroupAlignment)
+        .frame(maxWidth: outerMaxWidth, maxHeight: outerMaxHeight, alignment: .topLeading)
         .editorGeometryProbe(.smartView, isEnabled: debugEditorGeometry)
         .ignoresSafeArea(.keyboard)
     }

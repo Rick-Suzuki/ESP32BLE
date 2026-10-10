@@ -1,8 +1,12 @@
+261010 Sat 1034
+V62.33
+experimental versions added: 17 slider not working
+
+
 
 261009 Fri 2058
 V62.32
 iPad Air added - new solution
-
 
 261009 Fri 1953
 V62.31

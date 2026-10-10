@@ -107,6 +107,7 @@
 		1D9E1D1B2FC92DD900DB3621 /* BLE_KB_Manager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BLE_KB_Manager.swift; sourceTree = "<group>"; };
 		1DA256FD3065FD1A008C934A /* console pro.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "console pro.txt"; sourceTree = "<group>"; };
 		1DDA41A63078D0CA00D03761 /* console mini.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "console mini.txt"; sourceTree = "<group>"; };
+		1DDA41A73079CC7F00D03761 /* console 17.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "console 17.txt"; sourceTree = "<group>"; };
 		1DDFB8102F87C64000776ED6 /* debug.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = debug.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -175,6 +176,7 @@
 				1D23A17A3075B984003B646C /* VERSIONS.txt */,
 				1D9A8748302D3885005B5E36 /* codex.txt */,
 				1D590E532F61206100E430E0 /* console m2.txt */,
+				1DDA41A73079CC7F00D03761 /* console 17.txt */,
 				1D23A17C3075C212003B646C /* console_iPhone.txt */,
 				1DA256FD3065FD1A008C934A /* console pro.txt */,
 				1DDA41A63078D0CA00D03761 /* console mini.txt */,
