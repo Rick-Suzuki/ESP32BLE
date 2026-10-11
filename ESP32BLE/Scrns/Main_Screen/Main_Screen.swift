@@ -1868,7 +1868,6 @@ Tapping a row inserts the key code at the cursor.
             buttonFrame: renderedTarget.buttonFrame,
             gridDimensions: renderedTarget.gridDimensions
         )
-        mainGridActionMenuMode = .actions
         cancelPendingMovePopupRefresh()
         return true
     }
@@ -2201,6 +2200,7 @@ Tapping a row inserts the key code at the cursor.
             from: target,
             result: resizeResult
         )
+        beginPendingMovePopupRefresh(to: resizeResult.targetIndex)
         showMainGridActionMenuMessage("Button resized")
     }
 
@@ -2566,7 +2566,7 @@ Tapping a row inserts the key code at the cursor.
         )
 
         return MainGridActionMenuTarget(
-            index: result.sourceIndex,
+            index: result.targetIndex,
             buttonFrame: resizedFrame,
             gridDimensions: sourceTarget.gridDimensions
         )
@@ -5763,7 +5763,7 @@ Tapping a row inserts the key code at the cursor.
             return
         }
 
-        let preservedActionMenuTarget = mainGridActionMenuTarget?.index == sourceIndex ? mainGridActionMenuTarget : nil
+        let preservedActionMenuTarget = mainGridActionMenuTarget
         let sourceSpan = slotSpan(startingAt: sourceIndex, gridDimensions: gridDimensions)
         guard let finalAnchorIndex = moveFunctionKeySlot(sourceIndex, targetIndex, sourceSpan, gridDimensions) else {
             showMainGridActionMenuMessage("can't move btn")

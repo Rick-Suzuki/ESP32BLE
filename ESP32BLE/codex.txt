@@ -1,200 +1,63 @@
-POP-001 TEST 6E-A READ-ONLY PROBE
+A. FILES CHANGED
 
-No files were modified.
-No build was performed.
-No diagnostics were added.
+For Test 6F-B:
+• ESP32BLE/Scrns/Main_Screen/Main_DocumentActions.swift
+   • MainGridPopupResizeResult
+   • updatedSlotLinesForPopupResize(...)
+• ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
+   • resizeMainGridActionMenuSelection(to:)
+   • mainGridActionMenuTargetForResize(...)
 
-A. AVAILABILITY CALL SITE
+B. EXECUTION CONNECTION
 
-isMainGridResizeShapeAvailable(_:for:)
-Main_Screen.swift lines 2207-2224.
+Actual resize execution now calls resolvedPopupResizePlacement(...) inside updatedSlotLinesForPopupResize(...). Availability and execution now use the same intelligent finger-stretch placement resolver.
 
-It passes to resolvedPopupResizePlacement(...):
+C. GRID MUTATION
 
-• entry: functionKeys[target.index]
-• index: target.index
-• gridDimensions: target.gridDimensions
-• targetShape: shape
+The resize mutation now:
+• Preserves the original source entry/rawLine.
+• Clears every cell in placement.sourceFootprint.
+• Writes the original rawLine at placement.targetIndex.
+• Writes continuation tokens from placement.targetIndex using existing continuationAssignments(...).
 
-The function first checks:
+D. COLLISION SAFETY
 
-• Grid Edit Mode enabled
-• target index >= 0
-• target index < functionKeys.count
-• target index < visibleBoxCount
+Existing resolver collision rules are unchanged. The 6E-C continuation protection remains intact; unrelated @@wide / @@block cells are not treated as empty.
 
-The resolver then resolves the editable anchor internally.
+E. FINGER-STRETCH RULES
 
-B. RESOLVER
+No changes to finger-stretch rules or candidate ranking. Execution consumes the resolver’s selected placement rather than choosing its own.
 
-resolvedPopupResizePlacement(...)
-Main_DocumentActions.swift lines 718-821.
+F. POPUP TARGET
 
-For 3x3:
+MainGridPopupResizeResult now carries targetIndex. After successful resize, the popup target is updated to the new anchor and beginPendingMovePopupRefresh(to:) requests the actual rendered frame.
 
-• Confirms shape is supported.
-• Resolves source anchor using editableAnchorIndex(containing:).
-• Gets sourceShape using buttonShape(startingAt:).
-• Gets sourceFootprint using indexes(...).
-• Checks same-size early return only if source is already 3x3.
-• Checks existing anchor first.
-• Then enumerates overlapping candidate anchors.
+G. POPUP MODE
 
-Candidate bounds:
+Resize remains open. The resize path uses the mode-preserving move refresh rather than the action refresh that resets to Main.
 
-• minimumColumn = sourceMinColumn - targetWidth + 1
-• maximumColumn = sourceMaxColumn
-• minimumRow = sourceMinRow - targetHeight + 1
-• maximumRow = sourceMaxRow
+H. UNDO / REDO
 
-Then clamps to grid bounds.
+History behavior is preserved:
+• Successful resize records exactly one Undo snapshot from beforeSnapshot.
+• Failed resize records none.
+• Same-size selection remains a no-op.
+• Existing full-slot-line snapshots should preserve relocated anchors and continuation cells for Undo/Redo.
 
-For 3x3, this means the resolver can test anchors above and/or left of the original button, not only the original top-left anchor.
+I. DOCUMENT PERSISTENCE
 
-C. CANDIDATE VALIDATION
+The existing restoreFunctionKeySlotLines(...) path is still used. No separate document writes or format changes were introduced.
 
-popupResizePlacementCandidate(...)
-Main_DocumentActions.swift lines 823-861.
+J. REGRESSION SAFETY
 
-For a 3x3 candidate:
+Test 6E-G drag behavior was not changed in this task. Popup geometry, gestures, popup layout, other popup actions, BLE, Mac Helper, and editors were not modified.
 
-• shapeFits(...) verifies the 3x3 rectangle fits inside grid rows/columns.
-• indexes(...) generates all nine target cells.
-• maximumIndex < visibleBoxCount prevents accepting cells beyond the visible prefix.
-• targetFootprint.contains(where: sourceFootprintSet.contains) requires overlap with the original button.
-• Every target cell not in the original source footprint is checked.
-• Each checked cell must be either blank placeholder or empty.
+K. BUILD RESULT
 
-So yes: for a 3x3 candidate, the implementation examines all nine target cells, except source-footprint cells are intentionally skipped because the selected button may reuse them.
+Xcode BuildProject succeeded with no errors.
 
-I found no code path that accepts a 3x3 candidate without creating and validating the full 3x3 target footprint.
+L. FILE SAFETY
 
-D. MULTI-CELL BUTTONS
+No .txt files modified by me. No project files modified. No unrelated files modified. No commits performed.
 
-Neighbouring button ownership is protected by raw grid entries, not visible text.
-
-Continuation tokens are:
-
-• @@wide
-• @@block
-
-ContentView.swift lines 16-17.
-
-buttonShape(startingAt:) only treats cells as part of the selected source footprint when continuation tokens match:
-Main_DocumentActions.swift lines 1296-1312 and 1325-1331.
-
-A separate button labelled “close app” is not part of the selected source footprint unless its cell contains the selected button’s continuation token. A normal button anchor is not blank/empty, so it blocks candidates.
-
-E. VISIBLE GRID
-
-shapeFits(...)
-Main_DocumentActions.swift lines 1315-1323 checks grid row/column bounds.
-
-Candidate validation also checks:
-maximumIndex < visibleBoxCount
-Main_DocumentActions.swift lines 836-840.
-
-Because candidate bounds clamp row/column to non-negative values and shapeFits prevents row wrapping, a valid candidate should not extend beyond the displayed grid rectangle.
-
-I did not find evidence that hidden rows or underlying storage beyond the visible grid are accepted.
-
-F. EMPTY CELLS
-
-isEmptyButtonEntry(...)
-Main_ButtonBehavior.swift lines 1596-1600.
-
-A cell is empty only if:
-
-• trimmed rawLine is empty
-• sendTexts is empty
-• alternate display text is empty
-
-This means these remain occupied:
-
-• button with command text
-• SF Symbol-only button encoded in rawLine / alternate text
-• image or hidden metadata encoded in rawLine
-• invisible but occupied button
-• continuation token
-
-Blank placeholders are separately allowed.
-
-I did not find a source path where a visually occupied normal button would be considered empty unless its parsed entry truly has no rawLine, no sendTexts, and no alternate text.
-
-G. SOURCE FOOTPRINT
-
-Source anchor:
-editableAnchorIndex(containing:)
-Main_DocumentActions.swift lines 361-388.
-
-Source shape:
-buttonShape(startingAt:)
-Main_DocumentActions.swift lines 1296-1312.
-
-Source footprint:
-indexes(startingAt:shape:gridDimensions:)
-Main_DocumentActions.swift lines 1336-1347.
-
-The source footprint could be too large only if neighbouring cells contain the exact expected continuation tokens for the selected anchor. A separate “close app” button with a normal anchor entry would not be absorbed into the selected source footprint.
-
-No confirmed source defect found here.
-
-H. 3x3 ANALYSIS
-
-For 3x3 to be enabled, at least one candidate anchor must satisfy all of this:
-
-1. 3x3 is supported.
-2. The selected index resolves to a valid button anchor.
-3. The 3x3 rectangle fits inside grid dimensions.
-4. All nine cell indexes are within visible bounds.
-5. At least one of the nine cells overlaps the original selected button footprint.
-6. Every non-source cell in the nine-cell footprint is blank placeholder or empty.
-7. No other button anchor or continuation token appears in any non-source target cell.
-
-Important:
-The valid 3x3 candidate does not have to start at the selected button’s current top-left anchor. It may be above, left, or diagonally above-left as long as it overlaps the original button.
-
-I. ROOT CAUSE CLASSIFICATION
-
-I did not find a confirmed source-code defect in the 3x3 resolver or validator.
-
-Most likely classifications:
-
-• Runtime-state uncertainty.
-• Potentially valid placement not obvious visually.
-
-The source can explain why 3x3 might be enabled: the resolver may find a 3x3 placement above/left/diagonal around the selected button that the user is not visually considering.
-
-However, without the actual runtime grid data, I cannot prove whether the enabled 3x3 is correct or false-positive.
-
-J. RECOMMENDATION
-
-Smallest safe next step:
-
-Run a narrowly scoped temporary diagnostic probe before Test 6F.
-
-For requested 3x3 only, log:
-
-• selected popup index
-• resolved source anchor
-• source shape
-• source footprint
-• candidate anchor
-• candidate target footprint
-• each of the nine target cell classifications:
-source cell, empty, blank placeholder, button anchor, continuation, hidden occupied, out of visible range
-• pass/fail reason for each candidate
-• final chosen candidate, if any
-
-Use one clear prefix and db() if implemented later.
-
-Do not proceed to Test 6F until this confirms whether 3x3 is truly valid or which cell is being misclassified.
-
-K. FILE SAFETY
-
-Confirmed:
-No files were modified.
-No project file was modified.
-No .txt files were modified.
-No diagnostics were added.
-No build was performed.
+Note: git status still shows prior working-tree changes, including Main_ButtonBehavior.swift􀰓 from Test 6E-G and ESP32BLE/codex.txt; I did not modify those in this task.

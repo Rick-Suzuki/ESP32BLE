@@ -1,3 +1,7 @@
+261011 Sun 1653
+V62.36
+resizer complete - needs more testing
+
 261011 Sun 1550
 V62.35
 resizer in progress
