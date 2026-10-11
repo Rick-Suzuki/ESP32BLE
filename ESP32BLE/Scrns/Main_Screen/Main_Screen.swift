@@ -77,19 +77,12 @@ private struct MainGridActionMenuTarget {
     let index: Int
     let buttonFrame: CGRect
     let gridDimensions: GridDimensions
-    let probeID: UUID
 }
 
 private struct PopupUndoEntry {
     let documentName: String
     let slotLines: [String]
     let duplicateSourceTarget: MainGridActionMenuTarget?
-}
-
-private struct MainGridActionMenuPositionResult {
-    let center: CGPoint
-    let iPhoneProbeID: String?
-    let iPhoneProbeMessage: String?
 }
 
 private enum MainGridActionMenuMode {
@@ -638,9 +631,14 @@ struct MainScreen: View {
     // Smaller value moves the button grid upward toward the toolbar.
     private let topToolbarToGridSpacing: CGFloat = 2
     private let mainTopToolbarHeight: CGFloat = 44
+    private let iPadGridToBottomToolbarSpacing: CGFloat = 20
+    // MARK: - BM:🅱️ ADD COMMENTS HERE
+    // iPad popup vertical adjustment: 0 = no adjustment, +5 = move down 5 points, -5 = move up 5 points.
+    private let iPadPopupVerticalOffset: CGFloat = 0
     private let iPhoneBottomToolbarRegionHeight: CGFloat = 36
     private let iPhoneGridToBottomToolbarClearance: CGFloat = 4
     private let iPhoneGridReservedBottomInset: CGFloat = 30
+    private let mainScreenPopupCoordinateSpaceName = "MainScreenPopupCoordinateSpace"
 		
 		// MARK: - BM:🟥 smart SF symbols
     
@@ -1010,7 +1008,20 @@ sends F1, waits one send then sends sp(space)
     @State var didModifyCurrentSlotEditorSession = false
     @State private var mainGridActionMenuTarget: MainGridActionMenuTarget?
     @State private var mainGridActionMenuMode: MainGridActionMenuMode = .actions
+    @State private var pendingPopupRestoreIndex: Int?
+    @State private var pendingPopupRestoreDocumentName: String?
+    @State private var pendingMovePopupRefreshIndex: Int?
+    @State private var pendingMovePopupRefreshDocumentName: String?
+    @State private var pendingActionMenuFrameRefreshIndex: Int?
+    @State private var pendingActionMenuFrameRefreshDocumentName: String?
+    @State private var pendingActionMenuFrameRefreshRequiresButton = false
+    @State private var mainGridRenderedActionMenuTargets: [Int: MainGridActionMenuTarget] = [:]
+    @State private var mainGridRenderedButtonFrameRefreshToken = 0
+    @State private var mainGridRenderedFrame: CGRect?
+    @State private var iPadBottomToolbarTopY: CGFloat?
+    @State private var iPadBottomToolbarVisibleContentTopY: CGFloat?
     @State private var popupUndoHistory: [PopupUndoEntry] = []
+    @State private var popupRedoHistory: [PopupUndoEntry] = []
     @State private var directionalDeleteLastFootprint: MainGridDeleteFootprint?
     @State private var directionalDeleteDirection: MainGridDirectionalDeleteDirection?
     @State private var directionalDeleteExpectedAnchor: Int?
@@ -1081,8 +1092,11 @@ Tapping a row inserts the key code at the cursor.
     @State private var isSmartPhoneSFSymbolMode = false
     @State private var keyboardMinY: CGFloat = .greatestFiniteMagnitude
     @State private var editorGeometryFrames: [EditorGeometryProbeTarget: CGRect] = [:]
+    @State private var iPhoneButtonBrightnessSliderGlobalFrame: CGRect?
     @State private var smartIPhoneRightTableVisibleCellHeight: CGFloat?
     @State private var popupDismissTask: Task<Void, Never>?
+    @State private var mainGridOperationMessageText: String?
+    @State private var mainGridOperationMessageDismissTask: Task<Void, Never>?
     @State private var isDeleteAllButtonsConfirmationPresented = false
     private let iPhoneOrdinaryPreviewFontMultiplier: CGFloat = 1.5
     private let iPadSFSymbolPreviewGroupYOffset: CGFloat = 5
@@ -1125,7 +1139,7 @@ Tapping a row inserts the key code at the cursor.
     let adjacentNextDocumentDisplayName: String?
     let selectDocumentNamedFromGrid: (String) -> Bool
     let resizeVisibleBoxCount: (GridDimensions, GridDimensions) -> Bool
-    let moveFunctionKeySlot: (Int, Int, Int, GridDimensions) -> Bool
+    let moveFunctionKeySlot: (Int, Int, Int, GridDimensions) -> Int?
     let duplicateFunctionKeySlot: (Int, Int) -> Bool
     let updateFunctionKeySlot: (Int, String) -> Bool
     let currentFunctionKeySlotLines: () -> [String]
@@ -1157,6 +1171,10 @@ Tapping a row inserts the key code at the cursor.
                 handleSelectedDocumentDisplayNameChange()
             }
             .onChange(of: selectedDocumentName) {
+                cancelPendingPopupRestore()
+                cancelPendingMovePopupRefresh()
+                cancelPendingActionMenuFrameRefresh()
+                mainGridRenderedActionMenuTargets.removeAll()
                 clearPopupUndoHistory()
                 resetDirectionalDeleteState()
                 showFilenameToastIfNeeded()
@@ -1165,12 +1183,15 @@ Tapping a row inserts the key code at the cursor.
                 if editingSlotIndex != nil {
                     resetDirectionalDeleteState()
                     dismissMainGridActionMenu()
+                } else {
+                    restorePendingMainGridActionMenuIfPossible()
                 }
                 smartButtonBrightness = 0.5
                 smartButtonBrightnessBaseHex = smartButtonColorHex
             }
             .onChange(of: isGridEditModeEnabled) {
                 if !isGridEditModeEnabled {
+                    cancelPendingPopupRestore()
                     resetDirectionalDeleteState()
                     dismissMainGridActionMenu()
                 }
@@ -1202,6 +1223,7 @@ Tapping a row inserts the key code at the cursor.
                 mainGridAmbientSoundState.stopPlayback()
                 popupDismissTask?.cancel()
                 filenameToastDismissTask?.cancel()
+                mainGridOperationMessageDismissTask?.cancel()
                 presentedPreviewFile = nil
             }
             .task(id: definedFunctionKeyCount) {
@@ -1312,9 +1334,17 @@ Tapping a row inserts the key code at the cursor.
                         mainGridSection(availableWidth: contentWidth)
 
                         Color.clear
-                            .frame(height: 20)
+                            .frame(height: iPadGridToBottomToolbarSpacing)
 
                         displayModeButtonSection(availableWidth: contentWidth)
+                            .background {
+                                GeometryReader { toolbarGeometry in
+                                    Color.clear.preference(
+                                        key: IPadBottomToolbarFramePreferenceKey.self,
+                                        value: toolbarGeometry.frame(in: .named(mainScreenPopupCoordinateSpaceName))
+                                    )
+                                }
+                            }
                     } else {
                         mainGridSection(
                             availableWidth: contentWidth,
@@ -1358,23 +1388,13 @@ Tapping a row inserts the key code at the cursor.
                         if ESP001DiagnosticDevice.usesESP001DiagnosticEditor {
                             esp001MiniDiagnosticEditor(availableWidth: contentWidth)
                                 .editorGeometryProbe(.editorContainer, isEnabled: debugEditorGeometry)
-                                .task(id: editingSlotIndex) {
-                                    logESP001Test3EditorPresentation(presentation: "diagnostic")
-                                    logESP001Test4MiniEditorPresentation()
-                                }
                         } else {
                             smartView(availableWidth: contentWidth)
                                 .editorGeometryProbe(.editorContainer, isEnabled: debugEditorGeometry)
-                                .task(id: editingSlotIndex) {
-                                    logESP001Test3EditorPresentation(presentation: "smartView")
-                                }
                         }
                     } else {
                         iPhoneSmartEditorPresentation(availableWidth: contentWidth)
                             .editorGeometryProbe(.editorContainer, isEnabled: debugEditorGeometry)
-                            .task(id: editingSlotIndex) {
-                                logESP001Test3EditorPresentation(presentation: "iPhoneSmartEditorPresentation")
-                            }
                     }
                 }
 
@@ -1385,6 +1405,8 @@ Tapping a row inserts the key code at the cursor.
 
                 filenameToastOverlay(availableWidth: contentWidth)
 
+                mainGridOperationMessageOverlay(availableWidth: contentWidth)
+
                 mainGridActionMenuOverlay(
                     availableWidth: contentWidth,
                     availableHeight: geometry.size.height,
@@ -1393,8 +1415,25 @@ Tapping a row inserts the key code at the cursor.
                     gridHeight: iPhoneGridHeight
                 )
 
+                iPhoneButtonBrightnessTouchOverlay(containerFrame: containerFrame)
+
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .coordinateSpace(name: mainScreenPopupCoordinateSpaceName)
+            .onPreferenceChange(IPadBottomToolbarFramePreferenceKey.self) { frame in
+                let toolbarTopY = frame?.minY
+                if iPadBottomToolbarTopY != toolbarTopY {
+                    iPadBottomToolbarTopY = toolbarTopY
+                }
+            }
+            .onPreferenceChange(MainScreenBottomBarVisibleContentFramePreferenceKey.self) { frame in
+                let toolbarVisibleContentTopY = frame.flatMap { frame in
+                    frame.minY.isFinite && frame.height > 0 ? frame.minY : nil
+                }
+                if iPadBottomToolbarVisibleContentTopY != toolbarVisibleContentTopY {
+                    iPadBottomToolbarVisibleContentTopY = toolbarVisibleContentTopY
+                }
+            }
             .editorGeometryProbe(.screen, isEnabled: debugEditorGeometry)
             .ignoresSafeArea(.keyboard)
         }
@@ -1409,7 +1448,12 @@ Tapping a row inserts the key code at the cursor.
                 smartIPhoneRightTableVisibleCellHeight = height
             }
         }
-        .padding(.horizontal, isPad || editingSlotIndex == nil ? 2 : 0)
+        .onPreferenceChange(IPhoneButtonBrightnessSliderFramePreferenceKey.self) { frame in
+            if iPhoneButtonBrightnessSliderGlobalFrame != frame {
+                iPhoneButtonBrightnessSliderGlobalFrame = frame
+            }
+        }
+        .padding(.horizontal, ESP001DiagnosticDevice.isIPadMini5 && editingSlotIndex != nil ? 0 : (isPad || editingSlotIndex == nil ? 2 : 0))
         .ignoresSafeArea(.keyboard)
         .overlay(alignment: .topLeading) {
             if debugEditorGeometry, isPad, editingSlotIndex != nil {
@@ -1419,6 +1463,45 @@ Tapping a row inserts the key code at the cursor.
         }
         .overlay(alignment: .topLeading) {
             externalKeyboardShortcutLayer
+        }
+    }
+
+    @ViewBuilder
+    private func iPhoneButtonBrightnessTouchOverlay(containerFrame: CGRect) -> some View {
+        if !isPad,
+           editingSlotIndex != nil,
+           let sourceFrame = iPhoneButtonBrightnessSliderGlobalFrame {
+            let destinationFrame = CGRect(
+                x: sourceFrame.minX - containerFrame.minX,
+                y: sourceFrame.minY - containerFrame.minY,
+                width: sourceFrame.width,
+                height: sourceFrame.height
+            )
+
+            IPhoneButtonBrightnessTouchOverlay(
+                destinationFrame: destinationFrame,
+                onBrightnessGesture: { location, height in
+                    updateIPhoneButtonBrightnessFromOverlay(
+                        location: location,
+                        height: height
+                    )
+                }
+            )
+            .position(x: destinationFrame.midX, y: destinationFrame.midY)
+        }
+    }
+
+    private func updateIPhoneButtonBrightnessFromOverlay(
+        location: CGPoint,
+        height: CGFloat
+    ) {
+        guard height.isFinite, height > 0 else { return }
+
+        let rawBrightness = 1.0 - (location.y / height)
+        let brightness = min(1.0, max(0.0, Double(rawBrightness)))
+
+        if smartButtonBrightness != brightness {
+            smartButtonBrightness = brightness
         }
     }
 
@@ -1435,6 +1518,7 @@ Tapping a row inserts the key code at the cursor.
             boxFontSize: boxFontSize,
             isGridEditModeEnabled: isGridEditModeEnabled,
             selectedActionMenuIndex: mainGridActionMenuTarget?.index,
+            renderedButtonFrameRefreshToken: mainGridRenderedButtonFrameRefreshToken,
             bleSendEnabled: mainGridButtonMode != .disabled,
             onButtonClick: { ButtonClickFeedback.playIfEnabled() },
             isHiddenEntry: isMainGridEntryHidden,
@@ -1453,6 +1537,16 @@ Tapping a row inserts the key code at the cursor.
             dragGesture: { entry, index, gridDimensions in
                 AnyGesture(mainGridButtonDragGesture(entry: entry, index: index, gridDimensions: gridDimensions))
             },
+            onRenderedButtonFrame: { index, buttonFrame, gridDimensions in
+                rememberRenderedMainGridButtonFrame(
+                    index: index,
+                    buttonFrame: buttonFrame,
+                    gridDimensions: gridDimensions
+                )
+            },
+            onRenderedGridFrame: { frame in
+                rememberRenderedMainGridFrame(frame)
+            },
             onSingleEditTap: { entry, index, buttonFrame, gridDimensions in
                 presentMainGridActionMenu(
                     entry: entry,
@@ -1460,9 +1554,6 @@ Tapping a row inserts the key code at the cursor.
                     buttonFrame: buttonFrame,
                     gridDimensions: gridDimensions
                 )
-            },
-            onDuplicateSlot: { entry, index, gridDimensions in
-                duplicateMainGridSlotFromTap(entry: entry, index: index, gridDimensions: gridDimensions)
             },
             onResizeSlot: { entry, index, gridDimensions in
                 resizeSlotIfPossible(entry: entry, index: index, gridDimensions: gridDimensions)
@@ -1487,69 +1578,76 @@ Tapping a row inserts the key code at the cursor.
         if let mainGridActionMenuTarget {
             let menuSize = MainGridEditActionMenu.Metrics.menuSize
             let menuCornerRadius = isPad ? MainGridEditActionMenu.Metrics.cornerRadius : mainGridButtonCornerRadius
-            let menuPosition = mainGridActionMenuPosition(
-                selectedIndex: mainGridActionMenuTarget.index,
-                probeID: mainGridActionMenuTarget.probeID,
-                for: mainGridActionMenuTarget.buttonFrame,
-                menuSize: menuSize,
-                availableWidth: availableWidth,
-                availableHeight: availableHeight,
-                safeAreaInsets: safeAreaInsets,
+            let isButtonOperationAvailable = mainGridActionMenuSelectionContainsButton(mainGridActionMenuTarget)
+            let isPasteAvailable = canPasteMainGridActionMenuSelection(to: mainGridActionMenuTarget)
+            let resolvedGridHeight = resolvedMainGridActionMenuBoundaryHeight(
                 gridTopY: gridTopY,
-                gridHeight: gridHeight
+                fallbackGridHeight: gridHeight
             )
+            if let resolvedGridHeight {
+                let menuPosition = mainGridActionMenuPosition(
+                    for: mainGridActionMenuTarget.buttonFrame,
+                    menuSize: menuSize,
+                    availableWidth: availableWidth,
+                    availableHeight: availableHeight,
+                    safeAreaInsets: safeAreaInsets,
+                    gridTopY: gridTopY,
+                    gridHeight: resolvedGridHeight
+                )
 
-            Group {
-                switch mainGridActionMenuMode {
-                case .actions:
-                    MainGridEditActionMenu(cornerRadius: menuCornerRadius, isUndoAvailable: !popupUndoHistory.isEmpty) {
-                        ButtonClickFeedback.playIfEnabled()
-                        dismissMainGridActionMenu()
-                    } onEdit: {
-                        ButtonClickFeedback.playIfEnabled()
-                        openMainGridActionMenuEditor()
-                    } onUndo: {
-                        ButtonClickFeedback.playIfEnabled()
-                        undoMainGridActionMenuOperation()
-                    } onCopy: {
-                        ButtonClickFeedback.playIfEnabled()
-                        copyMainGridActionMenuSelection()
-                    } onCut: {
-                        ButtonClickFeedback.playIfEnabled()
-                        cutMainGridActionMenuSelection()
-                    } onPaste: {
-                        ButtonClickFeedback.playIfEnabled()
-                        pasteMainGridActionMenuSelection()
-                    } onDuplicate: {
-                        ButtonClickFeedback.playIfEnabled()
-                        duplicateMainGridActionMenuSelection()
-                    } onResize: {
-                        ButtonClickFeedback.playIfEnabled()
-                        openMainGridResizeActionMenu()
-                    } onDelete: {
-                        ButtonClickFeedback.playIfEnabled()
-                        deleteMainGridActionMenuSelection()
-                    }
-                case .resize:
-                    MainGridResizeActionMenu(
-                        cornerRadius: menuCornerRadius,
-                        selectedShape: currentMainGridActionMenuShape()
-                    ) {
-                        ButtonClickFeedback.playIfEnabled()
-                        mainGridActionMenuMode = .actions
-                    } onSelectShape: { shape in
-                        ButtonClickFeedback.playIfEnabled()
-                        resizeMainGridActionMenuSelection(to: shape)
+                Group {
+                    switch mainGridActionMenuMode {
+                    case .actions:
+                        MainGridEditActionMenu(
+                            cornerRadius: menuCornerRadius,
+                            isUndoAvailable: !popupUndoHistory.isEmpty,
+                            isRedoAvailable: !popupRedoHistory.isEmpty,
+                            isButtonOperationAvailable: isButtonOperationAvailable,
+                            isPasteAvailable: isPasteAvailable
+                        ) {
+                            ButtonClickFeedback.playIfEnabled()
+                            openMainGridActionMenuEditor()
+                        } onUndo: {
+                            ButtonClickFeedback.playIfEnabled()
+                            undoMainGridActionMenuOperation()
+                        } onRedo: {
+                            ButtonClickFeedback.playIfEnabled()
+                            redoMainGridActionMenuOperation()
+                        } onCopy: {
+                            ButtonClickFeedback.playIfEnabled()
+                            copyMainGridActionMenuSelection()
+                        } onCut: {
+                            ButtonClickFeedback.playIfEnabled()
+                            cutMainGridActionMenuSelection()
+                        } onPaste: {
+                            ButtonClickFeedback.playIfEnabled()
+                            pasteMainGridActionMenuSelection()
+                        } onDuplicate: {
+                            ButtonClickFeedback.playIfEnabled()
+                            duplicateMainGridActionMenuSelection()
+                        } onResize: {
+                            ButtonClickFeedback.playIfEnabled()
+                            openMainGridResizeActionMenu()
+                        } onDelete: {
+                            ButtonClickFeedback.playIfEnabled()
+                            deleteMainGridActionMenuSelection()
+                        }
+                    case .resize:
+                        MainGridResizeActionMenu(
+                            cornerRadius: menuCornerRadius,
+                            selectedShape: currentMainGridActionMenuShape()
+                        ) {
+                            ButtonClickFeedback.playIfEnabled()
+                            mainGridActionMenuMode = .actions
+                        } onSelectShape: { shape in
+                            ButtonClickFeedback.playIfEnabled()
+                            resizeMainGridActionMenuSelection(to: shape)
+                        }
                     }
                 }
-            }
-            .frame(width: menuSize.width, height: menuSize.height)
-            .position(menuPosition.center)
-            .zIndex(50)
-            .task(id: menuPosition.iPhoneProbeID) {
-                if let message = menuPosition.iPhoneProbeMessage {
-                    db("%@", message)
-                }
+                .frame(width: menuSize.width, height: menuSize.height)
+                .position(menuPosition)
+                .zIndex(50)
             }
         }
     }
@@ -1565,7 +1663,14 @@ Tapping a row inserts the key code at the cursor.
             return
         }
 
+        if mainGridActionMenuTarget?.index == index {
+            dismissMainGridActionMenu()
+            return
+        }
+
         let hadActionMenuTarget = mainGridActionMenuTarget != nil
+        cancelPendingMovePopupRefresh()
+        cancelPendingActionMenuFrameRefresh()
         if directionalDeleteDirection != nil,
            directionalDeleteExpectedAnchor != index {
             resetDirectionalDeleteState()
@@ -1574,8 +1679,7 @@ Tapping a row inserts the key code at the cursor.
         mainGridActionMenuTarget = MainGridActionMenuTarget(
             index: index,
             buttonFrame: buttonFrame,
-            gridDimensions: gridDimensions,
-            probeID: UUID()
+            gridDimensions: gridDimensions
         )
         if !hadActionMenuTarget {
             mainGridActionMenuMode = .actions
@@ -1583,6 +1687,8 @@ Tapping a row inserts the key code at the cursor.
     }
 
     func dismissMainGridActionMenu() {
+        cancelPendingMovePopupRefresh()
+        cancelPendingActionMenuFrameRefresh()
         mainGridActionMenuTarget = nil
         mainGridActionMenuMode = .actions
     }
@@ -1604,6 +1710,8 @@ Tapping a row inserts the key code at the cursor.
         }
 
         let selectedIndex = target.index
+        pendingPopupRestoreIndex = selectedIndex
+        pendingPopupRestoreDocumentName = selectedDocumentName
         dismissMainGridActionMenu()
         beginSlotEditing(at: selectedIndex)
     }
@@ -1616,6 +1724,226 @@ Tapping a row inserts the key code at the cursor.
         }
 
         mainGridActionMenuMode = .resize
+    }
+
+    private func mainGridActionMenuSelectionContainsButton(_ target: MainGridActionMenuTarget) -> Bool {
+        mainGridIndexContainsButton(target.index)
+    }
+
+    private func mainGridIndexContainsButton(_ index: Int) -> Bool {
+        guard isGridEditModeEnabled,
+              index >= 0,
+              index < functionKeys.count,
+              index < visibleBoxCount,
+              !isMainGridContinuationEntry(at: index),
+              !functionKeys[index].isBlankPlaceholder,
+              !isEmptyButtonEntry(functionKeys[index]) else {
+            return false
+        }
+
+        return true
+    }
+
+    private func rememberRenderedMainGridButtonFrame(
+        index: Int,
+        buttonFrame: CGRect,
+        gridDimensions: GridDimensions
+    ) {
+        guard index >= 0,
+              index < visibleBoxCount else {
+            return
+        }
+
+        let renderedTarget = MainGridActionMenuTarget(
+            index: index,
+            buttonFrame: buttonFrame,
+            gridDimensions: gridDimensions
+        )
+        let existingTarget = mainGridRenderedActionMenuTargets[index]
+        if existingTarget?.buttonFrame == buttonFrame,
+           existingTarget?.gridDimensions.columns == gridDimensions.columns,
+           existingTarget?.gridDimensions.rows == gridDimensions.rows {
+            if refreshPendingMovedMainGridActionMenuIfPossible(with: renderedTarget) {
+                return
+            }
+            _ = refreshPendingActionMenuFrameIfPossible(with: renderedTarget)
+            return
+        }
+
+        mainGridRenderedActionMenuTargets[index] = renderedTarget
+        if refreshPendingMovedMainGridActionMenuIfPossible(with: renderedTarget) {
+            return
+        }
+        if refreshPendingActionMenuFrameIfPossible(with: renderedTarget) {
+            return
+        }
+        restorePendingMainGridActionMenuIfPossible()
+    }
+
+    private func rememberRenderedMainGridFrame(_ frame: CGRect) {
+        guard frame.width.isFinite,
+              frame.height.isFinite,
+              frame.width > 0,
+              frame.height > 0 else {
+            return
+        }
+
+        if mainGridRenderedFrame != frame {
+            mainGridRenderedFrame = frame
+        }
+    }
+
+    private func resolvedMainGridActionMenuBoundaryHeight(
+        gridTopY: CGFloat,
+        fallbackGridHeight: CGFloat
+    ) -> CGFloat? {
+        guard isPad else {
+            return fallbackGridHeight
+        }
+
+        guard let visualGridHeight = mainGridRenderedFrame?.height,
+              let toolbarTopY = resolvedIPadBottomToolbarBoundaryTopY() else {
+            return nil
+        }
+
+        return min(visualGridHeight, max(0, toolbarTopY - gridTopY))
+    }
+
+    private func resolvedIPadBottomToolbarBoundaryTopY() -> CGFloat? {
+        iPadBottomToolbarVisibleContentTopY ?? iPadBottomToolbarTopY
+    }
+
+    private func cancelPendingPopupRestore() {
+        pendingPopupRestoreIndex = nil
+        pendingPopupRestoreDocumentName = nil
+    }
+
+    private func beginPendingMovePopupRefresh(to index: Int) {
+        cancelPendingActionMenuFrameRefresh()
+        pendingMovePopupRefreshIndex = index
+        pendingMovePopupRefreshDocumentName = selectedDocumentName
+        mainGridRenderedButtonFrameRefreshToken += 1
+    }
+
+    private func cancelPendingMovePopupRefresh() {
+        pendingMovePopupRefreshIndex = nil
+        pendingMovePopupRefreshDocumentName = nil
+    }
+
+    private func beginPendingActionMenuFrameRefresh(to index: Int, requiresButton: Bool) {
+        cancelPendingMovePopupRefresh()
+        pendingActionMenuFrameRefreshIndex = index
+        pendingActionMenuFrameRefreshDocumentName = selectedDocumentName
+        pendingActionMenuFrameRefreshRequiresButton = requiresButton
+        mainGridRenderedButtonFrameRefreshToken += 1
+    }
+
+    private func cancelPendingActionMenuFrameRefresh() {
+        pendingActionMenuFrameRefreshIndex = nil
+        pendingActionMenuFrameRefreshDocumentName = nil
+        pendingActionMenuFrameRefreshRequiresButton = false
+    }
+
+    @discardableResult
+    private func refreshPendingMovedMainGridActionMenuIfPossible(with renderedTarget: MainGridActionMenuTarget) -> Bool {
+        guard let refreshIndex = pendingMovePopupRefreshIndex,
+              refreshIndex == renderedTarget.index else {
+            return false
+        }
+
+        guard isGridEditModeEnabled,
+              editingSlotIndex == nil,
+              pendingMovePopupRefreshDocumentName == selectedDocumentName,
+              mainGridActionMenuTarget?.index == refreshIndex,
+              mainGridIndexContainsButton(refreshIndex) else {
+            cancelPendingMovePopupRefresh()
+            return false
+        }
+
+        mainGridActionMenuTarget = MainGridActionMenuTarget(
+            index: renderedTarget.index,
+            buttonFrame: renderedTarget.buttonFrame,
+            gridDimensions: renderedTarget.gridDimensions
+        )
+        mainGridActionMenuMode = .actions
+        cancelPendingMovePopupRefresh()
+        return true
+    }
+
+    @discardableResult
+    private func refreshPendingActionMenuFrameIfPossible(with renderedTarget: MainGridActionMenuTarget) -> Bool {
+        guard let refreshIndex = pendingActionMenuFrameRefreshIndex,
+              refreshIndex == renderedTarget.index else {
+            return false
+        }
+
+        guard isGridEditModeEnabled,
+              editingSlotIndex == nil,
+              pendingActionMenuFrameRefreshDocumentName == selectedDocumentName,
+              mainGridActionMenuTarget?.index == refreshIndex,
+              refreshIndex >= 0,
+              refreshIndex < visibleBoxCount,
+              functionKeys.indices.contains(refreshIndex),
+              !isMainGridContinuationEntry(at: refreshIndex) else {
+            cancelPendingActionMenuFrameRefresh()
+            return false
+        }
+
+        if pendingActionMenuFrameRefreshRequiresButton,
+           !mainGridIndexContainsButton(refreshIndex) {
+            cancelPendingActionMenuFrameRefresh()
+            return false
+        }
+
+        mainGridActionMenuTarget = MainGridActionMenuTarget(
+            index: renderedTarget.index,
+            buttonFrame: renderedTarget.buttonFrame,
+            gridDimensions: renderedTarget.gridDimensions
+        )
+        mainGridActionMenuMode = .actions
+        cancelPendingActionMenuFrameRefresh()
+        return true
+    }
+
+    private func restorePendingMainGridActionMenuIfPossible() {
+        guard let restoreIndex = pendingPopupRestoreIndex else {
+            return
+        }
+
+        guard isGridEditModeEnabled,
+              editingSlotIndex == nil,
+              pendingPopupRestoreDocumentName == selectedDocumentName else {
+            cancelPendingPopupRestore()
+            return
+        }
+
+        let targetIndex = editableMainGridAnchorIndex(containing: restoreIndex) ?? restoreIndex
+        guard mainGridIndexContainsButton(targetIndex) else {
+            cancelPendingPopupRestore()
+            return
+        }
+
+        guard let renderedTarget = mainGridRenderedActionMenuTargets[targetIndex] else {
+            return
+        }
+
+        mainGridActionMenuTarget = MainGridActionMenuTarget(
+            index: targetIndex,
+            buttonFrame: renderedTarget.buttonFrame,
+            gridDimensions: renderedTarget.gridDimensions
+        )
+        mainGridActionMenuMode = .actions
+        cancelPendingPopupRestore()
+    }
+
+    private func canPasteMainGridActionMenuSelection(to target: MainGridActionMenuTarget) -> Bool {
+        guard isGridEditModeEnabled,
+              target.index >= 0,
+              target.index < visibleBoxCount else {
+            return false
+        }
+
+        return hasValidMainGridActionMenuPastePayload()
     }
 
     private func deleteMainGridActionMenuSelection() {
@@ -1713,6 +2041,7 @@ Tapping a row inserts the key code at the cursor.
         resetDirectionalDeleteState()
         mainGridEditClipboardText = cutResult.clipboardText
         recordPopupUndoSnapshot(beforeSnapshot)
+        beginPendingActionMenuFrameRefresh(to: target.index, requiresButton: false)
         showMainGridActionMenuMessage("Button cut")
     }
 
@@ -1730,21 +2059,23 @@ Tapping a row inserts the key code at the cursor.
             gridDimensions: target.gridDimensions,
             slotLines: beforeSnapshot
         ) {
-        case let .success(updatedSlotLines):
-            guard updatedSlotLines != beforeSnapshot,
-                  restoreFunctionKeySlotLines(updatedSlotLines) else {
+        case let .success(pasteResult):
+            guard pasteResult.slotLines != beforeSnapshot,
+                  restoreFunctionKeySlotLines(pasteResult.slotLines) else {
                 return
             }
 
             resetDirectionalDeleteState()
+            mainGridActionMenuTarget = mainGridActionMenuTargetForPaste(from: target, result: pasteResult)
+            beginPendingActionMenuFrameRefresh(to: pasteResult.targetIndex, requiresButton: true)
             recordPopupUndoSnapshot(beforeSnapshot)
             showMainGridActionMenuMessage("Button pasted")
         case .nothingToPaste:
             showMainGridActionMenuMessage("Nothing to paste")
         case .notEnoughSpace:
-            showMainGridActionMenuMessage("Not enough space")
+            showMainGridActionMenuMessage("not enough space")
         case .spaceOccupied:
-            showMainGridActionMenuMessage("Space occupied")
+            showMainGridActionMenuMessage("not enough space")
         }
     }
 
@@ -1788,8 +2119,7 @@ Tapping a row inserts the key code at the cursor.
         let sourceTarget = MainGridActionMenuTarget(
             index: duplicateResult.sourceIndex,
             buttonFrame: target.buttonFrame,
-            gridDimensions: target.gridDimensions,
-            probeID: UUID()
+            gridDimensions: target.gridDimensions
         )
 
         resetDirectionalDeleteState()
@@ -1882,21 +2212,49 @@ Tapping a row inserts the key code at the cursor.
             return
         }
 
+        let redoSnapshot = currentFunctionKeySlotLines()
         guard restoreFunctionKeySlotLines(undoEntry.slotLines) else {
             return
         }
 
         popupUndoHistory.removeLast()
+        recordPopupRedoSnapshot(redoSnapshot, duplicateSourceTarget: undoEntry.duplicateSourceTarget)
         resetDirectionalDeleteState()
 
         if let duplicateSourceTarget = undoEntry.duplicateSourceTarget {
             mainGridActionMenuTarget = MainGridActionMenuTarget(
                 index: duplicateSourceTarget.index,
                 buttonFrame: duplicateSourceTarget.buttonFrame,
-                gridDimensions: duplicateSourceTarget.gridDimensions,
-                probeID: UUID()
+                gridDimensions: duplicateSourceTarget.gridDimensions
             )
         }
+        refreshMainGridActionMenuTargetAfterSnapshotRestore()
+    }
+
+    private func redoMainGridActionMenuOperation() {
+        guard isGridEditModeEnabled,
+              let redoEntry = popupRedoHistory.last else {
+            return
+        }
+
+        guard redoEntry.documentName == selectedDocumentName else {
+            clearPopupUndoHistory()
+            return
+        }
+
+        let undoSnapshot = currentFunctionKeySlotLines()
+        guard restoreFunctionKeySlotLines(redoEntry.slotLines) else {
+            return
+        }
+
+        popupRedoHistory.removeLast()
+        recordPopupUndoSnapshot(
+            undoSnapshot,
+            duplicateSourceTarget: redoEntry.duplicateSourceTarget,
+            clearsRedoHistory: false
+        )
+        resetDirectionalDeleteState()
+        refreshMainGridActionMenuTargetAfterSnapshotRestore()
     }
 
     private func deleteAllButtonsOnCurrentScreen() {
@@ -1930,7 +2288,8 @@ Tapping a row inserts the key code at the cursor.
 
     private func recordPopupUndoSnapshot(
         _ slotLines: [String],
-        duplicateSourceTarget: MainGridActionMenuTarget? = nil
+        duplicateSourceTarget: MainGridActionMenuTarget? = nil,
+        clearsRedoHistory: Bool = true
     ) {
         popupUndoHistory.append(PopupUndoEntry(
             documentName: selectedDocumentName,
@@ -1941,15 +2300,75 @@ Tapping a row inserts the key code at the cursor.
         if popupUndoHistory.count > popupUndoHistoryLimit {
             popupUndoHistory.removeFirst(popupUndoHistory.count - popupUndoHistoryLimit)
         }
+
+        if clearsRedoHistory {
+            clearPopupRedoHistory()
+        }
+    }
+
+    private func recordPopupRedoSnapshot(
+        _ slotLines: [String],
+        duplicateSourceTarget: MainGridActionMenuTarget? = nil
+    ) {
+        popupRedoHistory.append(PopupUndoEntry(
+            documentName: selectedDocumentName,
+            slotLines: slotLines,
+            duplicateSourceTarget: duplicateSourceTarget
+        ))
+
+        if popupRedoHistory.count > popupUndoHistoryLimit {
+            popupRedoHistory.removeFirst(popupRedoHistory.count - popupUndoHistoryLimit)
+        }
     }
 
     private func clearPopupUndoHistory() {
         popupUndoHistory.removeAll()
+        clearPopupRedoHistory()
+    }
+
+    private func clearPopupRedoHistory() {
+        popupRedoHistory.removeAll()
+    }
+
+    private func refreshMainGridActionMenuTargetAfterSnapshotRestore() {
+        guard let target = mainGridActionMenuTarget else {
+            return
+        }
+
+        let targetIndex = editableMainGridAnchorIndex(containing: target.index) ?? target.index
+        guard targetIndex >= 0,
+              targetIndex < visibleBoxCount,
+              functionKeys.indices.contains(targetIndex),
+              !isMainGridContinuationEntry(at: targetIndex) else {
+            dismissMainGridActionMenu()
+            return
+        }
+
+        if targetIndex != target.index {
+            mainGridActionMenuTarget = MainGridActionMenuTarget(
+                index: targetIndex,
+                buttonFrame: target.buttonFrame,
+                gridDimensions: target.gridDimensions
+            )
+        }
+
+        beginPendingActionMenuFrameRefresh(to: targetIndex, requiresButton: false)
     }
 
     private func showMainGridActionMenuMessage(_ message: String) {
-        alertTitle = ""
-        renameAlertMessage = message
+        mainGridOperationMessageDismissTask?.cancel()
+        mainGridOperationMessageText = message
+        mainGridOperationMessageDismissTask = Task {
+            try? await Task.sleep(for: .seconds(2))
+            guard !Task.isCancelled else {
+                return
+            }
+
+            await MainActor.run {
+                mainGridOperationMessageText = nil
+                mainGridOperationMessageDismissTask = nil
+            }
+        }
     }
 
     private func currentMainGridActionMenuShape() -> MainGridPopupButtonShape? {
@@ -2103,8 +2522,7 @@ Tapping a row inserts the key code at the cursor.
         return MainGridActionMenuTarget(
             index: result.targetIndex,
             buttonFrame: duplicateFrame,
-            gridDimensions: sourceTarget.gridDimensions,
-            probeID: UUID()
+            gridDimensions: sourceTarget.gridDimensions
         )
     }
 
@@ -2128,8 +2546,31 @@ Tapping a row inserts the key code at the cursor.
         return MainGridActionMenuTarget(
             index: result.sourceIndex,
             buttonFrame: resizedFrame,
-            gridDimensions: sourceTarget.gridDimensions,
-            probeID: UUID()
+            gridDimensions: sourceTarget.gridDimensions
+        )
+    }
+
+    private func mainGridActionMenuTargetForPaste(
+        from sourceTarget: MainGridActionMenuTarget,
+        result: MainGridPopupPasteResult
+    ) -> MainGridActionMenuTarget {
+        let sourceWidth = max(result.destinationWidth, 1)
+        let sourceHeight = max(result.destinationHeight, 1)
+        let targetWidth = max(result.pastedWidth, 1)
+        let targetHeight = max(result.pastedHeight, 1)
+        let cellWidth = (sourceTarget.buttonFrame.width - (mainGridButtonSpacing * CGFloat(sourceWidth - 1))) / CGFloat(sourceWidth)
+        let cellHeight = (sourceTarget.buttonFrame.height - (mainGridButtonSpacing * CGFloat(sourceHeight - 1))) / CGFloat(sourceHeight)
+        let pastedFrame = CGRect(
+            x: sourceTarget.buttonFrame.minX,
+            y: sourceTarget.buttonFrame.minY,
+            width: (cellWidth * CGFloat(targetWidth)) + (mainGridButtonSpacing * CGFloat(targetWidth - 1)),
+            height: (cellHeight * CGFloat(targetHeight)) + (mainGridButtonSpacing * CGFloat(targetHeight - 1))
+        )
+
+        return MainGridActionMenuTarget(
+            index: result.targetIndex,
+            buttonFrame: pastedFrame,
+            gridDimensions: sourceTarget.gridDimensions
         )
     }
 
@@ -2156,8 +2597,7 @@ Tapping a row inserts the key code at the cursor.
         return MainGridActionMenuTarget(
             index: targetIndex,
             buttonFrame: movedFrame,
-            gridDimensions: sourceTarget.gridDimensions,
-            probeID: UUID()
+            gridDimensions: sourceTarget.gridDimensions
         )
     }
 
@@ -2180,8 +2620,7 @@ Tapping a row inserts the key code at the cursor.
         return MainGridActionMenuTarget(
             index: nextFootprint.anchor,
             buttonFrame: nextFrame,
-            gridDimensions: sourceTarget.gridDimensions,
-            probeID: UUID()
+            gridDimensions: sourceTarget.gridDimensions
         )
     }
 
@@ -2203,8 +2642,6 @@ Tapping a row inserts the key code at the cursor.
     }
 
     private func mainGridActionMenuPosition(
-        selectedIndex: Int,
-        probeID: UUID,
         for buttonFrame: CGRect,
         menuSize: CGSize,
         availableWidth: CGFloat,
@@ -2212,27 +2649,20 @@ Tapping a row inserts the key code at the cursor.
         safeAreaInsets: EdgeInsets,
         gridTopY: CGFloat,
         gridHeight: CGFloat
-    ) -> MainGridActionMenuPositionResult {
+    ) -> CGPoint {
         if isPad {
-            let center = iPadMainGridActionMenuPosition(
+            return iPadMainGridActionMenuPosition(
                 for: buttonFrame,
                 menuSize: menuSize,
                 availableWidth: availableWidth,
                 availableHeight: availableHeight,
                 safeAreaInsets: safeAreaInsets,
-                gridTopY: gridTopY
-            )
-
-            return MainGridActionMenuPositionResult(
-                center: center,
-                iPhoneProbeID: nil,
-                iPhoneProbeMessage: nil
+                gridTopY: gridTopY,
+                gridHeight: gridHeight
             )
         }
 
         return iPhoneMainGridActionMenuPosition(
-            selectedIndex: selectedIndex,
-            probeID: probeID,
             for: buttonFrame,
             menuSize: menuSize,
             availableWidth: availableWidth,
@@ -2249,7 +2679,8 @@ Tapping a row inserts the key code at the cursor.
         availableWidth: CGFloat,
         availableHeight: CGFloat,
         safeAreaInsets: EdgeInsets,
-        gridTopY: CGFloat
+        gridTopY: CGFloat,
+        gridHeight: CGFloat
     ) -> CGPoint {
         let margin: CGFloat = 6
         let horizontalGap: CGFloat = 0
@@ -2268,35 +2699,32 @@ Tapping a row inserts the key code at the cursor.
             resolvedX = min(max(selectedFrame.midX, minimumX), maximumX)
         }
 
-        let minimumY = safeAreaInsets.top + margin + (menuSize.height / 2)
-        let bottomToolbarClearance = isPad ? margin : iPhoneBottomToolbarRegionHeight + iPhoneGridToBottomToolbarClearance + margin
-        let maximumY = max(minimumY, availableHeight - safeAreaInsets.bottom - bottomToolbarClearance - (menuSize.height / 2))
+        let gridMinimumY = max(gridTopY, safeAreaInsets.top)
+        let gridMaximumY = min(availableHeight - safeAreaInsets.bottom, gridTopY + gridHeight)
+        let minimumY = gridMinimumY + (menuSize.height / 2)
+        let maximumY = max(minimumY, gridMaximumY - (menuSize.height / 2))
         let resolvedY: CGFloat
 
-        if isPad {
-            let topAlignedY = selectedFrame.minY + (menuSize.height / 2)
-            let bottomAlignedY = selectedFrame.maxY - (menuSize.height / 2)
+        let topAlignedY = selectedFrame.minY + (menuSize.height / 2)
+        let bottomAlignedY = selectedFrame.maxY - (menuSize.height / 2)
 
-            if topAlignedY >= minimumY, topAlignedY <= maximumY {
-                resolvedY = topAlignedY
-            } else if bottomAlignedY >= minimumY, bottomAlignedY <= maximumY {
-                resolvedY = bottomAlignedY
-            } else {
-                resolvedY = min(max(topAlignedY, minimumY), maximumY)
-            }
+        if topAlignedY >= minimumY, topAlignedY <= maximumY {
+            resolvedY = topAlignedY
+        } else if bottomAlignedY >= minimumY, bottomAlignedY <= maximumY {
+            resolvedY = bottomAlignedY
         } else {
-            resolvedY = min(max(selectedFrame.midY, minimumY), maximumY)
+            resolvedY = min(max(topAlignedY, minimumY), maximumY)
         }
+
+        let finalY = min(max(resolvedY + iPadPopupVerticalOffset, minimumY), maximumY)
 
         return CGPoint(
             x: resolvedX,
-            y: resolvedY
+            y: finalY
         )
     }
 
     private func iPhoneMainGridActionMenuPosition(
-        selectedIndex: Int,
-        probeID: UUID,
         for buttonFrame: CGRect,
         menuSize: CGSize,
         availableWidth: CGFloat,
@@ -2304,7 +2732,7 @@ Tapping a row inserts the key code at the cursor.
         safeAreaInsets: EdgeInsets,
         gridTopY: CGFloat,
         gridHeight: CGFloat
-    ) -> MainGridActionMenuPositionResult {
+    ) -> CGPoint {
         let margin: CGFloat = 6
         let horizontalGap: CGFloat = 0
         let selectedFrame = buttonFrame.offsetBy(dx: 0, dy: gridTopY)
@@ -2329,107 +2757,18 @@ Tapping a row inserts the key code at the cursor.
         let topAlignedY = selectedFrame.minY + (menuSize.height / 2)
         let bottomAlignedY = selectedFrame.maxY - (menuSize.height / 2)
         let resolvedY: CGFloat
-        let branch: String
 
         if topAlignedY >= minimumY, topAlignedY <= maximumY {
             resolvedY = topAlignedY
-            branch = "TOP"
         } else if bottomAlignedY >= minimumY, bottomAlignedY <= maximumY {
             resolvedY = bottomAlignedY
-            branch = "BOTTOM"
         } else {
             resolvedY = min(max(topAlignedY, minimumY), maximumY)
-            branch = "CLAMP"
         }
 
-        let center = CGPoint(
+        return CGPoint(
             x: resolvedX,
             y: resolvedY
-        )
-
-        return MainGridActionMenuPositionResult(
-            center: center,
-            iPhoneProbeID: "\(probeID.uuidString)-\(selectedIndex)",
-            iPhoneProbeMessage: iPhonePopupProbeMessage(
-                selectedIndex: selectedIndex,
-                buttonFrame: buttonFrame,
-                selectedFrame: selectedFrame,
-                gridTopY: gridTopY,
-                gridHeight: gridHeight,
-                gridMinimumY: gridMinimumY,
-                gridMaximumY: gridMaximumY,
-                menuSize: menuSize,
-                topAlignedY: topAlignedY,
-                bottomAlignedY: bottomAlignedY,
-                minimumY: minimumY,
-                maximumY: maximumY,
-                branch: branch,
-                resolvedCenter: center
-            )
-        )
-    }
-
-    private func iPhonePopupProbeMessage(
-        selectedIndex: Int,
-        buttonFrame: CGRect,
-        selectedFrame: CGRect,
-        gridTopY: CGFloat,
-        gridHeight: CGFloat,
-        gridMinimumY: CGFloat,
-        gridMaximumY: CGFloat,
-        menuSize: CGSize,
-        topAlignedY: CGFloat,
-        bottomAlignedY: CGFloat,
-        minimumY: CGFloat,
-        maximumY: CGFloat,
-        branch: String,
-        resolvedCenter: CGPoint
-    ) -> String {
-        let popupRect = CGRect(
-            x: resolvedCenter.x - (menuSize.width / 2),
-            y: resolvedCenter.y - (menuSize.height / 2),
-            width: menuSize.width,
-            height: menuSize.height
-        )
-
-        return String(
-            format: "[IPHONE-POPUP-PROBE] index=%d buttonFrame=(minX: %.2f minY: %.2f maxX: %.2f maxY: %.2f width: %.2f height: %.2f) selectedFrame=(minX: %.2f minY: %.2f maxX: %.2f maxY: %.2f width: %.2f height: %.2f) gridTopY=%.2f gridHeight=%.2f gridMinimumY=%.2f gridMaximumY=%.2f menuSize=(width: %.2f height: %.2f) topAlignedY=%.2f bottomAlignedY=%.2f minimumY=%.2f maximumY=%.2f branch=%@ resolvedCenter=(x: %.2f y: %.2f) popupRect=(minX: %.2f minY: %.2f maxX: %.2f maxY: %.2f) selectedButtonRect=(minX: %.2f minY: %.2f maxX: %.2f maxY: %.2f) verticalDiffs=(popupMinYMinusSelectedMinY: %.2f popupMaxYMinusSelectedMaxY: %.2f)",
-            selectedIndex,
-            Double(buttonFrame.minX),
-            Double(buttonFrame.minY),
-            Double(buttonFrame.maxX),
-            Double(buttonFrame.maxY),
-            Double(buttonFrame.width),
-            Double(buttonFrame.height),
-            Double(selectedFrame.minX),
-            Double(selectedFrame.minY),
-            Double(selectedFrame.maxX),
-            Double(selectedFrame.maxY),
-            Double(selectedFrame.width),
-            Double(selectedFrame.height),
-            Double(gridTopY),
-            Double(gridHeight),
-            Double(gridMinimumY),
-            Double(gridMaximumY),
-            Double(menuSize.width),
-            Double(menuSize.height),
-            Double(topAlignedY),
-            Double(bottomAlignedY),
-            Double(minimumY),
-            Double(maximumY),
-            branch,
-            Double(resolvedCenter.x),
-            Double(resolvedCenter.y),
-            Double(popupRect.minX),
-            Double(popupRect.minY),
-            Double(popupRect.maxX),
-            Double(popupRect.maxY),
-            Double(selectedFrame.minX),
-            Double(selectedFrame.minY),
-            Double(selectedFrame.maxX),
-            Double(selectedFrame.maxY),
-            Double(popupRect.minY - selectedFrame.minY),
-            Double(popupRect.maxY - selectedFrame.maxY)
         )
     }
 
@@ -2670,6 +3009,7 @@ Tapping a row inserts the key code at the cursor.
             fontControlColor: fontControlColor,
             speechRecognitionActiveColor: speechRecognitionActiveColor,
             bleSendActiveColor: bleSendActiveColor,
+            popupCoordinateSpaceName: mainScreenPopupCoordinateSpaceName,
             onDecreaseRows: decreaseGridRows,
             onIncreaseRows: increaseGridRows,
             onDecreaseColumns: decreaseGridColumns,
@@ -2682,24 +3022,6 @@ Tapping a row inserts the key code at the cursor.
             onStopSpeech: stopSpokenGridText,
             onAdvanceDisplayMode: advanceDisplayMode
         )
-    }
-
-    private func logESP001Test3EditorPresentation(presentation: String) {
-        let modelIdentifier = UIDevice.current.hardwareModelIdentifier
-        db("[ESP-001-TEST3] model=\(modelIdentifier)")
-        db("[ESP-001-TEST3] isPad=\(isPad)")
-        db("[ESP-001-TEST3] isIPadMini5=\(ESP001DiagnosticDevice.isIPadMini5)")
-        db("[ESP-001-TEST3] isIPadAirM2=\(ESP001DiagnosticDevice.isIPadAirM2)")
-        db("[ESP-001-TEST3] editingSlotIndexNonNil=\(editingSlotIndex != nil)")
-        db("[ESP-001-TEST3] presentation=\(presentation)")
-    }
-
-    private func logESP001Test4MiniEditorPresentation() {
-        let modelIdentifier = UIDevice.current.hardwareModelIdentifier
-        db("[ESP-001-TEST4] model=\(modelIdentifier)")
-        db("[ESP-001-TEST4] configuration=\(ESP001DiagnosticDevice.activeMiniEditorTest.rawValue)")
-        db("[ESP-001-TEST4] presentation=diagnostic")
-        db("[ESP-001-TEST4] appeared=true")
     }
 
     private func esp001MiniDiagnosticEditor(availableWidth: CGFloat) -> some View {
@@ -3692,15 +4014,18 @@ Tapping a row inserts the key code at the cursor.
             .frame(width: smartColorSliderColumnWidth, height: 121, alignment: .center)
     }
 
+    @ViewBuilder
     private func smartIPhoneButtonBrightnessSlider(height: CGFloat, width: CGFloat) -> some View {
         Slider(value: $smartButtonBrightness, in: 0...1)
-            .rotationEffect(.degrees(-90))
             .frame(width: height, height: width * 0.55)
+            .rotationEffect(.degrees(-90))
             .tint(.yellow)
             .onChange(of: smartButtonBrightness) {
                 applySmartButtonBrightness()
             }
             .frame(width: width, height: height)
+            .contentShape(Rectangle())
+            .iPhoneButtonBrightnessSliderFrameReporter()
     }
 
     private func smartIPhoneButtonPreviewRow(editorWidth: CGFloat) -> some View {
@@ -5345,6 +5670,32 @@ Tapping a row inserts the key code at the cursor.
         }
     }
 
+    @ViewBuilder
+    private func mainGridOperationMessageOverlay(availableWidth: CGFloat) -> some View {
+        if let mainGridOperationMessageText {
+            let topPadding: CGFloat = !isPad && filenameToastText != nil ? 86 : 48
+
+            Text(mainGridOperationMessageText)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(.white)
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .minimumScaleFactor(0.8)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .frame(maxWidth: min(max(0, (availableWidth - 32) * 0.4489), 188.538))
+                .background(Color.black.opacity(0.88))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(Color.white.opacity(0.25), lineWidth: 1)
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .padding(.top, topPadding)
+                .transition(.opacity)
+                .allowsHitTesting(false)
+        }
+    }
+
     private func schedulePopupDismissIfNeeded() {
         popupDismissTask?.cancel()
 
@@ -5392,20 +5743,19 @@ Tapping a row inserts the key code at the cursor.
 
         let preservedActionMenuTarget = mainGridActionMenuTarget?.index == sourceIndex ? mainGridActionMenuTarget : nil
         let sourceSpan = slotSpan(startingAt: sourceIndex, gridDimensions: gridDimensions)
-        guard moveFunctionKeySlot(sourceIndex, targetIndex, sourceSpan, gridDimensions) else {
-            alertTitle = ""
-            renameAlertMessage = "can't move btn"
+        guard let finalAnchorIndex = moveFunctionKeySlot(sourceIndex, targetIndex, sourceSpan, gridDimensions) else {
+            showMainGridActionMenuMessage("can't move btn")
             return
         }
 
         resetDirectionalDeleteState()
         if let preservedActionMenuTarget {
-            mainGridActionMenuTarget = mainGridActionMenuTargetForMove(
-                from: preservedActionMenuTarget,
-                sourceIndex: sourceIndex,
-                targetIndex: targetIndex,
-                span: sourceSpan
+            mainGridActionMenuTarget = MainGridActionMenuTarget(
+                index: finalAnchorIndex,
+                buttonFrame: preservedActionMenuTarget.buttonFrame,
+                gridDimensions: preservedActionMenuTarget.gridDimensions
             )
+            beginPendingMovePopupRefresh(to: finalAnchorIndex)
         }
     }
 }
@@ -5711,6 +6061,14 @@ private struct SmartIPhoneRightTableVisibleCellHeightPreferenceKey: PreferenceKe
     }
 }
 
+private struct IPadBottomToolbarFramePreferenceKey: PreferenceKey {
+    static var defaultValue: CGRect?
+
+    static func reduce(value: inout CGRect?, nextValue: () -> CGRect?) {
+        value = nextValue() ?? value
+    }
+}
+
 private struct SmartIPhoneRightTableVisibleCellHeightReader: ViewModifier {
     let isEnabled: Bool
 
@@ -5752,6 +6110,37 @@ private struct EditorGeometryProbeModifier: ViewModifier {
     }
 }
 
+private struct IPhoneButtonBrightnessTouchOverlay: View {
+    let destinationFrame: CGRect
+    let onBrightnessGesture: (CGPoint, CGFloat) -> Void
+
+    var body: some View {
+        Rectangle()
+            .fill(Color.white.opacity(0.001))
+            .frame(width: destinationFrame.width, height: destinationFrame.height)
+            .contentShape(Rectangle())
+            .gesture(
+                DragGesture(minimumDistance: 0, coordinateSpace: .local)
+                    .onChanged { value in
+                        onBrightnessGesture(value.location, destinationFrame.height)
+                    }
+                    .onEnded { value in
+                        onBrightnessGesture(value.location, destinationFrame.height)
+                    }
+            )
+    }
+}
+
+private struct IPhoneButtonBrightnessSliderFramePreferenceKey: PreferenceKey {
+    static var defaultValue: CGRect?
+
+    static func reduce(value: inout CGRect?, nextValue: () -> CGRect?) {
+        if let nextValue = nextValue() {
+            value = nextValue
+        }
+    }
+}
+
 private extension View {
     func smartIPhoneRightTableVisibleCellHeightReader(isEnabled: Bool) -> some View {
         modifier(SmartIPhoneRightTableVisibleCellHeightReader(isEnabled: isEnabled))
@@ -5767,6 +6156,17 @@ private extension View {
             editorGeometryProbe(target, isEnabled: isEnabled)
         } else {
             self
+        }
+    }
+
+    func iPhoneButtonBrightnessSliderFrameReporter() -> some View {
+        background {
+            GeometryReader { geometry in
+                Color.clear.preference(
+                    key: IPhoneButtonBrightnessSliderFramePreferenceKey.self,
+                    value: geometry.frame(in: .global)
+                )
+            }
         }
     }
 }
@@ -6550,9 +6950,12 @@ private struct MainGridEditActionMenu: View {
 
     let cornerRadius: CGFloat
     let isUndoAvailable: Bool
-    let onClose: () -> Void
+    let isRedoAvailable: Bool
+    let isButtonOperationAvailable: Bool
+    let isPasteAvailable: Bool
     let onEdit: () -> Void
     let onUndo: () -> Void
+    let onRedo: () -> Void
     let onCopy: () -> Void
     let onCut: () -> Void
     let onPaste: () -> Void
@@ -6563,21 +6966,21 @@ private struct MainGridEditActionMenu: View {
     var body: some View {
         VStack(spacing: Metrics.spacing) {
             HStack(spacing: Metrics.spacing) {
-                menuButton(systemName: "xmark", accessibilityLabel: "Close action menu", foregroundColor: SymbolColor.close, action: onClose)
                 menuButton(systemName: "pencil", accessibilityLabel: "Edit button", foregroundColor: SymbolColor.edit, action: onEdit)
-                menuButton(systemName: "arrow.uturn.backward", accessibilityLabel: "Undo", foregroundColor: isUndoAvailable ? SymbolColor.undo : SymbolColor.close, action: onUndo)
+                menuButton(systemName: "arrow.uturn.backward", accessibilityLabel: "Undo", foregroundColor: SymbolColor.undo, isEnabled: isUndoAvailable, action: onUndo)
+                menuButton(systemName: "arrow.uturn.forward", accessibilityLabel: "Redo", foregroundColor: SymbolColor.undo, isEnabled: isRedoAvailable, action: onRedo)
             }
 
             HStack(spacing: Metrics.spacing) {
-                menuButton(systemName: "doc.on.doc", accessibilityLabel: "Copy button", foregroundColor: SymbolColor.copy, action: onCopy)
-                menuButton(systemName: "scissors", accessibilityLabel: "Cut button", foregroundColor: SymbolColor.cut, action: onCut)
-                menuButton(systemName: "doc.on.clipboard", accessibilityLabel: "Paste button", foregroundColor: SymbolColor.paste, action: onPaste)
+                menuButton(systemName: "doc.on.doc", accessibilityLabel: "Copy button", foregroundColor: SymbolColor.copy, isEnabled: isButtonOperationAvailable, action: onCopy)
+                menuButton(systemName: "scissors", accessibilityLabel: "Cut button", foregroundColor: SymbolColor.cut, isEnabled: isButtonOperationAvailable, action: onCut)
+                menuButton(systemName: "doc.on.clipboard", accessibilityLabel: "Paste button", foregroundColor: SymbolColor.paste, isEnabled: isPasteAvailable, action: onPaste)
             }
 
             HStack(spacing: Metrics.spacing) {
-                menuButton(systemName: "plus.square.on.square", accessibilityLabel: "Duplicate button", foregroundColor: SymbolColor.duplicate, action: onDuplicate)
-                menuButton(systemName: "arrow.up.left.and.arrow.down.right", accessibilityLabel: "Resize button", foregroundColor: SymbolColor.resize, action: onResize)
-                menuButton(systemName: "trash", accessibilityLabel: "Delete button", foregroundColor: SymbolColor.delete, action: onDelete)
+                menuButton(systemName: "plus.square.on.square", accessibilityLabel: "Duplicate button", foregroundColor: SymbolColor.duplicate, isEnabled: isButtonOperationAvailable, action: onDuplicate)
+                menuButton(systemName: "arrow.up.left.and.arrow.down.right", accessibilityLabel: "Resize button", foregroundColor: SymbolColor.resize, isEnabled: isButtonOperationAvailable, action: onResize)
+                menuButton(systemName: "trash", accessibilityLabel: "Delete button", foregroundColor: SymbolColor.delete, isEnabled: isButtonOperationAvailable, action: onDelete)
             }
         }
         .padding(5)
@@ -6594,17 +6997,19 @@ private struct MainGridEditActionMenu: View {
         systemName: String,
         accessibilityLabel: String,
         foregroundColor: Color,
+        isEnabled: Bool = true,
         action: @escaping () -> Void = {}
     ) -> some View {
         Button(action: action) {
             Image(systemName: systemName)
                 .font(.system(size: 21, weight: .semibold))
-                .foregroundStyle(foregroundColor)
+                .foregroundStyle(isEnabled ? foregroundColor : SymbolColor.close)
                 .frame(width: Metrics.buttonSize, height: Metrics.buttonSize)
                 .background(Color.white.opacity(0.13))
                 .contentShape(.rect)
         }
         .buttonStyle(.plain)
+        .disabled(!isEnabled)
         .accessibilityLabel(accessibilityLabel)
     }
 }

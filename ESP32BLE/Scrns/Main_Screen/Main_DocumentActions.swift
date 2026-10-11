@@ -34,10 +34,19 @@ struct MainGridEditClipboardPayload: Codable {
 }
 
 enum MainGridPopupPasteOutcome {
-    case success([String])
+    case success(MainGridPopupPasteResult)
     case nothingToPaste
     case notEnoughSpace
     case spaceOccupied
+}
+
+struct MainGridPopupPasteResult {
+    let targetIndex: Int
+    let destinationWidth: Int
+    let destinationHeight: Int
+    let pastedWidth: Int
+    let pastedHeight: Int
+    let slotLines: [String]
 }
 
 enum MainGridPopupDuplicateOutcome {
@@ -374,6 +383,10 @@ extension MainScreen {
         return nil
     }
 
+    func editableMainGridAnchorIndex(containing index: Int) -> Int? {
+        editableAnchorIndex(containing: index)
+    }
+
     private func normalizedSlotEditorTextForCommit(_ text: String) -> String {
         let components = text
             .components(separatedBy: "::")
@@ -472,26 +485,78 @@ extension MainScreen {
             return .nothingToPaste
         }
 
-        let shape = shape(for: payload)
-        switch pasteDestinationResult(startingAt: index, shape: shape, gridDimensions: gridDimensions) {
-        case .available:
-            let footprintIndexes = indexes(startingAt: index, shape: shape, gridDimensions: gridDimensions)
-            guard let maximumIndex = footprintIndexes.max() else {
+        let targetIndex = editableAnchorIndex(containing: index) ?? index
+        guard targetIndex >= 0,
+              targetIndex < visibleBoxCount,
+              functionKeys.indices.contains(targetIndex) else {
+            return .notEnoughSpace
+        }
+
+        let pastedShape = shape(for: payload)
+        guard shapeFits(pastedShape, startingAt: targetIndex, gridDimensions: gridDimensions) else {
+            return .notEnoughSpace
+        }
+
+        let destinationEntry = functionKeys[targetIndex]
+        let destinationShape: ButtonGridShape
+        let destinationFootprint: [Int]
+
+        if destinationEntry.isBlankPlaceholder || isEmptyButtonEntry(destinationEntry) {
+            destinationShape = ButtonGridShape(width: 1, height: 1)
+            destinationFootprint = [targetIndex]
+        } else {
+            guard !isButtonContinuationEntry(destinationEntry) else {
                 return .notEnoughSpace
             }
 
-            var updatedLines = slotLinesExpanded(slotLines, through: maximumIndex)
-            updatedLines[index] = payload.rawLine
-            for assignment in continuationAssignments(startingAt: index, shape: shape, gridDimensions: gridDimensions) {
-                updatedLines[assignment.index] = assignment.token
+            destinationShape = buttonShape(startingAt: targetIndex, gridDimensions: gridDimensions)
+            destinationFootprint = indexes(startingAt: targetIndex, shape: destinationShape, gridDimensions: gridDimensions)
+        }
+
+        let pastedFootprint = indexes(startingAt: targetIndex, shape: pastedShape, gridDimensions: gridDimensions)
+        let maximumIndex = max(destinationFootprint.max() ?? targetIndex, pastedFootprint.max() ?? targetIndex)
+        guard maximumIndex < visibleBoxCount else {
+            return .notEnoughSpace
+        }
+
+        let availableReplacementIndexes = Set(destinationFootprint)
+        for slotIndex in pastedFootprint {
+            guard slotIndex >= 0,
+                  slotIndex < visibleBoxCount,
+                  functionKeys.indices.contains(slotIndex) else {
+                return .notEnoughSpace
             }
 
-            return .success(updatedLines)
-        case .outOfBounds:
-            return .notEnoughSpace
-        case .occupied:
-            return .spaceOccupied
+            if availableReplacementIndexes.contains(slotIndex) {
+                continue
+            }
+
+            let entry = functionKeys[slotIndex]
+            guard entry.isBlankPlaceholder || isEmptyButtonEntry(entry) else {
+                return .notEnoughSpace
+            }
         }
+
+        var updatedLines = slotLinesExpanded(slotLines, through: maximumIndex)
+        for slotIndex in destinationFootprint where updatedLines.indices.contains(slotIndex) && slotIndex < visibleBoxCount {
+            updatedLines[slotIndex] = "_"
+        }
+
+        updatedLines[targetIndex] = payload.rawLine
+        for assignment in continuationAssignments(startingAt: targetIndex, shape: pastedShape, gridDimensions: gridDimensions) {
+            updatedLines[assignment.index] = assignment.token
+        }
+
+        let result = MainGridPopupPasteResult(
+            targetIndex: targetIndex,
+            destinationWidth: destinationShape.width,
+            destinationHeight: destinationShape.height,
+            pastedWidth: pastedShape.width,
+            pastedHeight: pastedShape.height,
+            slotLines: updatedLines
+        )
+
+        return .success(result)
     }
 
     func updatedSlotLinesForPopupDuplicate(
@@ -962,6 +1027,10 @@ extension MainScreen {
         }
 
         return payload
+    }
+
+    func hasValidMainGridActionMenuPastePayload() -> Bool {
+        decodedGridEditClipboardPayload() != nil
     }
 	//
 	//----------------------------------------

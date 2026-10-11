@@ -1,3 +1,9 @@
+
+261011 Sun 1425
+V62.34
+popup working
+
+
 261010 Sat 1034
 V62.33
 experimental versions added: 17 slider not working

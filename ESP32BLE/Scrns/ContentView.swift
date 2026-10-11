@@ -1948,12 +1948,12 @@ struct ContentView: View {
         to targetIndex: Int,
         span: Int,
         gridDimensions: GridDimensions
-    ) -> Bool {
+    ) -> Int? {
         guard sourceIndex != targetIndex,
               functionKeySlotLines.indices.contains(sourceIndex),
               targetIndex >= 0,
               targetIndex < maxFunctionKeyCount else {
-            return false
+            return nil
         }
 
         var updatedLines = functionKeySlotLines
@@ -1977,7 +1977,11 @@ struct ContentView: View {
             lines: updatedLines,
             gridDimensions: moveGridDimensions
         ) else {
-            return false
+            return nil
+        }
+
+        guard let movedSourceAnchor = movePlan.first(where: { $0.tile.anchor == sourceIndex })?.anchor else {
+            return nil
         }
 
         // Clear both the old footprints and the new footprints before writing anchors and
@@ -2012,7 +2016,7 @@ struct ContentView: View {
         }
 
         persistSlotLines(updatedLines)
-        return true
+        return movedSourceAnchor
     }
 
     private struct StoredTileMove {

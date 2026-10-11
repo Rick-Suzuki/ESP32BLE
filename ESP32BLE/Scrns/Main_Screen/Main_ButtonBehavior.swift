@@ -1560,7 +1560,7 @@ extension MainScreen {
         gridDimensions: GridDimensions
     ) -> AnyGesture<DragGesture.Value> {
         AnyGesture(
-            DragGesture(minimumDistance: 20)
+            DragGesture(minimumDistance: mainGridDragMinimumDistance)
                 .onChanged { _ in
                     guard isGridEditModeEnabled,
                           editingSlotIndex == nil,
@@ -1579,6 +1579,10 @@ extension MainScreen {
                     )
                 }
         )
+    }
+
+    private var mainGridDragMinimumDistance: CGFloat {
+        isPad ? 20 : 10
     }
 
     func editableText(for entry: FunctionKeyEntry) -> String {

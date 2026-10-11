@@ -221,6 +221,18 @@ private struct RepeatingToolbarButton<Label: View>: View {
         repeatTask = nil
     }
 }
+
+struct MainScreenBottomBarVisibleContentFramePreferenceKey: PreferenceKey {
+    static var defaultValue: CGRect?
+
+    static func reduce(value: inout CGRect?, nextValue: () -> CGRect?) {
+        guard let nextValue = nextValue() else {
+            return
+        }
+
+        value = value.map { $0.union(nextValue) } ?? nextValue
+    }
+}
 //
 //----------------------------------------
 // MARK: - BM:🟩 MAIN: BTM TOOLBAR
@@ -253,6 +265,7 @@ struct MainScreenBottomBar: View {
     let fontControlColor: Color
     let speechRecognitionActiveColor: Color
     let bleSendActiveColor: Color
+    let popupCoordinateSpaceName: String
     let onDecreaseRows: () -> Void
     let onIncreaseRows: () -> Void
     let onDecreaseColumns: () -> Void
@@ -332,6 +345,16 @@ struct MainScreenBottomBar: View {
                 bottomToolbarMinimumScaleFactor: bottomToolbarMinimumScaleFactor,
                 bottomToolbarCornerRadius: bottomToolbarCornerRadius
             )
+        }
+        .background {
+            if isPad {
+                GeometryReader { geometry in
+                    Color.clear.preference(
+                        key: MainScreenBottomBarVisibleContentFramePreferenceKey.self,
+                        value: geometry.frame(in: .named(popupCoordinateSpaceName))
+                    )
+                }
+            }
         }
 	}
 

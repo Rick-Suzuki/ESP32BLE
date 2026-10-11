@@ -1,456 +1,380 @@
-A. Executive Summary
-
-Read-only investigation only. No files were modified. No build was run.
-
-The iPhone brightness slider is a native SwiftUI Slider shared by both the original and experimental iPhone editor structures. The strongest source-based diagnosis is that the iPhone-only vertical slider has an unreliable or too-small interactive region because it is rotated before its sizing frames and then constrained into a narrow dynamic slider column.
-
-The preview button being too close is possible, but the source does not show direct overlap or an obvious preview overlay covering the slider. Parent gesture interception also looks unlikely from source inspection.
-
-A separate finding: the current brightness implementation does not only adjust a temporary preview-only value. When it works, it writes an adjusted hex colour back through smartRightTextBinding, which updates editingSlotText. That may be intentional existing behaviour, but it differs from the stated requirement that brightness should adjust only the preview button and not the saved colour.
-
-B. Exact Slider Implementation
-
-File:
-
-ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
-
-iPhone slider:
-
-Lines 3695–3704:
-
-smartIPhoneButtonBrightnessSlider(height:width:)
-
-It uses:
-
-Native SwiftUI Slider.
-
-Binding:
-
-$smartButtonBrightness
-
-Range:
-
-0...1
-
-Modifier order:
-
-Slider
-rotationEffect(-90)
-frame(width: height, height: width * 0.55)
-tint yellow
-onChange of smartButtonBrightness -> applySmartButtonBrightness()
-frame(width: width, height: height)
-
-There is no custom gesture, no contentShape, no allowsHitTesting override, no disabled modifier, no opacity modifier, no overlay, and no clipping directly on the slider.
-
-State:
-
-smartButtonBrightness is declared at line 1077.
-
-smartButtonBrightnessBaseHex is declared at line 1078.
-
-Initial/reset behaviour:
-
-When editingSlotIndex changes, smartButtonBrightness resets to 0.5 and smartButtonBrightnessBaseHex is set from smartButtonColorHex at lines 1164–1170.
-
-C. Slider Frame And Rotation Analysis
-
-The iPhone slider is built in smartIPhoneButtonPreviewRow(editorWidth:) at lines 3706–3757.
-
-Relevant calculations:
-
-previewAreaHeight = smartIPhoneButtonPreviewEnclosureHeight, line 3707.
-
-previewHeight = previewAreaHeight * 38 / 44, line 3710.
-
-sliderHeight = previewAreaHeight * 37 / 44, line 3720.
-
-previewSliderSpacing = editorWidth * 0.0048, line 3721.
-
-sliderColumnWidth = editorWidth * 0.14, line 3722.
-
-The slider is placed at lines 3734–3737 inside an HStack. It gets a final row slot of:
-
-width = sliderColumnWidth
-height = previewAreaHeight
-
-The slider function itself gives the rotated slider an inner frame of:
-
-width = sliderHeight
-height = sliderColumnWidth * 0.55
-
-Then it receives a final outer frame of:
-
-width = sliderColumnWidth
-height = sliderHeight
-
-This is the most suspicious source pattern.
-
-The iPhone right panel width is dynamic. In smartView, the iPhone right panel width is based on:
-
-availableWidth / 3
-smartIPhoneButtonEditorDynamicCellWidth(...)
-iPhoneRightPanelWidth = iPhoneLeftKeyCellWidth * 5
-
-See lines 2824–2830.
-
-The dynamic cell width is calculated at lines 3817–3823 by rounding the editorWidth / 46 column count and dividing the width by that count.
-
-Because sliderColumnWidth is only 14% of the right panel width, the slider’s interactive thickness can become quite narrow. The inner slider height is then reduced further to width * 0.55. Source inspection cannot prove the final UIKit/SwiftUI hit region, but this is a credible cause of a drag target that visually appears present but is difficult or impossible to grab reliably.
-
-D. Preview Button Hit-Testing Analysis
-
-The preview row places the slider first, then the preview button second, in an HStack with spacing previewSliderSpacing. See lines 3734–3748.
-
-The preview button is built by smartButtonPreview(...) at lines 3864–3971.
-
-The preview uses:
-
-SmartPreviewTextView for editable preview text, lines 3919–3927 and 3938–3949.
-
-A background from smartButtonPreviewBackground, line 3955.
-
-clipShape with corner radius 18, line 3956.
-
-A top-leading clear button overlay, lines 3957–3959.
-
-A border overlay, lines 3960–3968.
-
-Final preview footprint frame, line 3970.
-
-The clear button overlay is defined at lines 3974–3989. It has a 46 x 46 frame and contentShape(Rectangle()), but it lives inside the preview button overlay, not in the slider column.
-
-From source inspection, the preview is not intentionally overlaying the slider. The preview begins after the slider column plus spacing. I did not find a high-priority or simultaneous gesture attached to the preview row that would obviously steal slider drags.
-
-However, because the preview contains a UIKit-backed SmartPreviewTextView, physical testing is still needed to confirm there is no platform-level hit-test expansion or accidental overlap at runtime.
-
-E. Parent Container And Gesture Analysis
-
-The iPhone button panel is built in smartButtonPanel(editorWidth:) at lines 3643–3682.
-
-The iPhone branch uses:
-
-VStack(spacing: 0)
-smartIPhoneButtonPreviewRow
-smartIPhoneButtonControlRow
-smartButtonLowerEditingArea
-frame maxWidth/maxHeight
-black background
-panel border overlay
-clipped
-
-No parent drag gesture is attached there.
-
-The panel border uses allowsHitTesting(false), lines 3002–3032.
-
-The iPhone editor presentation uses iPhoneSmartEditorPresentation at lines 2893–2920:
-
-GeometryReader
-ZStack
-Color.black
-original or experimental editor
-outer frame
-geometry probe
-debug overlay only if debugEditorGeometry
-ignoresSafeArea container and keyboard
-
-No gesture in this presentation appears to intercept slider drags.
-
-Main screen presentation routes the iPhone editor at lines 1356–1378. The iPad dimming overlay at lines 1344–1354 is iPad-only and has allowsHitTesting(false), so it is not the iPhone issue.
-
-A grep for gesture modifiers found main grid drag gesture setup and an ImagePreviewGestureSurface used elsewhere around lines 6758 and 6969–7010. That image preview gesture surface is not part of the iPhone button editor slider path.
-
-F. Slider Binding And Value Flow
-
-The slider updates:
-
-smartButtonBrightness
-
-Declared line 1077.
-
-On change:
-
-smartIPhoneButtonBrightnessSlider calls applySmartButtonBrightness(), lines 3700–3702.
-
-applySmartButtonBrightness is at lines 4352–4362.
-
-It reads:
-
-smartButtonBrightnessBaseHex ?? smartButtonColorHex
-
-Then computes an adjusted hex value using adjustedSmartButtonColorHex(for:) at lines 4364–4366.
-
-The adjustment clamps brightness to 0...1 and moves each RGB component darker below 0.5 or lighter above 0.5. See lines 4368–4390.
-
-Then it writes:
-
-smartRightTextBinding.wrappedValue = rightTextReplacingColorPrefix(with: adjustedHex)
-
-smartRightTextBinding is at lines 3253–3267. Its setter writes through setEditingSlotTextFromUserEdit, lines 3277–3284, which marks the editor session modified and updates editingSlotText.
-
-Preview rendering reads the current colour through smartButtonColorHex, lines 4285–4295. The preview colour is smartButtonPreviewColor at lines 4297–4303 and is used by smartButtonPreviewBackground at lines 4305–4316.
-
-Important source finding:
-
-If the selected button has no six-digit colour prefix and smartButtonBrightnessBaseHex is nil, applySmartButtonBrightness returns without changing anything. In that situation, dragging the slider should still move the thumb if the touch is recognized, but the preview colour may not visibly change.
-
-Also important:
-
-The source currently changes the edited right-side text colour prefix, not a preview-only colour value. That means a working brightness slider can affect the edited button text and potentially the saved colour when the edit is committed. That is separate from the touch responsiveness bug, but it conflicts with the stated desired behaviour.
-
-G. iPad Versus iPhone Comparison
-
-iPad slider:
-
-smartButtonBrightnessSliderColumn, lines 3684–3693.
-
-Uses the same native Slider, same $smartButtonBrightness binding, same 0...1 range, same -90 degree rotation, same onChange -> applySmartButtonBrightness.
-
-But the iPad slider has fixed sizing:
-
-inner frame 116 x 24
-outer frame smartColorSliderColumnWidth x 121
-
-smartColorSliderColumnWidth is 48, line 568.
-
-iPhone slider:
-
-smartIPhoneButtonBrightnessSlider, lines 3695–3704.
-
-Uses dynamic sizing:
-
-inner frame width = sliderHeight
-inner frame height = sliderColumnWidth * 0.55
-outer frame width = sliderColumnWidth
-outer frame height = sliderHeight
-
-The major difference is not the binding. It is the iPhone slider’s much tighter dynamic frame and the frame/rotation order.
-
-The iPad implementation has a taller, more forgiving fixed outer column and a 24-point inner slider thickness. The iPhone implementation may reduce the effective thickness below that.
-
-H. Original Versus Experimental iPhone Comparison
-
-Current source note:
-
-The current file has:
-
-activeIPhoneEditorStructure = .experimental
-
-at lines 19–26.
-
-So the current selected iPhone path is experimental unless that constant is changed.
-
-Original path:
-
-iPhoneSmartEditorPresentation
-smartView
-smartButtonPanel(editorWidth:)
-
-See lines 2899–2901 and 2878–2882.
-
-Experimental path:
-
-iPhoneSmartEditorPresentation
-esp001ExperimentalIPhoneEditor
-ESP001ExperimentalIPhoneEditorShell
-AnyView(smartButtonPanel(editorWidth: resolvedSmartColorControlsWidth))
-
-See lines 2902–2906, 2923–2961, and 5460–5498.
-
-Both paths use the same smartButtonPanel, smartIPhoneButtonPreviewRow, and smartIPhoneButtonBrightnessSlider. This matches the user report that the issue occurs in both original and experimental editors.
-
-The experimental shell changes composition boundaries, but it preserves the same right panel builder and dynamic width math. Therefore the shared slider implementation remains the leading suspect.
-
-I. Ranked Likely Causes
-
-1. Most likely: rotated Slider layout/hit-test mismatch in the iPhone-only slider.
-
-Evidence for:
-
-The slider is rotated before the explicit sizing frames.
-The visible vertical control is being produced by transform plus constrained frames.
-No contentShape or enlarged interactive target is present.
-The iPad version uses larger fixed sizing and reportedly works.
-
-Evidence against:
-
-Source inspection alone cannot prove the final SwiftUI/UIKit hit-test region.
-
-2. Very likely contributor: slider column is too narrow for reliable touch input.
-
-Evidence for:
-
-sliderColumnWidth is only editorWidth * 0.14.
-The inner slider thickness is sliderColumnWidth * 0.55.
-The iPhone layout is compact and dynamic.
-
-Evidence against:
-
-The exact iPhone 17 runtime width is not captured in this read-only pass, so the final point sizes must be verified on device.
-
-3. Possible but less likely: preview button or SmartPreviewTextView intercepts nearby touches.
-
-Evidence for:
-
-The preview contains UIKit-backed editable text and a clear-button overlay.
-
-Evidence against:
-
-The source places slider and preview in separate HStack slots.
-The preview overlay belongs to the preview view.
-No direct overlay spans the slider column in the inspected code.
-
-4. Unlikely: parent gesture interception.
-
-Evidence for:
-
-There are gestures elsewhere in the file.
-
-Evidence against:
-
-The relevant editor containers do not show gesture, highPriorityGesture, or simultaneousGesture modifiers.
-The image preview gesture surface is unrelated to this slider path.
-The panel border disables hit testing.
-
-5. Unlikely as the primary “cannot drag” cause: binding failure.
-
-Evidence for:
-
-Some selected buttons with no colour prefix may produce no visible brightness change.
-
-Evidence against:
-
-The Slider has a direct @State binding. If touches reach it, the thumb should still move.
-
-6. Possible secondary behaviour issue: value updates but preview does not visibly change.
-
-Evidence for:
-
-If no base colour exists, applySmartButtonBrightness returns.
-If the preview is image-only or has clear colour, visible change could be subtle or absent.
-
-Evidence against:
-
-The user reports the slider itself does not respond to dragging, which points earlier than value propagation.
-
-7. No source evidence found: transparent overlay intercepting the slider.
-
-The inspected overlay candidates either do not cover the iPhone editor or have allowsHitTesting(false).
-
-J. Smallest Safe Correction Proposal
-
-Recommended first future experiment:
-
-Modify only smartIPhoneButtonBrightnessSlider(height:width:).
-
-Do not move the slider.
-Do not change the preview button.
-Do not change panel widths.
-Do not change visible layout intentionally.
-Do not touch iPad slider code.
-
-The smallest likely correction is to change the iPhone slider’s internal layout so the native Slider is given a reliable horizontal layout size before rotation, then placed back into the same final outer frame.
-
-In practical terms, the future experiment should keep the same outer width and height supplied by smartIPhoneButtonPreviewRow, but adjust the modifier order and/or hit-test shape inside smartIPhoneButtonBrightnessSlider so the rotated control has a stable interactive region.
-
-A second safe experiment, if the first does not work, would be to preserve the visible slider geometry but expand the touch target inside the existing slider column. That should be done without moving the preview or changing the row geometry.
-
-I would not start by moving the slider away from the preview. The source does not yet prove visual closeness is the cause.
-
-K. Uncertainty Requiring Physical-Device Testing
-
-Source inspection cannot determine the exact runtime hit-test rectangle after SwiftUI applies rotationEffect and frames.
-
-Source inspection cannot determine whether the iPhone 17’s actual right-panel width makes the slider’s effective target too small in practice.
-
-Source inspection cannot confirm whether SmartPreviewTextView or UIKit internals overlap the slider’s hit area at runtime.
-
-A future fix should be tested on the physical iPhone 17 in both .original and .experimental iPhone structures, because both share the same slider implementation.
-
-L. Exact Source References
-
-ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
-
-iPhone editor structure config:
-lines 19–26
-
-iPhone selected presentation:
-lines 2893–2920
-
-Original iPhone route to smartView:
-lines 2899–2901
-
-Experimental iPhone route:
-lines 2902–2906
-
-Experimental iPhone editor panel construction:
-lines 2923–2961
-
-Experimental iPhone shell:
-lines 5460–5498
-
-smartView iPhone width calculations:
-lines 2821–2839
-
-iPhone right panel construction in smartView:
-lines 2878–2882
-
-iPhone button panel:
-lines 3643–3682
-
-iPad brightness slider:
-lines 3684–3693
-
-iPhone brightness slider:
-lines 3695–3704
-
-iPhone preview row:
-lines 3706–3757
-
-iPhone dynamic cell width:
-lines 3817–3823
-
-Preview button:
-lines 3864–3971
-
-Preview clear button:
-lines 3974–3989
-
-Editable preview binding:
-lines 4016–4033
-
-Colour prefix replacement:
-lines 4281–4282
-
-Button colour extraction:
-lines 4285–4295
-
-Preview colour/background:
-lines 4297–4316
-
-Set button colour:
-lines 4343–4350
-
-Apply brightness:
-lines 4352–4362
-
-Brightness colour adjustment:
-lines 4364–4390
-
-Panel border hit testing disabled:
-lines 3002–3032
-
-Main iPhone editor presentation boundary:
-lines 1356–1378
-
-M. Confirmation
+POP-001 TEST 6A READ-ONLY RESIZE POPUP PROBE
 
 No files were modified.
+No build was performed.
+Source inspection only.
 
-No .txt files were touched.
+A. RESIZE IMPLEMENTATION
 
-No project settings were changed.
+Primary files:
+ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
+ESP32BLE/Scrns/Main_Screen/Main_DocumentActions.swift
 
-No build was run.
+Main popup overlay:
+Main_Screen.swift lines 1570-1650.
 
-No fix was implemented.
+Resize opens from the main action popup:
+Main_Screen.swift lines 1628-1630.
+
+Resize popup mode:
+Main_Screen.swift lines 1635-1645.
+
+Resize opening function:
+openMainGridResizeActionMenu()
+Main_Screen.swift lines 1719-1727.
+
+Resize action handler:
+resizeMainGridActionMenuSelection(to:)
+Main_Screen.swift lines 2158-2201.
+
+Resize popup view:
+MainGridResizeActionMenu
+Main_Screen.swift lines 7017-7117.
+
+The Resize popup is not a separate popover. It is a submenu/mode of the same Main Grid Edit popup overlay. The same popup frame, position, zIndex, anchor and dimensions are used. mainGridActionMenuMode switches between .actions and .resize.
+
+Popup dismissal / back:
+The Resize popup has an X/back button at Main_Screen.swift lines 7053-7064. It sets mainGridActionMenuMode = .actions through the onCancel closure at lines 1639-1642.
+
+B. SUPPORTED SIZES
+
+Supported resize choices are:
+
+1x1
+2x1
+3x1
+1x2
+2x2
+3x2
+1x3
+3x3
+
+Defined in:
+Main_DocumentActions.swift lines 58-79.
+
+The popup currently displays them as:
+
+Row 1:
+Back | 1x1 | 2x1
+
+Row 2:
+3x1 | 1x2 | 2x2
+
+Row 3:
+3x2 | 1x3 | 3x3
+
+Popup row definition:
+Main_Screen.swift lines 7018-7021.
+
+C. CURRENT OPTION GENERATION
+
+Options are hard-coded in MainGridResizeActionMenu.rows.
+
+Each size button is created by:
+shapeButton(_:)
+Main_Screen.swift lines 7066-7092.
+
+Labels come from:
+MainGridPopupButtonShape.label
+Main_DocumentActions.swift lines 66-68.
+
+Choices do not currently disappear.
+
+Positions are fixed by the hard-coded rows array.
+
+Options are not currently disabled. Every size button is tappable.
+
+D. VALIDATION
+
+Validation is performed only when the user taps a size.
+
+Handler:
+resizeMainGridActionMenuSelection(to:)
+Main_Screen.swift lines 2158-2201.
+
+Mutation/validation helper:
+updatedSlotLinesForPopupResize(...)
+Main_DocumentActions.swift lines 637-706.
+
+Boundary checks:
+• Supported shape: lines 644-646.
+• Anchor resolution: lines 646-647.
+• Valid source button: lines 651-655.
+• Same-size check: lines 658-661.
+• Grid boundary via shapeFits: lines 663-665.
+• Maximum target index / visible grid: lines 668-672.
+
+Collision checks:
+• Existing selected button footprint is collected as sourceIndexes: line 668.
+• Target footprint is collected as targetIndexes: line 669.
+• Cells already in sourceIndexes are treated as available.
+• Additional target cells must be blank/empty: lines 675-683.
+
+Continuation handling:
+• Source anchor is resolved by editableAnchorIndex.
+• Existing shape comes from buttonShape.
+• New continuation tokens are written by continuationAssignments: lines 691-693.
+
+Reusable geometry helpers:
+• shapeFits: Main_DocumentActions.swift lines 1162-1170.
+• indexes: starts at line 1183.
+• continuationAssignments: previously inspected at lines 1198-1214.
+• buttonShape: lines 1143-1160.
+
+E. CURRENT SIZE
+
+If the user taps the button’s current size:
+
+updatedSlotLinesForPopupResize returns .sameSize:
+Main_DocumentActions.swift lines 658-661.
+
+The handler returns immediately:
+Main_Screen.swift lines 2178-2181.
+
+Current behaviour:
+• Operation is not applied.
+• Grid is not modified.
+• Undo snapshot is not created.
+• Redo is not cleared.
+• Popup remains visible in Resize mode.
+• No message is displayed.
+
+The current size is already visually enabled and tappable.
+
+F. INVALID SIZES
+
+Invalid options are currently selectable.
+
+If the requested size extends beyond the grid:
+• validation returns .notEnoughSpace
+• message shown: “Not enough space”
+• Main_Screen.swift lines 2182-2184.
+
+If it overlaps another button:
+• validation returns .spaceOccupied
+• message shown: “Space occupied”
+• Main_Screen.swift lines 2185-2187.
+
+For invalid source or same size:
+• no message is shown
+• Main_Screen.swift lines 2178-2181.
+
+Invalid resize behaviour:
+• Option is not hidden.
+• Option is not disabled.
+• Tapping it displays a message for boundary/collision failures.
+• Popup remains open.
+• Undo is not recorded.
+• Clipboard is not affected.
+• Grid data is not modified.
+
+G. DISABLED STYLING
+
+The main popup already has reusable disabled styling:
+
+MainGridEditActionMenu.menuButton(...)
+Main_Screen.swift lines 6996-7013.
+
+It uses:
+• isEnabled
+• grey foreground via SymbolColor.close
+• .disabled(!isEnabled)
+
+The Resize popup does not currently use this mechanism. shapeButton(_:) has no enabled state and no .disabled.
+
+Smallest future approach:
+Add an enabled/disabled state per resize shape and apply the same visual pattern used by menuButton: grey foreground/fill plus .disabled(!isEnabled). This can be done inside MainGridResizeActionMenu without changing popup dimensions.
+
+H. ERROR MESSAGES
+
+Resize errors currently use the shared Main Grid operation message system:
+
+showMainGridActionMenuMessage(...)
+Main_Screen.swift lines 2358-2372.
+
+Message overlay placement:
+mainGridOperationMessageOverlay(...)
+Main_Screen.swift lines 5673-5696.
+
+Current message position:
+Top-centre of the Main Screen, padding top 48, or 86 on iPhone when filename toast is visible.
+
+Duration:
+2 seconds.
+
+Styling:
+• black background
+• white text
+• rounded border
+• compact padding
+
+Hit testing:
+.allowsHitTesting(false) at Main_Screen.swift line 5695.
+
+Resize currently uses the Test 5F top-centre message system, not a Resize-popup-local message.
+
+I. MESSAGE ABOVE POPUP
+
+Smallest safe future approach:
+
+Add a resize-specific transient message state, separate from mainGridOperationMessageText, for errors while mainGridActionMenuMode == .resize.
+
+Render it in mainGridActionMenuOverlay(...) near the same menuPosition already calculated for the popup.
+
+Conceptually:
+• keep the Resize popup at its current menuPosition
+• place a compact message view centered above menuPosition
+• message bottom = popup top - small gap
+• use .allowsHitTesting(false)
+• keep duration at 2 seconds unless user specifies otherwise
+
+Do not move the popup. Do not modify iPadMainGridActionMenuPosition or iPhoneMainGridActionMenuPosition.
+
+J. TOP-EDGE CONSTRAINTS
+
+If the Resize popup is near the top edge, a message above it could extend off-screen.
+
+Existing data available:
+• menuPosition
+• menuSize
+• safeAreaInsets
+• availableHeight
+• gridTopY
+• resolvedGridHeight
+
+Potential safe approach:
+• Prefer above-popup placement.
+• If the message would exceed the safe/top boundary, clamp the message Y into the visible overlay area.
+• If clamping would overlap the popup, consider placing it just below the popup only for that edge case.
+
+This should be implemented as message placement only. The Resize popup itself should remain fixed.
+
+K. IPAD / IPHONE
+
+Resize popup implementation is shared.
+
+The platform difference is positioning only:
+• mainGridActionMenuPosition(...) delegates to iPad or iPhone.
+• iPad function starts at Main_Screen.swift line 2631.
+• iPhone function starts at Main_Screen.swift line 2682.
+
+Resize popup uses the same menuPosition and same menuSize as the main action popup:
+Main_Screen.swift lines 1578-1596 and 1648-1650.
+
+No separate iPad/iPhone Resize view exists.
+
+The proposed option disabling can be shared safely.
+
+The proposed above-popup message can also be shared, but must use the already-computed popup position and safe bounds.
+
+L. UNDO / REDO
+
+Successful resize records Undo:
+Main_Screen.swift lines 2195-2197.
+
+Because Test 5J changed recordPopupUndoSnapshot(...) to clear Redo for new edits, a successful resize now invalidates Redo.
+
+Rejected resize:
+• .sameSize, .invalidSource, .notEnoughSpace, .spaceOccupied return before recordPopupUndoSnapshot
+• no Undo entry
+• no Redo invalidation
+• no grid mutation
+
+Current-size selection:
+• .sameSize
+• no Undo
+• no Redo invalidation
+• no grid mutation
+
+Multi-cell restore is snapshot-based through Undo/Redo, so continuation tokens are restored as part of slot lines.
+
+M. POPUP POSITIONING
+
+Resize popup position is identical to main action popup position.
+
+It uses:
+• mainGridActionMenuTarget.buttonFrame
+• mainGridActionMenuPosition(...)
+• .frame(width: menuSize.width, height: menuSize.height)
+• .position(menuPosition)
+
+Relevant lines:
+Main_Screen.swift lines 1577-1650.
+
+After successful resize, the target is currently updated with a synthetic frame:
+mainGridActionMenuTargetForResize(...)
+Main_Screen.swift lines 2529-2551.
+
+This calculates new width/height from the previous target frame and target shape.
+
+It does not currently request the rendered-frame refresh used by movement, Cut/Paste, Undo/Redo.
+
+Potential risk:
+If resize changes footprint substantially, the popup anchor could theoretically be stale or synthetic rather than authoritative. However, this probe did not include runtime testing.
+
+N. RECOMMENDED IMPLEMENTATION
+
+Smallest safe change set, preferably one controlled Codex implementation:
+
+1. Add a non-mutating resize availability helper.
+
+Safest option:
+Reuse updatedSlotLinesForPopupResize(...) against the current slot-line snapshot and interpret outcomes:
+• .success = enabled
+• .sameSize = enabled
+• .notEnoughSpace = disabled
+• .spaceOccupied = disabled
+• .invalidSource = disabled
+
+This avoids duplicating validation.
+
+2. Pass availability into MainGridResizeActionMenu.
+
+Keep the fixed rows array and all positions unchanged.
+
+3. Update shapeButton to accept isEnabled.
+
+Use greyed-out styling and .disabled(!isEnabled) matching the main popup.
+
+4. Preserve current-size behavior.
+
+Current size should be enabled. Tapping it can remain a no-op unless future requirements say otherwise.
+
+5. Add resize-local error message state if invalid options remain tappable somewhere.
+
+If invalid options become disabled, user cannot tap them, so error messages may only be needed for race conditions where validation changes after the view renders.
+
+6. For the future “message above popup” requirement, add a local overlay near menuPosition.
+
+This should be separate from the top-centre operation message system.
+
+7. Consider refreshing the popup target from rendered frames after successful resize.
+
+This is not required for disabling options, but it would align Resize with Test 5I-B’s Cut/Paste correction and avoid synthetic final frames.
+
+Recommended split:
+• Stage 1: fixed-position disabled resize options.
+• Stage 2: resize-local above-popup message.
+• Stage 3, if needed: rendered-frame refresh after successful resize.
+
+O. RISKS
+
+Main risks:
+• Accidentally changing the 146×146 popup layout.
+• Treating .sameSize as disabled even though requirement says current size remains enabled.
+• Duplicating validation and drifting from actual resize mutation rules.
+• Showing resize errors in the top-centre operation toast instead of above the Resize popup.
+• Placing an above-popup message off-screen near the top edge.
+• Introducing platform-specific positioning tweaks that disturb completed iPad/iPhone popup geometry.
+• Leaving successful resize anchored to a synthetic frame if future visual testing reveals stale positioning.
+
+Frozen geometry does not need to change for option disabling.
+
+P. FILE SAFETY
+
+Confirmed:
+No files were modified.
+No build was performed.
+No diagnostics were added.
+No project files were modified.
+No .txt files were modified.
