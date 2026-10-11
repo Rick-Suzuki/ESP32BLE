@@ -1635,7 +1635,10 @@ Tapping a row inserts the key code at the cursor.
                     case .resize:
                         MainGridResizeActionMenu(
                             cornerRadius: menuCornerRadius,
-                            selectedShape: currentMainGridActionMenuShape()
+                            selectedShape: currentMainGridActionMenuShape(),
+                            isShapeEnabled: { shape in
+                                isMainGridResizeShapeAvailable(shape, for: mainGridActionMenuTarget)
+                            }
                         ) {
                             ButtonClickFeedback.playIfEnabled()
                             mainGridActionMenuMode = .actions
@@ -2199,6 +2202,25 @@ Tapping a row inserts the key code at the cursor.
             result: resizeResult
         )
         showMainGridActionMenuMessage("Button resized")
+    }
+
+    private func isMainGridResizeShapeAvailable(
+        _ shape: MainGridPopupButtonShape,
+        for target: MainGridActionMenuTarget
+    ) -> Bool {
+        guard isGridEditModeEnabled,
+              target.index >= 0,
+              target.index < functionKeys.count,
+              target.index < visibleBoxCount else {
+            return false
+        }
+
+        return resolvedPopupResizePlacement(
+            entry: functionKeys[target.index],
+            index: target.index,
+            gridDimensions: target.gridDimensions,
+            targetShape: shape
+        ) != nil
     }
 
     private func undoMainGridActionMenuOperation() {
@@ -7023,6 +7045,7 @@ private struct MainGridResizeActionMenu: View {
 
     let cornerRadius: CGFloat
     let selectedShape: MainGridPopupButtonShape?
+    let isShapeEnabled: (MainGridPopupButtonShape) -> Bool
     let onCancel: () -> Void
     let onSelectShape: (MainGridPopupButtonShape) -> Void
 
@@ -7065,15 +7088,18 @@ private struct MainGridResizeActionMenu: View {
 
     private func shapeButton(_ shape: MainGridPopupButtonShape) -> some View {
         let isSelected = selectedShape == shape
+        let isEnabled = isShapeEnabled(shape)
+        let foregroundColor = isEnabled ? Color.white : MainGridEditActionMenu.SymbolColor.close
+        let diagramColor = isEnabled ? MainGridEditActionMenu.SymbolColor.resize : MainGridEditActionMenu.SymbolColor.close
 
         return Button {
             onSelectShape(shape)
         } label: {
             VStack(spacing: 2) {
-                shapeDiagram(shape)
+                shapeDiagram(shape, color: diagramColor)
                 Text(shape.label)
                     .font(.system(size: 8.5, weight: .semibold))
-                    .foregroundStyle(Color.white)
+                    .foregroundStyle(foregroundColor)
                     .lineLimit(1)
                     .minimumScaleFactor(0.75)
             }
@@ -7088,10 +7114,11 @@ private struct MainGridResizeActionMenu: View {
             .contentShape(.rect)
         }
         .buttonStyle(.plain)
+        .disabled(!isEnabled)
         .accessibilityLabel("Resize to \(shape.label)")
     }
 
-    private func shapeDiagram(_ shape: MainGridPopupButtonShape) -> some View {
+    private func shapeDiagram(_ shape: MainGridPopupButtonShape, color: Color) -> some View {
         let gap: CGFloat = 1.5
         let maxWidth: CGFloat = 22
         let maxHeight: CGFloat = 18
@@ -7106,7 +7133,7 @@ private struct MainGridResizeActionMenu: View {
                 HStack(spacing: gap) {
                     ForEach(0..<shape.width, id: \.self) { _ in
                         RoundedRectangle(cornerRadius: 1.2)
-                            .fill(MainGridEditActionMenu.SymbolColor.resize)
+                            .fill(color)
                             .frame(width: resolvedCellSize, height: resolvedCellSize)
                     }
                 }

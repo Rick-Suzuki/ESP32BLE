@@ -1,380 +1,200 @@
-POP-001 TEST 6A READ-ONLY RESIZE POPUP PROBE
+POP-001 TEST 6E-A READ-ONLY PROBE
 
-No files were modified.
-No build was performed.
-Source inspection only.
-
-A. RESIZE IMPLEMENTATION
-
-Primary files:
-ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
-ESP32BLE/Scrns/Main_Screen/Main_DocumentActions.swift
-
-Main popup overlay:
-Main_Screen.swift lines 1570-1650.
-
-Resize opens from the main action popup:
-Main_Screen.swift lines 1628-1630.
-
-Resize popup mode:
-Main_Screen.swift lines 1635-1645.
-
-Resize opening function:
-openMainGridResizeActionMenu()
-Main_Screen.swift lines 1719-1727.
-
-Resize action handler:
-resizeMainGridActionMenuSelection(to:)
-Main_Screen.swift lines 2158-2201.
-
-Resize popup view:
-MainGridResizeActionMenu
-Main_Screen.swift lines 7017-7117.
-
-The Resize popup is not a separate popover. It is a submenu/mode of the same Main Grid Edit popup overlay. The same popup frame, position, zIndex, anchor and dimensions are used. mainGridActionMenuMode switches between .actions and .resize.
-
-Popup dismissal / back:
-The Resize popup has an X/back button at Main_Screen.swift lines 7053-7064. It sets mainGridActionMenuMode = .actions through the onCancel closure at lines 1639-1642.
-
-B. SUPPORTED SIZES
-
-Supported resize choices are:
-
-1x1
-2x1
-3x1
-1x2
-2x2
-3x2
-1x3
-3x3
-
-Defined in:
-Main_DocumentActions.swift lines 58-79.
-
-The popup currently displays them as:
-
-Row 1:
-Back | 1x1 | 2x1
-
-Row 2:
-3x1 | 1x2 | 2x2
-
-Row 3:
-3x2 | 1x3 | 3x3
-
-Popup row definition:
-Main_Screen.swift lines 7018-7021.
-
-C. CURRENT OPTION GENERATION
-
-Options are hard-coded in MainGridResizeActionMenu.rows.
-
-Each size button is created by:
-shapeButton(_:)
-Main_Screen.swift lines 7066-7092.
-
-Labels come from:
-MainGridPopupButtonShape.label
-Main_DocumentActions.swift lines 66-68.
-
-Choices do not currently disappear.
-
-Positions are fixed by the hard-coded rows array.
-
-Options are not currently disabled. Every size button is tappable.
-
-D. VALIDATION
-
-Validation is performed only when the user taps a size.
-
-Handler:
-resizeMainGridActionMenuSelection(to:)
-Main_Screen.swift lines 2158-2201.
-
-Mutation/validation helper:
-updatedSlotLinesForPopupResize(...)
-Main_DocumentActions.swift lines 637-706.
-
-Boundary checks:
-• Supported shape: lines 644-646.
-• Anchor resolution: lines 646-647.
-• Valid source button: lines 651-655.
-• Same-size check: lines 658-661.
-• Grid boundary via shapeFits: lines 663-665.
-• Maximum target index / visible grid: lines 668-672.
-
-Collision checks:
-• Existing selected button footprint is collected as sourceIndexes: line 668.
-• Target footprint is collected as targetIndexes: line 669.
-• Cells already in sourceIndexes are treated as available.
-• Additional target cells must be blank/empty: lines 675-683.
-
-Continuation handling:
-• Source anchor is resolved by editableAnchorIndex.
-• Existing shape comes from buttonShape.
-• New continuation tokens are written by continuationAssignments: lines 691-693.
-
-Reusable geometry helpers:
-• shapeFits: Main_DocumentActions.swift lines 1162-1170.
-• indexes: starts at line 1183.
-• continuationAssignments: previously inspected at lines 1198-1214.
-• buttonShape: lines 1143-1160.
-
-E. CURRENT SIZE
-
-If the user taps the button’s current size:
-
-updatedSlotLinesForPopupResize returns .sameSize:
-Main_DocumentActions.swift lines 658-661.
-
-The handler returns immediately:
-Main_Screen.swift lines 2178-2181.
-
-Current behaviour:
-• Operation is not applied.
-• Grid is not modified.
-• Undo snapshot is not created.
-• Redo is not cleared.
-• Popup remains visible in Resize mode.
-• No message is displayed.
-
-The current size is already visually enabled and tappable.
-
-F. INVALID SIZES
-
-Invalid options are currently selectable.
-
-If the requested size extends beyond the grid:
-• validation returns .notEnoughSpace
-• message shown: “Not enough space”
-• Main_Screen.swift lines 2182-2184.
-
-If it overlaps another button:
-• validation returns .spaceOccupied
-• message shown: “Space occupied”
-• Main_Screen.swift lines 2185-2187.
-
-For invalid source or same size:
-• no message is shown
-• Main_Screen.swift lines 2178-2181.
-
-Invalid resize behaviour:
-• Option is not hidden.
-• Option is not disabled.
-• Tapping it displays a message for boundary/collision failures.
-• Popup remains open.
-• Undo is not recorded.
-• Clipboard is not affected.
-• Grid data is not modified.
-
-G. DISABLED STYLING
-
-The main popup already has reusable disabled styling:
-
-MainGridEditActionMenu.menuButton(...)
-Main_Screen.swift lines 6996-7013.
-
-It uses:
-• isEnabled
-• grey foreground via SymbolColor.close
-• .disabled(!isEnabled)
-
-The Resize popup does not currently use this mechanism. shapeButton(_:) has no enabled state and no .disabled.
-
-Smallest future approach:
-Add an enabled/disabled state per resize shape and apply the same visual pattern used by menuButton: grey foreground/fill plus .disabled(!isEnabled). This can be done inside MainGridResizeActionMenu without changing popup dimensions.
-
-H. ERROR MESSAGES
-
-Resize errors currently use the shared Main Grid operation message system:
-
-showMainGridActionMenuMessage(...)
-Main_Screen.swift lines 2358-2372.
-
-Message overlay placement:
-mainGridOperationMessageOverlay(...)
-Main_Screen.swift lines 5673-5696.
-
-Current message position:
-Top-centre of the Main Screen, padding top 48, or 86 on iPhone when filename toast is visible.
-
-Duration:
-2 seconds.
-
-Styling:
-• black background
-• white text
-• rounded border
-• compact padding
-
-Hit testing:
-.allowsHitTesting(false) at Main_Screen.swift line 5695.
-
-Resize currently uses the Test 5F top-centre message system, not a Resize-popup-local message.
-
-I. MESSAGE ABOVE POPUP
-
-Smallest safe future approach:
-
-Add a resize-specific transient message state, separate from mainGridOperationMessageText, for errors while mainGridActionMenuMode == .resize.
-
-Render it in mainGridActionMenuOverlay(...) near the same menuPosition already calculated for the popup.
-
-Conceptually:
-• keep the Resize popup at its current menuPosition
-• place a compact message view centered above menuPosition
-• message bottom = popup top - small gap
-• use .allowsHitTesting(false)
-• keep duration at 2 seconds unless user specifies otherwise
-
-Do not move the popup. Do not modify iPadMainGridActionMenuPosition or iPhoneMainGridActionMenuPosition.
-
-J. TOP-EDGE CONSTRAINTS
-
-If the Resize popup is near the top edge, a message above it could extend off-screen.
-
-Existing data available:
-• menuPosition
-• menuSize
-• safeAreaInsets
-• availableHeight
-• gridTopY
-• resolvedGridHeight
-
-Potential safe approach:
-• Prefer above-popup placement.
-• If the message would exceed the safe/top boundary, clamp the message Y into the visible overlay area.
-• If clamping would overlap the popup, consider placing it just below the popup only for that edge case.
-
-This should be implemented as message placement only. The Resize popup itself should remain fixed.
-
-K. IPAD / IPHONE
-
-Resize popup implementation is shared.
-
-The platform difference is positioning only:
-• mainGridActionMenuPosition(...) delegates to iPad or iPhone.
-• iPad function starts at Main_Screen.swift line 2631.
-• iPhone function starts at Main_Screen.swift line 2682.
-
-Resize popup uses the same menuPosition and same menuSize as the main action popup:
-Main_Screen.swift lines 1578-1596 and 1648-1650.
-
-No separate iPad/iPhone Resize view exists.
-
-The proposed option disabling can be shared safely.
-
-The proposed above-popup message can also be shared, but must use the already-computed popup position and safe bounds.
-
-L. UNDO / REDO
-
-Successful resize records Undo:
-Main_Screen.swift lines 2195-2197.
-
-Because Test 5J changed recordPopupUndoSnapshot(...) to clear Redo for new edits, a successful resize now invalidates Redo.
-
-Rejected resize:
-• .sameSize, .invalidSource, .notEnoughSpace, .spaceOccupied return before recordPopupUndoSnapshot
-• no Undo entry
-• no Redo invalidation
-• no grid mutation
-
-Current-size selection:
-• .sameSize
-• no Undo
-• no Redo invalidation
-• no grid mutation
-
-Multi-cell restore is snapshot-based through Undo/Redo, so continuation tokens are restored as part of slot lines.
-
-M. POPUP POSITIONING
-
-Resize popup position is identical to main action popup position.
-
-It uses:
-• mainGridActionMenuTarget.buttonFrame
-• mainGridActionMenuPosition(...)
-• .frame(width: menuSize.width, height: menuSize.height)
-• .position(menuPosition)
-
-Relevant lines:
-Main_Screen.swift lines 1577-1650.
-
-After successful resize, the target is currently updated with a synthetic frame:
-mainGridActionMenuTargetForResize(...)
-Main_Screen.swift lines 2529-2551.
-
-This calculates new width/height from the previous target frame and target shape.
-
-It does not currently request the rendered-frame refresh used by movement, Cut/Paste, Undo/Redo.
-
-Potential risk:
-If resize changes footprint substantially, the popup anchor could theoretically be stale or synthetic rather than authoritative. However, this probe did not include runtime testing.
-
-N. RECOMMENDED IMPLEMENTATION
-
-Smallest safe change set, preferably one controlled Codex implementation:
-
-1. Add a non-mutating resize availability helper.
-
-Safest option:
-Reuse updatedSlotLinesForPopupResize(...) against the current slot-line snapshot and interpret outcomes:
-• .success = enabled
-• .sameSize = enabled
-• .notEnoughSpace = disabled
-• .spaceOccupied = disabled
-• .invalidSource = disabled
-
-This avoids duplicating validation.
-
-2. Pass availability into MainGridResizeActionMenu.
-
-Keep the fixed rows array and all positions unchanged.
-
-3. Update shapeButton to accept isEnabled.
-
-Use greyed-out styling and .disabled(!isEnabled) matching the main popup.
-
-4. Preserve current-size behavior.
-
-Current size should be enabled. Tapping it can remain a no-op unless future requirements say otherwise.
-
-5. Add resize-local error message state if invalid options remain tappable somewhere.
-
-If invalid options become disabled, user cannot tap them, so error messages may only be needed for race conditions where validation changes after the view renders.
-
-6. For the future “message above popup” requirement, add a local overlay near menuPosition.
-
-This should be separate from the top-centre operation message system.
-
-7. Consider refreshing the popup target from rendered frames after successful resize.
-
-This is not required for disabling options, but it would align Resize with Test 5I-B’s Cut/Paste correction and avoid synthetic final frames.
-
-Recommended split:
-• Stage 1: fixed-position disabled resize options.
-• Stage 2: resize-local above-popup message.
-• Stage 3, if needed: rendered-frame refresh after successful resize.
-
-O. RISKS
-
-Main risks:
-• Accidentally changing the 146×146 popup layout.
-• Treating .sameSize as disabled even though requirement says current size remains enabled.
-• Duplicating validation and drifting from actual resize mutation rules.
-• Showing resize errors in the top-centre operation toast instead of above the Resize popup.
-• Placing an above-popup message off-screen near the top edge.
-• Introducing platform-specific positioning tweaks that disturb completed iPad/iPhone popup geometry.
-• Leaving successful resize anchored to a synthetic frame if future visual testing reveals stale positioning.
-
-Frozen geometry does not need to change for option disabling.
-
-P. FILE SAFETY
-
-Confirmed:
 No files were modified.
 No build was performed.
 No diagnostics were added.
-No project files were modified.
+
+A. AVAILABILITY CALL SITE
+
+isMainGridResizeShapeAvailable(_:for:)
+Main_Screen.swift lines 2207-2224.
+
+It passes to resolvedPopupResizePlacement(...):
+
+• entry: functionKeys[target.index]
+• index: target.index
+• gridDimensions: target.gridDimensions
+• targetShape: shape
+
+The function first checks:
+
+• Grid Edit Mode enabled
+• target index >= 0
+• target index < functionKeys.count
+• target index < visibleBoxCount
+
+The resolver then resolves the editable anchor internally.
+
+B. RESOLVER
+
+resolvedPopupResizePlacement(...)
+Main_DocumentActions.swift lines 718-821.
+
+For 3x3:
+
+• Confirms shape is supported.
+• Resolves source anchor using editableAnchorIndex(containing:).
+• Gets sourceShape using buttonShape(startingAt:).
+• Gets sourceFootprint using indexes(...).
+• Checks same-size early return only if source is already 3x3.
+• Checks existing anchor first.
+• Then enumerates overlapping candidate anchors.
+
+Candidate bounds:
+
+• minimumColumn = sourceMinColumn - targetWidth + 1
+• maximumColumn = sourceMaxColumn
+• minimumRow = sourceMinRow - targetHeight + 1
+• maximumRow = sourceMaxRow
+
+Then clamps to grid bounds.
+
+For 3x3, this means the resolver can test anchors above and/or left of the original button, not only the original top-left anchor.
+
+C. CANDIDATE VALIDATION
+
+popupResizePlacementCandidate(...)
+Main_DocumentActions.swift lines 823-861.
+
+For a 3x3 candidate:
+
+• shapeFits(...) verifies the 3x3 rectangle fits inside grid rows/columns.
+• indexes(...) generates all nine target cells.
+• maximumIndex < visibleBoxCount prevents accepting cells beyond the visible prefix.
+• targetFootprint.contains(where: sourceFootprintSet.contains) requires overlap with the original button.
+• Every target cell not in the original source footprint is checked.
+• Each checked cell must be either blank placeholder or empty.
+
+So yes: for a 3x3 candidate, the implementation examines all nine target cells, except source-footprint cells are intentionally skipped because the selected button may reuse them.
+
+I found no code path that accepts a 3x3 candidate without creating and validating the full 3x3 target footprint.
+
+D. MULTI-CELL BUTTONS
+
+Neighbouring button ownership is protected by raw grid entries, not visible text.
+
+Continuation tokens are:
+
+• @@wide
+• @@block
+
+ContentView.swift lines 16-17.
+
+buttonShape(startingAt:) only treats cells as part of the selected source footprint when continuation tokens match:
+Main_DocumentActions.swift lines 1296-1312 and 1325-1331.
+
+A separate button labelled “close app” is not part of the selected source footprint unless its cell contains the selected button’s continuation token. A normal button anchor is not blank/empty, so it blocks candidates.
+
+E. VISIBLE GRID
+
+shapeFits(...)
+Main_DocumentActions.swift lines 1315-1323 checks grid row/column bounds.
+
+Candidate validation also checks:
+maximumIndex < visibleBoxCount
+Main_DocumentActions.swift lines 836-840.
+
+Because candidate bounds clamp row/column to non-negative values and shapeFits prevents row wrapping, a valid candidate should not extend beyond the displayed grid rectangle.
+
+I did not find evidence that hidden rows or underlying storage beyond the visible grid are accepted.
+
+F. EMPTY CELLS
+
+isEmptyButtonEntry(...)
+Main_ButtonBehavior.swift lines 1596-1600.
+
+A cell is empty only if:
+
+• trimmed rawLine is empty
+• sendTexts is empty
+• alternate display text is empty
+
+This means these remain occupied:
+
+• button with command text
+• SF Symbol-only button encoded in rawLine / alternate text
+• image or hidden metadata encoded in rawLine
+• invisible but occupied button
+• continuation token
+
+Blank placeholders are separately allowed.
+
+I did not find a source path where a visually occupied normal button would be considered empty unless its parsed entry truly has no rawLine, no sendTexts, and no alternate text.
+
+G. SOURCE FOOTPRINT
+
+Source anchor:
+editableAnchorIndex(containing:)
+Main_DocumentActions.swift lines 361-388.
+
+Source shape:
+buttonShape(startingAt:)
+Main_DocumentActions.swift lines 1296-1312.
+
+Source footprint:
+indexes(startingAt:shape:gridDimensions:)
+Main_DocumentActions.swift lines 1336-1347.
+
+The source footprint could be too large only if neighbouring cells contain the exact expected continuation tokens for the selected anchor. A separate “close app” button with a normal anchor entry would not be absorbed into the selected source footprint.
+
+No confirmed source defect found here.
+
+H. 3x3 ANALYSIS
+
+For 3x3 to be enabled, at least one candidate anchor must satisfy all of this:
+
+1. 3x3 is supported.
+2. The selected index resolves to a valid button anchor.
+3. The 3x3 rectangle fits inside grid dimensions.
+4. All nine cell indexes are within visible bounds.
+5. At least one of the nine cells overlaps the original selected button footprint.
+6. Every non-source cell in the nine-cell footprint is blank placeholder or empty.
+7. No other button anchor or continuation token appears in any non-source target cell.
+
+Important:
+The valid 3x3 candidate does not have to start at the selected button’s current top-left anchor. It may be above, left, or diagonally above-left as long as it overlaps the original button.
+
+I. ROOT CAUSE CLASSIFICATION
+
+I did not find a confirmed source-code defect in the 3x3 resolver or validator.
+
+Most likely classifications:
+
+• Runtime-state uncertainty.
+• Potentially valid placement not obvious visually.
+
+The source can explain why 3x3 might be enabled: the resolver may find a 3x3 placement above/left/diagonal around the selected button that the user is not visually considering.
+
+However, without the actual runtime grid data, I cannot prove whether the enabled 3x3 is correct or false-positive.
+
+J. RECOMMENDATION
+
+Smallest safe next step:
+
+Run a narrowly scoped temporary diagnostic probe before Test 6F.
+
+For requested 3x3 only, log:
+
+• selected popup index
+• resolved source anchor
+• source shape
+• source footprint
+• candidate anchor
+• candidate target footprint
+• each of the nine target cell classifications:
+source cell, empty, blank placeholder, button anchor, continuation, hidden occupied, out of visible range
+• pass/fail reason for each candidate
+• final chosen candidate, if any
+
+Use one clear prefix and db() if implemented later.
+
+Do not proceed to Test 6F until this confirms whether 3x3 is truly valid or which cell is being misclassified.
+
+K. FILE SAFETY
+
+Confirmed:
+No files were modified.
+No project file was modified.
 No .txt files were modified.
+No diagnostics were added.
+No build was performed.

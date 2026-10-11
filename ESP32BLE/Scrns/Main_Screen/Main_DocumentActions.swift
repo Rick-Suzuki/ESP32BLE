@@ -104,6 +104,14 @@ struct MainGridPopupResizeResult {
     let slotLines: [String]
 }
 
+struct MainGridPopupResizePlacementResult {
+    let sourceIndex: Int
+    let sourceFootprint: [Int]
+    let targetShape: MainGridPopupButtonShape
+    let targetIndex: Int
+    let targetFootprint: [Int]
+}
+
 private enum MainGridPasteDestinationResult {
     case available
     case outOfBounds
@@ -705,6 +713,497 @@ extension MainScreen {
             targetHeight: targetShape.height,
             slotLines: updatedLines
         ))
+    }
+
+    func resolvedPopupResizePlacement(
+        entry: FunctionKeyEntry,
+        index: Int,
+        gridDimensions: GridDimensions,
+        targetShape: MainGridPopupButtonShape
+    ) -> MainGridPopupResizePlacementResult? {
+        guard isGridEditModeEnabled,
+              isSupportedShape(width: targetShape.width, height: targetShape.height),
+              let sourceIndex = editableAnchorIndex(containing: index),
+              functionKeys.indices.contains(sourceIndex) else {
+            return nil
+        }
+
+        let sourceEntry = functionKeys[sourceIndex]
+        guard !sourceEntry.isBlankPlaceholder,
+              !isEmptyButtonEntry(sourceEntry),
+              !isButtonContinuationEntry(sourceEntry) else {
+            return nil
+        }
+
+        let sourceShape = buttonShape(startingAt: sourceIndex, gridDimensions: gridDimensions)
+        let sourceFootprint = indexes(startingAt: sourceIndex, shape: sourceShape, gridDimensions: gridDimensions)
+        let sourceFootprintSet = Set(sourceFootprint)
+        let targetGridShape = ButtonGridShape(width: targetShape.width, height: targetShape.height)
+
+        if sourceShape.width == targetShape.width,
+           sourceShape.height == targetShape.height {
+            return MainGridPopupResizePlacementResult(
+                sourceIndex: sourceIndex,
+                sourceFootprint: sourceFootprint,
+                targetShape: targetShape,
+                targetIndex: sourceIndex,
+                targetFootprint: sourceFootprint
+            )
+        }
+
+        if let existingAnchorPlacement = popupResizePlacementCandidate(
+            sourceIndex: sourceIndex,
+            sourceFootprint: sourceFootprint,
+            sourceFootprintSet: sourceFootprintSet,
+            targetShape: targetShape,
+            targetGridShape: targetGridShape,
+            targetIndex: sourceIndex,
+            gridDimensions: gridDimensions
+        ) {
+            return existingAnchorPlacement
+        }
+
+        let columns = max(gridDimensions.columns, 1)
+        let sourceRows = sourceFootprint.map { $0 / columns }
+        let sourceColumns = sourceFootprint.map { $0 % columns }
+        guard let sourceMinRow = sourceRows.min(),
+              let sourceMaxRow = sourceRows.max(),
+              let sourceMinColumn = sourceColumns.min(),
+              let sourceMaxColumn = sourceColumns.max() else {
+            return nil
+        }
+
+        let minimumColumn = max(0, sourceMinColumn - targetShape.width + 1)
+        let maximumColumn = min(columns - targetShape.width, sourceMaxColumn)
+        let minimumRow = max(0, sourceMinRow - targetShape.height + 1)
+        let maximumRow = min(gridDimensions.rows - targetShape.height, sourceMaxRow)
+        guard minimumColumn <= maximumColumn,
+              minimumRow <= maximumRow else {
+            return nil
+        }
+
+        var candidates: [(placement: MainGridPopupResizePlacementResult, distance: Int, rowDelta: Int, columnDelta: Int, row: Int, column: Int)] = []
+        let sourceRow = sourceIndex / columns
+        let sourceColumn = sourceIndex % columns
+
+        for row in minimumRow...maximumRow {
+            for column in minimumColumn...maximumColumn {
+                let targetIndex = (row * columns) + column
+                guard targetIndex != sourceIndex,
+                      let placement = popupResizePlacementCandidate(
+                        sourceIndex: sourceIndex,
+                        sourceFootprint: sourceFootprint,
+                        sourceFootprintSet: sourceFootprintSet,
+                        targetShape: targetShape,
+                        targetGridShape: targetGridShape,
+                        targetIndex: targetIndex,
+                        gridDimensions: gridDimensions
+                      ) else {
+                    continue
+                }
+
+                let rowDelta = abs(row - sourceRow)
+                let columnDelta = abs(column - sourceColumn)
+                candidates.append((placement, rowDelta + columnDelta, rowDelta, columnDelta, row, column))
+            }
+        }
+
+        return candidates
+            .sorted {
+                if $0.distance != $1.distance { return $0.distance < $1.distance }
+                if $0.rowDelta != $1.rowDelta { return $0.rowDelta < $1.rowDelta }
+                if $0.columnDelta != $1.columnDelta { return $0.columnDelta < $1.columnDelta }
+                if $0.row != $1.row { return $0.row < $1.row }
+                return $0.column < $1.column
+            }
+            .first?
+            .placement
+    }
+
+    private func popupResizePlacementCandidate(
+        sourceIndex: Int,
+        sourceFootprint: [Int],
+        sourceFootprintSet: Set<Int>,
+        targetShape: MainGridPopupButtonShape,
+        targetGridShape: ButtonGridShape,
+        targetIndex: Int,
+        gridDimensions: GridDimensions
+    ) -> MainGridPopupResizePlacementResult? {
+        guard shapeFits(targetGridShape, startingAt: targetIndex, gridDimensions: gridDimensions) else {
+            return nil
+        }
+
+        let targetFootprint = indexes(startingAt: targetIndex, shape: targetGridShape, gridDimensions: gridDimensions)
+        guard let maximumIndex = targetFootprint.max(),
+              maximumIndex < visibleBoxCount,
+              targetFootprint.contains(where: { sourceFootprintSet.contains($0) }) else {
+            return nil
+        }
+
+        for slotIndex in targetFootprint where !sourceFootprintSet.contains(slotIndex) {
+            guard functionKeys.indices.contains(slotIndex) else {
+                return nil
+            }
+
+            let entry = functionKeys[slotIndex]
+            guard !isButtonContinuationEntry(entry),
+                  entry.isBlankPlaceholder || isEmptyButtonEntry(entry) else {
+                return nil
+            }
+        }
+
+        return MainGridPopupResizePlacementResult(
+            sourceIndex: sourceIndex,
+            sourceFootprint: sourceFootprint,
+            targetShape: targetShape,
+            targetIndex: targetIndex,
+            targetFootprint: targetFootprint
+        )
+    }
+
+    func logResize3x3PlacementProbe(
+        entry: FunctionKeyEntry,
+        index: Int,
+        gridDimensions: GridDimensions,
+        slotLines: [String]
+    ) {
+        let prefix = "[RESIZE-3X3-PROBE]"
+        let targetShape = MainGridPopupButtonShape(width: 3, height: 3)
+        let targetGridShape = ButtonGridShape(width: targetShape.width, height: targetShape.height)
+        let columns = max(gridDimensions.columns, 1)
+
+        db("%@ BEGIN", prefix)
+        db(
+            "%@ CONTEXT targetIndex=%d targetCell=%@ gridColumns=%d gridRows=%d visibleBoxCount=%d functionKeys.count=%d slotLines.count=%d selectedLabel=%@",
+            prefix,
+            index,
+            resizeProbeCoordinateDescription(for: index, columns: columns),
+            gridDimensions.columns,
+            gridDimensions.rows,
+            visibleBoxCount,
+            functionKeys.count,
+            slotLines.count,
+            resizeProbeShortLabel(for: entry)
+        )
+
+        guard isGridEditModeEnabled,
+              isSupportedShape(width: targetShape.width, height: targetShape.height),
+              let sourceIndex = editableAnchorIndex(containing: index),
+              functionKeys.indices.contains(sourceIndex) else {
+            db("%@ SOURCE invalid targetIndex=%d", prefix, index)
+            db("%@ END", prefix)
+            return
+        }
+
+        let sourceEntry = functionKeys[sourceIndex]
+        guard !sourceEntry.isBlankPlaceholder,
+              !isEmptyButtonEntry(sourceEntry),
+              !isButtonContinuationEntry(sourceEntry) else {
+            db(
+                "%@ SOURCE invalid anchorIndex=%d anchorCell=%@ classification=%@ label=%@",
+                prefix,
+                sourceIndex,
+                resizeProbeCoordinateDescription(for: sourceIndex, columns: columns),
+                resizeProbeCellClassification(
+                    for: sourceIndex,
+                    sourceFootprintSet: Set<Int>(),
+                    visibleBoxCount: visibleBoxCount
+                ),
+                resizeProbeShortLabel(for: sourceEntry)
+            )
+            db("%@ END", prefix)
+            return
+        }
+
+        let sourceShape = buttonShape(startingAt: sourceIndex, gridDimensions: gridDimensions)
+        let sourceFootprint = indexes(startingAt: sourceIndex, shape: sourceShape, gridDimensions: gridDimensions)
+        let sourceFootprintSet = Set(sourceFootprint)
+        db(
+            "%@ SOURCE targetIndex=%d anchorIndex=%d anchorCell=%@ shape=%dx%d footprint=%@",
+            prefix,
+            index,
+            sourceIndex,
+            resizeProbeCoordinateDescription(for: sourceIndex, columns: columns),
+            sourceShape.width,
+            sourceShape.height,
+            resizeProbeFootprintDescription(sourceFootprint, columns: columns)
+        )
+
+        let sourceRows = sourceFootprint.map { $0 / columns }
+        let sourceColumns = sourceFootprint.map { $0 % columns }
+        guard let sourceMinRow = sourceRows.min(),
+              let sourceMaxRow = sourceRows.max(),
+              let sourceMinColumn = sourceColumns.min(),
+              let sourceMaxColumn = sourceColumns.max() else {
+            db("%@ CANDIDATES unavailable reason=empty_source_footprint", prefix)
+            db("%@ END", prefix)
+            return
+        }
+
+        let minimumColumn = max(0, sourceMinColumn - targetShape.width + 1)
+        let maximumColumn = min(columns - targetShape.width, sourceMaxColumn)
+        let minimumRow = max(0, sourceMinRow - targetShape.height + 1)
+        let maximumRow = min(gridDimensions.rows - targetShape.height, sourceMaxRow)
+        var candidateIndexes: [Int] = [sourceIndex]
+
+        if minimumColumn <= maximumColumn,
+           minimumRow <= maximumRow {
+            for row in minimumRow...maximumRow {
+                for column in minimumColumn...maximumColumn {
+                    let candidateIndex = (row * columns) + column
+                    if candidateIndex != sourceIndex {
+                        candidateIndexes.append(candidateIndex)
+                    }
+                }
+            }
+        }
+
+        var validCandidates: [(placement: MainGridPopupResizePlacementResult, distance: Int, rowDelta: Int, columnDelta: Int, row: Int, column: Int)] = []
+        let sourceRow = sourceIndex / columns
+        let sourceColumn = sourceIndex % columns
+
+        for candidateIndex in candidateIndexes {
+            let row = candidateIndex / columns
+            let column = candidateIndex % columns
+            let candidatePlacement = popupResizePlacementCandidate(
+                sourceIndex: sourceIndex,
+                sourceFootprint: sourceFootprint,
+                sourceFootprintSet: sourceFootprintSet,
+                targetShape: targetShape,
+                targetGridShape: targetGridShape,
+                targetIndex: candidateIndex,
+                gridDimensions: gridDimensions
+            )
+            let targetFootprint = indexes(startingAt: candidateIndex, shape: targetGridShape, gridDimensions: gridDimensions)
+            let overlapsSource = targetFootprint.contains { sourceFootprintSet.contains($0) }
+            let fitsGrid = shapeFits(targetGridShape, startingAt: candidateIndex, gridDimensions: gridDimensions)
+            let fitsVisible = targetFootprint.allSatisfy { functionKeys.indices.contains($0) && $0 < visibleBoxCount }
+            let cellReports = targetFootprint.map {
+                resizeProbeCellReport(
+                    index: $0,
+                    columns: columns,
+                    sourceFootprintSet: sourceFootprintSet,
+                    visibleBoxCount: visibleBoxCount
+                )
+            }
+            let blockingReports = cellReports.filter {
+                !$0.isAllowedForPlacement && !$0.isSource
+            }
+            var failureReasons: [String] = []
+
+            if !fitsGrid {
+                failureReasons.append("outside grid")
+            }
+            if !fitsVisible {
+                failureReasons.append("outside visible area")
+            }
+            if !overlapsSource {
+                failureReasons.append("no source overlap")
+            }
+            failureReasons.append(contentsOf: blockingReports.map { $0.failureReason })
+
+            let resultText = candidatePlacement == nil
+                ? "FAIL: \(failureReasons.isEmpty ? "production validator rejected" : failureReasons.joined(separator: "; "))"
+                : "PASS"
+
+            db(
+                "%@ CANDIDATE index=%d cell=%@ footprint=%@ overlapsSource=%@ fitsGrid=%@ fitsVisible=%@ result=%@",
+                prefix,
+                candidateIndex,
+                resizeProbeCoordinateDescription(for: candidateIndex, columns: columns),
+                resizeProbeFootprintDescription(targetFootprint, columns: columns),
+                resizeProbeBool(overlapsSource),
+                resizeProbeBool(fitsGrid),
+                resizeProbeBool(fitsVisible),
+                resultText
+            )
+            db(
+                "%@ CELLS candidateIndex=%d %@",
+                prefix,
+                candidateIndex,
+                cellReports.map(\.description).joined(separator: " | ")
+            )
+
+            if let placement = candidatePlacement {
+                let rowDelta = abs(row - sourceRow)
+                let columnDelta = abs(column - sourceColumn)
+                validCandidates.append((placement, rowDelta + columnDelta, rowDelta, columnDelta, row, column))
+            }
+        }
+
+        let diagnosticSelection = validCandidates
+            .sorted {
+                if $0.distance != $1.distance { return $0.distance < $1.distance }
+                if $0.rowDelta != $1.rowDelta { return $0.rowDelta < $1.rowDelta }
+                if $0.columnDelta != $1.columnDelta { return $0.columnDelta < $1.columnDelta }
+                if $0.row != $1.row { return $0.row < $1.row }
+                return $0.column < $1.column
+            }
+            .first?
+            .placement
+        let productionSelection = resolvedPopupResizePlacement(
+            entry: entry,
+            index: index,
+            gridDimensions: gridDimensions,
+            targetShape: targetShape
+        )
+        let selectedCandidate = productionSelection.map {
+            "anchor=\($0.targetIndex) cell=\(resizeProbeCoordinateDescription(for: $0.targetIndex, columns: columns)) footprint=\(resizeProbeFootprintDescription($0.targetFootprint, columns: columns))"
+        } ?? "nil"
+        let discrepancy = diagnosticSelection?.targetIndex != productionSelection?.targetIndex ||
+            diagnosticSelection?.targetFootprint != productionSelection?.targetFootprint
+
+        db(
+            "%@ FINAL requestedSize=3x3 availability=%@ selectedCandidate=%@ candidatesExamined=%d validCandidates=%d discrepancy=%@",
+            prefix,
+            resizeProbeBool(productionSelection != nil),
+            selectedCandidate,
+            candidateIndexes.count,
+            validCandidates.count,
+            resizeProbeBool(discrepancy)
+        )
+        db("%@ END", prefix)
+    }
+
+    private struct ResizeProbeCellReport {
+        let description: String
+        let failureReason: String
+        let isAllowedForPlacement: Bool
+        let isSource: Bool
+    }
+
+    private func resizeProbeCellReport(
+        index: Int,
+        columns: Int,
+        sourceFootprintSet: Set<Int>,
+        visibleBoxCount: Int
+    ) -> ResizeProbeCellReport {
+        let coordinate = resizeProbeCoordinateDescription(for: index, columns: columns)
+        let isSource = sourceFootprintSet.contains(index)
+
+        if isSource {
+            return ResizeProbeCellReport(
+                description: "index=\(index) \(coordinate) class=SOURCE",
+                failureReason: "",
+                isAllowedForPlacement: true,
+                isSource: true
+            )
+        }
+
+        guard index >= 0,
+              functionKeys.indices.contains(index),
+              index < visibleBoxCount else {
+            return ResizeProbeCellReport(
+                description: "index=\(index) \(coordinate) class=OUT_OF_BOUNDS",
+                failureReason: "out of bounds index=\(index)",
+                isAllowedForPlacement: false,
+                isSource: false
+            )
+        }
+
+        let entry = functionKeys[index]
+        if isButtonContinuationEntry(entry) {
+            return ResizeProbeCellReport(
+                description: "index=\(index) \(coordinate) class=CONTINUATION label=\(resizeProbeShortLabel(for: entry))",
+                failureReason: "continuation cell index=\(index)",
+                isAllowedForPlacement: false,
+                isSource: false
+            )
+        }
+
+        if entry.isBlankPlaceholder {
+            return ResizeProbeCellReport(
+                description: "index=\(index) \(coordinate) class=BLANK",
+                failureReason: "",
+                isAllowedForPlacement: true,
+                isSource: false
+            )
+        }
+
+        if isEmptyButtonEntry(entry) {
+            return ResizeProbeCellReport(
+                description: "index=\(index) \(coordinate) class=EMPTY",
+                failureReason: "",
+                isAllowedForPlacement: true,
+                isSource: false
+            )
+        }
+
+        if entry.isHiddenInNormalMode {
+            return ResizeProbeCellReport(
+                description: "index=\(index) \(coordinate) class=HIDDEN_OCCUPIED label=\(resizeProbeShortLabel(for: entry))",
+                failureReason: "hidden occupied cell index=\(index)",
+                isAllowedForPlacement: false,
+                isSource: false
+            )
+        }
+
+        return ResizeProbeCellReport(
+            description: "index=\(index) \(coordinate) class=OCCUPIED label=\(resizeProbeShortLabel(for: entry))",
+            failureReason: "occupied cell index=\(index)",
+            isAllowedForPlacement: false,
+            isSource: false
+        )
+    }
+
+    private func resizeProbeCellClassification(
+        for index: Int,
+        sourceFootprintSet: Set<Int>,
+        visibleBoxCount: Int
+    ) -> String {
+        if sourceFootprintSet.contains(index) {
+            return "SOURCE"
+        }
+
+        guard index >= 0,
+              functionKeys.indices.contains(index),
+              index < visibleBoxCount else {
+            return "OUT_OF_BOUNDS"
+        }
+
+        let entry = functionKeys[index]
+        if isButtonContinuationEntry(entry) {
+            return "CONTINUATION"
+        }
+        if entry.isBlankPlaceholder {
+            return "BLANK"
+        }
+        if isEmptyButtonEntry(entry) {
+            return "EMPTY"
+        }
+        if entry.isHiddenInNormalMode {
+            return "HIDDEN_OCCUPIED"
+        }
+
+        return "OCCUPIED"
+    }
+
+    private func resizeProbeFootprintDescription(_ indexes: [Int], columns: Int) -> String {
+        "[" + indexes.map { "\($0)\(resizeProbeCoordinateDescription(for: $0, columns: columns))" }.joined(separator: ",") + "]"
+    }
+
+    private func resizeProbeCoordinateDescription(for index: Int, columns: Int) -> String {
+        let safeColumns = max(columns, 1)
+        return "(row=\(index / safeColumns),column=\(index % safeColumns))"
+    }
+
+    private func resizeProbeBool(_ value: Bool) -> String {
+        value ? "YES" : "NO"
+    }
+
+    private func resizeProbeShortLabel(for entry: FunctionKeyEntry) -> String {
+        let alternateText = entry.alternateDisplayText?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let primaryText = entry.primaryDisplayText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let rawText = entry.rawLine.trimmingCharacters(in: .whitespacesAndNewlines)
+        let label = [alternateText, primaryText, rawText]
+            .first { !$0.isEmpty } ?? "empty"
+        let collapsed = label.replacingOccurrences(of: "\n", with: " ")
+
+        if collapsed.count <= 24 {
+            return collapsed
+        }
+
+        return String(collapsed.prefix(24))
     }
 
     @discardableResult
