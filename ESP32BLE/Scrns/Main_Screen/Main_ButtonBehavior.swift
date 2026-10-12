@@ -1468,6 +1468,7 @@ extension MainScreen {
         entry: FunctionKeyEntry,
         index: Int,
         buttonHeight: CGFloat,
+        buttonSize: CGSize,
         backgroundOpacity: Double
     ) -> some View {
         let leftTitle = displayText(from: entry.primaryDisplayText)
@@ -1487,6 +1488,7 @@ extension MainScreen {
             rightEmojiDisplay: parsedEmojiDisplay(for: entry),
             boxFontSize: boxFontSize,
             buttonHeight: buttonHeight,
+            buttonSize: buttonSize,
             cornerRadius: mainGridButtonCornerRadius,
             borderWidth: mainGridButtonBorderWidth,
             usesInsetBorder: !isPad,
@@ -1683,6 +1685,7 @@ struct MainScreenButtonLabelView: View {
     let rightEmojiDisplay: (emoji: String, subtitle: String?)?
     let boxFontSize: Double
     let buttonHeight: CGFloat
+    let buttonSize: CGSize
     let cornerRadius: CGFloat
     let borderWidth: CGFloat
     let usesInsetBorder: Bool
@@ -1732,16 +1735,28 @@ struct MainScreenButtonLabelView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 ZStack {
-                    RoundedRectangle(cornerRadius: cornerRadius)
-                        .fill(buttonBackgroundColor)
-
-                    normalButtonBorder
+                    buttonVisualShell
+                        .frame(width: buttonSize.width, height: buttonSize.height)
 
                     buttonContent
                         .padding(8)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }
+    }
+
+    private var buttonVisualShell: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: cornerRadius)
+                .fill(buttonBackgroundColor)
+
+            if usesInsetBorder {
+                normalButtonBorder
+            } else {
+                normalButtonBorder
+                    .padding(borderWidth / 2)
             }
         }
     }

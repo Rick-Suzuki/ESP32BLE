@@ -1522,6 +1522,7 @@ Tapping a row inserts the key code at the cursor.
             mainGridButtonSpacing: mainGridButtonSpacing,
             mainGridButtonCornerRadius: mainGridButtonCornerRadius,
             boxFontSize: boxFontSize,
+            clipsButtonContentToBounds: true,
             isGridEditModeEnabled: isGridEditModeEnabled,
             selectedActionMenuIndex: mainGridActionMenuTarget?.index,
             renderedButtonFrameRefreshToken: mainGridRenderedButtonFrameRefreshToken,
@@ -1532,11 +1533,12 @@ Tapping a row inserts the key code at the cursor.
             isInteractiveWidgetEntry: isInteractiveMainGridWidgetEntry,
             sendLine: sendMainGridEntry,
             onBeginSlotEditing: beginSlotEditing,
-            buttonLabel: { entry, index, buttonHeight in
+            buttonLabel: { entry, index, buttonHeight, buttonSize in
                 mainGridButtonLabel(
                     entry: entry,
                     index: index,
-							buttonHeight: buttonHeight,
+                    buttonHeight: buttonHeight,
+                    buttonSize: buttonSize,
                     backgroundOpacity: mainGridBackgroundOpacity
                 )
             },

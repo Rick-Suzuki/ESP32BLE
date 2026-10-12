@@ -1,3 +1,8 @@
+261012 Mon 1616
+V62.39
+btns maintain size, if needed text cropped
+
+
 261012 Mon 1413
 V62.38
 undo,redo loses popup position

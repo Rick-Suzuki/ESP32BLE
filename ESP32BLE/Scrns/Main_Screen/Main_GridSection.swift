@@ -103,6 +103,7 @@ struct MainScreenGridSection<ButtonLabel: View>: View {
     let mainGridButtonSpacing: CGFloat
     let mainGridButtonCornerRadius: CGFloat
     let boxFontSize: Double
+    let clipsButtonContentToBounds: Bool
     let isGridEditModeEnabled: Bool
     let selectedActionMenuIndex: Int?
     let renderedButtonFrameRefreshToken: Int
@@ -113,7 +114,7 @@ struct MainScreenGridSection<ButtonLabel: View>: View {
     let isInteractiveWidgetEntry: (FunctionKeyEntry) -> Bool
     let sendLine: (FunctionKeyEntry) -> Void
     let onBeginSlotEditing: (Int) -> Void
-    let buttonLabel: (FunctionKeyEntry, Int, CGFloat) -> ButtonLabel
+    let buttonLabel: (FunctionKeyEntry, Int, CGFloat, CGSize) -> ButtonLabel
     let dragGesture: (FunctionKeyEntry, Int, GridDimensions) -> AnyGesture<DragGesture.Value>
     let onRenderedButtonFrame: (Int, CGRect, GridDimensions) -> Void
     let onRenderedGridFrame: (CGRect) -> Void
@@ -171,6 +172,7 @@ struct MainScreenGridSection<ButtonLabel: View>: View {
                             entry: entry,
                             index: index,
                             buttonHeight: resolvedButtonHeight,
+                            buttonSize: CGSize(width: resolvedButtonWidth, height: resolvedButtonHeight),
                             buttonFrame: CGRect(
                                 x: origin.x,
                                 y: origin.y,
@@ -180,6 +182,7 @@ struct MainScreenGridSection<ButtonLabel: View>: View {
                             gridDimensions: gridDimensions
                         )
                         .frame(width: resolvedButtonWidth, height: resolvedButtonHeight)
+                        .modifier(MainGridButtonBoundsClip(cornerRadius: mainGridButtonCornerRadius, isEnabled: clipsButtonContentToBounds))
                         .overlay {
                             if selectedActionMenuIndex == index {
                                 RoundedRectangle(cornerRadius: mainGridButtonCornerRadius)
@@ -386,11 +389,12 @@ struct MainScreenGridSection<ButtonLabel: View>: View {
         entry: FunctionKeyEntry,
         index: Int,
         buttonHeight: CGFloat,
+        buttonSize: CGSize,
         buttonFrame: CGRect,
         gridDimensions: GridDimensions
     ) -> some View {
         if !isGridEditModeEnabled && isInteractiveWidgetEntry(entry) {
-            buttonLabel(entry, index, buttonHeight)
+            buttonLabel(entry, index, buttonHeight, buttonSize)
                 .contentShape(Rectangle())
                 .simultaneousGesture(dragGesture(entry, index, gridDimensions))
                 .simultaneousGesture(slotEditorLongPressGesture(index: index))
@@ -413,7 +417,7 @@ struct MainScreenGridSection<ButtonLabel: View>: View {
 
                 sendLine(entry)
             } label: {
-                buttonLabel(entry, index, buttonHeight)
+                buttonLabel(entry, index, buttonHeight, buttonSize)
             }
             .buttonStyle(.plain)
             .contentShape(Rectangle())
@@ -440,5 +444,18 @@ struct MainScreenGridSection<ButtonLabel: View>: View {
                 longPressedEditIndex = index
                 onBeginSlotEditing(index)
             }
+    }
+}
+
+private struct MainGridButtonBoundsClip: ViewModifier {
+    let cornerRadius: CGFloat
+    let isEnabled: Bool
+
+    func body(content: Content) -> some View {
+        if isEnabled {
+            content.clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+        } else {
+            content
+        }
     }
 }

@@ -1,253 +1,326 @@
-1. ROOT CAUSE OR BEST-SUPPORTED HYPOTHESIS
+I’ve got the iPad-specific answer now. Source says iPad still uses the older content-sized shell and no grid-level clip, while iPhone uses the new fixed shell and clip. I’ll keep the recommendation cautious because this probe is intentionally before your physical iPad testing.1. IPAD GRID GEOMETRY
 
-Best-supported source hypothesis:
+SOURCE-CONFIRMED FINDINGS
 
-The G6 metadata itself appears to transfer correctly through repeated Undo/Redo. The likely disappearance path is the G6 Resize-specific restore validation in refreshMainGridActionMenuTargetAfterSnapshotRestore(preferredButtonAnchor:).
+File: ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
 
-For Resize Undo/Redo, that helper now does this:
+The iPad path enters the shared grid at lines 1339-1340:
 
-• Restores snapshot.
-• Uses stored resize anchor.
-• Requires that anchor to be a real button.
-• If validation fails, calls dismissMainGridActionMenu().
+if isPad {
+mainGridSection(availableWidth: contentWidth)
 
-That is the only Resize Undo/Redo path I found that can explicitly make the popup disappear.
+}
 
-Source-confirmed: there is no retry after this validation failure. If the stored anchor is temporarily or actually not considered a button at that moment, the popup is dismissed immediately.
+The iPhone path is separate at lines 1354-1359 and applies a fixed iPhone grid height. The iPad path does not use that iPhone fixed height.
 
-Runtime confirmation needed: whether the intermittent case is caused by a genuinely invalid stored anchor, a state/render ordering issue, or a visible-count/grid-boundary edge case.
+File: ESP32BLE/Scrns/Main_Screen/Main_GridSection.swift
 
-2. EXACT POPUP DISMISSAL PATHS
+MainScreenGridSection calculates grid dimensions independently of button content:
 
-ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
+• Grid rows/columns source: line 129.
+• Vertical spacing and button height: lines 130-132.
+• Horizontal spacing and button width: lines 133-136.
+• Button shape lookup: lines 152-162.
+• Button origin: lines 163-169.
+• Resolved button width/height are passed into the view frame: lines 171-185.
+• Popup frame reporting uses the same resolved CGRect: lines 197-215.
 
-• presentMainGridActionMenu(...), lines 1675-1677
-   • Tapping the same selected button toggles the popup off.
-   • Undo/Redo does not call this directly.
+Multi-cell dimensions are calculated here:
 
-• dismissMainGridActionMenu(), lines 1698-1702
-   • Cancels pending refreshes, sets mainGridActionMenuTarget = nil, returns menu mode to .actions.
-   • This is the central explicit dismissal function.
+• buttonShape: lines 258-280.
+• shapeFits: lines 282-290.
+• continuationTokensMatch: lines 292-312.
+• resolvedWidth: lines 314-317.
+• resolvedHeight: lines 319-322.
+• buttonOrigin: lines 324-335.
 
-• dismissMainGridActionMenuUnlessTargeted(at:), lines 1705-1710
-   • Dismisses if current target index differs from supplied index.
-   • I did not find it in the Resize Undo/Redo path.
+Conclusion: iPad grid dimensions are content-independent.
 
-• openMainGridActionMenuEditor(), lines 1713-1725
-   • Dismisses before beginning slot editing.
-   • Not part of Resize Undo/Redo.
+2. IPAD BUTTON FRAME HIERARCHY
 
-• .onChange(of: editingSlotIndex), lines 1188-1194
-   • Dismisses when slot editing begins.
-   • Could dismiss while pending refresh exists, but not from popup Undo/Redo itself.
+SOURCE-CONFIRMED FINDINGS
 
-• .onChange(of: isGridEditModeEnabled), lines 1198-1203
-   • Dismisses when leaving edit mode.
-   • Not Resize-specific.
+Current button hierarchy:
 
-• refreshMainGridActionMenuTargetAfterSnapshotRestore(...), lines 2376-2404
-   • Undo/Redo can reach this directly.
-   • Dismisses if target index is out of bounds, continuation, or if a Resize-preferred anchor does not pass mainGridIndexContainsButton.
-   • This is the main suspect.
+MainScreenGridSection.body
+gridButtonView(...)
+Button label
+buttonLabel(entry, index, buttonHeight, buttonSize)
+mainGridButtonLabel(...)
+MainScreenButtonLabelView
 
-• mainGridActionMenuOverlay(...), lines 1584-1593
-   • Popup does not render if mainGridActionMenuTarget is nil.
-   • On iPad, popup also does not render if resolvedMainGridActionMenuBoundaryHeight(...) returns nil.
-   • This is suppression, not explicit dismissal.
+Relevant lines:
 
-3. G6 HISTORY METADATA IMPLEMENTATION
+• gridButtonView: Main_GridSection.swift lines 387-421.
+• Button .buttonStyle(.plain): line 422.
+• Button .contentShape(Rectangle()): line 423.
+• Grid fixed frame: line 184.
+• Grid selection overlay: lines 186-191.
+• Position: lines 193-196.
 
-Current G6 additions:
+MainScreenButtonLabelView:
 
-• PopupUndoEntry.resizeTarget, lines 82-87.
-• PopupResizeUndoTarget(beforeAnchor:afterAnchor:), lines 89-92.
-• Resize stores metadata from resizeResult.sourceIndex and resizeResult.targetIndex, lines 2204-2210.
-• Undo copies metadata to redo history, lines 2254-2259.
-• Redo copies metadata back to undo history, lines 2288-2294.
-• Undo refreshes with beforeAnchor, line 2269.
-• Redo refreshes with afterAnchor, line 2296.
+• Created in Main_ButtonBehavior.swift lines 1478-1500.
+• Stores buttonSize line 1688.
+• Body starts line 1720.
+• iPhone branch: lines 1737-1746.
+• iPad branch: lines 1747-1755.
+• Content dispatch: lines 1796-1830.
 
-Source finding: the before/after relationship is not reversed during stack transfer.
+3. IPHONE VS IPAD DIFFERENCES
 
-4. UNDO/REDO EXECUTION SEQUENCE
+SOURCE-CONFIRMED FINDINGS
 
-Resize:
-• resizeMainGridActionMenuSelection(...) restores resized slot lines, records undo with resize metadata, sets popup target to resized target, then requests rendered-frame refresh. Lines 2166-2215.
+iPhone current behavior:
 
-Undo:
-• Uses last undo entry.
-• Captures redo snapshot.
-• Restores undo snapshot via restoreFunctionKeySlotLines.
-• Pushes redo snapshot with same resize metadata.
-• Calls refreshMainGridActionMenuTargetAfterSnapshotRestore(preferredButtonAnchor: beforeAnchor).
-• That validates and starts a button-required refresh.
+• clipsButtonContentToBounds: !isPad is passed at Main_Screen.swift line 1525.
+• iPhone therefore receives grid-level clipping in Main_GridSection.swift line 185.
+• usesInsetBorder: !isPad is passed at Main_ButtonBehavior.swift line 1494.
+• In MainScreenButtonLabelView, usesInsetBorder == true enters the fixed visual shell branch at lines 1737-1746.
+• The shell is fixed to buttonSize.width and buttonSize.height at lines 1739-1740.
 
-Redo:
-• Uses last redo entry.
-• Captures undo snapshot.
-• Restores redo snapshot.
-• Pushes undo snapshot with same resize metadata.
-• Calls refreshMainGridActionMenuTargetAfterSnapshotRestore(preferredButtonAnchor: afterAnchor).
+iPad current behavior:
 
-5. BUTTON VALIDATION FINDINGS
+• clipsButtonContentToBounds is false on iPad.
+• The grid-level clip modifier exists but returns unmodified content when disabled: Main_GridSection.swift lines 450-459.
+• usesInsetBorder is false on iPad.
+• iPad enters the older branch at Main_ButtonBehavior.swift lines 1747-1755.
+• In that branch, buttonVisualShell has no explicit grid-sized frame.
+• iPad border style uses .stroke(...), not .strokeBorder(...), at lines 1786-1788.
 
-Validation for Resize Undo/Redo occurs in refreshMainGridActionMenuTargetAfterSnapshotRestore(...), lines 2381-2392.
+4. NORMAL BORDER SIZING
 
-It checks:
-• target index in visible range
-• target index exists in functionKeys
-• target is not a continuation
-• for Resize metadata only, mainGridIndexContainsButton(targetIndex)
+SOURCE-CONFIRMED FINDINGS
 
-If validation fails, it calls dismissMainGridActionMenu().
+File: Main_ButtonBehavior.swift
 
-restoreFunctionKeySlotLines is wired to persistSlotLines, which calls applySlotLines; applySlotLines synchronously updates functionKeySlotLines, functionKeys, and loadedFunctionKeySlotCount. Source locations:
-• ContentView.swift􀰓 lines 929-933
-• ContentView.swift􀰓 lines 1357-1361
-• ContentView.swift􀰓 lines 1398-1411
+Normal border:
 
-Source finding: the validation is reading the restored in-memory model, not the old snapshot model, assuming persistSlotLines succeeds.
+• normalButtonBorder starts line 1781.
+• iPhone: .strokeBorder(borderColor, lineWidth: borderWidth) lines 1783-1785.
+• iPad: .stroke(borderColor, lineWidth: borderWidth) lines 1786-1788.
 
-6. PENDING FRAME REFRESH FINDINGS
+The border is part of buttonVisualShell:
 
-Relevant state:
-• pendingMovePopupRefreshIndex, lines 1019-1020.
-• pendingActionMenuFrameRefreshIndex, lines 1021-1023.
-• pendingActionMenuFrameRefreshRequiresButton, line 1023.
-• mainGridRenderedButtonFrameRefreshToken, line 1019 in current state block.
-• cached rendered targets: mainGridRenderedActionMenuTargets, line 1018.
+• buttonVisualShell starts line 1761.
+• background fill at lines 1763-1764.
+• normalButtonBorder at line 1766.
 
-Refresh starts:
-• beginPendingMovePopupRefresh(...), lines 1830-1835.
-• beginPendingActionMenuFrameRefresh(...), lines 1842-1848.
+For iPad, buttonVisualShell is placed without a fixed size:
 
-Refresh completes:
-• refreshPendingMovedMainGridActionMenuIfPossible(...), lines 1856-1878.
-• refreshPendingActionMenuFrameIfPossible(...), lines 1881-1913.
+• iPad branch line 1749.
+• content is sibling lines 1751-1753.
+• containing ZStack is only flexible: line 1755.
 
-Refresh cancellation:
-• Move refresh cancels action refresh, line 1831.
-• Action refresh cancels move refresh, line 1843.
-• Failed pending guards cancel their pending refresh, lines 1868 and 1896/1902.
-• Dismiss cancels both, lines 1698-1700.
+SWIFTUI LAYOUT REASONING
 
-Important: a new Undo/Redo replaces the previous pending refresh state.
+Yes, the iPad normal border can still size with the internal content-driven ZStack, because the iPad branch does not fix buttonVisualShell to buttonSize.
 
-7. SWIFTUI RENDERED-FRAME CALLBACK FINDINGS
+This is the same underlying structural risk the iPhone had before H3-A5.
 
-Main_GridSection.swift􀰓 calculates button frame from current shape and grid origin, lines 136-180.
+5. BACKGROUND SIZING
 
-It reports frames through .task(id:), lines 194-215.
+SOURCE-CONFIRMED FINDINGS
 
-The task id includes:
-• button index
-• minX/minY
-• width/height
-• grid dimensions
-• refresh token
+The normal background is the RoundedRectangle(...).fill(buttonBackgroundColor) inside buttonVisualShell, lines 1761-1764.
 
-renderedButtonFrameTaskID(...) is lines 373-378.
+For iPad, because buttonVisualShell is not fixed to buttonSize, the background may also follow the internal label size rather than the grid footprint.
 
-Source finding:
-• The callback is associated with an anchor index, not with a history operation id.
-• There is no generation id passed into rememberRenderedMainGridButtonFrame(...).
-• Pending refresh acceptance is based on current pending index and current popup target index.
+buttonBackgroundColor itself is resolved in Main_ButtonBehavior.swift below line 2369. Opacity/color resolution does not appear to affect sizing.
 
-8. WHETHER STALE CALLBACKS CAN INTERFERE
+6. CONTENT OVERFLOW RISKS
 
-Confirmed from source:
-• A stale callback for a different index is ignored because refresh index must match rendered target index.
-• A stale callback for the same index can be accepted because there is no refresh-generation check in refreshPendingActionMenuFrameIfPossible(...).
-• That would more likely cause a stale frame than full disappearance.
-• If guard validation fails inside the pending refresh callback, it cancels pending refresh but does not dismiss the popup.
+SOURCE-CONFIRMED FINDINGS
 
-The explicit disappearance still points more strongly to the validation branch in refreshMainGridActionMenuTargetAfterSnapshotRestore(...).
+All these content branches can be larger than small cells:
 
-9. WHETHER HISTORY METADATA REMAINS CORRECT
+Ordinary text:
+• textLabel lines 2340-2349.
+• Uses boxFontSize, .lineLimit(4), truncation, no fitted size.
 
-Source-confirmed: metadata is preserved correctly through stack transfers.
+SF Symbol:
+• symbolContent lines 2351-2367.
+• Symbol frame is max(18, boxFontSize * 1.5) at lines 2357-2360.
+• Subtitle uses textLabel at lines 2362-2364.
 
-For a sequence:
-• Resize 1 stores before O / after A.
-• Resize 2 stores before A / after B.
-• Undo Resize 2 uses A and stores redo with A/B.
-• Undo Resize 1 uses O and stores redo with O/A.
-• Redo Resize 1 uses A and stores undo with O/A.
-• Redo Resize 2 uses B and stores undo with A/B.
+Emoji:
+• emoji branch starts line 2369.
+• Emoji plus subtitle uses VStack and font multiplier.
 
-I did not find a source-level reversal or global overwrite. Each entry keeps its own anchors.
+Battery:
+• MainGridBatteryWidgetView lines 2457-2494.
+• Two-line VStack, same font-size input.
 
-10. WHY THE POPUP DISAPPEARS
+Clock/widgets:
+• clock branch lines 1839-1854.
+• Several widgets use VStack/Text with boxFontSize and flexible frames.
 
-Best-supported explanation:
+SWIFTUI LAYOUT REASONING
 
-During repeated Resize Undo/Redo, refreshMainGridActionMenuTargetAfterSnapshotRestore(preferredButtonAnchor:) occasionally rejects the stored anchor and calls dismissMainGridActionMenu().
+On iPad, larger cells may hide the problem in normal use. But source does not contain a structural safeguard preventing oversized content from making the internal label/shell larger.
 
-The exact rejection can be one of:
-• stored anchor is outside visibleBoxCount
-• stored anchor is outside functionKeys
-• stored anchor is a continuation token
-• stored anchor is blank/empty according to mainGridIndexContainsButton
+7. EXISTING IPAD SAFEGUARDS
 
-The source does not prove which condition is hit at runtime. Because the button geometry is reported as correct after the operation, the likely issue is not document restoration; it is that the popup restore path treats any immediate validation miss as fatal and dismisses instead of preserving the current popup while awaiting/attempting a rendered-frame refresh.
+SOURCE-CONFIRMED FINDINGS
 
-Why single Undo/Redo usually works:
-• The restored anchor is normally valid immediately, so the helper schedules refresh and the popup follows.
+Existing iPad safeguards:
 
-Why repeated operations expose it:
-• Repeated Undo/Redo rapidly replaces pending refresh state and repeatedly validates anchors during state transitions. Any one validation miss causes an immediate permanent popup dismissal.
+• Grid still applies fixed outer frame: Main_GridSection.swift line 184.
+• Some text/widgets have line limits and minimum scale factors.
+• Ordinary text has .lineLimit(4) and truncation: Main_ButtonBehavior.swift lines 2344-2347.
+• Clock text uses minimum scale factors: lines 1846-1850 and header at 2061-2070.
+• Battery top line has minimumScaleFactor(0.6), but percentage line does not: lines 2465-2472.
 
-11. SMALLEST RECOMMENDED CORRECTION
+Missing iPad safeguards:
 
-Do not change popup geometry.
+• No enabled grid-level clip, because clipsButtonContentToBounds is false on iPad.
+• No grid-sized visual shell, because iPad uses the branch at lines 1747-1755.
+• No iPad content fitting.
 
-Recommended future fix:
-• Modify refreshMainGridActionMenuTargetAfterSnapshotRestore(preferredButtonAnchor:).
-• For Resize-preferred anchors, do not immediately call dismissMainGridActionMenu() on button-validation failure.
-• Instead, preserve the current mainGridActionMenuTarget and either:
-   • leave the popup open with the last valid frame while waiting for a real rendered frame, or
-   • cancel only the pending resize refresh and keep the popup target unchanged.
-• Only dismiss when the target is structurally impossible, such as document mismatch, edit mode off, or explicit user dismissal.
+8. MULTI-CELL BUTTON BEHAVIOUR
 
-A slightly stronger version:
-• Add a refresh generation token to pending frame refresh state so stale same-index callbacks cannot satisfy a newer refresh.
-• This is probably secondary; it addresses stale frame risk more than disappearance.
+SOURCE-CONFIRMED FINDINGS
 
-The smallest source-targeted correction is to avoid fatal dismissal for Resize-specific validation misses that may be transient, while still requiring a real button before replacing the popup target frame.
+Multi-cell sizes are resolved from actual shape:
 
-12. RISKS TO OTHER POPUP OPERATIONS
+• candidate shapes include 3x3, 3x2, 2x2, 1x3, 3x1, 1x2, 2x1: Main_GridSection.swift lines 264-272.
+• resolved width/height include cell size plus spacing: lines 314-322.
+• buttonSize receives those resolved dimensions: line 175.
+• iPhone visual shell uses those dimensions.
+• iPad currently receives those dimensions but does not use them for shell sizing.
 
-Cut/Delete:
-• Some paths intentionally use requiresButton: false.
-• Do not globally change that.
-• The fix should only affect Resize metadata paths.
+SWIFTUI LAYOUT REASONING
 
-Paste:
-• Uses requiresButton: true; should remain unchanged.
+For iPad multi-cell buttons, the source still allows the visual shell to be content-sized. Larger footprints make overflow less likely, but source does not guarantee the background/border always match the footprint.
 
-Duplicate:
-• Has special duplicate source target handling.
-• Should remain unchanged.
+9. POPUP / SELECTION SAFETY
 
-Move:
-• Uses beginPendingMovePopupRefresh(...) and is not involved.
-• Do not modify.
+SOURCE-CONFIRMED FINDINGS
 
-User dismissal:
-• Must preserve dismissMainGridActionMenu() for same-button tap, edit start, leaving edit mode, and explicit close behavior.
+Popup anchor rectangles are grid-based:
 
-iPhone/iPad placement:
-• No geometry changes are indicated.
+• buttonFrame is created from origin/resolved size at Main_GridSection.swift lines 176-181.
+• Reported via onRenderedButtonFrame lines 197-215.
+• Edit tap receives the same buttonFrame at lines 426-432.
+• Popup positioning consumes the target frame in Main_Screen.swift around lines 1577-1600 and 2705-2734.
 
-13. FILES MODIFIED: NONE
+Selection overlay is grid-owned:
 
-No files were modified in this read-only probe.
-No build was performed.
-No diagnostics were added.
+• Main_GridSection.swift lines 186-191.
+• It sits after the fixed frame and clip modifier.
+
+Hit testing:
+
+• .contentShape(Rectangle()) in gridButtonView at lines 398 and 423.
+• Gesture modifiers lines 399-400 and 424-436.
+
+Conclusion: popup anchors and selection overlay are tied to the grid rectangle, not the content-sized label.
+
+10. THREE-IPAD DEVICE CONSIDERATIONS
+
+SOURCE-CONFIRMED FINDINGS
+
+The layout uses available geometry, not explicit iPad model checks:
+
+• Main_Screen.swift uses GeometryReader at line 1271.
+• contentWidth comes from geometry width at line 1273.
+• iPad enters shared mainGridSection(availableWidth:) at lines 1339-1340.
+• MainScreenGridSection computes button size from actual geometry at lines 127-136.
+
+SWIFTUI LAYOUT REASONING
+
+Smaller iPads, especially iPad mini 5, can make cells smaller and content overflow more likely. The source does not contain device-specific assumptions, which is good; physical testing on all three devices is the right next step.
+
+11. WHETHER ANY CORRECTION IS NEEDED
+
+SOURCE-CONFIRMED RISK
+
+Yes, the source shows iPad still has the same underlying structural risk:
+
+• No active grid-level clip.
+• No grid-sized visual shell.
+• iPad normal border/background can size with content-driven ZStack.
+
+However, whether this is a visible user-facing defect on iPad is not source-confirmed. The user’s planned physical-device testing is necessary before deciding whether to change iPad.
+
+Recommendation now:
+Do not change iPad yet. Test first.
+
+12. SMALLEST POSSIBLE CORRECTION, ONLY IF NECESSARY
+
+If physical iPad testing shows the same problem, the smallest correction is to adapt H3-A3/H3-A5 structurally while preserving iPad style.
+
+Potential minimal change:
+
+• Enable grid-level clipping for iPad too, or introduce a clearer flag such as clipsButtonContentToBounds true for all platforms.
+• Use the already-passed buttonSize for the iPad visual shell as well.
+• Preserve iPad normalButtonBorder style: keep .stroke(...), not .strokeBorder(...).
+• Preserve existing iPad corner radius from mainGridButtonCornerRadius.
+• Preserve selection overlay order after clipping.
+• Do not change content fonts, widgets, layout, popup, gestures, Move, or Resize.
+
+In concrete terms, the likely change would be in MainScreenButtonLabelView.body lines 1737-1755: make both platform branches use a grid-sized buttonVisualShell, while leaving the border implementation itself platform-specific.
+
+But only do this if iPad testing confirms visible overflow or border/background mismatch.
+
+13. REGRESSION RISKS
+
+If iPad is changed:
+
+• iPad normal border appearance could shift because .stroke(...) draws centered on the shape boundary, unlike iPhone .strokeBorder(...).
+• A grid-level clip could trim the outside half of iPad .stroke(...) unless modifier placement or stroke style is handled carefully.
+• Transparent buttons and invisible buttons should be checked.
+• Large SF Symbols, emoji, battery, clock, and widgets could become clipped. This matches the final design, but it may be visually more noticeable on smaller iPads.
+• Multi-cell button borders should be tested after resize.
+• Popup should remain safe because it uses grid frames, but verify visually.
+• Hit testing should remain grid-based if gestures are untouched.
+
+14. RECOMMENDED PHYSICAL TESTS
+
+On iPad Air M2 13-inch, iPad mini 5, and older iPad Pro:
+
+Test 1:
+1x1 ordinary F-key text at normal and high font sizes.
+Expected: border/background match grid cell.
+
+Test 2:
+1x1 SF Symbol plus subtitle at high font size.
+Expected current investigation question: see whether border/background expand or content overlaps neighbors.
+
+Test 3:
+1x1 battery widget at high font size.
+Expected: check whether top/bottom border remains complete or whether the internal shell grows.
+
+Test 4:
+1x1 clock widget with city label.
+Expected: check border/background and content clipping/overlap.
+
+Test 5:
+Emoji plus subtitle.
+Expected: check whether emoji stack expands the shell.
+
+Test 6:
+2x1, 1x2, 2x2, and 3x3 resized buttons with oversized content.
+Expected: shell should visually match footprint; note if not.
+
+Test 7:
+Edit Mode selection overlay on oversized-content buttons.
+Expected: selection overlay should remain grid-aligned.
+
+Test 8:
+Popup open on oversized-content buttons.
+Expected: popup anchors to grid rectangle, not visual overflow.
+
+Test 9:
+Move and Resize after oversized content.
+Expected: geometry and popup behavior remain normal.
+
+15. FILES MODIFIED: NONE
+
+No files were modified during this C1 probe.
+No build was run.
+No diagnostics or logging were added.
 No commits were performed.
 
-Current working tree already shows modified files from prior work:
-• ESP32BLE/Scrns/Main_Screen/Main_Screen.swift􀰓
-• ESP32BLE/codex.txt
-
-I did not modify them during this investigation.
+Current working tree note:
+Main_ButtonBehavior.swift􀰓, Main_GridSection.swift􀰓, and Main_Screen.swift􀰓 remain modified from prior H3-A work.
