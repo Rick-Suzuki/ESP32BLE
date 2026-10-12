@@ -1,199 +1,253 @@
-1. ROOT CAUSE
+1. ROOT CAUSE OR BEST-SUPPORTED HYPOTHESIS
 
-The new vertical rectangular exchange helper accepts a partially overlapping, horizontally offset neighbour because it allows horizontal expansion to include the neighbour’s full footprint, even when source and neighbour have the same shape and their column ranges do not match.
+Best-supported source hypothesis:
 
-For vertical movement, the current helper does not require a same-sized single neighbour to share the same column range as the source.
+The G6 metadata itself appears to transfer correctly through repeated Undo/Redo. The likely disappearance path is the G6 Resize-specific restore validation in refreshMainGridActionMenuTargetAfterSnapshotRestore(preferredButtonAnchor:).
 
-So this case:
+For Resize Undo/Redo, that helper now does this:
 
-row 0: . F F .
-row 1: C C . .
+• Restores snapshot.
+• Uses stored resize anchor.
+• Requires that anchor to be a real button.
+• If validation fails, calls dismissMainGridActionMenu().
 
-or the equivalent reversed vertical arrangement
+That is the only Resize Undo/Redo path I found that can explicitly make the popup disappear.
 
-is interpreted as a valid rectangular exchange region:
+Source-confirmed: there is no retry after this validation failure. If the stored anchor is temporarily or actually not considered a button at that moment, the popup is dismissed immediately.
 
-columns 0-2
-one row high for the neighbouring group
+Runtime confirmation needed: whether the intermittent case is caused by a genuinely invalid stored anchor, a state/render ordering issue, or a visible-count/grid-boundary edge case.
 
-The helper treats the extra column as empty exchange space, not as invalid alignment.
+2. EXACT POPUP DISMISSAL PATHS
 
-2. ACCEPTING MOVEMENT STRATEGY
+ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
 
-Best-supported source-level answer:
+• presentMainGridActionMenu(...), lines 1675-1677
+   • Tapping the same selected button toggles the popup off.
+   • Undo/Redo does not call this directly.
 
-verticalRectangularGroupSwapMoves(...) accepts the move.
+• dismissMainGridActionMenu(), lines 1698-1702
+   • Cancels pending refreshes, sets mainGridActionMenuTarget = nil, returns menu mode to .actions.
+   • This is the central explicit dismissal function.
 
-It is called from directionalFootprintGroupSwapMoves(...) before the vertical branch returns nil.
+• dismissMainGridActionMenuUnlessTargeted(at:), lines 1705-1710
+   • Dismisses if current target index differs from supplied index.
+   • I did not find it in the Resize Undo/Redo path.
 
-Earlier strategies are unlikely to accept this specific offset swap:
+• openMainGridActionMenuEditor(), lines 1713-1725
+   • Dismisses before beginning slot editing.
+   • Not part of Resize Undo/Redo.
 
-directionalLocalSlideMoves(...) requires the whole blocker footprint to be inside the entered strip. With only one-column overlap, C’s 2x1 footprint is not fully inside F’s 2-column entered strip.
+• .onChange(of: editingSlotIndex), lines 1188-1194
+   • Dismisses when slot editing begins.
+   • Could dismiss while pending refresh exists, but not from popup Undo/Redo itself.
 
-directionalGroupSwapMoves(...) calls groupSwapMoves(...) with a source-sized target rectangle. C’s offset 2x1 footprint is not fully inside that source-sized rectangle, so it rejects.
+• .onChange(of: isGridEditModeEnabled), lines 1198-1203
+   • Dismisses when leaving edit mode.
+   • Not Resize-specific.
 
-directionalCompatibleSwapMoves(...) requires same width and same anchor column for vertical compatible swaps. Offset columns reject.
+• refreshMainGridActionMenuTargetAfterSnapshotRestore(...), lines 2376-2404
+   • Undo/Redo can reach this directly.
+   • Dismisses if target index is out of bounds, continuation, or if a Resize-preferred anchor does not pass mainGridIndexContainsButton.
+   • This is the main suspect.
 
-Same-shape swap could theoretically accept same-sized offset buttons later, because it only checks same shape, but verticalRectangularGroupSwapMoves(...) appears to accept first in the current strategy order.
+• mainGridActionMenuOverlay(...), lines 1584-1593
+   • Popup does not render if mainGridActionMenuTarget is nil.
+   • On iPad, popup also does not render if resolvedMainGridActionMenuBoundaryHeight(...) returns nil.
+   • This is suppression, not explicit dismissal.
 
-Runtime tracing would be needed to confirm the exact strategy in the user’s live document, but source inspection strongly points to verticalRectangularGroupSwapMoves(...).
+3. G6 HISTORY METADATA IMPLEMENTATION
 
-3. RELEVANT FUNCTIONS AND SOURCE LOCATIONS
+Current G6 additions:
 
-ESP32BLE/Scrns/ContentView.swift
+• PopupUndoEntry.resizeTarget, lines 82-87.
+• PopupResizeUndoTarget(beforeAnchor:afterAnchor:), lines 89-92.
+• Resize stores metadata from resizeResult.sourceIndex and resizeResult.targetIndex, lines 2204-2210.
+• Undo copies metadata to redo history, lines 2254-2259.
+• Redo copies metadata back to undo history, lines 2288-2294.
+• Undo refreshes with beforeAnchor, line 2269.
+• Redo refreshes with afterAnchor, line 2296.
 
-resolvedTileMovePlan(...): line 2042
-directionalFootprintGroupSwapMoves(...): line 2441
-horizontalRectangularGroupSwapMoves(...): line 2505
-verticalRectangularGroupSwapMoves(...): line 2616
-groupSwapMoves(...): line 2727
-directionalCompatibleSwapMoves(...): line 2768
-verticalCompatibleSwapMoves(...): line 2859
-movePlanFits(...): line 2880
+Source finding: the before/after relationship is not reversed during stack transfer.
 
-Key accepting logic:
-verticalRectangularGroupSwapMoves(...), lines 2633-2724.
+4. UNDO/REDO EXECUTION SEQUENCE
 
-4. F/C FOOTPRINT ANALYSIS
+Resize:
+• resizeMainGridActionMenuSelection(...) restores resized slot lines, records undo with resize metadata, sets popup target to resized target, then requests rendered-frame refresh. Lines 2166-2215.
 
-Assuming relative coordinates where F is the dragged 2x1 source and C is the adjacent 2x1 neighbour in the drag direction:
+Undo:
+• Uses last undo entry.
+• Captures redo snapshot.
+• Restores undo snapshot via restoreFunctionKeySlotLines.
+• Pushes redo snapshot with same resize metadata.
+• Calls refreshMainGridActionMenuTargetAfterSnapshotRestore(preferredButtonAnchor: beforeAnchor).
+• That validates and starts a button-required refresh.
 
-F footprint:
-width 2, height 1
-columns 1-2
+Redo:
+• Uses last redo entry.
+• Captures undo snapshot.
+• Restores redo snapshot.
+• Pushes undo snapshot with same resize metadata.
+• Calls refreshMainGridActionMenuTargetAfterSnapshotRestore(preferredButtonAnchor: afterAnchor).
 
-C footprint:
-width 2, height 1
-columns 0-1
+5. BUTTON VALIDATION FINDINGS
 
-Horizontal overlap:
-only column 1
+Validation for Resize Undo/Redo occurs in refreshMainGridActionMenuTargetAfterSnapshotRestore(...), lines 2381-2392.
 
-They do not share identical column ranges.
+It checks:
+• target index in visible range
+• target index exists in functionKeys
+• target is not a continuation
+• for Resize metadata only, mainGridIndexContainsButton(targetIndex)
 
-Current vertical helper:
-inspects the adjacent row across F’s original columns 1-2.
-It sees C at column 1.
-It collects C as an initial neighbour.
-It expands minGroupColumn from 1 to 0 to include all of C.
-It keeps maxGroupColumn at 2 because that is F’s source span.
-The resulting group rectangle includes columns 0-2.
+If validation fails, it calls dismissMainGridActionMenu().
 
-5. PROPOSED MOVE PLAN
+restoreFunctionKeySlotLines is wired to persistSlotLines, which calls applySlotLines; applySlotLines synchronously updates functionKeySlotLines, functionKeys, and loadedFunctionKeySlotCount. Source locations:
+• ContentView.swift􀰓 lines 929-933
+• ContentView.swift􀰓 lines 1357-1361
+• ContentView.swift􀰓 lines 1398-1411
 
-For a vertical UP version with F below C:
+Source finding: the validation is reading the restored in-memory model, not the old snapshot model, assuming persistSlotLines succeeds.
 
-F moves up by groupHeight, which is 1 row.
-C moves down by source height, also 1 row.
+6. PENDING FRAME REFRESH FINDINGS
 
-Neither button changes columns.
-Neither button changes shape.
-No additional buttons are included if the expanded row rectangle is otherwise empty.
+Relevant state:
+• pendingMovePopupRefreshIndex, lines 1019-1020.
+• pendingActionMenuFrameRefreshIndex, lines 1021-1023.
+• pendingActionMenuFrameRefreshRequiresButton, line 1023.
+• mainGridRenderedButtonFrameRefreshToken, line 1019 in current state block.
+• cached rendered targets: mainGridRenderedActionMenuTargets, line 1018.
 
-This is geometrically collision-free, but it violates the intended “simple same-sized vertical swap requires aligned columns” rule.
+Refresh starts:
+• beginPendingMovePopupRefresh(...), lines 1830-1835.
+• beginPendingActionMenuFrameRefresh(...), lines 1842-1848.
 
-6. WHY THE CURRENT CODE ACCEPTS IT
+Refresh completes:
+• refreshPendingMovedMainGridActionMenuIfPossible(...), lines 1856-1878.
+• refreshPendingActionMenuFrameIfPossible(...), lines 1881-1913.
 
-verticalRectangularGroupSwapMoves(...) allows perpendicular expansion.
+Refresh cancellation:
+• Move refresh cancels action refresh, line 1831.
+• Action refresh cancels move refresh, line 1843.
+• Failed pending guards cancel their pending refresh, lines 1868 and 1896/1902.
+• Dismiss cancels both, lines 1698-1700.
 
-For vertical movement, perpendicular expansion means horizontal column expansion.
+Important: a new Undo/Redo replaces the previous pending refresh state.
 
-That is correct for different-width exchanges such as 2x2 against 3x1 with an empty side column.
+7. SWIFTUI RENDERED-FRAME CALLBACK FINDINGS
 
-But in this same-sized 2x1 against 2x1 case, the helper treats the offset as a valid need for horizontal expansion.
+Main_GridSection.swift􀰓 calculates button frame from current shape and grid origin, lines 136-180.
 
-Missing condition:
-When the vertical exchange is a simple one-neighbour, same-shape exchange, the neighbour should probably have the same column range as the source.
+It reports frames through .task(id:), lines 194-215.
 
-The helper currently has no such alignment check.
+The task id includes:
+• button index
+• minX/minY
+• width/height
+• grid dimensions
+• refresh token
 
-7. WHETHER COLLISION VALIDATION IS CORRECT
+renderedButtonFrameTaskID(...) is lines 373-378.
 
-movePlanFits(...) is doing its job.
+Source finding:
+• The callback is associated with an anchor index, not with a history operation id.
+• There is no generation id passed into rememberRenderedMainGridButtonFrame(...).
+• Pending refresh acceptance is based on current pending index and current popup target index.
 
-It checks final footprints:
-inside grid,
-no moved-button overlap,
-no overlap with stationary occupied cells,
-no duplicate destination cells.
+8. WHETHER STALE CALLBACKS CAN INTERFERE
 
-The F/C move can pass those checks because it is physically possible to swap rows while preserving each button’s columns.
+Confirmed from source:
+• A stale callback for a different index is ignored because refresh index must match rendered target index.
+• A stale callback for the same index can be accepted because there is no refresh-generation check in refreshPendingActionMenuFrameIfPossible(...).
+• That would more likely cause a stale frame than full disappearance.
+• If guard validation fails inside the pending refresh callback, it cancels pending refresh but does not dismiss the popup.
 
-The problem is not collision safety.
+The explicit disappearance still points more strongly to the validation branch in refreshMainGridActionMenuTargetAfterSnapshotRestore(...).
 
-The problem is strategy eligibility: the move is geometrically possible but not allowed by the intended movement rule.
+9. WHETHER HISTORY METADATA REMAINS CORRECT
 
-8. WHETHER HORIZONTAL MOVEMENT HAS THE SAME RISK
+Source-confirmed: metadata is preserved correctly through stack transfers.
 
-Yes, the horizontal equivalent is possible in principle.
+For a sequence:
+• Resize 1 stores before O / after A.
+• Resize 2 stores before A / after B.
+• Undo Resize 2 uses A and stores redo with A/B.
+• Undo Resize 1 uses O and stores redo with O/A.
+• Redo Resize 1 uses A and stores undo with O/A.
+• Redo Resize 2 uses B and stores undo with A/B.
 
-Equivalent case:
-two 1x2 buttons in adjacent columns, offset vertically by one row.
+I did not find a source-level reversal or global overwrite. Each entry keeps its own anchors.
 
-The horizontal helper can expand vertically to include the neighbour’s full footprint, so it may accept an analogous offset exchange if the expanded rectangle contains no unrelated occupied cells.
+10. WHY THE POPUP DISAPPEARS
 
-However, horizontal has passed manual testing, so do not change it without a confirmed horizontal reproduction. The same logical gap exists, but the reported defect is vertical.
+Best-supported explanation:
 
-9. SMALLEST RECOMMENDED CORRECTION
+During repeated Resize Undo/Redo, refreshMainGridActionMenuTargetAfterSnapshotRestore(preferredButtonAnchor:) occasionally rejects the stored anchor and calls dismissMainGridActionMenu().
 
-Change verticalRectangularGroupSwapMoves(...).
+The exact rejection can be one of:
+• stored anchor is outside visibleBoxCount
+• stored anchor is outside functionKeys
+• stored anchor is a continuation token
+• stored anchor is blank/empty according to mainGridIndexContainsButton
 
-Add a narrow eligibility check after blockingAnchors are collected and before building the expanded rectangle:
+The source does not prove which condition is hit at runtime. Because the button geometry is reported as correct after the operation, the likely issue is not document restoration; it is that the popup restore path treats any immediate validation miss as fatal and dismisses instead of preserving the current popup while awaiting/attempting a rendered-frame refresh.
 
-If blockingAnchors.count == 1,
-and the single blocking tile has the same shape as the source,
-and this is a vertical rectangular exchange,
-then require:
+Why single Undo/Redo usually works:
+• The restored anchor is normally valid immediately, so the helper schedules refresh and the popup follows.
 
-blockingTile.anchor % columns == sourceColumn
+Why repeated operations expose it:
+• Repeated Undo/Redo rapidly replaces pending refresh state and repeatedly validates anchors during state transitions. Any one validation miss causes an immediate permanent popup dismissal.
 
-In plain terms:
-same-sized vertical two-button swaps must have identical left edges / identical column ranges.
+11. SMALLEST RECOMMENDED CORRECTION
 
-For the F/C case:
-source F columns 1-2
-blocking C columns 0-1
-columns differ
-reject.
+Do not change popup geometry.
 
-Why valid different-sized exchanges continue working:
-The check applies only to a single same-shape neighbour. A 2x2 against 3x1, 1x3 against 2x2, or multiple-neighbour group exchange would not be blocked by this exact rule.
+Recommended future fix:
+• Modify refreshMainGridActionMenuTargetAfterSnapshotRestore(preferredButtonAnchor:).
+• For Resize-preferred anchors, do not immediately call dismissMainGridActionMenu() on button-validation failure.
+• Instead, preserve the current mainGridActionMenuTarget and either:
+   • leave the popup open with the last valid frame while waiting for a real rendered frame, or
+   • cancel only the pending resize refresh and keep the popup target unchanged.
+• Only dismiss when the target is structurally impossible, such as document mismatch, edit mode off, or explicit user dismissal.
 
-Possible equivalent horizontal future check:
-For horizontal same-sized one-neighbour swaps, require matching row:
-blockingTile.anchor / columns == sourceRow
+A slightly stronger version:
+• Add a refresh generation token to pending frame refresh state so stale same-index callbacks cannot satisfy a newer refresh.
+• This is probably secondary; it addresses stale frame risk more than disappearance.
 
-But because horizontal is currently considered stable, I would not change it until confirmed.
+The smallest source-targeted correction is to avoid fatal dismissal for Resize-specific validation misses that may be transient, while still requiring a real button before replacing the popup target frame.
 
-10. POSSIBLE REGRESSIONS
+12. RISKS TO OTHER POPUP OPERATIONS
 
-Potentially affected:
-Offset same-sized 2x1 vertical swaps that currently work but are now considered invalid.
+Cut/Delete:
+• Some paths intentionally use requiresButton: false.
+• Do not globally change that.
+• The fix should only affect Resize metadata paths.
 
-Should remain valid:
-Aligned same-sized vertical swaps.
-Different-width vertical rectangular exchanges.
-Multiple initial neighbours in the entering row.
-Vertical exchanges requiring empty side columns.
-Collision rejection with unrelated side blockers.
-UP/DOWN symmetry.
+Paste:
+• Uses requiresButton: true; should remain unchanged.
 
-Manual tests needed:
-2x1 over aligned 2x1.
-2x1 over offset 2x1.
-1x1 vertical swap.
-2x2 over aligned 2x2.
-2x2 over offset 2x2.
-2x2 over 3x1 with empty side column.
-2x2 over 3x1 with side blocker.
-Horizontal offset equivalent, observation only unless reproduced.
+Duplicate:
+• Has special duplicate source target handling.
+• Should remain unchanged.
 
-11. FILES MODIFIED: NONE
+Move:
+• Uses beginPendingMovePopupRefresh(...) and is not involved.
+• Do not modify.
 
-No files modified.
+User dismissal:
+• Must preserve dismissMainGridActionMenu() for same-button tap, edit start, leaving edit mode, and explicit close behavior.
 
-No builds performed.
+iPhone/iPad placement:
+• No geometry changes are indicated.
 
-No diagnostics added.
+13. FILES MODIFIED: NONE
 
-No commits performed.
+No files were modified in this read-only probe.
+No build was performed.
+No diagnostics were added.
+No commits were performed.
+
+Current working tree already shows modified files from prior work:
+• ESP32BLE/Scrns/Main_Screen/Main_Screen.swift􀰓
+• ESP32BLE/codex.txt
+
+I did not modify them during this investigation.

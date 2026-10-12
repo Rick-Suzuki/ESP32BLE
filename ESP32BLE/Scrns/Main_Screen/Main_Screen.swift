@@ -83,6 +83,12 @@ private struct PopupUndoEntry {
     let documentName: String
     let slotLines: [String]
     let duplicateSourceTarget: MainGridActionMenuTarget?
+    let resizeTarget: PopupResizeUndoTarget?
+}
+
+private struct PopupResizeUndoTarget {
+    let beforeAnchor: Int
+    let afterAnchor: Int
 }
 
 private enum MainGridActionMenuMode {
@@ -2195,7 +2201,13 @@ Tapping a row inserts the key code at the cursor.
         }
 
         resetDirectionalDeleteState()
-        recordPopupUndoSnapshot(beforeSnapshot)
+        recordPopupUndoSnapshot(
+            beforeSnapshot,
+            resizeTarget: PopupResizeUndoTarget(
+                beforeAnchor: resizeResult.sourceIndex,
+                afterAnchor: resizeResult.targetIndex
+            )
+        )
         mainGridActionMenuTarget = mainGridActionMenuTargetForResize(
             from: target,
             result: resizeResult
@@ -2240,7 +2252,11 @@ Tapping a row inserts the key code at the cursor.
         }
 
         popupUndoHistory.removeLast()
-        recordPopupRedoSnapshot(redoSnapshot, duplicateSourceTarget: undoEntry.duplicateSourceTarget)
+        recordPopupRedoSnapshot(
+            redoSnapshot,
+            duplicateSourceTarget: undoEntry.duplicateSourceTarget,
+            resizeTarget: undoEntry.resizeTarget
+        )
         resetDirectionalDeleteState()
 
         if let duplicateSourceTarget = undoEntry.duplicateSourceTarget {
@@ -2250,7 +2266,7 @@ Tapping a row inserts the key code at the cursor.
                 gridDimensions: duplicateSourceTarget.gridDimensions
             )
         }
-        refreshMainGridActionMenuTargetAfterSnapshotRestore()
+        refreshMainGridActionMenuTargetAfterSnapshotRestore(preferredButtonAnchor: undoEntry.resizeTarget?.beforeAnchor)
     }
 
     private func redoMainGridActionMenuOperation() {
@@ -2273,10 +2289,11 @@ Tapping a row inserts the key code at the cursor.
         recordPopupUndoSnapshot(
             undoSnapshot,
             duplicateSourceTarget: redoEntry.duplicateSourceTarget,
+            resizeTarget: redoEntry.resizeTarget,
             clearsRedoHistory: false
         )
         resetDirectionalDeleteState()
-        refreshMainGridActionMenuTargetAfterSnapshotRestore()
+        refreshMainGridActionMenuTargetAfterSnapshotRestore(preferredButtonAnchor: redoEntry.resizeTarget?.afterAnchor)
     }
 
     private func deleteAllButtonsOnCurrentScreen() {
@@ -2311,12 +2328,14 @@ Tapping a row inserts the key code at the cursor.
     private func recordPopupUndoSnapshot(
         _ slotLines: [String],
         duplicateSourceTarget: MainGridActionMenuTarget? = nil,
+        resizeTarget: PopupResizeUndoTarget? = nil,
         clearsRedoHistory: Bool = true
     ) {
         popupUndoHistory.append(PopupUndoEntry(
             documentName: selectedDocumentName,
             slotLines: slotLines,
-            duplicateSourceTarget: duplicateSourceTarget
+            duplicateSourceTarget: duplicateSourceTarget,
+            resizeTarget: resizeTarget
         ))
 
         if popupUndoHistory.count > popupUndoHistoryLimit {
@@ -2330,12 +2349,14 @@ Tapping a row inserts the key code at the cursor.
 
     private func recordPopupRedoSnapshot(
         _ slotLines: [String],
-        duplicateSourceTarget: MainGridActionMenuTarget? = nil
+        duplicateSourceTarget: MainGridActionMenuTarget? = nil,
+        resizeTarget: PopupResizeUndoTarget? = nil
     ) {
         popupRedoHistory.append(PopupUndoEntry(
             documentName: selectedDocumentName,
             slotLines: slotLines,
-            duplicateSourceTarget: duplicateSourceTarget
+            duplicateSourceTarget: duplicateSourceTarget,
+            resizeTarget: resizeTarget
         ))
 
         if popupRedoHistory.count > popupUndoHistoryLimit {
@@ -2352,12 +2373,29 @@ Tapping a row inserts the key code at the cursor.
         popupRedoHistory.removeAll()
     }
 
-    private func refreshMainGridActionMenuTargetAfterSnapshotRestore() {
+    private func refreshMainGridActionMenuTargetAfterSnapshotRestore(preferredButtonAnchor: Int? = nil) {
         guard let target = mainGridActionMenuTarget else {
             return
         }
 
-        let targetIndex = editableMainGridAnchorIndex(containing: target.index) ?? target.index
+        let targetIndex = preferredButtonAnchor ?? (editableMainGridAnchorIndex(containing: target.index) ?? target.index)
+        if preferredButtonAnchor != nil {
+            guard targetIndex >= 0 else {
+                return
+            }
+
+            if targetIndex != target.index {
+                mainGridActionMenuTarget = MainGridActionMenuTarget(
+                    index: targetIndex,
+                    buttonFrame: target.buttonFrame,
+                    gridDimensions: target.gridDimensions
+                )
+            }
+
+            beginPendingActionMenuFrameRefresh(to: targetIndex, requiresButton: true)
+            return
+        }
+
         guard targetIndex >= 0,
               targetIndex < visibleBoxCount,
               functionKeys.indices.contains(targetIndex),
@@ -2374,7 +2412,7 @@ Tapping a row inserts the key code at the cursor.
             )
         }
 
-        beginPendingActionMenuFrameRefresh(to: targetIndex, requiresButton: false)
+        beginPendingActionMenuFrameRefresh(to: targetIndex, requiresButton: preferredButtonAnchor != nil)
     }
 
     private func showMainGridActionMenuMessage(_ message: String) {

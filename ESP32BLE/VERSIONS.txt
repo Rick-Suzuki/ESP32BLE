@@ -1,3 +1,8 @@
+261012 Mon 1413
+V62.38
+undo,redo loses popup position
+
+
 261012 Mon 1334
 V62.37
 movement complete
