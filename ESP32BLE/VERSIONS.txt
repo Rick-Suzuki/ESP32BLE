@@ -1,3 +1,7 @@
+261012 Mon 1334
+V62.37
+movement complete
+
 261011 Sun 1653
 V62.36
 resizer complete - needs more testing
@@ -15,7 +19,6 @@ popup working
 261010 Sat 1034
 V62.33
 experimental versions added: 17 slider not working
-
 
 
 261009 Fri 2058

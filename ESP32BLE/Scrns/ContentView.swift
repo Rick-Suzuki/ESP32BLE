@@ -2156,6 +2156,16 @@ struct ContentView: View {
            let blockingAnchor = blockingAnchors.first,
            let blockingTile = tilesByAnchor[blockingAnchor],
            blockingTile.shape == sourceTile.shape {
+            if columnStep != 0, rowStep == 0 {
+                guard blockingTile.anchor / columns == sourceRow else {
+                    return nil
+                }
+            } else if rowStep != 0, columnStep == 0 {
+                guard blockingTile.anchor % columns == sourceColumn else {
+                    return nil
+                }
+            }
+
             return [
                 StoredTileMove(tile: sourceTile, anchor: blockingTile.anchor),
                 StoredTileMove(tile: blockingTile, anchor: sourceIndex)
@@ -2242,7 +2252,11 @@ struct ContentView: View {
         }
 
         let plannedMoves = [StoredTileMove(tile: sourceTile, anchor: targetIndex)] + displacedMoves
-        return movePlanFits(plannedMoves, occupancy: occupancy, gridDimensions: gridDimensions) ? plannedMoves : nil
+        guard movePlanFits(plannedMoves, occupancy: occupancy, gridDimensions: gridDimensions) else {
+            return nil
+        }
+
+        return plannedMoves
     }
 
     private func edgePushMoves(
@@ -2305,7 +2319,11 @@ struct ContentView: View {
             StoredTileMove(tile: blockingTile, anchor: blockingNewAnchor)
         ]
 
-        return movePlanFits(moves, occupancy: occupancy, gridDimensions: gridDimensions) ? moves : nil
+        guard movePlanFits(moves, occupancy: occupancy, gridDimensions: gridDimensions) else {
+            return nil
+        }
+
+        return moves
     }
 
     private func crossingPushMoves(
@@ -2378,7 +2396,11 @@ struct ContentView: View {
             StoredTileMove(tile: blockingTile, anchor: blockingNewAnchor)
         ]
 
-        return movePlanFits(moves, occupancy: occupancy, gridDimensions: gridDimensions) ? moves : nil
+        guard movePlanFits(moves, occupancy: occupancy, gridDimensions: gridDimensions) else {
+            return nil
+        }
+
+        return moves
     }
 
     private func directionalGroupSwapMoves(
@@ -2445,6 +2467,18 @@ struct ContentView: View {
         // This is deliberately different from a one-cell slide. The target rectangle starts
         // one full source-width/height away, so the exchanged footprints do not overlap.
         if columnStep != 0, rowStep == 0 {
+            if let moves = horizontalRectangularGroupSwapMoves(
+                from: sourceTile,
+                sourceRow: sourceRow,
+                sourceColumn: sourceColumn,
+                columnStep: columnStep,
+                occupancy: occupancy,
+                tilesByAnchor: tilesByAnchor,
+                gridDimensions: gridDimensions
+            ) {
+                return moves
+            }
+
             let targetColumn = sourceColumn + (columnStep * sourceTile.shape.width)
             guard targetColumn >= 0, targetColumn + sourceTile.shape.width <= columns else {
                 return nil
@@ -2460,21 +2494,262 @@ struct ContentView: View {
         }
 
         if rowStep != 0, columnStep == 0 {
-            let targetRow = sourceRow + (rowStep * sourceTile.shape.height)
-            guard targetRow >= 0, targetRow + sourceTile.shape.height <= gridDimensions.rows else {
-                return nil
-            }
-
-            return groupSwapMoves(
-                sourceTile: sourceTile,
-                targetAnchor: (targetRow * columns) + sourceColumn,
+            if let moves = verticalRectangularGroupSwapMoves(
+                from: sourceTile,
+                sourceRow: sourceRow,
+                sourceColumn: sourceColumn,
+                rowStep: rowStep,
                 occupancy: occupancy,
                 tilesByAnchor: tilesByAnchor,
                 gridDimensions: gridDimensions
-            )
+            ) {
+                return moves
+            }
+
+            return nil
         }
 
         return nil
+    }
+
+    private func horizontalRectangularGroupSwapMoves(
+        from sourceTile: StoredGridTile,
+        sourceRow: Int,
+        sourceColumn: Int,
+        columnStep: Int,
+        occupancy: [Int: Int],
+        tilesByAnchor: [Int: StoredGridTile],
+        gridDimensions: GridDimensions
+    ) -> [StoredTileMove]? {
+        let columns = max(gridDimensions.columns, 1)
+        let sourceRowRange = sourceRow..<(sourceRow + sourceTile.shape.height)
+        let groupStartColumn = columnStep > 0 ? sourceColumn + sourceTile.shape.width : sourceColumn - 1
+
+        guard groupStartColumn >= 0, groupStartColumn < columns else {
+            return nil
+        }
+
+        let blockingAnchors = Set(sourceRowRange.compactMap { row in
+            let index = (row * columns) + groupStartColumn
+            return occupancy[index].flatMap { $0 == sourceTile.anchor ? nil : $0 }
+        })
+
+        guard !blockingAnchors.isEmpty else {
+            return nil
+        }
+
+        if blockingAnchors.count == 1,
+           let anchor = blockingAnchors.first,
+           let tile = tilesByAnchor[anchor],
+           tile.shape == sourceTile.shape {
+            guard tile.anchor / columns == sourceRow else {
+                return nil
+            }
+        }
+
+        var minGroupRow = sourceRow
+        var maxGroupRow = sourceRow + sourceTile.shape.height - 1
+        var minGroupColumn = groupStartColumn
+        var maxGroupColumn = groupStartColumn
+
+        for anchor in blockingAnchors {
+            guard let tile = tilesByAnchor[anchor] else {
+                return nil
+            }
+
+            let tileRow = tile.anchor / columns
+            let tileColumn = tile.anchor % columns
+            let tileMinRow = tileRow
+            let tileMaxRow = tileRow + tile.shape.height - 1
+            let tileMinColumn = tileColumn
+            let tileMaxColumn = tileColumn + tile.shape.width - 1
+
+            if columnStep > 0 {
+                guard tileMinColumn >= groupStartColumn else {
+                    return nil
+                }
+            } else {
+                guard tileMaxColumn <= groupStartColumn else {
+                    return nil
+                }
+            }
+
+            minGroupRow = min(minGroupRow, tileMinRow)
+            maxGroupRow = max(maxGroupRow, tileMaxRow)
+            minGroupColumn = min(minGroupColumn, tileMinColumn)
+            maxGroupColumn = max(maxGroupColumn, tileMaxColumn)
+        }
+
+        guard minGroupRow >= 0,
+              maxGroupRow < gridDimensions.rows,
+              minGroupColumn >= 0,
+              maxGroupColumn < columns else {
+            return nil
+        }
+
+        let groupRowRange = minGroupRow...maxGroupRow
+        let groupIndexes = Set(groupRowRange.flatMap { row in
+            (minGroupColumn...maxGroupColumn).map { column in
+                (row * columns) + column
+            }
+        })
+
+        for index in groupIndexes {
+            if let anchor = occupancy[index],
+               anchor != sourceTile.anchor,
+               !blockingAnchors.contains(anchor) {
+                return nil
+            }
+        }
+
+        for anchor in blockingAnchors {
+            guard let tile = tilesByAnchor[anchor] else {
+                return nil
+            }
+
+            let tileIndexes = Set(buttonIndexes(startingAt: tile.anchor, shape: tile.shape, gridDimensions: gridDimensions))
+            guard tileIndexes.isSubset(of: groupIndexes) else {
+                return nil
+            }
+        }
+
+        let groupWidth = maxGroupColumn - minGroupColumn + 1
+        let sourceNewAnchor = sourceTile.anchor + (columnStep * groupWidth)
+        var moves = [StoredTileMove(tile: sourceTile, anchor: sourceNewAnchor)]
+
+        for anchor in blockingAnchors {
+            guard let tile = tilesByAnchor[anchor] else {
+                return nil
+            }
+
+            moves.append(StoredTileMove(tile: tile, anchor: tile.anchor - (columnStep * sourceTile.shape.width)))
+        }
+
+        guard movePlanFits(moves, occupancy: occupancy, gridDimensions: gridDimensions) else {
+            return nil
+        }
+
+        return moves
+    }
+
+    private func verticalRectangularGroupSwapMoves(
+        from sourceTile: StoredGridTile,
+        sourceRow: Int,
+        sourceColumn: Int,
+        rowStep: Int,
+        occupancy: [Int: Int],
+        tilesByAnchor: [Int: StoredGridTile],
+        gridDimensions: GridDimensions
+    ) -> [StoredTileMove]? {
+        let columns = max(gridDimensions.columns, 1)
+        let sourceColumnRange = sourceColumn..<(sourceColumn + sourceTile.shape.width)
+        let groupStartRow = rowStep > 0 ? sourceRow + sourceTile.shape.height : sourceRow - 1
+
+        guard groupStartRow >= 0, groupStartRow < gridDimensions.rows else {
+            return nil
+        }
+
+        let blockingAnchors = Set(sourceColumnRange.compactMap { column in
+            let index = (groupStartRow * columns) + column
+            return occupancy[index].flatMap { $0 == sourceTile.anchor ? nil : $0 }
+        })
+
+        guard !blockingAnchors.isEmpty else {
+            return nil
+        }
+
+        if blockingAnchors.count == 1,
+           let anchor = blockingAnchors.first,
+           let tile = tilesByAnchor[anchor],
+           tile.shape == sourceTile.shape {
+            guard tile.anchor % columns == sourceColumn else {
+                return nil
+            }
+        }
+
+        var minGroupRow = groupStartRow
+        var maxGroupRow = groupStartRow
+        var minGroupColumn = sourceColumn
+        var maxGroupColumn = sourceColumn + sourceTile.shape.width - 1
+
+        for anchor in blockingAnchors {
+            guard let tile = tilesByAnchor[anchor] else {
+                return nil
+            }
+
+            let tileRow = tile.anchor / columns
+            let tileColumn = tile.anchor % columns
+            let tileMinRow = tileRow
+            let tileMaxRow = tileRow + tile.shape.height - 1
+            let tileMinColumn = tileColumn
+            let tileMaxColumn = tileColumn + tile.shape.width - 1
+
+            if rowStep > 0 {
+                guard tileMinRow >= groupStartRow else {
+                    return nil
+                }
+            } else {
+                guard tileMaxRow <= groupStartRow else {
+                    return nil
+                }
+            }
+
+            minGroupRow = min(minGroupRow, tileMinRow)
+            maxGroupRow = max(maxGroupRow, tileMaxRow)
+            minGroupColumn = min(minGroupColumn, tileMinColumn)
+            maxGroupColumn = max(maxGroupColumn, tileMaxColumn)
+        }
+
+        guard minGroupRow >= 0,
+              maxGroupRow < gridDimensions.rows,
+              minGroupColumn >= 0,
+              maxGroupColumn < columns else {
+            return nil
+        }
+
+        let groupColumnRange = minGroupColumn...maxGroupColumn
+        let groupIndexes = Set((minGroupRow...maxGroupRow).flatMap { row in
+            groupColumnRange.map { column in
+                (row * columns) + column
+            }
+        })
+
+        for index in groupIndexes {
+            if let anchor = occupancy[index],
+               anchor != sourceTile.anchor,
+               !blockingAnchors.contains(anchor) {
+                return nil
+            }
+        }
+
+        for anchor in blockingAnchors {
+            guard let tile = tilesByAnchor[anchor] else {
+                return nil
+            }
+
+            let tileIndexes = Set(buttonIndexes(startingAt: tile.anchor, shape: tile.shape, gridDimensions: gridDimensions))
+            guard tileIndexes.isSubset(of: groupIndexes) else {
+                return nil
+            }
+        }
+
+        let groupHeight = maxGroupRow - minGroupRow + 1
+        let sourceNewAnchor = sourceTile.anchor + (rowStep * groupHeight * columns)
+        var moves = [StoredTileMove(tile: sourceTile, anchor: sourceNewAnchor)]
+
+        for anchor in blockingAnchors {
+            guard let tile = tilesByAnchor[anchor] else {
+                return nil
+            }
+
+            moves.append(StoredTileMove(tile: tile, anchor: tile.anchor - (rowStep * sourceTile.shape.height * columns)))
+        }
+
+        guard movePlanFits(moves, occupancy: occupancy, gridDimensions: gridDimensions) else {
+            return nil
+        }
+
+        return moves
     }
 
     private func groupSwapMoves(
@@ -2582,6 +2857,7 @@ struct ContentView: View {
 
                 scanRow += rowStep
             }
+
         }
 
         return nil

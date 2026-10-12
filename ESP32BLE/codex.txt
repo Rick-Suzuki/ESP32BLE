@@ -1,63 +1,199 @@
-A. FILES CHANGED
+1. ROOT CAUSE
 
-For Test 6F-B:
-• ESP32BLE/Scrns/Main_Screen/Main_DocumentActions.swift
-   • MainGridPopupResizeResult
-   • updatedSlotLinesForPopupResize(...)
-• ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
-   • resizeMainGridActionMenuSelection(to:)
-   • mainGridActionMenuTargetForResize(...)
+The new vertical rectangular exchange helper accepts a partially overlapping, horizontally offset neighbour because it allows horizontal expansion to include the neighbour’s full footprint, even when source and neighbour have the same shape and their column ranges do not match.
 
-B. EXECUTION CONNECTION
+For vertical movement, the current helper does not require a same-sized single neighbour to share the same column range as the source.
 
-Actual resize execution now calls resolvedPopupResizePlacement(...) inside updatedSlotLinesForPopupResize(...). Availability and execution now use the same intelligent finger-stretch placement resolver.
+So this case:
 
-C. GRID MUTATION
+row 0: . F F .
+row 1: C C . .
 
-The resize mutation now:
-• Preserves the original source entry/rawLine.
-• Clears every cell in placement.sourceFootprint.
-• Writes the original rawLine at placement.targetIndex.
-• Writes continuation tokens from placement.targetIndex using existing continuationAssignments(...).
+or the equivalent reversed vertical arrangement
 
-D. COLLISION SAFETY
+is interpreted as a valid rectangular exchange region:
 
-Existing resolver collision rules are unchanged. The 6E-C continuation protection remains intact; unrelated @@wide / @@block cells are not treated as empty.
+columns 0-2
+one row high for the neighbouring group
 
-E. FINGER-STRETCH RULES
+The helper treats the extra column as empty exchange space, not as invalid alignment.
 
-No changes to finger-stretch rules or candidate ranking. Execution consumes the resolver’s selected placement rather than choosing its own.
+2. ACCEPTING MOVEMENT STRATEGY
 
-F. POPUP TARGET
+Best-supported source-level answer:
 
-MainGridPopupResizeResult now carries targetIndex. After successful resize, the popup target is updated to the new anchor and beginPendingMovePopupRefresh(to:) requests the actual rendered frame.
+verticalRectangularGroupSwapMoves(...) accepts the move.
 
-G. POPUP MODE
+It is called from directionalFootprintGroupSwapMoves(...) before the vertical branch returns nil.
 
-Resize remains open. The resize path uses the mode-preserving move refresh rather than the action refresh that resets to Main.
+Earlier strategies are unlikely to accept this specific offset swap:
 
-H. UNDO / REDO
+directionalLocalSlideMoves(...) requires the whole blocker footprint to be inside the entered strip. With only one-column overlap, C’s 2x1 footprint is not fully inside F’s 2-column entered strip.
 
-History behavior is preserved:
-• Successful resize records exactly one Undo snapshot from beforeSnapshot.
-• Failed resize records none.
-• Same-size selection remains a no-op.
-• Existing full-slot-line snapshots should preserve relocated anchors and continuation cells for Undo/Redo.
+directionalGroupSwapMoves(...) calls groupSwapMoves(...) with a source-sized target rectangle. C’s offset 2x1 footprint is not fully inside that source-sized rectangle, so it rejects.
 
-I. DOCUMENT PERSISTENCE
+directionalCompatibleSwapMoves(...) requires same width and same anchor column for vertical compatible swaps. Offset columns reject.
 
-The existing restoreFunctionKeySlotLines(...) path is still used. No separate document writes or format changes were introduced.
+Same-shape swap could theoretically accept same-sized offset buttons later, because it only checks same shape, but verticalRectangularGroupSwapMoves(...) appears to accept first in the current strategy order.
 
-J. REGRESSION SAFETY
+Runtime tracing would be needed to confirm the exact strategy in the user’s live document, but source inspection strongly points to verticalRectangularGroupSwapMoves(...).
 
-Test 6E-G drag behavior was not changed in this task. Popup geometry, gestures, popup layout, other popup actions, BLE, Mac Helper, and editors were not modified.
+3. RELEVANT FUNCTIONS AND SOURCE LOCATIONS
 
-K. BUILD RESULT
+ESP32BLE/Scrns/ContentView.swift
 
-Xcode BuildProject succeeded with no errors.
+resolvedTileMovePlan(...): line 2042
+directionalFootprintGroupSwapMoves(...): line 2441
+horizontalRectangularGroupSwapMoves(...): line 2505
+verticalRectangularGroupSwapMoves(...): line 2616
+groupSwapMoves(...): line 2727
+directionalCompatibleSwapMoves(...): line 2768
+verticalCompatibleSwapMoves(...): line 2859
+movePlanFits(...): line 2880
 
-L. FILE SAFETY
+Key accepting logic:
+verticalRectangularGroupSwapMoves(...), lines 2633-2724.
 
-No .txt files modified by me. No project files modified. No unrelated files modified. No commits performed.
+4. F/C FOOTPRINT ANALYSIS
 
-Note: git status still shows prior working-tree changes, including Main_ButtonBehavior.swift􀰓 from Test 6E-G and ESP32BLE/codex.txt; I did not modify those in this task.
+Assuming relative coordinates where F is the dragged 2x1 source and C is the adjacent 2x1 neighbour in the drag direction:
+
+F footprint:
+width 2, height 1
+columns 1-2
+
+C footprint:
+width 2, height 1
+columns 0-1
+
+Horizontal overlap:
+only column 1
+
+They do not share identical column ranges.
+
+Current vertical helper:
+inspects the adjacent row across F’s original columns 1-2.
+It sees C at column 1.
+It collects C as an initial neighbour.
+It expands minGroupColumn from 1 to 0 to include all of C.
+It keeps maxGroupColumn at 2 because that is F’s source span.
+The resulting group rectangle includes columns 0-2.
+
+5. PROPOSED MOVE PLAN
+
+For a vertical UP version with F below C:
+
+F moves up by groupHeight, which is 1 row.
+C moves down by source height, also 1 row.
+
+Neither button changes columns.
+Neither button changes shape.
+No additional buttons are included if the expanded row rectangle is otherwise empty.
+
+This is geometrically collision-free, but it violates the intended “simple same-sized vertical swap requires aligned columns” rule.
+
+6. WHY THE CURRENT CODE ACCEPTS IT
+
+verticalRectangularGroupSwapMoves(...) allows perpendicular expansion.
+
+For vertical movement, perpendicular expansion means horizontal column expansion.
+
+That is correct for different-width exchanges such as 2x2 against 3x1 with an empty side column.
+
+But in this same-sized 2x1 against 2x1 case, the helper treats the offset as a valid need for horizontal expansion.
+
+Missing condition:
+When the vertical exchange is a simple one-neighbour, same-shape exchange, the neighbour should probably have the same column range as the source.
+
+The helper currently has no such alignment check.
+
+7. WHETHER COLLISION VALIDATION IS CORRECT
+
+movePlanFits(...) is doing its job.
+
+It checks final footprints:
+inside grid,
+no moved-button overlap,
+no overlap with stationary occupied cells,
+no duplicate destination cells.
+
+The F/C move can pass those checks because it is physically possible to swap rows while preserving each button’s columns.
+
+The problem is not collision safety.
+
+The problem is strategy eligibility: the move is geometrically possible but not allowed by the intended movement rule.
+
+8. WHETHER HORIZONTAL MOVEMENT HAS THE SAME RISK
+
+Yes, the horizontal equivalent is possible in principle.
+
+Equivalent case:
+two 1x2 buttons in adjacent columns, offset vertically by one row.
+
+The horizontal helper can expand vertically to include the neighbour’s full footprint, so it may accept an analogous offset exchange if the expanded rectangle contains no unrelated occupied cells.
+
+However, horizontal has passed manual testing, so do not change it without a confirmed horizontal reproduction. The same logical gap exists, but the reported defect is vertical.
+
+9. SMALLEST RECOMMENDED CORRECTION
+
+Change verticalRectangularGroupSwapMoves(...).
+
+Add a narrow eligibility check after blockingAnchors are collected and before building the expanded rectangle:
+
+If blockingAnchors.count == 1,
+and the single blocking tile has the same shape as the source,
+and this is a vertical rectangular exchange,
+then require:
+
+blockingTile.anchor % columns == sourceColumn
+
+In plain terms:
+same-sized vertical two-button swaps must have identical left edges / identical column ranges.
+
+For the F/C case:
+source F columns 1-2
+blocking C columns 0-1
+columns differ
+reject.
+
+Why valid different-sized exchanges continue working:
+The check applies only to a single same-shape neighbour. A 2x2 against 3x1, 1x3 against 2x2, or multiple-neighbour group exchange would not be blocked by this exact rule.
+
+Possible equivalent horizontal future check:
+For horizontal same-sized one-neighbour swaps, require matching row:
+blockingTile.anchor / columns == sourceRow
+
+But because horizontal is currently considered stable, I would not change it until confirmed.
+
+10. POSSIBLE REGRESSIONS
+
+Potentially affected:
+Offset same-sized 2x1 vertical swaps that currently work but are now considered invalid.
+
+Should remain valid:
+Aligned same-sized vertical swaps.
+Different-width vertical rectangular exchanges.
+Multiple initial neighbours in the entering row.
+Vertical exchanges requiring empty side columns.
+Collision rejection with unrelated side blockers.
+UP/DOWN symmetry.
+
+Manual tests needed:
+2x1 over aligned 2x1.
+2x1 over offset 2x1.
+1x1 vertical swap.
+2x2 over aligned 2x2.
+2x2 over offset 2x2.
+2x2 over 3x1 with empty side column.
+2x2 over 3x1 with side blocker.
+Horizontal offset equivalent, observation only unless reproduced.
+
+11. FILES MODIFIED: NONE
+
+No files modified.
+
+No builds performed.
+
+No diagnostics added.
+
+No commits performed.

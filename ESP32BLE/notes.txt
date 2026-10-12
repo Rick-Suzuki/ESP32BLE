@@ -1,0 +1,29 @@
+1
+A cant move left, D can move right
+
+2
+A can't move left, B can move right
+
+
+3a
+starting position
+3b
+after move
+
+4
+A can't move down,D can move up
+
+
+5
+A can't move down, C can move up
+
+
+6a
+start position
+6b
+slide A to left
+
+7a
+start position
+7b
+slide A to right
