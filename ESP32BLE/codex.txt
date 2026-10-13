@@ -1,95 +1,142 @@
-ESP-005 PHASE 3D-3 COMPLETE
+ESP-005 PHASE 3D-4 COMPLETE
 
-1. Exact declarations moved
+1. Declarations inspected
+
+Inspected the current Main_Screen.swift editor support tail and geometry-related declarations.
+
+Moved candidates confirmed safe:
+EditorGeometryProbeTarget
+EditorGeometryPreferenceKey
+SmartIPhoneRightTableVisibleCellHeightPreferenceKey
+IPadBottomToolbarFramePreferenceKey
+SmartIPhoneRightTableVisibleCellHeightReader
+EditorGeometryProbeModifier
+IPhoneButtonBrightnessTouchOverlay
+IPhoneButtonBrightnessSliderFramePreferenceKey
+View editor geometry extension methods
+DebugEditorGeometryOverlay
+
+Inspected but left in place:
+ESP001MiniDiagnosticPanels
+ESP001MiniDiagnosticEditorShell
+ESP001ExperimentalIPhoneEditorShell
+ESP001MiniDiagnosticEmptyPanel
+IPadSmartCommandKeypad
+IPadSmartButtonPanel
+IPadSmartSFPanel
+
+Reason left in place:
+These are editor UI/layout view declarations, not pure standalone geometry support. Moving them would broaden this phase beyond the requested geometry support extraction.
+
+2. Declarations moved
 
 Moved from:
 ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
 
 Moved to:
-ESP32BLE/Scrns/Main_Screen/Main_SmartEditorTextInputs.swift
+ESP32BLE/Scrns/Main_Screen/Main_EditorGeometrySupport.swift
 
-Declarations moved:
-SmartScriptTextEditor
-SmartPreviewTextView
-private CGSize extension
-SmartActionTextField
+3. Original source line ranges
 
-2. Current original source line ranges
+EditorGeometryProbeTarget: Main_Screen.swift lines 6114-6144
+EditorGeometryPreferenceKey: lines 6146-6155
+SmartIPhoneRightTableVisibleCellHeightPreferenceKey: lines 6157-6163
+IPadBottomToolbarFramePreferenceKey: lines 6165-6171
+SmartIPhoneRightTableVisibleCellHeightReader: lines 6173-6191
+EditorGeometryProbeModifier: lines 6193-6212
+IPhoneButtonBrightnessTouchOverlay: lines 6214-6233
+IPhoneButtonBrightnessSliderFramePreferenceKey: lines 6235-6243
+View geometry extension: lines 6245-6273
+DebugEditorGeometryOverlay: lines 6275-6382
 
-SmartScriptTextEditor: Main_Screen.swift lines 6384-6533
-SmartPreviewTextView: Main_Screen.swift lines 6535-6880
-private CGSize extension: Main_Screen.swift lines 6882-6886
-SmartActionTextField: Main_Screen.swift lines 6888-7029
+4. New destination line ranges
 
-3. New destination line ranges
+Main_EditorGeometrySupport.swift:
 
-Main_SmartEditorTextInputs.swift:
-SmartScriptTextEditor: lines 4-153
-SmartPreviewTextView: lines 155-500
-private CGSize extension: lines 502-506
-SmartActionTextField: lines 508-649
+Imports: lines 1-2
+EditorGeometryProbeTarget: lines 4-34
+EditorGeometryPreferenceKey: lines 36-45
+SmartIPhoneRightTableVisibleCellHeightPreferenceKey: lines 47-53
+IPadBottomToolbarFramePreferenceKey: lines 55-61
+SmartIPhoneRightTableVisibleCellHeightReader: lines 63-81
+EditorGeometryProbeModifier: lines 83-102
+IPhoneButtonBrightnessTouchOverlay: lines 104-123
+IPhoneButtonBrightnessSliderFramePreferenceKey: lines 125-133
+View geometry extension: lines 135-163
+DebugEditorGeometryOverlay: lines 165-272
 
-4. Line counts
+5. Line counts
 
-Main_Screen.swift original line count: 7030
-Main_Screen.swift new line count: 6383
-Main_SmartEditorTextInputs.swift line count: 649
+Main_Screen.swift original line count: 6383
+Main_Screen.swift new line count: 6113
+Main_EditorGeometrySupport.swift line count: 272 by wc -l
 
-5. Access-control changes
+6. Access-control changes
 
-Changed:
-private struct SmartScriptTextEditor
-to:
-struct SmartScriptTextEditor
+Changed from private to internal because MainScreen references them cross-file:
 
-Changed:
-private struct SmartPreviewTextView
-to:
-struct SmartPreviewTextView
+EditorGeometryProbeTarget
+EditorGeometryPreferenceKey
+SmartIPhoneRightTableVisibleCellHeightPreferenceKey
+IPadBottomToolbarFramePreferenceKey
+IPhoneButtonBrightnessTouchOverlay
+IPhoneButtonBrightnessSliderFramePreferenceKey
+DebugEditorGeometryOverlay
+View extension methods
 
-Changed:
-private struct SmartActionTextField
-to:
-struct SmartActionTextField
+Kept private:
+SmartIPhoneRightTableVisibleCellHeightReader
+EditorGeometryProbeModifier
+DebugEditorGeometryOverlay helper methods and computed properties
 
-The CGSize extension remained private.
+No MainScreen access control was changed.
 
-Coordinator classes and private UIKit helper views were preserved with their existing visibility.
+7. Imports added
 
-6. Imports added
-
-Main_SmartEditorTextInputs.swift imports:
+Main_EditorGeometrySupport.swift imports:
+Foundation
 SwiftUI
-UIKit
 
-7. Dependency verification
+Foundation is used for String(format:).
+SwiftUI is used for View, PreferenceKey, GeometryReader, gestures, Color, CGRect/CGPoint/CGFloat usage through SwiftUI/CoreGraphics.
 
-The moved declarations depend on SwiftUI/UIKit types, NSRange, Binding, UITextView, UITextField, UIResponder, NotificationCenter, CGSize, UIFont, UIEdgeInsets, NSMutableParagraphStyle, and NSAttributedString.
+8. Dependency verification
 
-No unrelated helper functions were moved.
-No private Main_Screen.swift state was required.
-The private CGSize helper moved with its only consumer area.
+Confirmed MainScreen still references:
+EditorGeometryProbeTarget
+IPadBottomToolbarFramePreferenceKey
+EditorGeometryPreferenceKey
+SmartIPhoneRightTableVisibleCellHeightPreferenceKey
+IPhoneButtonBrightnessSliderFramePreferenceKey
+IPhoneButtonBrightnessTouchOverlay
+DebugEditorGeometryOverlay
+editorGeometryProbe(...)
+optionalEditorGeometryProbe(...)
+smartIPhoneRightTableVisibleCellHeightReader(...)
+iPhoneButtonBrightnessSliderFrameReporter(...)
 
-8. Xcode project registration changes
+No MainScreen state or methods were moved.
 
-Main_SmartEditorTextInputs.swift was added through Xcode project tooling.
+9. Xcode project registration
+
+Main_EditorGeometrySupport.swift was added through Xcode project tooling.
 
 project.pbxproj now includes:
-PBXBuildFile entry for Main_SmartEditorTextInputs.swift in Sources
-PBXFileReference entry for Main_SmartEditorTextInputs.swift
+PBXBuildFile entry for Main_EditorGeometrySupport.swift in Sources
+PBXFileReference entry for Main_EditorGeometrySupport.swift
 Main_Screen group membership
 ESP32BLE Sources build phase membership
 
 File.txt was not restored or re-added.
 
-9. Build result
+10. Build result
 
 Build succeeded.
 
 Build duration:
-40.024 seconds
+24.266 seconds
 
-10. Compiler warnings
+11. New compiler warnings
 
 No new warnings attributable to this extraction.
 
@@ -100,31 +147,33 @@ MacConnectionManager.swift
 AppIntents metadata processing
 Interface orientation build warning
 
-11. Unexpected dependencies
-
-None.
-
 12. Changed files
 
 ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
-ESP32BLE/Scrns/Main_Screen/Main_SmartEditorTextInputs.swift
+ESP32BLE/Scrns/Main_Screen/Main_EditorGeometrySupport.swift
 ESP32BLE.xcodeproj/project.pbxproj
 
 13. Preservation confirmation
 
-UIKit lifecycle was preserved:
-makeUIView unchanged
-updateUIView unchanged
-makeCoordinator unchanged
+Geometry calculations were unchanged.
 
-Coordinator behaviour was preserved.
+PreferenceKey values and reduce methods were preserved.
 
-MainScreen construction sites remained unchanged.
+GeometryReader placement was preserved inside the moved declarations.
 
-MainScreen state ownership was not changed.
+The iPhone brightness touch overlay was moved intact:
+same destinationFrame sizing
+same opacity
+same contentShape
+same DragGesture minimumDistance
+same local coordinate space
+same onChanged/onEnded callbacks
+same height/value callback inputs
 
-Editor layout, geometry, bindings, focus ownership, and presentation were not changed.
+MainScreen state was untouched.
 
-Text selection, cursor handling, paste handling, and keyboard-related logic were moved intact.
+MainScreen call sites were untouched.
 
-No .txt files were modified by this phase. ESP32BLE/codex.txt appears modified in the working tree, but I did not read or write it.
+Editor layout methods were untouched.
+
+No .txt files were modified.

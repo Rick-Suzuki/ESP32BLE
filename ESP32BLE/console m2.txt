@@ -1,235 +1,149 @@
 Update the Info.plist: Support for all orientations will soon be required.
-									API MISUSE: <CBCentralManager: 0x10a5c8640> can only accept this command while in the powered on state
+									API MISUSE: <CBCentralManager: 0x10edac640> can only accept this command while in the powered on state
 									non-launching port is incompatible with service identifier "com.apple.PointerUI.pointeruid.default-service"
 									AX Safe category class 'SFBarButtonGroupContainerAccessibility' was not found!
-									<0x10a5308c0> Gesture: System gesture gate timed out.
-									[ESP-OUTPUT] #1 "cm"
-									[ESP-OUTPUT] #2 "f14"
-									261012_0912_922 🐞ContentView.swift:flush(result:):2051 [MOVE-PLAN-PROBE] BEGIN result=SUCCESS
-									261012_0912_922 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] sourceIndex=44 sourceRow=4 sourceColumn=4 sourceShape=3x3 sourceFootprint=[44(r=4,c=4),45(r=4,c=5),46(r=4,c=6),54(r=5,c=4),55(r=5,c=5),56(r=5,c=6),64(r=6,c=4),65(r=6,c=5),66(r=6,c=6)] targetIndex=45 targetRow=4 targetColumn=5 movementDirection=right rowStep=0 columnStep=1
-									261012_0912_922 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] destinationValidity=valid gridBoundaryValidity=valid
-									261012_0912_922 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] destinationFootprint=[45(r=4,c=5),46(r=4,c=6),47(r=4,c=7),55(r=5,c=5),56(r=5,c=6),57(r=5,c=7),65(r=6,c=5),66(r=6,c=6),67(r=6,c=7)] sourceDestinationOverlap=[45(r=4,c=5),46(r=4,c=6),55(r=5,c=5),56(r=5,c=6),65(r=6,c=5),66(r=6,c=6)]
-									261012_0912_922 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] blockingButtons=[]
-									261012_0912_922 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=plainMove result=ACCEPT reason=noBlockingButtons plannedMoves=[old=44(r=4,c=4)->new=45(r=4,c=5) shape=3x3]
-									261012_0912_922 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=localSlide result=NOT_REACHED
-									261012_0912_922 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=crossingPush result=NOT_REACHED
-									261012_0912_922 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=edgePush result=NOT_REACHED
-									261012_0912_922 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=groupSwap result=NOT_REACHED
-									261012_0912_922 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=footprintGroupSwap result=NOT_REACHED
-									261012_0912_922 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=compatibleSwap result=NOT_REACHED
-									261012_0912_923 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=sameShapeSwap result=NOT_REACHED
-									261012_0912_923 🐞ContentView.swift:flush(result:):2055 [MOVE-PLAN-PROBE] END
-									261012_0912_642 🐞ContentView.swift:flush(result:):2051 [MOVE-PLAN-PROBE] BEGIN result=SUCCESS
-									261012_0912_643 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] sourceIndex=45 sourceRow=4 sourceColumn=5 sourceShape=3x3 sourceFootprint=[45(r=4,c=5),46(r=4,c=6),47(r=4,c=7),55(r=5,c=5),56(r=5,c=6),57(r=5,c=7),65(r=6,c=5),66(r=6,c=6),67(r=6,c=7)] targetIndex=46 targetRow=4 targetColumn=6 movementDirection=right rowStep=0 columnStep=1
-									261012_0912_643 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] destinationValidity=valid gridBoundaryValidity=valid
-									261012_0912_643 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] destinationFootprint=[46(r=4,c=6),47(r=4,c=7),48(r=4,c=8),56(r=5,c=6),57(r=5,c=7),58(r=5,c=8),66(r=6,c=6),67(r=6,c=7),68(r=6,c=8)] sourceDestinationOverlap=[46(r=4,c=6),47(r=4,c=7),56(r=5,c=6),57(r=5,c=7),66(r=6,c=6),67(r=6,c=7)]
-									261012_0912_643 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] blockingButtons=[anchor=48 shape=2x1 numberOfCells=2 class=2-cell footprint=[48(r=4,c=8),49(r=4,c=9)] | anchor=58 shape=2x1 numberOfCells=2 class=2-cell footprint=[58(r=5,c=8),59(r=5,c=9)] | anchor=68 shape=2x1 numberOfCells=2 class=2-cell footprint=[68(r=6,c=8),69(r=6,c=9)]]
-									261012_0912_643 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=plainMove result=REJECT reason=blockingButtonsPresent
-									261012_0912_643 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=localSlide result=REJECT reason=partialBlocker anchor=48 blockerFootprint=[48(r=4,c=8),49(r=4,c=9)] enteringFootprint=[48(r=4,c=8),58(r=5,c=8),68(r=6,c=8)]
-									261012_0912_643 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=crossingPush result=REJECT reason=requiresSingleLargerBlocker blockers=[48, 58, 68]
-									261012_0912_643 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=edgePush result=REJECT reason=requiresSingleSmallerBlocker blockers=[48, 58, 68]
-									261012_0912_643 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=groupSwap result=REJECT reason=blockerNotInsideTarget anchor=48 blockerFootprint=[48(r=4,c=8),49(r=4,c=9)] targetFootprint=[46(r=4,c=6),47(r=4,c=7),48(r=4,c=8),56(r=5,c=6),57(r=5,c=7),58(r=5,c=8),66(r=6,c=6),67(r=6,c=7),68(r=6,c=8)]
-									261012_0912_643 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=rectangularGroupSwap result=ACCEPT movementDirection=right sourceColumn=5 newSourceColumn=7 groupWidth=2 plannedMoves=[old=45(r=4,c=5)->new=47(r=4,c=7) shape=3x3 | old=48(r=4,c=8)->new=45(r=4,c=5) shape=2x1 | old=58(r=5,c=8)->new=55(r=5,c=5) shape=2x1 | old=68(r=6,c=8)->new=65(r=6,c=5) shape=2x1]
-									261012_0912_643 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=footprintGroupSwap result=ACCEPT plannedMoves=[old=45(r=4,c=5)->new=47(r=4,c=7) shape=3x3 | old=48(r=4,c=8)->new=45(r=4,c=5) shape=2x1 | old=58(r=5,c=8)->new=55(r=5,c=5) shape=2x1 | old=68(r=6,c=8)->new=65(r=6,c=5) shape=2x1]
-									261012_0912_644 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=compatibleSwap result=NOT_REACHED
-									261012_0912_644 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=sameShapeSwap result=NOT_REACHED
-									261012_0912_644 🐞ContentView.swift:flush(result:):2055 [MOVE-PLAN-PROBE] END
-									261012_0912_503 🐞ContentView.swift:flush(result:):2051 [MOVE-PLAN-PROBE] BEGIN result=SUCCESS
-									261012_0912_504 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] sourceIndex=47 sourceRow=4 sourceColumn=7 sourceShape=3x3 sourceFootprint=[47(r=4,c=7),48(r=4,c=8),49(r=4,c=9),57(r=5,c=7),58(r=5,c=8),59(r=5,c=9),67(r=6,c=7),68(r=6,c=8),69(r=6,c=9)] targetIndex=46 targetRow=4 targetColumn=6 movementDirection=left rowStep=0 columnStep=-1
-									261012_0912_504 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] destinationValidity=valid gridBoundaryValidity=valid
-									261012_0912_504 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] destinationFootprint=[46(r=4,c=6),47(r=4,c=7),48(r=4,c=8),56(r=5,c=6),57(r=5,c=7),58(r=5,c=8),66(r=6,c=6),67(r=6,c=7),68(r=6,c=8)] sourceDestinationOverlap=[47(r=4,c=7),48(r=4,c=8),57(r=5,c=7),58(r=5,c=8),67(r=6,c=7),68(r=6,c=8)]
-									261012_0912_504 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] blockingButtons=[anchor=45 shape=2x1 numberOfCells=2 class=2-cell footprint=[45(r=4,c=5),46(r=4,c=6)] | anchor=55 shape=2x1 numberOfCells=2 class=2-cell footprint=[55(r=5,c=5),56(r=5,c=6)] | anchor=65 shape=2x1 numberOfCells=2 class=2-cell footprint=[65(r=6,c=5),66(r=6,c=6)]]
-									261012_0912_504 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=plainMove result=REJECT reason=blockingButtonsPresent
-									261012_0912_504 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=localSlide result=REJECT reason=partialBlocker anchor=55 blockerFootprint=[55(r=5,c=5),56(r=5,c=6)] enteringFootprint=[46(r=4,c=6),56(r=5,c=6),66(r=6,c=6)]
-									261012_0912_504 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=crossingPush result=REJECT reason=requiresSingleLargerBlocker blockers=[45, 55, 65]
-									261012_0912_504 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=edgePush result=REJECT reason=requiresSingleSmallerBlocker blockers=[45, 55, 65]
-									261012_0912_504 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=groupSwap result=REJECT reason=blockerNotInsideTarget anchor=45 blockerFootprint=[45(r=4,c=5),46(r=4,c=6)] targetFootprint=[46(r=4,c=6),47(r=4,c=7),48(r=4,c=8),56(r=5,c=6),57(r=5,c=7),58(r=5,c=8),66(r=6,c=6),67(r=6,c=7),68(r=6,c=8)]
-									261012_0912_504 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=rectangularGroupSwap result=ACCEPT movementDirection=left sourceColumn=7 newSourceColumn=5 groupWidth=2 plannedMoves=[old=47(r=4,c=7)->new=45(r=4,c=5) shape=3x3 | old=55(r=5,c=5)->new=58(r=5,c=8) shape=2x1 | old=45(r=4,c=5)->new=48(r=4,c=8) shape=2x1 | old=65(r=6,c=5)->new=68(r=6,c=8) shape=2x1]
-									261012_0912_504 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=footprintGroupSwap result=ACCEPT plannedMoves=[old=47(r=4,c=7)->new=45(r=4,c=5) shape=3x3 | old=55(r=5,c=5)->new=58(r=5,c=8) shape=2x1 | old=45(r=4,c=5)->new=48(r=4,c=8) shape=2x1 | old=65(r=6,c=5)->new=68(r=6,c=8) shape=2x1]
-									261012_0912_505 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=compatibleSwap result=NOT_REACHED
-									261012_0912_505 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=sameShapeSwap result=NOT_REACHED
-									261012_0912_505 🐞ContentView.swift:flush(result:):2055 [MOVE-PLAN-PROBE] END
-									261012_0913_886 🐞ContentView.swift:flush(result:):2051 [MOVE-PLAN-PROBE] BEGIN result=SUCCESS
-									261012_0913_887 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] sourceIndex=45 sourceRow=4 sourceColumn=5 sourceShape=3x3 sourceFootprint=[45(r=4,c=5),46(r=4,c=6),47(r=4,c=7),55(r=5,c=5),56(r=5,c=6),57(r=5,c=7),65(r=6,c=5),66(r=6,c=6),67(r=6,c=7)] targetIndex=35 targetRow=3 targetColumn=5 movementDirection=up rowStep=-1 columnStep=0
-									261012_0913_887 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] destinationValidity=valid gridBoundaryValidity=valid
-									261012_0913_887 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] destinationFootprint=[35(r=3,c=5),36(r=3,c=6),37(r=3,c=7),45(r=4,c=5),46(r=4,c=6),47(r=4,c=7),55(r=5,c=5),56(r=5,c=6),57(r=5,c=7)] sourceDestinationOverlap=[45(r=4,c=5),46(r=4,c=6),47(r=4,c=7),55(r=5,c=5),56(r=5,c=6),57(r=5,c=7)]
-									261012_0913_887 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] blockingButtons=[anchor=35 shape=2x1 numberOfCells=2 class=2-cell footprint=[35(r=3,c=5),36(r=3,c=6)]]
-									261012_0913_888 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=plainMove result=REJECT reason=blockingButtonsPresent
-									261012_0913_888 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=localSlide result=ACCEPT plannedMoves=[old=45(r=4,c=5)->new=35(r=3,c=5) shape=3x3 | old=35(r=3,c=5)->new=65(r=6,c=5) shape=2x1]
-									261012_0913_888 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=crossingPush result=NOT_REACHED
-									261012_0913_888 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=edgePush result=NOT_REACHED
-									261012_0913_888 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=groupSwap result=NOT_REACHED
-									261012_0913_889 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=footprintGroupSwap result=NOT_REACHED
-									261012_0913_889 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=compatibleSwap result=NOT_REACHED
-									261012_0913_889 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=sameShapeSwap result=NOT_REACHED
-									261012_0913_889 🐞ContentView.swift:flush(result:):2055 [MOVE-PLAN-PROBE] END
-									261012_0913_487 🐞ContentView.swift:flush(result:):2051 [MOVE-PLAN-PROBE] BEGIN result=SUCCESS
-									261012_0913_487 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] sourceIndex=35 sourceRow=3 sourceColumn=5 sourceShape=3x3 sourceFootprint=[35(r=3,c=5),36(r=3,c=6),37(r=3,c=7),45(r=4,c=5),46(r=4,c=6),47(r=4,c=7),55(r=5,c=5),56(r=5,c=6),57(r=5,c=7)] targetIndex=34 targetRow=3 targetColumn=4 movementDirection=left rowStep=0 columnStep=-1
-									261012_0913_487 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] destinationValidity=valid gridBoundaryValidity=valid
-									261012_0913_487 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] destinationFootprint=[34(r=3,c=4),35(r=3,c=5),36(r=3,c=6),44(r=4,c=4),45(r=4,c=5),46(r=4,c=6),54(r=5,c=4),55(r=5,c=5),56(r=5,c=6)] sourceDestinationOverlap=[35(r=3,c=5),36(r=3,c=6),45(r=4,c=5),46(r=4,c=6),55(r=5,c=5),56(r=5,c=6)]
-									261012_0913_487 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] blockingButtons=[]
-									261012_0913_487 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=plainMove result=ACCEPT reason=noBlockingButtons plannedMoves=[old=35(r=3,c=5)->new=34(r=3,c=4) shape=3x3]
-									261012_0913_487 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=localSlide result=NOT_REACHED
-									261012_0913_487 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=crossingPush result=NOT_REACHED
-									261012_0913_488 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=edgePush result=NOT_REACHED
-									261012_0913_488 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=groupSwap result=NOT_REACHED
-									261012_0913_488 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=footprintGroupSwap result=NOT_REACHED
-									261012_0913_488 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=compatibleSwap result=NOT_REACHED
-									261012_0913_488 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=sameShapeSwap result=NOT_REACHED
-									261012_0913_488 🐞ContentView.swift:flush(result:):2055 [MOVE-PLAN-PROBE] END
-									261012_0913_157 🐞ContentView.swift:flush(result:):2051 [MOVE-PLAN-PROBE] BEGIN result=SUCCESS
-									261012_0913_157 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] sourceIndex=34 sourceRow=3 sourceColumn=4 sourceShape=3x3 sourceFootprint=[34(r=3,c=4),35(r=3,c=5),36(r=3,c=6),44(r=4,c=4),45(r=4,c=5),46(r=4,c=6),54(r=5,c=4),55(r=5,c=5),56(r=5,c=6)] targetIndex=24 targetRow=2 targetColumn=4 movementDirection=up rowStep=-1 columnStep=0
-									261012_0913_157 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] destinationValidity=valid gridBoundaryValidity=valid
-									261012_0913_157 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] destinationFootprint=[24(r=2,c=4),25(r=2,c=5),26(r=2,c=6),34(r=3,c=4),35(r=3,c=5),36(r=3,c=6),44(r=4,c=4),45(r=4,c=5),46(r=4,c=6)] sourceDestinationOverlap=[34(r=3,c=4),35(r=3,c=5),36(r=3,c=6),44(r=4,c=4),45(r=4,c=5),46(r=4,c=6)]
-									261012_0913_157 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] blockingButtons=[anchor=24 shape=2x1 numberOfCells=2 class=2-cell footprint=[24(r=2,c=4),25(r=2,c=5)]]
-									261012_0913_157 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=plainMove result=REJECT reason=blockingButtonsPresent
-									261012_0913_157 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=localSlide result=ACCEPT plannedMoves=[old=34(r=3,c=4)->new=24(r=2,c=4) shape=3x3 | old=24(r=2,c=4)->new=54(r=5,c=4) shape=2x1]
-									261012_0913_157 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=crossingPush result=NOT_REACHED
-									261012_0913_158 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=edgePush result=NOT_REACHED
-									261012_0913_158 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=groupSwap result=NOT_REACHED
-									261012_0913_158 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=footprintGroupSwap result=NOT_REACHED
-									261012_0913_158 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=compatibleSwap result=NOT_REACHED
-									261012_0913_158 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=sameShapeSwap result=NOT_REACHED
-									261012_0913_158 🐞ContentView.swift:flush(result:):2055 [MOVE-PLAN-PROBE] END
-									261012_0913_254 🐞ContentView.swift:flush(result:):2051 [MOVE-PLAN-PROBE] BEGIN result=SUCCESS
-									261012_0913_254 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] sourceIndex=24 sourceRow=2 sourceColumn=4 sourceShape=3x3 sourceFootprint=[24(r=2,c=4),25(r=2,c=5),26(r=2,c=6),34(r=3,c=4),35(r=3,c=5),36(r=3,c=6),44(r=4,c=4),45(r=4,c=5),46(r=4,c=6)] targetIndex=14 targetRow=1 targetColumn=4 movementDirection=up rowStep=-1 columnStep=0
-									261012_0913_254 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] destinationValidity=valid gridBoundaryValidity=valid
-									261012_0913_254 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] destinationFootprint=[14(r=1,c=4),15(r=1,c=5),16(r=1,c=6),24(r=2,c=4),25(r=2,c=5),26(r=2,c=6),34(r=3,c=4),35(r=3,c=5),36(r=3,c=6)] sourceDestinationOverlap=[24(r=2,c=4),25(r=2,c=5),26(r=2,c=6),34(r=3,c=4),35(r=3,c=5),36(r=3,c=6)]
-									261012_0913_254 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] blockingButtons=[anchor=14 shape=2x1 numberOfCells=2 class=2-cell footprint=[14(r=1,c=4),15(r=1,c=5)] | anchor=16 shape=1x1 numberOfCells=1 class=1-cell footprint=[16(r=1,c=6)]]
-									261012_0913_255 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=plainMove result=REJECT reason=blockingButtonsPresent
-									261012_0913_255 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=localSlide result=ACCEPT plannedMoves=[old=24(r=2,c=4)->new=14(r=1,c=4) shape=3x3 | old=16(r=1,c=6)->new=46(r=4,c=6) shape=1x1 | old=14(r=1,c=4)->new=44(r=4,c=4) shape=2x1]
-									261012_0913_255 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=crossingPush result=NOT_REACHED
-									261012_0913_255 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=edgePush result=NOT_REACHED
-									261012_0913_255 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=groupSwap result=NOT_REACHED
-									261012_0913_255 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=footprintGroupSwap result=NOT_REACHED
-									261012_0913_255 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=compatibleSwap result=NOT_REACHED
-									261012_0913_255 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=sameShapeSwap result=NOT_REACHED
-									261012_0913_255 🐞ContentView.swift:flush(result:):2055 [MOVE-PLAN-PROBE] END
-									261012_0913_287 🐞ContentView.swift:flush(result:):2051 [MOVE-PLAN-PROBE] BEGIN result=SUCCESS
-									261012_0913_287 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] sourceIndex=14 sourceRow=1 sourceColumn=4 sourceShape=3x3 sourceFootprint=[14(r=1,c=4),15(r=1,c=5),16(r=1,c=6),24(r=2,c=4),25(r=2,c=5),26(r=2,c=6),34(r=3,c=4),35(r=3,c=5),36(r=3,c=6)] targetIndex=4 targetRow=0 targetColumn=4 movementDirection=up rowStep=-1 columnStep=0
-									261012_0913_287 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] destinationValidity=valid gridBoundaryValidity=valid
-									261012_0913_287 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] destinationFootprint=[4(r=0,c=4),5(r=0,c=5),6(r=0,c=6),14(r=1,c=4),15(r=1,c=5),16(r=1,c=6),24(r=2,c=4),25(r=2,c=5),26(r=2,c=6)] sourceDestinationOverlap=[14(r=1,c=4),15(r=1,c=5),16(r=1,c=6),24(r=2,c=4),25(r=2,c=5),26(r=2,c=6)]
-									261012_0913_288 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] blockingButtons=[anchor=4 shape=1x1 numberOfCells=1 class=1-cell footprint=[4(r=0,c=4)] | anchor=5 shape=1x1 numberOfCells=1 class=1-cell footprint=[5(r=0,c=5)] | anchor=6 shape=1x1 numberOfCells=1 class=1-cell footprint=[6(r=0,c=6)]]
-									261012_0913_288 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=plainMove result=REJECT reason=blockingButtonsPresent
-									261012_0913_288 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=localSlide result=ACCEPT plannedMoves=[old=14(r=1,c=4)->new=4(r=0,c=4) shape=3x3 | old=5(r=0,c=5)->new=35(r=3,c=5) shape=1x1 | old=6(r=0,c=6)->new=36(r=3,c=6) shape=1x1 | old=4(r=0,c=4)->new=34(r=3,c=4) shape=1x1]
-									261012_0913_288 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=crossingPush result=NOT_REACHED
-									261012_0913_288 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=edgePush result=NOT_REACHED
-									261012_0913_288 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=groupSwap result=NOT_REACHED
-									261012_0913_288 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=footprintGroupSwap result=NOT_REACHED
-									261012_0913_289 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=compatibleSwap result=NOT_REACHED
-									261012_0913_289 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=sameShapeSwap result=NOT_REACHED
-									261012_0913_289 🐞ContentView.swift:flush(result:):2055 [MOVE-PLAN-PROBE] END
-									261012_0913_988 🐞ContentView.swift:flush(result:):2051 [MOVE-PLAN-PROBE] BEGIN result=SUCCESS
-									261012_0913_988 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] sourceIndex=4 sourceRow=0 sourceColumn=4 sourceShape=3x3 sourceFootprint=[4(r=0,c=4),5(r=0,c=5),6(r=0,c=6),14(r=1,c=4),15(r=1,c=5),16(r=1,c=6),24(r=2,c=4),25(r=2,c=5),26(r=2,c=6)] targetIndex=14 targetRow=1 targetColumn=4 movementDirection=down rowStep=1 columnStep=0
-									261012_0913_988 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] destinationValidity=valid gridBoundaryValidity=valid
-									261012_0913_988 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] destinationFootprint=[14(r=1,c=4),15(r=1,c=5),16(r=1,c=6),24(r=2,c=4),25(r=2,c=5),26(r=2,c=6),34(r=3,c=4),35(r=3,c=5),36(r=3,c=6)] sourceDestinationOverlap=[14(r=1,c=4),15(r=1,c=5),16(r=1,c=6),24(r=2,c=4),25(r=2,c=5),26(r=2,c=6)]
-									261012_0913_988 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] blockingButtons=[anchor=34 shape=1x1 numberOfCells=1 class=1-cell footprint=[34(r=3,c=4)] | anchor=35 shape=1x1 numberOfCells=1 class=1-cell footprint=[35(r=3,c=5)] | anchor=36 shape=1x1 numberOfCells=1 class=1-cell footprint=[36(r=3,c=6)]]
-									261012_0913_988 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=plainMove result=REJECT reason=blockingButtonsPresent
-									261012_0913_988 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=localSlide result=ACCEPT plannedMoves=[old=4(r=0,c=4)->new=14(r=1,c=4) shape=3x3 | old=35(r=3,c=5)->new=5(r=0,c=5) shape=1x1 | old=36(r=3,c=6)->new=6(r=0,c=6) shape=1x1 | old=34(r=3,c=4)->new=4(r=0,c=4) shape=1x1]
-									261012_0913_988 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=crossingPush result=NOT_REACHED
-									261012_0913_989 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=edgePush result=NOT_REACHED
-									261012_0913_989 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=groupSwap result=NOT_REACHED
-									261012_0913_989 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=footprintGroupSwap result=NOT_REACHED
-									261012_0913_989 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=compatibleSwap result=NOT_REACHED
-									261012_0913_989 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=sameShapeSwap result=NOT_REACHED
-									261012_0913_989 🐞ContentView.swift:flush(result:):2055 [MOVE-PLAN-PROBE] END
-									261012_0913_903 🐞ContentView.swift:flush(result:):2051 [MOVE-PLAN-PROBE] BEGIN result=SUCCESS
-									261012_0913_903 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] sourceIndex=14 sourceRow=1 sourceColumn=4 sourceShape=3x3 sourceFootprint=[14(r=1,c=4),15(r=1,c=5),16(r=1,c=6),24(r=2,c=4),25(r=2,c=5),26(r=2,c=6),34(r=3,c=4),35(r=3,c=5),36(r=3,c=6)] targetIndex=24 targetRow=2 targetColumn=4 movementDirection=down rowStep=1 columnStep=0
-									261012_0913_904 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] destinationValidity=valid gridBoundaryValidity=valid
-									261012_0913_904 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] destinationFootprint=[24(r=2,c=4),25(r=2,c=5),26(r=2,c=6),34(r=3,c=4),35(r=3,c=5),36(r=3,c=6),44(r=4,c=4),45(r=4,c=5),46(r=4,c=6)] sourceDestinationOverlap=[24(r=2,c=4),25(r=2,c=5),26(r=2,c=6),34(r=3,c=4),35(r=3,c=5),36(r=3,c=6)]
-									261012_0913_904 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] blockingButtons=[anchor=44 shape=2x1 numberOfCells=2 class=2-cell footprint=[44(r=4,c=4),45(r=4,c=5)] | anchor=46 shape=1x1 numberOfCells=1 class=1-cell footprint=[46(r=4,c=6)]]
-									261012_0913_904 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=plainMove result=REJECT reason=blockingButtonsPresent
-									261012_0913_904 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=localSlide result=ACCEPT plannedMoves=[old=14(r=1,c=4)->new=24(r=2,c=4) shape=3x3 | old=46(r=4,c=6)->new=16(r=1,c=6) shape=1x1 | old=44(r=4,c=4)->new=14(r=1,c=4) shape=2x1]
-									261012_0913_904 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=crossingPush result=NOT_REACHED
-									261012_0913_904 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=edgePush result=NOT_REACHED
-									261012_0913_904 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=groupSwap result=NOT_REACHED
-									261012_0913_904 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=footprintGroupSwap result=NOT_REACHED
-									261012_0913_905 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=compatibleSwap result=NOT_REACHED
-									261012_0913_905 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=sameShapeSwap result=NOT_REACHED
-									261012_0913_905 🐞ContentView.swift:flush(result:):2055 [MOVE-PLAN-PROBE] END
-									261012_0913_788 🐞ContentView.swift:flush(result:):2051 [MOVE-PLAN-PROBE] BEGIN result=SUCCESS
-									261012_0913_789 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] sourceIndex=24 sourceRow=2 sourceColumn=4 sourceShape=3x3 sourceFootprint=[24(r=2,c=4),25(r=2,c=5),26(r=2,c=6),34(r=3,c=4),35(r=3,c=5),36(r=3,c=6),44(r=4,c=4),45(r=4,c=5),46(r=4,c=6)] targetIndex=34 targetRow=3 targetColumn=4 movementDirection=down rowStep=1 columnStep=0
-									261012_0913_789 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] destinationValidity=valid gridBoundaryValidity=valid
-									261012_0913_789 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] destinationFootprint=[34(r=3,c=4),35(r=3,c=5),36(r=3,c=6),44(r=4,c=4),45(r=4,c=5),46(r=4,c=6),54(r=5,c=4),55(r=5,c=5),56(r=5,c=6)] sourceDestinationOverlap=[34(r=3,c=4),35(r=3,c=5),36(r=3,c=6),44(r=4,c=4),45(r=4,c=5),46(r=4,c=6)]
-									261012_0913_789 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] blockingButtons=[anchor=54 shape=2x1 numberOfCells=2 class=2-cell footprint=[54(r=5,c=4),55(r=5,c=5)]]
-									261012_0913_789 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=plainMove result=REJECT reason=blockingButtonsPresent
-									261012_0913_789 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=localSlide result=ACCEPT plannedMoves=[old=24(r=2,c=4)->new=34(r=3,c=4) shape=3x3 | old=54(r=5,c=4)->new=24(r=2,c=4) shape=2x1]
-									261012_0913_789 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=crossingPush result=NOT_REACHED
-									261012_0913_789 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=edgePush result=NOT_REACHED
-									261012_0913_789 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=groupSwap result=NOT_REACHED
-									261012_0913_789 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=footprintGroupSwap result=NOT_REACHED
-									261012_0913_789 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=compatibleSwap result=NOT_REACHED
-									261012_0913_789 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=sameShapeSwap result=NOT_REACHED
-									261012_0913_789 🐞ContentView.swift:flush(result:):2055 [MOVE-PLAN-PROBE] END
-									261012_0913_770 🐞ContentView.swift:flush(result:):2051 [MOVE-PLAN-PROBE] BEGIN result=SUCCESS
-									261012_0913_770 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] sourceIndex=34 sourceRow=3 sourceColumn=4 sourceShape=3x3 sourceFootprint=[34(r=3,c=4),35(r=3,c=5),36(r=3,c=6),44(r=4,c=4),45(r=4,c=5),46(r=4,c=6),54(r=5,c=4),55(r=5,c=5),56(r=5,c=6)] targetIndex=44 targetRow=4 targetColumn=4 movementDirection=down rowStep=1 columnStep=0
-									261012_0913_770 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] destinationValidity=valid gridBoundaryValidity=valid
-									261012_0913_770 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] destinationFootprint=[44(r=4,c=4),45(r=4,c=5),46(r=4,c=6),54(r=5,c=4),55(r=5,c=5),56(r=5,c=6),64(r=6,c=4),65(r=6,c=5),66(r=6,c=6)] sourceDestinationOverlap=[44(r=4,c=4),45(r=4,c=5),46(r=4,c=6),54(r=5,c=4),55(r=5,c=5),56(r=5,c=6)]
-									261012_0913_770 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] blockingButtons=[anchor=65 shape=2x1 numberOfCells=2 class=2-cell footprint=[65(r=6,c=5),66(r=6,c=6)]]
-									261012_0913_770 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=plainMove result=REJECT reason=blockingButtonsPresent
-									261012_0913_770 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=localSlide result=ACCEPT plannedMoves=[old=34(r=3,c=4)->new=44(r=4,c=4) shape=3x3 | old=65(r=6,c=5)->new=35(r=3,c=5) shape=2x1]
-									261012_0913_770 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=crossingPush result=NOT_REACHED
-									261012_0913_770 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=edgePush result=NOT_REACHED
-									261012_0913_770 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=groupSwap result=NOT_REACHED
-									261012_0913_770 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=footprintGroupSwap result=NOT_REACHED
-									261012_0913_770 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=compatibleSwap result=NOT_REACHED
-									261012_0913_771 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=sameShapeSwap result=NOT_REACHED
-									261012_0913_771 🐞ContentView.swift:flush(result:):2055 [MOVE-PLAN-PROBE] END
-									261012_0913_620 🐞ContentView.swift:flush(result:):2051 [MOVE-PLAN-PROBE] BEGIN result=SUCCESS
-									261012_0913_620 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] sourceIndex=44 sourceRow=4 sourceColumn=4 sourceShape=3x3 sourceFootprint=[44(r=4,c=4),45(r=4,c=5),46(r=4,c=6),54(r=5,c=4),55(r=5,c=5),56(r=5,c=6),64(r=6,c=4),65(r=6,c=5),66(r=6,c=6)] targetIndex=34 targetRow=3 targetColumn=4 movementDirection=up rowStep=-1 columnStep=0
-									261012_0913_620 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] destinationValidity=valid gridBoundaryValidity=valid
-									261012_0913_620 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] destinationFootprint=[34(r=3,c=4),35(r=3,c=5),36(r=3,c=6),44(r=4,c=4),45(r=4,c=5),46(r=4,c=6),54(r=5,c=4),55(r=5,c=5),56(r=5,c=6)] sourceDestinationOverlap=[44(r=4,c=4),45(r=4,c=5),46(r=4,c=6),54(r=5,c=4),55(r=5,c=5),56(r=5,c=6)]
-									261012_0913_620 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] blockingButtons=[anchor=35 shape=2x1 numberOfCells=2 class=2-cell footprint=[35(r=3,c=5),36(r=3,c=6)]]
-									261012_0913_621 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=plainMove result=REJECT reason=blockingButtonsPresent
-									261012_0913_621 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=localSlide result=ACCEPT plannedMoves=[old=44(r=4,c=4)->new=34(r=3,c=4) shape=3x3 | old=35(r=3,c=5)->new=65(r=6,c=5) shape=2x1]
-									261012_0913_621 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=crossingPush result=NOT_REACHED
-									261012_0913_621 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=edgePush result=NOT_REACHED
-									261012_0913_621 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=groupSwap result=NOT_REACHED
-									261012_0913_621 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=footprintGroupSwap result=NOT_REACHED
-									261012_0913_621 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=compatibleSwap result=NOT_REACHED
-									261012_0913_621 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=sameShapeSwap result=NOT_REACHED
-									261012_0913_621 🐞ContentView.swift:flush(result:):2055 [MOVE-PLAN-PROBE] END
-									261012_0913_465 🐞ContentView.swift:flush(result:):2051 [MOVE-PLAN-PROBE] BEGIN result=SUCCESS
-									261012_0913_465 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] sourceIndex=34 sourceRow=3 sourceColumn=4 sourceShape=3x3 sourceFootprint=[34(r=3,c=4),35(r=3,c=5),36(r=3,c=6),44(r=4,c=4),45(r=4,c=5),46(r=4,c=6),54(r=5,c=4),55(r=5,c=5),56(r=5,c=6)] targetIndex=35 targetRow=3 targetColumn=5 movementDirection=right rowStep=0 columnStep=1
-									261012_0913_466 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] destinationValidity=valid gridBoundaryValidity=valid
-									261012_0913_466 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] destinationFootprint=[35(r=3,c=5),36(r=3,c=6),37(r=3,c=7),45(r=4,c=5),46(r=4,c=6),47(r=4,c=7),55(r=5,c=5),56(r=5,c=6),57(r=5,c=7)] sourceDestinationOverlap=[35(r=3,c=5),36(r=3,c=6),45(r=4,c=5),46(r=4,c=6),55(r=5,c=5),56(r=5,c=6)]
-									261012_0913_466 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] blockingButtons=[]
-									261012_0913_466 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=plainMove result=ACCEPT reason=noBlockingButtons plannedMoves=[old=34(r=3,c=4)->new=35(r=3,c=5) shape=3x3]
-									261012_0913_466 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=localSlide result=NOT_REACHED
-									261012_0913_466 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=crossingPush result=NOT_REACHED
-									261012_0913_466 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=edgePush result=NOT_REACHED
-									261012_0913_467 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=groupSwap result=NOT_REACHED
-									261012_0913_467 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=footprintGroupSwap result=NOT_REACHED
-									261012_0913_467 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=compatibleSwap result=NOT_REACHED
-									261012_0913_467 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=sameShapeSwap result=NOT_REACHED
-									261012_0913_467 🐞ContentView.swift:flush(result:):2055 [MOVE-PLAN-PROBE] END
-									261012_0913_286 🐞ContentView.swift:flush(result:):2051 [MOVE-PLAN-PROBE] BEGIN result=SUCCESS
-									261012_0913_287 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] sourceIndex=35 sourceRow=3 sourceColumn=5 sourceShape=3x3 sourceFootprint=[35(r=3,c=5),36(r=3,c=6),37(r=3,c=7),45(r=4,c=5),46(r=4,c=6),47(r=4,c=7),55(r=5,c=5),56(r=5,c=6),57(r=5,c=7)] targetIndex=36 targetRow=3 targetColumn=6 movementDirection=right rowStep=0 columnStep=1
-									261012_0913_287 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] destinationValidity=valid gridBoundaryValidity=valid
-									261012_0913_287 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] destinationFootprint=[36(r=3,c=6),37(r=3,c=7),38(r=3,c=8),46(r=4,c=6),47(r=4,c=7),48(r=4,c=8),56(r=5,c=6),57(r=5,c=7),58(r=5,c=8)] sourceDestinationOverlap=[36(r=3,c=6),37(r=3,c=7),46(r=4,c=6),47(r=4,c=7),56(r=5,c=6),57(r=5,c=7)]
-									261012_0913_287 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] blockingButtons=[anchor=38 shape=2x1 numberOfCells=2 class=2-cell footprint=[38(r=3,c=8),39(r=3,c=9)] | anchor=48 shape=2x1 numberOfCells=2 class=2-cell footprint=[48(r=4,c=8),49(r=4,c=9)] | anchor=58 shape=2x1 numberOfCells=2 class=2-cell footprint=[58(r=5,c=8),59(r=5,c=9)]]
-									261012_0913_287 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=plainMove result=REJECT reason=blockingButtonsPresent
-									261012_0913_287 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=localSlide result=REJECT reason=partialBlocker anchor=38 blockerFootprint=[38(r=3,c=8),39(r=3,c=9)] enteringFootprint=[38(r=3,c=8),48(r=4,c=8),58(r=5,c=8)]
-									261012_0913_287 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=crossingPush result=REJECT reason=requiresSingleLargerBlocker blockers=[38, 48, 58]
-									261012_0913_287 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=edgePush result=REJECT reason=requiresSingleSmallerBlocker blockers=[38, 48, 58]
-									261012_0913_287 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=groupSwap result=REJECT reason=blockerNotInsideTarget anchor=48 blockerFootprint=[48(r=4,c=8),49(r=4,c=9)] targetFootprint=[36(r=3,c=6),37(r=3,c=7),38(r=3,c=8),46(r=4,c=6),47(r=4,c=7),48(r=4,c=8),56(r=5,c=6),57(r=5,c=7),58(r=5,c=8)]
-									261012_0913_288 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=rectangularGroupSwap result=ACCEPT movementDirection=right sourceColumn=5 newSourceColumn=7 groupWidth=2 plannedMoves=[old=35(r=3,c=5)->new=37(r=3,c=7) shape=3x3 | old=38(r=3,c=8)->new=35(r=3,c=5) shape=2x1 | old=58(r=5,c=8)->new=55(r=5,c=5) shape=2x1 | old=48(r=4,c=8)->new=45(r=4,c=5) shape=2x1]
-									261012_0913_288 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=footprintGroupSwap result=ACCEPT plannedMoves=[old=35(r=3,c=5)->new=37(r=3,c=7) shape=3x3 | old=38(r=3,c=8)->new=35(r=3,c=5) shape=2x1 | old=58(r=5,c=8)->new=55(r=5,c=5) shape=2x1 | old=48(r=4,c=8)->new=45(r=4,c=5) shape=2x1]
-									261012_0913_288 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=compatibleSwap result=NOT_REACHED
-									261012_0913_288 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=sameShapeSwap result=NOT_REACHED
-									261012_0913_288 🐞ContentView.swift:flush(result:):2055 [MOVE-PLAN-PROBE] END
-									261012_0913_440 🐞ContentView.swift:flush(result:):2051 [MOVE-PLAN-PROBE] BEGIN result=SUCCESS
-									261012_0913_440 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] sourceIndex=37 sourceRow=3 sourceColumn=7 sourceShape=3x3 sourceFootprint=[37(r=3,c=7),38(r=3,c=8),39(r=3,c=9),47(r=4,c=7),48(r=4,c=8),49(r=4,c=9),57(r=5,c=7),58(r=5,c=8),59(r=5,c=9)] targetIndex=36 targetRow=3 targetColumn=6 movementDirection=left rowStep=0 columnStep=-1
-									261012_0913_440 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] destinationValidity=valid gridBoundaryValidity=valid
-									261012_0913_440 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] destinationFootprint=[36(r=3,c=6),37(r=3,c=7),38(r=3,c=8),46(r=4,c=6),47(r=4,c=7),48(r=4,c=8),56(r=5,c=6),57(r=5,c=7),58(r=5,c=8)] sourceDestinationOverlap=[37(r=3,c=7),38(r=3,c=8),47(r=4,c=7),48(r=4,c=8),57(r=5,c=7),58(r=5,c=8)]
-									261012_0913_440 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] blockingButtons=[anchor=35 shape=2x1 numberOfCells=2 class=2-cell footprint=[35(r=3,c=5),36(r=3,c=6)] | anchor=45 shape=2x1 numberOfCells=2 class=2-cell footprint=[45(r=4,c=5),46(r=4,c=6)] | anchor=55 shape=2x1 numberOfCells=2 class=2-cell footprint=[55(r=5,c=5),56(r=5,c=6)]]
-									261012_0913_440 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=plainMove result=REJECT reason=blockingButtonsPresent
-									261012_0913_440 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=localSlide result=REJECT reason=partialBlocker anchor=35 blockerFootprint=[35(r=3,c=5),36(r=3,c=6)] enteringFootprint=[36(r=3,c=6),46(r=4,c=6),56(r=5,c=6)]
-									261012_0913_440 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=crossingPush result=REJECT reason=requiresSingleLargerBlocker blockers=[35, 45, 55]
-									261012_0913_441 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=edgePush result=REJECT reason=requiresSingleSmallerBlocker blockers=[35, 45, 55]
-									261012_0913_441 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=groupSwap result=REJECT reason=blockerNotInsideTarget anchor=55 blockerFootprint=[55(r=5,c=5),56(r=5,c=6)] targetFootprint=[36(r=3,c=6),37(r=3,c=7),38(r=3,c=8),46(r=4,c=6),47(r=4,c=7),48(r=4,c=8),56(r=5,c=6),57(r=5,c=7),58(r=5,c=8)]
-									261012_0913_441 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=rectangularGroupSwap result=ACCEPT movementDirection=left sourceColumn=7 newSourceColumn=5 groupWidth=2 plannedMoves=[old=37(r=3,c=7)->new=35(r=3,c=5) shape=3x3 | old=35(r=3,c=5)->new=38(r=3,c=8) shape=2x1 | old=45(r=4,c=5)->new=48(r=4,c=8) shape=2x1 | old=55(r=5,c=5)->new=58(r=5,c=8) shape=2x1]
-									261012_0913_441 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=footprintGroupSwap result=ACCEPT plannedMoves=[old=37(r=3,c=7)->new=35(r=3,c=5) shape=3x3 | old=35(r=3,c=5)->new=38(r=3,c=8) shape=2x1 | old=45(r=4,c=5)->new=48(r=4,c=8) shape=2x1 | old=55(r=5,c=5)->new=58(r=5,c=8) shape=2x1]
-									261012_0913_441 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=compatibleSwap result=NOT_REACHED
-									261012_0913_441 🐞ContentView.swift:flush(result:):2053 [MOVE-PLAN-PROBE] strategy=sameShapeSwap result=NOT_REACHED
-									261012_0913_441 🐞ContentView.swift:flush(result:):2055 [MOVE-PLAN-PROBE] END
+									UITextView 0x10c38d800 is switching to TextKit 1 compatibility mode because its layoutManager was accessed. Break on void _UITextViewEnablingCompatibilityMode(UITextView *__strong, BOOL) to debug.
+									<0x10ed2c8c0> Gesture: System gesture gate timed out.
+									UITextView 0x125316400 is switching to TextKit 1 compatibility mode because its layoutManager was accessed. Break on void _UITextViewEnablingCompatibilityMode(UITextView *__strong, BOOL) to debug.
+									Reading from public effective user settings.
+									UIKeyboardLayoutStar implements focusItemsInRect: - caching for linear focus movement is limited as long as this view is on screen.
+									isKeyboardMinorEdgeWidth may only be set for UIKBDynamicRenderFactory, changes not saved
+									keyboardVerticalSizeClass may only be set for UIKBDynamicRenderFactory, changes not saved
+									keyboardHorizontalSizeClass may only be set for UIKBDynamicRenderFactory, changes not saved
+									currentHandBias may only be set for UIKBDynamicRenderFactory, changes not saved
+									currentHeight may only be set for UIKBDynamicRenderFactory, changes not saved
+									isKeyboardMinorEdgeWidth may only be set for UIKBDynamicRenderFactory, changes not saved
+									keyboardVerticalSizeClass may only be set for UIKBDynamicRenderFactory, changes not saved
+									keyboardHorizontalSizeClass may only be set for UIKBDynamicRenderFactory, changes not saved
+									currentHandBias may only be set for UIKBDynamicRenderFactory, changes not saved
+									currentHeight may only be set for UIKBDynamicRenderFactory, changes not saved
+									isKeyboardMinorEdgeWidth may only be set for UIKBDynamicRenderFactory, changes not saved
+									keyboardVerticalSizeClass may only be set for UIKBDynamicRenderFactory, changes not saved
+									keyboardHorizontalSizeClass may only be set for UIKBDynamicRenderFactory, changes not saved
+									currentHandBias may only be set for UIKBDynamicRenderFactory, changes not saved
+									currentHeight may only be set for UIKBDynamicRenderFactory, changes not saved
+									<0x10ed2c8c0> Gesture: System gesture gate timed out.
+									Unable to simultaneously satisfy constraints.
+									Probably at least one of the constraints in the following list is one you don't want.
+									Try this:
+										(1) look at each constraint and try to figure out which you don't expect;
+(2) find the code that added the unwanted constraint or constraints and fix it.
+(Note: If you're seeing NSAutoresizingMaskLayoutConstraints that you don't understand, refer to the documentation for the UIView property translatesAutoresizingMaskIntoConstraints)
+(
+	"<NSAutoresizingMaskLayoutConstraint:0x1170799a0 h=--& v=--& TUIPredictionViewCell:0x10ed27c00.width == 0   (active)>",
+	"<NSLayoutConstraint:0x10edb32f0 TUICandidateGradientContentLabel:0x10ef5b200.trailing == TUIPredictionViewCell:0x10ed27c00.trailing - 6   (active)>",
+	"<NSLayoutConstraint:0x10edb3200 H:|-(6)-[TUICandidateGradientContentLabel:0x10ef5b200]   (active, names: '|':TUIPredictionViewCell:0x10ed27c00 )>"
+)
+
+Will attempt to recover by breaking constraint
+<NSLayoutConstraint:0x10edb32f0 TUICandidateGradientContentLabel:0x10ef5b200.trailing == TUIPredictionViewCell:0x10ed27c00.trailing - 6   (active)>
+
+Make a symbolic breakpoint at UIViewAlertForUnsatisfiableConstraints to catch this in the debugger.
+																				The methods in the UIConstraintBasedLayoutDebugging category on UIView listed in <UIKitCore/UIView.h> may also be helpful.
+																				Unable to simultaneously satisfy constraints.
+																				Probably at least one of the constraints in the following list is one you don't want.
+																				Try this:
+																					(1) look at each constraint and try to figure out which you don't expect;
+(2) find the code that added the unwanted constraint or constraints and fix it.
+(Note: If you're seeing NSAutoresizingMaskLayoutConstraints that you don't understand, refer to the documentation for the UIView property translatesAutoresizingMaskIntoConstraints)
+(
+	"<NSAutoresizingMaskLayoutConstraint:0x11707a300 h=--& v=--& TUIPredictionViewCell:0x10ed27600.width == 0   (active)>",
+	"<NSLayoutConstraint:0x118d30410 H:|-(6)-[TUICandidateGradientContentLabel:0x1257e8a00]   (active, names: '|':TUIPredictionViewCell:0x10ed27600 )>",
+	"<NSLayoutConstraint:0x118d30460 TUICandidateGradientContentLabel:0x1257e8a00.trailing == TUIPredictionViewCell:0x10ed27600.trailing - 6   (active)>",
+	"<NSLayoutConstraint:0x10c3bb020 'UIScrollView-frameLayoutGuide-width' UILayoutGuide:0x1256eb9c0'UIScrollView-frameLayoutGuide'.width == TUICandidateGradientContentLabel:0x1257e8a00.width   (active)>"
+)
+
+Will attempt to recover by breaking constraint
+<NSLayoutConstraint:0x10c3bb020 'UIScrollView-frameLayoutGuide-width' UILayoutGuide:0x1256eb9c0'UIScrollView-frameLayoutGuide'.width == TUICandidateGradientContentLabel:0x1257e8a00.width   (active)>
+
+Make a symbolic breakpoint at UIViewAlertForUnsatisfiableConstraints to catch this in the debugger.
+																				The methods in the UIConstraintBasedLayoutDebugging category on UIView listed in <UIKitCore/UIView.h> may also be helpful.
+																				Unable to simultaneously satisfy constraints.
+																				Probably at least one of the constraints in the following list is one you don't want.
+																				Try this:
+																					(1) look at each constraint and try to figure out which you don't expect;
+(2) find the code that added the unwanted constraint or constraints and fix it.
+(Note: If you're seeing NSAutoresizingMaskLayoutConstraints that you don't understand, refer to the documentation for the UIView property translatesAutoresizingMaskIntoConstraints)
+(
+	"<NSAutoresizingMaskLayoutConstraint:0x11707a300 h=--& v=--& TUIPredictionViewCell:0x10ed27600.width == 0   (active)>",
+	"<NSLayoutConstraint:0x118d30410 H:|-(6)-[TUICandidateGradientContentLabel:0x1257e8a00]   (active, names: '|':TUIPredictionViewCell:0x10ed27600 )>",
+	"<NSLayoutConstraint:0x118d30460 TUICandidateGradientContentLabel:0x1257e8a00.trailing == TUIPredictionViewCell:0x10ed27600.trailing - 6   (active)>"
+)
+
+Will attempt to recover by breaking constraint
+<NSLayoutConstraint:0x118d30460 TUICandidateGradientContentLabel:0x1257e8a00.trailing == TUIPredictionViewCell:0x10ed27600.trailing - 6   (active)>
+
+Make a symbolic breakpoint at UIViewAlertForUnsatisfiableConstraints to catch this in the debugger.
+																				The methods in the UIConstraintBasedLayoutDebugging category on UIView listed in <UIKitCore/UIView.h> may also be helpful.
+																				Unable to simultaneously satisfy constraints.
+																				Probably at least one of the constraints in the following list is one you don't want.
+																				Try this:
+																					(1) look at each constraint and try to figure out which you don't expect;
+(2) find the code that added the unwanted constraint or constraints and fix it.
+(Note: If you're seeing NSAutoresizingMaskLayoutConstraints that you don't understand, refer to the documentation for the UIView property translatesAutoresizingMaskIntoConstraints)
+(
+	"<NSAutoresizingMaskLayoutConstraint:0x11707aa30 h=--& v=--& TUIPredictionViewCell:0x10ed27900.width == 0   (active)>",
+	"<NSLayoutConstraint:0x118d33bb0 H:|-(6)-[TUICandidateGradientContentLabel:0x1257e9e00]   (active, names: '|':TUIPredictionViewCell:0x10ed27900 )>",
+	"<NSLayoutConstraint:0x118d339d0 TUICandidateGradientContentLabel:0x1257e9e00.trailing == TUIPredictionViewCell:0x10ed27900.trailing - 6   (active)>",
+	"<NSLayoutConstraint:0x118d30870 'UIScrollView-frameLayoutGuide-width' UILayoutGuide:0x1257f00e0'UIScrollView-frameLayoutGuide'.width == TUICandidateGradientContentLabel:0x1257e9e00.width   (active)>"
+)
+
+Will attempt to recover by breaking constraint
+<NSLayoutConstraint:0x118d30870 'UIScrollView-frameLayoutGuide-width' UILayoutGuide:0x1257f00e0'UIScrollView-frameLayoutGuide'.width == TUICandidateGradientContentLabel:0x1257e9e00.width   (active)>
+
+Make a symbolic breakpoint at UIViewAlertForUnsatisfiableConstraints to catch this in the debugger.
+																				The methods in the UIConstraintBasedLayoutDebugging category on UIView listed in <UIKitCore/UIView.h> may also be helpful.
+																				Unable to simultaneously satisfy constraints.
+																				Probably at least one of the constraints in the following list is one you don't want.
+																				Try this:
+																					(1) look at each constraint and try to figure out which you don't expect;
+(2) find the code that added the unwanted constraint or constraints and fix it.
+(Note: If you're seeing NSAutoresizingMaskLayoutConstraints that you don't understand, refer to the documentation for the UIView property translatesAutoresizingMaskIntoConstraints)
+(
+	"<NSAutoresizingMaskLayoutConstraint:0x11707aa30 h=--& v=--& TUIPredictionViewCell:0x10ed27900.width == 0   (active)>",
+	"<NSLayoutConstraint:0x118d33bb0 H:|-(6)-[TUICandidateGradientContentLabel:0x1257e9e00]   (active, names: '|':TUIPredictionViewCell:0x10ed27900 )>",
+	"<NSLayoutConstraint:0x118d339d0 TUICandidateGradientContentLabel:0x1257e9e00.trailing == TUIPredictionViewCell:0x10ed27900.trailing - 6   (active)>"
+)
+
+Will attempt to recover by breaking constraint
+<NSLayoutConstraint:0x118d339d0 TUICandidateGradientContentLabel:0x1257e9e00.trailing == TUIPredictionViewCell:0x10ed27900.trailing - 6   (active)>
+
+Make a symbolic breakpoint at UIViewAlertForUnsatisfiableConstraints to catch this in the debugger.
+																				The methods in the UIConstraintBasedLayoutDebugging category on UIView listed in <UIKitCore/UIView.h> may also be helpful.
+																				Reporter disconnected. { function=sendMessage, reporterID=28956669509634 }
+Reporter disconnected. { function=sendMessage, reporterID=28956669509634 }
+Reporter disconnected. { function=sendMessage, reporterID=28956669509634 }
+Reporter disconnected. { function=sendMessage, reporterID=28956669509634 }
+Reporter disconnected. { function=sendMessage, reporterID=28956669509634 }
+Reporter disconnected. { function=sendMessage, reporterID=28956669509634 }
+Reporter disconnected. { function=sendMessage, reporterID=28956669509634 }
+Reporter disconnected. { function=sendMessage, reporterID=28956669509634 }
+Reporter disconnected. { function=sendMessage, reporterID=28956669509634 }
+Received port for identifier response: <(null)> with error:Error Domain=RBSServiceErrorDomain Code=1 "Client not entitled" UserInfo={RBSEntitlement=com.apple.runningboard.process-state, NSLocalizedFailureReason=Client not entitled, RBSPermanent=false}
+elapsedCPUTimeForFrontBoard couldn't generate a task port
+Received port for identifier response: <(null)> with error:Error Domain=RBSServiceErrorDomain Code=1 "Client not entitled" UserInfo={RBSEntitlement=com.apple.runningboard.process-state, NSLocalizedFailureReason=Client not entitled, RBSPermanent=false}
+elapsedCPUTimeForFrontBoard couldn't generate a task port
+Unable to simultaneously satisfy constraints.
+Probably at least one of the constraints in the following list is one you don't want.
+Try this:
+(1) look at each constraint and try to figure out which you don't expect;
+(2) find the code that added the unwanted constraint or constraints and fix it.
+(Note: If you're seeing NSAutoresizingMaskLayoutConstraints that you don't understand, refer to the documentation for the UIView property translatesAutoresizingMaskIntoConstraints)
+(
+	"<NSAutoresizingMaskLayoutConstraint:0x10f61c280 h=--& v=--& TUIPredictionViewCell:0x129418f00.width == 0   (active)>",
+	"<NSLayoutConstraint:0x122aac320 TUICandidateGradientContentLabel:0x1257eb200.trailing == TUIPredictionViewCell:0x129418f00.trailing - 6   (active)>",
+	"<NSLayoutConstraint:0x122aac3c0 H:|-(6)-[TUICandidateGradientContentLabel:0x1257eb200]   (active, names: '|':TUIPredictionViewCell:0x129418f00 )>"
+)
+
+Will attempt to recover by breaking constraint
+<NSLayoutConstraint:0x122aac320 TUICandidateGradientContentLabel:0x1257eb200.trailing == TUIPredictionViewCell:0x129418f00.trailing - 6   (active)>
+
+Make a symbolic breakpoint at UIViewAlertForUnsatisfiableConstraints to catch this in the debugger.
+																				The methods in the UIConstraintBasedLayoutDebugging category on UIView listed in <UIKitCore/UIView.h> may also be helpful.
+																				cannot add handler to 0 from 0 - dropping
+																				cannot add handler to 0 from 0 - dropping
+																				cannot add handler to 0 from 0 - dropping
+																				cannot add handler to 0 from 0 - dropping
+																				[ESP-OUTPUT] #1 "cm"
+																				[ESP-OUTPUT] #2 "f13"
+																				[ESP-OUTPUT] #3 " "
