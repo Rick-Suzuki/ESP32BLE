@@ -1,148 +1,170 @@
 1. Exact declarations moved
 
-Moved from Set_Screen.swift into Set_ArchiveDocuments.swift:
+Moved from ContentView.swift into MacConnectionManager.swift:
 
-SettingsTextFileDocument
-SettingsArchiveFileDocument
-SettingsSingleFileExportPicker
-private Data little-endian ZIP helper extension
-
-Left in Set_Screen.swift:
-
-SpeechVoiceOption, because it belongs to speech voice settings, not archive/export support.
-SettingsRenameAlertModifier, DeleteAllDataConfirmationModifier, RestoreAllFilesConfirmationModifier, because they are Settings UI alert support.
-VerticalAlignment.sliderTrackCenter extension, because it supports Settings slider layout.
+ESPMacTransportProbe
+ESPMacSecurityV1
+ESPMacSecurityStore
+private Data hexString / hex initializer extension
+MacConnectionManager
 
 2. Original source line ranges
 
-Original locations in ESP32BLE/Scrns/Set_Screen/Set_Screen.swift before extraction:
+Original locations in ESP32BLE/Scrns/ContentView.swift before extraction:
 
-SettingsTextFileDocument:
-lines 3801-3822
+ESPMacTransportProbe:
+lines 27-58
 
-SettingsArchiveFileDocument:
-lines 3824-4006
+ESPMacSecurityV1:
+lines 101-126
 
-SettingsSingleFileExportPicker:
-lines 4008-4040
+ESPMacSecurityStore:
+lines 128-207
 
 private extension Data:
-lines 4089-4121
+lines 209-230
+
+MacConnectionManager:
+lines 232-707
 
 3. New destination file and line ranges
 
 Created:
 
-ESP32BLE/Scrns/Set_Screen/Set_ArchiveDocuments.swift
+ESP32BLE/Scrns/MacConnectionManager.swift
 
 New locations:
 
-SettingsTextFileDocument:
-lines 5-26
+ESPMacTransportProbe:
+lines 7-38
 
-SettingsArchiveFileDocument:
-lines 28-210
+ESPMacSecurityV1:
+lines 41-65
 
-SettingsSingleFileExportPicker:
-lines 212-244
+ESPMacSecurityStore:
+lines 67-146
 
 private extension Data:
-lines 246-278
+lines 148-169
 
-4. Number of lines removed from Set_Screen.swift
+MacConnectionManager:
+lines 172-646
 
-Set_Screen.swift went from 4132 lines to 3856 lines by wc -l.
+4. Original ContentView.swift line count
 
-Net reduction:
-276 lines.
+Original ContentView.swift line count:
+3747 lines.
 
-5. Number of lines in Set_ArchiveDocuments.swift
+5. New ContentView.swift line count
 
-Set_ArchiveDocuments.swift is 278 lines by wc -l.
+New ContentView.swift line count:
+3106 lines.
 
-6. Access-control changes
+6. New MacConnectionManager.swift line count
 
-Two moved declarations needed minimal access-control changes because Set_Screen.swift still references them from another file:
+MacConnectionManager.swift line count:
+646 lines.
 
-SettingsArchiveFileDocument:
-changed from private struct to internal struct.
+7. Declarations deliberately left behind
 
-SettingsSingleFileExportPicker:
-changed from private struct to internal struct.
+Left in ContentView.swift:
 
-These are the default Swift access level and are needed because SettingsScreen uses them for archive export/import and single-file export presentation.
+AppRuntimeFlags
+orientationState
+ButtonClickFeedback
+OutputMode
 
-No broad private-to-internal conversion was made.
+Reason:
 
-These remained private:
+AppRuntimeFlags / orientationState are app orientation support, not Mac connection manager support.
 
-SettingsTextFileDocument
-private extension Data
-SettingsArchiveFileDocument.crc32
-SettingsArchiveFileDocument.crc32Table
+ButtonClickFeedback is used broadly by editor and UI controls.
 
-7. Exact Xcode project membership changes
+OutputMode is shared app-level output routing state and is referenced by ContentView/MainScreen/Keyboard flows.
 
-Updated ESP32BLE.xcodeproj/project.pbxproj only for the new Swift file.
+I also left the existing ContentView imports untouched. Network/CryptoKit/Security are no longer needed by the moved code there, but removing imports would be cleanup beyond the requested structural move.
+
+8. Access-control changes
+
+No access-control changes were made.
+
+MacConnectionManager remains internal, as before.
+
+ESPMacTransportProbe, ESPMacSecurityV1, ESPMacSecurityStore, and the Data helper extension remain private in the new file.
+
+No method signatures, property names, protocol conformances, actor annotations, published properties, or lifecycle methods were changed.
+
+9. Exact Xcode project membership changes
+
+Updated ESP32BLE.xcodeproj/project.pbxproj only to register the new Swift file.
 
 Added:
 
-PBXFileReference for Set_ArchiveDocuments.swift.
-PBXBuildFile entry for Set_ArchiveDocuments.swift in Sources.
-Set_ArchiveDocuments.swift to the Set_Screen project group.
-Set_ArchiveDocuments.swift to the ESP32BLE application target Sources build phase.
+PBXFileReference for MacConnectionManager.swift.
+PBXBuildFile entry for MacConnectionManager.swift in Sources.
+MacConnectionManager.swift to the Scrns project group.
+MacConnectionManager.swift to the ESP32BLE application target Sources build phase.
 
-No build settings, signing settings, deployment targets, bundle identifiers, schemes, capabilities, or unrelated project references were changed.
+No build settings, signing settings, deployment targets, bundle identifiers, capabilities, entitlements, schemes, or unrelated target memberships were changed.
 
-8. Build result
+10. Build result and build duration
 
-Build succeeded.
+Build result:
+Succeeded.
 
-BuildProject result:
-The project built successfully.
+Build duration:
+40.723 seconds.
 
-Elapsed time:
-about 49 seconds.
+11. Compiler warnings introduced
 
-9. Remaining risks or warnings
+Build completed with no errors.
 
-No runtime testing was performed.
+The build log reports a warning in the moved MacConnectionManager.swift code:
 
-This was a structural code move only. Archive creation, ZIP parsing, single-file export picker behavior, Settings layout, import/export handlers, and SettingsScreen state ownership were not intentionally changed.
+MacConnectionManager.swift:385:
+call to main actor-isolated instance method receive(on:) in a synchronous nonisolated context.
 
-The only behavioral risk is the normal small risk of source-file extraction: the moved types are now in a separate compilation file, with the two required declarations made internal so SettingsScreen can still see them. The successful build confirms the target membership and symbol visibility are valid.
+This is the same implementation moved from ContentView.swift; I did not change it because fixing that would alter concurrency behavior beyond a structural extraction.
 
-10. Complete list of modified/created files
+The build log also contains unrelated existing warnings in ScreenConfig.swift, Set_TxtEditor.swift, AppIntents metadata extraction, and interface orientation support.
+
+12. Remaining risks
+
+No runtime Mac Helper testing was performed.
+
+Because this was a code move only, the remaining risk is limited to source-file extraction and project membership. The successful build confirms the new file is compiled into the app target and ContentView still resolves MacConnectionManager.
+
+Network behavior, authentication payloads, Bonjour service type, pairing logic, HMAC logic, published state, DispatchQueue usage, Task usage, and connection lifecycle code were preserved as moved code.
+
+13. Complete list of changed files
 
 Created:
 
-ESP32BLE/Scrns/Set_Screen/Set_ArchiveDocuments.swift
+ESP32BLE/Scrns/MacConnectionManager.swift
 
 Modified:
 
-ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
+ESP32BLE/Scrns/ContentView.swift
 ESP32BLE.xcodeproj/project.pbxproj
 
-11. Confirmation that no unrelated files or functionality were changed
+14. Confirmation that no unrelated functionality was modified
 
 No Main_Screen.swift changes.
 
 No Main_ButtonBehavior.swift changes.
 
-No ContentView.swift changes.
-
 No Main_DocumentActions.swift changes.
 
-No editor implementation changes.
+No SettingsScreen or Phase 3A files changed.
 
-No Move/Resize changes.
+No editor files changed.
 
-No popup changes.
+No command descriptions, Markdown rendering, or text highlighting changed.
 
-No command description or Markdown changes.
+No UI geometry, button rendering, popup behavior, Move/Resize, Copy/Paste, or Undo/Redo code changed.
 
 No .txt files changed.
 
-No ESPMacHelper, Test Area, firmware, backup, or V62.40 baseline files were touched.
+No ESPMacHelper, Test Area helper, ESP32 firmware, backup, or V62.40 baseline files were touched.
 
 No commit, push, pull, reset, restore, revert, checkout, or rebase was performed.
