@@ -750,13 +750,15 @@ private let smartButtonSwatchHexColors = [
 		("paste (cmd-v)", "MV:", "sends command-v"),
 		("cut (cmd-x)", "MX:", "sends command-x")
 	]
+	//
+	//-----------------------------------------------------------------------------------------------
+	// MARK: - BM:🟥 smart widgets
+	//
 	private let smartCommandRows: [(english: String, shortcut: String, description: String)] = [
 		//
-		//----------------------------------------
+		//-----------------------------------------------------------------------------------------------
+		// *** TIME, DAY, DATE ETC ***
 		//
-		
-		// MARK: - BM:🟥 smart widgets
-		
 		("clock", "clock","""
 Inserts the current time.
 	
@@ -779,40 +781,41 @@ date Tokyo
 		//
 		//----------------------------------------
 		//
-		("day", "day ", """
-Inserts the current day.
-"""),
-		//
-		//----------------------------------------
-		//
-		("day of week", "dow ", """
-Inserts the day of the week.
-"""),
-		//
-		//----------------------------------------
-		//
 		("year", "year ", """
 Inserts the current year.
-"""),
-		//
-		//----------------------------------------
-		//
-		("prev", "prev", """
-Goes to the previous document
-in the file list.
-"""),
-		//
-		//----------------------------------------
-		//
-		("next", "next", """
-Goes to the next document
-in the file list.
+ 
+Optionally specify a city:
+ 
+year Paris
+year Tokyo
 """),
 		//
 		//----------------------------------------
 		//
 		("month", "month ", """
 Inserts the current month.
+"""),
+		//
+		//----------------------------------------
+		//
+		("day", "day ", """
+Inserts the current day.
+ 
+Optionally specify a city:
+ 
+day Paris
+day Tokyo
+"""),
+		//
+		//----------------------------------------
+		//
+		("day of week", "dow ", """
+Inserts the day of the week.
+ 
+Optionally specify a city:
+ 
+dow Paris
+dow Tokyo
 """),
 		//
 		//----------------------------------------
@@ -833,11 +836,19 @@ Inserts the current minutes.
 Inserts the current seconds.
 """),
 		//
+		//-----------------------------------------------------------------------------------------------
+		// *** BACK, FORWARD ETC ***
+		//
+		("prev", "prev", """
+Goes to the previous document
+in the file list.
+"""),
+		//
 		//----------------------------------------
 		//
-		("device power", "power ", """
-Shows the device
-power state.
+		("next", "next", """
+Goes to the next document
+in the file list.
 """),
 		//
 		//----------------------------------------
@@ -856,10 +867,14 @@ loaded page stack.
 		//
 		//----------------------------------------
 		//
-		("ambient sound", "amb snd.mp3", """
-Starts ambient sound
-playback.
+		("home", "home", """
+Goes to the
+home page.
 """),
+		//
+		//-----------------------------------------------------------------------------------------------
+		// *** MEDIA ***
+		//
 		//
 		//----------------------------------------
 		//
@@ -875,31 +890,14 @@ Speaks text aloud.
 		//
 		//----------------------------------------
 		//
-		("Esp32 out", "out 32 1", """
-Sends an ESP32
-output command.
-"""),
-		//
-		//----------------------------------------
-		//
-		("Esp32 pwm", "pwm 32 5 4", """
-Sends an ESP32
-PWM command.
-"""),
-		//
-		//----------------------------------------
-		//
-		("home", "home", """
-Goes to the
-home page.
-"""),
-		//
-		//----------------------------------------
-		//
 		("wait time", "wait 5", """
 Waits before continuing
 a command chain.
 """),
+		//
+		//-----------------------------------------------------------------------------------------------
+		// *** NUMBERS ***
+		//
 		//
 		//----------------------------------------
 		//
@@ -929,6 +927,20 @@ Uses a random line
 from a file.
 """),
 		//
+		//-----------------------------------------------------------------------------------------------
+		// *** IOS SYSTEM ***
+		//
+		//----------------------------------------
+		//
+		("device power", "power ", """
+Shows the device
+power state.
+"""),
+		("ambient sound", "amb snd.mp3", """
+Starts ambient sound
+playback.
+"""),
+		//
 		//----------------------------------------
 		//
 		("timer sound", "timer 60 snd.wav", """
@@ -952,8 +964,18 @@ shortcut.
 		//
 		//----------------------------------------
 		//
-		("open app", "app mail", """
-Opens an app.
+		("open app",	// table title
+		 "app mail",	// example code
+// details
+"""
+***Opens an App***	
+  
+iOS Apps that can be opened on device:
+
+mail			notes
+messages		facetime
+maps			music
+calendar	    .   
 """),
 		//
 		//----------------------------------------
@@ -976,8 +998,25 @@ sends F1 then waits 10 secs, the opens hello.txt
 F1:wait 1:sp
 sends F1, waits one send then sends sp(space)
 """),
-	]
-
+		//
+		//-----------------------------------------------------------------------------------------------
+		// *** ESP32 CMDS ***
+		//
+		("Esp32 out", "out 32 1", """
+Sends an ESP32
+output command.
+"""),
+		//
+		//----------------------------------------
+		//
+		("Esp32 pwm", "pwm 32 5 4", """
+Sends an ESP32
+PWM command.
+"""),
+	] // END OF SMART COMMENTS
+	//
+	//-----------------------------------------------------------------------------------------------
+	//
     @AppStorage("speechRecognitionAutoOffMinutes") var speechRecognitionAutoOffMinutes = 5
 	
 	// MARK: - BM:🔆 grid dims - allowed sizes
@@ -2974,7 +3013,7 @@ Tapping a row inserts the key code at the cursor.
         if mainGridButtonMode == .speechActive {
             speakMainGridText("home")
         }
-        let selectedHomeDocument = selectDocumentNamedFromGrid("home.txt")
+   //     let selectedHomeDocument = selectDocumentNamedFromGrid("home.txt")
     }
 
     private func goBackToPreviousDocumentFromMainScreenControl() {
@@ -3869,10 +3908,10 @@ Tapping a row inserts the key code at the cursor.
                 }
 
             ScrollView(.vertical) {
-                Text(smartCommandDescription)
+                Text(.init(smartCommandDescription))
                     .font(.system(size: 16, weight: .regular))
-                    .foregroundStyle(isSmartEscapeCodeTableVisible ? .green : .cyan)
-                    .multilineTextAlignment(.center)
+                    .foregroundStyle(.white)
+                    .multilineTextAlignment(.leading)
                     .padding(6)
                     .frame(maxWidth: .infinity)
             }

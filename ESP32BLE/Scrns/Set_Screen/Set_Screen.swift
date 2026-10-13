@@ -345,7 +345,7 @@ struct SettingsScreen: View {
 					ButtonClickFeedback.playIfEnabled()
 					prepareSingleFileExport()
 				}
-					Button("Export Backup") {
+					Button("Export Backup as zip") {
 						ButtonClickFeedback.playIfEnabled()
 						prepareArchiveExport()
 					}
@@ -509,17 +509,25 @@ struct SettingsScreen: View {
             activeImportMode = nil
             handleImportedSelection(result, importMode: importMode)
         }
-        .fileExporter(
-            isPresented: $isExportingArchive,
-            document: exportArchiveDocument,
-            contentType: archiveExportType,
-            defaultFilename: archiveExportDefaultFilename()
-        ) { result in
-            if case let .failure(error) = result {
-                renameAlertMessage = error.localizedDescription
-            }
-            exportArchiveDocument = nil
+        .background {
+            archiveExportPresenter
         }
+    }
+
+    private var archiveExportPresenter: some View {
+        Color.clear
+            .fileExporter(
+                isPresented: $isExportingArchive,
+                document: exportArchiveDocument,
+                contentType: archiveExportType,
+                defaultFilename: archiveExportDefaultFilename()
+            ) { result in
+                if case let .failure(error) = result {
+                    renameAlertMessage = error.localizedDescription
+                }
+                exportArchiveDocument = nil
+            }
+            .fileDialogBrowserOptions(.displayFileExtensions)
     }
 
     private var listMode: SettingsListMode {
@@ -3549,7 +3557,7 @@ struct SettingsScreen: View {
     private func archiveExportDefaultFilename() -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyMMdd_HHmmss"
-        return "ESP_\(formatter.string(from: Date()))"
+        return "ESP_\(formatter.string(from: Date())).zip"
     }
 
     private func makeFullArchiveData() throws -> Data {

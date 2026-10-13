@@ -1,326 +1,582 @@
-I’ve got the iPad-specific answer now. Source says iPad still uses the older content-sized shell and no grid-level clip, while iPhone uses the new fixed shell and clip. I’ll keep the recommendation cautious because this probe is intentionally before your physical iPad testing.1. IPAD GRID GEOMETRY
+I’ve finished the source trace. No files have been edited; I’m going straight to the plain-text report with the confirmed command locations and gaps.1. EXACT LOCATION OF "cb " IMPLEMENTATION
 
-SOURCE-CONFIRMED FINDINGS
+Confirmed source location:
+ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift
 
-File: ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
+Recognizer:
+targetClipboardTextForSendText(_:)
+lines 803-821
 
-The iPad path enters the shared grid at lines 1339-1340:
+Recognition condition:
+line 807:
+loweredSendText.hasPrefix("cb ")
 
-if isPad {
-mainGridSection(availableWidth: contentWidth)
+Text extraction:
+line 812:
+String(trimmedSendText.dropFirst(3))
+
+Cleanup:
+lines 811-819 remove surrounding quote-like characters, backslashes, and extra whitespace.
+
+Return behavior:
+line 820:
+Returns nil if the clipboard text is empty.
+
+Execution:
+sendMainGridEntry(_:)
+lines 138-275
+
+The clipboard target is collected at line 179:
+let targetClipboardText = targetClipboardTextForGridEntry(entry)
+
+The clipboard is updated at lines 229-231:
+if let targetClipboardText {
+UIPasteboard.general.string = targetClipboardText
 
 }
 
-The iPhone path is separate at lines 1354-1359 and applies a fixed iPhone grid height. The iPad path does not use that iPhone fixed height.
-
-File: ESP32BLE/Scrns/Main_Screen/Main_GridSection.swift
-
-MainScreenGridSection calculates grid dimensions independently of button content:
-
-• Grid rows/columns source: line 129.
-• Vertical spacing and button height: lines 130-132.
-• Horizontal spacing and button width: lines 133-136.
-• Button shape lookup: lines 152-162.
-• Button origin: lines 163-169.
-• Resolved button width/height are passed into the view frame: lines 171-185.
-• Popup frame reporting uses the same resolved CGRect: lines 197-215.
-
-Multi-cell dimensions are calculated here:
-
-• buttonShape: lines 258-280.
-• shapeFits: lines 282-290.
-• continuationTokensMatch: lines 292-312.
-• resolvedWidth: lines 314-317.
-• resolvedHeight: lines 319-322.
-• buttonOrigin: lines 324-335.
-
-Conclusion: iPad grid dimensions are content-independent.
-
-2. IPAD BUTTON FRAME HIERARCHY
-
-SOURCE-CONFIRMED FINDINGS
-
-Current button hierarchy:
-
-MainScreenGridSection.body
-gridButtonView(...)
-Button label
-buttonLabel(entry, index, buttonHeight, buttonSize)
-mainGridButtonLabel(...)
-MainScreenButtonLabelView
-
-Relevant lines:
-
-• gridButtonView: Main_GridSection.swift lines 387-421.
-• Button .buttonStyle(.plain): line 422.
-• Button .contentShape(Rectangle()): line 423.
-• Grid fixed frame: line 184.
-• Grid selection overlay: lines 186-191.
-• Position: lines 193-196.
-
-MainScreenButtonLabelView:
-
-• Created in Main_ButtonBehavior.swift lines 1478-1500.
-• Stores buttonSize line 1688.
-• Body starts line 1720.
-• iPhone branch: lines 1737-1746.
-• iPad branch: lines 1747-1755.
-• Content dispatch: lines 1796-1830.
-
-3. IPHONE VS IPAD DIFFERENCES
-
-SOURCE-CONFIRMED FINDINGS
-
-iPhone current behavior:
-
-• clipsButtonContentToBounds: !isPad is passed at Main_Screen.swift line 1525.
-• iPhone therefore receives grid-level clipping in Main_GridSection.swift line 185.
-• usesInsetBorder: !isPad is passed at Main_ButtonBehavior.swift line 1494.
-• In MainScreenButtonLabelView, usesInsetBorder == true enters the fixed visual shell branch at lines 1737-1746.
-• The shell is fixed to buttonSize.width and buttonSize.height at lines 1739-1740.
-
-iPad current behavior:
-
-• clipsButtonContentToBounds is false on iPad.
-• The grid-level clip modifier exists but returns unmodified content when disabled: Main_GridSection.swift lines 450-459.
-• usesInsetBorder is false on iPad.
-• iPad enters the older branch at Main_ButtonBehavior.swift lines 1747-1755.
-• In that branch, buttonVisualShell has no explicit grid-sized frame.
-• iPad border style uses .stroke(...), not .strokeBorder(...), at lines 1786-1788.
-
-4. NORMAL BORDER SIZING
-
-SOURCE-CONFIRMED FINDINGS
-
-File: Main_ButtonBehavior.swift
-
-Normal border:
-
-• normalButtonBorder starts line 1781.
-• iPhone: .strokeBorder(borderColor, lineWidth: borderWidth) lines 1783-1785.
-• iPad: .stroke(borderColor, lineWidth: borderWidth) lines 1786-1788.
-
-The border is part of buttonVisualShell:
-
-• buttonVisualShell starts line 1761.
-• background fill at lines 1763-1764.
-• normalButtonBorder at line 1766.
-
-For iPad, buttonVisualShell is placed without a fixed size:
-
-• iPad branch line 1749.
-• content is sibling lines 1751-1753.
-• containing ZStack is only flexible: line 1755.
-
-SWIFTUI LAYOUT REASONING
-
-Yes, the iPad normal border can still size with the internal content-driven ZStack, because the iPad branch does not fix buttonVisualShell to buttonSize.
-
-This is the same underlying structural risk the iPhone had before H3-A5.
-
-5. BACKGROUND SIZING
-
-SOURCE-CONFIRMED FINDINGS
-
-The normal background is the RoundedRectangle(...).fill(buttonBackgroundColor) inside buttonVisualShell, lines 1761-1764.
-
-For iPad, because buttonVisualShell is not fixed to buttonSize, the background may also follow the internal label size rather than the grid footprint.
-
-buttonBackgroundColor itself is resolved in Main_ButtonBehavior.swift below line 2369. Opacity/color resolution does not appear to affect sizing.
-
-6. CONTENT OVERFLOW RISKS
-
-SOURCE-CONFIRMED FINDINGS
-
-All these content branches can be larger than small cells:
-
-Ordinary text:
-• textLabel lines 2340-2349.
-• Uses boxFontSize, .lineLimit(4), truncation, no fitted size.
-
-SF Symbol:
-• symbolContent lines 2351-2367.
-• Symbol frame is max(18, boxFontSize * 1.5) at lines 2357-2360.
-• Subtitle uses textLabel at lines 2362-2364.
-
-Emoji:
-• emoji branch starts line 2369.
-• Emoji plus subtitle uses VStack and font multiplier.
-
-Battery:
-• MainGridBatteryWidgetView lines 2457-2494.
-• Two-line VStack, same font-size input.
-
-Clock/widgets:
-• clock branch lines 1839-1854.
-• Several widgets use VStack/Text with boxFontSize and flexible frames.
-
-SWIFTUI LAYOUT REASONING
-
-On iPad, larger cells may hide the problem in normal use. But source does not contain a structural safeguard preventing oversized content from making the internal label/shell larger.
-
-7. EXISTING IPAD SAFEGUARDS
-
-SOURCE-CONFIRMED FINDINGS
-
-Existing iPad safeguards:
-
-• Grid still applies fixed outer frame: Main_GridSection.swift line 184.
-• Some text/widgets have line limits and minimum scale factors.
-• Ordinary text has .lineLimit(4) and truncation: Main_ButtonBehavior.swift lines 2344-2347.
-• Clock text uses minimum scale factors: lines 1846-1850 and header at 2061-2070.
-• Battery top line has minimumScaleFactor(0.6), but percentage line does not: lines 2465-2472.
-
-Missing iPad safeguards:
-
-• No enabled grid-level clip, because clipsButtonContentToBounds is false on iPad.
-• No grid-sized visual shell, because iPad uses the branch at lines 1747-1755.
-• No iPad content fitting.
-
-8. MULTI-CELL BUTTON BEHAVIOUR
-
-SOURCE-CONFIRMED FINDINGS
-
-Multi-cell sizes are resolved from actual shape:
-
-• candidate shapes include 3x3, 3x2, 2x2, 1x3, 3x1, 1x2, 2x1: Main_GridSection.swift lines 264-272.
-• resolved width/height include cell size plus spacing: lines 314-322.
-• buttonSize receives those resolved dimensions: line 175.
-• iPhone visual shell uses those dimensions.
-• iPad currently receives those dimensions but does not use them for shell sizing.
-
-SWIFTUI LAYOUT REASONING
-
-For iPad multi-cell buttons, the source still allows the visual shell to be content-sized. Larger footprints make overflow less likely, but source does not guarantee the background/border always match the footprint.
-
-9. POPUP / SELECTION SAFETY
-
-SOURCE-CONFIRMED FINDINGS
-
-Popup anchor rectangles are grid-based:
-
-• buttonFrame is created from origin/resolved size at Main_GridSection.swift lines 176-181.
-• Reported via onRenderedButtonFrame lines 197-215.
-• Edit tap receives the same buttonFrame at lines 426-432.
-• Popup positioning consumes the target frame in Main_Screen.swift around lines 1577-1600 and 2705-2734.
-
-Selection overlay is grid-owned:
-
-• Main_GridSection.swift lines 186-191.
-• It sits after the fixed frame and clip modifier.
-
-Hit testing:
-
-• .contentShape(Rectangle()) in gridButtonView at lines 398 and 423.
-• Gesture modifiers lines 399-400 and 424-436.
-
-Conclusion: popup anchors and selection overlay are tied to the grid rectangle, not the content-sized label.
-
-10. THREE-IPAD DEVICE CONSIDERATIONS
-
-SOURCE-CONFIRMED FINDINGS
-
-The layout uses available geometry, not explicit iPad model checks:
-
-• Main_Screen.swift uses GeometryReader at line 1271.
-• contentWidth comes from geometry width at line 1273.
-• iPad enters shared mainGridSection(availableWidth:) at lines 1339-1340.
-• MainScreenGridSection computes button size from actual geometry at lines 127-136.
-
-SWIFTUI LAYOUT REASONING
-
-Smaller iPads, especially iPad mini 5, can make cells smaller and content overflow more likely. The source does not contain device-specific assumptions, which is good; physical testing on all three devices is the right next step.
-
-11. WHETHER ANY CORRECTION IS NEEDED
-
-SOURCE-CONFIRMED RISK
-
-Yes, the source shows iPad still has the same underlying structural risk:
-
-• No active grid-level clip.
-• No grid-sized visual shell.
-• iPad normal border/background can size with content-driven ZStack.
-
-However, whether this is a visible user-facing defect on iPad is not source-confirmed. The user’s planned physical-device testing is necessary before deciding whether to change iPad.
-
-Recommendation now:
-Do not change iPad yet. Test first.
-
-12. SMALLEST POSSIBLE CORRECTION, ONLY IF NECESSARY
-
-If physical iPad testing shows the same problem, the smallest correction is to adapt H3-A3/H3-A5 structurally while preserving iPad style.
-
-Potential minimal change:
-
-• Enable grid-level clipping for iPad too, or introduce a clearer flag such as clipsButtonContentToBounds true for all platforms.
-• Use the already-passed buttonSize for the iPad visual shell as well.
-• Preserve iPad normalButtonBorder style: keep .stroke(...), not .strokeBorder(...).
-• Preserve existing iPad corner radius from mainGridButtonCornerRadius.
-• Preserve selection overlay order after clipping.
-• Do not change content fonts, widgets, layout, popup, gestures, Move, or Resize.
-
-In concrete terms, the likely change would be in MainScreenButtonLabelView.body lines 1737-1755: make both platform branches use a grid-sized buttonVisualShell, while leaving the border implementation itself platform-specific.
-
-But only do this if iPad testing confirms visible overflow or border/background mismatch.
-
-13. REGRESSION RISKS
-
-If iPad is changed:
-
-• iPad normal border appearance could shift because .stroke(...) draws centered on the shape boundary, unlike iPhone .strokeBorder(...).
-• A grid-level clip could trim the outside half of iPad .stroke(...) unless modifier placement or stroke style is handled carefully.
-• Transparent buttons and invisible buttons should be checked.
-• Large SF Symbols, emoji, battery, clock, and widgets could become clipped. This matches the final design, but it may be visually more noticeable on smaller iPads.
-• Multi-cell button borders should be tested after resize.
-• Popup should remain safe because it uses grid frames, but verify visually.
-• Hit testing should remain grid-based if gestures are untouched.
-
-14. RECOMMENDED PHYSICAL TESTS
-
-On iPad Air M2 13-inch, iPad mini 5, and older iPad Pro:
-
-Test 1:
-1x1 ordinary F-key text at normal and high font sizes.
-Expected: border/background match grid cell.
-
-Test 2:
-1x1 SF Symbol plus subtitle at high font size.
-Expected current investigation question: see whether border/background expand or content overlaps neighbors.
-
-Test 3:
-1x1 battery widget at high font size.
-Expected: check whether top/bottom border remains complete or whether the internal shell grows.
-
-Test 4:
-1x1 clock widget with city label.
-Expected: check border/background and content clipping/overlap.
-
-Test 5:
-Emoji plus subtitle.
-Expected: check whether emoji stack expands the shell.
-
-Test 6:
-2x1, 1x2, 2x2, and 3x3 resized buttons with oversized content.
-Expected: shell should visually match footprint; note if not.
-
-Test 7:
-Edit Mode selection overlay on oversized-content buttons.
-Expected: selection overlay should remain grid-aligned.
-
-Test 8:
-Popup open on oversized-content buttons.
-Expected: popup anchors to grid rectangle, not visual overflow.
-
-Test 9:
-Move and Resize after oversized content.
-Expected: geometry and popup behavior remain normal.
-
-15. FILES MODIFIED: NONE
-
-No files were modified during this C1 probe.
-No build was run.
-No diagnostics or logging were added.
-No commits were performed.
-
-Current working tree note:
-Main_ButtonBehavior.swift􀰓, Main_GridSection.swift􀰓, and Main_Screen.swift􀰓 remain modified from prior H3-A work.
+Wait-chain execution:
+runWaitChainCommandTokens(...)
+lines 329-440
+
+The wait-chain clipboard execution path is lines 370-372:
+if let targetClipboardText = targetClipboardTextForSendText(trimmedActionToken) {
+UIPasteboard.general.string = targetClipboardText
+
+continue
+
+}
+
+Bluetooth filtering:
+bluetoothSendTexts(for:)
+lines 300-320
+
+The cb command is excluded from Bluetooth output at line 310:
+targetClipboardTextForSendText(sendText) == nil
+
+Platform:
+The implementation is in shared Main Screen command handling, not an iPhone-only or iPad-only branch. It should work on both iPhone and iPad.
+
+ESP32 / Mac Helper requirement:
+No ESP32 connection required.
+No Mac Helper required.
+It uses local UIPasteboard.general.
+
+smartCommandRows:
+"cb " does not appear in smartCommandRows.
+"cb " also does not appear in smartEscapeCodeRows.
+I did not find it in the soft editor helper buttons.
+
+Button press trace:
+Main grid button entry -> sendMainGridEntry(:) in Main_ButtonBehavior.swift line 138 -> targetClipboardTextForGridEntry(:) line 671 -> targetClipboardTextForSendText(_:) line 803 -> UIPasteboard.general.string assignment line 230.
+
+2. COMPLETE smartCommandRows INVENTORY
+
+Source:
+ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
+smartCommandRows starts at line 757 and ends at line 1016.
+
+Entries:
+
+Display name: clock
+Command syntax: clock
+Description: Inserts the current time. Optionally specify a city: clock Paris, clock Tokyo.
+Source: Main_Screen.swift lines 762-769
+
+Display name: date
+Command syntax: date
+Description: Inserts the current date. Optionally specify a city: date Paris, date Tokyo.
+Source: Main_Screen.swift lines 773-780
+
+Display name: year
+Command syntax: year
+Description: Inserts the current year. Optionally specify a city: year Paris, year Tokyo.
+Source: Main_Screen.swift lines 784-791
+
+Display name: month
+Command syntax: month
+Description: Inserts the current month.
+Source: Main_Screen.swift lines 795-797
+
+Display name: day
+Command syntax: day
+Description: Inserts the current day. Optionally specify a city: day Paris, day Tokyo.
+Source: Main_Screen.swift lines 801-808
+
+Display name: day of week
+Command syntax: dow
+Description: Inserts the day of the week. Optionally specify a city: dow Paris, dow Tokyo.
+Source: Main_Screen.swift lines 812-819
+
+Display name: hour
+Command syntax: hour
+Description: Inserts the current hour.
+Source: Main_Screen.swift lines 823-825
+
+Display name: mins
+Command syntax: min
+Description: Inserts the current minutes.
+Source: Main_Screen.swift lines 829-831
+
+Display name: secs
+Command syntax: sec
+Description: Inserts the current seconds.
+Source: Main_Screen.swift lines 835-837
+
+Display name: prev
+Command syntax: prev
+Description: Goes to the previous document in the file list.
+Source: Main_Screen.swift lines 842-845
+
+Display name: next
+Command syntax: next
+Description: Goes to the next document in the file list.
+Source: Main_Screen.swift lines 849-852
+
+Display name: back
+Command syntax: back
+Description: Goes back in the loaded page stack.
+Source: Main_Screen.swift lines 856-859
+
+Display name: forward
+Command syntax: forw
+Description: Goes forward in the loaded page stack.
+Source: Main_Screen.swift lines 863-866
+
+Display name: home
+Command syntax: home
+Description: Goes to the home page.
+Source: Main_Screen.swift lines 870-873
+
+Display name: play sound
+Command syntax: snd snd.mp3
+Description: Plays a sound file.
+Source: Main_Screen.swift lines 881-883
+
+Display name: speak text
+Command syntax: spk hello
+Description: Speaks text aloud.
+Source: Main_Screen.swift lines 887-889
+
+Display name: wait time
+Command syntax: wait 5
+Description: Waits before continuing a command chain.
+Source: Main_Screen.swift lines 893-896
+
+Display name: tap minus
+Command syntax: minus 10
+Description: Subtracts from a tap counter.
+Source: Main_Screen.swift lines 904-907
+
+Display name: tap add
+Command syntax: add
+Description: Adds to a tap counter.
+Source: Main_Screen.swift lines 911-914
+
+Display name: random number
+Command syntax: rnd 0 100
+Description: Generates a random number.
+Source: Main_Screen.swift lines 918-921
+
+Display name: random line
+Command syntax: rnd file.txt
+Description: Uses a random line from a file.
+Source: Main_Screen.swift lines 925-928
+
+Display name: device power
+Command syntax: power
+Description: Shows the device power state.
+Source: Main_Screen.swift lines 935-938
+
+Display name: ambient sound
+Command syntax: amb snd.mp3
+Description: Starts ambient sound playback.
+Source: Main_Screen.swift lines 939-942
+
+Display name: timer sound
+Command syntax: timer 60 snd.wav
+Description: Runs a timer that plays sound.
+Source: Main_Screen.swift lines 946-949
+
+Display name: timer speak
+Command syntax: timer 10 hello
+Description: Runs a timer that speaks text.
+Source: Main_Screen.swift lines 953-956
+
+Display name: run shortcut
+Command syntax: sc shortcutName
+Description: Runs an iOS shortcut.
+Source: Main_Screen.swift lines 960-963
+
+Display name: open app
+Command syntax: app mail
+Description: Opens an App. Lists examples including mail, notes, messages, facetime, maps, music, calendar.
+Source: Main_Screen.swift lines 967-979
+
+Display name: preview file
+Command syntax: file file.txt
+Description: Previews a file.
+Source: Main_Screen.swift lines 983-985
+
+Display name: wait
+Command syntax: wait 1
+Description: Explains wait number, fractions, and command-chain examples.
+Source: Main_Screen.swift lines 989-1000
+
+Display name: Esp32 out
+Command syntax: out 32 1
+Description: Sends an ESP32 output command.
+Source: Main_Screen.swift lines 1005-1008
+
+Display name: Esp32 pwm
+Command syntax: pwm 32 5 4
+Description: Sends an ESP32 PWM command.
+Source: Main_Screen.swift lines 1012-1015
+
+3. COMMANDS MISSING FROM smartCommandRows
+
+Confirmed implemented but not listed in smartCommandRows:
+
+cb
+Clipboard command.
+Implemented in Main_ButtonBehavior.swift lines 803-821.
+Executed in sendMainGridEntry at lines 229-231 and wait-chain at lines 370-372.
+Missing from smartCommandRows.
+
+shortcut
+Long-form alias for sc.
+Implemented in targetShortcutURLForSendText(_:) lines 773-801.
+smartCommandRows lists sc shortcutName, but not shortcut shortcutName.
+
+battery
+Alias for power widget.
+Implemented in targetWidgetDescriptorForSendText(_:) line 1177.
+smartCommandRows lists power, but not battery.
+
+random
+Alias for rnd widget.
+Implemented in targetWidgetDescriptorForSendText(_:) line 1192.
+smartCommandRows lists rnd, but not random.
+
+stop
+Stopwatch widget command.
+Implemented in targetWidgetDescriptorForSendText(_:) line 1224.
+Not listed in smartCommandRows.
+
+stopwatch
+Stopwatch widget command.
+Implemented in targetWidgetDescriptorForSendText(_:) line 1224.
+Not listed in smartCommandRows.
+
+ambient
+Long-form alias for amb.
+Implemented in targetWidgetDescriptorForSendText(_:) lines 1074-1076 and 1226.
+smartCommandRows lists amb, but not ambient.
+
+Direct .txt random-line widget
+A bare widget command ending in .txt becomes .textFileRandom.
+Implemented in targetWidgetDescriptorForSendText(_:) lines 1091-1093.
+smartCommandRows documents rnd file.txt, but not bare file.txt as a widget command.
+
+Direct document links:
+home is listed.
+But arbitrary screen document links are implemented and not listed:
+legacy .txt screen document link: Main_ButtonBehavior.swift lines 656-658.
+.screen document link: Main_ButtonBehavior.swift lines 660-662.
+These select documents through targetDocumentNameForSendText(_:) rather than the file preview path.
+
+HTTP / HTTPS URL open:
+Implemented in targetURLForSendText(_:) lines 687-714.
+Not listed in smartCommandRows.
+Also accepts malformed http// and https// and normalizes them at lines 691-694.
+
+Bare supported sound filename:
+targetSoundFilenameForSendText(_:) treats a supported sound filename as a playable sound even without snd prefix.
+Implemented lines 836-863.
+smartCommandRows lists snd snd.mp3, but not the bare filename form.
+
+Potentially documented elsewhere, but not in smartCommandRows:
+Function keys F1 through F20 are generated in the smart command panel at Main_Screen.swift lines 3573-3576. They are not part of smartCommandRows because they are generated separately.
+
+4. OTHER COMMAND TABLES / RECOGNITION MECHANISMS
+
+smartEscapeCodeRows:
+ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_Screen.swift lines 732-751.
+
+Entries:
+escape key -> ESC:
+send return -> RET:
+backspace key -> BS:
+space key -> SP:
+tab key -> TAB:
+new line -> NL:
+colon -> :
+up key -> UP:
+down key -> DOWN:
+left key -> LEFT:
+right key -> RIGHT:
+select all ctl-a -> CA:
+copy ctl-c -> CC:
+paste ctl-v -> CV:
+cut ctl-x -> CX:
+select all cmd-a -> MA:
+copy cmd-c -> MC:
+paste cmd-v -> MV:
+cut cmd-x -> MX:
+
+Smart function-key generator:
+ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_Screen.swift lines 3573-3576.
+Generates F1 through F20 insert buttons.
+
+Soft editor helper buttons:
+ESP32BLE/ESP32BLE/Scrns/Main_Screen/Soft_Editor/Soft_Editor_Overlay.swift lines 232-272.
+This is another command insertion UI. It includes prev, next, month, hour, min, sec, power, back, forw, amb, snd, spk, out, pwm, home, wait, minus, add, rnd, timer, sc, app, file.
+It does not include cb.
+
+Widget recognition table:
+ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift lines 1247-1256.
+Recognizes:
+add
+minus
+power
+rnd
+random
+clock
+date
+dow
+sec
+min
+hour
+day
+month
+year
+timer
+stop
+stopwatch
+amb
+ambient
+
+There is a duplicate bare-widget recognizer in ContentView.swift lines 3219-3228 used while parsing persisted/editing text.
+
+Widget descriptor execution:
+ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift lines 1066-1245.
+Maps recognized widget commands into MainGridWidgetDescriptor cases.
+
+MainGridWidgetDescriptor:
+ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift lines 2426-2444.
+Supported widget descriptors:
+clock
+day
+month
+year
+second
+minute
+hour
+dow
+date
+power
+add
+minus
+random
+textFileRandom
+stopwatch
+ambientSound
+timer
+
+Command parser:
+ESP32BLE/ESP32BLE/Scrns/ContentView.swift lines 733-783.
+parsedActionTokens(from:) splits action text on colon.
+It preserves a literal space token.
+It maps sp to a space.
+It expands display modifier symbols into command tokens.
+
+Compact modifier symbols:
+ESP32BLE/ESP32BLE/Scrns/ContentView.swift lines 726-731.
+⌃ -> ct
+⌥ -> op
+⇧ -> sh
+⌘ -> cm
+
+Bluetooth normalization:
+ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift lines 1402-1455.
+sp becomes a space.
+out 32 1 becomes out:32:1.
+pwm 32 5 4 becomes pwm:32:5:4.
+F-key tokens are lowercased.
+Other tokens pass through.
+
+Mac Helper command mapping:
+ESP32BLE/ESP32BLE/Scrns/ContentView.swift lines 570-706.
+macMessages(from:) and macMessage(for:modifiers:) map tokens to Mac Helper messages.
+Recognized Mac-side token handling includes:
+RET, RETURN, ENTER
+SP, SPACE, literal space
+TAB
+BS, BACKSPACE, DELETE
+ESC, ESCAPE
+CA, CC, CV, CX
+MA, MC, MV, MX
+UP, DOWN, LEFT, RIGHT
+KP0-KP9, KP., KP+, KP-, KP/, KP*, KPE
+F-number keys
+single letters
+modifier aliases ct/ctl/ctrl/control, op/opt/option, sh/shift, cm/cmd/command/win
+
+Custom keyboard tables:
+ESP32BLE/ESP32BLE/Scrns/KB_Screen/KB_ModeRows.swift, beginning at line 4.
+These define keyboard screen cells and token rows, including keypad tokens, F13-F20 combinations, modifiers, arrows, etc.
+This is a separate keyboard UI, not smartCommandRows.
+
+Custom keyboard send logic:
+ESP32BLE/ESP32BLE/Scrns/KB_Screen/KB_InputBehavior.swift lines 33-119.
+ESP32BLE/ESP32BLE/Scrns/KB_Screen/KB_ModifierSend.swift lines 60-129.
+Sends typed text/tokens directly to Mac Helper or ESP32 depending on OutputMode.
+
+Speech recognition open command:
+ESP32BLE/ESP32BLE/Scrns/Main_Screen/Speech Recognition/SR_Support.swift lines 138-140 from grep results.
+Recognizes speech text with an open prefix. This is a voice command path, not smartCommandRows.
+
+5. COMMAND EXECUTION SUMMARY
+
+Main local command processor:
+sendMainGridEntry(_:)
+ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift lines 138-275.
+
+Wait-chain command processor:
+runWaitChainCommandTokens(...)
+Main_ButtonBehavior.swift lines 329-440.
+
+Bluetooth / Mac / ESP output:
+sendKeyboardOutputTokens(...)
+Main_ButtonBehavior.swift lines 457-506.
+
+Output modes:
+OutputMode enum:
+ESP32BLE/ESP32BLE/Scrns/ContentView.swift lines 80-83.
+Modes:
+none
+esp32
+mac
+
+Mac output:
+sendKeyboardOutputTokens uses macConnection.sendKeyboardTokens(...) at Main_ButtonBehavior.swift lines 478-485.
+Mac helper maps/receives keyboard tokens via MacConnectionManager in ContentView.swift lines 570-706.
+
+ESP32 output:
+sendKeyboardOutputTokens checks ble.isConnected at Main_ButtonBehavior.swift lines 490-493, validates ASCII at lines 496-498, and sends each token through ble.sendLine(...) at lines 501-503.
+
+Commands executable without ESP32 or Mac Helper:
+cb clipboard command
+http/https URL open
+app open command
+sc / shortcut command
+file preview command
+spk text / spk file text-to-speech
+local sound playback through snd or bare supported sound filename
+ambient sound widget
+timer widget and timer completion actions that speak/play local sound
+clock/date/day/month/year/sec/min/hour/dow widgets
+power/battery widget
+add/minus/random/rnd/text-file-random widgets
+stop/stopwatch widget
+prev/next/back/forw/home/document navigation
+wait itself, if the later chain tokens are also local
+
+Commands requiring ESP32 or Mac Helper:
+Generic keyboard output tokens after local commands are filtered.
+F-key tokens.
+Escape/special key tokens such as ESC, RET, BS, TAB, UP, DOWN, LEFT, RIGHT.
+Modifier/key combinations.
+out and pwm require ESP32 to have their intended ESP32 effect. In code they are normalized locally, then sent through the selected output route.
+Plain text keyboard output.
+
+6. IMPLEMENTED AND LISTED IN smartCommandRows
+
+Implemented and listed:
+clock
+date
+year
+month
+day
+dow
+hour
+min
+sec
+prev
+next
+back
+forw
+home
+snd
+spk
+wait
+minus
+add
+rnd number
+rnd file.txt
+power
+amb
+timer sound
+timer speech
+sc
+app
+file
+out
+pwm
+
+7. IMPLEMENTED BUT NOT LISTED IN smartCommandRows
+
+Strong documentation candidates:
+cb
+shortcut
+battery
+random
+stop
+stopwatch
+ambient
+http:// and https:// URL commands
+http// and https// normalization
+bare supported sound filename playback
+bare .txt random-line widget
+direct .txt / .screen document links
+
+8. LISTED IN smartCommandRows BUT NOT IMPLEMENTED
+
+I did not find a clearly listed smartCommandRows command that is completely unimplemented.
+
+Notes:
+The “play sound” row uses snd snd.mp3 and is implemented by targetSoundFilenameForSendText(_:) lines 836-863.
+The “Esp32 out” and “Esp32 pwm” rows are normalized by normalizedBluetoothSendText(_:) lines 1410-1424 and then sent through the output route. Their final hardware behavior depends on ESP32 firmware, which was outside this investigation.
+The “wait time” and “wait” rows are duplicates, not missing implementations.
+
+9. INCONSISTENCIES DISCOVERED
+
+cb is implemented and executable but undocumented in smartCommandRows and absent from the soft editor helper buttons.
+
+shortcut is implemented as a long-form alias, but only sc is shown in smartCommandRows.
+
+battery is implemented as an alias for power, but only power is documented.
+
+random is implemented as an alias for rnd, but only rnd is documented.
+
+stop and stopwatch are implemented, but neither appears in smartCommandRows.
+
+ambient is implemented as an alias for amb, but only amb is documented.
+
+There are two “wait” style entries in smartCommandRows:
+wait time at lines 893-896.
+wait at lines 989-1000.
+Both point to the same underlying wait recognition path.
+
+The soft editor helper button for play sound inserts:
+snd snd mp3
+at Soft_Editor_Overlay.swift line 249.
+smartCommandRows uses:
+snd snd.mp3
+The missing dot in the soft editor inserted text looks suspicious, because supported sound filename detection checks path extensions in Main_ButtonBehavior.swift lines 856-860. I did not test this at runtime.
+
+10. FILES MODIFIED
+
+None.
+
+This was a read-only investigation. No files were created, edited, deleted, built, reset, restored, reverted, committed, pushed, or pulled.
