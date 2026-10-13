@@ -1,170 +1,160 @@
+ESP-005 Phase 3C complete.
+
 1. Exact declarations moved
 
-Moved from ContentView.swift into MacConnectionManager.swift:
+Moved these 13 declarations intact from ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift to ESP32BLE/Scrns/Main_Screen/Main_ButtonLabelView.swift:
 
-ESPMacTransportProbe
-ESPMacSecurityV1
-ESPMacSecurityStore
-private Data hexString / hex initializer extension
-MacConnectionManager
+1. MainScreenButtonLabelView
+2. MainGridWidgetDescriptor
+3. MainGridTimerCompletion
+4. MainGridBatteryWidgetView
+5. MainGridStepUpCounterWidgetView
+6. MainGridStepDownCounterWidgetView
+7. MainGridSharedTimerState
+8. MainGridAmbientSoundState
+9. MainGridTimerWidgetView
+10. MainGridAmbientSoundWidgetView
+11. MainGridStopwatchWidgetView
+12. MainGridRandomNumberWidgetView
+13. MainGridRandomTextWidgetView
 
-2. Original source line ranges
+2. Original source line boundaries
 
-Original locations in ESP32BLE/Scrns/ContentView.swift before extraction:
+Original source:
+ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift
 
-ESPMacTransportProbe:
-lines 27-58
+Original extraction start:
+Line 1673:
+struct MainScreenButtonLabelView: View {
 
-ESPMacSecurityV1:
-lines 101-126
+Original extraction end:
+End of MainGridRandomTextWidgetView, approximately original line 3471.
 
-ESPMacSecurityStore:
-lines 128-207
+Original declaration starts from the probe/current source were preserved:
+MainScreenButtonLabelView at 1673.
+MainGridWidgetDescriptor at 2426.
+MainGridTimerCompletion at 2446.
+MainGridBatteryWidgetView at 2451.
+MainGridStepUpCounterWidgetView at 2511.
+MainGridStepDownCounterWidgetView at 2579.
+MainGridSharedTimerState at 2627.
+MainGridAmbientSoundState at 2870.
+MainGridTimerWidgetView at 2940.
+MainGridAmbientSoundWidgetView at 3075.
+MainGridStopwatchWidgetView at 3142.
+MainGridRandomNumberWidgetView at 3205.
+MainGridRandomTextWidgetView at 3290.
 
-private extension Data:
-lines 209-230
+3. New destination line boundaries
 
-MacConnectionManager:
-lines 232-707
+New file:
+ESP32BLE/Scrns/Main_Screen/Main_ButtonLabelView.swift
 
-3. New destination file and line ranges
+New declaration starts:
+Line 6: MainScreenButtonLabelView
+Line 759: MainGridWidgetDescriptor
+Line 779: MainGridTimerCompletion
+Line 784: MainGridBatteryWidgetView
+Line 844: MainGridStepUpCounterWidgetView
+Line 912: MainGridStepDownCounterWidgetView
+Line 960: MainGridSharedTimerState
+Line 1203: MainGridAmbientSoundState
+Line 1273: MainGridTimerWidgetView
+Line 1408: MainGridAmbientSoundWidgetView
+Line 1475: MainGridStopwatchWidgetView
+Line 1538: MainGridRandomNumberWidgetView
+Line 1623: MainGridRandomTextWidgetView
 
-Created:
+4. Line counts
 
-ESP32BLE/Scrns/MacConnectionManager.swift
+Main_ButtonBehavior.swift original line count:
+3471
 
-New locations:
+Main_ButtonBehavior.swift new line count:
+1671
 
-ESPMacTransportProbe:
-lines 7-38
+Main_ButtonLabelView.swift line count:
+1804
 
-ESPMacSecurityV1:
-lines 41-65
+Lines removed from Main_ButtonBehavior.swift:
+1800
 
-ESPMacSecurityStore:
-lines 67-146
+5. Access-control changes
 
-private extension Data:
-lines 148-169
+None.
 
-MacConnectionManager:
-lines 172-646
+The private widget views remain private in Main_ButtonLabelView.swift.
+The internal declarations remain internal.
+No private/fileprivate/internal/public access levels were changed.
 
-4. Original ContentView.swift line count
+6. Import changes
 
-Original ContentView.swift line count:
-3747 lines.
+Main_ButtonLabelView.swift was created with the imports needed by the moved declarations:
 
-5. New ContentView.swift line count
+SwiftUI
+UIKit
+AVFoundation
+Combine
 
-New ContentView.swift line count:
-3106 lines.
+No imports were removed from Main_ButtonBehavior.swift.
 
-6. New MacConnectionManager.swift line count
+7. Xcode project membership changes
 
-MacConnectionManager.swift line count:
-646 lines.
+ESP32BLE.xcodeproj/project.pbxproj was updated only to register Main_ButtonLabelView.swift.
 
-7. Declarations deliberately left behind
+Project membership additions:
+PBXFileReference for Main_ButtonLabelView.swift.
+PBXBuildFile for Main_ButtonLabelView.swift in Sources.
+Group membership in the existing Main_Screen group.
+Sources build phase membership for the ESP32BLE app target.
 
-Left in ContentView.swift:
+No build settings, signing, bundle IDs, deployment targets, capabilities, schemes, or other target memberships were changed.
 
-AppRuntimeFlags
-orientationState
-ButtonClickFeedback
-OutputMode
+8. Build result
 
-Reason:
-
-AppRuntimeFlags / orientationState are app orientation support, not Mac connection manager support.
-
-ButtonClickFeedback is used broadly by editor and UI controls.
-
-OutputMode is shared app-level output routing state and is referenced by ContentView/MainScreen/Keyboard flows.
-
-I also left the existing ContentView imports untouched. Network/CryptoKit/Security are no longer needed by the moved code there, but removing imports would be cleanup beyond the requested structural move.
-
-8. Access-control changes
-
-No access-control changes were made.
-
-MacConnectionManager remains internal, as before.
-
-ESPMacTransportProbe, ESPMacSecurityV1, ESPMacSecurityStore, and the Data helper extension remain private in the new file.
-
-No method signatures, property names, protocol conformances, actor annotations, published properties, or lifecycle methods were changed.
-
-9. Exact Xcode project membership changes
-
-Updated ESP32BLE.xcodeproj/project.pbxproj only to register the new Swift file.
-
-Added:
-
-PBXFileReference for MacConnectionManager.swift.
-PBXBuildFile entry for MacConnectionManager.swift in Sources.
-MacConnectionManager.swift to the Scrns project group.
-MacConnectionManager.swift to the ESP32BLE application target Sources build phase.
-
-No build settings, signing settings, deployment targets, bundle identifiers, capabilities, entitlements, schemes, or unrelated target memberships were changed.
-
-10. Build result and build duration
-
-Build result:
-Succeeded.
+Build succeeded.
 
 Build duration:
-40.723 seconds.
+36.001 seconds.
 
-11. Compiler warnings introduced
+Build log warnings were present, but none were from Main_ButtonLabelView.swift or the moved declarations. The warnings reported were in existing areas: MacConnectionManager.swift, ScreenConfig.swift, Set_TxtEditor.swift, AppIntents metadata processing, and interface orientation settings.
 
-Build completed with no errors.
+9. Preservation checks
 
-The build log reports a warning in the moved MacConnectionManager.swift code:
+mainGridButtonLabel(...) remains in Main_ButtonBehavior.swift at line 1467 and still constructs MainScreenButtonLabelView.
 
-MacConnectionManager.swift:385:
-call to main actor-isolated instance method receive(on:) in a synchronous nonisolated context.
+Command execution, command parsing, BLE/Mac output, clipboard, speech, sound playback, and document navigation remain in Main_ButtonBehavior.swift.
 
-This is the same implementation moved from ContentView.swift; I did not change it because fixing that would alter concurrency behavior beyond a structural extraction.
+Main_Screen.swift was not modified. Existing StateObject ownership remains in place:
+mainGridTimerState at Main_Screen.swift line 1037.
+mainGridAmbientSoundState at Main_Screen.swift line 1038.
 
-The build log also contains unrelated existing warnings in ScreenConfig.swift, Set_TxtEditor.swift, AppIntents metadata extraction, and interface orientation support.
+No widget implementation logic was rewritten.
+No rendering logic was rewritten.
+No SwiftUI state ownership was changed.
+No runtime visual testing was performed.
 
-12. Remaining risks
+10. Changed files for this extraction
 
-No runtime Mac Helper testing was performed.
-
-Because this was a code move only, the remaining risk is limited to source-file extraction and project membership. The successful build confirms the new file is compiled into the app target and ContentView still resolves MacConnectionManager.
-
-Network behavior, authentication payloads, Bonjour service type, pairing logic, HMAC logic, published state, DispatchQueue usage, Task usage, and connection lifecycle code were preserved as moved code.
-
-13. Complete list of changed files
-
-Created:
-
-ESP32BLE/Scrns/MacConnectionManager.swift
-
-Modified:
-
-ESP32BLE/Scrns/ContentView.swift
+ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift
+ESP32BLE/Scrns/Main_Screen/Main_ButtonLabelView.swift
 ESP32BLE.xcodeproj/project.pbxproj
 
-14. Confirmation that no unrelated functionality was modified
+11. Files not modified by this extraction
 
-No Main_Screen.swift changes.
+Main_Screen.swift
+Main_GridSection.swift
+Main_DocumentActions.swift
+ContentView.swift
+MacConnectionManager.swift
+Settings files
+Button Editor files
+ESPMacHelper
+Test Area
+ESP32 firmware
 
-No Main_ButtonBehavior.swift changes.
+12. .txt files
 
-No Main_DocumentActions.swift changes.
+I did not modify any .txt files for this task.
 
-No SettingsScreen or Phase 3A files changed.
-
-No editor files changed.
-
-No command descriptions, Markdown rendering, or text highlighting changed.
-
-No UI geometry, button rendering, popup behavior, Move/Resize, Copy/Paste, or Undo/Redo code changed.
-
-No .txt files changed.
-
-No ESPMacHelper, Test Area helper, ESP32 firmware, backup, or V62.40 baseline files were touched.
-
-No commit, push, pull, reset, restore, revert, checkout, or rebase was performed.
+Current git status shows ESP32BLE/VERSIONS.txt and ESP32BLE/codex.txt already modified in the working tree, but they were not touched by this extraction.

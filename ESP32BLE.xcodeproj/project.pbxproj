@@ -11,6 +11,7 @@
 		1D16CD1330304347004E330E /* ScreenDocument.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D16CD1230304347004E330E /* ScreenDocument.swift */; };
 		1D2A22C3307DF60E003CCFCF /* Set_ArchiveDocuments.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D2A22C2307DF60E003CCFCF /* Set_ArchiveDocuments.swift */; };
 		1D2A22C5307DFAF0003CCFCF /* MacConnectionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D2A22C4307DFAF0003CCFCF /* MacConnectionManager.swift */; };
+		1D2A22C7307DFFB6003CCFCF /* Main_ButtonLabelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D2A22C6307DFFB6003CCFCF /* Main_ButtonLabelView.swift */; };
 		1D2B666F2FE78E0400F10733 /* color.png in Resources */ = {isa = PBXBuildFile; fileRef = 1D2B666E2FE78E0400F10733 /* color.png */; };
 		1D590E582F61206100E430E0 /* CommandButtonsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D590E4D2F61206100E430E0 /* CommandButtonsSection.swift */; };
 		1D590E5A2F61206100E430E0 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D590E4F2F61206100E430E0 /* ContentView.swift */; };
@@ -64,6 +65,7 @@
 		1D2A22AF307C69D3003CCFCF /* notes.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = notes.txt; sourceTree = "<group>"; };
 		1D2A22C2307DF60E003CCFCF /* Set_ArchiveDocuments.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Set_ArchiveDocuments.swift; sourceTree = "<group>"; };
 		1D2A22C4307DFAF0003CCFCF /* MacConnectionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacConnectionManager.swift; sourceTree = "<group>"; };
+		1D2A22C6307DFFB6003CCFCF /* Main_ButtonLabelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Main_ButtonLabelView.swift; sourceTree = "<group>"; };
 		1D2B666E2FE78E0400F10733 /* color.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = color.png; sourceTree = "<group>"; };
 		1D33C2D12F6145DC0098FD5C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1D590E292F611FB700E430E0 /* ESP32BLE.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ESP32BLE.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -264,6 +266,7 @@
 				1D9E1CE32FC92DC600DB3621 /* Main_DocumentActions.swift */,
 				1D9E1CE42FC92DC600DB3621 /* Main_GridSection.swift */,
 				1D9E1CE52FC92DC600DB3621 /* Main_Screen.swift */,
+				1D2A22C6307DFFB6003CCFCF /* Main_ButtonLabelView.swift */,
 			);
 			path = Main_Screen;
 			sourceTree = "<group>";
@@ -413,6 +416,7 @@
 				1D16CD1330304347004E330E /* ScreenDocument.swift in Sources */,
 				1D9E1D082FC92DC600DB3621 /* Soft_Editor_TextField.swift in Sources */,
 				1D9E1D092FC92DC600DB3621 /* KB_ModifierSend.swift in Sources */,
+				1D2A22C7307DFFB6003CCFCF /* Main_ButtonLabelView.swift in Sources */,
 				1D9E1D0C2FC92DC600DB3621 /* Set_ImgSelectionSupport.swift in Sources */,
 				1D2A22C3307DF60E003CCFCF /* Set_ArchiveDocuments.swift in Sources */,
 				1D9E1D0D2FC92DC600DB3621 /* Set_TxtEditor.swift in Sources */,
