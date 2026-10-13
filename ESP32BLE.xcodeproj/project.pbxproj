@@ -16,6 +16,7 @@
 		1D2A22CB307E198C003CCFCF /* Main_GridActionMenuViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D2A22CA307E198C003CCFCF /* Main_GridActionMenuViews.swift */; };
 		1D2A22CD307E1CE3003CCFCF /* Main_SmartEditorTextInputs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D2A22CC307E1CE3003CCFCF /* Main_SmartEditorTextInputs.swift */; };
 		1D2A22CF307E21BA003CCFCF /* Main_EditorGeometrySupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D2A22CE307E21BA003CCFCF /* Main_EditorGeometrySupport.swift */; };
+		1D2A22D1307E4419003CCFCF /* Main_EditorShellViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D2A22D0307E4419003CCFCF /* Main_EditorShellViews.swift */; };
 		1D2B666F2FE78E0400F10733 /* color.png in Resources */ = {isa = PBXBuildFile; fileRef = 1D2B666E2FE78E0400F10733 /* color.png */; };
 		1D590E582F61206100E430E0 /* CommandButtonsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D590E4D2F61206100E430E0 /* CommandButtonsSection.swift */; };
 		1D590E5A2F61206100E430E0 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D590E4F2F61206100E430E0 /* ContentView.swift */; };
@@ -74,6 +75,7 @@
 		1D2A22CA307E198C003CCFCF /* Main_GridActionMenuViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Main_GridActionMenuViews.swift; sourceTree = "<group>"; };
 		1D2A22CC307E1CE3003CCFCF /* Main_SmartEditorTextInputs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Main_SmartEditorTextInputs.swift; sourceTree = "<group>"; };
 		1D2A22CE307E21BA003CCFCF /* Main_EditorGeometrySupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Main_EditorGeometrySupport.swift; sourceTree = "<group>"; };
+		1D2A22D0307E4419003CCFCF /* Main_EditorShellViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Main_EditorShellViews.swift; sourceTree = "<group>"; };
 		1D2B666E2FE78E0400F10733 /* color.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = color.png; sourceTree = "<group>"; };
 		1D33C2D12F6145DC0098FD5C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1D590E292F611FB700E430E0 /* ESP32BLE.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ESP32BLE.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -277,6 +279,7 @@
 				1D2A22CA307E198C003CCFCF /* Main_GridActionMenuViews.swift */,
 				1D2A22CC307E1CE3003CCFCF /* Main_SmartEditorTextInputs.swift */,
 				1D2A22CE307E21BA003CCFCF /* Main_EditorGeometrySupport.swift */,
+				1D2A22D0307E4419003CCFCF /* Main_EditorShellViews.swift */,
 			);
 			path = Main_Screen;
 			sourceTree = "<group>";
@@ -410,6 +413,7 @@
 				1D16CD11302F1954004E330E /* ScreenConfig.swift in Sources */,
 				1D9E1CF52FC92DC600DB3621 /* KB_TopToolbar.swift in Sources */,
 				1D9E1CF62FC92DC600DB3621 /* Main_BG_img.swift in Sources */,
+				1D2A22D1307E4419003CCFCF /* Main_EditorShellViews.swift in Sources */,
 				1D9E1CF72FC92DC600DB3621 /* SR_Manager.swift in Sources */,
 				1D9E1CF82FC92DC600DB3621 /* Main_DocumentActions.swift in Sources */,
 				1D2A22C5307DFAF0003CCFCF /* MacConnectionManager.swift in Sources */,
