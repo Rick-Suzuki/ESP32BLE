@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		1D16CD11302F1954004E330E /* ScreenConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D16CD10302F1954004E330E /* ScreenConfig.swift */; };
 		1D16CD1330304347004E330E /* ScreenDocument.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D16CD1230304347004E330E /* ScreenDocument.swift */; };
+		1D2A22C3307DF60E003CCFCF /* Set_ArchiveDocuments.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D2A22C2307DF60E003CCFCF /* Set_ArchiveDocuments.swift */; };
 		1D2B666F2FE78E0400F10733 /* color.png in Resources */ = {isa = PBXBuildFile; fileRef = 1D2B666E2FE78E0400F10733 /* color.png */; };
 		1D590E582F61206100E430E0 /* CommandButtonsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D590E4D2F61206100E430E0 /* CommandButtonsSection.swift */; };
 		1D590E5A2F61206100E430E0 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D590E4F2F61206100E430E0 /* ContentView.swift */; };
@@ -60,6 +61,7 @@
 		1D23A17A3075B984003B646C /* VERSIONS.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = VERSIONS.txt; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.plist; };
 		1D23A17C3075C212003B646C /* console_iPhone.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = console_iPhone.txt; sourceTree = "<group>"; };
 		1D2A22AF307C69D3003CCFCF /* notes.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = notes.txt; sourceTree = "<group>"; };
+		1D2A22C2307DF60E003CCFCF /* Set_ArchiveDocuments.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Set_ArchiveDocuments.swift; sourceTree = "<group>"; };
 		1D2B666E2FE78E0400F10733 /* color.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = color.png; sourceTree = "<group>"; };
 		1D33C2D12F6145DC0098FD5C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1D590E292F611FB700E430E0 /* ESP32BLE.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ESP32BLE.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -270,6 +272,7 @@
 				1D9E1CEB2FC92DC600DB3621 /* Set_TxtEditor.swift */,
 				1DD4E8DB2FC9609B00C5C1B6 /* Btm_Area */,
 				1DD4E8DC2FC9612600C5C1B6 /* Table_Img */,
+				1D2A22C2307DF60E003CCFCF /* Set_ArchiveDocuments.swift */,
 			);
 			path = Set_Screen;
 			sourceTree = "<group>";
@@ -407,6 +410,7 @@
 				1D9E1D082FC92DC600DB3621 /* Soft_Editor_TextField.swift in Sources */,
 				1D9E1D092FC92DC600DB3621 /* KB_ModifierSend.swift in Sources */,
 				1D9E1D0C2FC92DC600DB3621 /* Set_ImgSelectionSupport.swift in Sources */,
+				1D2A22C3307DF60E003CCFCF /* Set_ArchiveDocuments.swift in Sources */,
 				1D9E1D0D2FC92DC600DB3621 /* Set_TxtEditor.swift in Sources */,
 				1D9E1D0E2FC92DC600DB3621 /* Main_BtmToolbar.swift in Sources */,
 				1D9E1D0F2FC92DC600DB3621 /* KB_InputBehavior.swift in Sources */,

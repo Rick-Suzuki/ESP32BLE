@@ -1,582 +1,148 @@
-I’ve finished the source trace. No files have been edited; I’m going straight to the plain-text report with the confirmed command locations and gaps.1. EXACT LOCATION OF "cb " IMPLEMENTATION
+1. Exact declarations moved
 
-Confirmed source location:
-ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift
+Moved from Set_Screen.swift into Set_ArchiveDocuments.swift:
 
-Recognizer:
-targetClipboardTextForSendText(_:)
-lines 803-821
+SettingsTextFileDocument
+SettingsArchiveFileDocument
+SettingsSingleFileExportPicker
+private Data little-endian ZIP helper extension
 
-Recognition condition:
-line 807:
-loweredSendText.hasPrefix("cb ")
+Left in Set_Screen.swift:
 
-Text extraction:
-line 812:
-String(trimmedSendText.dropFirst(3))
+SpeechVoiceOption, because it belongs to speech voice settings, not archive/export support.
+SettingsRenameAlertModifier, DeleteAllDataConfirmationModifier, RestoreAllFilesConfirmationModifier, because they are Settings UI alert support.
+VerticalAlignment.sliderTrackCenter extension, because it supports Settings slider layout.
 
-Cleanup:
-lines 811-819 remove surrounding quote-like characters, backslashes, and extra whitespace.
+2. Original source line ranges
 
-Return behavior:
-line 820:
-Returns nil if the clipboard text is empty.
+Original locations in ESP32BLE/Scrns/Set_Screen/Set_Screen.swift before extraction:
 
-Execution:
-sendMainGridEntry(_:)
-lines 138-275
+SettingsTextFileDocument:
+lines 3801-3822
 
-The clipboard target is collected at line 179:
-let targetClipboardText = targetClipboardTextForGridEntry(entry)
+SettingsArchiveFileDocument:
+lines 3824-4006
 
-The clipboard is updated at lines 229-231:
-if let targetClipboardText {
-UIPasteboard.general.string = targetClipboardText
+SettingsSingleFileExportPicker:
+lines 4008-4040
 
-}
+private extension Data:
+lines 4089-4121
 
-Wait-chain execution:
-runWaitChainCommandTokens(...)
-lines 329-440
+3. New destination file and line ranges
 
-The wait-chain clipboard execution path is lines 370-372:
-if let targetClipboardText = targetClipboardTextForSendText(trimmedActionToken) {
-UIPasteboard.general.string = targetClipboardText
+Created:
 
-continue
+ESP32BLE/Scrns/Set_Screen/Set_ArchiveDocuments.swift
 
-}
+New locations:
 
-Bluetooth filtering:
-bluetoothSendTexts(for:)
-lines 300-320
+SettingsTextFileDocument:
+lines 5-26
 
-The cb command is excluded from Bluetooth output at line 310:
-targetClipboardTextForSendText(sendText) == nil
+SettingsArchiveFileDocument:
+lines 28-210
 
-Platform:
-The implementation is in shared Main Screen command handling, not an iPhone-only or iPad-only branch. It should work on both iPhone and iPad.
-
-ESP32 / Mac Helper requirement:
-No ESP32 connection required.
-No Mac Helper required.
-It uses local UIPasteboard.general.
-
-smartCommandRows:
-"cb " does not appear in smartCommandRows.
-"cb " also does not appear in smartEscapeCodeRows.
-I did not find it in the soft editor helper buttons.
-
-Button press trace:
-Main grid button entry -> sendMainGridEntry(:) in Main_ButtonBehavior.swift line 138 -> targetClipboardTextForGridEntry(:) line 671 -> targetClipboardTextForSendText(_:) line 803 -> UIPasteboard.general.string assignment line 230.
-
-2. COMPLETE smartCommandRows INVENTORY
-
-Source:
-ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
-smartCommandRows starts at line 757 and ends at line 1016.
-
-Entries:
-
-Display name: clock
-Command syntax: clock
-Description: Inserts the current time. Optionally specify a city: clock Paris, clock Tokyo.
-Source: Main_Screen.swift lines 762-769
-
-Display name: date
-Command syntax: date
-Description: Inserts the current date. Optionally specify a city: date Paris, date Tokyo.
-Source: Main_Screen.swift lines 773-780
-
-Display name: year
-Command syntax: year
-Description: Inserts the current year. Optionally specify a city: year Paris, year Tokyo.
-Source: Main_Screen.swift lines 784-791
-
-Display name: month
-Command syntax: month
-Description: Inserts the current month.
-Source: Main_Screen.swift lines 795-797
-
-Display name: day
-Command syntax: day
-Description: Inserts the current day. Optionally specify a city: day Paris, day Tokyo.
-Source: Main_Screen.swift lines 801-808
-
-Display name: day of week
-Command syntax: dow
-Description: Inserts the day of the week. Optionally specify a city: dow Paris, dow Tokyo.
-Source: Main_Screen.swift lines 812-819
-
-Display name: hour
-Command syntax: hour
-Description: Inserts the current hour.
-Source: Main_Screen.swift lines 823-825
-
-Display name: mins
-Command syntax: min
-Description: Inserts the current minutes.
-Source: Main_Screen.swift lines 829-831
-
-Display name: secs
-Command syntax: sec
-Description: Inserts the current seconds.
-Source: Main_Screen.swift lines 835-837
-
-Display name: prev
-Command syntax: prev
-Description: Goes to the previous document in the file list.
-Source: Main_Screen.swift lines 842-845
-
-Display name: next
-Command syntax: next
-Description: Goes to the next document in the file list.
-Source: Main_Screen.swift lines 849-852
-
-Display name: back
-Command syntax: back
-Description: Goes back in the loaded page stack.
-Source: Main_Screen.swift lines 856-859
-
-Display name: forward
-Command syntax: forw
-Description: Goes forward in the loaded page stack.
-Source: Main_Screen.swift lines 863-866
-
-Display name: home
-Command syntax: home
-Description: Goes to the home page.
-Source: Main_Screen.swift lines 870-873
-
-Display name: play sound
-Command syntax: snd snd.mp3
-Description: Plays a sound file.
-Source: Main_Screen.swift lines 881-883
-
-Display name: speak text
-Command syntax: spk hello
-Description: Speaks text aloud.
-Source: Main_Screen.swift lines 887-889
-
-Display name: wait time
-Command syntax: wait 5
-Description: Waits before continuing a command chain.
-Source: Main_Screen.swift lines 893-896
-
-Display name: tap minus
-Command syntax: minus 10
-Description: Subtracts from a tap counter.
-Source: Main_Screen.swift lines 904-907
-
-Display name: tap add
-Command syntax: add
-Description: Adds to a tap counter.
-Source: Main_Screen.swift lines 911-914
-
-Display name: random number
-Command syntax: rnd 0 100
-Description: Generates a random number.
-Source: Main_Screen.swift lines 918-921
-
-Display name: random line
-Command syntax: rnd file.txt
-Description: Uses a random line from a file.
-Source: Main_Screen.swift lines 925-928
-
-Display name: device power
-Command syntax: power
-Description: Shows the device power state.
-Source: Main_Screen.swift lines 935-938
-
-Display name: ambient sound
-Command syntax: amb snd.mp3
-Description: Starts ambient sound playback.
-Source: Main_Screen.swift lines 939-942
-
-Display name: timer sound
-Command syntax: timer 60 snd.wav
-Description: Runs a timer that plays sound.
-Source: Main_Screen.swift lines 946-949
-
-Display name: timer speak
-Command syntax: timer 10 hello
-Description: Runs a timer that speaks text.
-Source: Main_Screen.swift lines 953-956
-
-Display name: run shortcut
-Command syntax: sc shortcutName
-Description: Runs an iOS shortcut.
-Source: Main_Screen.swift lines 960-963
-
-Display name: open app
-Command syntax: app mail
-Description: Opens an App. Lists examples including mail, notes, messages, facetime, maps, music, calendar.
-Source: Main_Screen.swift lines 967-979
-
-Display name: preview file
-Command syntax: file file.txt
-Description: Previews a file.
-Source: Main_Screen.swift lines 983-985
-
-Display name: wait
-Command syntax: wait 1
-Description: Explains wait number, fractions, and command-chain examples.
-Source: Main_Screen.swift lines 989-1000
-
-Display name: Esp32 out
-Command syntax: out 32 1
-Description: Sends an ESP32 output command.
-Source: Main_Screen.swift lines 1005-1008
-
-Display name: Esp32 pwm
-Command syntax: pwm 32 5 4
-Description: Sends an ESP32 PWM command.
-Source: Main_Screen.swift lines 1012-1015
-
-3. COMMANDS MISSING FROM smartCommandRows
-
-Confirmed implemented but not listed in smartCommandRows:
-
-cb
-Clipboard command.
-Implemented in Main_ButtonBehavior.swift lines 803-821.
-Executed in sendMainGridEntry at lines 229-231 and wait-chain at lines 370-372.
-Missing from smartCommandRows.
-
-shortcut
-Long-form alias for sc.
-Implemented in targetShortcutURLForSendText(_:) lines 773-801.
-smartCommandRows lists sc shortcutName, but not shortcut shortcutName.
-
-battery
-Alias for power widget.
-Implemented in targetWidgetDescriptorForSendText(_:) line 1177.
-smartCommandRows lists power, but not battery.
-
-random
-Alias for rnd widget.
-Implemented in targetWidgetDescriptorForSendText(_:) line 1192.
-smartCommandRows lists rnd, but not random.
-
-stop
-Stopwatch widget command.
-Implemented in targetWidgetDescriptorForSendText(_:) line 1224.
-Not listed in smartCommandRows.
-
-stopwatch
-Stopwatch widget command.
-Implemented in targetWidgetDescriptorForSendText(_:) line 1224.
-Not listed in smartCommandRows.
-
-ambient
-Long-form alias for amb.
-Implemented in targetWidgetDescriptorForSendText(_:) lines 1074-1076 and 1226.
-smartCommandRows lists amb, but not ambient.
-
-Direct .txt random-line widget
-A bare widget command ending in .txt becomes .textFileRandom.
-Implemented in targetWidgetDescriptorForSendText(_:) lines 1091-1093.
-smartCommandRows documents rnd file.txt, but not bare file.txt as a widget command.
-
-Direct document links:
-home is listed.
-But arbitrary screen document links are implemented and not listed:
-legacy .txt screen document link: Main_ButtonBehavior.swift lines 656-658.
-.screen document link: Main_ButtonBehavior.swift lines 660-662.
-These select documents through targetDocumentNameForSendText(_:) rather than the file preview path.
-
-HTTP / HTTPS URL open:
-Implemented in targetURLForSendText(_:) lines 687-714.
-Not listed in smartCommandRows.
-Also accepts malformed http// and https// and normalizes them at lines 691-694.
-
-Bare supported sound filename:
-targetSoundFilenameForSendText(_:) treats a supported sound filename as a playable sound even without snd prefix.
-Implemented lines 836-863.
-smartCommandRows lists snd snd.mp3, but not the bare filename form.
-
-Potentially documented elsewhere, but not in smartCommandRows:
-Function keys F1 through F20 are generated in the smart command panel at Main_Screen.swift lines 3573-3576. They are not part of smartCommandRows because they are generated separately.
-
-4. OTHER COMMAND TABLES / RECOGNITION MECHANISMS
-
-smartEscapeCodeRows:
-ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_Screen.swift lines 732-751.
-
-Entries:
-escape key -> ESC:
-send return -> RET:
-backspace key -> BS:
-space key -> SP:
-tab key -> TAB:
-new line -> NL:
-colon -> :
-up key -> UP:
-down key -> DOWN:
-left key -> LEFT:
-right key -> RIGHT:
-select all ctl-a -> CA:
-copy ctl-c -> CC:
-paste ctl-v -> CV:
-cut ctl-x -> CX:
-select all cmd-a -> MA:
-copy cmd-c -> MC:
-paste cmd-v -> MV:
-cut cmd-x -> MX:
-
-Smart function-key generator:
-ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_Screen.swift lines 3573-3576.
-Generates F1 through F20 insert buttons.
-
-Soft editor helper buttons:
-ESP32BLE/ESP32BLE/Scrns/Main_Screen/Soft_Editor/Soft_Editor_Overlay.swift lines 232-272.
-This is another command insertion UI. It includes prev, next, month, hour, min, sec, power, back, forw, amb, snd, spk, out, pwm, home, wait, minus, add, rnd, timer, sc, app, file.
-It does not include cb.
-
-Widget recognition table:
-ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift lines 1247-1256.
-Recognizes:
-add
-minus
-power
-rnd
-random
-clock
-date
-dow
-sec
-min
-hour
-day
-month
-year
-timer
-stop
-stopwatch
-amb
-ambient
-
-There is a duplicate bare-widget recognizer in ContentView.swift lines 3219-3228 used while parsing persisted/editing text.
-
-Widget descriptor execution:
-ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift lines 1066-1245.
-Maps recognized widget commands into MainGridWidgetDescriptor cases.
-
-MainGridWidgetDescriptor:
-ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift lines 2426-2444.
-Supported widget descriptors:
-clock
-day
-month
-year
-second
-minute
-hour
-dow
-date
-power
-add
-minus
-random
-textFileRandom
-stopwatch
-ambientSound
-timer
-
-Command parser:
-ESP32BLE/ESP32BLE/Scrns/ContentView.swift lines 733-783.
-parsedActionTokens(from:) splits action text on colon.
-It preserves a literal space token.
-It maps sp to a space.
-It expands display modifier symbols into command tokens.
-
-Compact modifier symbols:
-ESP32BLE/ESP32BLE/Scrns/ContentView.swift lines 726-731.
-⌃ -> ct
-⌥ -> op
-⇧ -> sh
-⌘ -> cm
-
-Bluetooth normalization:
-ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift lines 1402-1455.
-sp becomes a space.
-out 32 1 becomes out:32:1.
-pwm 32 5 4 becomes pwm:32:5:4.
-F-key tokens are lowercased.
-Other tokens pass through.
-
-Mac Helper command mapping:
-ESP32BLE/ESP32BLE/Scrns/ContentView.swift lines 570-706.
-macMessages(from:) and macMessage(for:modifiers:) map tokens to Mac Helper messages.
-Recognized Mac-side token handling includes:
-RET, RETURN, ENTER
-SP, SPACE, literal space
-TAB
-BS, BACKSPACE, DELETE
-ESC, ESCAPE
-CA, CC, CV, CX
-MA, MC, MV, MX
-UP, DOWN, LEFT, RIGHT
-KP0-KP9, KP., KP+, KP-, KP/, KP*, KPE
-F-number keys
-single letters
-modifier aliases ct/ctl/ctrl/control, op/opt/option, sh/shift, cm/cmd/command/win
-
-Custom keyboard tables:
-ESP32BLE/ESP32BLE/Scrns/KB_Screen/KB_ModeRows.swift, beginning at line 4.
-These define keyboard screen cells and token rows, including keypad tokens, F13-F20 combinations, modifiers, arrows, etc.
-This is a separate keyboard UI, not smartCommandRows.
-
-Custom keyboard send logic:
-ESP32BLE/ESP32BLE/Scrns/KB_Screen/KB_InputBehavior.swift lines 33-119.
-ESP32BLE/ESP32BLE/Scrns/KB_Screen/KB_ModifierSend.swift lines 60-129.
-Sends typed text/tokens directly to Mac Helper or ESP32 depending on OutputMode.
-
-Speech recognition open command:
-ESP32BLE/ESP32BLE/Scrns/Main_Screen/Speech Recognition/SR_Support.swift lines 138-140 from grep results.
-Recognizes speech text with an open prefix. This is a voice command path, not smartCommandRows.
-
-5. COMMAND EXECUTION SUMMARY
-
-Main local command processor:
-sendMainGridEntry(_:)
-ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift lines 138-275.
-
-Wait-chain command processor:
-runWaitChainCommandTokens(...)
-Main_ButtonBehavior.swift lines 329-440.
-
-Bluetooth / Mac / ESP output:
-sendKeyboardOutputTokens(...)
-Main_ButtonBehavior.swift lines 457-506.
-
-Output modes:
-OutputMode enum:
-ESP32BLE/ESP32BLE/Scrns/ContentView.swift lines 80-83.
-Modes:
-none
-esp32
-mac
-
-Mac output:
-sendKeyboardOutputTokens uses macConnection.sendKeyboardTokens(...) at Main_ButtonBehavior.swift lines 478-485.
-Mac helper maps/receives keyboard tokens via MacConnectionManager in ContentView.swift lines 570-706.
-
-ESP32 output:
-sendKeyboardOutputTokens checks ble.isConnected at Main_ButtonBehavior.swift lines 490-493, validates ASCII at lines 496-498, and sends each token through ble.sendLine(...) at lines 501-503.
-
-Commands executable without ESP32 or Mac Helper:
-cb clipboard command
-http/https URL open
-app open command
-sc / shortcut command
-file preview command
-spk text / spk file text-to-speech
-local sound playback through snd or bare supported sound filename
-ambient sound widget
-timer widget and timer completion actions that speak/play local sound
-clock/date/day/month/year/sec/min/hour/dow widgets
-power/battery widget
-add/minus/random/rnd/text-file-random widgets
-stop/stopwatch widget
-prev/next/back/forw/home/document navigation
-wait itself, if the later chain tokens are also local
-
-Commands requiring ESP32 or Mac Helper:
-Generic keyboard output tokens after local commands are filtered.
-F-key tokens.
-Escape/special key tokens such as ESC, RET, BS, TAB, UP, DOWN, LEFT, RIGHT.
-Modifier/key combinations.
-out and pwm require ESP32 to have their intended ESP32 effect. In code they are normalized locally, then sent through the selected output route.
-Plain text keyboard output.
-
-6. IMPLEMENTED AND LISTED IN smartCommandRows
-
-Implemented and listed:
-clock
-date
-year
-month
-day
-dow
-hour
-min
-sec
-prev
-next
-back
-forw
-home
-snd
-spk
-wait
-minus
-add
-rnd number
-rnd file.txt
-power
-amb
-timer sound
-timer speech
-sc
-app
-file
-out
-pwm
-
-7. IMPLEMENTED BUT NOT LISTED IN smartCommandRows
-
-Strong documentation candidates:
-cb
-shortcut
-battery
-random
-stop
-stopwatch
-ambient
-http:// and https:// URL commands
-http// and https// normalization
-bare supported sound filename playback
-bare .txt random-line widget
-direct .txt / .screen document links
-
-8. LISTED IN smartCommandRows BUT NOT IMPLEMENTED
-
-I did not find a clearly listed smartCommandRows command that is completely unimplemented.
-
-Notes:
-The “play sound” row uses snd snd.mp3 and is implemented by targetSoundFilenameForSendText(_:) lines 836-863.
-The “Esp32 out” and “Esp32 pwm” rows are normalized by normalizedBluetoothSendText(_:) lines 1410-1424 and then sent through the output route. Their final hardware behavior depends on ESP32 firmware, which was outside this investigation.
-The “wait time” and “wait” rows are duplicates, not missing implementations.
-
-9. INCONSISTENCIES DISCOVERED
-
-cb is implemented and executable but undocumented in smartCommandRows and absent from the soft editor helper buttons.
-
-shortcut is implemented as a long-form alias, but only sc is shown in smartCommandRows.
-
-battery is implemented as an alias for power, but only power is documented.
-
-random is implemented as an alias for rnd, but only rnd is documented.
-
-stop and stopwatch are implemented, but neither appears in smartCommandRows.
-
-ambient is implemented as an alias for amb, but only amb is documented.
-
-There are two “wait” style entries in smartCommandRows:
-wait time at lines 893-896.
-wait at lines 989-1000.
-Both point to the same underlying wait recognition path.
-
-The soft editor helper button for play sound inserts:
-snd snd mp3
-at Soft_Editor_Overlay.swift line 249.
-smartCommandRows uses:
-snd snd.mp3
-The missing dot in the soft editor inserted text looks suspicious, because supported sound filename detection checks path extensions in Main_ButtonBehavior.swift lines 856-860. I did not test this at runtime.
-
-10. FILES MODIFIED
-
-None.
-
-This was a read-only investigation. No files were created, edited, deleted, built, reset, restored, reverted, committed, pushed, or pulled.
+SettingsSingleFileExportPicker:
+lines 212-244
+
+private extension Data:
+lines 246-278
+
+4. Number of lines removed from Set_Screen.swift
+
+Set_Screen.swift went from 4132 lines to 3856 lines by wc -l.
+
+Net reduction:
+276 lines.
+
+5. Number of lines in Set_ArchiveDocuments.swift
+
+Set_ArchiveDocuments.swift is 278 lines by wc -l.
+
+6. Access-control changes
+
+Two moved declarations needed minimal access-control changes because Set_Screen.swift still references them from another file:
+
+SettingsArchiveFileDocument:
+changed from private struct to internal struct.
+
+SettingsSingleFileExportPicker:
+changed from private struct to internal struct.
+
+These are the default Swift access level and are needed because SettingsScreen uses them for archive export/import and single-file export presentation.
+
+No broad private-to-internal conversion was made.
+
+These remained private:
+
+SettingsTextFileDocument
+private extension Data
+SettingsArchiveFileDocument.crc32
+SettingsArchiveFileDocument.crc32Table
+
+7. Exact Xcode project membership changes
+
+Updated ESP32BLE.xcodeproj/project.pbxproj only for the new Swift file.
+
+Added:
+
+PBXFileReference for Set_ArchiveDocuments.swift.
+PBXBuildFile entry for Set_ArchiveDocuments.swift in Sources.
+Set_ArchiveDocuments.swift to the Set_Screen project group.
+Set_ArchiveDocuments.swift to the ESP32BLE application target Sources build phase.
+
+No build settings, signing settings, deployment targets, bundle identifiers, schemes, capabilities, or unrelated project references were changed.
+
+8. Build result
+
+Build succeeded.
+
+BuildProject result:
+The project built successfully.
+
+Elapsed time:
+about 49 seconds.
+
+9. Remaining risks or warnings
+
+No runtime testing was performed.
+
+This was a structural code move only. Archive creation, ZIP parsing, single-file export picker behavior, Settings layout, import/export handlers, and SettingsScreen state ownership were not intentionally changed.
+
+The only behavioral risk is the normal small risk of source-file extraction: the moved types are now in a separate compilation file, with the two required declarations made internal so SettingsScreen can still see them. The successful build confirms the target membership and symbol visibility are valid.
+
+10. Complete list of modified/created files
+
+Created:
+
+ESP32BLE/Scrns/Set_Screen/Set_ArchiveDocuments.swift
+
+Modified:
+
+ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
+ESP32BLE.xcodeproj/project.pbxproj
+
+11. Confirmation that no unrelated files or functionality were changed
+
+No Main_Screen.swift changes.
+
+No Main_ButtonBehavior.swift changes.
+
+No ContentView.swift changes.
+
+No Main_DocumentActions.swift changes.
+
+No editor implementation changes.
+
+No Move/Resize changes.
+
+No popup changes.
+
+No command description or Markdown changes.
+
+No .txt files changed.
+
+No ESPMacHelper, Test Area, firmware, backup, or V62.40 baseline files were touched.
+
+No commit, push, pull, reset, restore, revert, checkout, or rebase was performed.
