@@ -1,135 +1,158 @@
-ESP-005 PHASE 3D-5 COMPLETE
+ESP32BLE — ESP-005 PHASE 3D-6 COMPLETE
 
-1. Declarations moved
+1. Declaration moved
 
-Moved from:
+Moved:
+SmartScriptEditingModel
+
+From:
 ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
 
-Moved to:
-ESP32BLE/Scrns/Main_Screen/Main_EditorShellViews.swift
+To:
+ESP32BLE/Scrns/Main_Screen/Main_SmartScriptEditingModel.swift
 
-Moved declarations:
-ESP001MiniDiagnosticPanels
-ESP001MiniDiagnosticEditorShell
-ESP001ExperimentalIPhoneEditorShell
-ESP001MiniDiagnosticEmptyPanel
-IPadSmartCommandKeypad
-IPadSmartButtonPanel
-IPadSmartSFPanel
 
-2. Original line ranges
+2. Original line range
 
-ESP001MiniDiagnosticPanels: Main_Screen.swift lines 5864-5869
-ESP001MiniDiagnosticEditorShell: lines 5871-5907
-ESP001ExperimentalIPhoneEditorShell: lines 5909-5950
-ESP001MiniDiagnosticEmptyPanel: lines 5952-5967
-IPadSmartCommandKeypad: lines 5969-6029
-IPadSmartButtonPanel: lines 6031-6093
-IPadSmartSFPanel: lines 6095-6112
+Original source range:
+Main_Screen.swift:119-516
 
-3. Destination line ranges
+Original declaration:
+private struct SmartScriptEditingModel
 
-Main_EditorShellViews.swift:
-ESP001MiniDiagnosticPanels: lines 3-8
-ESP001MiniDiagnosticEditorShell: lines 10-46
-ESP001ExperimentalIPhoneEditorShell: lines 48-89
-ESP001MiniDiagnosticEmptyPanel: lines 91-106
-IPadSmartCommandKeypad: lines 108-168
-IPadSmartButtonPanel: lines 170-232
-IPadSmartSFPanel: lines 234-251
+
+3. Destination line range
+
+New destination range:
+Main_SmartScriptEditingModel.swift:3-400
+
+New declaration:
+struct SmartScriptEditingModel
+
 
 4. Line counts
 
-Main_Screen.swift original line count: 6113
-Main_Screen.swift new line count: 5863
-Main_EditorShellViews.swift line count: 251
+Original Main_Screen.swift line count:
+5,863
+
+New Main_Screen.swift line count:
+5,464
+
+New Main_SmartScriptEditingModel.swift line count:
+400
+
 
 5. Access-control changes
 
-Changed only these top-level declarations from private to internal:
+Changed only the moved top-level declaration:
 
-private struct ESP001MiniDiagnosticPanels -> struct ESP001MiniDiagnosticPanels
-private struct ESP001MiniDiagnosticEditorShell -> struct ESP001MiniDiagnosticEditorShell
-private struct ESP001ExperimentalIPhoneEditorShell -> struct ESP001ExperimentalIPhoneEditorShell
-private struct ESP001MiniDiagnosticEmptyPanel -> struct ESP001MiniDiagnosticEmptyPanel
-private struct IPadSmartCommandKeypad -> struct IPadSmartCommandKeypad
-private struct IPadSmartButtonPanel -> struct IPadSmartButtonPanel
-private struct IPadSmartSFPanel -> struct IPadSmartSFPanel
+private struct SmartScriptEditingModel
 
-Private constants inside IPadSmartButtonPanel stayed private.
+to:
+
+struct SmartScriptEditingModel
+
+No other access-control changes were made.
+
+Nested declarations stayed private:
+private struct EditingState
+private enum EditTransactionKind
+
+Private helpers remained private.
+
 
 6. Imports added
 
-Main_EditorShellViews.swift imports:
-SwiftUI
+Main_SmartScriptEditingModel.swift imports:
+Foundation
+
+SwiftUI was not added.
+
 
 7. Dependency verification
 
-The moved declarations depend on SwiftUI and the existing geometry helpers in Main_EditorGeometrySupport.swift.
+Verified the model depends only on Foundation/Swift standard library symbols:
+NSRange
+NSNotFound
+NSString bridging
+String
+Character
+Array
+Optional
 
-No geometry helpers were duplicated or moved again.
-No MainScreen state was moved.
-No call sites were changed.
-ESP-001 routing declarations and methods stayed in Main_Screen.swift.
+No MainScreen state, MainScreen methods, command-processing helpers, editor views, BLE output, or Mac output dependencies were moved into the model.
 
-8. Xcode project registration
 
-Main_EditorShellViews.swift was added through Xcode project tooling.
+8. Preservation confirmations
 
-project.pbxproj now contains:
-PBXFileReference for Main_EditorShellViews.swift
-PBXBuildFile for Main_EditorShellViews.swift in Sources
-Main_Screen group membership
-ESP32BLE Sources build phase membership
+Nested declarations moved intact.
 
-File.txt was not restored or re-added.
+MainScreen @State ownership was unchanged:
+@State private var smartScriptEditingModel = SmartScriptEditingModel()
 
-9. Build result
+Existing call sites were untouched.
+
+Undo/redo algorithms were unchanged.
+
+Cursor and selection algorithms were unchanged.
+
+Command processing was untouched.
+
+ESP-001 routing was untouched.
+
+No editor geometry, UI layout, BLE/Mac output, popup, Move/Resize, or document behavior was changed.
+
+
+9. Xcode project registration
+
+Registered through Xcode’s project-aware file writer, not by hand-editing the project file.
+
+Project membership entries for Main_SmartScriptEditingModel.swift were added at:
+
+PBXBuildFile:
+ESP32BLE.xcodeproj/project.pbxproj:20
+
+PBXFileReference:
+ESP32BLE.xcodeproj/project.pbxproj:80
+
+Main_Screen group membership:
+ESP32BLE.xcodeproj/project.pbxproj:285
+
+Sources build phase:
+ESP32BLE.xcodeproj/project.pbxproj:441
+
+
+10. Build result
 
 Build succeeded.
 
 Build duration:
-5.993 seconds
+26.263 seconds
 
-10. Compiler warnings
+Xcode live diagnostics for Main_SmartScriptEditingModel.swift:
+No issues found.
 
-No new warnings attributable to this extraction.
+New compiler warnings:
+None reported by the build tool output.
 
-Existing unrelated warnings remain in:
-MacConnectionManager.swift
-ScreenConfig.swift
-Set_TxtEditor.swift
-AppIntents metadata processing
-Interface orientation warning
 
-11. Changed files
+11. Complete changed-file list
 
-Changed by this phase:
-ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
-ESP32BLE/Scrns/Main_Screen/Main_EditorShellViews.swift
+Authorised changes:
 ESP32BLE.xcodeproj/project.pbxproj
+ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
+ESP32BLE/Scrns/Main_Screen/Main_SmartScriptEditingModel.swift
 
-Pre-existing unrelated working-tree changes remain:
-ESP32BLE/VERSIONS.txt
+Unexpected working-tree item:
 ESP32BLE/codex.txt
 
-I did not modify any .txt files.
+I did not intentionally edit any .txt file. After the Xcode file creation/source move, git status showed codex.txt modified, and its diff contains the previous 3D-6 probe report. I left it untouched and did not revert it.
 
-12. Preservation confirmation
 
-All seven declarations moved intact, with only the required top-level private removal.
+12. Notes
 
-The iPad geometry constants were unchanged:
-previewButtonHeight = 121
-upperTopPadding = -2
-upperBottomPadding = 5
-previewLeadingPadding = 0
-previewTrailingPadding = 8
+No Git commit was created.
 
-Existing MainScreen call sites were untouched.
+No backup was created.
 
-MainScreen state was untouched.
-
-ESP-001 routing was untouched.
-
-Editor geometry and production editor layout were untouched.
+No unrelated Swift files were modified.
