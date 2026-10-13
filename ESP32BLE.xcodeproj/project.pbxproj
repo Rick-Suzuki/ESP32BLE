@@ -13,6 +13,7 @@
 		1D2A22C5307DFAF0003CCFCF /* MacConnectionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D2A22C4307DFAF0003CCFCF /* MacConnectionManager.swift */; };
 		1D2A22C7307DFFB6003CCFCF /* Main_ButtonLabelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D2A22C6307DFFB6003CCFCF /* Main_ButtonLabelView.swift */; };
 		1D2A22C9307E0916003CCFCF /* Main_FilePreviewOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D2A22C8307E0916003CCFCF /* Main_FilePreviewOverlay.swift */; };
+		1D2A22CB307E198C003CCFCF /* Main_GridActionMenuViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D2A22CA307E198C003CCFCF /* Main_GridActionMenuViews.swift */; };
 		1D2B666F2FE78E0400F10733 /* color.png in Resources */ = {isa = PBXBuildFile; fileRef = 1D2B666E2FE78E0400F10733 /* color.png */; };
 		1D590E582F61206100E430E0 /* CommandButtonsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D590E4D2F61206100E430E0 /* CommandButtonsSection.swift */; };
 		1D590E5A2F61206100E430E0 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D590E4F2F61206100E430E0 /* ContentView.swift */; };
@@ -68,6 +69,7 @@
 		1D2A22C4307DFAF0003CCFCF /* MacConnectionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacConnectionManager.swift; sourceTree = "<group>"; };
 		1D2A22C6307DFFB6003CCFCF /* Main_ButtonLabelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Main_ButtonLabelView.swift; sourceTree = "<group>"; };
 		1D2A22C8307E0916003CCFCF /* Main_FilePreviewOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Main_FilePreviewOverlay.swift; sourceTree = "<group>"; };
+		1D2A22CA307E198C003CCFCF /* Main_GridActionMenuViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Main_GridActionMenuViews.swift; sourceTree = "<group>"; };
 		1D2B666E2FE78E0400F10733 /* color.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = color.png; sourceTree = "<group>"; };
 		1D33C2D12F6145DC0098FD5C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1D590E292F611FB700E430E0 /* ESP32BLE.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ESP32BLE.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -268,6 +270,7 @@
 				1D9E1CE52FC92DC600DB3621 /* Main_Screen.swift */,
 				1D2A22C6307DFFB6003CCFCF /* Main_ButtonLabelView.swift */,
 				1D2A22C8307E0916003CCFCF /* Main_FilePreviewOverlay.swift */,
+				1D2A22CA307E198C003CCFCF /* Main_GridActionMenuViews.swift */,
 			);
 			path = Main_Screen;
 			sourceTree = "<group>";
@@ -393,6 +396,7 @@
 				1D590E5A2F61206100E430E0 /* ContentView.swift in Sources */,
 				1D590E5C2F61206100E430E0 /* ESP32BLEApp.swift in Sources */,
 				1D590E5D2F61206100E430E0 /* PhraseButtonsSection.swift in Sources */,
+				1D2A22CB307E198C003CCFCF /* Main_GridActionMenuViews.swift in Sources */,
 				1D2A22C9307E0916003CCFCF /* Main_FilePreviewOverlay.swift in Sources */,
 				1DDFB8112F87C64500776ED6 /* debug.swift in Sources */,
 				1D590E5E2F61206100E430E0 /* TestArea.swift in Sources */,
