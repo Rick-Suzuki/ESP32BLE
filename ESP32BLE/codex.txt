@@ -1,160 +1,90 @@
-ESP-005 Phase 3C complete.
+Blocked at the final cleanup step.
 
-1. Exact declarations moved
+The extraction itself was completed and built successfully, but the Xcode project registration step had an unrelated side effect:
 
-Moved these 13 declarations intact from ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift to ESP32BLE/Scrns/Main_Screen/Main_ButtonLabelView.swift:
+XcodeWrite added:
+ESP32BLE/Scrns/Main_Screen/Main_FilePreviewOverlay.swift
 
-1. MainScreenButtonLabelView
-2. MainGridWidgetDescriptor
-3. MainGridTimerCompletion
-4. MainGridBatteryWidgetView
-5. MainGridStepUpCounterWidgetView
-6. MainGridStepDownCounterWidgetView
-7. MainGridSharedTimerState
-8. MainGridAmbientSoundState
-9. MainGridTimerWidgetView
-10. MainGridAmbientSoundWidgetView
-11. MainGridStopwatchWidgetView
-12. MainGridRandomNumberWidgetView
-13. MainGridRandomTextWidgetView
+But the project file diff also shows that Xcode removed the existing File.txt project reference/group entry from ESP32BLE.xcodeproj/project.pbxproj.
 
-2. Original source line boundaries
+I attempted to restore only those two File.txt project-file lines, but that project-file edit was rejected. I will not directly edit project.pbxproj further while Xcode is open.
+
+What is currently done:
+
+1. Declarations moved
+
+Moved from Main_Screen.swift into Main_FilePreviewOverlay.swift:
+
+MainScreenFilePreviewOverlay
+ImagePreviewGestureSurface
+
+2. Source ranges
 
 Original source:
-ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift
+Main_Screen.swift lines 7225-7582.
 
-Original extraction start:
-Line 1673:
-struct MainScreenButtonLabelView: View {
+New destination:
+Main_FilePreviewOverlay.swift lines 4-361.
 
-Original extraction end:
-End of MainGridRandomTextWidgetView, approximately original line 3471.
+3. Access control
 
-Original declaration starts from the probe/current source were preserved:
-MainScreenButtonLabelView at 1673.
-MainGridWidgetDescriptor at 2426.
-MainGridTimerCompletion at 2446.
-MainGridBatteryWidgetView at 2451.
-MainGridStepUpCounterWidgetView at 2511.
-MainGridStepDownCounterWidgetView at 2579.
-MainGridSharedTimerState at 2627.
-MainGridAmbientSoundState at 2870.
-MainGridTimerWidgetView at 2940.
-MainGridAmbientSoundWidgetView at 3075.
-MainGridStopwatchWidgetView at 3142.
-MainGridRandomNumberWidgetView at 3205.
-MainGridRandomTextWidgetView at 3290.
+MainScreenFilePreviewOverlay changed from:
 
-3. New destination line boundaries
+private struct MainScreenFilePreviewOverlay
 
-New file:
-ESP32BLE/Scrns/Main_Screen/Main_ButtonLabelView.swift
+to:
 
-New declaration starts:
-Line 6: MainScreenButtonLabelView
-Line 759: MainGridWidgetDescriptor
-Line 779: MainGridTimerCompletion
-Line 784: MainGridBatteryWidgetView
-Line 844: MainGridStepUpCounterWidgetView
-Line 912: MainGridStepDownCounterWidgetView
-Line 960: MainGridSharedTimerState
-Line 1203: MainGridAmbientSoundState
-Line 1273: MainGridTimerWidgetView
-Line 1408: MainGridAmbientSoundWidgetView
-Line 1475: MainGridStopwatchWidgetView
-Line 1538: MainGridRandomNumberWidgetView
-Line 1623: MainGridRandomTextWidgetView
+struct MainScreenFilePreviewOverlay
 
-4. Line counts
+ImagePreviewGestureSurface remained private.
 
-Main_ButtonBehavior.swift original line count:
-3471
-
-Main_ButtonBehavior.swift new line count:
-1671
-
-Main_ButtonLabelView.swift line count:
-1804
-
-Lines removed from Main_ButtonBehavior.swift:
-1800
-
-5. Access-control changes
-
-None.
-
-The private widget views remain private in Main_ButtonLabelView.swift.
-The internal declarations remain internal.
-No private/fileprivate/internal/public access levels were changed.
-
-6. Import changes
-
-Main_ButtonLabelView.swift was created with the imports needed by the moved declarations:
+4. Imports in new file
 
 SwiftUI
 UIKit
-AVFoundation
-Combine
 
-No imports were removed from Main_ButtonBehavior.swift.
+5. Line counts
 
-7. Xcode project membership changes
+Main_Screen.swift original:
+7582 lines.
 
-ESP32BLE.xcodeproj/project.pbxproj was updated only to register Main_ButtonLabelView.swift.
+Main_Screen.swift current:
+7223 lines.
 
-Project membership additions:
-PBXFileReference for Main_ButtonLabelView.swift.
-PBXBuildFile for Main_ButtonLabelView.swift in Sources.
-Group membership in the existing Main_Screen group.
-Sources build phase membership for the ESP32BLE app target.
+Main_FilePreviewOverlay.swift:
+361 lines.
 
-No build settings, signing, bundle IDs, deployment targets, capabilities, schemes, or other target memberships were changed.
-
-8. Build result
+6. Build result
 
 Build succeeded.
 
 Build duration:
-36.001 seconds.
+44.506 seconds.
 
-Build log warnings were present, but none were from Main_ButtonLabelView.swift or the moved declarations. The warnings reported were in existing areas: MacConnectionManager.swift, ScreenConfig.swift, Set_TxtEditor.swift, AppIntents metadata processing, and interface orientation settings.
+Existing warnings were reported in ScreenConfig.swift, Set_TxtEditor.swift, MacConnectionManager.swift, AppIntents metadata processing, and interface orientation settings. No new warning was reported from Main_FilePreviewOverlay.swift.
 
-9. Preservation checks
+7. Files currently changed by this phase
 
-mainGridButtonLabel(...) remains in Main_ButtonBehavior.swift at line 1467 and still constructs MainScreenButtonLabelView.
-
-Command execution, command parsing, BLE/Mac output, clipboard, speech, sound playback, and document navigation remain in Main_ButtonBehavior.swift.
-
-Main_Screen.swift was not modified. Existing StateObject ownership remains in place:
-mainGridTimerState at Main_Screen.swift line 1037.
-mainGridAmbientSoundState at Main_Screen.swift line 1038.
-
-No widget implementation logic was rewritten.
-No rendering logic was rewritten.
-No SwiftUI state ownership was changed.
-No runtime visual testing was performed.
-
-10. Changed files for this extraction
-
-ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift
-ESP32BLE/Scrns/Main_Screen/Main_ButtonLabelView.swift
+ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
+ESP32BLE/Scrns/Main_Screen/Main_FilePreviewOverlay.swift
 ESP32BLE.xcodeproj/project.pbxproj
 
-11. Files not modified by this extraction
+8. Important project-file issue requiring user action
 
-Main_Screen.swift
-Main_GridSection.swift
-Main_DocumentActions.swift
-ContentView.swift
-MacConnectionManager.swift
-Settings files
-Button Editor files
-ESPMacHelper
-Test Area
-ESP32 firmware
+Please restore File.txt in the Xcode project navigator / project membership if it should remain in the project.
 
-12. .txt files
+The unwanted project-file removal is:
 
-I did not modify any .txt files for this task.
+File.txt PBXFileReference removed.
+File.txt group child entry removed.
 
-Current git status shows ESP32BLE/VERSIONS.txt and ESP32BLE/codex.txt already modified in the working tree, but they were not touched by this extraction.
+I did not modify any .txt file contents. codex.txt already appears modified in the working tree, but I did not touch it for this phase.
+
+9. Preservation confirmation
+
+MainScreen.PreviewedFile was not moved.
+presentedPreviewFile was not moved.
+The fullScreenCover construction remains in Main_Screen.swift.
+Preview logic and gestures were moved intact.
+MainScreen state ownership was not changed.
+MainScreen.body was not edited.
