@@ -1,90 +1,130 @@
-Blocked at the final cleanup step.
+ESP-005 PHASE 3D-3 COMPLETE
 
-The extraction itself was completed and built successfully, but the Xcode project registration step had an unrelated side effect:
+1. Exact declarations moved
 
-XcodeWrite added:
-ESP32BLE/Scrns/Main_Screen/Main_FilePreviewOverlay.swift
+Moved from:
+ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
 
-But the project file diff also shows that Xcode removed the existing File.txt project reference/group entry from ESP32BLE.xcodeproj/project.pbxproj.
+Moved to:
+ESP32BLE/Scrns/Main_Screen/Main_SmartEditorTextInputs.swift
 
-I attempted to restore only those two File.txt project-file lines, but that project-file edit was rejected. I will not directly edit project.pbxproj further while Xcode is open.
+Declarations moved:
+SmartScriptTextEditor
+SmartPreviewTextView
+private CGSize extension
+SmartActionTextField
 
-What is currently done:
+2. Current original source line ranges
 
-1. Declarations moved
+SmartScriptTextEditor: Main_Screen.swift lines 6384-6533
+SmartPreviewTextView: Main_Screen.swift lines 6535-6880
+private CGSize extension: Main_Screen.swift lines 6882-6886
+SmartActionTextField: Main_Screen.swift lines 6888-7029
 
-Moved from Main_Screen.swift into Main_FilePreviewOverlay.swift:
+3. New destination line ranges
 
-MainScreenFilePreviewOverlay
-ImagePreviewGestureSurface
+Main_SmartEditorTextInputs.swift:
+SmartScriptTextEditor: lines 4-153
+SmartPreviewTextView: lines 155-500
+private CGSize extension: lines 502-506
+SmartActionTextField: lines 508-649
 
-2. Source ranges
+4. Line counts
 
-Original source:
-Main_Screen.swift lines 7225-7582.
+Main_Screen.swift original line count: 7030
+Main_Screen.swift new line count: 6383
+Main_SmartEditorTextInputs.swift line count: 649
 
-New destination:
-Main_FilePreviewOverlay.swift lines 4-361.
+5. Access-control changes
 
-3. Access control
-
-MainScreenFilePreviewOverlay changed from:
-
-private struct MainScreenFilePreviewOverlay
-
+Changed:
+private struct SmartScriptTextEditor
 to:
+struct SmartScriptTextEditor
 
-struct MainScreenFilePreviewOverlay
+Changed:
+private struct SmartPreviewTextView
+to:
+struct SmartPreviewTextView
 
-ImagePreviewGestureSurface remained private.
+Changed:
+private struct SmartActionTextField
+to:
+struct SmartActionTextField
 
-4. Imports in new file
+The CGSize extension remained private.
 
+Coordinator classes and private UIKit helper views were preserved with their existing visibility.
+
+6. Imports added
+
+Main_SmartEditorTextInputs.swift imports:
 SwiftUI
 UIKit
 
-5. Line counts
+7. Dependency verification
 
-Main_Screen.swift original:
-7582 lines.
+The moved declarations depend on SwiftUI/UIKit types, NSRange, Binding, UITextView, UITextField, UIResponder, NotificationCenter, CGSize, UIFont, UIEdgeInsets, NSMutableParagraphStyle, and NSAttributedString.
 
-Main_Screen.swift current:
-7223 lines.
+No unrelated helper functions were moved.
+No private Main_Screen.swift state was required.
+The private CGSize helper moved with its only consumer area.
 
-Main_FilePreviewOverlay.swift:
-361 lines.
+8. Xcode project registration changes
 
-6. Build result
+Main_SmartEditorTextInputs.swift was added through Xcode project tooling.
+
+project.pbxproj now includes:
+PBXBuildFile entry for Main_SmartEditorTextInputs.swift in Sources
+PBXFileReference entry for Main_SmartEditorTextInputs.swift
+Main_Screen group membership
+ESP32BLE Sources build phase membership
+
+File.txt was not restored or re-added.
+
+9. Build result
 
 Build succeeded.
 
 Build duration:
-44.506 seconds.
+40.024 seconds
 
-Existing warnings were reported in ScreenConfig.swift, Set_TxtEditor.swift, MacConnectionManager.swift, AppIntents metadata processing, and interface orientation settings. No new warning was reported from Main_FilePreviewOverlay.swift.
+10. Compiler warnings
 
-7. Files currently changed by this phase
+No new warnings attributable to this extraction.
+
+Existing unrelated warnings remain in:
+Set_TxtEditor.swift
+ScreenConfig.swift
+MacConnectionManager.swift
+AppIntents metadata processing
+Interface orientation build warning
+
+11. Unexpected dependencies
+
+None.
+
+12. Changed files
 
 ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
-ESP32BLE/Scrns/Main_Screen/Main_FilePreviewOverlay.swift
+ESP32BLE/Scrns/Main_Screen/Main_SmartEditorTextInputs.swift
 ESP32BLE.xcodeproj/project.pbxproj
 
-8. Important project-file issue requiring user action
+13. Preservation confirmation
 
-Please restore File.txt in the Xcode project navigator / project membership if it should remain in the project.
+UIKit lifecycle was preserved:
+makeUIView unchanged
+updateUIView unchanged
+makeCoordinator unchanged
 
-The unwanted project-file removal is:
+Coordinator behaviour was preserved.
 
-File.txt PBXFileReference removed.
-File.txt group child entry removed.
+MainScreen construction sites remained unchanged.
 
-I did not modify any .txt file contents. codex.txt already appears modified in the working tree, but I did not touch it for this phase.
-
-9. Preservation confirmation
-
-MainScreen.PreviewedFile was not moved.
-presentedPreviewFile was not moved.
-The fullScreenCover construction remains in Main_Screen.swift.
-Preview logic and gestures were moved intact.
 MainScreen state ownership was not changed.
-MainScreen.body was not edited.
+
+Editor layout, geometry, bindings, focus ownership, and presentation were not changed.
+
+Text selection, cursor handling, paste handling, and keyboard-related logic were moved intact.
+
+No .txt files were modified by this phase. ESP32BLE/codex.txt appears modified in the working tree, but I did not read or write it.
