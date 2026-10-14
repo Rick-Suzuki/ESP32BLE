@@ -1,287 +1,156 @@
-ESP-005 Phase 9 Final Git Audit
+ESP32BLE Home Button Legacy Filename Probe
 
-1. Actual branch and HEAD
+1. Exact Home button action location
 
-Branch:
-DEVELOPMENT
+Top-left toolbar Home button:
+ESP32BLE/Scrns/Main_Screen/Toolbars/Main_TopToolbar.swift
+lines 84-89
 
-HEAD:
-b59c42d
+Action:
+ButtonClickFeedback.playIfEnabled()
+openHomeDocument()
 
-Expected branch and HEAD match.
-
-2. Complete working-tree status
-
-Modified tracked files:
-ESP32BLE.xcodeproj/project.pbxproj
-ESP32BLE/Scrns/ContentView.swift
+The closure is supplied from MainScreen:
 ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
-ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
-ESP32BLE/VERSIONS.txt
-ESP32BLE/codex.txt
-ESP32BLE/console m2.txt
+line 948
 
-Untracked files:
-ESP32BLE/Scrns/Main_Screen/Main_ModePersistence.swift
+openHomeDocument:
+openHomeDocumentFromMainScreenControl
 
-Deleted/renamed files:
-None reported.
+Implementation:
+ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
+lines 2620-2625
 
-3. Diff summary
+Current implementation:
+• If mainGridButtonMode == .speechActive, it speaks "home".
+• The actual document selection line is commented out:
+// let selectedHomeDocument = selectDocumentNamedFromGrid("home.txt")
 
-git diff --stat reports:
+So the top-left Home button currently does not load a Home document at all.
 
-ESP32BLE.xcodeproj/project.pbxproj: 4 insertions
-ESP32BLE/Scrns/ContentView.swift: 3 changed lines
-ESP32BLE/Scrns/Main_Screen/Main_Screen.swift: 143 changed lines
-ESP32BLE/Scrns/Set_Screen/Set_Screen.swift: 8 changed lines
-ESP32BLE/VERSIONS.txt: 4 insertions
-ESP32BLE/codex.txt: report text changed
-ESP32BLE/console m2.txt: console-log text changed
+2. Relevant home.txt references
 
-Total tracked diff:
-191 insertions, 386 deletions
+ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift
+line 653
+Function: targetDocumentNameForSendText(_:)
+Purpose: A grid button/action token of "home" resolves to "home.txt".
 
-Note:
-Main_ModePersistence.swift is untracked, so it is not included in git diff --stat.
+ESP32BLE/Scrns/Main_Screen/Speech Recognition/SR_Support.swift
+line 26
+Function: applyRecognizedSpeech(_:)
+Purpose: Speech command "go home" calls selectDocumentNamedFromGrid("home.txt").
 
-4. Staged changes
+ESP32BLE/Scrns/Main_Screen/Speech Recognition/SR_Support.swift
+line 28
+Function: applyRecognizedSpeech(_:)
+Purpose: Error message says "Couldn't find home.txt."
 
-No staged changes.
+ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
+line 2624
+Function: openHomeDocumentFromMainScreenControl()
+Purpose: Commented-out legacy Home navigation line references home.txt.
 
-git diff --cached produced no output.
+3. Relevant home.screen references
 
-5. git diff --check result
+No literal "home.screen" references were found in Swift source.
 
-git diff --check produced no output.
+The standard .screen mechanism exists generically:
+ESP32BLE/Scrns/ScreenDocument.swift
+line 3: screenDocumentFileExtension = "screen"
+line 19: screenDocumentFileName(forBaseName:)
+line 32: preferredScreenDocumentURLs(from:)
 
-No whitespace/conflict-marker problems were reported for tracked diffs.
+4. How Home document resolution works
 
-6. Main_ModePersistence extraction audit
+ContentView document selection:
+ESP32BLE/Scrns/ContentView.swift
+lines 2698-2727
+Function: selectDocumentNamedFromGrid(_:)
 
-File present:
-ESP32BLE/Scrns/Main_Screen/Main_ModePersistence.swift
+Flow:
+• canonicalDocumentFileName(from:) preserves names ending in .screen or .txt.
+• Names without an extension default to .txt.
+• It first searches documentFiles for an exact filename.
+• If the requested filename ends in .txt and no exact match is found, it falls back to a .screen file with the same base name.
+• It then calls selectDocument(fileURL, recordHistory: true).
 
-Declarations present:
-private enum MainScreenPersistedModeFiles
-extension MainScreen
+Important detail:
+documentFiles appears to be the preferred screen document list, so selectDocumentNamedFromGrid("home.txt") can still resolve to home.screen through the legacy fallback when home.screen exists.
 
-Moved methods present:
-cycleMainGridButtonMode()
-advanceDisplayMode()
-restorePersistedMainScreenModes()
-savePersistedDisplayMode()
-savePersistedMainGridButtonMode()
-readPersistedString(from:)
-writePersistedString(_:to:)
-persistedModeValues(from:)
-persistedModeFileURL(named:)
+5. Confirmed cause
 
-Original declarations removed from Main_Screen.swift:
-Confirmed. The persistence enum and method definitions no longer appear in Main_Screen.swift.
+There are two related issues:
 
-Duplicate declarations:
-None found. Definitions appear only in Main_ModePersistence.swift.
+First, the Main Screen top-left Home button does not currently open any document because its selection call is commented out.
 
-Call sites remain in Main_Screen.swift:
-restorePersistedMainScreenModes()
-advanceDisplayMode()
-cycleMainGridButtonMode()
+Second, the remaining active Home command paths still use the legacy filename home.txt:
+• grid/send-text token "home"
+• speech command "go home"
 
-State ownership:
-No state variables were duplicated or moved. displayMode, mainGridButtonMode, selectedDocumentName, and speech-related state remain owned by MainScreen.
+Those legacy references rely on fallback logic to reach home.screen. That is fragile and produces legacy error text.
 
-Access control:
-Minimal and expected:
-restorePersistedMainScreenModes() is internal so Main_Screen.swift can call it.
-Helper methods remain private.
-MainScreenPersistedModeFiles remains private.
-No public access was introduced.
+6. Other navigation paths affected
 
-Persistence behavior:
-The extracted implementation still uses the same filenames:
-.main_screen_view_mode.cfg
-.main_screen_button_action_mode.cfg
+Affected:
+• Top-left toolbar Home button: currently no document navigation.
+• External keyboard shortcut "h": Main_Screen.swift lines 2518-2520 calls openHomeDocumentFromMainScreenControl(), so it has the same issue as the toolbar Home button.
+• Grid action/send text "home": resolves to home.txt in Main_ButtonBehavior.swift.
+• Speech command "go home": explicitly opens home.txt in SR_Support.swift.
 
-It still uses document-directory storage, selectedDocumentName keyed values, sorted key writing, UTF-8 text, try? handling, and legacy single-value fallback.
+Not affected:
+• Explicit "home.screen" action text should already be accepted by targetDocumentNameForSendText(_:).
+• Speech "open home.screen" should pass through targetDocumentNameForSpeechOpenCommand(_:) and select the .screen file if present.
+• Generic .screen document creation/default mechanisms already use .screen.
 
-Xcode project registration:
-Confirmed in ESP32BLE.xcodeproj/project.pbxproj:
-PBXBuildFile entry added.
-PBXFileReference entry added.
-Main_Screen group membership added.
-Sources build phase membership added.
+7. Smallest safe correction
 
-No File.txt references were shown in the project diff.
+Recommended smallest correction:
 
-7. Settings persistence fix audit
+A. In Main_Screen.swift, make openHomeDocumentFromMainScreenControl() call:
+selectDocumentNamedFromGrid("home.screen")
 
-File:
-ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
+Preserve the existing speechActive speak behavior.
 
-Function:
-saveAndReturnToMain(using:)
-
-Current diff:
-
-if let text {
-documentEditorText = text
-
-if loadedDocumentName == selectedDocumentName {
-
-    saveSelectedDocumentAndReload(text)
-
-}
-
-} else {
-if loadedDocumentName == selectedDocumentName {
-
-    saveSelectedDocumentAndReload(documentEditorText)
-
-}
-
-}
-returnToMain()
-
-Verified behavior:
-When loadedDocumentName == selectedDocumentName, save-on-return still happens.
-When loadedDocumentName differs from selectedDocumentName, saveSelectedDocumentAndReload is skipped.
-returnToMain() still runs unconditionally.
-Optional text argument is preserved.
-documentEditorText assignment for explicit text is preserved.
-No Settings filters, file selection, loading logic, or text-file editing behavior changed.
-
-8. ContentView diff assessment
-
-Remaining diff in ContentView.swift:
-
-Removed:
-import CryptoKit
-
-Changed restoreFunctionKeySlotLines closure from:
-persistSlotLines(slotLines)
+B. In Main_ButtonBehavior.swift, change the special "home" token mapping from:
+return "home.txt"
 
 to:
-return persistSlotLines(slotLines)
+return "home.screen"
 
-Assessment:
-No persistence diagnostics remain.
-CryptoKit removal is cleanup from probe-only SHA-256 diagnostic helpers.
-The explicit return is behavior-equivalent for the Bool-returning closure.
-No screen save/load logic, document selection, button persistence, or UI behavior is otherwise changed.
+C. In SR_Support.swift, change the "go home" speech path from:
+selectDocumentNamedFromGrid("home.txt")
 
-This file is not part of the Main_ModePersistence extraction or the Settings fix itself, but the remaining diff is cleanup/no-op related to removed diagnostics.
+to:
+selectDocumentNamedFromGrid("home.screen")
 
-9. Main_Screen diff assessment
+and update the matching error message to home.screen.
 
-Main_Screen.swift changes include:
+This preserves legacy .txt fallback elsewhere because selectDocumentNamedFromGrid and canonicalDocumentFileName do not need to change.
 
-Removed:
-private enum MainScreenPersistedModeFiles
+8. Exact files that would require modification
 
-Removed:
-mode persistence methods now moved to Main_ModePersistence.swift.
-
-Remaining non-extraction edits:
-Several combined guard statements were split into separate guards around popup operations and drag handling. These are behavior-equivalent and appear to be residue from diagnostic insertion/removal, not functional changes.
-
-No remaining [SCREEN-PERSIST-PROBE] diagnostics.
-No screen UI changes found in the diff.
-No BLE/network logic changes found in the diff.
-No button rendering or editor layout changes found in the diff.
-Button/grid persistence call sites remain intact.
-
-10. Xcode project diff assessment
-
-project.pbxproj diff is limited to registering Main_ModePersistence.swift:
-
-PBXBuildFile
-PBXFileReference
-Main_Screen group membership
-Sources build phase membership
-
-No build settings, signing, deployment target, entitlements, schemes, or File.txt references were changed in the visible diff.
-
-11. Temporary diagnostic verification
-
-Swift source search results:
-[SCREEN-PERSIST-PROBE]: zero occurrences
-screenPersistProbe: zero occurrences
-
-Note:
-ESP32BLE/console m2.txt still contains historical console output with [SCREEN-PERSIST-PROBE] text. That is a user-maintained .txt log file, not Swift source, and was not touched.
-
-12. Extracted module verification
-
-Present:
-
-ESP32BLE/Scrns/Main_Screen/Main_ButtonLabelView.swift
-ESP32BLE/Scrns/Main_Screen/Main_FilePreviewOverlay.swift
-ESP32BLE/Scrns/Main_Screen/Main_GridActionMenuViews.swift
-ESP32BLE/Scrns/Main_Screen/Main_SmartEditorTextInputs.swift
-ESP32BLE/Scrns/Main_Screen/Main_EditorGeometrySupport.swift
-ESP32BLE/Scrns/Main_Screen/Main_EditorShellViews.swift
-ESP32BLE/Scrns/Main_Screen/Main_SmartScriptEditingModel.swift
-ESP32BLE/Scrns/Main_Screen/Main_ModePersistence.swift
-ESP32BLE/Scrns/MacConnectionManager.swift
-ESP32BLE/Scrns/Set_Screen/Set_ArchiveDocuments.swift
-
-Git status:
-Only Main_ModePersistence.swift is currently untracked among those checked extraction files.
-
-13. Unexpected or unrelated changes
-
-User-maintained text files are modified:
-ESP32BLE/VERSIONS.txt
-ESP32BLE/codex.txt
-ESP32BLE/console m2.txt
-
-These should not be automatically included unless you explicitly want those local notes/logs committed.
-
-ContentView.swift has a small cleanup/no-op diff. It is not harmful and build-tested historically, but it is not essential to the Settings fix or mode extraction.
-
-Main_Screen.swift has behavior-equivalent guard splitting in addition to the mode extraction. This is not expected to change behavior, but it is not strictly part of moving Main_ModePersistence.
-
-14. Recommended commit files
-
-A. Files required for ESP-005:
-ESP32BLE.xcodeproj/project.pbxproj
 ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
-ESP32BLE/Scrns/Main_Screen/Main_ModePersistence.swift
+Function: openHomeDocumentFromMainScreenControl()
 
-B. Files required for the Settings fix:
-ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
+ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift
+Function: targetDocumentNameForSendText(_:)
 
-C. Files that should NOT be included automatically:
-ESP32BLE/VERSIONS.txt
-ESP32BLE/codex.txt
-ESP32BLE/console m2.txt
+ESP32BLE/Scrns/Main_Screen/Speech Recognition/SR_Support.swift
+Function: applyRecognizedSpeech(_:)
 
-D. Files requiring user review:
-ESP32BLE/Scrns/ContentView.swift
+9. Compatibility concerns
 
-Reason:
-The remaining ContentView diff is cleanup/no-op after diagnostic removal, but not essential to the mode extraction or Settings overwrite fix.
+Keep the generic legacy .txt support intact. Do not change:
+legacyScreenDocumentFileExtension
+canonicalDocumentFileName(from:)
+selectDocumentNamedFromGrid(_:)
+documentURL(forDocumentName:)
+preferredScreenDocumentURLs(from:)
 
-15. Suggested commit message
+Changing only the Home literals to home.screen should not remove compatibility for older explicit .txt navigation commands.
 
-ESP-005 modularize mode persistence and fix Settings return save
+10. Confirmation
 
-16. Remaining risks
-
-Low.
-
-The latest reported build after Phase 8 succeeded:
-Build succeeded.
-Duration: 26.177 seconds.
-
-No build was run during this Phase 9 audit, per instruction.
-
-The only review item is whether to include the small ContentView cleanup/no-op diff in the same commit or handle it separately.
-
-17. Confirmation
-
-No files were modified during this audit.
-No Git staging or history changes were made.
-No build was run.
-No .txt files were touched.
+No files were modified.
+No Git state was changed.
+No staging, commit, checkout, reset, restore, tag, or branch operation was performed.

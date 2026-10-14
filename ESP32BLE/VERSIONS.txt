@@ -1,3 +1,7 @@
+261014 Wed 1130
+home btn fixed
+V62.51
+
 
 261014 Wed 1116
 ESP-005 complete: mode persistence extraction and Settings save fix

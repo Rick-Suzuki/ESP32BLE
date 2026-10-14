@@ -2621,7 +2621,7 @@ Tapping a row inserts the key code at the cursor.
         if mainGridButtonMode == .speechActive {
             speakMainGridText("home")
         }
-   //     let selectedHomeDocument = selectDocumentNamedFromGrid("home.txt")
+        _ = selectDocumentNamedFromGrid("home.screen")
     }
 
     private func goBackToPreviousDocumentFromMainScreenControl() {

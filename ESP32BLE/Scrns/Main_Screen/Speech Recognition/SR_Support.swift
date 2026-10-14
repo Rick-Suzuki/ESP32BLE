@@ -23,9 +23,9 @@ extension MainScreen {
         if recognizedText == canonicalSpeechText(from: "go home") {
             unmatchedSpeechText = nil
 
-            guard selectDocumentNamedFromGrid("home.txt") else {
+            guard selectDocumentNamedFromGrid("home.screen") else {
                 alertTitle = "File Not Found"
-                renameAlertMessage = "Couldn't find home.txt."
+                renameAlertMessage = "Couldn't find home.screen."
                 return
             }
 

@@ -650,7 +650,7 @@ extension MainScreen {
         }
 
         if loweredSendText == "home" {
-            return "home.txt"
+            return "home.screen"
         }
 
         if loweredSendText.hasSuffix(".\(legacyScreenDocumentFileExtension)") {
