@@ -1,3 +1,9 @@
+
+261014 Wed 1116
+ESP-005 complete: mode persistence extraction and Settings save fix
+V62.50
+
+
 261013 Tue 2037
 PHASE 3D-6: SMART SCRIPT EDITING MODEL EXTRACTION
 V62.49

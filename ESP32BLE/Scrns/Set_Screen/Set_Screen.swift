@@ -1333,9 +1333,13 @@ struct SettingsScreen: View {
     private func saveAndReturnToMain(using text: String? = nil) {
         if let text {
             documentEditorText = text
-            saveSelectedDocumentAndReload(text)
+            if loadedDocumentName == selectedDocumentName {
+                saveSelectedDocumentAndReload(text)
+            }
         } else {
-            saveSelectedDocumentAndReload(documentEditorText)
+            if loadedDocumentName == selectedDocumentName {
+                saveSelectedDocumentAndReload(documentEditorText)
+            }
         }
         returnToMain()
     }

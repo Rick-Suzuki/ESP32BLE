@@ -1,158 +1,287 @@
-ESP32BLE — ESP-005 PHASE 3D-6 COMPLETE
+ESP-005 Phase 9 Final Git Audit
 
-1. Declaration moved
+1. Actual branch and HEAD
 
-Moved:
-SmartScriptEditingModel
+Branch:
+DEVELOPMENT
 
-From:
+HEAD:
+b59c42d
+
+Expected branch and HEAD match.
+
+2. Complete working-tree status
+
+Modified tracked files:
+ESP32BLE.xcodeproj/project.pbxproj
+ESP32BLE/Scrns/ContentView.swift
 ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
+ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
+ESP32BLE/VERSIONS.txt
+ESP32BLE/codex.txt
+ESP32BLE/console m2.txt
 
-To:
-ESP32BLE/Scrns/Main_Screen/Main_SmartScriptEditingModel.swift
+Untracked files:
+ESP32BLE/Scrns/Main_Screen/Main_ModePersistence.swift
 
+Deleted/renamed files:
+None reported.
 
-2. Original line range
+3. Diff summary
 
-Original source range:
-Main_Screen.swift:119-516
+git diff --stat reports:
 
-Original declaration:
-private struct SmartScriptEditingModel
+ESP32BLE.xcodeproj/project.pbxproj: 4 insertions
+ESP32BLE/Scrns/ContentView.swift: 3 changed lines
+ESP32BLE/Scrns/Main_Screen/Main_Screen.swift: 143 changed lines
+ESP32BLE/Scrns/Set_Screen/Set_Screen.swift: 8 changed lines
+ESP32BLE/VERSIONS.txt: 4 insertions
+ESP32BLE/codex.txt: report text changed
+ESP32BLE/console m2.txt: console-log text changed
 
+Total tracked diff:
+191 insertions, 386 deletions
 
-3. Destination line range
+Note:
+Main_ModePersistence.swift is untracked, so it is not included in git diff --stat.
 
-New destination range:
-Main_SmartScriptEditingModel.swift:3-400
+4. Staged changes
 
-New declaration:
-struct SmartScriptEditingModel
+No staged changes.
 
+git diff --cached produced no output.
 
-4. Line counts
+5. git diff --check result
 
-Original Main_Screen.swift line count:
-5,863
+git diff --check produced no output.
 
-New Main_Screen.swift line count:
-5,464
+No whitespace/conflict-marker problems were reported for tracked diffs.
 
-New Main_SmartScriptEditingModel.swift line count:
-400
+6. Main_ModePersistence extraction audit
 
+File present:
+ESP32BLE/Scrns/Main_Screen/Main_ModePersistence.swift
 
-5. Access-control changes
+Declarations present:
+private enum MainScreenPersistedModeFiles
+extension MainScreen
 
-Changed only the moved top-level declaration:
+Moved methods present:
+cycleMainGridButtonMode()
+advanceDisplayMode()
+restorePersistedMainScreenModes()
+savePersistedDisplayMode()
+savePersistedMainGridButtonMode()
+readPersistedString(from:)
+writePersistedString(_:to:)
+persistedModeValues(from:)
+persistedModeFileURL(named:)
 
-private struct SmartScriptEditingModel
+Original declarations removed from Main_Screen.swift:
+Confirmed. The persistence enum and method definitions no longer appear in Main_Screen.swift.
+
+Duplicate declarations:
+None found. Definitions appear only in Main_ModePersistence.swift.
+
+Call sites remain in Main_Screen.swift:
+restorePersistedMainScreenModes()
+advanceDisplayMode()
+cycleMainGridButtonMode()
+
+State ownership:
+No state variables were duplicated or moved. displayMode, mainGridButtonMode, selectedDocumentName, and speech-related state remain owned by MainScreen.
+
+Access control:
+Minimal and expected:
+restorePersistedMainScreenModes() is internal so Main_Screen.swift can call it.
+Helper methods remain private.
+MainScreenPersistedModeFiles remains private.
+No public access was introduced.
+
+Persistence behavior:
+The extracted implementation still uses the same filenames:
+.main_screen_view_mode.cfg
+.main_screen_button_action_mode.cfg
+
+It still uses document-directory storage, selectedDocumentName keyed values, sorted key writing, UTF-8 text, try? handling, and legacy single-value fallback.
+
+Xcode project registration:
+Confirmed in ESP32BLE.xcodeproj/project.pbxproj:
+PBXBuildFile entry added.
+PBXFileReference entry added.
+Main_Screen group membership added.
+Sources build phase membership added.
+
+No File.txt references were shown in the project diff.
+
+7. Settings persistence fix audit
+
+File:
+ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
+
+Function:
+saveAndReturnToMain(using:)
+
+Current diff:
+
+if let text {
+documentEditorText = text
+
+if loadedDocumentName == selectedDocumentName {
+
+    saveSelectedDocumentAndReload(text)
+
+}
+
+} else {
+if loadedDocumentName == selectedDocumentName {
+
+    saveSelectedDocumentAndReload(documentEditorText)
+
+}
+
+}
+returnToMain()
+
+Verified behavior:
+When loadedDocumentName == selectedDocumentName, save-on-return still happens.
+When loadedDocumentName differs from selectedDocumentName, saveSelectedDocumentAndReload is skipped.
+returnToMain() still runs unconditionally.
+Optional text argument is preserved.
+documentEditorText assignment for explicit text is preserved.
+No Settings filters, file selection, loading logic, or text-file editing behavior changed.
+
+8. ContentView diff assessment
+
+Remaining diff in ContentView.swift:
+
+Removed:
+import CryptoKit
+
+Changed restoreFunctionKeySlotLines closure from:
+persistSlotLines(slotLines)
 
 to:
+return persistSlotLines(slotLines)
 
-struct SmartScriptEditingModel
+Assessment:
+No persistence diagnostics remain.
+CryptoKit removal is cleanup from probe-only SHA-256 diagnostic helpers.
+The explicit return is behavior-equivalent for the Bool-returning closure.
+No screen save/load logic, document selection, button persistence, or UI behavior is otherwise changed.
 
-No other access-control changes were made.
+This file is not part of the Main_ModePersistence extraction or the Settings fix itself, but the remaining diff is cleanup/no-op related to removed diagnostics.
 
-Nested declarations stayed private:
-private struct EditingState
-private enum EditTransactionKind
+9. Main_Screen diff assessment
 
-Private helpers remained private.
+Main_Screen.swift changes include:
 
+Removed:
+private enum MainScreenPersistedModeFiles
 
-6. Imports added
+Removed:
+mode persistence methods now moved to Main_ModePersistence.swift.
 
-Main_SmartScriptEditingModel.swift imports:
-Foundation
+Remaining non-extraction edits:
+Several combined guard statements were split into separate guards around popup operations and drag handling. These are behavior-equivalent and appear to be residue from diagnostic insertion/removal, not functional changes.
 
-SwiftUI was not added.
+No remaining [SCREEN-PERSIST-PROBE] diagnostics.
+No screen UI changes found in the diff.
+No BLE/network logic changes found in the diff.
+No button rendering or editor layout changes found in the diff.
+Button/grid persistence call sites remain intact.
 
+10. Xcode project diff assessment
 
-7. Dependency verification
+project.pbxproj diff is limited to registering Main_ModePersistence.swift:
 
-Verified the model depends only on Foundation/Swift standard library symbols:
-NSRange
-NSNotFound
-NSString bridging
-String
-Character
-Array
-Optional
+PBXBuildFile
+PBXFileReference
+Main_Screen group membership
+Sources build phase membership
 
-No MainScreen state, MainScreen methods, command-processing helpers, editor views, BLE output, or Mac output dependencies were moved into the model.
+No build settings, signing, deployment target, entitlements, schemes, or File.txt references were changed in the visible diff.
 
+11. Temporary diagnostic verification
 
-8. Preservation confirmations
+Swift source search results:
+[SCREEN-PERSIST-PROBE]: zero occurrences
+screenPersistProbe: zero occurrences
 
-Nested declarations moved intact.
+Note:
+ESP32BLE/console m2.txt still contains historical console output with [SCREEN-PERSIST-PROBE] text. That is a user-maintained .txt log file, not Swift source, and was not touched.
 
-MainScreen @State ownership was unchanged:
-@State private var smartScriptEditingModel = SmartScriptEditingModel()
+12. Extracted module verification
 
-Existing call sites were untouched.
+Present:
 
-Undo/redo algorithms were unchanged.
+ESP32BLE/Scrns/Main_Screen/Main_ButtonLabelView.swift
+ESP32BLE/Scrns/Main_Screen/Main_FilePreviewOverlay.swift
+ESP32BLE/Scrns/Main_Screen/Main_GridActionMenuViews.swift
+ESP32BLE/Scrns/Main_Screen/Main_SmartEditorTextInputs.swift
+ESP32BLE/Scrns/Main_Screen/Main_EditorGeometrySupport.swift
+ESP32BLE/Scrns/Main_Screen/Main_EditorShellViews.swift
+ESP32BLE/Scrns/Main_Screen/Main_SmartScriptEditingModel.swift
+ESP32BLE/Scrns/Main_Screen/Main_ModePersistence.swift
+ESP32BLE/Scrns/MacConnectionManager.swift
+ESP32BLE/Scrns/Set_Screen/Set_ArchiveDocuments.swift
 
-Cursor and selection algorithms were unchanged.
+Git status:
+Only Main_ModePersistence.swift is currently untracked among those checked extraction files.
 
-Command processing was untouched.
+13. Unexpected or unrelated changes
 
-ESP-001 routing was untouched.
+User-maintained text files are modified:
+ESP32BLE/VERSIONS.txt
+ESP32BLE/codex.txt
+ESP32BLE/console m2.txt
 
-No editor geometry, UI layout, BLE/Mac output, popup, Move/Resize, or document behavior was changed.
+These should not be automatically included unless you explicitly want those local notes/logs committed.
 
+ContentView.swift has a small cleanup/no-op diff. It is not harmful and build-tested historically, but it is not essential to the Settings fix or mode extraction.
 
-9. Xcode project registration
+Main_Screen.swift has behavior-equivalent guard splitting in addition to the mode extraction. This is not expected to change behavior, but it is not strictly part of moving Main_ModePersistence.
 
-Registered through Xcode’s project-aware file writer, not by hand-editing the project file.
+14. Recommended commit files
 
-Project membership entries for Main_SmartScriptEditingModel.swift were added at:
-
-PBXBuildFile:
-ESP32BLE.xcodeproj/project.pbxproj:20
-
-PBXFileReference:
-ESP32BLE.xcodeproj/project.pbxproj:80
-
-Main_Screen group membership:
-ESP32BLE.xcodeproj/project.pbxproj:285
-
-Sources build phase:
-ESP32BLE.xcodeproj/project.pbxproj:441
-
-
-10. Build result
-
-Build succeeded.
-
-Build duration:
-26.263 seconds
-
-Xcode live diagnostics for Main_SmartScriptEditingModel.swift:
-No issues found.
-
-New compiler warnings:
-None reported by the build tool output.
-
-
-11. Complete changed-file list
-
-Authorised changes:
+A. Files required for ESP-005:
 ESP32BLE.xcodeproj/project.pbxproj
 ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
-ESP32BLE/Scrns/Main_Screen/Main_SmartScriptEditingModel.swift
+ESP32BLE/Scrns/Main_Screen/Main_ModePersistence.swift
 
-Unexpected working-tree item:
+B. Files required for the Settings fix:
+ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
+
+C. Files that should NOT be included automatically:
+ESP32BLE/VERSIONS.txt
 ESP32BLE/codex.txt
+ESP32BLE/console m2.txt
 
-I did not intentionally edit any .txt file. After the Xcode file creation/source move, git status showed codex.txt modified, and its diff contains the previous 3D-6 probe report. I left it untouched and did not revert it.
+D. Files requiring user review:
+ESP32BLE/Scrns/ContentView.swift
 
+Reason:
+The remaining ContentView diff is cleanup/no-op after diagnostic removal, but not essential to the mode extraction or Settings overwrite fix.
 
-12. Notes
+15. Suggested commit message
 
-No Git commit was created.
+ESP-005 modularize mode persistence and fix Settings return save
 
-No backup was created.
+16. Remaining risks
 
-No unrelated Swift files were modified.
+Low.
+
+The latest reported build after Phase 8 succeeded:
+Build succeeded.
+Duration: 26.177 seconds.
+
+No build was run during this Phase 9 audit, per instruction.
+
+The only review item is whether to include the small ContentView cleanup/no-op diff in the same commit or handle it separately.
+
+17. Confirmation
+
+No files were modified during this audit.
+No Git staging or history changes were made.
+No build was run.
+No .txt files were touched.

@@ -1,149 +1,90 @@
 Update the Info.plist: Support for all orientations will soon be required.
-									API MISUSE: <CBCentralManager: 0x10edac640> can only accept this command while in the powered on state
+									261014_1040_107 🐞ContentView.swift:loadFunctionKeys(from:):718 [SCREEN-PERSIST-PROBE] platform=iPad loadFunctionKeys entry selectedBefore=msfs-home.screen file=msfs-home.screen ext=screen urlID=0ECABB26C6A2
+									261014_1040_107 🐞ContentView.swift:loadFunctionKeys(from:):725 [SCREEN-PERSIST-PROBE] loadFunctionKeys readSuccess file=msfs-home.screen urlID=0ECABB26C6A2 slots=25 fingerprint=D77DB681C33A diskDigest=AB4A9853A351
+									261014_1040_108 🐞ContentView.swift:loadFunctionKeys(from:):733 [SCREEN-PERSIST-PROBE] loadFunctionKeys applied selectedAfter=msfs-home.screen file=msfs-home.screen urlID=0ECABB26C6A2 slots=25 fingerprint=D77DB681C33A diskDigest=AB4A9853A351
+									API MISUSE: <CBCentralManager: 0x122df88c0> can only accept this command while in the powered on state
+									261014_1040_112 🐞Set_Screen.swift:configuredSettingsScreen:426 [SCREEN-PERSIST-PROBE] event=settingsTaskLoad selected=msfs-home.screen loaded= textDigest=E3B0C44298FC
+									261014_1040_112 🐞Set_Screen.swift:loadSelectedDocumentText():1282 [SCREEN-PERSIST-PROBE] event=settingsLoadStart selected=msfs-home.screen loadedBefore= file=nil textDigest=E3B0C44298FC diskDigest=nil
+									261014_1040_112 🐞Set_Screen.swift:loadSelectedDocumentText():1286 [SCREEN-PERSIST-PROBE] event=settingsLoadComplete selected=msfs-home.screen loadedAfter= file=nil textDigest=E3B0C44298FC savedDigest=E3B0C44298FC textMatchesDisk=false
+									261014_1040_196 🐞Main_Screen.swift:reloadSelectedDocumentIfAvailable():5200 [SCREEN-PERSIST-PROBE] reloadSelectedDocumentIfAvailable entry selected=msfs-home.screen
+									261014_1040_196 🐞Main_Screen.swift:reloadSelectedDocumentIfAvailable():5202 [SCREEN-PERSIST-PROBE] reloadSelectedDocumentIfAvailable noURL selected=msfs-home.screen
+									261014_1040_396 🐞Set_Screen.swift:configuredSettingsScreen:433 [SCREEN-PERSIST-PROBE] event=settingsDocumentFilesOnChange selected=msfs-home.screen loaded= textDigest=E3B0C44298FC
+									261014_1040_397 🐞Set_Screen.swift:loadSelectedDocumentText():1293 [SCREEN-PERSIST-PROBE] event=settingsLoadStart selected=msfs-home.screen loadedBefore= file=Brave.txt urlID=88D84E80C51A textDigest=E3B0C44298FC diskDigest=676ACD9C0D28
+									261014_1040_399 🐞Set_Screen.swift:loadSelectedDocumentText():1299 [SCREEN-PERSIST-PROBE] event=settingsLoadComplete selected=msfs-home.screen loadedAfter=Brave.txt file=Brave.txt urlID=88D84E80C51A textDigest=676ACD9C0D28 savedDigest=676ACD9C0D28 textMatchesDisk=true
+									261014_1040_457 🐞Set_Screen.swift:configuredSettingsScreen:449 [SCREEN-PERSIST-PROBE] event=settingsDocumentEditorTextOnChange selected=msfs-home.screen loaded=Brave.txt textDigest=676ACD9C0D28
+									261014_1040_459 🐞Set_Screen.swift:saveDocumentText(_:to:):1370 [SCREEN-PERSIST-PROBE] event=settingsAutoSaveAttempt selected=msfs-home.screen loaded=Brave.txt file=Brave.txt urlID=88D84E80C51A textDigest=676ACD9C0D28 currentDiskDigest=676ACD9C0D28 textMatchesDisk=true
+									261014_1040_461 🐞Set_Screen.swift:saveDocumentText(_:to:):1374 [SCREEN-PERSIST-PROBE] event=settingsAutoSaveSuccess file=Brave.txt urlID=88D84E80C51A textDigest=676ACD9C0D28 readbackDigest=676ACD9C0D28
 									non-launching port is incompatible with service identifier "com.apple.PointerUI.pointeruid.default-service"
 									AX Safe category class 'SFBarButtonGroupContainerAccessibility' was not found!
-									UITextView 0x10c38d800 is switching to TextKit 1 compatibility mode because its layoutManager was accessed. Break on void _UITextViewEnablingCompatibilityMode(UITextView *__strong, BOOL) to debug.
-									<0x10ed2c8c0> Gesture: System gesture gate timed out.
-									UITextView 0x125316400 is switching to TextKit 1 compatibility mode because its layoutManager was accessed. Break on void _UITextViewEnablingCompatibilityMode(UITextView *__strong, BOOL) to debug.
-									Reading from public effective user settings.
-									UIKeyboardLayoutStar implements focusItemsInRect: - caching for linear focus movement is limited as long as this view is on screen.
-									isKeyboardMinorEdgeWidth may only be set for UIKBDynamicRenderFactory, changes not saved
-									keyboardVerticalSizeClass may only be set for UIKBDynamicRenderFactory, changes not saved
-									keyboardHorizontalSizeClass may only be set for UIKBDynamicRenderFactory, changes not saved
-									currentHandBias may only be set for UIKBDynamicRenderFactory, changes not saved
-									currentHeight may only be set for UIKBDynamicRenderFactory, changes not saved
-									isKeyboardMinorEdgeWidth may only be set for UIKBDynamicRenderFactory, changes not saved
-									keyboardVerticalSizeClass may only be set for UIKBDynamicRenderFactory, changes not saved
-									keyboardHorizontalSizeClass may only be set for UIKBDynamicRenderFactory, changes not saved
-									currentHandBias may only be set for UIKBDynamicRenderFactory, changes not saved
-									currentHeight may only be set for UIKBDynamicRenderFactory, changes not saved
-									isKeyboardMinorEdgeWidth may only be set for UIKBDynamicRenderFactory, changes not saved
-									keyboardVerticalSizeClass may only be set for UIKBDynamicRenderFactory, changes not saved
-									keyboardHorizontalSizeClass may only be set for UIKBDynamicRenderFactory, changes not saved
-									currentHandBias may only be set for UIKBDynamicRenderFactory, changes not saved
-									currentHeight may only be set for UIKBDynamicRenderFactory, changes not saved
-									<0x10ed2c8c0> Gesture: System gesture gate timed out.
-									Unable to simultaneously satisfy constraints.
-									Probably at least one of the constraints in the following list is one you don't want.
-									Try this:
-										(1) look at each constraint and try to figure out which you don't expect;
-(2) find the code that added the unwanted constraint or constraints and fix it.
-(Note: If you're seeing NSAutoresizingMaskLayoutConstraints that you don't understand, refer to the documentation for the UIView property translatesAutoresizingMaskIntoConstraints)
-(
-	"<NSAutoresizingMaskLayoutConstraint:0x1170799a0 h=--& v=--& TUIPredictionViewCell:0x10ed27c00.width == 0   (active)>",
-	"<NSLayoutConstraint:0x10edb32f0 TUICandidateGradientContentLabel:0x10ef5b200.trailing == TUIPredictionViewCell:0x10ed27c00.trailing - 6   (active)>",
-	"<NSLayoutConstraint:0x10edb3200 H:|-(6)-[TUICandidateGradientContentLabel:0x10ef5b200]   (active, names: '|':TUIPredictionViewCell:0x10ed27c00 )>"
-)
-
-Will attempt to recover by breaking constraint
-<NSLayoutConstraint:0x10edb32f0 TUICandidateGradientContentLabel:0x10ef5b200.trailing == TUIPredictionViewCell:0x10ed27c00.trailing - 6   (active)>
-
-Make a symbolic breakpoint at UIViewAlertForUnsatisfiableConstraints to catch this in the debugger.
-																				The methods in the UIConstraintBasedLayoutDebugging category on UIView listed in <UIKitCore/UIView.h> may also be helpful.
-																				Unable to simultaneously satisfy constraints.
-																				Probably at least one of the constraints in the following list is one you don't want.
-																				Try this:
-																					(1) look at each constraint and try to figure out which you don't expect;
-(2) find the code that added the unwanted constraint or constraints and fix it.
-(Note: If you're seeing NSAutoresizingMaskLayoutConstraints that you don't understand, refer to the documentation for the UIView property translatesAutoresizingMaskIntoConstraints)
-(
-	"<NSAutoresizingMaskLayoutConstraint:0x11707a300 h=--& v=--& TUIPredictionViewCell:0x10ed27600.width == 0   (active)>",
-	"<NSLayoutConstraint:0x118d30410 H:|-(6)-[TUICandidateGradientContentLabel:0x1257e8a00]   (active, names: '|':TUIPredictionViewCell:0x10ed27600 )>",
-	"<NSLayoutConstraint:0x118d30460 TUICandidateGradientContentLabel:0x1257e8a00.trailing == TUIPredictionViewCell:0x10ed27600.trailing - 6   (active)>",
-	"<NSLayoutConstraint:0x10c3bb020 'UIScrollView-frameLayoutGuide-width' UILayoutGuide:0x1256eb9c0'UIScrollView-frameLayoutGuide'.width == TUICandidateGradientContentLabel:0x1257e8a00.width   (active)>"
-)
-
-Will attempt to recover by breaking constraint
-<NSLayoutConstraint:0x10c3bb020 'UIScrollView-frameLayoutGuide-width' UILayoutGuide:0x1256eb9c0'UIScrollView-frameLayoutGuide'.width == TUICandidateGradientContentLabel:0x1257e8a00.width   (active)>
-
-Make a symbolic breakpoint at UIViewAlertForUnsatisfiableConstraints to catch this in the debugger.
-																				The methods in the UIConstraintBasedLayoutDebugging category on UIView listed in <UIKitCore/UIView.h> may also be helpful.
-																				Unable to simultaneously satisfy constraints.
-																				Probably at least one of the constraints in the following list is one you don't want.
-																				Try this:
-																					(1) look at each constraint and try to figure out which you don't expect;
-(2) find the code that added the unwanted constraint or constraints and fix it.
-(Note: If you're seeing NSAutoresizingMaskLayoutConstraints that you don't understand, refer to the documentation for the UIView property translatesAutoresizingMaskIntoConstraints)
-(
-	"<NSAutoresizingMaskLayoutConstraint:0x11707a300 h=--& v=--& TUIPredictionViewCell:0x10ed27600.width == 0   (active)>",
-	"<NSLayoutConstraint:0x118d30410 H:|-(6)-[TUICandidateGradientContentLabel:0x1257e8a00]   (active, names: '|':TUIPredictionViewCell:0x10ed27600 )>",
-	"<NSLayoutConstraint:0x118d30460 TUICandidateGradientContentLabel:0x1257e8a00.trailing == TUIPredictionViewCell:0x10ed27600.trailing - 6   (active)>"
-)
-
-Will attempt to recover by breaking constraint
-<NSLayoutConstraint:0x118d30460 TUICandidateGradientContentLabel:0x1257e8a00.trailing == TUIPredictionViewCell:0x10ed27600.trailing - 6   (active)>
-
-Make a symbolic breakpoint at UIViewAlertForUnsatisfiableConstraints to catch this in the debugger.
-																				The methods in the UIConstraintBasedLayoutDebugging category on UIView listed in <UIKitCore/UIView.h> may also be helpful.
-																				Unable to simultaneously satisfy constraints.
-																				Probably at least one of the constraints in the following list is one you don't want.
-																				Try this:
-																					(1) look at each constraint and try to figure out which you don't expect;
-(2) find the code that added the unwanted constraint or constraints and fix it.
-(Note: If you're seeing NSAutoresizingMaskLayoutConstraints that you don't understand, refer to the documentation for the UIView property translatesAutoresizingMaskIntoConstraints)
-(
-	"<NSAutoresizingMaskLayoutConstraint:0x11707aa30 h=--& v=--& TUIPredictionViewCell:0x10ed27900.width == 0   (active)>",
-	"<NSLayoutConstraint:0x118d33bb0 H:|-(6)-[TUICandidateGradientContentLabel:0x1257e9e00]   (active, names: '|':TUIPredictionViewCell:0x10ed27900 )>",
-	"<NSLayoutConstraint:0x118d339d0 TUICandidateGradientContentLabel:0x1257e9e00.trailing == TUIPredictionViewCell:0x10ed27900.trailing - 6   (active)>",
-	"<NSLayoutConstraint:0x118d30870 'UIScrollView-frameLayoutGuide-width' UILayoutGuide:0x1257f00e0'UIScrollView-frameLayoutGuide'.width == TUICandidateGradientContentLabel:0x1257e9e00.width   (active)>"
-)
-
-Will attempt to recover by breaking constraint
-<NSLayoutConstraint:0x118d30870 'UIScrollView-frameLayoutGuide-width' UILayoutGuide:0x1257f00e0'UIScrollView-frameLayoutGuide'.width == TUICandidateGradientContentLabel:0x1257e9e00.width   (active)>
-
-Make a symbolic breakpoint at UIViewAlertForUnsatisfiableConstraints to catch this in the debugger.
-																				The methods in the UIConstraintBasedLayoutDebugging category on UIView listed in <UIKitCore/UIView.h> may also be helpful.
-																				Unable to simultaneously satisfy constraints.
-																				Probably at least one of the constraints in the following list is one you don't want.
-																				Try this:
-																					(1) look at each constraint and try to figure out which you don't expect;
-(2) find the code that added the unwanted constraint or constraints and fix it.
-(Note: If you're seeing NSAutoresizingMaskLayoutConstraints that you don't understand, refer to the documentation for the UIView property translatesAutoresizingMaskIntoConstraints)
-(
-	"<NSAutoresizingMaskLayoutConstraint:0x11707aa30 h=--& v=--& TUIPredictionViewCell:0x10ed27900.width == 0   (active)>",
-	"<NSLayoutConstraint:0x118d33bb0 H:|-(6)-[TUICandidateGradientContentLabel:0x1257e9e00]   (active, names: '|':TUIPredictionViewCell:0x10ed27900 )>",
-	"<NSLayoutConstraint:0x118d339d0 TUICandidateGradientContentLabel:0x1257e9e00.trailing == TUIPredictionViewCell:0x10ed27900.trailing - 6   (active)>"
-)
-
-Will attempt to recover by breaking constraint
-<NSLayoutConstraint:0x118d339d0 TUICandidateGradientContentLabel:0x1257e9e00.trailing == TUIPredictionViewCell:0x10ed27900.trailing - 6   (active)>
-
-Make a symbolic breakpoint at UIViewAlertForUnsatisfiableConstraints to catch this in the debugger.
-																				The methods in the UIConstraintBasedLayoutDebugging category on UIView listed in <UIKitCore/UIView.h> may also be helpful.
-																				Reporter disconnected. { function=sendMessage, reporterID=28956669509634 }
-Reporter disconnected. { function=sendMessage, reporterID=28956669509634 }
-Reporter disconnected. { function=sendMessage, reporterID=28956669509634 }
-Reporter disconnected. { function=sendMessage, reporterID=28956669509634 }
-Reporter disconnected. { function=sendMessage, reporterID=28956669509634 }
-Reporter disconnected. { function=sendMessage, reporterID=28956669509634 }
-Reporter disconnected. { function=sendMessage, reporterID=28956669509634 }
-Reporter disconnected. { function=sendMessage, reporterID=28956669509634 }
-Reporter disconnected. { function=sendMessage, reporterID=28956669509634 }
-Received port for identifier response: <(null)> with error:Error Domain=RBSServiceErrorDomain Code=1 "Client not entitled" UserInfo={RBSEntitlement=com.apple.runningboard.process-state, NSLocalizedFailureReason=Client not entitled, RBSPermanent=false}
-elapsedCPUTimeForFrontBoard couldn't generate a task port
-Received port for identifier response: <(null)> with error:Error Domain=RBSServiceErrorDomain Code=1 "Client not entitled" UserInfo={RBSEntitlement=com.apple.runningboard.process-state, NSLocalizedFailureReason=Client not entitled, RBSPermanent=false}
-elapsedCPUTimeForFrontBoard couldn't generate a task port
-Unable to simultaneously satisfy constraints.
-Probably at least one of the constraints in the following list is one you don't want.
-Try this:
-(1) look at each constraint and try to figure out which you don't expect;
-(2) find the code that added the unwanted constraint or constraints and fix it.
-(Note: If you're seeing NSAutoresizingMaskLayoutConstraints that you don't understand, refer to the documentation for the UIView property translatesAutoresizingMaskIntoConstraints)
-(
-	"<NSAutoresizingMaskLayoutConstraint:0x10f61c280 h=--& v=--& TUIPredictionViewCell:0x129418f00.width == 0   (active)>",
-	"<NSLayoutConstraint:0x122aac320 TUICandidateGradientContentLabel:0x1257eb200.trailing == TUIPredictionViewCell:0x129418f00.trailing - 6   (active)>",
-	"<NSLayoutConstraint:0x122aac3c0 H:|-(6)-[TUICandidateGradientContentLabel:0x1257eb200]   (active, names: '|':TUIPredictionViewCell:0x129418f00 )>"
-)
-
-Will attempt to recover by breaking constraint
-<NSLayoutConstraint:0x122aac320 TUICandidateGradientContentLabel:0x1257eb200.trailing == TUIPredictionViewCell:0x129418f00.trailing - 6   (active)>
-
-Make a symbolic breakpoint at UIViewAlertForUnsatisfiableConstraints to catch this in the debugger.
-																				The methods in the UIConstraintBasedLayoutDebugging category on UIView listed in <UIKitCore/UIView.h> may also be helpful.
-																				cannot add handler to 0 from 0 - dropping
-																				cannot add handler to 0 from 0 - dropping
-																				cannot add handler to 0 from 0 - dropping
-																				cannot add handler to 0 from 0 - dropping
-																				[ESP-OUTPUT] #1 "cm"
-																				[ESP-OUTPUT] #2 "f13"
-																				[ESP-OUTPUT] #3 " "
+									261014_1041_272 🐞Set_Screen.swift:saveAndReturnToMain(using:):1358 [SCREEN-PERSIST-PROBE] event=settingsReturnBeforeSave selected=msfs-home.screen loaded=Brave.txt textDigest=676ACD9C0D28 savedDigest=676ACD9C0D28 textMatchesSaved=true currentDiskDigest=AB4A9853A351 urlID=0ECABB26C6A2
+									261014_1041_749 🐞Main_Screen.swift:body:856 [SCREEN-PERSIST-PROBE] platform=iPad settingsPresented changed new=false selected=msfs-home.screen willReload=true
+									261014_1041_749 🐞Main_Screen.swift:reloadSelectedDocumentIfAvailable():5200 [SCREEN-PERSIST-PROBE] reloadSelectedDocumentIfAvailable entry selected=msfs-home.screen
+									261014_1041_749 🐞Main_Screen.swift:reloadSelectedDocumentIfAvailable():5207 [SCREEN-PERSIST-PROBE] reloadSelectedDocumentIfAvailable loadFunctionKeys file=msfs-home.screen ext=screen urlID=0ECABB26C6A2
+									261014_1041_750 🐞ContentView.swift:loadFunctionKeys(from:):718 [SCREEN-PERSIST-PROBE] platform=iPad loadFunctionKeys entry selectedBefore=msfs-home.screen file=msfs-home.screen ext=screen urlID=0ECABB26C6A2
+									261014_1041_750 🐞ContentView.swift:loadFunctionKeys(from:):725 [SCREEN-PERSIST-PROBE] loadFunctionKeys readSuccess file=msfs-home.screen urlID=0ECABB26C6A2 slots=25 fingerprint=D77DB681C33A diskDigest=AB4A9853A351
+									261014_1041_751 🐞ContentView.swift:loadFunctionKeys(from:):733 [SCREEN-PERSIST-PROBE] loadFunctionKeys applied selectedAfter=msfs-home.screen file=msfs-home.screen urlID=0ECABB26C6A2 slots=25 fingerprint=D77DB681C33A diskDigest=AB4A9853A351
+									261014_1041_189 🐞Main_Screen.swift:resizeMainGridActionMenuSelection(to:):1849 [SCREEN-PERSIST-PROBE] caller=resizeMainGridActionMenuSelection operation=restoreFunctionKeySlotLines slots=25 fingerprint=B4EC211F02EB
+									261014_1041_190 🐞ContentView.swift:body:333 [SCREEN-PERSIST-PROBE] caller=restoreFunctionKeySlotLines operation=persistSlotLines slots=25 fingerprint=B4EC211F02EB
+									261014_1041_191 🐞ContentView.swift:documentURL(forDocumentName:):793 [SCREEN-PERSIST-PROBE] documentURL requested=msfs-home.screen resolved=msfs-home.screen source=exact urlID=0ECABB26C6A2
+									261014_1041_192 🐞ContentView.swift:persistSlotLines(_:):815 [SCREEN-PERSIST-PROBE] platform=iPad persistSlotLines entry selected=msfs-home.screen url=msfs-home.screen ext=screen urlID=0ECABB26C6A2 slots=25 fingerprint=B4EC211F02EB
+									261014_1041_193 🐞ContentView.swift:persistSlotLines(_:):829 [SCREEN-PERSIST-PROBE] persistSlotLines writeAttempt file=msfs-home.screen ext=screen urlID=0ECABB26C6A2 slots=25 fingerprint=B4EC211F02EB writeDigest=5F57D45B3055
+									261014_1041_196 🐞ContentView.swift:persistSlotLines(_:):833 [SCREEN-PERSIST-PROBE] persistSlotLines writeSuccess file=msfs-home.screen urlID=0ECABB26C6A2 slots=25 fingerprint=B4EC211F02EB writeDigest=5F57D45B3055
+									261014_1041_196 🐞ContentView.swift:persistSlotLines(_:):837 [SCREEN-PERSIST-PROBE] persistSlotLines writeReadback file=msfs-home.screen urlID=0ECABB26C6A2 bytesMatch=true diskDigest=5F57D45B3055
+									UITextView 0x122785800 is switching to TextKit 1 compatibility mode because its layoutManager was accessed. Break on void _UITextViewEnablingCompatibilityMode(UITextView *__strong, BOOL) to debug.
+									<0x122d5c500> Gesture: System gesture gate timed out.
+									261014_1041_506 🐞Main_DocumentActions.swift:commitSlotEditing():290 [SCREEN-PERSIST-PROBE] caller=commitSlotEditing operation=updateFunctionKeySlot index=7 span=7
+									261014_1041_507 🐞ContentView.swift:updateSelectedDocumentSlot(at:with:):2582 [SCREEN-PERSIST-PROBE] caller=updateSelectedDocumentSlot operation=persistSlotLines index=7 slots=25 fingerprint=74F9C3E5C192
+									261014_1041_508 🐞ContentView.swift:documentURL(forDocumentName:):793 [SCREEN-PERSIST-PROBE] documentURL requested=msfs-home.screen resolved=msfs-home.screen source=exact urlID=0ECABB26C6A2
+									261014_1041_509 🐞ContentView.swift:persistSlotLines(_:):815 [SCREEN-PERSIST-PROBE] platform=iPad persistSlotLines entry selected=msfs-home.screen url=msfs-home.screen ext=screen urlID=0ECABB26C6A2 slots=25 fingerprint=74F9C3E5C192
+									261014_1041_510 🐞ContentView.swift:persistSlotLines(_:):829 [SCREEN-PERSIST-PROBE] persistSlotLines writeAttempt file=msfs-home.screen ext=screen urlID=0ECABB26C6A2 slots=25 fingerprint=74F9C3E5C192 writeDigest=FFBA12A965BF
+									261014_1041_514 🐞ContentView.swift:persistSlotLines(_:):833 [SCREEN-PERSIST-PROBE] persistSlotLines writeSuccess file=msfs-home.screen urlID=0ECABB26C6A2 slots=25 fingerprint=74F9C3E5C192 writeDigest=FFBA12A965BF
+									261014_1041_515 🐞ContentView.swift:persistSlotLines(_:):837 [SCREEN-PERSIST-PROBE] persistSlotLines writeReadback file=msfs-home.screen urlID=0ECABB26C6A2 bytesMatch=true diskDigest=FFBA12A965BF
+									261014_1041_516 🐞Main_DocumentActions.swift:commitSlotEditing():294 [SCREEN-PERSIST-PROBE] caller=commitSlotEditing operation=setSlotSpan index=7 span=7
+									261014_1041_516 🐞Main_DocumentActions.swift:setSlotSpan(startingAt:from:to:):1494 [SCREEN-PERSIST-PROBE] caller=setSlotSpan operation=spanMaintenance index=7 from=7 to=7
+									261014_1041_516 🐞ContentView.swift:updateSelectedDocumentSlot(at:with:):2582 [SCREEN-PERSIST-PROBE] caller=updateSelectedDocumentSlot operation=persistSlotLines index=12 slots=25 fingerprint=74F9C3E5C192
+									261014_1041_517 🐞ContentView.swift:documentURL(forDocumentName:):793 [SCREEN-PERSIST-PROBE] documentURL requested=msfs-home.screen resolved=msfs-home.screen source=exact urlID=0ECABB26C6A2
+									261014_1041_517 🐞ContentView.swift:persistSlotLines(_:):815 [SCREEN-PERSIST-PROBE] platform=iPad persistSlotLines entry selected=msfs-home.screen url=msfs-home.screen ext=screen urlID=0ECABB26C6A2 slots=25 fingerprint=74F9C3E5C192
+									261014_1041_518 🐞ContentView.swift:persistSlotLines(_:):829 [SCREEN-PERSIST-PROBE] persistSlotLines writeAttempt file=msfs-home.screen ext=screen urlID=0ECABB26C6A2 slots=25 fingerprint=74F9C3E5C192 writeDigest=FFBA12A965BF
+									261014_1041_520 🐞ContentView.swift:persistSlotLines(_:):833 [SCREEN-PERSIST-PROBE] persistSlotLines writeSuccess file=msfs-home.screen urlID=0ECABB26C6A2 slots=25 fingerprint=74F9C3E5C192 writeDigest=FFBA12A965BF
+									261014_1041_521 🐞ContentView.swift:persistSlotLines(_:):837 [SCREEN-PERSIST-PROBE] persistSlotLines writeReadback file=msfs-home.screen urlID=0ECABB26C6A2 bytesMatch=true diskDigest=FFBA12A965BF
+									261014_1041_521 🐞ContentView.swift:updateSelectedDocumentSlot(at:with:):2582 [SCREEN-PERSIST-PROBE] caller=updateSelectedDocumentSlot operation=persistSlotLines index=17 slots=25 fingerprint=74F9C3E5C192
+									261014_1041_522 🐞ContentView.swift:documentURL(forDocumentName:):793 [SCREEN-PERSIST-PROBE] documentURL requested=msfs-home.screen resolved=msfs-home.screen source=exact urlID=0ECABB26C6A2
+									261014_1041_523 🐞ContentView.swift:persistSlotLines(_:):815 [SCREEN-PERSIST-PROBE] platform=iPad persistSlotLines entry selected=msfs-home.screen url=msfs-home.screen ext=screen urlID=0ECABB26C6A2 slots=25 fingerprint=74F9C3E5C192
+									261014_1041_523 🐞ContentView.swift:persistSlotLines(_:):829 [SCREEN-PERSIST-PROBE] persistSlotLines writeAttempt file=msfs-home.screen ext=screen urlID=0ECABB26C6A2 slots=25 fingerprint=74F9C3E5C192 writeDigest=FFBA12A965BF
+									261014_1041_525 🐞ContentView.swift:persistSlotLines(_:):833 [SCREEN-PERSIST-PROBE] persistSlotLines writeSuccess file=msfs-home.screen urlID=0ECABB26C6A2 slots=25 fingerprint=74F9C3E5C192 writeDigest=FFBA12A965BF
+									261014_1041_525 🐞ContentView.swift:persistSlotLines(_:):837 [SCREEN-PERSIST-PROBE] persistSlotLines writeReadback file=msfs-home.screen urlID=0ECABB26C6A2 bytesMatch=true diskDigest=FFBA12A965BF
+									261014_1041_225 🐞Main_Screen.swift:body:856 [SCREEN-PERSIST-PROBE] platform=iPad settingsPresented changed new=true selected=msfs-home.screen willReload=false
+									261014_1041_225 🐞Set_Screen.swift:configuredSettingsScreen:426 [SCREEN-PERSIST-PROBE] event=settingsTaskLoad selected=msfs-home.screen loaded= textDigest=E3B0C44298FC
+									261014_1041_226 🐞Set_Screen.swift:loadSelectedDocumentText():1293 [SCREEN-PERSIST-PROBE] event=settingsLoadStart selected=msfs-home.screen loadedBefore= file=Brave.txt urlID=88D84E80C51A textDigest=E3B0C44298FC diskDigest=676ACD9C0D28
+									261014_1041_227 🐞Set_Screen.swift:loadSelectedDocumentText():1299 [SCREEN-PERSIST-PROBE] event=settingsLoadComplete selected=msfs-home.screen loadedAfter=Brave.txt file=Brave.txt urlID=88D84E80C51A textDigest=676ACD9C0D28 savedDigest=676ACD9C0D28 textMatchesDisk=true
+									261014_1041_331 🐞Set_Screen.swift:configuredSettingsScreen:449 [SCREEN-PERSIST-PROBE] event=settingsDocumentEditorTextOnChange selected=msfs-home.screen loaded=Brave.txt textDigest=676ACD9C0D28
+									261014_1041_333 🐞Set_Screen.swift:saveDocumentText(_:to:):1370 [SCREEN-PERSIST-PROBE] event=settingsAutoSaveAttempt selected=msfs-home.screen loaded=Brave.txt file=Brave.txt urlID=88D84E80C51A textDigest=676ACD9C0D28 currentDiskDigest=676ACD9C0D28 textMatchesDisk=true
+									261014_1041_334 🐞Set_Screen.swift:saveDocumentText(_:to:):1374 [SCREEN-PERSIST-PROBE] event=settingsAutoSaveSuccess file=Brave.txt urlID=88D84E80C51A textDigest=676ACD9C0D28 readbackDigest=676ACD9C0D28
+									261014_1041_662 🐞Set_Screen.swift:saveAndReturnToMain(using:):1358 [SCREEN-PERSIST-PROBE] event=settingsReturnBeforeSave selected=msfs-home.screen loaded=Brave.txt textDigest=676ACD9C0D28 savedDigest=676ACD9C0D28 textMatchesSaved=true currentDiskDigest=FFBA12A965BF urlID=0ECABB26C6A2
+									261014_1041_689 🐞Main_Screen.swift:body:856 [SCREEN-PERSIST-PROBE] platform=iPad settingsPresented changed new=false selected=msfs-home.screen willReload=true
+									261014_1041_689 🐞Main_Screen.swift:reloadSelectedDocumentIfAvailable():5200 [SCREEN-PERSIST-PROBE] reloadSelectedDocumentIfAvailable entry selected=msfs-home.screen
+									261014_1041_689 🐞Main_Screen.swift:reloadSelectedDocumentIfAvailable():5207 [SCREEN-PERSIST-PROBE] reloadSelectedDocumentIfAvailable loadFunctionKeys file=msfs-home.screen ext=screen urlID=0ECABB26C6A2
+									261014_1041_689 🐞ContentView.swift:loadFunctionKeys(from:):718 [SCREEN-PERSIST-PROBE] platform=iPad loadFunctionKeys entry selectedBefore=msfs-home.screen file=msfs-home.screen ext=screen urlID=0ECABB26C6A2
+									261014_1041_690 🐞ContentView.swift:loadFunctionKeys(from:):725 [SCREEN-PERSIST-PROBE] loadFunctionKeys readSuccess file=msfs-home.screen urlID=0ECABB26C6A2 slots=25 fingerprint=74F9C3E5C192 diskDigest=FFBA12A965BF
+									261014_1041_690 🐞ContentView.swift:loadFunctionKeys(from:):733 [SCREEN-PERSIST-PROBE] loadFunctionKeys applied selectedAfter=msfs-home.screen file=msfs-home.screen urlID=0ECABB26C6A2 slots=25 fingerprint=74F9C3E5C192 diskDigest=FFBA12A965BF
+									261014_1042_091 🐞ContentView.swift:loadFunctionKeys(from:):718 [SCREEN-PERSIST-PROBE] platform=iPad loadFunctionKeys entry selectedBefore=msfs-home.screen file=msfs-ds-main.screen ext=screen urlID=85269B9183F8
+									261014_1042_093 🐞ContentView.swift:loadFunctionKeys(from:):725 [SCREEN-PERSIST-PROBE] loadFunctionKeys readSuccess file=msfs-ds-main.screen urlID=85269B9183F8 slots=35 fingerprint=EEF62F62F19B diskDigest=94DEFD86854D
+									261014_1042_099 🐞ContentView.swift:loadFunctionKeys(from:):733 [SCREEN-PERSIST-PROBE] loadFunctionKeys applied selectedAfter=msfs-ds-main.screen file=msfs-ds-main.screen urlID=85269B9183F8 slots=35 fingerprint=EEF62F62F19B diskDigest=94DEFD86854D
+									261014_1042_305 🐞ContentView.swift:loadFunctionKeys(from:):718 [SCREEN-PERSIST-PROBE] platform=iPad loadFunctionKeys entry selectedBefore=msfs-ds-main.screen file=msfs-ds-home.screen ext=screen urlID=1B5EABBCFD82
+									261014_1042_307 🐞ContentView.swift:loadFunctionKeys(from:):725 [SCREEN-PERSIST-PROBE] loadFunctionKeys readSuccess file=msfs-ds-home.screen urlID=1B5EABBCFD82 slots=25 fingerprint=4A3C095254F0 diskDigest=676ACD9C0D28
+									261014_1042_308 🐞ContentView.swift:loadFunctionKeys(from:):733 [SCREEN-PERSIST-PROBE] loadFunctionKeys applied selectedAfter=msfs-ds-home.screen file=msfs-ds-home.screen urlID=1B5EABBCFD82 slots=25 fingerprint=4A3C095254F0 diskDigest=676ACD9C0D28
+									261014_1042_540 🐞ContentView.swift:loadFunctionKeys(from:):718 [SCREEN-PERSIST-PROBE] platform=iPad loadFunctionKeys entry selectedBefore=msfs-ds-home.screen file=msfs-ds-cam.screen ext=screen urlID=B8C751B35085
+									261014_1042_546 🐞ContentView.swift:loadFunctionKeys(from:):725 [SCREEN-PERSIST-PROBE] loadFunctionKeys readSuccess file=msfs-ds-cam.screen urlID=B8C751B35085 slots=16 fingerprint=540C550DFE85 diskDigest=64DC91D9326A
+									261014_1042_548 🐞ContentView.swift:loadFunctionKeys(from:):733 [SCREEN-PERSIST-PROBE] loadFunctionKeys applied selectedAfter=msfs-ds-cam.screen file=msfs-ds-cam.screen urlID=B8C751B35085 slots=16 fingerprint=540C550DFE85 diskDigest=64DC91D9326A
+									261014_1042_722 🐞ContentView.swift:loadFunctionKeys(from:):718 [SCREEN-PERSIST-PROBE] platform=iPad loadFunctionKeys entry selectedBefore=msfs-ds-cam.screen file=keypad.screen ext=screen urlID=A936B323E824
+									261014_1042_728 🐞ContentView.swift:loadFunctionKeys(from:):725 [SCREEN-PERSIST-PROBE] loadFunctionKeys readSuccess file=keypad.screen urlID=A936B323E824 slots=98 fingerprint=72BEC397982E diskDigest=5CEC26ACF0D9
+									261014_1042_730 🐞ContentView.swift:loadFunctionKeys(from:):733 [SCREEN-PERSIST-PROBE] loadFunctionKeys applied selectedAfter=keypad.screen file=keypad.screen urlID=A936B323E824 slots=98 fingerprint=72BEC397982E diskDigest=5CEC26ACF0D9
+									261014_1042_922 🐞ContentView.swift:loadFunctionKeys(from:):718 [SCREEN-PERSIST-PROBE] platform=iPad loadFunctionKeys entry selectedBefore=keypad.screen file=Japanese.screen ext=screen urlID=730E57C8E698
+									261014_1042_929 🐞ContentView.swift:loadFunctionKeys(from:):725 [SCREEN-PERSIST-PROBE] loadFunctionKeys readSuccess file=Japanese.screen urlID=730E57C8E698 slots=699 fingerprint=06D588ED4ED9 diskDigest=B8ED81321E81
+									261014_1042_930 🐞ContentView.swift:loadFunctionKeys(from:):733 [SCREEN-PERSIST-PROBE] loadFunctionKeys applied selectedAfter=Japanese.screen file=Japanese.screen urlID=730E57C8E698 slots=699 fingerprint=06D588ED4ED9 diskDigest=B8ED81321E81
+									261014_1042_625 🐞ContentView.swift:loadFunctionKeys(from:):718 [SCREEN-PERSIST-PROBE] platform=iPad loadFunctionKeys entry selectedBefore=Japanese.screen file=Jap1.screen ext=screen urlID=28B3582785A4
+									261014_1042_630 🐞ContentView.swift:loadFunctionKeys(from:):725 [SCREEN-PERSIST-PROBE] loadFunctionKeys readSuccess file=Jap1.screen urlID=28B3582785A4 slots=400 fingerprint=07E7E92BEDA0 diskDigest=EEB91CB83C21
+									261014_1042_632 🐞ContentView.swift:loadFunctionKeys(from:):733 [SCREEN-PERSIST-PROBE] loadFunctionKeys applied selectedAfter=Jap1.screen file=Jap1.screen urlID=28B3582785A4 slots=400 fingerprint=07E7E92BEDA0 diskDigest=EEB91CB83C21
+									261014_1042_649 🐞ContentView.swift:loadFunctionKeys(from:):718 [SCREEN-PERSIST-PROBE] platform=iPad loadFunctionKeys entry selectedBefore=Jap1.screen file=Home.screen ext=screen urlID=6FA0E45F612E
+									261014_1042_650 🐞ContentView.swift:loadFunctionKeys(from:):725 [SCREEN-PERSIST-PROBE] loadFunctionKeys readSuccess file=Home.screen urlID=6FA0E45F612E slots=60 fingerprint=42AAB76F2EBF diskDigest=87A55C362243
+									261014_1042_653 🐞ContentView.swift:loadFunctionKeys(from:):733 [SCREEN-PERSIST-PROBE] loadFunctionKeys applied selectedAfter=Home.screen file=Home.screen urlID=6FA0E45F612E slots=60 fingerprint=42AAB76F2EBF diskDigest=87A55C362243

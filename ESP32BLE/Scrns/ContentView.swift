@@ -5,7 +5,6 @@ import UIKit
 import ImageIO
 import Network
 import Combine
-import CryptoKit
 import Security
 
 
@@ -289,7 +288,7 @@ struct ContentView: View {
                             functionKeySlotLines
                         },
                         restoreFunctionKeySlotLines: { slotLines in
-                            persistSlotLines(slotLines)
+                            return persistSlotLines(slotLines)
                         },
                         loadGridDimensions: loadStoredGridDimensions,
                         saveGridDimensions: { documentName, gridDimensions in
