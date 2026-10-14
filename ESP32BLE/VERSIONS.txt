@@ -1,3 +1,7 @@
+261014 Wed 1756
+import/export improved, more todo
+V62.52
+
 261014 Wed 1130
 home btn fixed
 V62.51

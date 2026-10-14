@@ -1,156 +1,632 @@
-ESP32BLE Home Button Legacy Filename Probe
+READ-ONLY INVESTIGATION RESULT
 
-1. Exact Home button action location
+No code, project files, documents, archives, .txt files, or Git state were modified.
 
-Top-left toolbar Home button:
-ESP32BLE/Scrns/Main_Screen/Toolbars/Main_TopToolbar.swift
-lines 84-89
+1. FOUR BUTTON LOCATIONS AND ACTIONS
 
+Source file:
+ESP32BLE/ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
+
+Import menu:
+Line 316 starts the import Menu.
+Line 317 label: "Import Screens"
 Action:
-ButtonClickFeedback.playIfEnabled()
-openHomeDocument()
+• ButtonClickFeedback.playIfEnabled()
+• importConflictApplyToAll = false
+• activeImportMode = .screen
+• pendingImportMode = .screen
 
-The closure is supplied from MainScreen:
-ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
-line 948
+Line 323 label: "Restore Backup"
+Action:
+• ButtonClickFeedback.playIfEnabled()
+• isRestoreAllFilesConfirmationPresented = true
 
-openHomeDocument:
-openHomeDocumentFromMainScreenControl
+Import menu label:
+Lines 327-331:
+• Image(systemName: "square.and.arrow.down")
+• .font(.title)
+• .foregroundStyle(.white)
 
-Implementation:
-ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
-lines 2620-2625
+Import menu enabled/disabled:
+• No .disabled modifier found on the import Menu.
+• No opacity/brightness modifier found on the import Menu.
+• Actual action availability appears enabled in all filters.
 
-Current implementation:
-• If mainGridButtonMode == .speechActive, it speaks "home".
-• The actual document selection line is commented out:
-// let selectedHomeDocument = selectDocumentNamedFromGrid("home.txt")
+Restore confirmation:
+Lines 476-479 attach RestoreAllFilesConfirmationModifier.
+Lines 3836-3848 define the alert.
+Alert title: "Restore All Files?"
+Message says existing same-name files will be replaced.
+Restore button calls beginRestoreAllFiles().
 
-So the top-left Home button currently does not load a Home document at all.
+beginRestoreAllFiles:
+Lines 619-623:
+• importConflictApplyToAll = false
+• activeImportMode = .allFiles
+• pendingImportMode = .allFiles
 
-2. Relevant home.txt references
+Export menu:
+Line 343 starts the export Menu.
+Line 344 label: "Export Screen"
+Action:
+• ButtonClickFeedback.playIfEnabled()
+• prepareSingleFileExport()
 
-ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift
-line 653
-Function: targetDocumentNameForSendText(_:)
-Purpose: A grid button/action token of "home" resolves to "home.txt".
+Line 348 label: "Export Backup as zip"
+Action:
+• ButtonClickFeedback.playIfEnabled()
+• prepareArchiveExport()
 
-ESP32BLE/Scrns/Main_Screen/Speech Recognition/SR_Support.swift
-line 26
-Function: applyRecognizedSpeech(_:)
-Purpose: Speech command "go home" calls selectDocumentNamedFromGrid("home.txt").
+Export menu label:
+Lines 352-356:
+• Image(systemName: "square.and.arrow.up")
+• .font(.title)
+• .foregroundStyle(.white)
 
-ESP32BLE/Scrns/Main_Screen/Speech Recognition/SR_Support.swift
-line 28
-Function: applyRecognizedSpeech(_:)
-Purpose: Error message says "Couldn't find home.txt."
+Export menu enabled/disabled:
+Lines 359-360:
+• .disabled(!canExportInCurrentListMode)
+• .opacity(canExportInCurrentListMode ? 1 : 0.45)
 
-ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
-line 2624
-Function: openHomeDocumentFromMainScreenControl()
-Purpose: Commented-out legacy Home navigation line references home.txt.
+Export availability condition:
+Lines 603-605:
+canExportInCurrentListMode = listMode != .text && listMode != .all
 
-3. Relevant home.screen references
+Button style:
+• Import/export are SwiftUI Menu controls.
+• No explicit .buttonStyle is applied to these two menus.
+• Other toolbar text buttons use SettingsToolbarButton, but these import/export icons do not.
 
-No literal "home.screen" references were found in Swift source.
+Platform-specific implementation:
+• The four menu items share the same Settings toolbar implementation on iPhone and iPad.
+• iPad adds Spacer elements around the title/import/export area.
+• iPhone and iPad use different Settings body layout, but the import/export Menu code is shared.
+• No iPhone-specific suppression of import/export animation was found.
 
-The standard .screen mechanism exists generically:
-ESP32BLE/Scrns/ScreenDocument.swift
-line 3: screenDocumentFileExtension = "screen"
-line 19: screenDocumentFileName(forBaseName:)
-line 32: preferredScreenDocumentURLs(from:)
+2. EXACT EXPORT SCREEN BEHAVIOUR
 
-4. How Home document resolution works
+Action path:
+Export Screen -> prepareSingleFileExport() at lines 1863-1872
+prepareSingleFileExport() -> makeSingleFileExportURL() at lines 1891-1933
+Presentation -> SettingsSingleFileExportPicker at Set_ArchiveDocuments.swift lines 212-244
 
-ContentView document selection:
-ESP32BLE/Scrns/ContentView.swift
-lines 2698-2727
-Function: selectDocumentNamedFromGrid(_:)
+What it exports:
+• It exports one ZIP file.
+• It contains exactly two entries:
+   • one .screen document
+   • one matching .config.json file
 
-Flow:
-• canonicalDocumentFileName(from:) preserves names ending in .screen or .txt.
-• Names without an extension default to .txt.
-• It first searches documentFiles for an exact filename.
-• If the requested filename ends in .txt and no exact match is found, it falls back to a .screen file with the same base name.
-• It then calls selectDocument(fileURL, recordHistory: true).
+ZIP entry creation:
+Lines 1917-1928 create archive data with:
+• documentFileName
+• configFileName(forDocumentName: documentFileName)
 
-Important detail:
-documentFiles appears to be the preferred screen document list, so selectDocumentNamedFromGrid("home.txt") can still resolve to home.screen through the legacy fallback when home.screen exists.
+Does it export the currently selected screen?
+• Yes, if selectedDocumentFileURL exists and is a .screen file.
+• selectedDocumentFileURL is based on selectedDocumentName, not the currently visible Images/Sounds/PDFs filter.
 
-5. Confirmed cause
+Can it export multiple screens?
+• No. Export Screen exports one screen package only.
 
-There are two related issues:
+File extension produced:
+• The temporary/exported file is .zip.
+• Temporary name is "(singleFileExportDisplayName).zip" at lines 1915-1916.
 
-First, the Main Screen top-left Home button does not currently open any document because its selection call is commented out.
+Is the original document modified?
+• Yes, potentially.
+• prepareSingleFileExport() calls saveCurrentDocumentText() first, line 1864.
+• saveCurrentDocumentText() writes documentEditorText to the loaded file, lines 1310-1317 and 1347-1354.
+• The export itself does not modify the original config unless saveCurrentDocumentText or related state already does.
 
-Second, the remaining active Home command paths still use the legacy filename home.txt:
-• grid/send-text token "home"
-• speech command "go home"
+Does it include associated images/sounds/PDFs?
+• No.
 
-Those legacy references rely on fallback logic to reach home.screen. That is fragile and produces legacy error text.
+Does it include settings?
+• It includes the per-screen .config.json only.
+• If an existing valid config exists, it uses it.
+• Otherwise it generates default config data for the exported package.
+• It does not include AppStorage settings like selected background image, selected sound, timing, TTS voice/rate, output mode, etc.
 
-6. Other navigation paths affected
+Does it use a share sheet or file exporter?
+• It uses UIDocumentPickerViewController(forExporting:asCopy:) through SettingsSingleFileExportPicker.
+• It does not use ShareLink.
+• It does not use SwiftUI .fileExporter for this operation.
 
-Affected:
-• Top-left toolbar Home button: currently no document navigation.
-• External keyboard shortcut "h": Main_Screen.swift lines 2518-2520 calls openHomeDocumentFromMainScreenControl(), so it has the same issue as the toolbar Home button.
-• Grid action/send text "home": resolves to home.txt in Main_ButtonBehavior.swift.
-• Speech command "go home": explicitly opens home.txt in SR_Support.swift.
+Where is the exported file saved?
+• The user chooses the destination in the document picker.
+• A temporary .zip is first written in FileManager.default.temporaryDirectory.
+• The picker exports it as a copy.
 
-Not affected:
-• Explicit "home.screen" action text should already be accepted by targetDocumentNameForSendText(_:).
-• Speech "open home.screen" should pass through targetDocumentNameForSpeechOpenCommand(_:) and select the .screen file if present.
-• Generic .screen document creation/default mechanisms already use .screen.
+What happens if no screen is selected?
+• makeSingleFileExportURL() falls back to documentEditorText and singleFileExportDisplayName.
+• singleFileExportDisplayName falls back to "Document" if no selected or loaded document name exists.
+• Result would be a generated .screen file inside Document.zip, with generated default config.
 
-7. Smallest safe correction
+3. EXACT EXPORT BACKUP BEHAVIOUR
 
-Recommended smallest correction:
+Action path:
+Export Backup as zip -> prepareArchiveExport() at lines 1874-1889
+prepareArchiveExport() -> makeFullArchiveData() at lines 3567-3615
+Presentation -> archiveExportPresenter .fileExporter at lines 517-530
 
-A. In Main_Screen.swift, make openHomeDocumentFromMainScreenControl() call:
-selectDocumentNamedFromGrid("home.screen")
+File exporter:
+• Uses SwiftUI .fileExporter.
+• contentType is zipImportType equivalent: UTType(filenameExtension: "zip").
+• defaultFilename is archiveExportDefaultFilename().
 
-Preserve the existing speechActive speak behavior.
+ZIP naming convention:
+Line 3561-3565:
+ESP_yyMMdd_HHmmss.zip
 
-B. In Main_ButtonBehavior.swift, change the special "home" token mapping from:
-return "home.txt"
+Archive structure:
+• Archive.json
+• Screens/<screen files>
+• Configs/<screen config files>
+• Text/<legacy txt files>
+• Images/<image files>
+• Sounds/<sound files>
+• PDFs/<pdf files>
 
-to:
-return "home.screen"
+Included:
+• .screen files: yes, from availableDocumentURLs
+• Legacy .txt files: yes, from availableTextURLs
+• Images: yes, supported image extensions only
+• Sounds: yes, supported sound extensions only
+• PDFs: yes
+• Per-screen .config.json files: yes, one config per exported .screen
+• Archive manifest: yes, Archive.json
 
-C. In SR_Support.swift, change the "go home" speech path from:
-selectDocumentNamedFromGrid("home.txt")
+Excluded:
+• AppStorage/user preferences not represented as files.
+• Unknown/unsupported files in Documents.
+• Loose .config.json files that do not correspond to an exported .screen are not included directly.
+• Other application documents outside the handled categories.
+• Hidden files are not explicitly part of the exported category lists.
 
-to:
-selectDocumentNamedFromGrid("home.screen")
+Compression:
+• The custom ZIP writer stores files with compressionMethod = 0.
+• Files are copied into the ZIP uncompressed/stored, not deflated.
 
-and update the matching error message to home.screen.
+Existing files modified?
+• Potentially the currently loaded document is saved first.
+• prepareArchiveExport() calls saveCurrentDocumentText(), line 1875.
+• The archive creation reads files and creates in-memory Data.
+• It does not otherwise modify existing files.
 
-This preserves legacy .txt fallback elsewhere because selectDocumentNamedFromGrid and canonicalDocumentFileName do not need to change.
+Does export depend on selected filter?
+Visible availability does.
+Actual backup creation does not need the filter.
+The export menu is disabled when listMode is .text or .all because of canExportInCurrentListMode.
 
-8. Exact files that would require modification
+Is it a complete app backup?
+• Not complete.
+• It backs up recognized Documents files in the app’s Documents directory: screens, generated/per-screen configs, legacy text, images, sounds, PDFs.
+• It does not back up all app settings/preferences or arbitrary files.
 
-ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
-Function: openHomeDocumentFromMainScreenControl()
+4. EXACT IMPORT SCREENS BEHAVIOUR
 
-ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift
-Function: targetDocumentNameForSendText(_:)
+Action path:
+Import Screens -> pendingImportMode = .screen
+.fileImporter uses activeImportContentTypes at lines 501-510
+activeImportContentTypes at lines 636-645
 
-ESP32BLE/Scrns/Main_Screen/Speech Recognition/SR_Support.swift
-Function: applyRecognizedSpeech(_:)
+Accepted file types:
+For .screen mode:
+• .screen
+• .zip
 
-9. Compatibility concerns
+Direct .txt support:
+• No, not through the current Import Screens action.
+• Legacy .txt files are only imported in .allFiles restore mode, or from a full archive ZIP.
+• There is older handleDocumentImport() code for screen documents only, but it is not the current action path.
 
-Keep the generic legacy .txt support intact. Do not change:
-legacyScreenDocumentFileExtension
-canonicalDocumentFileName(from:)
-selectDocumentNamedFromGrid(_:)
-documentURL(forDocumentName:)
-preferredScreenDocumentURLs(from:)
+Images/sounds/PDFs:
+• Not directly through Import Screens.
+• They can be imported if the selected ZIP is classified as a full archive.
 
-Changing only the Home literals to home.screen should not remove compatibility for older explicit .txt navigation commands.
+ZIP archives:
+• Yes.
+• A ZIP can be either:
+   • a single screen package ZIP containing a .screen and optional matching .config.json
+   • a full archive ZIP containing Archive.json plus one or more archive folders
 
-10. Confirmation
+Multiple files:
+• Yes. fileImporter allowsMultipleSelection: true at line 504.
 
-No files were modified.
-No Git state was changed.
-No staging, commit, checkout, reset, restore, tag, or branch operation was performed.
+Destination directory:
+• App Documents directory from currentDocumentsDirectoryURL, lines 3447-3449.
+
+Duplicate filename handling:
+For .screen imports:
+• If target exists, applyPendingImportConflictIfNeeded() is called.
+• For screen mode, it presents a conflict dialog.
+• Dialog options currently shown:
+   • Replace Existing
+   • Skip This File
+   • Stop Import
+   • Cancel
+• There is code for keep-both, but no visible "Keep Both" button in the current dialog.
+
+Overwrite behaviour:
+• Replace removes the existing target then imports the new file.
+• Skip continues.
+• Stop cancels/finishes current session.
+• For .screen replacement, matching config may also be removed/replaced/defaulted through ensureImportedScreenConfig().
+
+Error handling:
+• Invalid ZIP logs db() messages and continues/skips.
+• Missing Documents directory logs and returns.
+• Import failures increment failedFileCount in restore mode.
+• Some errors are surfaced through renameAlertMessage.
+
+Do imported files appear immediately?
+• Yes, when something imports successfully, finishPendingImportSession() calls markImportedContentChanged().
+• markImportedContentChanged() calls refreshDocumentFiles() and changes importRefreshID, lines 3451-3454.
+• documentTableSection is keyed with .id(importRefreshID), line 1029.
+
+Does Main Screen reload?
+• If a screen document is imported, finishPendingImportSession() calls loadFunctionKeys(firstImportedDocumentURL), lines 2892-2894.
+• That affects the active screen selection/load path.
+
+Important finding:
+• Import Screens can import a full archive ZIP.
+• In processPendingImportSession(), a ZIP selected in screen mode is first checked by extractFullArchiveImportIfPresent().
+• If it is a full archive, session.importMode becomes .allFiles at lines 2390-2395.
+• That means Import Screens can perform all-files restore behavior without the Restore Backup confirmation.
+
+5. EXACT RESTORE BACKUP BEHAVIOUR
+
+Action path:
+Restore Backup -> confirmation alert -> beginRestoreAllFiles()
+beginRestoreAllFiles() sets mode .allFiles.
+.fileImporter allows ZIP only.
+
+Accepted archive formats:
+• .zip only.
+
+Expected ZIP structure:
+• Must be a full archive as defined by fullArchiveStructure().
+• Required:
+   • Archive.json
+   • at least one content folder entry under Screens/, Configs/, Text/, Images/, Sounds/, or PDFs/
+• Archive entries must use the custom supported ZIP subset:
+   • local file headers
+   • compression method 0 only
+   • no data descriptor flag
+   • compressed size must equal uncompressed size
+• Standard compressed ZIPs using deflate are rejected as unsupported.
+
+Merge or replace?
+• It merges into the Documents directory.
+• It does not delete files that are absent from the archive.
+• Existing files with the same name are replaced automatically.
+
+Duplicate filename behaviour:
+• In .allFiles mode, applyPendingImportConflictIfNeeded() automatically calls importReplacingExistingFile().
+• No per-file conflict prompt is shown for restore.
+• Existing target is removed first, then imported.
+
+Can existing files be deleted?
+• Existing files with matching names can be deleted/replaced.
+• Files not present in the archive are not deleted.
+
+Are settings restored?
+• Per-screen .config.json files are restored if present/valid.
+• AppStorage preferences are not restored.
+• Selected background/sound/PDF preferences are not restored as settings, though the files themselves may be restored.
+
+Active screen affected?
+• If a screen document is restored/imported, firstImportedDocumentURL is loaded through loadFunctionKeys().
+• First restored image/sound/PDF may become selected only if no current selection exists, since importListMode is nil for restore.
+
+Confirmation requested?
+• Yes for Restore Backup.
+• No if a full archive ZIP is selected via Import Screens.
+
+Malformed archives:
+• If not full archive: "Couldn't import all files: ..." after fileReadCorruptFile.
+• Unsupported compression/data descriptor: unsupported scheme error.
+• Entries outside expected folders or with invalid names are ignored.
+• Invalid configs are copied, decoded, then removed and treated as failure if decoding fails.
+
+Partial restore possible?
+• Yes.
+• Restore processes entries sequentially.
+• Failures increment failedFileCount but do not necessarily roll back previous successful imports.
+• This creates partial-restore risk.
+
+Data-loss risk:
+• Restore replaces same-name files automatically after one global confirmation.
+• It removes existing files before importing replacements.
+• If import of the replacement then fails, the old file may already be gone.
+• Import Screens can trigger full archive restore behavior without the restore confirmation if the ZIP has full archive structure.
+
+6. FILE TYPES HANDLED BY EACH OPERATION
+
+Import Screens:
+• Direct: .screen, .zip
+• ZIP screen package: .screen plus optional matching .config.json
+• ZIP full archive: .screen, .config.json, .txt, supported images, supported sounds, .pdf
+• Direct .txt/images/sounds/PDFs: no
+
+Restore Backup:
+• Direct: .zip only
+• Inside ZIP:
+   • Screens/*.screen
+   • Configs/*.config.json
+   • Text/*.txt
+   • Images/*.png, .jpg, .jpeg, .heic, .heif, .gif, .bmp, .tiff, .webp
+   • Sounds/*.mp3, .wav, .m4a, .aiff, .aac, .caf
+   • PDFs/*.pdf
+
+Export Screen:
+• Produces one .zip
+• Inside ZIP:
+   • one .screen
+   • one .config.json
+
+Export Backup as zip:
+• Produces one .zip
+• Inside ZIP:
+   • Archive.json
+   • .screen files
+   • .config.json files for screens
+   • .txt files
+   • supported image files
+   • supported sound files
+   • PDFs
+
+7. WHETHER EACH OPERATION MODIFIES EXISTING DOCUMENTS
+
+Import Screens:
+• Yes, if replacing an existing same-name .screen.
+• Also may create/replace matching .config.json.
+• If no duplicate, it adds files.
+• Full archive via Import Screens can replace many existing files automatically.
+
+Restore Backup:
+• Yes.
+• Automatically replaces same-name files.
+• Does not delete unrelated files.
+
+Export Screen:
+• Potentially yes before export because saveCurrentDocumentText() is called.
+• Export archive generation itself writes only a temporary ZIP.
+
+Export Backup as zip:
+• Potentially yes before export because saveCurrentDocumentText() is called.
+• Archive generation itself does not modify existing files.
+
+8. FILTER ENABLEMENT MATRIX
+
+Implementation-based visible/actual matrix:
+
+Filter: Screens
+• Import Screens: visible enabled, action enabled
+• Restore Backup: visible enabled, action enabled
+• Export Screen: visible enabled, action enabled
+• Export Backup as zip: visible enabled, action enabled
+
+Filter: Text
+• Import Screens: visible enabled, action enabled
+• Restore Backup: visible enabled, action enabled
+• Export Screen: visible disabled, action blocked by disabled export menu
+• Export Backup as zip: visible disabled, action blocked by disabled export menu
+
+Filter: Images
+• Import Screens: visible enabled, action enabled
+• Restore Backup: visible enabled, action enabled
+• Export Screen: visible enabled, action enabled, but still exports the selected screen, not the selected image
+• Export Backup as zip: visible enabled, action enabled
+
+Filter: Sounds
+• Import Screens: visible enabled, action enabled
+• Restore Backup: visible enabled, action enabled
+• Export Screen: visible enabled, action enabled, but still exports the selected screen, not the selected sound
+• Export Backup as zip: visible enabled, action enabled
+
+Filter: PDFs
+• Import Screens: visible enabled, action enabled
+• Restore Backup: visible enabled, action enabled
+• Export Screen: visible enabled, action enabled, but still exports the selected screen, not the selected PDF
+• Export Backup as zip: visible enabled, action enabled
+
+Filter: All
+• Import Screens: visible enabled, action enabled
+• Restore Backup: visible enabled, action enabled
+• Export Screen: visible disabled, action blocked by disabled export menu
+• Export Backup as zip: visible disabled, action blocked by disabled export menu
+
+9. ROOT CAUSE OF FILTER RESTRICTIONS
+
+The export restrictions are explicitly programmed:
+canExportInCurrentListMode returns false for .text and .all only.
+
+This is not a limitation of backup creation.
+prepareArchiveExport() and makeFullArchiveData() do not require a particular filter.
+
+This is also not a limitation of Export Screen creation.
+Export Screen always targets selectedDocumentFileURL/documentEditorText, not the current media filter.
+
+The import menu is not restricted by the filter in the source inspected.
+
+10. ROOT CAUSE OF IPAD PULSING
+
+From source inspection, no definitive explicit pulsing cause was found.
+
+Evidence checked:
+• No repeatForever attached to these buttons.
+• No explicit animation attached to these menus.
+• No brightness modifier attached to these menus.
+• Import menu has no disabled/opacity modifier.
+• Export menu has fixed opacity based on canExportInCurrentListMode.
+• canExportInCurrentListMode depends only on listMode, not a timer.
+• The four menu items share the same SwiftUI Menu implementation.
+• No iPhone-specific code suppressing pulsing was found.
+
+Most likely classification from source:
+• Not A, intentional animation.
+• Not clearly C, repeated enabled-state change, because the only export enabled state depends on listMode.
+• Most likely B/D/E: an inherited SwiftUI/Menu rendering behavior, environment refresh, or iPad-specific Menu rendering side effect.
+
+One plausible contributing factor:
+• The buttons are native SwiftUI Menu controls with SF Symbol labels and no explicit .buttonStyle(.plain).
+• iPad and iPhone render Menu controls differently.
+• iPad also has different layout around the toolbar and title.
+
+Smallest useful future probe:
+• Add temporary db() onChange logging for listModeRawValue and canExportInCurrentListMode, plus a lightweight log when the toolbar body recomputes.
+• If those values are stable while pulsing continues, the cause is visual/rendering rather than state toggling.
+• A second tiny probe would be to temporarily apply .buttonStyle(.plain) or disable implicit animations around just the two Menu labels, but that would be a behavior/style experiment and was not done.
+
+11. IPHONE/IPAD IMPLEMENTATION DIFFERENCES
+
+Shared:
+• Same Import Screens action.
+• Same Restore Backup action.
+• Same Export Screen action.
+• Same Export Backup as zip action.
+• Same fileImporter and fileExporter presenters.
+• Same export enabled-state logic.
+• Same import enabled-state logic.
+
+Different:
+• Settings layout differs:
+   • iPad uses split HStack: editor/bottom panel plus document table.
+   • iPhone uses iPhoneSettingsBody with compact side-by-side content.
+• Toolbar spacing differs:
+   • iPad inserts Spacer around title and between import/export.
+• Other toolbar text buttons may render differently by iOS version via SettingsToolbarButton / SettingsUIKitVisualButton, but import/export icon menus do not use that wrapper.
+• No deliberate iPhone-only pulsing suppression found.
+
+Functional differences:
+• No functional difference found for the four operations based on platform.
+• Any observed pulsing appears visual/platform-rendering related, not action logic.
+
+12. RECOMMENDED BUTTON LABELS
+
+Current labels:
+• Import Screens
+• Restore Backup
+• Export Screen
+• Export Backup as zip
+
+Accuracy:
+• "Export Screen" is fairly accurate if understood as "export current/selected screen package", but it produces a ZIP containing .screen + config, not a bare .screen.
+• "Export Backup as zip" is partly accurate but overstates completeness if "backup" implies all settings/app state.
+• "Import Screens" is incomplete because it accepts screen-package ZIPs and can also import a full archive ZIP.
+• "Restore Backup" is mostly accurate for archive ZIP restore, but it merges/replaces files rather than restoring a complete app state.
+
+Suggested clearer labels:
+• Export Screen Package
+• Export Files Archive
+• Import Screen Package
+• Restore Files Archive
+
+Shorter alternatives:
+• Export Screen
+• Export Files ZIP
+• Import Screens
+• Restore Files ZIP
+
+Avoid:
+• "Complete Backup", because AppStorage/settings and unsupported files are not included.
+• "Export All Files", unless "all" is scoped to supported app document file categories.
+
+13. CAN BACKUP/RESTORE SAFELY BE INDEPENDENT OF SELECTED FILTER?
+
+Yes, based on implementation.
+
+Export Backup:
+• makeFullArchiveData() builds from all recognized categories, independent of listMode.
+• It can safely be available in Screens/Text/Images/Sounds/PDFs/All from a functional standpoint.
+
+Restore Backup:
+• Restore uses a ZIP-only importer and writes to Documents independent of listMode.
+• It can safely be available independent of selected filter from a functional standpoint.
+
+Caution:
+• "Safely" here means technically independent of filter.
+• Restore still has overwrite/data-loss risks and should keep confirmation.
+
+14. DATA-LOSS OR COMPATIBILITY RISKS
+
+Data-loss risks:
+• Restore replaces same-name files automatically.
+• Existing file is removed before replacement import is completed.
+• Partial restore is possible; no rollback exists.
+• Import Screens can process a full archive ZIP and enter allFiles mode without the Restore Backup confirmation.
+• Export operations save the currently loaded editor text before exporting, which can modify existing documents.
+
+Compatibility risks:
+• ZIP parser supports only stored/uncompressed ZIP entries.
+• ZIPs created by common tools with deflate compression may fail restore.
+• Full archive detection requires Archive.json plus archive folder content.
+• Unsupported files in Documents are excluded from backup.
+• AppStorage settings are not included, so restored app state may not match original app state.
+• Direct legacy .txt import is not supported by Import Screens, despite legacy .txt export/restore support.
+
+15. SMALLEST POSSIBLE FUTURE IMPROVEMENTS, RANKED BY RISK
+
+Lowest risk:
+1. Rename labels to clarify package/archive scope.
+2. Make Export Backup / Restore Backup availability independent of filter if desired.
+3. Add comments near canExportInCurrentListMode explaining why Text/All are disabled, or remove that restriction.
+
+Low to medium risk:
+4. Add explicit .buttonStyle(.plain) or fixed visual styling to import/export Menu labels to reduce iPad rendering differences.
+5. Add temporary db() probes for listMode/canExportInCurrentListMode/body refresh to confirm pulsing cause.
+
+Medium risk:
+6. Prevent Import Screens from treating full archive ZIPs as allFiles restore, or route it through the Restore confirmation.
+7. Add a visible "Keep Both" conflict option if the existing keep-both code is intended to be usable.
+
+Higher risk:
+8. Make restore transactional or safer: copy replacement first, then swap; report partial failures clearly.
+9. Expand archive format compatibility to support deflated ZIPs.
+10. Add AppStorage/settings export/import if a true complete backup is desired.
+
+16. EXACT SOURCE FILES INVOLVED
+
+ESP32BLE/ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
+• Toolbar buttons and menu actions
+• Filter enum and canExportInCurrentListMode
+• Import mode state
+• fileImporter
+• fileExporter presenter
+• Import/restore processing
+• Export screen/archive preparation
+• Archive structure creation
+• Conflict handling
+• Restore confirmation alert
+
+ESP32BLE/ESP32BLE/Scrns/Set_Screen/Set_ArchiveDocuments.swift
+• SettingsArchiveFileDocument
+• Custom ZIP write/read implementation
+• SettingsSingleFileExportPicker
+• UIDocumentPickerViewController export wrapper
+
+ESP32BLE/ESP32BLE/Scrns/ScreenDocument.swift
+• screenDocumentFileExtension = "screen"
+• legacyScreenDocumentFileExtension = "txt"
+• .screen identification
+• preferredScreenDocumentURLs
+
+ESP32BLE/ESP32BLE/Scrns/ScreenConfig.swift
+• configFileName(forDocumentName:)
+• configURL(forDocumentURL:)
+• load/save/ensure/default screen config behavior
+
+ESP32BLE/ESP32BLE/Scrns/Set_Screen/Set_TxtEditor.swift
+• SettingsToolbarButton and UIKit visual button helpers
+• Relevant for comparing toolbar button implementations, though import/export menus do not use SettingsToolbarButton
+
+17. CONFIRMATION
+
+Confirmed:
+• No Swift files modified.
+• No Xcode project files modified.
+• No documents or archives created, imported, restored, deleted, renamed, or edited.
+• No .txt files touched.
+• No Git commands were run.
+• No Git state was modified.

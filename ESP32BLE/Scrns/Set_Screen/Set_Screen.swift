@@ -314,13 +314,13 @@ struct SettingsScreen: View {
 			// import btn
 			//
 				Menu {
-					Button("Import Screens") {
+					Button("Import Screen(s)") {
 						ButtonClickFeedback.playIfEnabled()
                         importConflictApplyToAll = false
                         activeImportMode = .screen
 						pendingImportMode = .screen
 					}
-					Button("Restore Backup") {
+					Button("Restore Full Backup") {
 						ButtonClickFeedback.playIfEnabled()
 						isRestoreAllFilesConfirmationPresented = true
 					}
@@ -341,11 +341,11 @@ struct SettingsScreen: View {
 			// export btn/menu
 			//
 			Menu {
-				Button("Export Screen") {
+				Button("Export 1 Screen") {
 					ButtonClickFeedback.playIfEnabled()
 					prepareSingleFileExport()
 				}
-					Button("Export Backup as zip") {
+					Button("Create Full Backup") {
 						ButtonClickFeedback.playIfEnabled()
 						prepareArchiveExport()
 					}
@@ -601,7 +601,7 @@ struct SettingsScreen: View {
     }
 
     private var canExportInCurrentListMode: Bool {
-        listMode != .text && listMode != .all
+        true
     }
 
     private var isImporting: Binding<Bool> {
@@ -2313,6 +2313,11 @@ struct SettingsScreen: View {
 
         switch importMode {
         case .screen:
+            guard !screenImportSelectionContainsFullBackup(urls) else {
+                renameAlertMessage = settingsFullBackupImportRejectedMessage
+                return
+            }
+
             let session = makePendingImportSession(
                 directoryURL: directoryURL,
                 importMode: .screen,
@@ -2388,6 +2393,12 @@ struct SettingsScreen: View {
                 do {
 
                     if let archiveImport = try extractFullArchiveImportIfPresent(from: sourceURL) {
+                        guard session.importMode != .screen else {
+                            cleanupTemporaryImportDirectories(session.temporaryImportDirectoryURLs + [archiveImport.temporaryDirectoryURL])
+                            renameAlertMessage = settingsFullBackupImportRejectedMessage
+                            return
+                        }
+
                         session.importMode = .allFiles
                         session.importListMode = nil
                         session.temporaryImportDirectoryURLs.append(archiveImport.temporaryDirectoryURL)
@@ -2913,6 +2924,24 @@ struct SettingsScreen: View {
         for directoryURL in directoryURLs {
             try? FileManager.default.removeItem(at: directoryURL)
         }
+    }
+
+    private func screenImportSelectionContainsFullBackup(_ urls: [URL]) -> Bool {
+        for url in urls where url.pathExtension.lowercased() == "zip" {
+            guard (try? isFullBackupArchive(url)) == true else {
+                continue
+            }
+
+            return true
+        }
+
+        return false
+    }
+
+    private func isFullBackupArchive(_ zipURL: URL) throws -> Bool {
+        let archiveData = try readImportedFileData(from: zipURL)
+        let entries = try SettingsArchiveFileDocument.archiveEntries(from: archiveData)
+        return fullArchiveStructure(in: entries).isFullArchive
     }
 
     private func selectedScreenConfigURLsByName(from urls: [URL]) -> [String: URL] {
@@ -3802,13 +3831,29 @@ private struct SpeechVoiceOption: Identifiable, Equatable {
     var id: String { identifier }
 }
 
+private let settingsFullBackupImportRejectedMessage = """
+This ZIP contains a full backup, including screens, images, sounds, text files and PDFs.
+
+Import Screen(s) only accepts individual .screen files or ZIP packages containing screens and their configurations.
+
+To import this backup, select Restore Full Backup from the Import menu.
+"""
+
 private struct SettingsRenameAlertModifier: ViewModifier {
     @Binding var message: String?
     let isPresented: Binding<Bool>
 
+    private var alertTitle: String {
+        message == settingsFullBackupImportRejectedMessage ? "Full Backup Detected" : "Alert"
+    }
+
+    private var dismissButtonTitle: String {
+        message == settingsFullBackupImportRejectedMessage ? "Dismiss" : "OK"
+    }
+
     func body(content: Content) -> some View {
-        content.alert("Alert", isPresented: isPresented) {
-            Button("OK", role: .cancel) {
+        content.alert(alertTitle, isPresented: isPresented) {
+            Button(dismissButtonTitle, role: .cancel) {
                 message = nil
             }
         } message: {
