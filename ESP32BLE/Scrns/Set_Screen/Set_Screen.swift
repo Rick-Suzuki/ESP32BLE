@@ -66,6 +66,34 @@ struct SettingsScreen: View {
         case keepBoth
     }
 
+    private enum RestoreConflictResolution {
+        case replaceAll
+        case skipAll
+    }
+
+    private enum RestoreArchiveValidationError: LocalizedError {
+        case invalidBackupArchive
+        case invalidArchivePath(String)
+        case unsupportedArchiveEntry(String)
+        case duplicateDestinationFilename(String)
+        case invalidScreenConfiguration(String)
+
+        var errorDescription: String? {
+            switch self {
+            case .invalidBackupArchive:
+                return "Invalid backup archive."
+            case .invalidArchivePath(let fileName):
+                return "Invalid backup archive path: \(fileName)."
+            case .unsupportedArchiveEntry(let fileName):
+                return "Unsupported file in backup: \(fileName)."
+            case .duplicateDestinationFilename(let fileName):
+                return "Duplicate filenames in backup: \(fileName)."
+            case .invalidScreenConfiguration(let fileName):
+                return "Invalid screen configuration in backup: \(fileName)."
+            }
+        }
+    }
+
     private struct PendingImportConflict {
         let sourceURL: URL
         let targetURL: URL
@@ -81,6 +109,7 @@ struct SettingsScreen: View {
         var processedItemCount = 0
         var selectedConfigURLsByName: [String: URL]
         var temporaryImportDirectoryURLs: [URL] = []
+        var skipFileNameKeys: Set<String> = []
         var existingFileNames: Set<String>
         var existingTextNames: Set<String>
         var existingConfigNames: Set<String>
@@ -109,6 +138,30 @@ struct SettingsScreen: View {
         let fileURLs: [URL]
         let configURLsByName: [String: URL]
         let temporaryDirectoryURL: URL
+    }
+
+    private struct PendingFullRestore {
+        var session: PendingImportSession
+        let skipFileNameKeys: Set<String>
+    }
+
+    private struct FullRestorePreflight {
+        var session: PendingImportSession
+        let conflictFileNameKeys: Set<String>
+        let skipFileNameKeys: Set<String>
+    }
+
+    private struct FullArchiveEntryPlan {
+        let entry: SettingsArchiveFileDocument.ArchiveEntry
+        let folderName: String
+        let fileName: String
+        let contentKind: ImportedContentKind
+        let fileNameKey: String
+    }
+
+    private struct FullArchiveEntryClassification {
+        let fileURLs: [URL]
+        let configURLsByName: [String: URL]
     }
 
     private struct SettingsStoredGridDimensions: Codable {
@@ -185,6 +238,7 @@ struct SettingsScreen: View {
     @State private var activeImportMode: SettingsImportMode?
     @State private var pendingImportSession: PendingImportSession?
     @State private var pendingImportConflict: PendingImportConflict?
+    @State private var pendingFullRestore: PendingFullRestore?
     @State private var importConflictApplyToAll = false
     @State private var importRefreshID = UUID()
     @State private var isExportingArchive = false
@@ -322,7 +376,7 @@ struct SettingsScreen: View {
 					}
 					Button("Restore Full Backup") {
 						ButtonClickFeedback.playIfEnabled()
-						isRestoreAllFilesConfirmationPresented = true
+						beginRestoreAllFiles()
 					}
 				} label: {
 					Image(systemName: "square.and.arrow.down")
@@ -473,10 +527,6 @@ struct SettingsScreen: View {
             isPresented: $isDeleteAllDataConfirmationPresented,
             deleteAllData: deleteAllData
         ))
-        .modifier(RestoreAllFilesConfirmationModifier(
-            isPresented: $isRestoreAllFilesConfirmationPresented,
-            restoreAllFiles: beginRestoreAllFiles
-        ))
         .overlay {
             repairDocumentAlertOverlay
         }
@@ -498,10 +548,26 @@ struct SettingsScreen: View {
         } message: {
             Text(pendingImportConflict?.fileName ?? "")
         }
+        .alert(
+            "Restore Conflicts Found",
+            isPresented: restoreConflictDialogIsPresented
+        ) {
+            Button("Replace All") {
+                resolvePendingFullRestore(.replaceAll)
+            }
+            Button("Skip All") {
+                resolvePendingFullRestore(.skipAll)
+            }
+            Button("Cancel", role: .cancel) {
+                cancelPendingFullRestore()
+            }
+        } message: {
+            Text("Some filenames already exist. Choose how to handle them.")
+        }
         .fileImporter(
             isPresented: isImporting,
             allowedContentTypes: activeImportContentTypes,
-            allowsMultipleSelection: true
+            allowsMultipleSelection: allowsMultipleImportSelection
         ) { result in
             let importMode = activeImportMode
             pendingImportListMode = nil
@@ -611,6 +677,21 @@ struct SettingsScreen: View {
                 if !isPresented {
                     pendingImportListMode = nil
                     pendingImportMode = nil
+                }
+            }
+        )
+    }
+
+    private var allowsMultipleImportSelection: Bool {
+        pendingImportMode != .allFiles
+    }
+
+    private var restoreConflictDialogIsPresented: Binding<Bool> {
+        Binding(
+            get: { pendingFullRestore != nil },
+            set: { isPresented in
+                if !isPresented {
+                    cancelPendingFullRestore()
                 }
             }
         )
@@ -2328,25 +2409,93 @@ struct SettingsScreen: View {
         case .allFiles:
             guard let zipURL = urls.first, urls.count == 1, zipURL.pathExtension.lowercased() == "zip" else {
                 db("IMPORT_TRACE all_files_archive_validation=invalid reason=expected_single_zip")
-                renameAlertMessage = "Restore All Files expects one exported ZIP file."
+                renameAlertMessage = "Restore Full Backup expects one ZIP file."
                 return
             }
 
             do {
-                let archiveImport = try extractFullArchiveImport(from: zipURL)
-                var session = makePendingImportSession(
-                    directoryURL: directoryURL,
-                    importMode: .allFiles,
-                    remainingURLs: archiveImport.fileURLs,
-                    selectedConfigURLsByName: archiveImport.configURLsByName
+                let preflight = try makeFullRestorePreflight(from: zipURL, directoryURL: directoryURL)
+                guard !preflight.conflictFileNameKeys.isEmpty else {
+                    processPendingImportSession(preflight.session)
+                    return
+                }
+
+                pendingFullRestore = PendingFullRestore(
+                    session: preflight.session,
+                    skipFileNameKeys: preflight.skipFileNameKeys
                 )
-                session.temporaryImportDirectoryURLs.append(archiveImport.temporaryDirectoryURL)
-                processPendingImportSession(session)
             } catch {
                 db("IMPORT_TRACE all_files_archive_validation=invalid error=\(error.localizedDescription)")
-                renameAlertMessage = "Couldn't import all files: \(error.localizedDescription)"
+                renameAlertMessage = "Couldn't import full backup: \(error.localizedDescription)"
             }
         }
+    }
+
+    private func makeFullRestorePreflight(from zipURL: URL, directoryURL: URL) throws -> FullRestorePreflight {
+        let archiveImport = try extractFullArchiveImport(from: zipURL)
+        let destinationFileNameKeys = archiveImport.fileURLs.map { $0.lastPathComponent.lowercased() }
+        let existingFileNameKeys = existingDocumentDirectoryFileNameKeys(in: directoryURL)
+        let conflictFileNameKeys = Set(destinationFileNameKeys.filter { existingFileNameKeys.contains($0) })
+        let screenConflictConfigKeys = Set(archiveImport.fileURLs.compactMap { fileURL -> String? in
+            guard isScreenDocumentURL(fileURL),
+                  conflictFileNameKeys.contains(fileURL.lastPathComponent.lowercased()) else {
+                return nil
+            }
+
+            return configFileName(forDocumentName: fileURL.lastPathComponent).lowercased()
+        })
+
+        var session = makePendingImportSession(
+            directoryURL: directoryURL,
+            importMode: .allFiles,
+            remainingURLs: archiveImport.fileURLs,
+            selectedConfigURLsByName: archiveImport.configURLsByName
+        )
+        session.temporaryImportDirectoryURLs.append(archiveImport.temporaryDirectoryURL)
+
+        return FullRestorePreflight(
+            session: session,
+            conflictFileNameKeys: conflictFileNameKeys,
+            skipFileNameKeys: conflictFileNameKeys.union(screenConflictConfigKeys)
+        )
+    }
+
+    private func existingDocumentDirectoryFileNameKeys(in directoryURL: URL) -> Set<String> {
+        let fileURLs = (try? FileManager.default.contentsOfDirectory(
+            at: directoryURL,
+            includingPropertiesForKeys: [.isRegularFileKey],
+            options: [.skipsHiddenFiles]
+        )) ?? []
+
+        return Set(fileURLs.compactMap { url in
+            let values = try? url.resourceValues(forKeys: [.isRegularFileKey])
+            guard values?.isRegularFile == true else { return nil }
+            return url.lastPathComponent.lowercased()
+        })
+    }
+
+    private func resolvePendingFullRestore(_ resolution: RestoreConflictResolution) {
+        guard var restore = pendingFullRestore else {
+            return
+        }
+
+        pendingFullRestore = nil
+        switch resolution {
+        case .replaceAll:
+            processPendingImportSession(restore.session)
+        case .skipAll:
+            restore.session.skipFileNameKeys = restore.skipFileNameKeys
+            processPendingImportSession(restore.session)
+        }
+    }
+
+    private func cancelPendingFullRestore() {
+        guard let restore = pendingFullRestore else {
+            return
+        }
+
+        cleanupTemporaryImportDirectories(restore.session.temporaryImportDirectoryURLs)
+        pendingFullRestore = nil
     }
 
     private func makePendingImportSession(
@@ -2383,6 +2532,11 @@ struct SettingsScreen: View {
             let targetFileNameKey = targetFileName.lowercased()
             let targetURL = session.directoryURL.appendingPathComponent(targetFileName)
             if session.importMode == .allFiles {
+            }
+
+            if session.importMode == .allFiles,
+               session.skipFileNameKeys.contains(targetFileNameKey) {
+                continue
             }
 
             if pathExtension == "zip" {
@@ -3058,52 +3212,10 @@ struct SettingsScreen: View {
                 withIntermediateDirectories: true
             )
 
-            var configURLsByName: [String: URL] = [:]
-            var configURLs: [URL] = []
-            var screenURLs: [URL] = []
-            var textURLs: [URL] = []
-            var imageURLs: [URL] = []
-            var soundURLs: [URL] = []
-            var pdfURLs: [URL] = []
-
-            for entry in entries {
-                let components = entry.fileName.split(separator: "/", omittingEmptySubsequences: true).map(String.init)
-                guard components.count == 2 else {
-                    continue
-                }
-
-                let folderName = components[0]
-                guard let fileName = sanitizedArchiveFileName(components[1]) else {
-                    continue
-                }
-
-                let extractedURL = temporaryDirectoryURL.appendingPathComponent(fileName)
-                try entry.data.write(to: extractedURL, options: [.atomic])
-                let pathExtension = extractedURL.pathExtension.lowercased()
-
-                switch folderName {
-                case "Configs" where isScreenConfigFileName(fileName):
-                    configURLsByName[fileName.lowercased()] = extractedURL
-                    configURLs.append(extractedURL)
-                case "Screens" where isScreenDocumentFileExtension(pathExtension):
-                    screenURLs.append(extractedURL)
-                case "Text" where pathExtension == legacyScreenDocumentFileExtension:
-                    textURLs.append(extractedURL)
-                case "Images" where supportedImportedImageExtensions.contains(pathExtension):
-                    imageURLs.append(extractedURL)
-                case "Sounds" where supportedImportedSoundExtensions.contains(pathExtension):
-                    soundURLs.append(extractedURL)
-                case "PDFs" where supportedImportedPDFExtensions.contains(pathExtension):
-                    pdfURLs.append(extractedURL)
-                default:
-                    continue
-                }
-            }
-
-            let orderedURLs = configURLs + screenURLs + textURLs + imageURLs + soundURLs + pdfURLs
+            let classification = try classifyFullArchiveEntries(entries, temporaryDirectoryURL: temporaryDirectoryURL)
             return FullArchiveImport(
-                fileURLs: orderedURLs,
-                configURLsByName: configURLsByName,
+                fileURLs: classification.fileURLs,
+                configURLsByName: classification.configURLsByName,
                 temporaryDirectoryURL: temporaryDirectoryURL
             )
         } catch {
@@ -3111,6 +3223,101 @@ struct SettingsScreen: View {
             try? FileManager.default.removeItem(at: temporaryDirectoryURL)
             throw error
         }
+    }
+
+    private func classifyFullArchiveEntries(
+        _ entries: [SettingsArchiveFileDocument.ArchiveEntry],
+        temporaryDirectoryURL: URL
+    ) throws -> FullArchiveEntryClassification {
+        var seenFileNameKeys: Set<String> = []
+        var configURLsByName: [String: URL] = [:]
+        var configURLs: [URL] = []
+        var screenURLs: [URL] = []
+        var textURLs: [URL] = []
+        var imageURLs: [URL] = []
+        var soundURLs: [URL] = []
+        var pdfURLs: [URL] = []
+
+        for entry in entries {
+            guard entry.fileName != "Archive.json" else {
+                continue
+            }
+
+            let plan = try fullArchiveEntryPlan(for: entry)
+            guard !seenFileNameKeys.contains(plan.fileNameKey) else {
+                throw RestoreArchiveValidationError.duplicateDestinationFilename(plan.fileName)
+            }
+            seenFileNameKeys.insert(plan.fileNameKey)
+
+            let extractedURL = temporaryDirectoryURL.appendingPathComponent(plan.fileName)
+            try plan.entry.data.write(to: extractedURL, options: [.atomic])
+
+            switch plan.contentKind {
+            case .config:
+                configURLsByName[plan.fileNameKey] = extractedURL
+                configURLs.append(extractedURL)
+            case .document:
+                screenURLs.append(extractedURL)
+            case .text:
+                textURLs.append(extractedURL)
+            case .image:
+                imageURLs.append(extractedURL)
+            case .sound:
+                soundURLs.append(extractedURL)
+            case .pdf:
+                pdfURLs.append(extractedURL)
+            }
+        }
+
+        return FullArchiveEntryClassification(
+            fileURLs: configURLs + screenURLs + textURLs + imageURLs + soundURLs + pdfURLs,
+            configURLsByName: configURLsByName
+        )
+    }
+
+    private func fullArchiveEntryPlan(for entry: SettingsArchiveFileDocument.ArchiveEntry) throws -> FullArchiveEntryPlan {
+        let components = entry.fileName.split(separator: "/", omittingEmptySubsequences: true).map(String.init)
+        guard components.count == 2 else {
+            throw RestoreArchiveValidationError.invalidArchivePath(entry.fileName)
+        }
+
+        let folderName = components[0]
+        guard let fileName = sanitizedArchiveFileName(components[1]) else {
+            throw RestoreArchiveValidationError.invalidArchivePath(entry.fileName)
+        }
+
+        let pathExtension = URL(fileURLWithPath: fileName).pathExtension.lowercased()
+        let contentKind: ImportedContentKind
+
+        switch folderName {
+        case "Configs" where isScreenConfigFileName(fileName):
+            do {
+                _ = try JSONDecoder().decode(ScreenConfig.self, from: entry.data)
+            } catch {
+                throw RestoreArchiveValidationError.invalidScreenConfiguration(fileName)
+            }
+            contentKind = .config
+        case "Screens" where isScreenDocumentFileExtension(pathExtension):
+            contentKind = .document
+        case "Text" where pathExtension == legacyScreenDocumentFileExtension:
+            contentKind = .text
+        case "Images" where supportedImportedImageExtensions.contains(pathExtension):
+            contentKind = .image
+        case "Sounds" where supportedImportedSoundExtensions.contains(pathExtension):
+            contentKind = .sound
+        case "PDFs" where supportedImportedPDFExtensions.contains(pathExtension):
+            contentKind = .pdf
+        default:
+            throw RestoreArchiveValidationError.unsupportedArchiveEntry(entry.fileName)
+        }
+
+        return FullArchiveEntryPlan(
+            entry: entry,
+            folderName: folderName,
+            fileName: fileName,
+            contentKind: contentKind,
+            fileNameKey: fileName.lowercased()
+        )
     }
 
     private func fullArchiveStructure(
@@ -3169,6 +3376,12 @@ struct SettingsScreen: View {
     ) {
         let fileManager = FileManager.default
         let targetConfigURL = configURL(forDocumentURL: documentURL)
+        let targetConfigKey = targetConfigURL.lastPathComponent.lowercased()
+
+        if session.importMode == .allFiles,
+           session.skipFileNameKeys.contains(targetConfigKey) {
+            return
+        }
 
         if fileManager.fileExists(atPath: targetConfigURL.path) {
             if replacingDocument {
