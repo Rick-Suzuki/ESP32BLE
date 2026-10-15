@@ -1,119 +1,82 @@
-1. File modified
+ESP32BLE — B2b IMPLEMENTATION REPORT
 
-ESP32BLE/Scrns/BLE/BLE_KB_Manager.swift only.
+1. File and lines changed
 
-No other files were modified by this implementation. Existing unrelated workspace changes were preserved. No Git write operations or commits were performed.
+Modified only:
 
-2. Lines changed
+BLE_KB_Manager.swift
 
-Lines 75–79:
-Added UUID-keyed tracking sets.
+Changed lines 286–293 inside connectToSelectedDevice().
 
-Lines 247–251:
-Clear all B2a tracking during stop().
+No other functions or files were modified.
 
-Lines 467–485:
-Guard service discovery in didConnect.
+2. Skip condition
 
-Lines 493–497:
-Clear tracking for the disconnected peripheral.
+The selected connection request is skipped only when both conditions are true:
 
-Lines 526–530:
-Clear tracking when connection fails.
+match.peripheral.state == .connecting
 
-Lines 551–587:
-Handle service-discovery failures and suppress duplicate characteristic discovery.
+probePeripheralIDs.contains(match.id)
 
-Lines 595–656:
-Handle characteristic failures and suppress duplicate selected-device initialization, DEVICE_ID reads, notifications, and timing transmission.
+No new properties or state variables were introduced. isPendingProbeConnection is a local constant.
 
-3. New tracking variables
+3. Other peripheral states
 
-serviceDiscoveryPeripheralIDs
+Existing connect behavior remains for:
 
-characteristicDiscoveryPeripheralIDs
+• .disconnected
+• .connected
+• .disconnecting
+• .connecting without temporary-probe membership
 
-completedCharacteristicDiscoveryPeripheralIDs
+These cases continue using the original:
 
-deviceIDReadPeripheralIDs
+centralManager.connect(match.peripheral, options: nil)
 
-selectedInitializationPeripheralIDs
+4. B1 preservation
 
-Each is a Set<UUID>, keeping peripherals independent.
-
-4. Duplicate service discovery
-
-didConnect inserts the peripheral UUID into serviceDiscoveryPeripheralIDs.
-
-Only the first insertion calls discoverServices(...). Later callbacks produce:
-
-[BLE-CONNECT-PROBE] SKIPPED DUPLICATE SERVICE DISCOVERY
-
-Probe-only characteristic discovery that completed before selection is explicitly allowed to rediscover for selected-device initialization.
-
-5. Duplicate characteristic discovery
-
-didDiscoverServices inserts the UUID into characteristicDiscoveryPeripheralIDs.
-
-Only the first insertion calls discoverCharacteristics(...). Repeated service callbacks produce:
-
-[BLE-CONNECT-PROBE] SKIPPED DUPLICATE CHARACTERISTIC DISCOVERY
-
-6. Selected initialization protection
-
-selectedInitializationPeripheralIDs allows selected initialization once per connection lifecycle.
-
-Duplicate characteristic callbacks no longer repeat:
-
-RX/TX assignment
-TX notification setup
-DEVICE_ID reads
-connectionText = "Connected"
-sendStoredKeyboardTiming()
-
-Suppressed callbacks produce:
-
-[BLE-CONNECT-PROBE] SKIPPED DUPLICATE SELECTED INITIALIZATION
-
-Probe-only characteristic discovery does not mark selected initialization complete.
-
-7. Tracking lifecycle and retries
-
-Per-peripheral tracking is cleared by:
-
-didDisconnectPeripheral
-didFailToConnect
-
-All tracking is cleared by stop() because that deliberately ends all managed connections.
-
-Service and characteristic discovery failures release their request tracking without introducing an automatic retry loop. Missing service or characteristic results also release the relevant request tracking.
-
-Other peripherals’ tracking is unaffected by a single peripheral disconnect or failure.
-
-8. B1 preservation
-
-B1 remains at lines 449–451 with its original condition:
+B1’s didConnect promotion condition remains unchanged:
 
 wasProbe && matchesSelected && matchesActive
 
-It still removes only the selected UUID from probePeripheralIDs, after which the normal branch sets isConnected = true.
+Probe membership remains intact when B2b skips the duplicate request, allowing the original pending connection callback to execute B1 promotion.
 
-connectToSelectedDevice(), connection requests, probe creation, cancellation, scanning, and reconnection behavior were not changed.
+5. B2a preservation
 
-9. Validation
+No B2a properties, guards, discovery callbacks, initialization logic, or cleanup paths were modified.
 
-Xcode file diagnostics: No issues found.
+6. Diagnostic added
+
+When the redundant request is skipped, the existing logging mechanism emits:
+
+SKIPPED DUPLICATE CONNECT
+
+It includes:
+
+• Peripheral UUID
+• Selected attempt number
+• CBPeripheral.state
+• Probe membership
+• reason=temporaryProbeAlreadyConnecting
+
+The existing helper supplies the required [BLE-CONNECT-PROBE] and 🐞 prefixes.
+
+The existing selected-connect diagnostic remains unchanged when connect() is requested.
+
+7. Build result
+
+Xcode live diagnostics: No issues found.
 
 Full Xcode project build: Successful.
 
-Build completed in approximately 25.3 seconds with no errors.
+Build completed in 6.9 seconds with no errors.
 
-10. Remaining limitations
+8. Remaining risks and limitations
 
-B2a intentionally retains the redundant centralManager.connect(...) request.
+B2b intentionally does not directly promote .connected probes; that remains B2c work.
 
-Direct promotion without another didConnect callback remains outside this stage.
+Pending cancellation and .disconnecting races remain unchanged for B2d.
 
-The existing pending probe-cancellation race remains unchanged.
+Validation covered source inspection and compilation. Physical-device BLE testing was not performed.
 
-Validation confirms compilation and code-path behavior; physical-device BLE testing was not performed in this session.
+No commit or other Git write operation was performed.

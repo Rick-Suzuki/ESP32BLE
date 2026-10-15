@@ -283,9 +283,15 @@ final class BLEKeyboardManager: NSObject, ObservableObject {
         connectionProbeLog("scan stop requested reason=selectedConnect peripheralUUID=\(match.id.uuidString) attempt=\(connectionAttemptNumber)")
 		centralManager.stopScan()
         connectionProbeLog("scanning stopped reason=selectedConnect peripheralUUID=\(match.id.uuidString) attempt=\(connectionAttemptNumber)")
-        connectionProbeLog("centralManager.connect requested kind=selected peripheralUUID=\(match.id.uuidString) attempt=\(connectionAttemptNumber) alreadyProbe=\(probePeripheralIDs.contains(match.id))")
-		centralManager.connect(match.peripheral, options: nil)
-	}
+        let isPendingProbeConnection = match.peripheral.state == .connecting
+            && probePeripheralIDs.contains(match.id)
+        if isPendingProbeConnection {
+            connectionProbeLog("SKIPPED DUPLICATE CONNECT peripheralUUID=\(match.id.uuidString) attempt=\(connectionAttemptNumber) CBPeripheral.state=\(peripheralStateDescription(match.peripheral.state)) probeMembership=\(probePeripheralIDs.contains(match.id)) reason=temporaryProbeAlreadyConnecting")
+        } else {
+            connectionProbeLog("centralManager.connect requested kind=selected peripheralUUID=\(match.id.uuidString) attempt=\(connectionAttemptNumber) alreadyProbe=\(probePeripheralIDs.contains(match.id))")
+			centralManager.connect(match.peripheral, options: nil)
+        }
+		}
 	
 			func disconnect() {
 				isDeliberatelyStopped = true
