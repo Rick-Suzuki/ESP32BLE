@@ -1,62 +1,139 @@
-Implemented Phase 3B-1 in:
+PHASE 3B-2 IMPLEMENTED
 
-ESP32BLE/Scrns/Set_Screen/Set_Screen.swift􀰓
+1. Exact files modified
 
-Changed functions/areas:
+Only modified:
 
-• Added restore conflict/preflight state and models around lines 69, 74, 112, 143-162, 241.
-• Restore menu action now calls beginRestoreAllFiles() directly at lines 377-379.
-• Added one conflict dialog at lines 553-567.
-• Restore file importer now uses mode-specific selection behavior at line 571.
-• Added allowsMultipleImportSelection and restoreConflictDialogIsPresented around lines 686-699.
-• Updated .allFiles handling in handleImportedSelection around lines 2413-2431.
-• Added restore preflight/conflict helpers around lines 2435-2499.
-• Updated processPendingImportSession(_:) around lines 2523-2540 for Skip All.
-• Updated ensureImportedScreenConfig(...) around lines 3373-3384 so skipped screen configs are preserved.
-• Refactored full archive extraction/classification around lines 3216-3319.
+ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
 
-New restore flow:
+No other source files were modified.
 
-• Restore Full Backup opens the ZIP picker directly.
-• Restore picker allows exactly one ZIP through allowsMultipleImportSelection.
-• Defensive validation rejects anything other than exactly one .zip.
-• Preflight parses the backup, validates restorable entries, decodes screen configs, detects duplicate destination filenames case-insensitively, and compares final flat Documents filenames before importing.
-• No conflicts: restore proceeds automatically.
-• Conflicts: shows one dialog titled Restore Conflicts Found with Replace All, Skip All, and Cancel.
-• No old pre-selection restore confirmation is used in the restore flow.
+2. Functions changed
 
-Archive validation implemented:
+Changed:
 
-• Reuses existing full-backup archive parsing through extractFullArchiveImport(from:).
-• Requires the existing full-backup structure/metadata path.
-• Supports only Screens/, Configs/, Text/, Images/, Sounds/, and PDFs/.
-• Uses the final destination filename, flattened into Documents.
-• Rejects invalid paths, unsupported entries, duplicate destination filenames, and invalid screen config JSON before Documents are modified.
+applyPendingImportConflictIfNeeded
+• Removed the pre-success replacedFileCount increment for .allFiles.
 
-Conflict behavior:
+importReplacingExistingFile
+• For Restore Full Backup only, identified by session.importMode == .allFiles, existing destinations now use safe replacement.
+• Non-restore imports keep the previous remove-then-import behavior.
+• replacedFileCount now increments only after a successful replacement.
 
-• Replace All imports everything and preserves the existing replacement mechanism for this phase.
-• Skip All skips conflicting destination filenames.
-• If a skipped file is a .screen, its matching .config.json from the backup is also skipped.
-• A new screen with a conflicting existing config respects Skip All and does not overwrite that config.
-• Cancel clears pending restore state and removes temporary extraction directories without importing.
+ensureImportedScreenConfig
+• Restore mode no longer deletes an existing config before a replacement is ready.
+• Skip All config protection remains in place.
+• Existing valid configs are preserved when a replacement screen has no matching backup config.
+• Restore mode exits before the old remove-first config path.
 
-Verification:
+Added:
 
-• Xcode live diagnostics: no issues found in Set_Screen.swift􀰓.
-• Build result: ESP32BLE project built successfully.
-• Import Screen(s) still permits multiple selections because only .allFiles restore mode disables multiple selection.
-• Phase 2 full-backup rejection for Import Screen(s) was preserved.
-• iPhone and iPad share the same restore logic; no platform-specific restore path was added.
+safelyReplaceExistingScreenConfig
+safelyReplaceExistingImportedFile
+stageImportedFileData
+verifyStagedReplacement
+
+3. New safe replacement helper
+
+Added safelyReplaceExistingImportedFile(from:to:).
+
+It:
+
+• Creates an item replacement directory.
+• Stages the incoming file first.
+• Verifies the staged file exists and matches source file size when available.
+• Calls FileManager.replaceItemAt.
+• Cleans up the staging directory with defer.
+• Does not remove the original file before staging succeeds.
+
+4. Staging directory implementation
+
+Uses:
+
+FileManager.default.url(for: .itemReplacementDirectory, in: .userDomainMask, appropriateFor: targetURL, create: true)
+
+The staged file is placed inside that replacement directory using a UUID filename plus the target extension.
+
+Staging files are not placed directly in Documents, so they should not appear in the normal Settings file list.
+
+5. FileManager replacement implementation
+
+Uses:
+
+FileManager.default.replaceItemAt(targetURL, withItemAt: stagedURL, backupItemName: nil, options: [.usingNewMetadataOnly])
+
+If replacement fails:
+
+• The code does not delete targetURL.
+• It does not retry with remove/move.
+• It checks whether the destination still exists.
+• It logs any Foundation recovery original location from NSFileOriginalItemLocationKey using db().
+• It throws through the existing restore error path.
+
+6. Screen/configuration handling
+
+For .config.json restore replacements:
+
+• safelyReplaceExistingScreenConfig reads and decodes the source config before replacement.
+• Invalid config data is not written over an existing config.
+• Existing configs are replaced with the same safe replacement helper.
+• New configs still use the existing new-file import path.
+• If a replacement screen has no matching backup config, an existing valid config is preserved.
+
+Skip All still preserves skipped screens and matching configs.
+
+7. Error handling and recovery behavior
+
+Existing restore failure handling is preserved:
+
+• Failures are recorded with recordImportFailure.
+• renameAlertMessage reports the failed file.
+• The restore session continues according to the existing flow.
+• Temporary staging resources are cleaned up with defer.
+
+This is still per-file safety, not a transactional restore.
+
+8. Restore counters
+
+replacedFileCount now increments only after successful replacement.
+
+Previously it incremented before the replacement attempt in .allFiles.
+
+9. Other import modes
+
+Other import modes remain unchanged.
+
+The safe replacement branch is gated by:
+
+session.importMode == .allFiles
+
+Import Screen(s), individual screen imports, keep-both imports, normal document saving, renaming, export logic, and archive format were not changed.
+
+10. Build result
+
+ESP32BLE built successfully.
+
+11. Remaining data-loss risks
+
+This improves per-file replacement safety only.
 
 Remaining risks:
 
-• This phase intentionally does not make replacement atomic. If a write fails after restore begins, existing restore error behavior still applies.
-• I did not run destructive restore tests against user Documents.
+• A full backup restore is still not transactional.
+• Earlier restored files remain restored if a later file fails.
+• App termination during a multi-file restore can still leave a partially completed restore.
+• New-file imports are not rolled back if later files fail.
 
-File/Git safety:
+12. Safety confirmation
 
-• I modified only ESP32BLE/Scrns/Set_Screen/Set_Screen.swift􀰓.
-• I did not modify any .txt files.
-• I did not stage, commit, tag, reset, restore, checkout, rebase, pull, push, clean, or change branches.
-• Read-only git status --short shows ESP32BLE/Scrns/Set_Screen/Set_Screen.swift􀰓 modified, and also shows ESP32BLE/codex.txt already modified in the worktree; I did not touch that .txt file.
+No .txt files were modified by me.
+No Git state was changed.
+No staging, commits, tags, resets, restores, checkouts, rebases, pulls, pushes, cleans, or branch changes were performed.
+No destructive restore tests were run.
+
+Read-only status currently shows:
+
+ESP32BLE/Scrns/Set_Screen/Set_Screen.swift􀰓 modified
+ESP32BLE/codex.txt already modified in the worktree
+
+I did not touch codex.txt.

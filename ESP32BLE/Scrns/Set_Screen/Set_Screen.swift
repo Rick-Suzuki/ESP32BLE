@@ -2840,7 +2840,6 @@ struct SettingsScreen: View {
         session: inout PendingImportSession
     ) -> Bool {
         if session.importMode == .allFiles {
-            session.replacedFileCount += 1
             importReplacingExistingFile(
                 sourceURL: sourceURL,
                 targetURL: targetURL,
@@ -2958,7 +2957,32 @@ struct SettingsScreen: View {
         session: inout PendingImportSession
     ) {
         do {
-            if FileManager.default.fileExists(atPath: targetURL.path) {
+            let isRestoreReplacement = session.importMode == .allFiles
+            let targetExists = FileManager.default.fileExists(atPath: targetURL.path)
+
+            if isRestoreReplacement, targetExists {
+                switch contentKind {
+                case .config:
+                    try safelyReplaceExistingScreenConfig(from: sourceURL, to: targetURL)
+                default:
+                    try safelyReplaceExistingImportedFile(from: sourceURL, to: targetURL)
+                }
+
+                if contentKind == .document {
+                    ensureImportedScreenConfig(for: targetURL, session: session, replacingDocument: true)
+                }
+
+                session.replacedFileCount += 1
+                recordSuccessfulImport(
+                    targetURL: targetURL,
+                    fileNameKey: targetURL.lastPathComponent.lowercased(),
+                    contentKind: contentKind,
+                    session: &session
+                )
+                return
+            }
+
+            if targetExists {
                 try FileManager.default.removeItem(at: targetURL)
             }
 
@@ -2969,6 +2993,10 @@ struct SettingsScreen: View {
                 session: &session,
                 replacingDocument: true
             )
+
+            if targetExists {
+                session.replacedFileCount += 1
+            }
         } catch {
             recordImportFailure(fileName: fileName, error: error, session: &session)
             renameAlertMessage = "Couldn't import \(fileName): \(error.localizedDescription)"
@@ -3383,6 +3411,38 @@ struct SettingsScreen: View {
             return
         }
 
+        if session.importMode == .allFiles,
+           replacingDocument,
+           fileManager.fileExists(atPath: targetConfigURL.path),
+           loadScreenConfig(for: documentURL) != nil {
+            return
+        }
+
+        let matchingConfigFileName = configFileName(forDocumentName: documentURL.lastPathComponent).lowercased()
+
+        if session.importMode == .allFiles,
+           let sourceConfigURL = session.selectedConfigURLsByName[matchingConfigFileName] {
+            do {
+                if fileManager.fileExists(atPath: targetConfigURL.path) {
+                    try safelyReplaceExistingScreenConfig(from: sourceConfigURL, to: targetConfigURL)
+                } else {
+                    try importValidScreenConfig(from: sourceConfigURL, to: targetConfigURL)
+                }
+
+                if loadScreenConfig(for: documentURL) != nil {
+                    return
+                }
+            } catch {
+                db("Failed to import screen config \(sourceConfigURL.lastPathComponent): \(error.localizedDescription)")
+                return
+            }
+        }
+
+        if session.importMode == .allFiles {
+            createDefaultScreenConfigIfNeeded(for: documentURL)
+            return
+        }
+
         if fileManager.fileExists(atPath: targetConfigURL.path) {
             if replacingDocument {
                 try? fileManager.removeItem(at: targetConfigURL)
@@ -3395,7 +3455,6 @@ struct SettingsScreen: View {
             }
         }
 
-        let matchingConfigFileName = configFileName(forDocumentName: documentURL.lastPathComponent).lowercased()
         if let sourceConfigURL = session.selectedConfigURLsByName[matchingConfigFileName] {
             do {
                 if fileManager.fileExists(atPath: targetConfigURL.path) {
@@ -3437,6 +3496,12 @@ struct SettingsScreen: View {
             try? FileManager.default.removeItem(at: targetURL)
             throw error
         }
+    }
+
+    private func safelyReplaceExistingScreenConfig(from sourceURL: URL, to targetURL: URL) throws {
+        let configData = try readImportedFileData(from: sourceURL)
+        _ = try JSONDecoder().decode(ScreenConfig.self, from: configData)
+        try safelyReplaceExistingImportedFile(from: sourceURL, to: targetURL)
     }
 
     private func isScreenConfigFileName(_ fileName: String) -> Bool {
@@ -3734,6 +3799,103 @@ struct SettingsScreen: View {
         }
 
         return importedData
+    }
+
+    private func safelyReplaceExistingImportedFile(from sourceURL: URL, to targetURL: URL) throws {
+        let fileManager = FileManager.default
+        let replacementDirectoryURL = try fileManager.url(
+            for: .itemReplacementDirectory,
+            in: .userDomainMask,
+            appropriateFor: targetURL,
+            create: true
+        )
+        defer {
+            try? fileManager.removeItem(at: replacementDirectoryURL)
+        }
+
+        let stagedURL = replacementDirectoryURL
+            .appendingPathComponent(UUID().uuidString)
+            .appendingPathExtension(targetURL.pathExtension)
+
+        let expectedFileSize = try stageImportedFileData(from: sourceURL, to: stagedURL)
+        try verifyStagedReplacement(at: stagedURL, expectedFileSize: expectedFileSize)
+
+        do {
+            _ = try fileManager.replaceItemAt(
+                targetURL,
+                withItemAt: stagedURL,
+                backupItemName: nil,
+                options: [.usingNewMetadataOnly]
+            )
+        } catch {
+            let nsError = error as NSError
+            if let recoveryURL = nsError.userInfo["NSFileOriginalItemLocationKey"] as? URL {
+                db("IMPORT_TRACE replacement_failed original_recovery_location=\(recoveryURL.path)")
+            } else if let recoveryURL = nsError.userInfo["NSFileOriginalItemLocationKey"] as? NSURL {
+                db("IMPORT_TRACE replacement_failed original_recovery_location=\(recoveryURL.path ?? "")")
+            }
+
+            let destinationStillExists = fileManager.fileExists(atPath: targetURL.path)
+            db("IMPORT_TRACE replacement_failed destination_exists=\(destinationStillExists) destination=\(targetURL.path) error=\(error.localizedDescription)")
+            throw error
+        }
+    }
+
+    private func stageImportedFileData(from sourceURL: URL, to stagedURL: URL) throws -> Int? {
+        let didAccessSecurityScopedResource = sourceURL.startAccessingSecurityScopedResource()
+        defer {
+            if didAccessSecurityScopedResource {
+                sourceURL.stopAccessingSecurityScopedResource()
+            }
+        }
+
+        let coordinator = NSFileCoordinator()
+        var importError: Error?
+        var coordinatorError: NSError?
+        var expectedFileSize: Int?
+
+        coordinator.coordinate(readingItemAt: sourceURL, options: [], error: &coordinatorError) { coordinatedURL in
+            do {
+                expectedFileSize = try? coordinatedURL.resourceValues(forKeys: [.fileSizeKey]).fileSize
+                try FileManager.default.createDirectory(
+                    at: stagedURL.deletingLastPathComponent(),
+                    withIntermediateDirectories: true
+                )
+
+                do {
+                    try FileManager.default.copyItem(at: coordinatedURL, to: stagedURL)
+                } catch {
+                    try? FileManager.default.removeItem(at: stagedURL)
+                    let importedData = try Data(contentsOf: coordinatedURL)
+                    try importedData.write(to: stagedURL, options: .atomic)
+                }
+            } catch {
+                importError = error
+            }
+        }
+
+        if let importError {
+            throw importError
+        }
+
+        if let coordinatorError {
+            throw coordinatorError
+        }
+
+        return expectedFileSize
+    }
+
+    private func verifyStagedReplacement(at stagedURL: URL, expectedFileSize: Int?) throws {
+        let values = try stagedURL.resourceValues(forKeys: [.isRegularFileKey, .fileSizeKey])
+        guard values.isRegularFile == true,
+              let stagedFileSize = values.fileSize else {
+            throw CocoaError(.fileWriteUnknown)
+        }
+
+        if let expectedFileSize,
+           stagedFileSize != expectedFileSize {
+            throw CocoaError(.fileWriteUnknown)
+        }
     }
 
     private func importFileData(from sourceURL: URL, to targetURL: URL) throws {
