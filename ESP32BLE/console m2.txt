@@ -1,280 +1,250 @@
 Update the Info.plist: Support for all orientations will soon be required.
 									[BLE-CONNECT-PROBE] 🐞 t=0.000s scan stop requested reason=stop() activePeripheralUUID=nil discoveredDeviceCount=0
-									API MISUSE: <CBCentralManager: 0x10d1b8a00> can only accept this command while in the powered on state
+									API MISUSE: <CBCentralManager: 0x10e1b4a00> can only accept this command while in the powered on state
 									[BLE-CONNECT-PROBE] 🐞 t=0.000s scanning stopped
 									[BLE-CONNECT-PROBE] 🐞 t=0.000s state isConnected previous=false new=false activePeripheralUUID=nil attempt=0
+									[BLE-CONNECT-PROBE] 🐞 t=0.174s scan stop requested reason=stop() activePeripheralUUID=nil discoveredDeviceCount=0
+									API MISUSE: <CBCentralManager: 0x10e1b4a00> can only accept this command while in the powered on state
+									[BLE-CONNECT-PROBE] 🐞 t=0.174s scanning stopped
+									[BLE-CONNECT-PROBE] 🐞 t=0.174s state isConnected previous=false new=false activePeripheralUUID=nil attempt=0
 									non-launching port is incompatible with service identifier "com.apple.PointerUI.pointeruid.default-service"
 									AX Safe category class 'SFBarButtonGroupContainerAccessibility' was not found!
-									[BLE-CONNECT-PROBE] 🐞 t=5.470s scan start requested bluetoothState=poweredOn deliberatelyStopped=true isConnected=false connectionText="Not connected" selectedPeripheralID=nil activePeripheralUUID=nil discoveredDeviceCount=0
-									[BLE-CONNECT-PROBE] 🐞 t=5.470s state connectionText previous="Not connected" new="Scanning..." peripheralUUID=nil attempt=0
-									[BLE-CONNECT-PROBE] 🐞 t=5.470s scan started bluetoothState=poweredOn deliberatelyStopped=false isConnected=false connectionText="Scanning..." selectedPeripheralID=nil activePeripheralUUID=nil discoveredDeviceCount=0
-									[BLE-CONNECT-PROBE] 🐞 t=5.532s new peripheral discovered uuid=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 name="2" RSSI=127 selected=false active=false temporaryProbeRequested=true
-									[BLE-CONNECT-PROBE] 🐞 t=5.532s centralManager.connect requested kind=temporaryProbe peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 selected=false active=false
-									[BLE-CONNECT-PROBE] 🐞 t=5.920s scan stop requested reason=stop() activePeripheralUUID=nil discoveredDeviceCount=1
-									[BLE-CONNECT-PROBE] 🐞 t=5.920s scanning stopped
-									[BLE-CONNECT-PROBE] 🐞 t=5.920s state isConnected previous=false new=false activePeripheralUUID=nil attempt=0
-									[BLE-CONNECT-PROBE] 🐞 t=5.972s didDisconnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 error=nil active=false probe=false isConnectedBefore=false connectionTextBefore="Not connected" scanningWillRestart=false activePeripheralWillBeCleared=false
-									[BLE-CONNECT-PROBE] 🐞 t=7.320s scan start requested bluetoothState=poweredOn deliberatelyStopped=true isConnected=false connectionText="Not connected" selectedPeripheralID=nil activePeripheralUUID=nil discoveredDeviceCount=1
-									[BLE-CONNECT-PROBE] 🐞 t=7.320s state connectionText previous="Not connected" new="Scanning..." peripheralUUID=nil attempt=0
-									[BLE-CONNECT-PROBE] 🐞 t=7.320s scan started bluetoothState=poweredOn deliberatelyStopped=false isConnected=false connectionText="Scanning..." selectedPeripheralID=nil activePeripheralUUID=nil discoveredDeviceCount=0
-									[BLE-CONNECT-PROBE] 🐞 t=7.391s new peripheral discovered uuid=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 name="2" RSSI=127 selected=false active=false temporaryProbeRequested=true
-									[BLE-CONNECT-PROBE] 🐞 t=7.391s centralManager.connect requested kind=temporaryProbe peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 selected=false active=false
-									[BLE-CONNECT-PROBE] 🐞 t=7.825s didConnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=none classifiedAsProbe=true matchesSelectedPeripheralID=false matchesEsp32Peripheral=false probePeripheralIDs=[B2D020B6-17A6-E4F9-84F9-CE3D30A7A795] isConnectedBefore=false connectionTextBefore="Scanning..." discoverServicesRequested=true
-									[BLE-CONNECT-PROBE] 🐞 t=7.825s discoverServices requested peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=none classifiedAsProbe=true
-									[BLE-CONNECT-PROBE] 🐞 t=8.180s didDiscoverServices peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 error=nil serviceCount=1 serviceUUIDs=[6E400001-B5A3-F393-E0A9-E50E24DCCA9E] active=false classifiedAsProbe=true
-									[BLE-CONNECT-PROBE] 🐞 t=8.180s discoverCharacteristics requested peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 serviceUUID=6E400001-B5A3-F393-E0A9-E50E24DCCA9E characteristicUUIDs=[6E400002-B5A3-F393-E0A9-E50E24DCCA9E,6E400003-B5A3-F393-E0A9-E50E24DCCA9E,6E400004-B5A3-F393-E0A9-E50E24DCCA9E]
-									[BLE-CONNECT-PROBE] 🐞 t=8.301s didDiscoverCharacteristics peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 serviceUUID=6E400001-B5A3-F393-E0A9-E50E24DCCA9E error=nil characteristicUUIDs=[6E400003-B5A3-F393-E0A9-E50E24DCCA9E,6E400002-B5A3-F393-E0A9-E50E24DCCA9E,6E400004-B5A3-F393-E0A9-E50E24DCCA9E] rxFound=true txFound=true deviceIDFound=true txNotificationsRequested=false deviceIDReadRequested=true
-									[BLE-CONNECT-PROBE] 🐞 t=8.301s DEVICE_ID read request peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 serviceUUID=6E400001-B5A3-F393-E0A9-E50E24DCCA9E characteristicUUID=6E400004-B5A3-F393-E0A9-E50E24DCCA9E active=false classifiedAsProbe=true
-									[BLE-CONNECT-PROBE] 🐞 t=8.360s DEVICE_ID response peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 error=nil classifiedAsProbe=true selected=false active=false disconnectRequested=true
-									[BLE-CONNECT-PROBE] 🐞 t=8.360s disconnect requested reason=temporaryProbeDeviceIDRead peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 selected=false active=false
-									[BLE-CONNECT-PROBE] 🐞 t=8.413s selected connect attempt=1 selectedPeripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 name="2 [2]" previousActivePeripheralUUID=nil previousPeripheralState=disconnecting previousIsConnected=false connectionText="Scanning..." alreadyProbe=false CBPeripheral.state=disconnecting
-									[BLE-CONNECT-PROBE] 🐞 t=8.413s state connectionText previous="Scanning..." new="Connecting to 2 [2]..." peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=1
-									[BLE-CONNECT-PROBE] 🐞 t=8.413s state esp32Peripheral previous=nil new=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=1
-									[BLE-CONNECT-PROBE] 🐞 t=8.413s scan stop requested reason=selectedConnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=1
-									[BLE-CONNECT-PROBE] 🐞 t=8.413s scanning stopped reason=selectedConnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=1
-									[BLE-CONNECT-PROBE] 🐞 t=8.413s centralManager.connect requested kind=selected peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=1 alreadyProbe=false
-									[BLE-CONNECT-PROBE] 🐞 t=8.469s didDisconnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 error=nil active=true probe=false isConnectedBefore=false connectionTextBefore="Connecting to 2 [2]..." scanningWillRestart=true activePeripheralWillBeCleared=true
-									[BLE-CONNECT-PROBE] 🐞 t=8.469s state connectionText previous="Connecting to 2 [2]..." new="Disconnected" peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=1
-									[BLE-CONNECT-PROBE] 🐞 t=8.469s state isConnected previous=false new=false peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=1
-									[BLE-CONNECT-PROBE] 🐞 t=8.469s state connectedDeviceID previous="Unknown" new="Unknown" peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=1
-									[BLE-CONNECT-PROBE] 🐞 t=8.469s state esp32Peripheral previous=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 new=nil attempt=1
-									[BLE-CONNECT-PROBE] 🐞 t=8.469s scan start requested bluetoothState=poweredOn deliberatelyStopped=false isConnected=false connectionText="Disconnected" selectedPeripheralID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 activePeripheralUUID=nil discoveredDeviceCount=1
-									[BLE-CONNECT-PROBE] 🐞 t=8.469s state connectionText previous="Disconnected" new="Scanning..." peripheralUUID=nil attempt=1
-									[BLE-CONNECT-PROBE] 🐞 t=8.469s state selectedPeripheralID previous=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 new=nil reason=clearDiscoveredDevices attempt=1
-									[BLE-CONNECT-PROBE] 🐞 t=8.469s scan started bluetoothState=poweredOn deliberatelyStopped=false isConnected=false connectionText="Scanning..." selectedPeripheralID=nil activePeripheralUUID=nil discoveredDeviceCount=0
-									[BLE-CONNECT-PROBE] 🐞 t=8.469s new peripheral discovered uuid=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 name="2" RSSI=127 selected=false active=false temporaryProbeRequested=true
-									[BLE-CONNECT-PROBE] 🐞 t=8.469s centralManager.connect requested kind=temporaryProbe peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 selected=false active=false
-									[BLE-CONNECT-PROBE] 🐞 t=8.963s didConnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=1 classifiedAsProbe=true matchesSelectedPeripheralID=false matchesEsp32Peripheral=false probePeripheralIDs=[B2D020B6-17A6-E4F9-84F9-CE3D30A7A795] isConnectedBefore=false connectionTextBefore="Scanning..." discoverServicesRequested=true
-									[BLE-CONNECT-PROBE] 🐞 t=8.963s discoverServices requested peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=1 classifiedAsProbe=true
-									[BLE-CONNECT-PROBE] 🐞 t=9.320s didDiscoverServices peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 error=nil serviceCount=1 serviceUUIDs=[6E400001-B5A3-F393-E0A9-E50E24DCCA9E] active=false classifiedAsProbe=true
-									[BLE-CONNECT-PROBE] 🐞 t=9.320s discoverCharacteristics requested peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 serviceUUID=6E400001-B5A3-F393-E0A9-E50E24DCCA9E characteristicUUIDs=[6E400002-B5A3-F393-E0A9-E50E24DCCA9E,6E400003-B5A3-F393-E0A9-E50E24DCCA9E,6E400004-B5A3-F393-E0A9-E50E24DCCA9E]
-									[BLE-CONNECT-PROBE] 🐞 t=9.443s didDiscoverCharacteristics peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 serviceUUID=6E400001-B5A3-F393-E0A9-E50E24DCCA9E error=nil characteristicUUIDs=[6E400003-B5A3-F393-E0A9-E50E24DCCA9E,6E400002-B5A3-F393-E0A9-E50E24DCCA9E,6E400004-B5A3-F393-E0A9-E50E24DCCA9E] rxFound=true txFound=true deviceIDFound=true txNotificationsRequested=false deviceIDReadRequested=true
-									[BLE-CONNECT-PROBE] 🐞 t=9.443s DEVICE_ID read request peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 serviceUUID=6E400001-B5A3-F393-E0A9-E50E24DCCA9E characteristicUUID=6E400004-B5A3-F393-E0A9-E50E24DCCA9E active=false classifiedAsProbe=true
-									[BLE-CONNECT-PROBE] 🐞 t=9.500s DEVICE_ID response peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 error=nil classifiedAsProbe=true selected=false active=false disconnectRequested=true
-									[BLE-CONNECT-PROBE] 🐞 t=9.500s disconnect requested reason=temporaryProbeDeviceIDRead peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 selected=false active=false
-									[BLE-CONNECT-PROBE] 🐞 t=9.551s didDisconnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 error=nil active=false probe=false isConnectedBefore=false connectionTextBefore="Scanning..." scanningWillRestart=false activePeripheralWillBeCleared=false
-									[BLE-CONNECT-PROBE] 🐞 t=9.712s selected connect attempt=2 selectedPeripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 name="2 [2]" previousActivePeripheralUUID=nil previousPeripheralState=disconnected previousIsConnected=false connectionText="Scanning..." alreadyProbe=false CBPeripheral.state=disconnected
-									[BLE-CONNECT-PROBE] 🐞 t=9.712s state connectionText previous="Scanning..." new="Connecting to 2 [2]..." peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=2
-									[BLE-CONNECT-PROBE] 🐞 t=9.712s state esp32Peripheral previous=nil new=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=2
-									[BLE-CONNECT-PROBE] 🐞 t=9.712s scan stop requested reason=selectedConnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=2
-									[BLE-CONNECT-PROBE] 🐞 t=9.712s scanning stopped reason=selectedConnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=2
-									[BLE-CONNECT-PROBE] 🐞 t=9.712s centralManager.connect requested kind=selected peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=2 alreadyProbe=false
-									[BLE-CONNECT-PROBE] 🐞 t=10.194s didConnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=2 classifiedAsProbe=false matchesSelectedPeripheralID=true matchesEsp32Peripheral=true probePeripheralIDs=[] isConnectedBefore=false connectionTextBefore="Connecting to 2 [2]..." discoverServicesRequested=true
-									[BLE-CONNECT-PROBE] 🐞 t=10.194s state connectionText previous="Connecting to 2 [2]..." new="Connected, discovering services..." peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=2
-									[BLE-CONNECT-PROBE] 🐞 t=10.194s state isConnected previous=false new=true peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=2
-									[BLE-CONNECT-PROBE] 🐞 t=10.194s state esp32Peripheral previous=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 new=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=2
-									[BLE-CONNECT-PROBE] 🐞 t=10.194s discoverServices requested peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=2 classifiedAsProbe=false
-									[BLE-CONNECT-PROBE] 🐞 t=10.551s didDiscoverServices peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 error=nil serviceCount=1 serviceUUIDs=[6E400001-B5A3-F393-E0A9-E50E24DCCA9E] active=true classifiedAsProbe=false
-									[BLE-CONNECT-PROBE] 🐞 t=10.551s discoverCharacteristics requested peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 serviceUUID=6E400001-B5A3-F393-E0A9-E50E24DCCA9E characteristicUUIDs=[6E400002-B5A3-F393-E0A9-E50E24DCCA9E,6E400003-B5A3-F393-E0A9-E50E24DCCA9E,6E400004-B5A3-F393-E0A9-E50E24DCCA9E]
-									[BLE-CONNECT-PROBE] 🐞 t=10.671s didDiscoverCharacteristics peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 serviceUUID=6E400001-B5A3-F393-E0A9-E50E24DCCA9E error=nil characteristicUUIDs=[6E400003-B5A3-F393-E0A9-E50E24DCCA9E,6E400002-B5A3-F393-E0A9-E50E24DCCA9E,6E400004-B5A3-F393-E0A9-E50E24DCCA9E] rxFound=true txFound=true deviceIDFound=true txNotificationsRequested=true deviceIDReadRequested=true
-									[BLE-CONNECT-PROBE] 🐞 t=10.671s TX notification request peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 serviceUUID=6E400001-B5A3-F393-E0A9-E50E24DCCA9E characteristicUUID=6E400003-B5A3-F393-E0A9-E50E24DCCA9E
-									[BLE-CONNECT-PROBE] 🐞 t=10.671s DEVICE_ID read request peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 serviceUUID=6E400001-B5A3-F393-E0A9-E50E24DCCA9E characteristicUUID=6E400004-B5A3-F393-E0A9-E50E24DCCA9E active=true classifiedAsProbe=false
-									[BLE-CONNECT-PROBE] 🐞 t=10.671s active characteristic discovery completion peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 connectionTextBefore="Connected, discovering services..." willSetConnected=true storedTimingWillBeSent=true
-									[BLE-CONNECT-PROBE] 🐞 t=10.671s state connectionText previous="Connected, discovering services..." new="Connected" peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=2 connectedActuallySet=true
-									[BLE-CONNECT-PROBE] 🐞 t=10.671s stored timing send requested peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=2
-									[BLE-CONNECT-PROBE] 🐞 t=10.881s DEVICE_ID response peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 error=nil classifiedAsProbe=false selected=true active=true disconnectRequested=false
-									[BLE-CONNECT-PROBE] 🐞 t=10.881s state connectedDeviceID previous="Unknown" new="2" peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=2
-									[BLE-CONNECT-PROBE] 🐞 t=10.881s state connectionText previous="Connected" new="Connected to device 2" peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=2
-									[BLE-CONNECT-PROBE] 🐞 t=11.120s scan stop requested reason=stop() activePeripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 discoveredDeviceCount=1
-									[BLE-CONNECT-PROBE] 🐞 t=11.120s scanning stopped
-									[BLE-CONNECT-PROBE] 🐞 t=11.120s state isConnected previous=true new=false activePeripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=2
-									[BLE-CONNECT-PROBE] 🐞 t=11.120s state esp32Peripheral previous=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 new=nil reason=stop attempt=2
-									[BLE-CONNECT-PROBE] 🐞 t=11.165s didDisconnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 error=nil active=false probe=false isConnectedBefore=false connectionTextBefore="Not connected" scanningWillRestart=false activePeripheralWillBeCleared=false
-									[BLE-CONNECT-PROBE] 🐞 t=11.959s scan start requested bluetoothState=poweredOn deliberatelyStopped=true isConnected=false connectionText="Not connected" selectedPeripheralID=nil activePeripheralUUID=nil discoveredDeviceCount=1
-									[BLE-CONNECT-PROBE] 🐞 t=11.959s state connectionText previous="Not connected" new="Scanning..." peripheralUUID=nil attempt=2
-									[BLE-CONNECT-PROBE] 🐞 t=11.959s scan started bluetoothState=poweredOn deliberatelyStopped=false isConnected=false connectionText="Scanning..." selectedPeripheralID=nil activePeripheralUUID=nil discoveredDeviceCount=0
-									[BLE-CONNECT-PROBE] 🐞 t=12.022s new peripheral discovered uuid=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 name="2" RSSI=127 selected=false active=false temporaryProbeRequested=true
-									[BLE-CONNECT-PROBE] 🐞 t=12.022s centralManager.connect requested kind=temporaryProbe peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 selected=false active=false
-									[BLE-CONNECT-PROBE] 🐞 t=12.476s didConnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=2 classifiedAsProbe=true matchesSelectedPeripheralID=false matchesEsp32Peripheral=false probePeripheralIDs=[B2D020B6-17A6-E4F9-84F9-CE3D30A7A795] isConnectedBefore=false connectionTextBefore="Scanning..." discoverServicesRequested=true
-									[BLE-CONNECT-PROBE] 🐞 t=12.476s discoverServices requested peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=2 classifiedAsProbe=true
-									[BLE-CONNECT-PROBE] 🐞 t=12.832s didDiscoverServices peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 error=nil serviceCount=1 serviceUUIDs=[6E400001-B5A3-F393-E0A9-E50E24DCCA9E] active=false classifiedAsProbe=true
-									[BLE-CONNECT-PROBE] 🐞 t=12.832s discoverCharacteristics requested peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 serviceUUID=6E400001-B5A3-F393-E0A9-E50E24DCCA9E characteristicUUIDs=[6E400002-B5A3-F393-E0A9-E50E24DCCA9E,6E400003-B5A3-F393-E0A9-E50E24DCCA9E,6E400004-B5A3-F393-E0A9-E50E24DCCA9E]
-									[BLE-CONNECT-PROBE] 🐞 t=12.983s didDiscoverCharacteristics peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 serviceUUID=6E400001-B5A3-F393-E0A9-E50E24DCCA9E error=nil characteristicUUIDs=[6E400003-B5A3-F393-E0A9-E50E24DCCA9E,6E400002-B5A3-F393-E0A9-E50E24DCCA9E,6E400004-B5A3-F393-E0A9-E50E24DCCA9E] rxFound=true txFound=true deviceIDFound=true txNotificationsRequested=false deviceIDReadRequested=true
-									[BLE-CONNECT-PROBE] 🐞 t=12.983s DEVICE_ID read request peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 serviceUUID=6E400001-B5A3-F393-E0A9-E50E24DCCA9E characteristicUUID=6E400004-B5A3-F393-E0A9-E50E24DCCA9E active=false classifiedAsProbe=true
-									[BLE-CONNECT-PROBE] 🐞 t=13.042s DEVICE_ID response peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 error=nil classifiedAsProbe=true selected=false active=false disconnectRequested=true
-									[BLE-CONNECT-PROBE] 🐞 t=13.042s disconnect requested reason=temporaryProbeDeviceIDRead peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 selected=false active=false
-									[BLE-CONNECT-PROBE] 🐞 t=13.132s didDisconnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 error=nil active=false probe=false isConnectedBefore=false connectionTextBefore="Scanning..." scanningWillRestart=false activePeripheralWillBeCleared=false
-									[BLE-CONNECT-PROBE] 🐞 t=14.022s selected connect attempt=3 selectedPeripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 name="2 [2]" previousActivePeripheralUUID=nil previousPeripheralState=disconnected previousIsConnected=false connectionText="Scanning..." alreadyProbe=false CBPeripheral.state=disconnected
-									[BLE-CONNECT-PROBE] 🐞 t=14.022s state connectionText previous="Scanning..." new="Connecting to 2 [2]..." peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=3
-									[BLE-CONNECT-PROBE] 🐞 t=14.022s state esp32Peripheral previous=nil new=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=3
-									[BLE-CONNECT-PROBE] 🐞 t=14.022s scan stop requested reason=selectedConnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=3
-									[BLE-CONNECT-PROBE] 🐞 t=14.022s scanning stopped reason=selectedConnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=3
-									[BLE-CONNECT-PROBE] 🐞 t=14.022s centralManager.connect requested kind=selected peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=3 alreadyProbe=false
-									[BLE-CONNECT-PROBE] 🐞 t=14.456s didConnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=3 classifiedAsProbe=false matchesSelectedPeripheralID=true matchesEsp32Peripheral=true probePeripheralIDs=[] isConnectedBefore=false connectionTextBefore="Connecting to 2 [2]..." discoverServicesRequested=true
-									[BLE-CONNECT-PROBE] 🐞 t=14.456s state connectionText previous="Connecting to 2 [2]..." new="Connected, discovering services..." peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=3
-									[BLE-CONNECT-PROBE] 🐞 t=14.457s state isConnected previous=false new=true peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=3
-									[BLE-CONNECT-PROBE] 🐞 t=14.457s state esp32Peripheral previous=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 new=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=3
-									[BLE-CONNECT-PROBE] 🐞 t=14.457s discoverServices requested peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=3 classifiedAsProbe=false
-									[BLE-CONNECT-PROBE] 🐞 t=14.812s didDiscoverServices peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 error=nil serviceCount=1 serviceUUIDs=[6E400001-B5A3-F393-E0A9-E50E24DCCA9E] active=true classifiedAsProbe=false
-									[BLE-CONNECT-PROBE] 🐞 t=14.812s discoverCharacteristics requested peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 serviceUUID=6E400001-B5A3-F393-E0A9-E50E24DCCA9E characteristicUUIDs=[6E400002-B5A3-F393-E0A9-E50E24DCCA9E,6E400003-B5A3-F393-E0A9-E50E24DCCA9E,6E400004-B5A3-F393-E0A9-E50E24DCCA9E]
-									[BLE-CONNECT-PROBE] 🐞 t=14.931s didDiscoverCharacteristics peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 serviceUUID=6E400001-B5A3-F393-E0A9-E50E24DCCA9E error=nil characteristicUUIDs=[6E400003-B5A3-F393-E0A9-E50E24DCCA9E,6E400002-B5A3-F393-E0A9-E50E24DCCA9E,6E400004-B5A3-F393-E0A9-E50E24DCCA9E] rxFound=true txFound=true deviceIDFound=true txNotificationsRequested=true deviceIDReadRequested=true
-									[BLE-CONNECT-PROBE] 🐞 t=14.932s TX notification request peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 serviceUUID=6E400001-B5A3-F393-E0A9-E50E24DCCA9E characteristicUUID=6E400003-B5A3-F393-E0A9-E50E24DCCA9E
-									[BLE-CONNECT-PROBE] 🐞 t=14.932s DEVICE_ID read request peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 serviceUUID=6E400001-B5A3-F393-E0A9-E50E24DCCA9E characteristicUUID=6E400004-B5A3-F393-E0A9-E50E24DCCA9E active=true classifiedAsProbe=false
-									[BLE-CONNECT-PROBE] 🐞 t=14.932s active characteristic discovery completion peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 connectionTextBefore="Connected, discovering services..." willSetConnected=true storedTimingWillBeSent=true
-									[BLE-CONNECT-PROBE] 🐞 t=14.932s state connectionText previous="Connected, discovering services..." new="Connected" peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=3 connectedActuallySet=true
-									[BLE-CONNECT-PROBE] 🐞 t=14.932s stored timing send requested peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=3
-									[BLE-CONNECT-PROBE] 🐞 t=15.140s DEVICE_ID response peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 error=nil classifiedAsProbe=false selected=true active=true disconnectRequested=false
-									[BLE-CONNECT-PROBE] 🐞 t=15.140s state connectedDeviceID previous="Unknown" new="2" peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=3
-									[BLE-CONNECT-PROBE] 🐞 t=15.140s state connectionText previous="Connected" new="Connected to device 2" peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=3
-									[BLE-CONNECT-PROBE] 🐞 t=15.317s scan stop requested reason=stop() activePeripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 discoveredDeviceCount=1
-									[BLE-CONNECT-PROBE] 🐞 t=15.317s scanning stopped
-									[BLE-CONNECT-PROBE] 🐞 t=15.317s state isConnected previous=true new=false activePeripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=3
-									[BLE-CONNECT-PROBE] 🐞 t=15.317s state esp32Peripheral previous=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 new=nil reason=stop attempt=3
-									[BLE-CONNECT-PROBE] 🐞 t=15.361s didDisconnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 error=nil active=false probe=false isConnectedBefore=false connectionTextBefore="Not connected" scanningWillRestart=false activePeripheralWillBeCleared=false
-									[BLE-CONNECT-PROBE] 🐞 t=16.485s scan start requested bluetoothState=poweredOn deliberatelyStopped=true isConnected=false connectionText="Not connected" selectedPeripheralID=nil activePeripheralUUID=nil discoveredDeviceCount=1
-									[BLE-CONNECT-PROBE] 🐞 t=16.485s state connectionText previous="Not connected" new="Scanning..." peripheralUUID=nil attempt=3
-									[BLE-CONNECT-PROBE] 🐞 t=16.485s scan started bluetoothState=poweredOn deliberatelyStopped=false isConnected=false connectionText="Scanning..." selectedPeripheralID=nil activePeripheralUUID=nil discoveredDeviceCount=0
-									[BLE-CONNECT-PROBE] 🐞 t=16.569s new peripheral discovered uuid=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 name="2" RSSI=127 selected=false active=false temporaryProbeRequested=true
-									[BLE-CONNECT-PROBE] 🐞 t=16.569s centralManager.connect requested kind=temporaryProbe peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 selected=false active=false
-									[BLE-CONNECT-PROBE] 🐞 t=17.007s didConnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=3 classifiedAsProbe=true matchesSelectedPeripheralID=false matchesEsp32Peripheral=false probePeripheralIDs=[B2D020B6-17A6-E4F9-84F9-CE3D30A7A795] isConnectedBefore=false connectionTextBefore="Scanning..." discoverServicesRequested=true
-									[BLE-CONNECT-PROBE] 🐞 t=17.007s discoverServices requested peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=3 classifiedAsProbe=true
-									[BLE-CONNECT-PROBE] 🐞 t=17.392s didDiscoverServices peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 error=nil serviceCount=1 serviceUUIDs=[6E400001-B5A3-F393-E0A9-E50E24DCCA9E] active=false classifiedAsProbe=true
-									[BLE-CONNECT-PROBE] 🐞 t=17.392s discoverCharacteristics requested peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 serviceUUID=6E400001-B5A3-F393-E0A9-E50E24DCCA9E characteristicUUIDs=[6E400002-B5A3-F393-E0A9-E50E24DCCA9E,6E400003-B5A3-F393-E0A9-E50E24DCCA9E,6E400004-B5A3-F393-E0A9-E50E24DCCA9E]
-									[BLE-CONNECT-PROBE] 🐞 t=17.513s didDiscoverCharacteristics peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 serviceUUID=6E400001-B5A3-F393-E0A9-E50E24DCCA9E error=nil characteristicUUIDs=[6E400003-B5A3-F393-E0A9-E50E24DCCA9E,6E400002-B5A3-F393-E0A9-E50E24DCCA9E,6E400004-B5A3-F393-E0A9-E50E24DCCA9E] rxFound=true txFound=true deviceIDFound=true txNotificationsRequested=false deviceIDReadRequested=true
-									[BLE-CONNECT-PROBE] 🐞 t=17.513s DEVICE_ID read request peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 serviceUUID=6E400001-B5A3-F393-E0A9-E50E24DCCA9E characteristicUUID=6E400004-B5A3-F393-E0A9-E50E24DCCA9E active=false classifiedAsProbe=true
-									[BLE-CONNECT-PROBE] 🐞 t=17.572s DEVICE_ID response peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 error=nil classifiedAsProbe=true selected=false active=false disconnectRequested=true
-									[BLE-CONNECT-PROBE] 🐞 t=17.572s disconnect requested reason=temporaryProbeDeviceIDRead peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 selected=false active=false
-									[BLE-CONNECT-PROBE] 🐞 t=17.659s didDisconnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 error=nil active=false probe=false isConnectedBefore=false connectionTextBefore="Scanning..." scanningWillRestart=false activePeripheralWillBeCleared=false
-									[BLE-CONNECT-PROBE] 🐞 t=18.640s selected connect attempt=4 selectedPeripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 name="2 [2]" previousActivePeripheralUUID=nil previousPeripheralState=disconnected previousIsConnected=false connectionText="Scanning..." alreadyProbe=false CBPeripheral.state=disconnected
-									[BLE-CONNECT-PROBE] 🐞 t=18.640s state connectionText previous="Scanning..." new="Connecting to 2 [2]..." peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=4
-									[BLE-CONNECT-PROBE] 🐞 t=18.640s state esp32Peripheral previous=nil new=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=4
-									[BLE-CONNECT-PROBE] 🐞 t=18.640s scan stop requested reason=selectedConnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=4
-									[BLE-CONNECT-PROBE] 🐞 t=18.640s scanning stopped reason=selectedConnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=4
-									[BLE-CONNECT-PROBE] 🐞 t=18.640s centralManager.connect requested kind=selected peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=4 alreadyProbe=false
-									[BLE-CONNECT-PROBE] 🐞 t=19.165s didConnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=4 classifiedAsProbe=false matchesSelectedPeripheralID=true matchesEsp32Peripheral=true probePeripheralIDs=[] isConnectedBefore=false connectionTextBefore="Connecting to 2 [2]..." discoverServicesRequested=true
-									[BLE-CONNECT-PROBE] 🐞 t=19.165s state connectionText previous="Connecting to 2 [2]..." new="Connected, discovering services..." peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=4
-									[BLE-CONNECT-PROBE] 🐞 t=19.165s state isConnected previous=false new=true peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=4
-									[BLE-CONNECT-PROBE] 🐞 t=19.165s state esp32Peripheral previous=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 new=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=4
-									[BLE-CONNECT-PROBE] 🐞 t=19.165s discoverServices requested peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=4 classifiedAsProbe=false
-									[BLE-CONNECT-PROBE] 🐞 t=19.551s didDiscoverServices peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 error=nil serviceCount=1 serviceUUIDs=[6E400001-B5A3-F393-E0A9-E50E24DCCA9E] active=true classifiedAsProbe=false
-									[BLE-CONNECT-PROBE] 🐞 t=19.551s discoverCharacteristics requested peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 serviceUUID=6E400001-B5A3-F393-E0A9-E50E24DCCA9E characteristicUUIDs=[6E400002-B5A3-F393-E0A9-E50E24DCCA9E,6E400003-B5A3-F393-E0A9-E50E24DCCA9E,6E400004-B5A3-F393-E0A9-E50E24DCCA9E]
-									[BLE-CONNECT-PROBE] 🐞 t=19.671s didDiscoverCharacteristics peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 serviceUUID=6E400001-B5A3-F393-E0A9-E50E24DCCA9E error=nil characteristicUUIDs=[6E400003-B5A3-F393-E0A9-E50E24DCCA9E,6E400002-B5A3-F393-E0A9-E50E24DCCA9E,6E400004-B5A3-F393-E0A9-E50E24DCCA9E] rxFound=true txFound=true deviceIDFound=true txNotificationsRequested=true deviceIDReadRequested=true
-									[BLE-CONNECT-PROBE] 🐞 t=19.672s TX notification request peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 serviceUUID=6E400001-B5A3-F393-E0A9-E50E24DCCA9E characteristicUUID=6E400003-B5A3-F393-E0A9-E50E24DCCA9E
-									[BLE-CONNECT-PROBE] 🐞 t=19.672s DEVICE_ID read request peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 serviceUUID=6E400001-B5A3-F393-E0A9-E50E24DCCA9E characteristicUUID=6E400004-B5A3-F393-E0A9-E50E24DCCA9E active=true classifiedAsProbe=false
-									[BLE-CONNECT-PROBE] 🐞 t=19.672s active characteristic discovery completion peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 connectionTextBefore="Connected, discovering services..." willSetConnected=true storedTimingWillBeSent=true
-									[BLE-CONNECT-PROBE] 🐞 t=19.672s state connectionText previous="Connected, discovering services..." new="Connected" peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=4 connectedActuallySet=true
-									[BLE-CONNECT-PROBE] 🐞 t=19.672s stored timing send requested peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=4
-									[BLE-CONNECT-PROBE] 🐞 t=19.850s DEVICE_ID response peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 error=nil classifiedAsProbe=false selected=true active=true disconnectRequested=false
-									[BLE-CONNECT-PROBE] 🐞 t=19.850s state connectedDeviceID previous="Unknown" new="2" peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=4
-									[BLE-CONNECT-PROBE] 🐞 t=19.850s state connectionText previous="Connected" new="Connected to device 2" peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=4
-									[BLE-CONNECT-PROBE] 🐞 t=118.475s scan stop requested reason=stop() activePeripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 discoveredDeviceCount=1
-									[BLE-CONNECT-PROBE] 🐞 t=118.475s scanning stopped
-									[BLE-CONNECT-PROBE] 🐞 t=118.475s state isConnected previous=true new=false activePeripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=4
-									[BLE-CONNECT-PROBE] 🐞 t=118.475s state esp32Peripheral previous=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 new=nil reason=stop attempt=4
-									[BLE-CONNECT-PROBE] 🐞 t=118.521s didDisconnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 error=nil active=false probe=false isConnectedBefore=false connectionTextBefore="Not connected" scanningWillRestart=false activePeripheralWillBeCleared=false
-									[BLE-CONNECT-PROBE] 🐞 t=119.866s scan start requested bluetoothState=poweredOn deliberatelyStopped=true isConnected=false connectionText="Not connected" selectedPeripheralID=nil activePeripheralUUID=nil discoveredDeviceCount=1
-									[BLE-CONNECT-PROBE] 🐞 t=119.866s state connectionText previous="Not connected" new="Scanning..." peripheralUUID=nil attempt=4
-									[BLE-CONNECT-PROBE] 🐞 t=119.866s scan started bluetoothState=poweredOn deliberatelyStopped=false isConnected=false connectionText="Scanning..." selectedPeripheralID=nil activePeripheralUUID=nil discoveredDeviceCount=0
-									[BLE-CONNECT-PROBE] 🐞 t=119.940s new peripheral discovered uuid=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 name="2" RSSI=127 selected=false active=false temporaryProbeRequested=true
-									[BLE-CONNECT-PROBE] 🐞 t=119.940s centralManager.connect requested kind=temporaryProbe peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 selected=false active=false
-									[BLE-CONNECT-PROBE] 🐞 t=120.387s didConnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=4 classifiedAsProbe=true matchesSelectedPeripheralID=false matchesEsp32Peripheral=false probePeripheralIDs=[B2D020B6-17A6-E4F9-84F9-CE3D30A7A795] isConnectedBefore=false connectionTextBefore="Scanning..." discoverServicesRequested=true
-									[BLE-CONNECT-PROBE] 🐞 t=120.387s discoverServices requested peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=4 classifiedAsProbe=true
-									[BLE-CONNECT-PROBE] 🐞 t=120.748s didDiscoverServices peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 error=nil serviceCount=1 serviceUUIDs=[6E400001-B5A3-F393-E0A9-E50E24DCCA9E] active=false classifiedAsProbe=true
-									[BLE-CONNECT-PROBE] 🐞 t=120.748s discoverCharacteristics requested peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 serviceUUID=6E400001-B5A3-F393-E0A9-E50E24DCCA9E characteristicUUIDs=[6E400002-B5A3-F393-E0A9-E50E24DCCA9E,6E400003-B5A3-F393-E0A9-E50E24DCCA9E,6E400004-B5A3-F393-E0A9-E50E24DCCA9E]
-									[BLE-CONNECT-PROBE] 🐞 t=120.867s didDiscoverCharacteristics peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 serviceUUID=6E400001-B5A3-F393-E0A9-E50E24DCCA9E error=nil characteristicUUIDs=[6E400003-B5A3-F393-E0A9-E50E24DCCA9E,6E400002-B5A3-F393-E0A9-E50E24DCCA9E,6E400004-B5A3-F393-E0A9-E50E24DCCA9E] rxFound=true txFound=true deviceIDFound=true txNotificationsRequested=false deviceIDReadRequested=true
-									[BLE-CONNECT-PROBE] 🐞 t=120.867s DEVICE_ID read request peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 serviceUUID=6E400001-B5A3-F393-E0A9-E50E24DCCA9E characteristicUUID=6E400004-B5A3-F393-E0A9-E50E24DCCA9E active=false classifiedAsProbe=true
-									[BLE-CONNECT-PROBE] 🐞 t=120.888s selected connect attempt=5 selectedPeripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 name="2" previousActivePeripheralUUID=nil previousPeripheralState=connected previousIsConnected=false connectionText="Scanning..." alreadyProbe=true CBPeripheral.state=connected
-									[BLE-CONNECT-PROBE] 🐞 t=120.888s state connectionText previous="Scanning..." new="Connecting to 2..." peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=5
-									[BLE-CONNECT-PROBE] 🐞 t=120.888s state esp32Peripheral previous=nil new=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=5
-									[BLE-CONNECT-PROBE] 🐞 t=120.888s scan stop requested reason=selectedConnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=5
-									[BLE-CONNECT-PROBE] 🐞 t=120.888s scanning stopped reason=selectedConnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=5
-									[BLE-CONNECT-PROBE] 🐞 t=120.888s centralManager.connect requested kind=selected peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=5 alreadyProbe=true
-									[BLE-CONNECT-PROBE] 🐞 t=120.959s PROMOTED PROBE TO SELECTED peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=5 previousProbeMembership=true resultingProbeMembership=false
-									[BLE-CONNECT-PROBE] 🐞 t=120.959s didConnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=5 classifiedAsProbe=false matchesSelectedPeripheralID=true matchesEsp32Peripheral=true probePeripheralIDs=[] isConnectedBefore=false connectionTextBefore="Connecting to 2..." discoverServicesRequested=true
-									[BLE-CONNECT-PROBE] 🐞 t=120.959s state connectionText previous="Connecting to 2..." new="Connected, discovering services..." peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=5
-									[BLE-CONNECT-PROBE] 🐞 t=120.959s state isConnected previous=false new=true peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=5
-									[BLE-CONNECT-PROBE] 🐞 t=120.960s state esp32Peripheral previous=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 new=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=5
-									[BLE-CONNECT-PROBE] 🐞 t=120.960s discoverServices requested peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=5 classifiedAsProbe=false
-									[BLE-CONNECT-PROBE] 🐞 t=120.960s DEVICE_ID response peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 error=nil classifiedAsProbe=false selected=true active=true disconnectRequested=false
-									[BLE-CONNECT-PROBE] 🐞 t=120.960s state connectedDeviceID previous="Unknown" new="2" peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=5
-									[BLE-CONNECT-PROBE] 🐞 t=120.960s state connectionText previous="Connected, discovering services..." new="Connected to device 2" peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=5
-									[BLE-CONNECT-PROBE] 🐞 t=121.041s didDiscoverServices peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 error=nil serviceCount=1 serviceUUIDs=[6E400001-B5A3-F393-E0A9-E50E24DCCA9E] active=true classifiedAsProbe=false
-									[BLE-CONNECT-PROBE] 🐞 t=121.041s discoverCharacteristics requested peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 serviceUUID=6E400001-B5A3-F393-E0A9-E50E24DCCA9E characteristicUUIDs=[6E400002-B5A3-F393-E0A9-E50E24DCCA9E,6E400003-B5A3-F393-E0A9-E50E24DCCA9E,6E400004-B5A3-F393-E0A9-E50E24DCCA9E]
-									[BLE-CONNECT-PROBE] 🐞 t=121.042s didDiscoverCharacteristics peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 serviceUUID=6E400001-B5A3-F393-E0A9-E50E24DCCA9E error=nil characteristicUUIDs=[6E400003-B5A3-F393-E0A9-E50E24DCCA9E,6E400002-B5A3-F393-E0A9-E50E24DCCA9E,6E400004-B5A3-F393-E0A9-E50E24DCCA9E] rxFound=true txFound=true deviceIDFound=true txNotificationsRequested=true deviceIDReadRequested=true
-									[BLE-CONNECT-PROBE] 🐞 t=121.042s TX notification request peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 serviceUUID=6E400001-B5A3-F393-E0A9-E50E24DCCA9E characteristicUUID=6E400003-B5A3-F393-E0A9-E50E24DCCA9E
-									[BLE-CONNECT-PROBE] 🐞 t=121.042s DEVICE_ID read request peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 serviceUUID=6E400001-B5A3-F393-E0A9-E50E24DCCA9E characteristicUUID=6E400004-B5A3-F393-E0A9-E50E24DCCA9E active=true classifiedAsProbe=false
-									[BLE-CONNECT-PROBE] 🐞 t=121.042s active characteristic discovery completion peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 connectionTextBefore="Connected to device 2" willSetConnected=true storedTimingWillBeSent=true
-									[BLE-CONNECT-PROBE] 🐞 t=121.042s state connectionText previous="Connected to device 2" new="Connected" peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=5 connectedActuallySet=true
-									[BLE-CONNECT-PROBE] 🐞 t=121.042s stored timing send requested peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=5
-									[BLE-CONNECT-PROBE] 🐞 t=121.224s DEVICE_ID response peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 error=nil classifiedAsProbe=false selected=true active=true disconnectRequested=false
-									[BLE-CONNECT-PROBE] 🐞 t=121.224s state connectedDeviceID previous="2" new="2" peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=5
-									[BLE-CONNECT-PROBE] 🐞 t=121.224s state connectionText previous="Connected" new="Connected to device 2" peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=5
-									[BLE-CONNECT-PROBE] 🐞 t=122.132s scan stop requested reason=stop() activePeripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 discoveredDeviceCount=1
-									[BLE-CONNECT-PROBE] 🐞 t=122.132s scanning stopped
-									[BLE-CONNECT-PROBE] 🐞 t=122.132s state isConnected previous=true new=false activePeripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=5
-									[BLE-CONNECT-PROBE] 🐞 t=122.132s state esp32Peripheral previous=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 new=nil reason=stop attempt=5
-									[BLE-CONNECT-PROBE] 🐞 t=122.177s didDisconnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 error=nil active=false probe=false isConnectedBefore=false connectionTextBefore="Not connected" scanningWillRestart=false activePeripheralWillBeCleared=false
-									[BLE-CONNECT-PROBE] 🐞 t=122.978s scan start requested bluetoothState=poweredOn deliberatelyStopped=true isConnected=false connectionText="Not connected" selectedPeripheralID=nil activePeripheralUUID=nil discoveredDeviceCount=1
-									[BLE-CONNECT-PROBE] 🐞 t=122.978s state connectionText previous="Not connected" new="Scanning..." peripheralUUID=nil attempt=5
-									[BLE-CONNECT-PROBE] 🐞 t=122.978s scan started bluetoothState=poweredOn deliberatelyStopped=false isConnected=false connectionText="Scanning..." selectedPeripheralID=nil activePeripheralUUID=nil discoveredDeviceCount=0
-									[BLE-CONNECT-PROBE] 🐞 t=123.029s new peripheral discovered uuid=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 name="2" RSSI=127 selected=false active=false temporaryProbeRequested=true
-									[BLE-CONNECT-PROBE] 🐞 t=123.029s centralManager.connect requested kind=temporaryProbe peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 selected=false active=false
-									[BLE-CONNECT-PROBE] 🐞 t=123.481s didConnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=5 classifiedAsProbe=true matchesSelectedPeripheralID=false matchesEsp32Peripheral=false probePeripheralIDs=[B2D020B6-17A6-E4F9-84F9-CE3D30A7A795] isConnectedBefore=false connectionTextBefore="Scanning..." discoverServicesRequested=true
-									[BLE-CONNECT-PROBE] 🐞 t=123.481s discoverServices requested peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=5 classifiedAsProbe=true
-									[BLE-CONNECT-PROBE] 🐞 t=123.738s selected connect attempt=6 selectedPeripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 name="2" previousActivePeripheralUUID=nil previousPeripheralState=connected previousIsConnected=false connectionText="Scanning..." alreadyProbe=true CBPeripheral.state=connected
-									[BLE-CONNECT-PROBE] 🐞 t=123.738s state connectionText previous="Scanning..." new="Connecting to 2..." peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=6
-									[BLE-CONNECT-PROBE] 🐞 t=123.738s state esp32Peripheral previous=nil new=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=6
-									[BLE-CONNECT-PROBE] 🐞 t=123.738s scan stop requested reason=selectedConnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=6
-									[BLE-CONNECT-PROBE] 🐞 t=123.739s scanning stopped reason=selectedConnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=6
-									[BLE-CONNECT-PROBE] 🐞 t=123.739s centralManager.connect requested kind=selected peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=6 alreadyProbe=true
-									[BLE-CONNECT-PROBE] 🐞 t=123.811s PROMOTED PROBE TO SELECTED peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=6 previousProbeMembership=true resultingProbeMembership=false
-									[BLE-CONNECT-PROBE] 🐞 t=123.811s didConnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=6 classifiedAsProbe=false matchesSelectedPeripheralID=true matchesEsp32Peripheral=true probePeripheralIDs=[] isConnectedBefore=false connectionTextBefore="Connecting to 2..." discoverServicesRequested=true
-									[BLE-CONNECT-PROBE] 🐞 t=123.812s state connectionText previous="Connecting to 2..." new="Connected, discovering services..." peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=6
-									[BLE-CONNECT-PROBE] 🐞 t=123.812s state isConnected previous=false new=true peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=6
-									[BLE-CONNECT-PROBE] 🐞 t=123.812s state esp32Peripheral previous=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 new=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=6
-									[BLE-CONNECT-PROBE] 🐞 t=123.812s SKIPPED DUPLICATE SERVICE DISCOVERY peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=6 reason=serviceDiscoveryAlreadyRequested
-									[BLE-CONNECT-PROBE] 🐞 t=123.893s didDiscoverServices peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 error=nil serviceCount=1 serviceUUIDs=[6E400001-B5A3-F393-E0A9-E50E24DCCA9E] active=true classifiedAsProbe=false
-									[BLE-CONNECT-PROBE] 🐞 t=123.893s discoverCharacteristics requested peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 serviceUUID=6E400001-B5A3-F393-E0A9-E50E24DCCA9E characteristicUUIDs=[6E400002-B5A3-F393-E0A9-E50E24DCCA9E,6E400003-B5A3-F393-E0A9-E50E24DCCA9E,6E400004-B5A3-F393-E0A9-E50E24DCCA9E]
-									[BLE-CONNECT-PROBE] 🐞 t=124.015s didDiscoverCharacteristics peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 serviceUUID=6E400001-B5A3-F393-E0A9-E50E24DCCA9E error=nil characteristicUUIDs=[6E400003-B5A3-F393-E0A9-E50E24DCCA9E,6E400002-B5A3-F393-E0A9-E50E24DCCA9E,6E400004-B5A3-F393-E0A9-E50E24DCCA9E] rxFound=true txFound=true deviceIDFound=true txNotificationsRequested=true deviceIDReadRequested=true
-									[BLE-CONNECT-PROBE] 🐞 t=124.015s TX notification request peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 serviceUUID=6E400001-B5A3-F393-E0A9-E50E24DCCA9E characteristicUUID=6E400003-B5A3-F393-E0A9-E50E24DCCA9E
-									[BLE-CONNECT-PROBE] 🐞 t=124.016s DEVICE_ID read request peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 serviceUUID=6E400001-B5A3-F393-E0A9-E50E24DCCA9E characteristicUUID=6E400004-B5A3-F393-E0A9-E50E24DCCA9E active=true classifiedAsProbe=false
-									[BLE-CONNECT-PROBE] 🐞 t=124.016s active characteristic discovery completion peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 connectionTextBefore="Connected, discovering services..." willSetConnected=true storedTimingWillBeSent=true
-									[BLE-CONNECT-PROBE] 🐞 t=124.016s state connectionText previous="Connected, discovering services..." new="Connected" peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=6 connectedActuallySet=true
-									[BLE-CONNECT-PROBE] 🐞 t=124.016s stored timing send requested peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=6
-									[BLE-CONNECT-PROBE] 🐞 t=124.224s DEVICE_ID response peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 error=nil classifiedAsProbe=false selected=true active=true disconnectRequested=false
-									[BLE-CONNECT-PROBE] 🐞 t=124.225s state connectedDeviceID previous="Unknown" new="2" peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=6
-									[BLE-CONNECT-PROBE] 🐞 t=124.225s state connectionText previous="Connected" new="Connected to device 2" peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=6
-									[BLE-CONNECT-PROBE] 🐞 t=125.557s scan stop requested reason=stop() activePeripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 discoveredDeviceCount=1
-									[BLE-CONNECT-PROBE] 🐞 t=125.557s scanning stopped
-									[BLE-CONNECT-PROBE] 🐞 t=125.557s state isConnected previous=true new=false activePeripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=6
-									[BLE-CONNECT-PROBE] 🐞 t=125.557s state esp32Peripheral previous=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 new=nil reason=stop attempt=6
-									[BLE-CONNECT-PROBE] 🐞 t=125.602s didDisconnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 error=nil active=false probe=false isConnectedBefore=false connectionTextBefore="Not connected" scanningWillRestart=false activePeripheralWillBeCleared=false
-									[BLE-CONNECT-PROBE] 🐞 t=126.409s scan start requested bluetoothState=poweredOn deliberatelyStopped=true isConnected=false connectionText="Not connected" selectedPeripheralID=nil activePeripheralUUID=nil discoveredDeviceCount=1
-									[BLE-CONNECT-PROBE] 🐞 t=126.409s state connectionText previous="Not connected" new="Scanning..." peripheralUUID=nil attempt=6
-									[BLE-CONNECT-PROBE] 🐞 t=126.409s scan started bluetoothState=poweredOn deliberatelyStopped=false isConnected=false connectionText="Scanning..." selectedPeripheralID=nil activePeripheralUUID=nil discoveredDeviceCount=0
-									[BLE-CONNECT-PROBE] 🐞 t=126.455s new peripheral discovered uuid=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 name="2" RSSI=127 selected=false active=false temporaryProbeRequested=true
-									[BLE-CONNECT-PROBE] 🐞 t=126.455s centralManager.connect requested kind=temporaryProbe peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 selected=false active=false
-									[BLE-CONNECT-PROBE] 🐞 t=126.617s scan stop requested reason=stop() activePeripheralUUID=nil discoveredDeviceCount=1
-									[BLE-CONNECT-PROBE] 🐞 t=126.617s scanning stopped
-									[BLE-CONNECT-PROBE] 🐞 t=126.617s state isConnected previous=false new=false activePeripheralUUID=nil attempt=6
-									[BLE-CONNECT-PROBE] 🐞 t=126.661s didDisconnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 error=nil active=false probe=false isConnectedBefore=false connectionTextBefore="Not connected" scanningWillRestart=false activePeripheralWillBeCleared=false
-									[BLE-CONNECT-PROBE] 🐞 t=127.541s scan start requested bluetoothState=poweredOn deliberatelyStopped=true isConnected=false connectionText="Not connected" selectedPeripheralID=nil activePeripheralUUID=nil discoveredDeviceCount=1
-									[BLE-CONNECT-PROBE] 🐞 t=127.541s state connectionText previous="Not connected" new="Scanning..." peripheralUUID=nil attempt=6
-									[BLE-CONNECT-PROBE] 🐞 t=127.542s scan started bluetoothState=poweredOn deliberatelyStopped=false isConnected=false connectionText="Scanning..." selectedPeripheralID=nil activePeripheralUUID=nil discoveredDeviceCount=0
-									[BLE-CONNECT-PROBE] 🐞 t=127.609s new peripheral discovered uuid=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 name="2" RSSI=127 selected=false active=false temporaryProbeRequested=true
-									[BLE-CONNECT-PROBE] 🐞 t=127.609s centralManager.connect requested kind=temporaryProbe peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 selected=false active=false
-									[BLE-CONNECT-PROBE] 🐞 t=128.042s didConnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=6 classifiedAsProbe=true matchesSelectedPeripheralID=false matchesEsp32Peripheral=false probePeripheralIDs=[B2D020B6-17A6-E4F9-84F9-CE3D30A7A795] isConnectedBefore=false connectionTextBefore="Scanning..." discoverServicesRequested=true
-									[BLE-CONNECT-PROBE] 🐞 t=128.042s discoverServices requested peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=6 classifiedAsProbe=true
-									[BLE-CONNECT-PROBE] 🐞 t=128.338s selected connect attempt=7 selectedPeripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 name="2" previousActivePeripheralUUID=nil previousPeripheralState=connected previousIsConnected=false connectionText="Scanning..." alreadyProbe=true CBPeripheral.state=connected
-									[BLE-CONNECT-PROBE] 🐞 t=128.338s state connectionText previous="Scanning..." new="Connecting to 2..." peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=7
-									[BLE-CONNECT-PROBE] 🐞 t=128.338s state esp32Peripheral previous=nil new=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=7
-									[BLE-CONNECT-PROBE] 🐞 t=128.338s scan stop requested reason=selectedConnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=7
-									[BLE-CONNECT-PROBE] 🐞 t=128.338s scanning stopped reason=selectedConnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=7
-									[BLE-CONNECT-PROBE] 🐞 t=128.338s centralManager.connect requested kind=selected peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=7 alreadyProbe=true
-									[BLE-CONNECT-PROBE] 🐞 t=128.412s PROMOTED PROBE TO SELECTED peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=7 previousProbeMembership=true resultingProbeMembership=false
-									[BLE-CONNECT-PROBE] 🐞 t=128.412s didConnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=7 classifiedAsProbe=false matchesSelectedPeripheralID=true matchesEsp32Peripheral=true probePeripheralIDs=[] isConnectedBefore=false connectionTextBefore="Connecting to 2..." discoverServicesRequested=true
-									[BLE-CONNECT-PROBE] 🐞 t=128.412s state connectionText previous="Connecting to 2..." new="Connected, discovering services..." peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=7
-									[BLE-CONNECT-PROBE] 🐞 t=128.412s state isConnected previous=false new=true peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=7
-									[BLE-CONNECT-PROBE] 🐞 t=128.412s state esp32Peripheral previous=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 new=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=7
-									[BLE-CONNECT-PROBE] 🐞 t=128.412s SKIPPED DUPLICATE SERVICE DISCOVERY peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=7 reason=serviceDiscoveryAlreadyRequested
-									[BLE-CONNECT-PROBE] 🐞 t=128.412s didDiscoverServices peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 error=nil serviceCount=1 serviceUUIDs=[6E400001-B5A3-F393-E0A9-E50E24DCCA9E] active=true classifiedAsProbe=false
-									[BLE-CONNECT-PROBE] 🐞 t=128.412s discoverCharacteristics requested peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 serviceUUID=6E400001-B5A3-F393-E0A9-E50E24DCCA9E characteristicUUIDs=[6E400002-B5A3-F393-E0A9-E50E24DCCA9E,6E400003-B5A3-F393-E0A9-E50E24DCCA9E,6E400004-B5A3-F393-E0A9-E50E24DCCA9E]
-									[BLE-CONNECT-PROBE] 🐞 t=128.515s didDiscoverCharacteristics peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 serviceUUID=6E400001-B5A3-F393-E0A9-E50E24DCCA9E error=nil characteristicUUIDs=[6E400003-B5A3-F393-E0A9-E50E24DCCA9E,6E400002-B5A3-F393-E0A9-E50E24DCCA9E,6E400004-B5A3-F393-E0A9-E50E24DCCA9E] rxFound=true txFound=true deviceIDFound=true txNotificationsRequested=true deviceIDReadRequested=true
-									[BLE-CONNECT-PROBE] 🐞 t=128.515s TX notification request peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 serviceUUID=6E400001-B5A3-F393-E0A9-E50E24DCCA9E characteristicUUID=6E400003-B5A3-F393-E0A9-E50E24DCCA9E
-									[BLE-CONNECT-PROBE] 🐞 t=128.515s DEVICE_ID read request peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 serviceUUID=6E400001-B5A3-F393-E0A9-E50E24DCCA9E characteristicUUID=6E400004-B5A3-F393-E0A9-E50E24DCCA9E active=true classifiedAsProbe=false
-									[BLE-CONNECT-PROBE] 🐞 t=128.515s active characteristic discovery completion peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 connectionTextBefore="Connected, discovering services..." willSetConnected=true storedTimingWillBeSent=true
-									[BLE-CONNECT-PROBE] 🐞 t=128.515s state connectionText previous="Connected, discovering services..." new="Connected" peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=7 connectedActuallySet=true
-									[BLE-CONNECT-PROBE] 🐞 t=128.515s stored timing send requested peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=7
-									[BLE-CONNECT-PROBE] 🐞 t=128.725s DEVICE_ID response peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 error=nil classifiedAsProbe=false selected=true active=true disconnectRequested=false
-									[BLE-CONNECT-PROBE] 🐞 t=128.726s state connectedDeviceID previous="Unknown" new="2" peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=7
-									[BLE-CONNECT-PROBE] 🐞 t=128.726s state connectionText previous="Connected" new="Connected to device 2" peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=7
+									[BLE-CONNECT-PROBE] 🐞 t=8.949s scan start requested bluetoothState=poweredOn deliberatelyStopped=true isConnected=false connectionText="Not connected" selectedPeripheralID=nil activePeripheralUUID=nil discoveredDeviceCount=0
+									[BLE-CONNECT-PROBE] 🐞 t=8.949s state connectionText previous="Not connected" new="Scanning..." peripheralUUID=nil attempt=0
+									[BLE-CONNECT-PROBE] 🐞 t=8.949s scan started bluetoothState=poweredOn deliberatelyStopped=false isConnected=false connectionText="Scanning..." selectedPeripheralID=nil activePeripheralUUID=nil discoveredDeviceCount=0
+									[BLE-CONNECT-PROBE] 🐞 t=8.999s new peripheral discovered uuid=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 name="2" RSSI=-38 selected=false active=false temporaryProbeRequested=true
+									[BLE-CONNECT-PROBE] 🐞 t=8.999s centralManager.connect requested kind=temporaryProbe peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 selected=false active=false
+									[BLE-CONNECT-PROBE] 🐞 t=9.484s didConnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=none classifiedAsProbe=true matchesSelectedPeripheralID=false matchesEsp32Peripheral=false probePeripheralIDs=[B2D020B6-17A6-E4F9-84F9-CE3D30A7A795] isConnectedBefore=false connectionTextBefore="Scanning..." discoverServicesRequested=true
+									[BLE-CONNECT-PROBE] 🐞 t=9.484s discoverServices requested peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=none classifiedAsProbe=true
+									[BLE-CONNECT-PROBE] 🐞 t=9.859s selected connect attempt=1 selectedPeripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 name="2" previousActivePeripheralUUID=nil previousPeripheralState=connected previousIsConnected=false connectionText="Scanning..." alreadyProbe=true CBPeripheral.state=connected
+									[BLE-CONNECT-PROBE] 🐞 t=9.859s state connectionText previous="Scanning..." new="Connecting to 2..." peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=1
+									[BLE-CONNECT-PROBE] 🐞 t=9.859s state esp32Peripheral previous=nil new=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=1
+									[BLE-CONNECT-PROBE] 🐞 t=9.859s scan stop requested reason=selectedConnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=1
+									[BLE-CONNECT-PROBE] 🐞 t=9.859s scanning stopped reason=selectedConnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=1
+									[BLE-CONNECT-PROBE] 🐞 t=9.859s centralManager.connect requested kind=selected peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=1 alreadyProbe=true
+									[BLE-CONNECT-PROBE] 🐞 t=9.914s PROMOTED PROBE TO SELECTED peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=1 previousProbeMembership=true resultingProbeMembership=false
+									[BLE-CONNECT-PROBE] 🐞 t=9.914s didConnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=1 classifiedAsProbe=false matchesSelectedPeripheralID=true matchesEsp32Peripheral=true probePeripheralIDs=[] isConnectedBefore=false connectionTextBefore="Connecting to 2..." discoverServicesRequested=true
+									[BLE-CONNECT-PROBE] 🐞 t=9.914s state connectionText previous="Connecting to 2..." new="Connected, discovering services..." peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=1
+									[BLE-CONNECT-PROBE] 🐞 t=9.914s state isConnected previous=false new=true peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=1
+									[BLE-CONNECT-PROBE] 🐞 t=9.914s state esp32Peripheral previous=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 new=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=1
+									[BLE-CONNECT-PROBE] 🐞 t=9.914s SKIPPED DUPLICATE SERVICE DISCOVERY peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=1 reason=serviceDiscoveryAlreadyRequested
+									[BLE-CONNECT-PROBE] 🐞 t=9.915s didDiscoverServices peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 error=nil serviceCount=1 serviceUUIDs=[6E400001-B5A3-F393-E0A9-E50E24DCCA9E] active=true classifiedAsProbe=false
+									[BLE-CONNECT-PROBE] 🐞 t=9.915s discoverCharacteristics requested peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 serviceUUID=6E400001-B5A3-F393-E0A9-E50E24DCCA9E characteristicUUIDs=[6E400002-B5A3-F393-E0A9-E50E24DCCA9E,6E400003-B5A3-F393-E0A9-E50E24DCCA9E,6E400004-B5A3-F393-E0A9-E50E24DCCA9E]
+									[BLE-CONNECT-PROBE] 🐞 t=10.020s didDiscoverCharacteristics peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 serviceUUID=6E400001-B5A3-F393-E0A9-E50E24DCCA9E error=nil characteristicUUIDs=[6E400003-B5A3-F393-E0A9-E50E24DCCA9E,6E400002-B5A3-F393-E0A9-E50E24DCCA9E,6E400004-B5A3-F393-E0A9-E50E24DCCA9E] rxFound=true txFound=true deviceIDFound=true txNotificationsRequested=true deviceIDReadRequested=true
+									[BLE-CONNECT-PROBE] 🐞 t=10.020s TX notification request peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 serviceUUID=6E400001-B5A3-F393-E0A9-E50E24DCCA9E characteristicUUID=6E400003-B5A3-F393-E0A9-E50E24DCCA9E
+									[BLE-CONNECT-PROBE] 🐞 t=10.020s DEVICE_ID read request peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 serviceUUID=6E400001-B5A3-F393-E0A9-E50E24DCCA9E characteristicUUID=6E400004-B5A3-F393-E0A9-E50E24DCCA9E active=true classifiedAsProbe=false
+									[BLE-CONNECT-PROBE] 🐞 t=10.021s active characteristic discovery completion peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 connectionTextBefore="Connected, discovering services..." willSetConnected=true storedTimingWillBeSent=true
+									[BLE-CONNECT-PROBE] 🐞 t=10.021s state connectionText previous="Connected, discovering services..." new="Connected" peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=1 connectedActuallySet=true
+									[BLE-CONNECT-PROBE] 🐞 t=10.021s stored timing send requested peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=1
+									[BLE-CONNECT-PROBE] 🐞 t=10.201s DEVICE_ID response peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 error=nil classifiedAsProbe=false selected=true active=true disconnectRequested=false
+									[BLE-CONNECT-PROBE] 🐞 t=10.201s state connectedDeviceID previous="Unknown" new="2" peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=1
+									[BLE-CONNECT-PROBE] 🐞 t=10.201s state connectionText previous="Connected" new="Connected to device 2" peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=1
+									[BLE-CONNECT-PROBE] 🐞 t=11.071s scan stop requested reason=stop() activePeripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 discoveredDeviceCount=1
+									[BLE-CONNECT-PROBE] 🐞 t=11.071s scanning stopped
+									[BLE-CONNECT-PROBE] 🐞 t=11.071s state isConnected previous=true new=false activePeripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=1
+									[BLE-CONNECT-PROBE] 🐞 t=11.071s state esp32Peripheral previous=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 new=nil reason=stop attempt=1
+									[BLE-CONNECT-PROBE] 🐞 t=11.115s didDisconnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 error=nil active=false probe=false isConnectedBefore=false connectionTextBefore="Not connected" scanningWillRestart=false activePeripheralWillBeCleared=false
+									[BLE-CONNECT-PROBE] 🐞 t=11.873s scan start requested bluetoothState=poweredOn deliberatelyStopped=true isConnected=false connectionText="Not connected" selectedPeripheralID=nil activePeripheralUUID=nil discoveredDeviceCount=1
+									[BLE-CONNECT-PROBE] 🐞 t=11.873s state connectionText previous="Not connected" new="Scanning..." peripheralUUID=nil attempt=1
+									[BLE-CONNECT-PROBE] 🐞 t=11.873s scan started bluetoothState=poweredOn deliberatelyStopped=false isConnected=false connectionText="Scanning..." selectedPeripheralID=nil activePeripheralUUID=nil discoveredDeviceCount=0
+									[BLE-CONNECT-PROBE] 🐞 t=11.957s new peripheral discovered uuid=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 name="2" RSSI=-35 selected=false active=false temporaryProbeRequested=true
+									[BLE-CONNECT-PROBE] 🐞 t=11.958s centralManager.connect requested kind=temporaryProbe peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 selected=false active=false
+									[BLE-CONNECT-PROBE] 🐞 t=12.343s selected connect attempt=2 selectedPeripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 name="2" previousActivePeripheralUUID=nil previousPeripheralState=connecting previousIsConnected=false connectionText="Scanning..." alreadyProbe=true CBPeripheral.state=connecting
+									[BLE-CONNECT-PROBE] 🐞 t=12.343s state connectionText previous="Scanning..." new="Connecting to 2..." peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=2
+									[BLE-CONNECT-PROBE] 🐞 t=12.343s state esp32Peripheral previous=nil new=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=2
+									[BLE-CONNECT-PROBE] 🐞 t=12.343s scan stop requested reason=selectedConnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=2
+									[BLE-CONNECT-PROBE] 🐞 t=12.343s scanning stopped reason=selectedConnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=2
+									[BLE-CONNECT-PROBE] 🐞 t=12.343s SKIPPED DUPLICATE CONNECT peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=2 CBPeripheral.state=connecting probeMembership=true reason=temporaryProbeAlreadyConnecting
+									[BLE-CONNECT-PROBE] 🐞 t=12.413s PROMOTED PROBE TO SELECTED peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=2 previousProbeMembership=true resultingProbeMembership=false
+									[BLE-CONNECT-PROBE] 🐞 t=12.413s didConnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=2 classifiedAsProbe=false matchesSelectedPeripheralID=true matchesEsp32Peripheral=true probePeripheralIDs=[] isConnectedBefore=false connectionTextBefore="Connecting to 2..." discoverServicesRequested=true
+									[BLE-CONNECT-PROBE] 🐞 t=12.413s state connectionText previous="Connecting to 2..." new="Connected, discovering services..." peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=2
+									[BLE-CONNECT-PROBE] 🐞 t=12.413s state isConnected previous=false new=true peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=2
+									[BLE-CONNECT-PROBE] 🐞 t=12.413s state esp32Peripheral previous=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 new=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=2
+									[BLE-CONNECT-PROBE] 🐞 t=12.413s discoverServices requested peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=2 classifiedAsProbe=false
+									[BLE-CONNECT-PROBE] 🐞 t=12.751s didDiscoverServices peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 error=nil serviceCount=1 serviceUUIDs=[6E400001-B5A3-F393-E0A9-E50E24DCCA9E] active=true classifiedAsProbe=false
+									[BLE-CONNECT-PROBE] 🐞 t=12.751s discoverCharacteristics requested peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 serviceUUID=6E400001-B5A3-F393-E0A9-E50E24DCCA9E characteristicUUIDs=[6E400002-B5A3-F393-E0A9-E50E24DCCA9E,6E400003-B5A3-F393-E0A9-E50E24DCCA9E,6E400004-B5A3-F393-E0A9-E50E24DCCA9E]
+									[BLE-CONNECT-PROBE] 🐞 t=12.900s didDiscoverCharacteristics peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 serviceUUID=6E400001-B5A3-F393-E0A9-E50E24DCCA9E error=nil characteristicUUIDs=[6E400003-B5A3-F393-E0A9-E50E24DCCA9E,6E400002-B5A3-F393-E0A9-E50E24DCCA9E,6E400004-B5A3-F393-E0A9-E50E24DCCA9E] rxFound=true txFound=true deviceIDFound=true txNotificationsRequested=true deviceIDReadRequested=true
+									[BLE-CONNECT-PROBE] 🐞 t=12.900s TX notification request peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 serviceUUID=6E400001-B5A3-F393-E0A9-E50E24DCCA9E characteristicUUID=6E400003-B5A3-F393-E0A9-E50E24DCCA9E
+									[BLE-CONNECT-PROBE] 🐞 t=12.900s DEVICE_ID read request peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 serviceUUID=6E400001-B5A3-F393-E0A9-E50E24DCCA9E characteristicUUID=6E400004-B5A3-F393-E0A9-E50E24DCCA9E active=true classifiedAsProbe=false
+									[BLE-CONNECT-PROBE] 🐞 t=12.900s active characteristic discovery completion peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 connectionTextBefore="Connected, discovering services..." willSetConnected=true storedTimingWillBeSent=true
+									[BLE-CONNECT-PROBE] 🐞 t=12.901s state connectionText previous="Connected, discovering services..." new="Connected" peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=2 connectedActuallySet=true
+									[BLE-CONNECT-PROBE] 🐞 t=12.901s stored timing send requested peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=2
+									[BLE-CONNECT-PROBE] 🐞 t=13.080s DEVICE_ID response peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 error=nil classifiedAsProbe=false selected=true active=true disconnectRequested=false
+									[BLE-CONNECT-PROBE] 🐞 t=13.080s state connectedDeviceID previous="Unknown" new="2" peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=2
+									[BLE-CONNECT-PROBE] 🐞 t=13.080s state connectionText previous="Connected" new="Connected to device 2" peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=2
+									[BLE-CONNECT-PROBE] 🐞 t=13.528s scan stop requested reason=stop() activePeripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 discoveredDeviceCount=1
+									[BLE-CONNECT-PROBE] 🐞 t=13.528s scanning stopped
+									[BLE-CONNECT-PROBE] 🐞 t=13.528s state isConnected previous=true new=false activePeripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=2
+									[BLE-CONNECT-PROBE] 🐞 t=13.528s state esp32Peripheral previous=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 new=nil reason=stop attempt=2
+									[BLE-CONNECT-PROBE] 🐞 t=13.573s didDisconnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 error=nil active=false probe=false isConnectedBefore=false connectionTextBefore="Not connected" scanningWillRestart=false activePeripheralWillBeCleared=false
+									[BLE-CONNECT-PROBE] 🐞 t=14.330s scan start requested bluetoothState=poweredOn deliberatelyStopped=true isConnected=false connectionText="Not connected" selectedPeripheralID=nil activePeripheralUUID=nil discoveredDeviceCount=1
+									[BLE-CONNECT-PROBE] 🐞 t=14.330s state connectionText previous="Not connected" new="Scanning..." peripheralUUID=nil attempt=2
+									[BLE-CONNECT-PROBE] 🐞 t=14.330s scan started bluetoothState=poweredOn deliberatelyStopped=false isConnected=false connectionText="Scanning..." selectedPeripheralID=nil activePeripheralUUID=nil discoveredDeviceCount=0
+									[BLE-CONNECT-PROBE] 🐞 t=14.416s new peripheral discovered uuid=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 name="2" RSSI=-40 selected=false active=false temporaryProbeRequested=true
+									[BLE-CONNECT-PROBE] 🐞 t=14.416s centralManager.connect requested kind=temporaryProbe peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 selected=false active=false
+									[BLE-CONNECT-PROBE] 🐞 t=14.511s scan stop requested reason=stop() activePeripheralUUID=nil discoveredDeviceCount=1
+									[BLE-CONNECT-PROBE] 🐞 t=14.511s scanning stopped
+									[BLE-CONNECT-PROBE] 🐞 t=14.511s state isConnected previous=false new=false activePeripheralUUID=nil attempt=2
+									[BLE-CONNECT-PROBE] 🐞 t=14.565s didDisconnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 error=nil active=false probe=false isConnectedBefore=false connectionTextBefore="Not connected" scanningWillRestart=false activePeripheralWillBeCleared=false
+									[BLE-CONNECT-PROBE] 🐞 t=14.640s scan start requested bluetoothState=poweredOn deliberatelyStopped=true isConnected=false connectionText="Not connected" selectedPeripheralID=nil activePeripheralUUID=nil discoveredDeviceCount=1
+									[BLE-CONNECT-PROBE] 🐞 t=14.640s state connectionText previous="Not connected" new="Scanning..." peripheralUUID=nil attempt=2
+									[BLE-CONNECT-PROBE] 🐞 t=14.640s scan started bluetoothState=poweredOn deliberatelyStopped=false isConnected=false connectionText="Scanning..." selectedPeripheralID=nil activePeripheralUUID=nil discoveredDeviceCount=0
+									[BLE-CONNECT-PROBE] 🐞 t=14.731s new peripheral discovered uuid=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 name="2" RSSI=-36 selected=false active=false temporaryProbeRequested=true
+									[BLE-CONNECT-PROBE] 🐞 t=14.731s centralManager.connect requested kind=temporaryProbe peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 selected=false active=false
+									[BLE-CONNECT-PROBE] 🐞 t=15.183s didConnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=2 classifiedAsProbe=true matchesSelectedPeripheralID=false matchesEsp32Peripheral=false probePeripheralIDs=[B2D020B6-17A6-E4F9-84F9-CE3D30A7A795] isConnectedBefore=false connectionTextBefore="Scanning..." discoverServicesRequested=true
+									[BLE-CONNECT-PROBE] 🐞 t=15.183s discoverServices requested peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=2 classifiedAsProbe=true
+									[BLE-CONNECT-PROBE] 🐞 t=15.526s selected connect attempt=3 selectedPeripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 name="2" previousActivePeripheralUUID=nil previousPeripheralState=connected previousIsConnected=false connectionText="Scanning..." alreadyProbe=true CBPeripheral.state=connected
+									[BLE-CONNECT-PROBE] 🐞 t=15.526s state connectionText previous="Scanning..." new="Connecting to 2..." peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=3
+									[BLE-CONNECT-PROBE] 🐞 t=15.526s state esp32Peripheral previous=nil new=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=3
+									[BLE-CONNECT-PROBE] 🐞 t=15.526s scan stop requested reason=selectedConnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=3
+									[BLE-CONNECT-PROBE] 🐞 t=15.526s scanning stopped reason=selectedConnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=3
+									[BLE-CONNECT-PROBE] 🐞 t=15.526s centralManager.connect requested kind=selected peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=3 alreadyProbe=true
+									[BLE-CONNECT-PROBE] 🐞 t=15.599s PROMOTED PROBE TO SELECTED peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=3 previousProbeMembership=true resultingProbeMembership=false
+									[BLE-CONNECT-PROBE] 🐞 t=15.599s didConnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=3 classifiedAsProbe=false matchesSelectedPeripheralID=true matchesEsp32Peripheral=true probePeripheralIDs=[] isConnectedBefore=false connectionTextBefore="Connecting to 2..." discoverServicesRequested=true
+									[BLE-CONNECT-PROBE] 🐞 t=15.599s state connectionText previous="Connecting to 2..." new="Connected, discovering services..." peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=3
+									[BLE-CONNECT-PROBE] 🐞 t=15.599s state isConnected previous=false new=true peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=3
+									[BLE-CONNECT-PROBE] 🐞 t=15.599s state esp32Peripheral previous=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 new=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=3
+									[BLE-CONNECT-PROBE] 🐞 t=15.599s SKIPPED DUPLICATE SERVICE DISCOVERY peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=3 reason=serviceDiscoveryAlreadyRequested
+									[BLE-CONNECT-PROBE] 🐞 t=15.599s didDiscoverServices peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 error=nil serviceCount=1 serviceUUIDs=[6E400001-B5A3-F393-E0A9-E50E24DCCA9E] active=true classifiedAsProbe=false
+									[BLE-CONNECT-PROBE] 🐞 t=15.599s discoverCharacteristics requested peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 serviceUUID=6E400001-B5A3-F393-E0A9-E50E24DCCA9E characteristicUUIDs=[6E400002-B5A3-F393-E0A9-E50E24DCCA9E,6E400003-B5A3-F393-E0A9-E50E24DCCA9E,6E400004-B5A3-F393-E0A9-E50E24DCCA9E]
+									[BLE-CONNECT-PROBE] 🐞 t=15.720s didDiscoverCharacteristics peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 serviceUUID=6E400001-B5A3-F393-E0A9-E50E24DCCA9E error=nil characteristicUUIDs=[6E400003-B5A3-F393-E0A9-E50E24DCCA9E,6E400002-B5A3-F393-E0A9-E50E24DCCA9E,6E400004-B5A3-F393-E0A9-E50E24DCCA9E] rxFound=true txFound=true deviceIDFound=true txNotificationsRequested=true deviceIDReadRequested=true
+									[BLE-CONNECT-PROBE] 🐞 t=15.720s TX notification request peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 serviceUUID=6E400001-B5A3-F393-E0A9-E50E24DCCA9E characteristicUUID=6E400003-B5A3-F393-E0A9-E50E24DCCA9E
+									[BLE-CONNECT-PROBE] 🐞 t=15.720s DEVICE_ID read request peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 serviceUUID=6E400001-B5A3-F393-E0A9-E50E24DCCA9E characteristicUUID=6E400004-B5A3-F393-E0A9-E50E24DCCA9E active=true classifiedAsProbe=false
+									[BLE-CONNECT-PROBE] 🐞 t=15.720s active characteristic discovery completion peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 connectionTextBefore="Connected, discovering services..." willSetConnected=true storedTimingWillBeSent=true
+									[BLE-CONNECT-PROBE] 🐞 t=15.720s state connectionText previous="Connected, discovering services..." new="Connected" peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=3 connectedActuallySet=true
+									[BLE-CONNECT-PROBE] 🐞 t=15.720s stored timing send requested peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=3
+									[BLE-CONNECT-PROBE] 🐞 t=15.900s DEVICE_ID response peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 error=nil classifiedAsProbe=false selected=true active=true disconnectRequested=false
+									[BLE-CONNECT-PROBE] 🐞 t=15.900s state connectedDeviceID previous="Unknown" new="2" peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=3
+									[BLE-CONNECT-PROBE] 🐞 t=15.900s state connectionText previous="Connected" new="Connected to device 2" peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=3
+									[BLE-CONNECT-PROBE] 🐞 t=16.751s scan stop requested reason=stop() activePeripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 discoveredDeviceCount=1
+									[BLE-CONNECT-PROBE] 🐞 t=16.751s scanning stopped
+									[BLE-CONNECT-PROBE] 🐞 t=16.751s state isConnected previous=true new=false activePeripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=3
+									[BLE-CONNECT-PROBE] 🐞 t=16.751s state esp32Peripheral previous=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 new=nil reason=stop attempt=3
+									[BLE-CONNECT-PROBE] 🐞 t=16.795s didDisconnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 error=nil active=false probe=false isConnectedBefore=false connectionTextBefore="Not connected" scanningWillRestart=false activePeripheralWillBeCleared=false
+									[BLE-CONNECT-PROBE] 🐞 t=18.413s scan start requested bluetoothState=poweredOn deliberatelyStopped=true isConnected=false connectionText="Not connected" selectedPeripheralID=nil activePeripheralUUID=nil discoveredDeviceCount=1
+									[BLE-CONNECT-PROBE] 🐞 t=18.413s state connectionText previous="Not connected" new="Scanning..." peripheralUUID=nil attempt=3
+									[BLE-CONNECT-PROBE] 🐞 t=18.413s scan started bluetoothState=poweredOn deliberatelyStopped=false isConnected=false connectionText="Scanning..." selectedPeripheralID=nil activePeripheralUUID=nil discoveredDeviceCount=0
+									[BLE-CONNECT-PROBE] 🐞 t=18.589s new peripheral discovered uuid=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 name="2" RSSI=-40 selected=false active=false temporaryProbeRequested=true
+									[BLE-CONNECT-PROBE] 🐞 t=18.589s centralManager.connect requested kind=temporaryProbe peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 selected=false active=false
+									[BLE-CONNECT-PROBE] 🐞 t=19.022s didConnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=3 classifiedAsProbe=true matchesSelectedPeripheralID=false matchesEsp32Peripheral=false probePeripheralIDs=[B2D020B6-17A6-E4F9-84F9-CE3D30A7A795] isConnectedBefore=false connectionTextBefore="Scanning..." discoverServicesRequested=true
+									[BLE-CONNECT-PROBE] 🐞 t=19.022s discoverServices requested peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=3 classifiedAsProbe=true
+									[BLE-CONNECT-PROBE] 🐞 t=19.381s didDiscoverServices peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 error=nil serviceCount=1 serviceUUIDs=[6E400001-B5A3-F393-E0A9-E50E24DCCA9E] active=false classifiedAsProbe=true
+									[BLE-CONNECT-PROBE] 🐞 t=19.381s discoverCharacteristics requested peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 serviceUUID=6E400001-B5A3-F393-E0A9-E50E24DCCA9E characteristicUUIDs=[6E400002-B5A3-F393-E0A9-E50E24DCCA9E,6E400003-B5A3-F393-E0A9-E50E24DCCA9E,6E400004-B5A3-F393-E0A9-E50E24DCCA9E]
+									[BLE-CONNECT-PROBE] 🐞 t=19.502s didDiscoverCharacteristics peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 serviceUUID=6E400001-B5A3-F393-E0A9-E50E24DCCA9E error=nil characteristicUUIDs=[6E400003-B5A3-F393-E0A9-E50E24DCCA9E,6E400002-B5A3-F393-E0A9-E50E24DCCA9E,6E400004-B5A3-F393-E0A9-E50E24DCCA9E] rxFound=true txFound=true deviceIDFound=true txNotificationsRequested=false deviceIDReadRequested=true
+									[BLE-CONNECT-PROBE] 🐞 t=19.502s DEVICE_ID read request peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 serviceUUID=6E400001-B5A3-F393-E0A9-E50E24DCCA9E characteristicUUID=6E400004-B5A3-F393-E0A9-E50E24DCCA9E active=false classifiedAsProbe=true
+									[BLE-CONNECT-PROBE] 🐞 t=19.562s DEVICE_ID response peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 error=nil classifiedAsProbe=true selected=false active=false disconnectRequested=true
+									[BLE-CONNECT-PROBE] 🐞 t=19.563s PENDING PROBE DISCONNECT RECORDED peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 CBPeripheral.state=connected attempt=3 pendingDisconnectMembership=true
+									[BLE-CONNECT-PROBE] 🐞 t=19.563s disconnect requested reason=temporaryProbeDeviceIDRead peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 selected=false active=false
+									[BLE-CONNECT-PROBE] 🐞 t=19.648s didDisconnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 error=nil active=false probe=false isConnectedBefore=false connectionTextBefore="Scanning..." scanningWillRestart=false activePeripheralWillBeCleared=false
+									[BLE-CONNECT-PROBE] 🐞 t=19.648s PENDING RECONNECT IGNORED peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 reason=selectedPeripheralChanged selectedPeripheralUUID=nil activePeripheralUUID=nil deliberatelyStopped=false
+									[BLE-CONNECT-PROBE] 🐞 t=20.709s selected connect attempt=4 selectedPeripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 name="2 [2]" previousActivePeripheralUUID=nil previousPeripheralState=disconnected previousIsConnected=false connectionText="Scanning..." alreadyProbe=false CBPeripheral.state=disconnected
+									[BLE-CONNECT-PROBE] 🐞 t=20.710s state connectionText previous="Scanning..." new="Connecting to 2 [2]..." peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=4
+									[BLE-CONNECT-PROBE] 🐞 t=20.710s state esp32Peripheral previous=nil new=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=4
+									[BLE-CONNECT-PROBE] 🐞 t=20.710s scan stop requested reason=selectedConnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=4
+									[BLE-CONNECT-PROBE] 🐞 t=20.710s scanning stopped reason=selectedConnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=4
+									[BLE-CONNECT-PROBE] 🐞 t=20.710s centralManager.connect requested kind=selected peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=4 alreadyProbe=false
+									[BLE-CONNECT-PROBE] 🐞 t=21.153s didConnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=4 classifiedAsProbe=false matchesSelectedPeripheralID=true matchesEsp32Peripheral=true probePeripheralIDs=[] isConnectedBefore=false connectionTextBefore="Connecting to 2 [2]..." discoverServicesRequested=true
+									[BLE-CONNECT-PROBE] 🐞 t=21.153s state connectionText previous="Connecting to 2 [2]..." new="Connected, discovering services..." peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=4
+									[BLE-CONNECT-PROBE] 🐞 t=21.153s state isConnected previous=false new=true peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=4
+									[BLE-CONNECT-PROBE] 🐞 t=21.153s state esp32Peripheral previous=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 new=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=4
+									[BLE-CONNECT-PROBE] 🐞 t=21.154s discoverServices requested peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=4 classifiedAsProbe=false
+									[BLE-CONNECT-PROBE] 🐞 t=21.541s didDiscoverServices peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 error=nil serviceCount=1 serviceUUIDs=[6E400001-B5A3-F393-E0A9-E50E24DCCA9E] active=true classifiedAsProbe=false
+									[BLE-CONNECT-PROBE] 🐞 t=21.541s discoverCharacteristics requested peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 serviceUUID=6E400001-B5A3-F393-E0A9-E50E24DCCA9E characteristicUUIDs=[6E400002-B5A3-F393-E0A9-E50E24DCCA9E,6E400003-B5A3-F393-E0A9-E50E24DCCA9E,6E400004-B5A3-F393-E0A9-E50E24DCCA9E]
+									[BLE-CONNECT-PROBE] 🐞 t=21.691s didDiscoverCharacteristics peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 serviceUUID=6E400001-B5A3-F393-E0A9-E50E24DCCA9E error=nil characteristicUUIDs=[6E400003-B5A3-F393-E0A9-E50E24DCCA9E,6E400002-B5A3-F393-E0A9-E50E24DCCA9E,6E400004-B5A3-F393-E0A9-E50E24DCCA9E] rxFound=true txFound=true deviceIDFound=true txNotificationsRequested=true deviceIDReadRequested=true
+									[BLE-CONNECT-PROBE] 🐞 t=21.691s TX notification request peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 serviceUUID=6E400001-B5A3-F393-E0A9-E50E24DCCA9E characteristicUUID=6E400003-B5A3-F393-E0A9-E50E24DCCA9E
+									[BLE-CONNECT-PROBE] 🐞 t=21.691s DEVICE_ID read request peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 serviceUUID=6E400001-B5A3-F393-E0A9-E50E24DCCA9E characteristicUUID=6E400004-B5A3-F393-E0A9-E50E24DCCA9E active=true classifiedAsProbe=false
+									[BLE-CONNECT-PROBE] 🐞 t=21.691s active characteristic discovery completion peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 connectionTextBefore="Connected, discovering services..." willSetConnected=true storedTimingWillBeSent=true
+									[BLE-CONNECT-PROBE] 🐞 t=21.691s state connectionText previous="Connected, discovering services..." new="Connected" peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=4 connectedActuallySet=true
+									[BLE-CONNECT-PROBE] 🐞 t=21.691s stored timing send requested peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=4
+									[BLE-CONNECT-PROBE] 🐞 t=21.900s DEVICE_ID response peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 error=nil classifiedAsProbe=false selected=true active=true disconnectRequested=false
+									[BLE-CONNECT-PROBE] 🐞 t=21.900s state connectedDeviceID previous="Unknown" new="2" peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=4
+									[BLE-CONNECT-PROBE] 🐞 t=21.900s state connectionText previous="Connected" new="Connected to device 2" peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=4
+									[BLE-CONNECT-PROBE] 🐞 t=22.183s scan stop requested reason=stop() activePeripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 discoveredDeviceCount=1
+									[BLE-CONNECT-PROBE] 🐞 t=22.183s scanning stopped
+									[BLE-CONNECT-PROBE] 🐞 t=22.183s state isConnected previous=true new=false activePeripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=4
+									[BLE-CONNECT-PROBE] 🐞 t=22.183s state esp32Peripheral previous=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 new=nil reason=stop attempt=4
+									[BLE-CONNECT-PROBE] 🐞 t=22.227s didDisconnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 error=nil active=false probe=false isConnectedBefore=false connectionTextBefore="Not connected" scanningWillRestart=false activePeripheralWillBeCleared=false
+									[BLE-CONNECT-PROBE] 🐞 t=23.479s scan start requested bluetoothState=poweredOn deliberatelyStopped=true isConnected=false connectionText="Not connected" selectedPeripheralID=nil activePeripheralUUID=nil discoveredDeviceCount=1
+									[BLE-CONNECT-PROBE] 🐞 t=23.479s state connectionText previous="Not connected" new="Scanning..." peripheralUUID=nil attempt=4
+									[BLE-CONNECT-PROBE] 🐞 t=23.479s scan started bluetoothState=poweredOn deliberatelyStopped=false isConnected=false connectionText="Scanning..." selectedPeripheralID=nil activePeripheralUUID=nil discoveredDeviceCount=0
+									[BLE-CONNECT-PROBE] 🐞 t=23.525s new peripheral discovered uuid=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 name="2" RSSI=-42 selected=false active=false temporaryProbeRequested=true
+									[BLE-CONNECT-PROBE] 🐞 t=23.525s centralManager.connect requested kind=temporaryProbe peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 selected=false active=false
+									[BLE-CONNECT-PROBE] 🐞 t=23.621s scan stop requested reason=stop() activePeripheralUUID=nil discoveredDeviceCount=1
+									[BLE-CONNECT-PROBE] 🐞 t=23.621s scanning stopped
+									[BLE-CONNECT-PROBE] 🐞 t=23.621s state isConnected previous=false new=false activePeripheralUUID=nil attempt=4
+									[BLE-CONNECT-PROBE] 🐞 t=23.665s didDisconnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 error=nil active=false probe=false isConnectedBefore=false connectionTextBefore="Not connected" scanningWillRestart=false activePeripheralWillBeCleared=false
+									[BLE-CONNECT-PROBE] 🐞 t=23.814s scan start requested bluetoothState=poweredOn deliberatelyStopped=true isConnected=false connectionText="Not connected" selectedPeripheralID=nil activePeripheralUUID=nil discoveredDeviceCount=1
+									[BLE-CONNECT-PROBE] 🐞 t=23.814s state connectionText previous="Not connected" new="Scanning..." peripheralUUID=nil attempt=4
+									[BLE-CONNECT-PROBE] 🐞 t=23.814s scan started bluetoothState=poweredOn deliberatelyStopped=false isConnected=false connectionText="Scanning..." selectedPeripheralID=nil activePeripheralUUID=nil discoveredDeviceCount=0
+									[BLE-CONNECT-PROBE] 🐞 t=23.859s new peripheral discovered uuid=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 name="2" RSSI=-41 selected=false active=false temporaryProbeRequested=true
+									[BLE-CONNECT-PROBE] 🐞 t=23.859s centralManager.connect requested kind=temporaryProbe peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 selected=false active=false
+									[BLE-CONNECT-PROBE] 🐞 t=24.009s scan stop requested reason=stop() activePeripheralUUID=nil discoveredDeviceCount=1
+									[BLE-CONNECT-PROBE] 🐞 t=24.009s scanning stopped
+									[BLE-CONNECT-PROBE] 🐞 t=24.009s state isConnected previous=false new=false activePeripheralUUID=nil attempt=4
+									[BLE-CONNECT-PROBE] 🐞 t=24.052s didDisconnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 error=nil active=false probe=false isConnectedBefore=false connectionTextBefore="Not connected" scanningWillRestart=false activePeripheralWillBeCleared=false
+									[BLE-CONNECT-PROBE] 🐞 t=24.140s scan start requested bluetoothState=poweredOn deliberatelyStopped=true isConnected=false connectionText="Not connected" selectedPeripheralID=nil activePeripheralUUID=nil discoveredDeviceCount=1
+									[BLE-CONNECT-PROBE] 🐞 t=24.141s state connectionText previous="Not connected" new="Scanning..." peripheralUUID=nil attempt=4
+									[BLE-CONNECT-PROBE] 🐞 t=24.141s scan started bluetoothState=poweredOn deliberatelyStopped=false isConnected=false connectionText="Scanning..." selectedPeripheralID=nil activePeripheralUUID=nil discoveredDeviceCount=0
+									[BLE-CONNECT-PROBE] 🐞 t=24.186s new peripheral discovered uuid=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 name="2" RSSI=-44 selected=false active=false temporaryProbeRequested=true
+									[BLE-CONNECT-PROBE] 🐞 t=24.186s centralManager.connect requested kind=temporaryProbe peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 selected=false active=false
+									[BLE-CONNECT-PROBE] 🐞 t=24.338s scan stop requested reason=stop() activePeripheralUUID=nil discoveredDeviceCount=1
+									[BLE-CONNECT-PROBE] 🐞 t=24.338s scanning stopped
+									[BLE-CONNECT-PROBE] 🐞 t=24.338s state isConnected previous=false new=false activePeripheralUUID=nil attempt=4
+									[BLE-CONNECT-PROBE] 🐞 t=24.383s didDisconnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 error=nil active=false probe=false isConnectedBefore=false connectionTextBefore="Not connected" scanningWillRestart=false activePeripheralWillBeCleared=false
+									[BLE-CONNECT-PROBE] 🐞 t=24.532s scan start requested bluetoothState=poweredOn deliberatelyStopped=true isConnected=false connectionText="Not connected" selectedPeripheralID=nil activePeripheralUUID=nil discoveredDeviceCount=1
+									[BLE-CONNECT-PROBE] 🐞 t=24.532s state connectionText previous="Not connected" new="Scanning..." peripheralUUID=nil attempt=4
+									[BLE-CONNECT-PROBE] 🐞 t=24.532s scan started bluetoothState=poweredOn deliberatelyStopped=false isConnected=false connectionText="Scanning..." selectedPeripheralID=nil activePeripheralUUID=nil discoveredDeviceCount=0
+									[BLE-CONNECT-PROBE] 🐞 t=24.599s new peripheral discovered uuid=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 name="2" RSSI=-42 selected=false active=false temporaryProbeRequested=true
+									[BLE-CONNECT-PROBE] 🐞 t=24.599s centralManager.connect requested kind=temporaryProbe peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 selected=false active=false
+									[BLE-CONNECT-PROBE] 🐞 t=24.694s scan stop requested reason=stop() activePeripheralUUID=nil discoveredDeviceCount=1
+									[BLE-CONNECT-PROBE] 🐞 t=24.695s scanning stopped
+									[BLE-CONNECT-PROBE] 🐞 t=24.695s state isConnected previous=false new=false activePeripheralUUID=nil attempt=4
+									[BLE-CONNECT-PROBE] 🐞 t=24.738s didDisconnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 error=nil active=false probe=false isConnectedBefore=false connectionTextBefore="Not connected" scanningWillRestart=false activePeripheralWillBeCleared=false
+									[BLE-CONNECT-PROBE] 🐞 t=24.881s scan start requested bluetoothState=poweredOn deliberatelyStopped=true isConnected=false connectionText="Not connected" selectedPeripheralID=nil activePeripheralUUID=nil discoveredDeviceCount=1
+									[BLE-CONNECT-PROBE] 🐞 t=24.881s state connectionText previous="Not connected" new="Scanning..." peripheralUUID=nil attempt=4
+									[BLE-CONNECT-PROBE] 🐞 t=24.881s scan started bluetoothState=poweredOn deliberatelyStopped=false isConnected=false connectionText="Scanning..." selectedPeripheralID=nil activePeripheralUUID=nil discoveredDeviceCount=0
+									[BLE-CONNECT-PROBE] 🐞 t=24.941s new peripheral discovered uuid=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 name="2" RSSI=-42 selected=false active=false temporaryProbeRequested=true
+									[BLE-CONNECT-PROBE] 🐞 t=24.941s centralManager.connect requested kind=temporaryProbe peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 selected=false active=false
+									[BLE-CONNECT-PROBE] 🐞 t=25.396s scan stop requested reason=stop() activePeripheralUUID=nil discoveredDeviceCount=1
+									[BLE-CONNECT-PROBE] 🐞 t=25.396s scanning stopped
+									[BLE-CONNECT-PROBE] 🐞 t=25.396s state isConnected previous=false new=false activePeripheralUUID=nil attempt=4
+									[BLE-CONNECT-PROBE] 🐞 t=25.441s didConnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=4 classifiedAsProbe=false matchesSelectedPeripheralID=false matchesEsp32Peripheral=false probePeripheralIDs=[] isConnectedBefore=false connectionTextBefore="Not connected" discoverServicesRequested=true
+									[BLE-CONNECT-PROBE] 🐞 t=25.441s state connectionText previous="Not connected" new="Connected, discovering services..." peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=4
+									[BLE-CONNECT-PROBE] 🐞 t=25.441s state isConnected previous=false new=true peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=4
+									[BLE-CONNECT-PROBE] 🐞 t=25.441s state esp32Peripheral previous=nil new=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=4
+									[BLE-CONNECT-PROBE] 🐞 t=25.441s discoverServices requested peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=4 classifiedAsProbe=false
+									[BLE-CONNECT-PROBE] 🐞 t=25.441s didDisconnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 error=nil active=true probe=false isConnectedBefore=true connectionTextBefore="Connected, discovering services..." scanningWillRestart=false activePeripheralWillBeCleared=true
+									[BLE-CONNECT-PROBE] 🐞 t=25.441s state connectionText previous="Connected, discovering services..." new="Disconnected" peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=4
+									[BLE-CONNECT-PROBE] 🐞 t=25.441s state isConnected previous=true new=false peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=4
+									[BLE-CONNECT-PROBE] 🐞 t=25.441s state connectedDeviceID previous="Unknown" new="Unknown" peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=4
+									[BLE-CONNECT-PROBE] 🐞 t=25.441s state esp32Peripheral previous=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 new=nil attempt=4
+									[BLE-CONNECT-PROBE] 🐞 t=25.963s scan start requested bluetoothState=poweredOn deliberatelyStopped=true isConnected=false connectionText="Disconnected" selectedPeripheralID=nil activePeripheralUUID=nil discoveredDeviceCount=1
+									[BLE-CONNECT-PROBE] 🐞 t=25.963s state connectionText previous="Disconnected" new="Scanning..." peripheralUUID=nil attempt=4
+									[BLE-CONNECT-PROBE] 🐞 t=25.963s scan started bluetoothState=poweredOn deliberatelyStopped=false isConnected=false connectionText="Scanning..." selectedPeripheralID=nil activePeripheralUUID=nil discoveredDeviceCount=0
+									[BLE-CONNECT-PROBE] 🐞 t=26.046s new peripheral discovered uuid=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 name="2" RSSI=-39 selected=false active=false temporaryProbeRequested=true
+									[BLE-CONNECT-PROBE] 🐞 t=26.046s centralManager.connect requested kind=temporaryProbe peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 selected=false active=false
+									[BLE-CONNECT-PROBE] 🐞 t=26.500s didConnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=4 classifiedAsProbe=true matchesSelectedPeripheralID=false matchesEsp32Peripheral=false probePeripheralIDs=[B2D020B6-17A6-E4F9-84F9-CE3D30A7A795] isConnectedBefore=false connectionTextBefore="Scanning..." discoverServicesRequested=true
+									[BLE-CONNECT-PROBE] 🐞 t=26.500s discoverServices requested peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=4 classifiedAsProbe=true
+									[BLE-CONNECT-PROBE] 🐞 t=26.844s selected connect attempt=5 selectedPeripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 name="2" previousActivePeripheralUUID=nil previousPeripheralState=connected previousIsConnected=false connectionText="Scanning..." alreadyProbe=true CBPeripheral.state=connected
+									[BLE-CONNECT-PROBE] 🐞 t=26.844s state connectionText previous="Scanning..." new="Connecting to 2..." peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=5
+									[BLE-CONNECT-PROBE] 🐞 t=26.844s state esp32Peripheral previous=nil new=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=5
+									[BLE-CONNECT-PROBE] 🐞 t=26.844s scan stop requested reason=selectedConnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=5
+									[BLE-CONNECT-PROBE] 🐞 t=26.844s scanning stopped reason=selectedConnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=5
+									[BLE-CONNECT-PROBE] 🐞 t=26.844s centralManager.connect requested kind=selected peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=5 alreadyProbe=true
+									[BLE-CONNECT-PROBE] 🐞 t=26.919s PROMOTED PROBE TO SELECTED peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=5 previousProbeMembership=true resultingProbeMembership=false
+									[BLE-CONNECT-PROBE] 🐞 t=26.919s didConnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=5 classifiedAsProbe=false matchesSelectedPeripheralID=true matchesEsp32Peripheral=true probePeripheralIDs=[] isConnectedBefore=false connectionTextBefore="Connecting to 2..." discoverServicesRequested=true
+									[BLE-CONNECT-PROBE] 🐞 t=26.919s state connectionText previous="Connecting to 2..." new="Connected, discovering services..." peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=5
+									[BLE-CONNECT-PROBE] 🐞 t=26.919s state isConnected previous=false new=true peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=5
+									[BLE-CONNECT-PROBE] 🐞 t=26.919s state esp32Peripheral previous=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 new=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=5
+									[BLE-CONNECT-PROBE] 🐞 t=26.919s SKIPPED DUPLICATE SERVICE DISCOVERY peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=5 reason=serviceDiscoveryAlreadyRequested
+									[BLE-CONNECT-PROBE] 🐞 t=26.920s didDiscoverServices peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 error=nil serviceCount=1 serviceUUIDs=[6E400001-B5A3-F393-E0A9-E50E24DCCA9E] active=true classifiedAsProbe=false
+									[BLE-CONNECT-PROBE] 🐞 t=26.920s discoverCharacteristics requested peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 serviceUUID=6E400001-B5A3-F393-E0A9-E50E24DCCA9E characteristicUUIDs=[6E400002-B5A3-F393-E0A9-E50E24DCCA9E,6E400003-B5A3-F393-E0A9-E50E24DCCA9E,6E400004-B5A3-F393-E0A9-E50E24DCCA9E]
+									[BLE-CONNECT-PROBE] 🐞 t=27.075s didDiscoverCharacteristics peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 serviceUUID=6E400001-B5A3-F393-E0A9-E50E24DCCA9E error=nil characteristicUUIDs=[6E400003-B5A3-F393-E0A9-E50E24DCCA9E,6E400002-B5A3-F393-E0A9-E50E24DCCA9E,6E400004-B5A3-F393-E0A9-E50E24DCCA9E] rxFound=true txFound=true deviceIDFound=true txNotificationsRequested=true deviceIDReadRequested=true
+									[BLE-CONNECT-PROBE] 🐞 t=27.075s TX notification request peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 serviceUUID=6E400001-B5A3-F393-E0A9-E50E24DCCA9E characteristicUUID=6E400003-B5A3-F393-E0A9-E50E24DCCA9E
+									[BLE-CONNECT-PROBE] 🐞 t=27.075s DEVICE_ID read request peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 serviceUUID=6E400001-B5A3-F393-E0A9-E50E24DCCA9E characteristicUUID=6E400004-B5A3-F393-E0A9-E50E24DCCA9E active=true classifiedAsProbe=false
+									[BLE-CONNECT-PROBE] 🐞 t=27.075s active characteristic discovery completion peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 connectionTextBefore="Connected, discovering services..." willSetConnected=true storedTimingWillBeSent=true
+									[BLE-CONNECT-PROBE] 🐞 t=27.075s state connectionText previous="Connected, discovering services..." new="Connected" peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=5 connectedActuallySet=true
+									[BLE-CONNECT-PROBE] 🐞 t=27.075s stored timing send requested peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=5
+									[BLE-CONNECT-PROBE] 🐞 t=27.270s DEVICE_ID response peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 error=nil classifiedAsProbe=false selected=true active=true disconnectRequested=false
+									[BLE-CONNECT-PROBE] 🐞 t=27.270s state connectedDeviceID previous="Unknown" new="2" peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=5
+									[BLE-CONNECT-PROBE] 🐞 t=27.270s state connectionText previous="Connected" new="Connected to device 2" peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=5

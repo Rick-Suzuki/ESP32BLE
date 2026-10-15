@@ -72,6 +72,7 @@ final class BLEKeyboardManager: NSObject, ObservableObject {
 	// Track peripherals that are temporarily connected just to read device ID.
 	//
 		private var probePeripheralIDs: Set<UUID> = []
+        private var pendingProbeDisconnectPeripheralIDs: Set<UUID> = []
         private var serviceDiscoveryPeripheralIDs: Set<UUID> = []
         private var characteristicDiscoveryPeripheralIDs: Set<UUID> = []
         private var completedCharacteristicDiscoveryPeripheralIDs: Set<UUID> = []
@@ -244,6 +245,7 @@ final class BLEKeyboardManager: NSObject, ObservableObject {
 			idCharacteristic = nil
 				connectedDeviceID = "Unknown"
 				probePeripheralIDs.removeAll()
+                pendingProbeDisconnectPeripheralIDs.removeAll()
                 serviceDiscoveryPeripheralIDs.removeAll()
                 characteristicDiscoveryPeripheralIDs.removeAll()
                 completedCharacteristicDiscoveryPeripheralIDs.removeAll()
@@ -285,7 +287,11 @@ final class BLEKeyboardManager: NSObject, ObservableObject {
         connectionProbeLog("scanning stopped reason=selectedConnect peripheralUUID=\(match.id.uuidString) attempt=\(connectionAttemptNumber)")
         let isPendingProbeConnection = match.peripheral.state == .connecting
             && probePeripheralIDs.contains(match.id)
-        if isPendingProbeConnection {
+        let isPendingProbeDisconnect = match.peripheral.state == .disconnecting
+            && pendingProbeDisconnectPeripheralIDs.contains(match.id)
+        if isPendingProbeDisconnect {
+            connectionProbeLog("PENDING RECONNECT WAITING peripheralUUID=\(match.id.uuidString) attempt=\(connectionAttemptNumber) CBPeripheral.state=\(peripheralStateDescription(match.peripheral.state)) pendingDisconnectMembership=\(pendingProbeDisconnectPeripheralIDs.contains(match.id))")
+        } else if isPendingProbeConnection {
             connectionProbeLog("SKIPPED DUPLICATE CONNECT peripheralUUID=\(match.id.uuidString) attempt=\(connectionAttemptNumber) CBPeripheral.state=\(peripheralStateDescription(match.peripheral.state)) probeMembership=\(probePeripheralIDs.contains(match.id)) reason=temporaryProbeAlreadyConnecting")
         } else {
             connectionProbeLog("centralManager.connect requested kind=selected peripheralUUID=\(match.id.uuidString) attempt=\(connectionAttemptNumber) alreadyProbe=\(probePeripheralIDs.contains(match.id))")
@@ -491,7 +497,8 @@ extension BLEKeyboardManager: CBCentralManagerDelegate {
             }
 	}
 	
-		func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral, error: Error?) {
+			func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral, error: Error?) {
+                let wasPendingProbeDisconnect = pendingProbeDisconnectPeripheralIDs.remove(peripheral.identifier) != nil
                 let wasProbe = probePeripheralIDs.contains(peripheral.identifier)
                 let wasActive = esp32Peripheral?.identifier == peripheral.identifier
                 connectionProbeLog("didDisconnect peripheralUUID=\(peripheral.identifier.uuidString) error=\(error.map { String(describing: $0) } ?? "nil") active=\(wasActive) probe=\(wasProbe) isConnectedBefore=\(isConnected) connectionTextBefore=\(connectionText.debugDescription) scanningWillRestart=\(wasActive && !isDeliberatelyStopped) activePeripheralWillBeCleared=\(wasActive)")
@@ -501,8 +508,33 @@ extension BLEKeyboardManager: CBCentralManagerDelegate {
                 completedCharacteristicDiscoveryPeripheralIDs.remove(peripheral.identifier)
                 deviceIDReadPeripheralIDs.remove(peripheral.identifier)
                 selectedInitializationPeripheralIDs.remove(peripheral.identifier)
-			
-			if esp32Peripheral?.identifier == peripheral.identifier {
+
+                let selectedMatches = selectedPeripheralID == peripheral.identifier
+                let activeMatches = esp32Peripheral?.identifier == peripheral.identifier
+                if wasPendingProbeDisconnect
+                    && selectedMatches
+                    && activeMatches
+                    && !isDeliberatelyStopped {
+                    connectionProbeLog("PENDING RECONNECT STARTED peripheralUUID=\(peripheral.identifier.uuidString) attempt=\(connectionAttempt(for: peripheral)) error=\(error.map { String(describing: $0) } ?? "nil") selectedPeripheralIDMatch=\(selectedMatches) esp32PeripheralMatch=\(activeMatches) deliberatelyStopped=\(isDeliberatelyStopped)")
+                    centralManager.connect(peripheral, options: nil)
+                    return
+                }
+
+                if wasPendingProbeDisconnect {
+                    let rejectionReason: String
+                    if isDeliberatelyStopped {
+                        rejectionReason = "deliberatelyStopped"
+                    } else if !selectedMatches {
+                        rejectionReason = "selectedPeripheralChanged"
+                    } else if !activeMatches {
+                        rejectionReason = "activePeripheralChanged"
+                    } else {
+                        rejectionReason = "currentIntentInvalid"
+                    }
+                    connectionProbeLog("PENDING RECONNECT IGNORED peripheralUUID=\(peripheral.identifier.uuidString) reason=\(rejectionReason) selectedPeripheralUUID=\(selectedPeripheralID?.uuidString ?? "nil") activePeripheralUUID=\(esp32Peripheral?.identifier.uuidString ?? "nil") deliberatelyStopped=\(isDeliberatelyStopped)")
+                }
+				
+				if esp32Peripheral?.identifier == peripheral.identifier {
 			connectionProbeLog("state connectionText previous=\(connectionText.debugDescription) new=\"Disconnected\" peripheralUUID=\(peripheral.identifier.uuidString) attempt=\(connectionAttempt(for: peripheral))")
 				connectionText = "Disconnected"
                     connectionProbeLog("state isConnected previous=\(isConnected) new=false peripheralUUID=\(peripheral.identifier.uuidString) attempt=\(connectionAttempt(for: peripheral))")
@@ -701,10 +733,12 @@ extension BLEKeyboardManager: CBPeripheralDelegate {
 			//
 			// Disconnect from non-selected probe devices after reading ID.
 			//
-			if probePeripheralIDs.contains(peripheral.identifier),
-			   peripheral.identifier != esp32Peripheral?.identifier {
-				probePeripheralIDs.remove(peripheral.identifier)
-					connectionProbeLog("disconnect requested reason=temporaryProbeDeviceIDRead peripheralUUID=\(peripheral.identifier.uuidString) selected=\(peripheral.identifier == selectedPeripheralID) active=\(peripheral.identifier == esp32Peripheral?.identifier)")
+				if probePeripheralIDs.contains(peripheral.identifier),
+				   peripheral.identifier != esp32Peripheral?.identifier {
+					probePeripheralIDs.remove(peripheral.identifier)
+                    pendingProbeDisconnectPeripheralIDs.insert(peripheral.identifier)
+                    connectionProbeLog("PENDING PROBE DISCONNECT RECORDED peripheralUUID=\(peripheral.identifier.uuidString) CBPeripheral.state=\(peripheralStateDescription(peripheral.state)) attempt=\(connectionAttempt(for: peripheral)) pendingDisconnectMembership=\(pendingProbeDisconnectPeripheralIDs.contains(peripheral.identifier))")
+						connectionProbeLog("disconnect requested reason=temporaryProbeDeviceIDRead peripheralUUID=\(peripheral.identifier.uuidString) selected=\(peripheral.identifier == selectedPeripheralID) active=\(peripheral.identifier == esp32Peripheral?.identifier)")
 						centralManager.cancelPeripheralConnection(peripheral)
 				}
 			}

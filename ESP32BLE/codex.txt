@@ -1,82 +1,100 @@
-ESP32BLE — B2b IMPLEMENTATION REPORT
+ESP32BLE — B2d VERIFICATION REPORT
 
-1. File and lines changed
+The requested B2d implementation was already present from the preceding task. I verified the current source without reapplying edits or changing any files.
 
-Modified only:
+1. File and line ranges
 
-BLE_KB_Manager.swift
+BLE_KB_Manager.swift:
 
-Changed lines 286–293 inside connectToSelectedDevice().
+• Line 75: pending-disconnect tracking
+• Line 248: stop cleanup
+• Lines 290–299: .disconnecting selection handling
+• Lines 500–535: didDisconnect marker consumption and reconnect
+• Lines 739–742: probe-disconnect recording
 
-No other functions or files were modified.
+2. Tracking variable
 
-2. Skip condition
+private var pendingProbeDisconnectPeripheralIDs: Set<UUID> = []
 
-The selected connection request is skipped only when both conditions are true:
+No additional state, timers, counters, or state machines exist.
 
-match.peripheral.state == .connecting
+3. Marker recording
 
-probePeripheralIDs.contains(match.id)
+Lines 739–742 record the UUID and diagnostic before cancelPeripheralConnection().
 
-No new properties or state variables were introduced. isPendingProbeConnection is a local constant.
+4. .disconnecting selection
 
-3. Other peripheral states
+Lines 290–293 detect:
 
-Existing connect behavior remains for:
+match.peripheral.state == .disconnecting
 
-• .disconnected
-• .connected
-• .disconnecting
-• .connecting without temporary-probe membership
+and pending-disconnect membership.
 
-These cases continue using the original:
+The selected state is preserved and connect() waits for didDisconnect.
 
-centralManager.connect(match.peripheral, options: nil)
+5. didDisconnect reconnect
 
-4. B1 preservation
+Lines 501–520:
 
-B1’s didConnect promotion condition remains unchanged:
+• Consume the marker once.
+• Clear all B2a per-UUID lifecycle tracking.
+• Verify selected UUID, active UUID, and stop state.
+• Issue exactly one fresh connect request.
+• Return before normal disconnect teardown.
 
-wasProbe && matchesSelected && matchesActive
+6. Stale reconnect prevention
 
-Probe membership remains intact when B2b skips the duplicate request, allowing the original pending connection callback to execute B1 promotion.
+Lines 523–535 reject marked reconnects when:
 
-5. B2a preservation
+• BLE was stopped.
+• Selection changed.
+• Active peripheral changed.
+• Current intent is otherwise invalid.
 
-No B2a properties, guards, discovery callbacks, initialization logic, or cleanup paths were modified.
+Callbacks from unrelated UUIDs do not clear the newer active device.
 
-6. Diagnostic added
+7. Stop and Mac mode
 
-When the redundant request is skipped, the existing logging mechanism emits:
+Line 248 clears all pending probe-disconnect markers.
 
-SKIPPED DUPLICATE CONNECT
+Mac mode calls the existing stop() path, so delayed reconnects remain disabled.
 
-It includes:
+8. B1
 
-• Peripheral UUID
-• Selected attempt number
-• CBPeripheral.state
-• Probe membership
-• reason=temporaryProbeAlreadyConnecting
+Unchanged. Existing didConnect classification and promotion remain intact.
 
-The existing helper supplies the required [BLE-CONNECT-PROBE] and 🐞 prefixes.
+9. B2a
 
-The existing selected-connect diagnostic remains unchanged when connect() is requested.
+Unchanged. Discovery guards remain intact, and lifecycle tracking is cleared before B2d reconnects.
 
-7. Build result
+10. B2b
+
+Unchanged. The existing .connecting temporary-probe condition and diagnostic remain intact.
+
+11. Diagnostics present
+
+PENDING PROBE DISCONNECT RECORDED
+
+PENDING RECONNECT WAITING
+
+PENDING RECONNECT STARTED
+
+PENDING RECONNECT IGNORED
+
+All use the existing [BLE-CONNECT-PROBE] 🐞 logging mechanism.
+
+12. Build result
 
 Xcode live diagnostics: No issues found.
 
-Full Xcode project build: Successful.
+Full project build: Successful.
 
-Build completed in 6.9 seconds with no errors.
+Build completed in approximately 1.4 seconds with no errors.
 
-8. Remaining risks and limitations
+13. Limitations
 
-B2b intentionally does not directly promote .connected probes; that remains B2c work.
+Physical-device BLE behavior was not exercised during this verification.
 
-Pending cancellation and .disconnecting races remain unchanged for B2d.
+The older didDisconnect summary diagnostic is emitted before the B2d branch, so its predicted teardown fields may differ from the eventual valid-reconnect path. PENDING RECONNECT STARTED records the actual outcome.
 
-Validation covered source inspection and compilation. Physical-device BLE testing was not performed.
-
-No commit or other Git write operation was performed.
+No files were modified during this verification. No commit or Git write operation was performed.
