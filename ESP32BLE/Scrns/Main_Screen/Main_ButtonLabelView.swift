@@ -68,6 +68,10 @@ struct MainScreenButtonLabelView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 ZStack {
+					Rectangle()
+						.fill(Color.white.opacity(0.001))
+						.frame(width: buttonSize.width, height: buttonSize.height)
+
                     buttonVisualShell
                         .frame(width: buttonSize.width, height: buttonSize.height)
 

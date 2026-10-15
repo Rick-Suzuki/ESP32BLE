@@ -1,139 +1,63 @@
-PHASE 3B-2 IMPLEMENTED
+• Based on the code you pasted from Xcode: ABSENT.
 
-1. Exact files modified
+6. Git status and relevant diff
+• NOT CONFIRMED (no Git access here). I cannot run git status or git diff. If you run locally:
+   • git status
+   • git diff -- Main_ButtonLabelView.swift
+   • git diff --cached -- Main_ButtonLabelView.swift
+   • These would reveal whether the change is untracked, staged, or committed—or whether it was never applied or has been reverted.
 
-Only modified:
+7. Actual Xcode target source reference
+• NOT CONFIRMED (no project.pbxproj inspection here).
+• From your earlier context, Main_ButtonLabelView.swift is part of the app and contains MainScreenButtonLabelView.
+• There is no evidence in the provided files of multiple references to Main_ButtonLabelView.swift or multiple targets including different copies, but this cannot be definitively confirmed without project file inspection.
 
-ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
+8. Any duplicate view definitions
+• Searching within the provided source context earlier:
+   • struct MainScreenButtonLabelView was found only in Main_ButtonLabelView.swift.
+• A broader search across your project for duplicate definitions could not be run here. From the provided files, no duplicates are evident.
 
-No other source files were modified.
+9. Most likely explanation for the discrepancy (supported by evidence)
+• The change Codex reported was applied via a tool-based edit step. However, your current Xcode-visible file does not contain the change. Possible explanations:
+1. The change did not actually persist to the same physical file Xcode is showing (e.g., edited a different copy or an unreferenced file). This is consistent with the absence of the rectangle in your pasted code.
+2. The change may have been overwritten by a subsequent update or revert (manual or automated), returning the file to its prior state. This cannot be confirmed without git history/diff.
+3. There are multiple working copies or branches, and the change was applied in a different branch or workspace. Not confirmable here.
+• Evidence supporting explanation 1:
+   • Your pasted current body clearly lacks the added Rectangle.
+   • No other files in the provided context show a duplicated or alternative MainScreenButtonLabelView.
+• Evidence supporting explanation 2:
+   • Not confirmable without Git diff or history. No evidence provided that the file was subsequently changed or reverted.
 
-2. Functions changed
+10. Whether Codex and Xcode are using the same physical source file
+• NOT CONFIRMED.
+• You are seeing Main_ButtonLabelView.swift in Xcode without the change.
+• The edit tool reported it modified Main_ButtonLabelView.swift, but we cannot verify if it targeted the same physical path that Xcode is using (e.g., if there is a second copy on disk).
+• This strongly suggests a path mismatch or an overwrite/revert after the change.
 
-Changed:
+11. Confirmation that no files or Git state were modified
+• Confirmed: In this read-only investigation step, I did not modify any files, run any Git commands, or change project configuration.
 
-applyPendingImportConflictIfNeeded
-• Removed the pre-success replacedFileCount increment for .allFiles.
+==================================================
+Summary and next steps (read-only)
+• The change Codex reported (adding a conditional transparent Rectangle in the normal ZStack) is ABSENT in the source you pasted from Xcode.
+• Without filesystem and Git access, I cannot definitively determine whether:
+   • The change was applied to a different copy,
+   • The change was overwritten,
+   • Or the change was never persisted.
+• To resolve this discrepancy, please consider these read-only verification steps on your side:
+1. In Terminal, from the repository root:
+ - git status
+ - git diff -- Main_ButtonLabelView.swift
+ - git diff --cached -- Main_ButtonLabelView.swift
+ - git log -p -- Main_ButtonLabelView.swift (to see if there was ever a commit with the change)
 
-importReplacingExistingFile
-• For Restore Full Backup only, identified by session.importMode == .allFiles, existing destinations now use safe replacement.
-• Non-restore imports keep the previous remove-then-import behavior.
-• replacedFileCount now increments only after a successful replacement.
+2. Confirm the absolute filesystem path of the Main_ButtonLabelView.swift that Xcode is displaying:
+ - In Xcode, select the file in the Project Navigator, open the File Inspector (right sidebar), and check the “Location” path.
 
-ensureImportedScreenConfig
-• Restore mode no longer deletes an existing config before a replacement is ready.
-• Skip All config protection remains in place.
-• Existing valid configs are preserved when a replacement screen has no matching backup config.
-• Restore mode exits before the old remove-first config path.
+3. Search for duplicates inside your project folder:
+ - Find all matching filenames: Main_ButtonLabelView.swift
+ - Confirm there is only one and that it matches Xcode’s File Inspector path.
 
-Added:
+4. Ensure the target membership in Xcode points to that same physical file.
 
-safelyReplaceExistingScreenConfig
-safelyReplaceExistingImportedFile
-stageImportedFileData
-verifyStagedReplacement
-
-3. New safe replacement helper
-
-Added safelyReplaceExistingImportedFile(from:to:).
-
-It:
-
-• Creates an item replacement directory.
-• Stages the incoming file first.
-• Verifies the staged file exists and matches source file size when available.
-• Calls FileManager.replaceItemAt.
-• Cleans up the staging directory with defer.
-• Does not remove the original file before staging succeeds.
-
-4. Staging directory implementation
-
-Uses:
-
-FileManager.default.url(for: .itemReplacementDirectory, in: .userDomainMask, appropriateFor: targetURL, create: true)
-
-The staged file is placed inside that replacement directory using a UUID filename plus the target extension.
-
-Staging files are not placed directly in Documents, so they should not appear in the normal Settings file list.
-
-5. FileManager replacement implementation
-
-Uses:
-
-FileManager.default.replaceItemAt(targetURL, withItemAt: stagedURL, backupItemName: nil, options: [.usingNewMetadataOnly])
-
-If replacement fails:
-
-• The code does not delete targetURL.
-• It does not retry with remove/move.
-• It checks whether the destination still exists.
-• It logs any Foundation recovery original location from NSFileOriginalItemLocationKey using db().
-• It throws through the existing restore error path.
-
-6. Screen/configuration handling
-
-For .config.json restore replacements:
-
-• safelyReplaceExistingScreenConfig reads and decodes the source config before replacement.
-• Invalid config data is not written over an existing config.
-• Existing configs are replaced with the same safe replacement helper.
-• New configs still use the existing new-file import path.
-• If a replacement screen has no matching backup config, an existing valid config is preserved.
-
-Skip All still preserves skipped screens and matching configs.
-
-7. Error handling and recovery behavior
-
-Existing restore failure handling is preserved:
-
-• Failures are recorded with recordImportFailure.
-• renameAlertMessage reports the failed file.
-• The restore session continues according to the existing flow.
-• Temporary staging resources are cleaned up with defer.
-
-This is still per-file safety, not a transactional restore.
-
-8. Restore counters
-
-replacedFileCount now increments only after successful replacement.
-
-Previously it incremented before the replacement attempt in .allFiles.
-
-9. Other import modes
-
-Other import modes remain unchanged.
-
-The safe replacement branch is gated by:
-
-session.importMode == .allFiles
-
-Import Screen(s), individual screen imports, keep-both imports, normal document saving, renaming, export logic, and archive format were not changed.
-
-10. Build result
-
-ESP32BLE built successfully.
-
-11. Remaining data-loss risks
-
-This improves per-file replacement safety only.
-
-Remaining risks:
-
-• A full backup restore is still not transactional.
-• Earlier restored files remain restored if a later file fails.
-• App termination during a multi-file restore can still leave a partially completed restore.
-• New-file imports are not rolled back if later files fail.
-
-12. Safety confirmation
-
-No .txt files were modified by me.
-No Git state was changed.
-No staging, commits, tags, resets, restores, checkouts, rebases, pulls, pushes, cleans, or branch changes were performed.
-No destructive restore tests were run.
-
-Read-only status currently shows:
-
-ESP32BLE/Scrns/Set_Screen/Set_Screen.swift􀰓 modified
-ESP32BLE/codex.txt already modified in the worktree
-
-I did not touch codex.txt.
+If you want, I can prepare the precise BEFORE/AFTER snippet again for you to apply manually in the correct file once we confirm the path Xcode is using. This will avoid any ambiguity about where the change should go, and keep the fix minimal and isolated.
