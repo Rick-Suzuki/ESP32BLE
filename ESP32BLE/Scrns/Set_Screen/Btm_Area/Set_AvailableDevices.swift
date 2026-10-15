@@ -351,6 +351,12 @@ struct SettingsAvailableDevicesPanel: View {
         .accessibilityLabel(isStatusBarVisible ? "Hide status bar" : "Show status bar")
     }
 
+// MARK: - BM:🅱️ ADD COMMENTS HERE
+// The green checkmark indicates the selected device on iPad (selection state only). Diagnostic log when selection changes occurs elsewhere.
+    private func showsDeviceCheckmark(for device: BLEDiscoveredDevice) -> Bool {
+        isPad && ble.selectedPeripheralID == device.id
+    }
+
     private func settingsDeviceName(for device: BLEDiscoveredDevice) -> String {
         if isPad {
             return device.displayName
@@ -373,10 +379,6 @@ struct SettingsAvailableDevicesPanel: View {
 
     private var settingsDeviceFontSize: CGFloat {
         13
-    }
-
-    private func showsDeviceCheckmark(for device: BLEDiscoveredDevice) -> Bool {
-        isPad && ble.selectedPeripheralID == device.id
     }
 
     private func settingsDeviceBackgroundColor(for device: BLEDiscoveredDevice) -> Color {

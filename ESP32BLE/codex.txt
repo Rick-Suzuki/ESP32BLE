@@ -1,63 +1,119 @@
-• Based on the code you pasted from Xcode: ABSENT.
+1. File modified
 
-6. Git status and relevant diff
-• NOT CONFIRMED (no Git access here). I cannot run git status or git diff. If you run locally:
-   • git status
-   • git diff -- Main_ButtonLabelView.swift
-   • git diff --cached -- Main_ButtonLabelView.swift
-   • These would reveal whether the change is untracked, staged, or committed—or whether it was never applied or has been reverted.
+ESP32BLE/Scrns/BLE/BLE_KB_Manager.swift only.
 
-7. Actual Xcode target source reference
-• NOT CONFIRMED (no project.pbxproj inspection here).
-• From your earlier context, Main_ButtonLabelView.swift is part of the app and contains MainScreenButtonLabelView.
-• There is no evidence in the provided files of multiple references to Main_ButtonLabelView.swift or multiple targets including different copies, but this cannot be definitively confirmed without project file inspection.
+No other files were modified by this implementation. Existing unrelated workspace changes were preserved. No Git write operations or commits were performed.
 
-8. Any duplicate view definitions
-• Searching within the provided source context earlier:
-   • struct MainScreenButtonLabelView was found only in Main_ButtonLabelView.swift.
-• A broader search across your project for duplicate definitions could not be run here. From the provided files, no duplicates are evident.
+2. Lines changed
 
-9. Most likely explanation for the discrepancy (supported by evidence)
-• The change Codex reported was applied via a tool-based edit step. However, your current Xcode-visible file does not contain the change. Possible explanations:
-1. The change did not actually persist to the same physical file Xcode is showing (e.g., edited a different copy or an unreferenced file). This is consistent with the absence of the rectangle in your pasted code.
-2. The change may have been overwritten by a subsequent update or revert (manual or automated), returning the file to its prior state. This cannot be confirmed without git history/diff.
-3. There are multiple working copies or branches, and the change was applied in a different branch or workspace. Not confirmable here.
-• Evidence supporting explanation 1:
-   • Your pasted current body clearly lacks the added Rectangle.
-   • No other files in the provided context show a duplicated or alternative MainScreenButtonLabelView.
-• Evidence supporting explanation 2:
-   • Not confirmable without Git diff or history. No evidence provided that the file was subsequently changed or reverted.
+Lines 75–79:
+Added UUID-keyed tracking sets.
 
-10. Whether Codex and Xcode are using the same physical source file
-• NOT CONFIRMED.
-• You are seeing Main_ButtonLabelView.swift in Xcode without the change.
-• The edit tool reported it modified Main_ButtonLabelView.swift, but we cannot verify if it targeted the same physical path that Xcode is using (e.g., if there is a second copy on disk).
-• This strongly suggests a path mismatch or an overwrite/revert after the change.
+Lines 247–251:
+Clear all B2a tracking during stop().
 
-11. Confirmation that no files or Git state were modified
-• Confirmed: In this read-only investigation step, I did not modify any files, run any Git commands, or change project configuration.
+Lines 467–485:
+Guard service discovery in didConnect.
 
-==================================================
-Summary and next steps (read-only)
-• The change Codex reported (adding a conditional transparent Rectangle in the normal ZStack) is ABSENT in the source you pasted from Xcode.
-• Without filesystem and Git access, I cannot definitively determine whether:
-   • The change was applied to a different copy,
-   • The change was overwritten,
-   • Or the change was never persisted.
-• To resolve this discrepancy, please consider these read-only verification steps on your side:
-1. In Terminal, from the repository root:
- - git status
- - git diff -- Main_ButtonLabelView.swift
- - git diff --cached -- Main_ButtonLabelView.swift
- - git log -p -- Main_ButtonLabelView.swift (to see if there was ever a commit with the change)
+Lines 493–497:
+Clear tracking for the disconnected peripheral.
 
-2. Confirm the absolute filesystem path of the Main_ButtonLabelView.swift that Xcode is displaying:
- - In Xcode, select the file in the Project Navigator, open the File Inspector (right sidebar), and check the “Location” path.
+Lines 526–530:
+Clear tracking when connection fails.
 
-3. Search for duplicates inside your project folder:
- - Find all matching filenames: Main_ButtonLabelView.swift
- - Confirm there is only one and that it matches Xcode’s File Inspector path.
+Lines 551–587:
+Handle service-discovery failures and suppress duplicate characteristic discovery.
 
-4. Ensure the target membership in Xcode points to that same physical file.
+Lines 595–656:
+Handle characteristic failures and suppress duplicate selected-device initialization, DEVICE_ID reads, notifications, and timing transmission.
 
-If you want, I can prepare the precise BEFORE/AFTER snippet again for you to apply manually in the correct file once we confirm the path Xcode is using. This will avoid any ambiguity about where the change should go, and keep the fix minimal and isolated.
+3. New tracking variables
+
+serviceDiscoveryPeripheralIDs
+
+characteristicDiscoveryPeripheralIDs
+
+completedCharacteristicDiscoveryPeripheralIDs
+
+deviceIDReadPeripheralIDs
+
+selectedInitializationPeripheralIDs
+
+Each is a Set<UUID>, keeping peripherals independent.
+
+4. Duplicate service discovery
+
+didConnect inserts the peripheral UUID into serviceDiscoveryPeripheralIDs.
+
+Only the first insertion calls discoverServices(...). Later callbacks produce:
+
+[BLE-CONNECT-PROBE] SKIPPED DUPLICATE SERVICE DISCOVERY
+
+Probe-only characteristic discovery that completed before selection is explicitly allowed to rediscover for selected-device initialization.
+
+5. Duplicate characteristic discovery
+
+didDiscoverServices inserts the UUID into characteristicDiscoveryPeripheralIDs.
+
+Only the first insertion calls discoverCharacteristics(...). Repeated service callbacks produce:
+
+[BLE-CONNECT-PROBE] SKIPPED DUPLICATE CHARACTERISTIC DISCOVERY
+
+6. Selected initialization protection
+
+selectedInitializationPeripheralIDs allows selected initialization once per connection lifecycle.
+
+Duplicate characteristic callbacks no longer repeat:
+
+RX/TX assignment
+TX notification setup
+DEVICE_ID reads
+connectionText = "Connected"
+sendStoredKeyboardTiming()
+
+Suppressed callbacks produce:
+
+[BLE-CONNECT-PROBE] SKIPPED DUPLICATE SELECTED INITIALIZATION
+
+Probe-only characteristic discovery does not mark selected initialization complete.
+
+7. Tracking lifecycle and retries
+
+Per-peripheral tracking is cleared by:
+
+didDisconnectPeripheral
+didFailToConnect
+
+All tracking is cleared by stop() because that deliberately ends all managed connections.
+
+Service and characteristic discovery failures release their request tracking without introducing an automatic retry loop. Missing service or characteristic results also release the relevant request tracking.
+
+Other peripherals’ tracking is unaffected by a single peripheral disconnect or failure.
+
+8. B1 preservation
+
+B1 remains at lines 449–451 with its original condition:
+
+wasProbe && matchesSelected && matchesActive
+
+It still removes only the selected UUID from probePeripheralIDs, after which the normal branch sets isConnected = true.
+
+connectToSelectedDevice(), connection requests, probe creation, cancellation, scanning, and reconnection behavior were not changed.
+
+9. Validation
+
+Xcode file diagnostics: No issues found.
+
+Full Xcode project build: Successful.
+
+Build completed in approximately 25.3 seconds with no errors.
+
+10. Remaining limitations
+
+B2a intentionally retains the redundant centralManager.connect(...) request.
+
+Direct promotion without another didConnect callback remains outside this stage.
+
+The existing pending probe-cancellation race remains unchanged.
+
+Validation confirms compilation and code-path behavior; physical-device BLE testing was not performed in this session.

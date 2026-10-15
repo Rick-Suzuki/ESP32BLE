@@ -1,3 +1,7 @@
+261015 Thu 1545
+B1, B2a BT-BLE completed
+V62.56
+
 261015 Thu 1333
 clr background btn didnt tap, fixed
 V62.55

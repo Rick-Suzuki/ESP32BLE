@@ -1,4 +1,3 @@
-//
 //  BLEKeyboardManager.swift
 //  ESP32_ble
 //
@@ -8,6 +7,9 @@
 import Foundation
 import CoreBluetooth
 import Combine
+
+private let BLEProbeClock = DispatchTime.now()
+
 //
 // BLE manager for talking to the ESP32.
 //
@@ -70,6 +72,62 @@ final class BLEKeyboardManager: NSObject, ObservableObject {
 	// Track peripherals that are temporarily connected just to read device ID.
 	//
 		private var probePeripheralIDs: Set<UUID> = []
+        private var serviceDiscoveryPeripheralIDs: Set<UUID> = []
+        private var characteristicDiscoveryPeripheralIDs: Set<UUID> = []
+        private var completedCharacteristicDiscoveryPeripheralIDs: Set<UUID> = []
+        private var deviceIDReadPeripheralIDs: Set<UUID> = []
+        private var selectedInitializationPeripheralIDs: Set<UUID> = []
+
+        // MARK: - BM:🅱️  add your comments here
+        // Connection-probe state is diagnostic only and does not participate in BLE decisions.
+        private var connectionAttemptNumber = 0
+        private var connectionAttemptByPeripheral: [UUID: Int] = [:]
+
+        private func connectionProbeLog(_ message: String) {
+            let now = DispatchTime.now().uptimeNanoseconds
+            let start = BLEProbeClock.uptimeNanoseconds
+            let elapsedNanoseconds = now >= start ? now - start : 0
+            let elapsedSeconds = Double(elapsedNanoseconds) / 1_000_000_000
+            print("[BLE-CONNECT-PROBE] 🐞 t=\(String(format: "%.3f", elapsedSeconds))s \(message)")
+        }
+
+        private func connectionAttempt(for peripheral: CBPeripheral) -> String {
+            connectionAttemptByPeripheral[peripheral.identifier].map(String.init) ?? "none"
+        }
+
+        private func peripheralStateDescription(_ state: CBPeripheralState) -> String {
+            switch state {
+            case .disconnected:
+                return "disconnected"
+            case .connecting:
+                return "connecting"
+            case .connected:
+                return "connected"
+            case .disconnecting:
+                return "disconnecting"
+            @unknown default:
+                return "unknown"
+            }
+        }
+
+        private func bluetoothStateDescription(_ state: CBManagerState) -> String {
+            switch state {
+            case .unknown:
+                return "unknown"
+            case .resetting:
+                return "resetting"
+            case .unsupported:
+                return "unsupported"
+            case .unauthorized:
+                return "unauthorized"
+            case .poweredOff:
+                return "poweredOff"
+            case .poweredOn:
+                return "poweredOn"
+            @unknown default:
+                return "unknownFuture"
+            }
+        }
 	
 	//
 	// UART-style UUIDs matching your ESP32 sketch.
@@ -95,8 +153,12 @@ final class BLEKeyboardManager: NSObject, ObservableObject {
 		}
 	
 		func clearDiscoveredDevices() {
+                let previousSelectedPeripheralID = selectedPeripheralID
 			discoveredDevices.removeAll()
 			selectedPeripheralID = nil
+                if previousSelectedPeripheralID != nil {
+                    connectionProbeLog("state selectedPeripheralID previous=\(previousSelectedPeripheralID?.uuidString ?? "nil") new=nil reason=clearDiscoveredDevices attempt=\(connectionAttemptNumber)")
+                }
 		}
 
 			private func startStaleDeviceCleanupTimer() {
@@ -118,13 +180,20 @@ final class BLEKeyboardManager: NSObject, ObservableObject {
 					return false
 				}
 
-				return shouldExpire
+				if shouldExpire && device.id == selectedPeripheralID {
+                        connectionProbeLog("stale cleanup removing selected device uuid=\(device.id.uuidString) active=false")
+                    }
+                    if shouldExpire && device.id == esp32Peripheral?.identifier {
+                        connectionProbeLog("stale cleanup unexpectedly removing active device uuid=\(device.id.uuidString)")
+                    }
+					return shouldExpire
 			}
 
 			if let selectedPeripheralID,
 			   !discoveredDevices.contains(where: { $0.id == selectedPeripheralID }),
 			   selectedPeripheralID != esp32Peripheral?.identifier {
-				self.selectedPeripheralID = nil
+				connectionProbeLog("state selectedPeripheralID previous=\(selectedPeripheralID.uuidString) new=nil reason=staleCleanup attempt=\(connectionAttemptNumber)")
+					self.selectedPeripheralID = nil
 			}
 		}
 	
@@ -133,26 +202,32 @@ final class BLEKeyboardManager: NSObject, ObservableObject {
 	//-------------------------------------------------------------------------
 	
 		func startScan() {
+                connectionProbeLog("scan start requested bluetoothState=\(bluetoothStateDescription(centralManager.state)) deliberatelyStopped=\(isDeliberatelyStopped) isConnected=\(isConnected) connectionText=\(connectionText.debugDescription) selectedPeripheralID=\(selectedPeripheralID?.uuidString ?? "nil") activePeripheralUUID=\(esp32Peripheral?.identifier.uuidString ?? "nil") discoveredDeviceCount=\(discoveredDevices.count)")
 			isDeliberatelyStopped = false
 		guard centralManager.state == .poweredOn else {
 			bluetoothStateText = "Bluetooth is not powered on"
 			return
 		}
 		
-			connectionText = "Scanning..."
+			let previousConnectionText = connectionText
+				connectionText = "Scanning..."
+                connectionProbeLog("state connectionText previous=\(previousConnectionText.debugDescription) new=\(connectionText.debugDescription) peripheralUUID=\(esp32Peripheral?.identifier.uuidString ?? "nil") attempt=\(connectionAttemptNumber)")
 			clearDiscoveredDevices()
 			probePeripheralIDs.removeAll()
 			startStaleDeviceCleanupTimer()
 			
-				centralManager.scanForPeripherals(
+				connectionProbeLog("scan started bluetoothState=\(bluetoothStateDescription(centralManager.state)) deliberatelyStopped=\(isDeliberatelyStopped) isConnected=\(isConnected) connectionText=\(connectionText.debugDescription) selectedPeripheralID=\(selectedPeripheralID?.uuidString ?? "nil") activePeripheralUUID=\(esp32Peripheral?.identifier.uuidString ?? "nil") discoveredDeviceCount=\(discoveredDevices.count)")
+                    centralManager.scanForPeripherals(
 				withServices: [serviceUUID],
 				options: [CBCentralManagerScanOptionAllowDuplicatesKey: true]
 			)
 	}
 
 		func stop() {
+                connectionProbeLog("scan stop requested reason=stop() activePeripheralUUID=\(esp32Peripheral?.identifier.uuidString ?? "nil") discoveredDeviceCount=\(discoveredDevices.count)")
 			isDeliberatelyStopped = true
 			centralManager.stopScan()
+                connectionProbeLog("scanning stopped")
 			staleDeviceCleanupTimer?.invalidate()
 			staleDeviceCleanupTimer = nil
 			for device in discoveredDevices {
@@ -162,16 +237,23 @@ final class BLEKeyboardManager: NSObject, ObservableObject {
 			sendQueueTask?.cancel()
 			sendQueueTask = nil
 			selectedPeripheralID = nil
+            connectionProbeLog("state isConnected previous=\(isConnected) new=false activePeripheralUUID=\(esp32Peripheral?.identifier.uuidString ?? "nil") attempt=\(connectionAttemptNumber)")
 			isConnected = false
 			rxCharacteristic = nil
 			txCharacteristic = nil
 			idCharacteristic = nil
-			connectedDeviceID = "Unknown"
-			probePeripheralIDs.removeAll()
-			connectionText = "Not connected"
+				connectedDeviceID = "Unknown"
+				probePeripheralIDs.removeAll()
+                serviceDiscoveryPeripheralIDs.removeAll()
+                characteristicDiscoveryPeripheralIDs.removeAll()
+                completedCharacteristicDiscoveryPeripheralIDs.removeAll()
+                deviceIDReadPeripheralIDs.removeAll()
+                selectedInitializationPeripheralIDs.removeAll()
+				connectionText = "Not connected"
 
 			if let esp32Peripheral {
 				centralManager.cancelPeripheralConnection(esp32Peripheral)
+				self.connectionProbeLog("state esp32Peripheral previous=\(esp32Peripheral.identifier.uuidString) new=nil reason=stop attempt=\(connectionAttempt(for: esp32Peripheral))")
 				self.esp32Peripheral = nil
 			}
 		}
@@ -186,11 +268,22 @@ final class BLEKeyboardManager: NSObject, ObservableObject {
 			connectionText = "Selected ESP32 not found"
 			return
 		}
-		
+
+        connectionAttemptNumber += 1
+        connectionAttemptByPeripheral[match.id] = connectionAttemptNumber
+        let previousActivePeripheralID = esp32Peripheral?.identifier
+        let previousConnectionText = connectionText
+        connectionProbeLog("selected connect attempt=\(connectionAttemptNumber) selectedPeripheralUUID=\(match.id.uuidString) name=\(match.displayName.debugDescription) previousActivePeripheralUUID=\(previousActivePeripheralID?.uuidString ?? "nil") previousPeripheralState=\(peripheralStateDescription(match.peripheral.state)) previousIsConnected=\(isConnected) connectionText=\(connectionText.debugDescription) alreadyProbe=\(probePeripheralIDs.contains(match.id)) CBPeripheral.state=\(peripheralStateDescription(match.peripheral.state))")
+
 		connectionText = "Connecting to \(match.displayName)..."
+        connectionProbeLog("state connectionText previous=\(previousConnectionText.debugDescription) new=\(connectionText.debugDescription) peripheralUUID=\(match.id.uuidString) attempt=\(connectionAttemptNumber)")
 		esp32Peripheral = match.peripheral
+        connectionProbeLog("state esp32Peripheral previous=\(previousActivePeripheralID?.uuidString ?? "nil") new=\(match.id.uuidString) attempt=\(connectionAttemptNumber)")
 		esp32Peripheral?.delegate = self
+        connectionProbeLog("scan stop requested reason=selectedConnect peripheralUUID=\(match.id.uuidString) attempt=\(connectionAttemptNumber)")
 		centralManager.stopScan()
+        connectionProbeLog("scanning stopped reason=selectedConnect peripheralUUID=\(match.id.uuidString) attempt=\(connectionAttemptNumber)")
+        connectionProbeLog("centralManager.connect requested kind=selected peripheralUUID=\(match.id.uuidString) attempt=\(connectionAttemptNumber) alreadyProbe=\(probePeripheralIDs.contains(match.id))")
 		centralManager.connect(match.peripheral, options: nil)
 	}
 	
@@ -313,6 +406,11 @@ extension BLEKeyboardManager: CBCentralManagerDelegate {
 						let now = Date()
 						
 						if let index = discoveredDevices.firstIndex(where: { $0.id == peripheral.identifier }) {
+                                let previousState = discoveredDevices[index].peripheral.state
+                                if (peripheral.identifier == selectedPeripheralID || peripheral.identifier == esp32Peripheral?.identifier),
+                                   previousState != peripheral.state {
+                                    connectionProbeLog("existing peripheral significant state change uuid=\(peripheral.identifier.uuidString) name=\(name.debugDescription) RSSI=\(RSSI.intValue) selected=\(peripheral.identifier == selectedPeripheralID) active=\(peripheral.identifier == esp32Peripheral?.identifier) previousState=\(peripheralStateDescription(previousState)) newState=\(peripheralStateDescription(peripheral.state))")
+                                }
 						discoveredDevices[index] = BLEDiscoveredDevice(
 							id: peripheral.identifier,
 							peripheral: peripheral,
@@ -322,7 +420,8 @@ extension BLEKeyboardManager: CBCentralManagerDelegate {
 							lastSeenAt: now
 						)
 					} else {
-						let item = BLEDiscoveredDevice(
+						connectionProbeLog("new peripheral discovered uuid=\(peripheral.identifier.uuidString) name=\(name.debugDescription) RSSI=\(RSSI.intValue) selected=\(peripheral.identifier == selectedPeripheralID) active=\(peripheral.identifier == esp32Peripheral?.identifier) temporaryProbeRequested=true")
+                            let item = BLEDiscoveredDevice(
 							id: peripheral.identifier,
 						peripheral: peripheral,
 					name: name,
@@ -336,33 +435,79 @@ extension BLEKeyboardManager: CBCentralManagerDelegate {
 				// Connect briefly to read its device ID.
 				//
 			probePeripheralIDs.insert(peripheral.identifier)
+                connectionProbeLog("centralManager.connect requested kind=temporaryProbe peripheralUUID=\(peripheral.identifier.uuidString) selected=\(peripheral.identifier == selectedPeripheralID) active=\(peripheral.identifier == esp32Peripheral?.identifier)")
 			peripheral.delegate = self
 			centralManager.connect(peripheral, options: nil)
 		}
 	}
 	
 	func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
-		let isProbe = probePeripheralIDs.contains(peripheral.identifier)
+		let matchesSelected = peripheral.identifier == selectedPeripheralID
+            let matchesActive = peripheral.identifier == esp32Peripheral?.identifier
+            let wasProbe = probePeripheralIDs.contains(peripheral.identifier)
+
+            if wasProbe && matchesSelected && matchesActive {
+                probePeripheralIDs.remove(peripheral.identifier)
+                connectionProbeLog("PROMOTED PROBE TO SELECTED peripheralUUID=\(peripheral.identifier.uuidString) attempt=\(connectionAttempt(for: peripheral)) previousProbeMembership=\(wasProbe) resultingProbeMembership=\(probePeripheralIDs.contains(peripheral.identifier))")
+            }
+
+            let isProbe = probePeripheralIDs.contains(peripheral.identifier)
+            let probeIDs = probePeripheralIDs.map(\.uuidString).sorted().joined(separator: ",")
+            connectionProbeLog("didConnect peripheralUUID=\(peripheral.identifier.uuidString) attempt=\(connectionAttempt(for: peripheral)) classifiedAsProbe=\(isProbe) matchesSelectedPeripheralID=\(matchesSelected) matchesEsp32Peripheral=\(matchesActive) probePeripheralIDs=[\(probeIDs)] isConnectedBefore=\(isConnected) connectionTextBefore=\(connectionText.debugDescription) discoverServicesRequested=true")
 		
 			if !isProbe {
-				connectionText = "Connected, discovering services..."
-				isConnected = true
-				esp32Peripheral = peripheral
+				connectionProbeLog("state connectionText previous=\(connectionText.debugDescription) new=\"Connected, discovering services...\" peripheralUUID=\(peripheral.identifier.uuidString) attempt=\(connectionAttempt(for: peripheral))")
+					connectionText = "Connected, discovering services..."
+				connectionProbeLog("state isConnected previous=\(isConnected) new=true peripheralUUID=\(peripheral.identifier.uuidString) attempt=\(connectionAttempt(for: peripheral))")
+					isConnected = true
+				connectionProbeLog("state esp32Peripheral previous=\(esp32Peripheral?.identifier.uuidString ?? "nil") new=\(peripheral.identifier.uuidString) attempt=\(connectionAttempt(for: peripheral))")
+					esp32Peripheral = peripheral
 		}
 		
-		peripheral.discoverServices([serviceUUID])
+		let identifier = peripheral.identifier
+            let needsSelectedRediscovery = matchesSelected
+                && matchesActive
+                && completedCharacteristicDiscoveryPeripheralIDs.contains(identifier)
+                && !selectedInitializationPeripheralIDs.contains(identifier)
+
+            if needsSelectedRediscovery {
+                serviceDiscoveryPeripheralIDs.remove(identifier)
+                characteristicDiscoveryPeripheralIDs.remove(identifier)
+                completedCharacteristicDiscoveryPeripheralIDs.remove(identifier)
+                deviceIDReadPeripheralIDs.remove(identifier)
+            }
+
+            if serviceDiscoveryPeripheralIDs.insert(identifier).inserted {
+                connectionProbeLog("discoverServices requested peripheralUUID=\(identifier.uuidString) attempt=\(connectionAttempt(for: peripheral)) classifiedAsProbe=\(isProbe)")
+                peripheral.discoverServices([serviceUUID])
+            } else {
+                connectionProbeLog("SKIPPED DUPLICATE SERVICE DISCOVERY peripheralUUID=\(identifier.uuidString) attempt=\(connectionAttempt(for: peripheral)) reason=serviceDiscoveryAlreadyRequested")
+            }
 	}
 	
 		func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral, error: Error?) {
-			probePeripheralIDs.remove(peripheral.identifier)
-		
-		if esp32Peripheral?.identifier == peripheral.identifier {
-			connectionText = "Disconnected"
+                let wasProbe = probePeripheralIDs.contains(peripheral.identifier)
+                let wasActive = esp32Peripheral?.identifier == peripheral.identifier
+                connectionProbeLog("didDisconnect peripheralUUID=\(peripheral.identifier.uuidString) error=\(error.map { String(describing: $0) } ?? "nil") active=\(wasActive) probe=\(wasProbe) isConnectedBefore=\(isConnected) connectionTextBefore=\(connectionText.debugDescription) scanningWillRestart=\(wasActive && !isDeliberatelyStopped) activePeripheralWillBeCleared=\(wasActive)")
+				probePeripheralIDs.remove(peripheral.identifier)
+                serviceDiscoveryPeripheralIDs.remove(peripheral.identifier)
+                characteristicDiscoveryPeripheralIDs.remove(peripheral.identifier)
+                completedCharacteristicDiscoveryPeripheralIDs.remove(peripheral.identifier)
+                deviceIDReadPeripheralIDs.remove(peripheral.identifier)
+                selectedInitializationPeripheralIDs.remove(peripheral.identifier)
+			
+			if esp32Peripheral?.identifier == peripheral.identifier {
+			connectionProbeLog("state connectionText previous=\(connectionText.debugDescription) new=\"Disconnected\" peripheralUUID=\(peripheral.identifier.uuidString) attempt=\(connectionAttempt(for: peripheral))")
+				connectionText = "Disconnected"
+                    connectionProbeLog("state isConnected previous=\(isConnected) new=false peripheralUUID=\(peripheral.identifier.uuidString) attempt=\(connectionAttempt(for: peripheral))")
 				isConnected = false
 				rxCharacteristic = nil
 				txCharacteristic = nil
 				idCharacteristic = nil
-			connectedDeviceID = "Unknown"
+			let previousConnectedDeviceID = connectedDeviceID
+            connectedDeviceID = "Unknown"
+            connectionProbeLog("state connectedDeviceID previous=\(previousConnectedDeviceID.debugDescription) new=\(connectedDeviceID.debugDescription) peripheralUUID=\(peripheral.identifier.uuidString) attempt=\(connectionAttempt(for: peripheral))")
+            connectionProbeLog("state esp32Peripheral previous=\(peripheral.identifier.uuidString) new=nil attempt=\(connectionAttempt(for: peripheral))")
 			esp32Peripheral = nil
 				outgoingLines.removeAll()
 				sendQueueTask?.cancel()
@@ -374,10 +519,20 @@ extension BLEKeyboardManager: CBCentralManagerDelegate {
 		}
 	
 		func centralManager(_ central: CBCentralManager, didFailToConnect peripheral: CBPeripheral, error: Error?) {
-			probePeripheralIDs.remove(peripheral.identifier)
-		
-		if esp32Peripheral?.identifier == peripheral.identifier {
-				connectionText = "Failed to connect"
+                let wasProbe = probePeripheralIDs.contains(peripheral.identifier)
+                let wasActive = esp32Peripheral?.identifier == peripheral.identifier
+                connectionProbeLog("didFailToConnect peripheralUUID=\(peripheral.identifier.uuidString) error=\(error.map { String(describing: $0) } ?? "nil") active=\(wasActive) probe=\(wasProbe) isConnectedBefore=\(isConnected) connectionTextBefore=\(connectionText.debugDescription) scanningWillRestart=\(wasActive && !isDeliberatelyStopped) activePeripheralWillBeCleared=false")
+				probePeripheralIDs.remove(peripheral.identifier)
+                serviceDiscoveryPeripheralIDs.remove(peripheral.identifier)
+                characteristicDiscoveryPeripheralIDs.remove(peripheral.identifier)
+                completedCharacteristicDiscoveryPeripheralIDs.remove(peripheral.identifier)
+                deviceIDReadPeripheralIDs.remove(peripheral.identifier)
+                selectedInitializationPeripheralIDs.remove(peripheral.identifier)
+			
+			if esp32Peripheral?.identifier == peripheral.identifier {
+				connectionProbeLog("state connectionText previous=\(connectionText.debugDescription) new=\"Failed to connect\" peripheralUUID=\(peripheral.identifier.uuidString) attempt=\(connectionAttempt(for: peripheral))")
+					connectionText = "Failed to connect"
+                    connectionProbeLog("state isConnected previous=\(isConnected) new=false peripheralUUID=\(peripheral.identifier.uuidString) attempt=\(connectionAttempt(for: peripheral))")
 				isConnected = false
 				outgoingLines.removeAll()
 				sendQueueTask?.cancel()
@@ -393,57 +548,112 @@ extension BLEKeyboardManager: CBCentralManagerDelegate {
 // MARK: - CBPeripheralDelegate
 //-----------------------------------------------------------------------------
 extension BLEKeyboardManager: CBPeripheralDelegate {
-	func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: Error?) {
-		guard error == nil else {
-			if esp32Peripheral?.identifier == peripheral.identifier {
-				connectionText = "Service discovery failed"
+		func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: Error?) {
+            let identifier = peripheral.identifier
+            let serviceUUIDs = peripheral.services?.map { $0.uuid.uuidString }.joined(separator: ",") ?? "nil"
+            connectionProbeLog("didDiscoverServices peripheralUUID=\(identifier.uuidString) error=\(error.map { String(describing: $0) } ?? "nil") serviceCount=\(peripheral.services?.count ?? 0) serviceUUIDs=[\(serviceUUIDs)] active=\(identifier == esp32Peripheral?.identifier) classifiedAsProbe=\(probePeripheralIDs.contains(identifier))")
+			guard error == nil else {
+                serviceDiscoveryPeripheralIDs.remove(identifier)
+                characteristicDiscoveryPeripheralIDs.remove(identifier)
+                completedCharacteristicDiscoveryPeripheralIDs.remove(identifier)
+				if esp32Peripheral?.identifier == identifier {
+					connectionText = "Service discovery failed"
+				}
+				return
 			}
-			return
+			
+			guard let services = peripheral.services,
+                  let service = services.first(where: { $0.uuid == serviceUUID }) else {
+                serviceDiscoveryPeripheralIDs.remove(identifier)
+                return
+            }
+
+            let needsSelectedRediscovery = identifier == selectedPeripheralID
+                && identifier == esp32Peripheral?.identifier
+                && completedCharacteristicDiscoveryPeripheralIDs.contains(identifier)
+                && !selectedInitializationPeripheralIDs.contains(identifier)
+
+            if needsSelectedRediscovery {
+                characteristicDiscoveryPeripheralIDs.remove(identifier)
+                completedCharacteristicDiscoveryPeripheralIDs.remove(identifier)
+                deviceIDReadPeripheralIDs.remove(identifier)
+            }
+
+            if characteristicDiscoveryPeripheralIDs.insert(identifier).inserted {
+                connectionProbeLog("discoverCharacteristics requested peripheralUUID=\(identifier.uuidString) serviceUUID=\(service.uuid.uuidString) characteristicUUIDs=[\(rxUUID.uuidString),\(txUUID.uuidString),\(deviceIDUUID.uuidString)]")
+                peripheral.discoverCharacteristics([rxUUID, txUUID, deviceIDUUID], for: service)
+            } else {
+                connectionProbeLog("SKIPPED DUPLICATE CHARACTERISTIC DISCOVERY peripheralUUID=\(identifier.uuidString) attempt=\(connectionAttempt(for: peripheral)) reason=characteristicDiscoveryAlreadyRequested")
+            }
 		}
-		
-		guard let services = peripheral.services else { return }
-		
-		for service in services where service.uuid == serviceUUID {
-			peripheral.discoverCharacteristics([rxUUID, txUUID, deviceIDUUID], for: service)
-		}
-	}
 	
 	func peripheral(
 		_ peripheral: CBPeripheral,
 		didDiscoverCharacteristicsFor service: CBService,
 		error: Error?
-	) {
-		guard error == nil else {
-			if esp32Peripheral?.identifier == peripheral.identifier {
-				connectionText = "Characteristic discovery failed"
-			}
-			return
-		}
-		
-		guard let characteristics = service.characteristics else { return }
-		
-		for characteristic in characteristics {
-				if peripheral.identifier == esp32Peripheral?.identifier, characteristic.uuid == rxUUID {
-					rxCharacteristic = characteristic
+		) {
+            let identifier = peripheral.identifier
+            let characteristicUUIDs = service.characteristics?.map { $0.uuid.uuidString }.joined(separator: ",") ?? "nil"
+            let foundRX = service.characteristics?.contains(where: { $0.uuid == rxUUID }) ?? false
+            let foundTX = service.characteristics?.contains(where: { $0.uuid == txUUID }) ?? false
+            let foundDeviceID = service.characteristics?.contains(where: { $0.uuid == deviceIDUUID }) ?? false
+            let isActive = identifier == esp32Peripheral?.identifier
+            connectionProbeLog("didDiscoverCharacteristics peripheralUUID=\(identifier.uuidString) serviceUUID=\(service.uuid.uuidString) error=\(error.map { String(describing: $0) } ?? "nil") characteristicUUIDs=[\(characteristicUUIDs)] rxFound=\(foundRX) txFound=\(foundTX) deviceIDFound=\(foundDeviceID) txNotificationsRequested=\(error == nil && isActive && foundTX) deviceIDReadRequested=\(error == nil && foundDeviceID)")
+			guard error == nil else {
+                serviceDiscoveryPeripheralIDs.remove(identifier)
+                characteristicDiscoveryPeripheralIDs.remove(identifier)
+                completedCharacteristicDiscoveryPeripheralIDs.remove(identifier)
+                deviceIDReadPeripheralIDs.remove(identifier)
+                selectedInitializationPeripheralIDs.remove(identifier)
+				if esp32Peripheral?.identifier == identifier {
+					connectionText = "Characteristic discovery failed"
 				}
+				return
+			}
+			
+			guard let characteristics = service.characteristics else {
+                serviceDiscoveryPeripheralIDs.remove(identifier)
+                characteristicDiscoveryPeripheralIDs.remove(identifier)
+                return
+            }
 
-				if peripheral.identifier == esp32Peripheral?.identifier, characteristic.uuid == txUUID {
-					txCharacteristic = characteristic
-					peripheral.setNotifyValue(true, for: characteristic)
+            completedCharacteristicDiscoveryPeripheralIDs.insert(identifier)
+            let shouldInitializeSelected = isActive
+                && selectedInitializationPeripheralIDs.insert(identifier).inserted
+
+            if isActive && !shouldInitializeSelected {
+                connectionProbeLog("SKIPPED DUPLICATE SELECTED INITIALIZATION peripheralUUID=\(identifier.uuidString) attempt=\(connectionAttempt(for: peripheral)) reason=selectedInitializationAlreadyCompleted")
+            }
+			
+			for characteristic in characteristics {
+					if shouldInitializeSelected, characteristic.uuid == rxUUID {
+						rxCharacteristic = characteristic
+					}
+
+					if shouldInitializeSelected, characteristic.uuid == txUUID {
+						txCharacteristic = characteristic
+						connectionProbeLog("TX notification request peripheralUUID=\(identifier.uuidString) serviceUUID=\(service.uuid.uuidString) characteristicUUID=\(characteristic.uuid.uuidString)")
+							peripheral.setNotifyValue(true, for: characteristic)
+					}
+					
+					if characteristic.uuid == deviceIDUUID,
+                       deviceIDReadPeripheralIDs.insert(identifier).inserted {
+					if shouldInitializeSelected {
+						idCharacteristic = characteristic
+					}
+					connectionProbeLog("DEVICE_ID read request peripheralUUID=\(identifier.uuidString) serviceUUID=\(service.uuid.uuidString) characteristicUUID=\(characteristic.uuid.uuidString) active=\(isActive) classifiedAsProbe=\(probePeripheralIDs.contains(identifier))")
+						peripheral.readValue(for: characteristic)
 				}
-				
-				if characteristic.uuid == deviceIDUUID {
-				if peripheral.identifier == esp32Peripheral?.identifier {
-					idCharacteristic = characteristic
+			}
+			
+				if shouldInitializeSelected {
+					connectionProbeLog("active characteristic discovery completion peripheralUUID=\(identifier.uuidString) connectionTextBefore=\(connectionText.debugDescription) willSetConnected=true storedTimingWillBeSent=true")
+                    let previousConnectionText = connectionText
+						connectionText = "Connected"
+                    connectionProbeLog("state connectionText previous=\(previousConnectionText.debugDescription) new=\(connectionText.debugDescription) peripheralUUID=\(identifier.uuidString) attempt=\(connectionAttempt(for: peripheral)) connectedActuallySet=\(connectionText == "Connected")")
+					connectionProbeLog("stored timing send requested peripheralUUID=\(identifier.uuidString) attempt=\(connectionAttempt(for: peripheral))")
+							sendStoredKeyboardTiming()
 				}
-				peripheral.readValue(for: characteristic)
-			}
-		}
-		
-			if peripheral.identifier == esp32Peripheral?.identifier {
-				connectionText = "Connected"
-				sendStoredKeyboardTiming()
-			}
 		}
 	
 	func peripheral(
@@ -451,7 +661,17 @@ extension BLEKeyboardManager: CBPeripheralDelegate {
 		didUpdateValueFor characteristic: CBCharacteristic,
 		error: Error?
 	) {
-		guard error == nil else { return }
+		if characteristic.uuid == deviceIDUUID {
+                let isProbe = probePeripheralIDs.contains(peripheral.identifier)
+                let isSelected = peripheral.identifier == selectedPeripheralID
+                let isActive = peripheral.identifier == esp32Peripheral?.identifier
+                let hasDecodableValue = characteristic.value.flatMap { String(data: $0, encoding: .utf8) } != nil
+                let disconnectRequested = error == nil && hasDecodableValue && isProbe && !isActive
+                connectionProbeLog("DEVICE_ID response peripheralUUID=\(peripheral.identifier.uuidString) error=\(error.map { String(describing: $0) } ?? "nil") classifiedAsProbe=\(isProbe) selected=\(isSelected) active=\(isActive) disconnectRequested=\(disconnectRequested)")
+            } else if characteristic.uuid == txUUID, let error {
+                connectionProbeLog("TX significant activity peripheralUUID=\(peripheral.identifier.uuidString) error=\(String(describing: error)) payloadBytes=\(characteristic.value?.count ?? 0)")
+            }
+			guard error == nil else { return }
 		
 			if characteristic.uuid == deviceIDUUID,
 			   let data = characteristic.value,
@@ -464,8 +684,12 @@ extension BLEKeyboardManager: CBPeripheralDelegate {
 			}
 			
 			if peripheral.identifier == esp32Peripheral?.identifier {
-				connectedDeviceID = value.isEmpty ? "Unknown" : value
-				connectionText = "Connected to device \(connectedDeviceID)"
+				let previousConnectedDeviceID = connectedDeviceID
+                    connectedDeviceID = value.isEmpty ? "Unknown" : value
+                    connectionProbeLog("state connectedDeviceID previous=\(previousConnectedDeviceID.debugDescription) new=\(connectedDeviceID.debugDescription) peripheralUUID=\(peripheral.identifier.uuidString) attempt=\(connectionAttempt(for: peripheral))")
+				let previousConnectionText = connectionText
+                    connectionText = "Connected to device \(connectedDeviceID)"
+                    connectionProbeLog("state connectionText previous=\(previousConnectionText.debugDescription) new=\(connectionText.debugDescription) peripheralUUID=\(peripheral.identifier.uuidString) attempt=\(connectionAttempt(for: peripheral))")
 			}
 			
 			//
@@ -474,7 +698,8 @@ extension BLEKeyboardManager: CBPeripheralDelegate {
 			if probePeripheralIDs.contains(peripheral.identifier),
 			   peripheral.identifier != esp32Peripheral?.identifier {
 				probePeripheralIDs.remove(peripheral.identifier)
-					centralManager.cancelPeripheralConnection(peripheral)
+					connectionProbeLog("disconnect requested reason=temporaryProbeDeviceIDRead peripheralUUID=\(peripheral.identifier.uuidString) selected=\(peripheral.identifier == selectedPeripheralID) active=\(peripheral.identifier == esp32Peripheral?.identifier)")
+						centralManager.cancelPeripheralConnection(peripheral)
 				}
 			}
 
