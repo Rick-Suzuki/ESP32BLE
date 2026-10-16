@@ -1,3 +1,6 @@
+261016 Fri 1601
+F2B.3 - file loading improved
+V62.62
 
 261016 Fri 1459
 before file fixes

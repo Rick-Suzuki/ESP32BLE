@@ -71,6 +71,24 @@ struct SettingsScreen: View {
         case skipAll
     }
 
+    private enum DocumentSaveResult {
+        case unchanged
+        case saved
+        case reloadedFromDisk
+        case conflict
+        case missing
+        case failed
+
+        var allowsDocumentTransition: Bool {
+            switch self {
+            case .unchanged, .saved, .reloadedFromDisk:
+                return true
+            case .conflict, .missing, .failed:
+                return false
+            }
+        }
+    }
+
     private enum RestoreArchiveValidationError: LocalizedError {
         case invalidBackupArchive
         case invalidArchivePath(String)
@@ -218,7 +236,12 @@ struct SettingsScreen: View {
     @State private var speechSynthesizer = AVSpeechSynthesizer()
     @State private var soundPreviewPlayer: AVAudioPlayer?
     @State private var loadedDocumentName = ""
+    @State private var loadedDocumentURL: URL?
     @State private var savedDocumentEditorText = ""
+    @State private var documentSaveAlertTitle = ""
+    @State private var documentSaveAlertMessage = ""
+    @State private var isDocumentSaveAlertPresented = false
+    @State private var blockedDocumentSaveResult: DocumentSaveResult?
     @AppStorage("settingsBluetoothMonitorMode") private var isBluetoothMonitorMode = false
     @State private var isEditingDocumentName = false
     @State private var documentNameDraft = ""
@@ -483,16 +506,20 @@ struct SettingsScreen: View {
             await observeSettingsKeyboardHide()
         }
         .onChange(of: documentFiles.map(\.path)) {
-            loadSelectedDocumentText()
+            if saveCurrentDocumentText().allowsDocumentTransition {
+                loadSelectedDocumentText()
+            }
         }
         .onChange(of: selectedDocumentName) {
-            saveCurrentDocumentText()
-            loadSelectedDocumentText()
+            if saveCurrentDocumentText().allowsDocumentTransition {
+                loadSelectedDocumentText()
+            }
             cancelNameEditing()
         }
         .onChange(of: listModeRawValue) {
-            saveCurrentDocumentText()
-            loadSelectedDocumentText()
+            if saveCurrentDocumentText().allowsDocumentTransition {
+                loadSelectedDocumentText()
+            }
         }
         .onChange(of: documentEditorText) {
             guard !isLoadingDocumentText else { return }
@@ -523,6 +550,11 @@ struct SettingsScreen: View {
             message: $renameAlertMessage,
             isPresented: renameAlertIsPresented
         ))
+        .alert(documentSaveAlertTitle, isPresented: $isDocumentSaveAlertPresented) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(documentSaveAlertMessage)
+        }
         .modifier(DeleteAllDataConfirmationModifier(
             isPresented: $isDeleteAllDataConfirmationPresented,
             deleteAllData: deleteAllData
@@ -1358,14 +1390,25 @@ struct SettingsScreen: View {
             documentEditorText = ""
             savedDocumentEditorText = ""
             loadedDocumentName = ""
+            loadedDocumentURL = nil
+            blockedDocumentSaveResult = nil
             return
         }
 
-        let loadedText = (try? String(contentsOf: fileURL, encoding: .utf8)) ?? ""
-        documentEditorText = loadedText
-        savedDocumentEditorText = loadedText
-        loadedDocumentName = fileURL.lastPathComponent
-        documentNameDraft = currentTitleDisplayName
+        do {
+            let loadedText = try String(contentsOf: fileURL, encoding: .utf8)
+            documentEditorText = loadedText
+            savedDocumentEditorText = loadedText
+            loadedDocumentName = fileURL.lastPathComponent
+            loadedDocumentURL = fileURL
+            blockedDocumentSaveResult = nil
+            documentNameDraft = currentTitleDisplayName
+        } catch {
+            presentDocumentSaveAlert(
+                title: "File Could Not Be Opened",
+                message: "The file could not be read. The current editor contents have been preserved."
+            )
+        }
     }
 
     private func loadTextFile(_ fileURL: URL) {
@@ -1373,65 +1416,153 @@ struct SettingsScreen: View {
         isLoadingDocumentText = true
         defer { isLoadingDocumentText = false }
 
-        let loadedText = (try? String(contentsOf: fileURL, encoding: .utf8)) ?? ""
-        documentEditorText = loadedText
-        savedDocumentEditorText = loadedText
-        loadedDocumentName = fileURL.lastPathComponent
-        documentNameDraft = currentTitleDisplayName
+        do {
+            let loadedText = try String(contentsOf: fileURL, encoding: .utf8)
+            documentEditorText = loadedText
+            savedDocumentEditorText = loadedText
+            loadedDocumentName = fileURL.lastPathComponent
+            loadedDocumentURL = fileURL
+            blockedDocumentSaveResult = nil
+            documentNameDraft = currentTitleDisplayName
+        } catch {
+            presentDocumentSaveAlert(
+                title: "File Could Not Be Opened",
+                message: "The file could not be read. The current editor contents have been preserved."
+            )
+        }
     }
 
-    private func saveSelectedDocumentText() {
+    @discardableResult
+    private func saveSelectedDocumentText() -> DocumentSaveResult {
         guard let fileURL = selectedDocumentFileURL else {
-            return
+            return .failed
         }
 
-        saveDocumentText(documentEditorText, to: fileURL)
+        return saveDocumentText(documentEditorText, to: fileURL)
     }
 
-    private func saveCurrentDocumentText() {
+    @discardableResult
+    private func saveCurrentDocumentText() -> DocumentSaveResult {
         guard !loadedDocumentName.isEmpty,
               let fileURL = fileURLForLoadedDocumentName() else {
-            return
+            return .unchanged
         }
 
-        saveDocumentText(documentEditorText, to: fileURL)
+        return saveDocumentText(documentEditorText, to: fileURL)
     }
 
-    private func saveCurrentDocumentText(_ text: String) {
+    @discardableResult
+    private func saveCurrentDocumentText(_ text: String) -> DocumentSaveResult {
         guard !loadedDocumentName.isEmpty,
               let fileURL = fileURLForLoadedDocumentName() else {
-            return
+            return .unchanged
         }
 
-        saveDocumentText(text, to: fileURL)
+        return saveDocumentText(text, to: fileURL)
     }
 
     private func fileURLForLoadedDocumentName() -> URL? {
-        availableDocumentURLs.first(where: { $0.lastPathComponent == loadedDocumentName }) ??
-            availableTextURLs.first(where: { $0.lastPathComponent == loadedDocumentName })
+        guard loadedDocumentURL?.lastPathComponent == loadedDocumentName else {
+            return nil
+        }
+
+        return loadedDocumentURL
     }
 
     private func saveAndReturnToMain(using text: String? = nil) {
+        let textToSave = text ?? documentEditorText
         if let text {
             documentEditorText = text
-            if loadedDocumentName == selectedDocumentName {
-                saveSelectedDocumentAndReload(text)
-            }
-        } else {
-            if loadedDocumentName == selectedDocumentName {
-                saveSelectedDocumentAndReload(documentEditorText)
-            }
         }
-        returnToMain()
+
+        let saveResult = saveCurrentDocumentText(textToSave)
+        if saveResult.allowsDocumentTransition {
+            returnToMain()
+        }
     }
 
-    private func saveDocumentText(_ text: String, to fileURL: URL) {
+    private func saveDocumentText(_ text: String, to fileURL: URL) -> DocumentSaveResult {
+        guard fileURL.lastPathComponent == loadedDocumentName,
+              fileURL == loadedDocumentURL else {
+            presentDocumentSaveAlert(
+                title: "File Could Not Be Saved",
+                message: "The editor baseline does not match this file. Your changes have not been saved."
+            )
+            return .failed
+        }
+
+        if let blockedDocumentSaveResult {
+            presentDocumentSaveAlert(for: blockedDocumentSaveResult)
+            return blockedDocumentSaveResult
+        }
+
+        guard FileManager.default.fileExists(atPath: fileURL.path) else {
+            blockedDocumentSaveResult = .missing
+            presentDocumentSaveAlert(for: .missing)
+            return .missing
+        }
+
         do {
+            let diskText = try String(contentsOf: fileURL, encoding: .utf8)
+
+            if diskText == text {
+                savedDocumentEditorText = diskText
+                return .unchanged
+            }
+
+            if text == savedDocumentEditorText {
+                isLoadingDocumentText = true
+                documentEditorText = diskText
+                savedDocumentEditorText = diskText
+                isLoadingDocumentText = false
+                return .reloadedFromDisk
+            }
+
+            guard diskText == savedDocumentEditorText else {
+                blockedDocumentSaveResult = .conflict
+                presentDocumentSaveAlert(for: .conflict)
+                return .conflict
+            }
+
             try text.write(to: fileURL, atomically: true, encoding: .utf8)
             savedDocumentEditorText = text
             loadedDocumentName = fileURL.lastPathComponent
+            loadedDocumentURL = fileURL
+            return .saved
         } catch {
-            db("Failed to save document: \(fileURL.lastPathComponent)")
+            presentDocumentSaveAlert(
+                title: "File Could Not Be Saved",
+                message: "The file could not be read or saved. Your changes have not been saved."
+            )
+            return .failed
+        }
+    }
+
+    private func presentDocumentSaveAlert(title: String, message: String) {
+        documentSaveAlertTitle = title
+        documentSaveAlertMessage = message
+        isDocumentSaveAlertPresented = true
+    }
+
+    private func presentDocumentSaveAlert(for result: DocumentSaveResult) {
+        switch result {
+        case .conflict:
+            presentDocumentSaveAlert(
+                title: "File Changed Externally",
+                message: "The file on disk has changed since it was opened. Your changes have not been saved."
+            )
+        case .missing:
+            presentDocumentSaveAlert(
+                title: "File Removed",
+                message: "The file was removed outside ESP. Your unsaved changes have not been saved."
+            )
+        case .failed:
+            presentDocumentSaveAlert(
+                title: "File Could Not Be Saved",
+                message: "The file could not be read or saved. Your changes have not been saved."
+            )
+        case .unchanged, .saved, .reloadedFromDisk:
+            break
         }
     }
 
@@ -1441,22 +1572,27 @@ struct SettingsScreen: View {
             return
         }
 
-        saveCurrentDocumentText()
+        guard saveCurrentDocumentText().allowsDocumentTransition else {
+            return
+        }
         let repairedText = repairedDocumentText(from: documentEditorText, documentName: fileURL.lastPathComponent)
         let didRepair = repairedText != documentEditorText
 
-        do {
-            try repairedText.write(to: fileURL, atomically: true, encoding: .utf8)
+        let saveResult = saveDocumentText(repairedText, to: fileURL)
+        switch saveResult {
+        case .saved, .unchanged:
             isLoadingDocumentText = true
             documentEditorText = repairedText
             savedDocumentEditorText = repairedText
             loadedDocumentName = fileURL.lastPathComponent
+            loadedDocumentURL = fileURL
             isLoadingDocumentText = false
             loadFunctionKeys(fileURL)
             repairAlertMessage = didRepair ? "Document repaired" : "Document checked"
-        } catch {
-            isLoadingDocumentText = false
-            repairAlertMessage = "Could not repair \(fileURL.lastPathComponent)."
+        case .reloadedFromDisk:
+            repairAlertMessage = "The file changed outside ESP and was reloaded. Check it before repairing."
+        case .conflict, .missing, .failed:
+            break
         }
     }
 
