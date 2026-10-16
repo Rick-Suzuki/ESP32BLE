@@ -172,6 +172,14 @@ nonisolated func downsampledUIImage(at url: URL, maxPixelDimension: CGFloat) -> 
 }
 
 struct ContentView: View {
+    private enum MainScreenSaveResult {
+        case saved
+        case unchanged
+        case conflict
+        case missing
+        case failed
+    }
+
     private let defaultDocumentFontSize: Double = 20
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage("selectedBackgroundImageIndex") private var selectedBackgroundImageIndex = 0
@@ -188,6 +196,11 @@ struct ContentView: View {
     @State private var functionKeySlotLines = ContentView.defaultFunctionKeyTitles()
     @State private var loadedFunctionKeySlotCount = defaultNamedFunctionKeyCount
     @State private var loadedScreenConfig: ScreenConfig?
+    @State private var loadedScreenBaselineURL: URL?
+    @State private var loadedScreenBaselineText: String?
+    @State private var mainScreenSaveAlertTitle = ""
+    @State private var mainScreenSaveAlertMessage = ""
+    @State private var isMainScreenSaveAlertPresented = false
     @State private var documentFiles: [URL] = []
     @State private var documentDirectorySnapshot: [URL] = []
     @State private var backgroundImageFiles: [URL] = []
@@ -328,6 +341,11 @@ struct ContentView: View {
         .id(isStatusBarVisible)
         .ignoresSafeArea(.keyboard)
         .statusBarHidden(!isStatusBarVisible)
+        .alert(mainScreenSaveAlertTitle, isPresented: $isMainScreenSaveAlertPresented) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(mainScreenSaveAlertMessage)
+        }
         .onAppear {
             presentInitialSettingsScreenIfNeeded()
             applyKeepScreenAwakePreference()
@@ -679,9 +697,13 @@ struct ContentView: View {
                 requiredBoxCount: min(max(loadedTitles.count, 1), maxFunctionKeyCount)
             )
             applySlotLines(loadedTitles)
+            loadedScreenBaselineURL = fileURL
+            loadedScreenBaselineText = contents
             selectedDocumentName = fileURL.lastPathComponent
             restoreBackgroundImageSelection(for: selectedDocumentName)
         } catch {
+            loadedScreenBaselineURL = nil
+            loadedScreenBaselineText = nil
             loadedScreenConfig = nil
             functionKeySlotLines = []
             functionKeys = Array(repeating: FunctionKeyEntry(rawLine: "", sendTexts: [], alternateDisplayText: nil, buttonColorCode: nil, isBlankPlaceholder: false, isHiddenInNormalMode: false), count: maxFunctionKeyCount)
@@ -754,24 +776,71 @@ struct ContentView: View {
 
     @discardableResult
     private func persistSlotLines(_ slotLines: [String]) -> Bool {
-        guard let selectedDocumentURL = selectedDocumentURL() else {
-            applySlotLines(slotLines)
-            return true
-        }
-
         let normalizedLines = Array(slotLines.prefix(maxFunctionKeyCount))
             .map(escapedSlotLineForPersistence)
         let contents = normalizedLines.joined(separator: "\n")
+        let saveResult = saveMainScreenText(contents)
 
-        do {
-            try contents.write(to: selectedDocumentURL, atomically: true, encoding: .utf8)
+        switch saveResult {
+        case .saved, .unchanged:
             applySlotLines(normalizedLines)
             return true
-        } catch {
-            db("ERROR ContentView.persistSlotLines write failed; reloading selected document error=\(error.localizedDescription)")
-            loadFunctionKeys(from: selectedDocumentURL)
+        case .conflict:
+            presentMainScreenSaveAlert(
+                title: "File Changed Externally",
+                message: "This screen was changed outside ESP.\nYour edit has not been saved."
+            )
+            return false
+        case .missing:
+            presentMainScreenSaveAlert(
+                title: "File Removed",
+                message: "This screen was removed outside ESP.\nYour edit has not been saved."
+            )
+            return false
+        case .failed:
+            presentMainScreenSaveAlert(
+                title: "File Could Not Be Saved",
+                message: "Your edit has not been saved."
+            )
             return false
         }
+    }
+
+    private func saveMainScreenText(_ text: String) -> MainScreenSaveResult {
+        guard let loadedScreenBaselineURL,
+              let loadedScreenBaselineText,
+              loadedScreenBaselineURL.lastPathComponent == selectedDocumentName else {
+            return .failed
+        }
+
+        guard FileManager.default.fileExists(atPath: loadedScreenBaselineURL.path) else {
+            return .missing
+        }
+
+        do {
+            let diskText = try String(contentsOf: loadedScreenBaselineURL, encoding: .utf8)
+
+            if diskText == text {
+                self.loadedScreenBaselineText = diskText
+                return .unchanged
+            }
+
+            guard diskText == loadedScreenBaselineText else {
+                return .conflict
+            }
+
+            try text.write(to: loadedScreenBaselineURL, atomically: true, encoding: .utf8)
+            self.loadedScreenBaselineText = text
+            return .saved
+        } catch {
+            return .failed
+        }
+    }
+
+    private func presentMainScreenSaveAlert(title: String, message: String) {
+        mainScreenSaveAlertTitle = title
+        mainScreenSaveAlertMessage = message
+        isMainScreenSaveAlertPresented = true
     }
 
     private func saveSelectedDocumentAndReload(_ text: String) {
@@ -1239,8 +1308,7 @@ struct ContentView: View {
             return false
         }
 
-        persistSlotLines(resizedLines)
-        return true
+        return persistSlotLines(resizedLines)
     }
 
     private func resizedSlotLines(from slotLines: [String], oldGrid: GridDimensions, newGrid: GridDimensions) -> [String]? {
@@ -1373,7 +1441,9 @@ struct ContentView: View {
             }
         }
 
-        persistSlotLines(updatedLines)
+        guard persistSlotLines(updatedLines) else {
+            return nil
+        }
         return movedSourceAnchor
     }
 
@@ -2467,8 +2537,7 @@ struct ContentView: View {
         }
 
         updatedLines[targetIndex] = sourceLine
-        persistSlotLines(updatedLines)
-        return true
+        return persistSlotLines(updatedLines)
     }
 
     @discardableResult

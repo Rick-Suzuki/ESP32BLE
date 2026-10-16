@@ -1,133 +1,196 @@
-F2B.3 IMPLEMENTATION RESULT
+F2B.4 IMPLEMENTATION RESULT
 
 1. File modified
 
-ESP32BLE/ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
+ESP32BLE/ESP32BLE/Scrns/ContentView.swift
 
-No other files were modified.
+No Main Screen, Settings, project, text, or screen files were modified.
 
-2. Functions and state modified
+2. Functions and source areas modified
 
-• saveAndReturnToMain(using:) at approximately lines 1472–1482.
-• saveDocumentText(_:to:) at approximately lines 1484–1539.
-• presentDocumentSaveAlert(for:) added at approximately lines 1547–1567.
-• F2B.2 blocked-save state refined at approximately line 244.
-• Successful document loads reset that state at approximately lines 1394, 1404, and 1425.
+• MainScreenSaveResult added at approximately lines 175–181.
+• Main Screen baseline and alert state added at approximately lines 199–203.
+• Main Screen save alert added at approximately lines 344–348.
+• loadFunctionKeys(from:) updated at approximately lines 691–711.
+• persistSlotLines(_:) updated at approximately lines 778–807.
+• saveMainScreenText(_:) added at approximately lines 809–838.
+• presentMainScreenSaveAlert(title:message:) added at approximately lines 840–844.
+• resizeSelectedDocumentGrid(from:to:) updated at approximately line 1311.
+• moveSelectedDocumentSlot(...) updated at approximately lines 1444–1447.
+• duplicateSelectedDocumentSlot(from:to:) updated at approximately line 2540.
 
-3. Settings → Main behavior
+3. Baseline capture
 
-The Main toolbar still calls saveAndReturnToMain().
+After loadFunctionKeys(from:) successfully reads a screen, ContentView now retains:
 
-saveAndReturnToMain(using:) now:
+• loadedScreenBaselineURL: the exact URL that was loaded.
+• loadedScreenBaselineText: the exact unmodified text read from disk.
 
-• Uses documentEditorText or its supplied text parameter.
-• Calls the existing conflict-aware saveCurrentDocumentText(_:).
-• Receives a DocumentSaveResult from the existing F2B.2 mechanism.
-• Calls returnToMain() only when allowsDocumentTransition is true.
-• Never writes directly to disk.
-• Never calls saveSelectedDocumentAndReload(_:) anymore.
+The baseline is captured only after a successful String(contentsOf:) operation.
 
-4. DocumentSaveResult handling
+If loading fails:
 
-unchanged:
+• The baseline URL is cleared.
+• The baseline text is cleared.
+• No empty or stale text becomes a valid baseline.
 
-• No additional write.
-• Settings dismisses.
+Loading another screen replaces both baseline values.
 
-saved:
+4. URL association
 
-• The protected save completed successfully.
-• Settings dismisses.
+Before saving, saveMainScreenText(_:) requires:
 
-reloadedFromDisk:
+• A valid loaded baseline URL.
+• A valid loaded baseline text.
+• The baseline URL’s filename to match selectedDocumentName.
 
-• The editor and baseline contain the authoritative disk contents.
-• Settings dismisses.
+The cached document list is not used to establish the baseline or determine whether the loaded file still exists.
 
-conflict:
+5. Disk comparison
+
+Before writing, saveMainScreenText(_:) now:
+
+• Verifies that the baseline exists and belongs to the selected screen.
+• Checks the exact baseline URL with FileManager.fileExists.
+• Reads the current file contents directly from disk.
+• Compares the disk text with the proposed output and loaded baseline.
+• Writes only when disk still matches the baseline.
+
+Modification dates are not used.
+
+6. Save-result handling
+
+The private MainScreenSaveResult distinguishes:
+
+• saved
+• unchanged
+• conflict
+• missing
+• failed
+
+Disk unchanged:
+
+• Proposed text is written.
+• The exact successfully written text becomes the new baseline.
+• Normal subsequent edits continue working.
+
+Disk already equals proposed text:
 
 • No write occurs.
-• Settings remains open.
-• Local editor contents are preserved.
-• The existing “File Changed Externally” alert is presented.
+• The verified disk text becomes the baseline.
+• The requested slot state is applied.
+• The operation succeeds without a false conflict.
 
-missing:
+Disk changed externally:
+
+• No write occurs.
+• The external file is preserved.
+• The baseline is not replaced with stale local text.
+• The operation returns false.
+
+Disk deleted:
 
 • The file is not recreated.
-• Settings remains open.
-• Local editor contents are preserved.
-• The existing “File Removed” alert is presented.
+• No write occurs.
+• The operation returns false.
 
-failed:
+Read or write failure:
 
-• Settings remains open.
-• Local editor contents are preserved.
-• The existing failure alert remains responsible for reporting the error.
+• The operation returns false.
+• The baseline is not updated.
 
-5. Blocked-result preservation
+7. Rejected-edit behavior
 
-F2B.2 previously remembered only that saving was blocked. It could not distinguish a conflict from a missing file on a later Main-button press.
+persistSlotLines(_:) continues to apply new slot lines only after a saved or synchronized result.
 
-The state now retains the actual DocumentSaveResult:
+For conflict, missing, or failure:
 
-• conflict remains conflict.
-• missing remains missing.
+• The proposed slot lines are not applied to ContentView.
+• The previously displayed screen state remains visible.
+• The disk file remains untouched.
+• A warning clearly states that the attempted edit was not saved.
 
-Pressing Main again reuses the same alert infrastructure and presents the appropriate message without repeating the disk write attempt.
+This uses the safe rollback behavior permitted by the specification. No external replacement is automatically loaded over the visible screen. Navigating away and returning will use the normal disk-loading path.
 
-No second conflict-detection system was introduced.
+8. Caller-result corrections
 
-6. Optional text parameter
+Three existing wrappers previously discarded persistSlotLines(_:) failure:
 
-No current call site supplies the optional text parameter.
+• Grid resize always returned true.
+• Tile movement returned its new anchor.
+• Slot duplication always returned true.
 
-Support was preserved:
+They now propagate rejection:
 
-• Supplied text becomes the editor’s current local text.
-• It passes through the protected three-way comparison.
-• It cannot reach the former blind ContentView callback.
-• It cannot bypass conflict or missing-file protection.
+• Resize returns false.
+• Movement returns nil.
+• Duplication returns false.
 
-7. Old blind callback
+The existing restoration, undo, redo, cut, paste, delete, and direct slot-edit paths already receive the persistence Bool result through their existing callback structures.
 
-saveSelectedDocumentAndReload remains declared and injected because removal was not necessary for this phase.
+9. User warnings
 
-Source search found no remaining invocation after the change:
+External modification:
 
-• Set_Screen.swift still declares the callback property.
-• ContentView.swift and Main_Screen.swift still pass or retain it.
-• The normal Settings Main button no longer calls it.
-• No other source path currently invokes it.
+Title:
+File Changed Externally
 
-ContentView.saveSelectedDocumentAndReload(_:) itself was not modified.
+Message:
+This screen was changed outside ESP.
+Your edit has not been saved.
 
-8. Main Screen disk reload
+Deleted file:
 
-The existing disk reload remains unchanged.
+Title:
+File Removed
 
-After a safe Settings dismissal:
+Message:
+This screen was removed outside ESP.
+Your edit has not been saved.
 
-• ContentView sets isSettingsScreenPresented to false.
-• Main_Screen observes that change at approximately lines 959–962.
-• reloadSelectedDocumentIfAvailable() runs at approximately lines 5293–5301.
-• It calls the injected loadFunctionKeys URL loader.
-• ContentView.loadFunctionKeys(from:) reads the selected .screen file from Documents.
+Other failure:
 
-Settings editor contents are no longer directly applied to Main Screen during this transition.
+Title:
+File Could Not Be Saved
 
-9. Remaining unsafe write paths
+Message:
+Your edit has not been saved.
 
-The following remain deferred:
+No overwrite, merge, Save As, or automatic conflict resolution was added.
 
-• ContentView.persistSlotLines(_:) — Main Screen grid persistence, scheduled for F2B.4.
-• ContentView.saveSelectedDocumentAndReload(_:) remains a blind writer, although no current call site invokes it.
-• No foreground refresh, polling, file observer, or pull-to-refresh was added.
+10. Main Screen write-path audit
 
-10. Validation
+Confirmed Main Screen screen-content operations use persistSlotLines(_:) through:
+
+• Grid resizing.
+• Tile movement.
+• Slot duplication.
+• Slot editing.
+• Restore operations.
+• Cut and paste.
+• Popup duplication and resizing.
+• Undo and redo.
+• Delete-all and related slot clearing.
+
+The separate saveSelectedDocumentAndReload(_:) blind writer remains in ContentView but is still unused after F2B.3. It was not activated or modified.
+
+Default document creation remains an explicit creation workflow rather than an existing-screen edit.
+
+Screen configuration JSON writes are separate from .screen content persistence and were not changed.
+
+11. Remaining limitations
+
+Some Main Screen editing actions historically ignore the returned Bool after calling updateFunctionKeySlot. The central ContentView writer nevertheless rejects the save, does not apply the proposed screen state, and presents the warning. Those actions may close their transient editor or popup, but the displayed screen returns to or retains its previous state.
+
+The unused saveSelectedDocumentAndReload(_:) function remains inherently unprotected if reactivated later.
+
+No foreground monitoring or automatic external-file refresh was added.
+
+12. Validation
 
 Xcode live diagnostics:
 
-No issues found in Set_Screen.swift.
+No issues found in ContentView.swift.
 
 Build result:
 
@@ -135,8 +198,10 @@ The ESP32BLE project built successfully.
 
 Build duration:
 
-24.903 seconds.
+32.563 seconds.
 
-No warnings or build errors were reported.
+No build errors were reported.
 
 The application and simulator were not launched.
+
+The SwiftUI guidance influenced keeping the baseline and alert state private to ContentView and applying UI state only after persistence succeeds.
