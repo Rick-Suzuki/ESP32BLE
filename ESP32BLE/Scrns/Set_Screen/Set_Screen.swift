@@ -3197,10 +3197,9 @@ struct SettingsScreen: View {
         session: inout PendingImportSession
     ) {
         do {
-            let isRestoreReplacement = session.importMode == .allFiles
             let targetExists = FileManager.default.fileExists(atPath: targetURL.path)
 
-            if isRestoreReplacement, targetExists {
+            if targetExists {
                 switch contentKind {
                 case .config:
                     try safelyReplaceExistingScreenConfig(from: sourceURL, to: targetURL)
@@ -3222,10 +3221,6 @@ struct SettingsScreen: View {
                 return
             }
 
-            if targetExists {
-                try FileManager.default.removeItem(at: targetURL)
-            }
-
             try importResolvedFile(
                 from: sourceURL,
                 to: targetURL,
@@ -3234,9 +3229,6 @@ struct SettingsScreen: View {
                 replacingDocument: true
             )
 
-            if targetExists {
-                session.replacedFileCount += 1
-            }
         } catch {
             recordImportFailure(fileName: fileName, error: error, session: &session)
             renameAlertMessage = "Couldn't import \(fileName): \(error.localizedDescription)"
