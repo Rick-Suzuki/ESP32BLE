@@ -1,3 +1,7 @@
+261016 Fri 0903
+ESP32 connection complete
+V62.59
+
 
 261016 Fri 0820
 B2d completed

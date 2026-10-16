@@ -453,8 +453,19 @@ extension BLEKeyboardManager: CBCentralManagerDelegate {
 		}
 	}
 	
-	func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
-		let matchesSelected = peripheral.identifier == selectedPeripheralID
+		func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
+            let uuid = peripheral.identifier
+            let expectedProbe = probePeripheralIDs.contains(uuid)
+            let expectedSelected = selectedPeripheralID == uuid
+                && esp32Peripheral?.identifier == uuid
+
+            guard !isDeliberatelyStopped && (expectedProbe || expectedSelected) else {
+                connectionProbeLog("REJECTED STALE didConnect peripheralUUID=\(uuid.uuidString) deliberatelyStopped=\(isDeliberatelyStopped) expectedProbe=\(expectedProbe) expectedSelected=\(expectedSelected) selectedPeripheralUUID=\(selectedPeripheralID?.uuidString ?? "nil") activePeripheralUUID=\(esp32Peripheral?.identifier.uuidString ?? "nil") attempt=\(connectionAttempt(for: peripheral))")
+                centralManager.cancelPeripheralConnection(peripheral)
+                return
+            }
+
+			let matchesSelected = peripheral.identifier == selectedPeripheralID
             let matchesActive = peripheral.identifier == esp32Peripheral?.identifier
             let wasProbe = probePeripheralIDs.contains(peripheral.identifier)
 
