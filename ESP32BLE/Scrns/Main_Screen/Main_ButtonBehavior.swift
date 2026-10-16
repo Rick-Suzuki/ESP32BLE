@@ -173,6 +173,21 @@ extension MainScreen {
         if db_btnCode {
             let command = entry.rawLine.components(separatedBy: "::").first ?? entry.rawLine
             print("🐞 \(command)")
+
+            for token in entry.sendTexts {
+                let classificationLabel: String
+
+                switch commandClassification(for: token) {
+                case .internalCommand:
+                    classificationLabel = "internal"
+                case .file:
+                    classificationLabel = "file"
+                case .external:
+                    classificationLabel = "external"
+                }
+
+                print("🐞 \(token) → \(classificationLabel)")
+            }
         }
 
         if mainGridButtonMode.speaksText {
@@ -496,7 +511,9 @@ extension MainScreen {
             return true
         }
 
-        let keyboardOutputTokens = tokens.map(normalizedBluetoothSendText)
+        let keyboardOutputTokens = tokens
+            .map(normalizedBluetoothSendText)
+            .filter { !$0.hasPrefix(".") }
 
         guard !keyboardOutputTokens.isEmpty else {
             return true
@@ -1102,11 +1119,11 @@ extension MainScreen {
         let loweredSendText = trimmedSendText.lowercased()
         let widgetText: String
 
-        if loweredSendText.hasPrefix("amb ") {
-            let filename = normalizedSoundFilename(String(trimmedSendText.dropFirst(4)))
+        if loweredSendText.hasPrefix(".amb ") {
+            let filename = normalizedSoundFilename(String(trimmedSendText.dropFirst(5)))
             return filename.isEmpty ? nil : .ambientSound(filename: filename)
-        } else if loweredSendText.hasPrefix("ambient ") {
-            let filename = normalizedSoundFilename(String(trimmedSendText.dropFirst(8)))
+        } else if loweredSendText.hasPrefix(".ambient ") {
+            let filename = normalizedSoundFilename(String(trimmedSendText.dropFirst(9)))
             return filename.isEmpty ? nil : .ambientSound(filename: filename)
         } else if isBareWidgetCommandText(loweredSendText) {
             widgetText = trimmedSendText
@@ -1127,7 +1144,7 @@ extension MainScreen {
         }
 
         switch widgetName {
-        case "clock":
+        case ".clock":
             let cityLabel: String?
             if components.count > 1 {
                 let resolvedCityLabel = components.dropFirst().joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1136,7 +1153,7 @@ extension MainScreen {
                 cityLabel = nil
             }
             return .clock(cityLabel: cityLabel)
-        case "day":
+        case ".day":
             let cityLabel: String?
             if components.count > 1 {
                 let resolvedCityLabel = components.dropFirst().joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1145,7 +1162,7 @@ extension MainScreen {
                 cityLabel = nil
             }
             return .day(cityLabel: cityLabel)
-        case "month":
+        case ".month":
             let cityLabel: String?
             if components.count > 1 {
                 let resolvedCityLabel = components.dropFirst().joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1154,7 +1171,7 @@ extension MainScreen {
                 cityLabel = nil
             }
             return .month(cityLabel: cityLabel)
-        case "year":
+        case ".year":
             let cityLabel: String?
             if components.count > 1 {
                 let resolvedCityLabel = components.dropFirst().joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1163,7 +1180,7 @@ extension MainScreen {
                 cityLabel = nil
             }
             return .year(cityLabel: cityLabel)
-        case "sec":
+        case ".sec":
             let cityLabel: String?
             if components.count > 1 {
                 let resolvedCityLabel = components.dropFirst().joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1172,7 +1189,7 @@ extension MainScreen {
                 cityLabel = nil
             }
             return .second(cityLabel: cityLabel)
-        case "min":
+        case ".min":
             let cityLabel: String?
             if components.count > 1 {
                 let resolvedCityLabel = components.dropFirst().joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1181,7 +1198,7 @@ extension MainScreen {
                 cityLabel = nil
             }
             return .minute(cityLabel: cityLabel)
-        case "hour":
+        case ".hour":
             let cityLabel: String?
             if components.count > 1 {
                 let resolvedCityLabel = components.dropFirst().joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1190,7 +1207,7 @@ extension MainScreen {
                 cityLabel = nil
             }
             return .hour(cityLabel: cityLabel)
-        case "dow":
+        case ".dow":
             let cityLabel: String?
             if components.count > 1 {
                 let resolvedCityLabel = components.dropFirst().joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1199,7 +1216,7 @@ extension MainScreen {
                 cityLabel = nil
             }
             return .dow(cityLabel: cityLabel)
-        case "date":
+        case ".date":
             let cityLabel: String?
             if components.count > 1 {
                 let resolvedCityLabel = components.dropFirst().joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1208,11 +1225,11 @@ extension MainScreen {
                 cityLabel = nil
             }
             return .date(cityLabel: cityLabel)
-        case "power", "battery":
+        case ".power":
             return .power
-        case "add":
+        case ".add":
             return .add
-        case "minus":
+        case ".minus":
             let initialCount: Int
             if components.count > 1 {
                 guard let parsedInitialCount = Int(components[1]) else {
@@ -1223,7 +1240,7 @@ extension MainScreen {
                 initialCount = 0
             }
             return .minus(initialCount: initialCount)
-        case "rnd", "random":
+        case ".rnd", ".random":
             if components.count > 1 {
                 let filename = String(components.dropFirst().joined(separator: " "))
                     .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1255,14 +1272,14 @@ extension MainScreen {
             }
 
             return .random(minimumValue: minimumValue, maximumValue: maximumValue)
-        case "stop", "stopwatch":
+        case ".stop", ".stopwatch":
             return .stopwatch
-        case "amb", "ambient":
+        case ".amb", ".ambient":
             let filename = components.count > 1
                 ? normalizedSoundFilename(String(components.dropFirst().joined(separator: " ")))
                 : ""
             return filename.isEmpty ? nil : .ambientSound(filename: filename)
-        case "timer":
+        case ".timer":
             let initialDuration = components.count > 1
                 ? parseWidgetTimerDuration(String(components[1]))
                 : 0
@@ -1280,9 +1297,9 @@ extension MainScreen {
 
     private func isBareWidgetCommandText(_ loweredText: String) -> Bool {
         let widgetCommands = [
-            "add", "minus", "power", "rnd", "random", "clock", "date",
-            "dow", "sec", "min", "hour", "day", "month", "year", "timer",
-            "stop", "stopwatch", "amb", "ambient"
+            ".add", ".minus", ".power", ".rnd", ".random", ".clock", ".date",
+            ".dow", ".sec", ".min", ".hour", ".day", ".month", ".year", ".timer",
+            ".stop", ".stopwatch", ".amb", ".ambient"
         ]
 
         return widgetCommands.contains { command in

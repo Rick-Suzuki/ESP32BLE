@@ -1,23 +1,1007 @@
-W2A implementation complete.
+ESP32BLE — F1
+SCREEN FILE INTEGRITY AND EXTERNAL FILE CHANGES
+READ-ONLY INVESTIGATION
+16 October 2026
 
-Changed file:
-ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift
+No files were modified.
+No build was performed.
+The application was not launched.
+No Git operations were performed.
 
-Added at approximately lines 17–43:
+1. EXECUTIVE SUMMARY
 
-• Private enum: CommandClassification
-• Cases: internalCommand, file, external
-• Private helper: commandClassification(for:)
+CONFIRMED SOURCE FINDINGS
 
-Validation:
+Problem A — possible data loss:
 
-• Leading “.” returns internalCommand.
-• Listed file extensions return file case-insensitively.
-• Other tokens return external.
-• The helper performs no file lookup or command execution.
-• Search confirmed its only occurrence is its declaration; it is not called.
-• No existing parsing, recognition, execution, widget, WAIT, preview, navigation, audio, or transport path changed.
-• File diagnostics: no issues.
-• Project build: successful, with no errors.
-• The app was not launched.
-• No other files were modified.
+The source contains a genuine stale-data overwrite risk.
+
+A loaded screen is retained in memory in two places:
+
+• ContentView.functionKeySlotLines
+• SettingsScreen.documentEditorText
+
+Neither representation records the file’s modification date, size, identity, hash, or original contents for conflict detection.
+
+Several operations write these in-memory values directly over the selected .screen file without first checking whether the disk file changed externally.
+
+The most significant risk is SettingsScreen:
+
+• It loads the entire screen into documentEditorText.
+• It saves on every documentEditorText change.
+• It also saves unconditionally when the selected screen changes.
+• It saves unconditionally when the Settings list mode changes.
+• It saves before creating, repairing, or exporting.
+• These saves do not compare documentEditorText with savedDocumentEditorText.
+• They do not compare the current disk file with the version originally loaded.
+
+Therefore, after iTunes replaces widgets.screen, a later Settings action can write the old editor contents back over that replacement.
+
+ContentView’s grid-edit operations have the same conflict weakness. Moving, duplicating, editing, restoring, or resizing a button writes the cached functionKeySlotLines over the disk file without checking for an external replacement.
+
+However, no source evidence shows that backgrounding or swiping the app away directly saves a .screen file. The only scenePhase handler performs keep-awake maintenance when the app becomes active.
+
+Consequently:
+
+• A stale overwrite is source-confirmed as possible.
+• A termination-triggered save is not supported by the source.
+• The exact interaction that caused the reported overwrite still requires device testing.
+
+Problem B — file discovery:
+
+The failure to show English.screen until restart is directly explained by the source.
+
+The available screen list is cached in:
+
+• ContentView.documentFiles
+• ContentView.documentDirectorySnapshot
+
+The Documents directory is scanned at startup and after application-controlled file operations. It is not rescanned when:
+
+• The app enters the foreground.
+• The Settings screen opens.
+• The file-selection UI appears.
+• iTunes adds or replaces a file externally.
+
+On restart, the startup task scans Documents again, which makes English.screen appear.
+
+2. SCREEN STORAGE LOCATIONS
+
+Primary storage
+
+File:
+ESP32BLE/ESP32BLE/Scrns/ContentView.swift
+
+Functions:
+
+• documentsDirectoryURL(), lines 466–468
+• refreshDocumentFiles(), lines 506–542
+• documentURL(forDocumentName:), lines 740–753
+
+All live .screen files are stored directly in the application’s user Documents directory.
+
+No Screens subdirectory is used.
+
+The screen list is built by enumerating that Documents directory at lines 513–525.
+
+File:
+ESP32BLE/ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
+
+Function/property:
+
+• currentDocumentsDirectoryURL, lines 3754–3756
+
+The Settings import, create, media, and file-management workflows use the same Documents directory.
+
+iTunes File Sharing exposure
+
+File:
+ESP32BLE/ESP32BLE/Info.plist
+
+Lines 9–10:
+
+• UIFileSharingEnabled = true
+
+This exposes the application’s Documents directory through iTunes/Finder File Sharing.
+
+There is no LSSupportsOpeningDocumentsInPlace setting in this plist.
+
+Screen recognition
+
+File:
+ESP32BLE/ESP32BLE/Scrns/ScreenDocument.swift
+
+Relevant locations:
+
+• screenDocumentFileExtension = "screen", line 3
+• isScreenDocumentURL(_:), lines 6–8
+• isScreenDocumentFileName(_:), lines 10–12
+• isScreenDocumentFileExtension(_:), lines 14–17
+• preferredScreenDocumentURLs(from:), lines 32–36
+
+Only the .screen extension is included in the active screen list. Extension recognition is case-insensitive because pathExtension is normalized to lowercase.
+
+Companion screen configuration files
+
+File:
+ESP32BLE/ESP32BLE/Scrns/ScreenConfig.swift
+
+Relevant locations:
+
+• configFileName(forDocumentName:), lines 85–93
+• configURL(forDocumentURL:), lines 95–99
+• loadScreenConfig(for:), lines 101–110
+• saveScreenConfig(_:for:), lines 112–129
+
+Each screen can have a sibling file named:
+
+screen-name.config.json
+
+It is stored beside the .screen file in Documents, not in Application Support.
+
+Temporary storage
+
+File:
+ESP32BLE/ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
+
+Temporary locations are used for:
+
+• Export preparation around lines 1996–2011.
+• ZIP extraction around lines 3180–3211 and 3234–3281.
+• Staging safe replacements around lines 3804–3842.
+• Import copying around lines 3920–3935.
+
+These temporary files are import/export intermediates. They are not the normal source of the active screen list.
+
+Bundled/default storage
+
+No bundled .screen-file repository is used for the normal screen list.
+
+ensureDefaultFunctionKeysFile() creates a default screen in Documents only when no screen documents exist:
+
+File:
+ESP32BLE/ESP32BLE/Scrns/ContentView.swift
+
+Lines 470–504, particularly the write at lines 490–495.
+
+3. COMPLETE SCREEN-WRITE INVENTORY
+
+A. Default screen creation
+
+File:
+ESP32BLE/ESP32BLE/Scrns/ContentView.swift
+
+Function:
+ensureDefaultFunctionKeysFile(), lines 470–504
+
+Write:
+lines 492–495
+
+Trigger:
+Startup task calls the function at line 337.
+
+Destination:
+Documents/default startup .screen filename.
+
+Overwrite behavior:
+No overwrite. It writes only when no screen URLs exist and the target does not exist.
+
+Data source:
+Generated default F1...Fn strings.
+
+Conflict check:
+Existence check only.
+
+Error handling:
+Falls back to in-memory default keys.
+
+B. Main Screen slot persistence
+
+File:
+ESP32BLE/ESP32BLE/Scrns/ContentView.swift
+
+Function:
+persistSlotLines(_:), lines 755–775
+
+Write:
+line 767
+
+Triggers:
+
+• Restoring saved slot lines through the MainScreen closure, lines 287–292.
+• Resizing the grid, line 1242.
+• Moving a button/tile, line 1376.
+• Duplicating a slot, line 2470.
+• Updating/editing a slot, line 2489.
+
+Destination:
+The currently selected .screen file in Documents.
+
+Overwrite behavior:
+Atomic String.write replaces the file contents.
+
+Data source:
+The supplied slot array, usually derived from cached functionKeySlotLines.
+
+Conflict check:
+None.
+
+Dirty-state check:
+None.
+
+Error handling:
+On failure it reloads the selected document from disk at lines 771–773.
+
+Risk:
+A successful write can silently overwrite an externally replaced screen with stale cached slot data.
+
+C. Settings-to-Main save
+
+File:
+ESP32BLE/ESP32BLE/Scrns/ContentView.swift
+
+Function:
+saveSelectedDocumentAndReload(_:), lines 777–789
+
+Write:
+line 783
+
+Caller:
+Set_Screen.swift, saveAndReturnToMain(using:), lines 1414–1426.
+
+Destination:
+Selected .screen file in Documents.
+
+Data source:
+SettingsScreen.documentEditorText or explicitly supplied editor text.
+
+Conflict check:
+None.
+
+Error handling:
+Reloads the file only if the write throws.
+
+D. Settings editor automatic saving
+
+File:
+ESP32BLE/ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
+
+Functions:
+
+• saveSelectedDocumentText(), lines 1383–1389
+• saveCurrentDocumentText(), lines 1391–1398
+• saveCurrentDocumentText(_:), lines 1400–1407
+• saveDocumentText(_:to:), lines 1428–1436
+
+Write:
+line 1430
+
+Automatic triggers:
+
+• selectedDocumentName changes, lines 488–491.
+• listModeRawValue changes, lines 493–496.
+• documentEditorText changes, lines 497–499 and following save call.
+
+Additional explicit triggers:
+
+• Repair, line 1444.
+• Create new document, line 1927.
+• Single-file export preparation, line 1945.
+• Archive export preparation, line 1956.
+
+Destination:
+The URL resolved from loadedDocumentName in the cached file lists.
+
+Data source:
+Cached documentEditorText.
+
+Conflict check:
+None.
+
+Dirty-state check:
+None. saveCurrentDocumentText() does not test:
+
+documentEditorText != savedDocumentEditorText
+
+Important consequence:
+Changing Settings list mode can overwrite a disk file even when the user did not edit the screen during that action.
+
+E. Repair
+
+File:
+ESP32BLE/ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
+
+Function:
+repairDocument(), lines 1438–1460
+
+Writes:
+
+• First saves current editor text at line 1444.
+• Writes repaired text at lines 1448–1449.
+
+Destination:
+Selected screen file.
+
+Data source:
+Cached editor text transformed by repairedDocumentText(...).
+
+Conflict check:
+None.
+
+Error handling:
+Displays the repair failure message.
+
+F. New screen creation
+
+File:
+ESP32BLE/ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
+
+Function:
+createNewDocument(), lines 1926–1942
+
+Writes:
+
+• Saves the previously loaded document first, line 1927.
+• Writes a new 16-slot screen, lines 1933–1936.
+
+Destination:
+Documents.
+
+Overwrite behavior:
+nextAvailableNewDocumentURL() chooses a non-existing name.
+
+G. Rename
+
+File:
+ESP32BLE/ESP32BLE/Scrns/ContentView.swift
+
+Function:
+renameSelectedDocument(to:), lines 2858–2908
+
+Mutation:
+Moves the .screen file at line 2895.
+
+Related mutation:
+Moves its config at lines 2893 and 2807–2824.
+
+Existing-target handling:
+The name is rejected when documentFiles already contains it, lines 2875–2876.
+
+External-change protection:
+None beyond the target-name check.
+
+H. Delete
+
+File:
+ESP32BLE/ESP32BLE/Scrns/ContentView.swift
+
+Function:
+deleteDocument(_:), lines 2911–2951
+
+Mutation:
+Removes the .screen file at line 2934 and its config at line 2935.
+
+It then refreshes the list at line 2942.
+
+I. Duplicate
+
+File:
+ESP32BLE/ESP32BLE/Scrns/ContentView.swift
+
+Function:
+duplicateDocument(_:), lines 2954–2983
+
+Mutation:
+Copies the disk file at line 2969.
+
+Data source:
+Current disk file, not in-memory slot contents.
+
+It refreshes and selects the new file at lines 2979–2980.
+
+J. In-app import and replacement
+
+File:
+ESP32BLE/ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
+
+Relevant functions:
+
+• processPendingImportSession(_:), lines 2522–2783
+• resolvePendingImportConflictByReplacing(), lines 2890–2914
+• resolvePendingImportConflictKeepingBoth(), lines 2916–2939
+• resolvePendingImportConflictBySkipping(), lines 2941–2950
+• importReplacingExistingFile(...), lines 2952–3004
+• importResolvedFile(...), lines 3028–3052
+• finishPendingImportSession(_:), lines 3068–3103
+• safelyReplaceExistingImportedFile(...), lines 3804–3842
+• importFileData(...), lines 3901–3951
+
+Ordinary replacement:
+
+• Existing destination is removed at lines 2985–2987.
+• Imported data is placed at the same URL through importResolvedFile(...).
+
+Full-restore replacement:
+
+• Data is staged.
+• Staged size is verified.
+• FileManager.replaceItemAt is used at lines 3823–3829.
+
+After successful import:
+
+• finishPendingImportSession calls markImportedContentChanged(), line 3083.
+• markImportedContentChanged refreshes the Documents scan, lines 3758–3761.
+• The first imported screen is loaded at lines 3085–3087.
+
+K. Legacy screen import handler
+
+File:
+ESP32BLE/ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
+
+Relevant section:
+lines 3570–3615
+
+It:
+
+• Accepts .screen files.
+• Skips existing names.
+• Imports new files using importFileData(), lines 3595–3597.
+• Refreshes at line 3604.
+• Loads the first imported document at lines 3606–3608.
+
+L. Delete all data
+
+File:
+ESP32BLE/ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
+
+Function:
+deleteAllData(), lines 2271–2300
+
+It removes every item in Documents at lines 2285–2292, including all .screen files.
+
+This is explicit user-driven deletion, not automatic persistence.
+
+4. APPLICATION LIFECYCLE AND SAVE TRIGGERS
+
+File:
+ESP32BLE/ESP32BLE/Scrns/ContentView.swift
+
+Lifecycle state:
+@Environment(.scenePhase), line 176.
+
+Handler:
+lines 382–386.
+
+Actual behavior:
+
+• It responds only when scenePhase becomes .active.
+• It calls applyKeepScreenAwakePreference().
+• It does not refresh files.
+• It does not reload the active screen.
+• It does not save a screen.
+
+Startup:
+
+• The ContentView task at lines 335–342 calls ensureDefaultFunctionKeysFile().
+• That function scans Documents and selects/loads the initial document at lines 502–503.
+
+No source occurrence was found for:
+
+• UIApplication.willResignActiveNotification
+• UIApplication.didEnterBackgroundNotification
+• UIApplication.willTerminateNotification
+• A termination save handler
+• A background save handler
+• A periodic/timer-based screen save
+
+The inspected onDisappear handlers belong to toolbar, grid, widget, image-control, or presentation cleanup. None is a .screen persistence path.
+
+CONFIRMED CONCLUSION
+
+Swiping ESP away is not shown in the source to initiate a screen save.
+
+If stale data is written during the reported sequence, the write must be triggered by another action before termination, or by behavior outside the inspected application save paths.
+
+5. CURRENT SCREEN CACHING BEHAVIOUR
+
+File:
+ESP32BLE/ESP32BLE/Scrns/ContentView.swift
+
+State:
+
+• functionKeys, line 187
+• functionKeySlotLines, line 188
+• loadedFunctionKeySlotCount, line 189
+• loadedScreenConfig, line 190
+• documentFiles, line 191
+• documentDirectorySnapshot, line 192
+• selectedDocumentName, line 199
+• navigation histories, lines 197–198
+
+Loading:
+
+Function:
+loadFunctionKeys(from:), lines 673–690
+
+Process:
+
+• Reads the disk file once, line 675.
+• Parses lines, lines 676 and 692–705.
+• Loads its config, lines 677–680.
+• Stores slot text in functionKeySlotLines through applySlotLines(), lines 681 and 715–720.
+• Builds parsed FunctionKeyEntry values, lines 717–718 and 722–733.
+• Records the filename, line 682.
+
+If the disk file later changes externally:
+
+• functionKeySlotLines remains unchanged.
+• functionKeys remains unchanged.
+• loadedScreenConfig remains unchanged.
+• selectedDocumentName remains unchanged.
+• No automatic reload occurs.
+
+Settings editor cache
+
+File:
+ESP32BLE/ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
+
+Loading around lines 1350–1368:
+
+• Reads the file into loadedText, line 1364.
+• Copies it to documentEditorText, line 1365.
+• Copies it to savedDocumentEditorText, line 1366.
+• Stores loadedDocumentName, line 1367.
+
+savedDocumentEditorText is used for editor undo/display state, including lines 758–759. It is not used as a dirty-state guard before saving.
+
+The application therefore does not distinguish reliably between:
+
+• An in-app edit that needs saving.
+• An unchanged in-memory editor.
+• A disk file changed externally after loading.
+
+6. EXTERNAL MODIFICATION DETECTION
+
+No screen conflict-detection mechanism exists.
+
+The source does not record or compare:
+
+• Modification dates.
+• File sizes for loaded screen conflict detection.
+• File hashes.
+• Original file contents before saving.
+• Resource identifiers.
+• File-system change notifications.
+• NSFilePresenter change notifications.
+• DispatchSource file-system events.
+
+NSFileCoordinator is used only while reading import sources and staging import data in Set_Screen.swift around lines 3768–3801, 3844–3886, and 3901–3951.
+
+The file-size checks at lines 3859 and 3888–3898 validate staged import completeness. They do not protect a currently loaded screen from an external modification.
+
+All direct editor/grid writes can therefore overwrite a file that changed after it was loaded.
+
+7. EXACT POSSIBLE DATA-LOSS SEQUENCE
+
+Stage 1: ESP loads widgets.screen
+
+ContentView.loadFunctionKeys(from:), lines 673–690, reads and caches the old screen.
+
+If Settings is visible, SettingsScreen also reads and caches it in documentEditorText at lines 1364–1367.
+
+Stage 2: Old contents remain in memory
+
+The old data remains in:
+
+• functionKeySlotLines
+• functionKeys
+• documentEditorText
+• savedDocumentEditorText
+
+Stage 3: iTunes replaces widgets.screen
+
+No application observer responds.
+
+The disk has new contents, but the displayed grid and editor remain old.
+
+Stage 4: Earliest confirmed opportunities for stale overwrite
+
+Settings path:
+
+Any of these can call saveCurrentDocumentText() with the old documentEditorText:
+
+• Changing selectedDocumentName, lines 488–491.
+• Changing Settings list mode, lines 493–496.
+• Any editor state change, lines 497–499.
+• Repair, line 1444.
+• Creating a new screen, line 1927.
+• Preparing an export, lines 1945 or 1956.
+• Returning to Main through saveAndReturnToMain(), lines 1414–1426.
+
+Main grid path:
+
+Any of these can call persistSlotLines() with cached functionKeySlotLines:
+
+• Resize.
+• Move.
+• Duplicate.
+• Edit.
+• Restore/undo slot arrangement.
+
+Stage 5: Backgrounding
+
+The scenePhase handler does not save. It only applies the keep-awake preference when active.
+
+Stage 6: Swiping the app away
+
+No termination-save handler exists in the inspected source.
+
+Stage 7: Old file observed through iTunes
+
+This outcome is consistent with a stale write having occurred at Stage 4.
+
+It is not, from static source alone, proof that the swipe-away action caused the write.
+
+8. SCREEN-LIST REFRESH BEHAVIOUR
+
+File:
+ESP32BLE/ESP32BLE/Scrns/ContentView.swift
+
+Function:
+refreshDocumentFiles(), lines 506–542
+
+The function:
+
+• Enumerates Documents, lines 513–518.
+• Filters and sorts .screen files, lines 520–525.
+• Assigns documentFiles, line 536.
+• Assigns documentDirectorySnapshot, line 537.
+
+Initial refresh:
+
+• ensureDefaultFunctionKeysFile(), line 502.
+• Called by the startup task at line 337.
+
+Other refresh triggers:
+
+• Delete-all refresh, lines 544–550.
+• Rename success, line 2903.
+• Delete success/failure, lines 2942 and 2950.
+• Duplicate success/failure, lines 2979 and 2982.
+• In-app import completion through markImportedContentChanged(), Set_Screen.swift lines 3758–3761.
+• Individual in-app create/delete/media operations also invoke the supplied refresh closure.
+
+Missing refresh triggers:
+
+• No refresh on scenePhase becoming active.
+• No refresh when Settings opens.
+• No refresh when the file list appears.
+• No external directory watcher.
+• No refresh caused by iTunes File Sharing.
+
+Settings file lists are also cached.
+
+File:
+ESP32BLE/ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
+
+Functions/properties:
+
+• availableDocumentURLs, lines 1669–1676
+• availableTextURLs, lines 1678–1685
+• availableSoundURLs, lines 1719–1727
+• availablePDFURLs, lines 1730–1737
+• availableAllFileURLs, lines 1739–1746
+
+These derive from documentDirectorySnapshot rather than scanning Documents directly.
+
+CONFIRMED ROOT CAUSE FOR PROBLEM B
+
+English.screen remains invisible because documentFiles and documentDirectorySnapshot are not refreshed following an external directory change.
+
+Restart runs the startup scan, so the file appears.
+
+Smallest later refresh point:
+
+ContentView’s existing scenePhase handler at lines 382–386 is the smallest central point for refreshing externally added files when the app becomes active.
+
+Opening Settings through showSettingsScreen(), lines 2773–2781, is another useful refresh point, but foreground refresh is the broader solution.
+
+9. SKIP / REPLACE WORKFLOW
+
+Conflict discovery
+
+File:
+ESP32BLE/ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
+
+processPendingImportSession(_:) builds destination URLs and checks both cached name sets and file existence.
+
+The pending conflict records:
+
+• sourceURL
+• targetURL
+• fileName
+• contentKind
+
+at lines 2880–2886.
+
+Skip
+
+Function:
+resolvePendingImportConflictBySkipping(), lines 2941–2950
+
+It removes the pending conflict and continues the session without writing the conflicting file.
+
+Replace
+
+Function:
+resolvePendingImportConflictByReplacing(), lines 2890–2914
+
+It passes the source and target into importReplacingExistingFile(...).
+
+Ordinary replacement:
+
+• Removes the destination, lines 2985–2987.
+• Imports the selected source to the target, lines 2989–2995.
+
+Full restore replacement:
+
+• Uses safelyReplaceExistingImportedFile(), lines 2963–2969.
+• Stages and verifies the imported file.
+• Uses replaceItemAt, lines 3823–3829.
+
+Completion:
+
+• markImportedContentChanged() refreshes the directory list.
+• The first imported document is loaded from disk, lines 3083–3087.
+
+CONFIRMED FINDING
+
+The in-app Replace implementation contains a real disk replacement operation and refreshes/reloads after a successful session.
+
+There is no source indication that Replace merely changes memory without replacing the disk file.
+
+Important remaining risk:
+
+After a successful replacement, another stale editor save could still overwrite it if old documentEditorText remains associated with the same filename and a save trigger fires before the newly replaced document is loaded into that editor state.
+
+External iTunes replacement is completely separate. It bypasses all of this application import, refresh, reload, and conflict code.
+
+10. OTHER FILE TYPES
+
+.txt files
+
+The Settings text editor uses the same documentEditorText and saveDocumentText mechanism.
+
+Therefore, externally changed .txt files have a similar stale-editor overwrite risk if they are currently loaded in Settings.
+
+Images, sounds, and PDFs
+
+These are listed from the same cached documentDirectorySnapshot, so externally added files can remain invisible until a refresh.
+
+They are not generally loaded as editable text and then automatically rewritten. Consequently, the specific stale-text overwrite mechanism does not apply to them.
+
+They remain subject to explicit rename, delete, import, and replacement operations.
+
+11. CONFIRMED ROOT CAUSES
+
+CONFIRMED SOURCE FINDING 1
+
+The app has no external-change detection before overwriting a loaded .screen file.
+
+CONFIRMED SOURCE FINDING 2
+
+SettingsScreen performs unconditional saves from cached editor contents on selected-file and list-mode transitions.
+
+CONFIRMED SOURCE FINDING 3
+
+Main Screen grid edits persist a complete cached slot array without verifying that the disk file is still the version originally loaded.
+
+CONFIRMED SOURCE FINDING 4
+
+There is no dirty-state guard in saveCurrentDocumentText(). savedDocumentEditorText exists but is not used to prevent unnecessary writes.
+
+CONFIRMED SOURCE FINDING 5
+
+The screen list and full Documents snapshot are cached and are not refreshed on foreground activation or external directory changes.
+
+CONFIRMED SOURCE FINDING 6
+
+There is no background or termination screen-save handler in the inspected source.
+
+12. HYPOTHESES REQUIRING DEVICE TESTING
+
+The exact action that overwrote widgets.screen is not established by static inspection.
+
+The most likely application-level explanations are:
+
+• Settings was visible or mounted with old documentEditorText, and a list-mode or selected-screen transition triggered saveCurrentDocumentText().
+• An editor state update triggered the documentEditorText onChange save.
+• Returning from Settings invoked saveSelectedDocumentAndReload().
+• A Main Screen edit, move, duplicate, resize, or undo/restore operation persisted stale functionKeySlotLines.
+
+A pure sequence of:
+
+• External replacement.
+• No user or state-changing action.
+• Background.
+• Swipe-away termination.
+
+does not contain a source-confirmed application save trigger.
+
+Device testing is needed to determine whether:
+
+• A particular Settings state change occurs implicitly during backgrounding.
+• iTunes/Finder reports the replacement before it is fully committed.
+• Another interaction occurred between replacement and termination.
+• The running build differs from the inspected source.
+
+13. SMALLEST RECOMMENDED FIX
+
+Priority 1: Stop unnecessary Settings writes
+
+The smallest immediate risk reduction is in:
+
+ESP32BLE/ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
+
+Function:
+saveDocumentText(_:to:), lines 1428–1436
+
+Before writing, require the proposed text to differ from savedDocumentEditorText.
+
+This would stop unchanged list-mode and selected-file transitions from rewriting the same cached text.
+
+Advantage:
+
+• Very small change.
+• Eliminates many unconditional stale writes.
+• Preserves actual in-app edits.
+
+Limitation:
+
+• If the user edits old cached contents after an external replacement, the text is dirty and would still overwrite the external file.
+• It does not protect ContentView grid edits.
+
+Priority 2: Add real conflict detection
+
+When a screen or text file is loaded, retain a baseline representing that disk version. The safest minimal baseline is the loaded file contents, since the source already reads them.
+
+Before any screen write:
+
+• Read the current disk contents.
+• Compare them with the baseline loaded into memory.
+• If disk differs and the in-memory text is unchanged, reload from disk instead of writing.
+• If both disk and memory changed, stop and present a conflict choice rather than silently overwriting.
+
+A content comparison is safer than modification date alone because:
+
+• Replacement utilities can preserve timestamps.
+• Timestamp resolution can miss rapid changes.
+• Atomic replacement can change file identity.
+
+At minimum, both write funnels should be protected:
+
+• ContentView.persistSlotLines(_:), lines 755–775.
+• SettingsScreen.saveDocumentText(_:to:), lines 1428–1436.
+
+saveSelectedDocumentAndReload(_:) should use the same protection or funnel through the protected Settings save path.
+
+Priority 3: Refresh external files on foreground
+
+Extend the existing scenePhase active branch in:
+
+ESP32BLE/ESP32BLE/Scrns/ContentView.swift
+lines 382–386
+
+to call refreshDocumentFiles().
+
+After refreshing:
+
+• If the selected screen still exists and has changed externally while local state is clean, reload it.
+• If the selected screen was deleted externally, select a valid fallback.
+• If local state is dirty and the disk changed, do not silently reload or overwrite; surface a conflict.
+
+Calling refreshDocumentFiles() alone fixes discovery of English.screen but does not update the displayed contents of an externally replaced widgets.screen.
+
+Priority 4: Refresh when opening Settings
+
+Calling refreshDocumentFiles() from showSettingsScreen(), lines 2773–2781, would ensure the file list is current before the editor opens.
+
+This is useful as a secondary refresh point, but it should not replace foreground refresh.
+
+14. SUGGESTED IMPLEMENTATION PHASES
+
+Phase F2A — eliminate unchanged automatic writes
+
+Objective:
+Prevent Settings transitions from rewriting an unchanged cached document.
+
+Affected file:
+Set_Screen.swift
+
+Likely functions:
+saveCurrentDocumentText()
+saveDocumentText(_:to:)
+
+Complexity:
+Low
+
+Smallest change:
+Use the existing savedDocumentEditorText as a dirty check.
+
+Dependency:
+None.
+
+Phase F2B — foreground file-list refresh
+
+Objective:
+Detect externally added and removed files.
+
+Affected file:
+ContentView.swift
+
+Likely location:
+scenePhase handler, lines 382–386.
+
+Complexity:
+Low
+
+Smallest change:
+Call the existing refreshDocumentFiles() when becoming active.
+
+Dependency:
+None.
+
+Limitation:
+Does not by itself reload an externally replaced selected file.
+
+Phase F2C — selected-file external-change detection
+
+Objective:
+Reload externally replaced screens when there are no local changes and prevent silent conflicts when both sides changed.
+
+Affected files:
+
+• ContentView.swift
+• Set_Screen.swift
+
+Likely functions:
+
+• loadFunctionKeys(from:)
+• persistSlotLines(_:)
+• saveSelectedDocumentAndReload(_:)
+• loadSelectedDocumentText()
+• saveDocumentText(_:to:)
+
+Complexity:
+Medium
+
+Smallest practical change:
+Retain loaded baseline contents and compare current disk contents immediately before writing.
+
+Dependency:
+F2A is recommended first so unnecessary save attempts are reduced.
+
+Phase F2D — conflict user interface
+
+Objective:
+Preserve both legitimate in-app edits and externally replaced disk data.
+
+Affected files:
+Primarily Set_Screen.swift, with a small ContentView integration if Main grid edits also need conflict presentation.
+
+Complexity:
+Medium
+
+Smallest practical behavior:
+
+• Reload external version when local state is clean.
+• When both changed, block the save and offer Reload or Replace.
+• Never silently choose the stale in-memory version.
+
+FINAL CONCLUSION
+
+Problem B has a definite source-level cause: the Documents directory is not refreshed after external changes.
+
+Problem A has a definite source-level vulnerability: cached screen contents are written without dirty-state or external-change checks.
+
+The source does not support the narrower conclusion that app termination itself performs the overwrite. The most credible application-side overwrite points are the unconditional Settings saves and full cached-grid writes that can occur before termination.
