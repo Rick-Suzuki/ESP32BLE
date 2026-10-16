@@ -1,207 +1,865 @@
-F2B.4 IMPLEMENTATION RESULT
+ESP32BLE — F2C.3
+SETTINGS EDITOR — REPLACEMENT IMPORT INVESTIGATION
 
-1. File modified
+READ-ONLY PROBE COMPLETE
+
+No files were modified.
+No build was performed.
+The application and simulator were not launched.
+
+1. EXECUTIVE SUMMARY
+
+CONFIRMED SOURCE FINDING:
+
+The reported stale-editor behaviour is explained by the current source.
+
+A successful replacement import:
+
+1. Replaces Widgets.screen on disk.
+2. Refreshes the cached file arrays.
+3. Calls ContentView.loadFunctionKeys(from:) for the imported screen.
+4. Reloads Main Screen state from the replacement file.
+5. Leaves the Settings editor unchanged when the selected filename and file-list paths remain the same.
+
+The Settings editor currently reloads in response to:
+
+• Initial Settings task execution.
+• documentFiles.map(.path) changing.
+• selectedDocumentName changing.
+• The Settings list mode changing.
+• Explicit text-file selection.
+
+A same-filename replacement changes the file contents but not its path or selected filename. Therefore, none of the relevant Settings editor observers is guaranteed to fire.
+
+This explains why:
+
+• Settings continues showing the old text.
+• Main already contains the imported version.
+• Selecting another screen and returning reloads the editor correctly.
+• Returning to Main displays the imported version.
+
+The smallest safe correction is in Set_Screen.swift: after a successful document import or replacement, explicitly reload the Settings editor when the successfully imported destination URL is the document currently loaded by the editor.
+
+2. IMPORT SOURCE LOCATIONS
+
+Primary file:
+
+ESP32BLE/ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
+
+File importer presentation:
+
+Lines 599–609
+
+The SwiftUI file importer:
+
+• Uses activeImportContentTypes.
+• Allows multiple selection except for full backup restore.
+• Captures activeImportMode.
+• Clears the pending presentation state.
+• Calls handleImportedSelection(_:importMode:).
+
+Import presentation state:
+
+isImporting
+Lines 705–715
+
+Import content types:
+
+activeImportContentTypes
+Lines 749–757
+
+Screen imports accept:
+
+• Individual screen documents.
+• ZIP screen packages.
+
+Full restoration accepts one ZIP archive.
+
+Import entry point:
+
+handleImportedSelection(_:importMode:)
+Lines 2608–2659
+
+For a screen import, it:
+
+1. Rejects full backup archives selected through the screen-import workflow.
+2. Creates a PendingImportSession.
+3. Calls processPendingImportSession(_:).
+
+Pending import session construction:
+
+makePendingImportSession(...)
+Lines 2728–2747
+
+It captures cached sets of existing filenames for screens, text files, configurations, images, sounds, and PDFs.
+
+Main import processing:
+
+processPendingImportSession(_:)
+Lines 2749–3011
+
+For screen files:
+
+Lines 2838–2867
+
+It:
+
+1. Resolves the destination as Documents/<imported filename>.
+2. Checks for a duplicate filename.
+3. Presents or applies conflict handling when the destination exists.
+4. Imports a new file when there is no conflict.
+5. Records successful imports.
+
+Duplicate conflict handling:
+
+applyPendingImportConflictIfNeeded(...)
+Lines 3062–3115
+
+Replace Existing action:
+
+resolvePendingImportConflictByReplacing()
+Lines 3117–3141
+
+The confirmation dialog invoking it is at lines 565–582.
+
+Replacement execution:
+
+importReplacingExistingFile(...)
+Lines 3179–3231
+
+Successful import recording:
+
+recordSuccessfulImport(...)
+Lines 3013–3053
+
+Import completion:
+
+finishPendingImportSession(_:)
+Lines 3295–3330
+
+3. SECURITY-SCOPED ACCESS
+
+Imported source files use security-scoped resource access.
+
+Relevant functions:
+
+readImportedFileData(from:)
+Lines 3995–4029
+
+stageImportedFileData(from:to:)
+Lines 4071–4113
+
+importFileData(from:to:)
+Lines 4128–4178
+
+Each calls:
+
+sourceURL.startAccessingSecurityScopedResource()
+
+and balances successful access with:
+
+sourceURL.stopAccessingSecurityScopedResource()
+
+Reading is coordinated with NSFileCoordinator.
+
+4. REPLACEMENT IMPLEMENTATION AND ATOMICITY
+
+There are two replacement paths.
+
+Normal screen-import replacement:
+
+importReplacingExistingFile(...)
+Lines 3212–3226
+
+For a normal screen import:
+
+1. If the destination exists, removeItem(at:) deletes it.
+2. importResolvedFile(...) imports the replacement.
+3. importFileData(...) first stages the source in a temporary URL.
+4. moveItem(at:to:) moves that temporary file to the destination.
+
+CONFIRMED:
+
+This complete normal replacement operation is not atomic because the old destination is explicitly removed before the replacement is installed. There is a period during which the destination does not exist.
+
+The final move from the temporary URL is a single filesystem move, but the overall remove-then-import sequence is not an atomic replacement.
+
+Full-backup restore replacement:
+
+importReplacingExistingFile(...)
+Lines 3190–3209
+
+This uses:
+
+safelyReplaceExistingImportedFile(from:to:)
+Lines 4031–4069
+
+That function:
+
+1. Creates an item-replacement directory.
+2. Stages and verifies the imported file.
+3. Calls FileManager.replaceItemAt(...).
+
+This is the safer replacement-style API and is distinct from the normal Import Screen replacement route.
+
+5. IMPORT COMPLETION PATH
+
+finishPendingImportSession(_:)
+Lines 3295–3330
+
+After at least one successful import, it performs:
+
+markImportedContentChanged()
+
+at line 3310.
+
+markImportedContentChanged()
+Lines 3985–3988
+
+It calls:
+
+refreshDocumentFiles()
+
+and changes:
+
+importRefreshID = UUID()
+
+The table section uses that identity here:
+
+documentTableSection
+Lines 1106–1144
+
+Specifically:
+
+.id(importRefreshID)
+
+at line 1143.
+
+This reconstructs the file-table section after an import. It does not reload the editor text.
+
+After refreshing the file list, finishPendingImportSession(_:) does:
+
+if let firstImportedDocumentURL = session.firstImportedDocumentURL {
+loadFunctionKeys(firstImportedDocumentURL)
+
+}
+
+at lines 3312–3314.
+
+The loadFunctionKeys closure is supplied by ContentView as selectDocument:
+
+ContentView.swift
+SettingsScreen construction
+Lines 2803–2827
+
+The callback assignment is:
+
+loadFunctionKeys: selectDocument
+
+at line 2814.
+
+6. CONTENTVIEW IMPORT SELECTION PATH
+
+File:
 
 ESP32BLE/ESP32BLE/Scrns/ContentView.swift
 
-No Main Screen, Settings, project, text, or screen files were modified.
+selectDocument(_:)
+Lines 2721–2723
 
-2. Functions and source areas modified
+It directly calls:
 
-• MainScreenSaveResult added at approximately lines 175–181.
-• Main Screen baseline and alert state added at approximately lines 199–203.
-• Main Screen save alert added at approximately lines 344–348.
-• loadFunctionKeys(from:) updated at approximately lines 691–711.
-• persistSlotLines(_:) updated at approximately lines 778–807.
-• saveMainScreenText(_:) added at approximately lines 809–838.
-• presentMainScreenSaveAlert(title:message:) added at approximately lines 840–844.
-• resizeSelectedDocumentGrid(from:to:) updated at approximately line 1311.
-• moveSelectedDocumentSlot(...) updated at approximately lines 1444–1447.
-• duplicateSelectedDocumentSlot(from:to:) updated at approximately line 2540.
+loadFunctionKeys(from: fileURL)
 
-3. Baseline capture
+loadFunctionKeys(from:)
+Lines 691–711
 
-After loadFunctionKeys(from:) successfully reads a screen, ContentView now retains:
+This function reads the current disk contents at lines 692–694 and updates:
 
-• loadedScreenBaselineURL: the exact URL that was loaded.
-• loadedScreenBaselineText: the exact unmodified text read from disk.
+• Main Screen slot data.
+• Main Screen configuration.
+• Main Screen disk baseline URL.
+• Main Screen disk baseline text.
+• selectedDocumentName.
 
-The baseline is captured only after a successful String(contentsOf:) operation.
+Relevant assignments:
 
-If loading fails:
+loadedScreenBaselineURL = fileURL
+loadedScreenBaselineText = contents
+selectedDocumentName = fileURL.lastPathComponent
 
-• The baseline URL is cleared.
-• The baseline text is cleared.
-• No empty or stale text becomes a valid baseline.
+Lines 700–703.
 
-Loading another screen replaces both baseline values.
+Therefore, import completion does load the replacement into Main Screen memory immediately.
 
-4. URL association
+For a same-name replacement, however:
 
-Before saving, saveMainScreenText(_:) requires:
+selectedDocumentName = "Widgets.screen"
 
-• A valid loaded baseline URL.
-• A valid loaded baseline text.
-• The baseline URL’s filename to match selectedDocumentName.
+assigns the same value already held by selectedDocumentName. SwiftUI does not produce a meaningful selectedDocumentName change for Settings to observe.
 
-The cached document list is not used to establish the baseline or determine whether the loaded file still exists.
+7. SETTINGS EDITOR STATE
 
-5. Disk comparison
+File:
 
-Before writing, saveMainScreenText(_:) now:
+ESP32BLE/ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
 
-• Verifies that the baseline exists and belongs to the selected screen.
-• Checks the exact baseline URL with FileManager.fileExists.
-• Reads the current file contents directly from disk.
-• Compares the disk text with the proposed output and loaded baseline.
-• Writes only when disk still matches the baseline.
+Editor state:
 
-Modification dates are not used.
+Lines 232–244
 
-6. Save-result handling
+Relevant properties:
 
-The private MainScreenSaveResult distinguishes:
+documentEditorText
+Line 232
 
-• saved
-• unchanged
-• conflict
-• missing
-• failed
+isLoadingDocumentText
+Line 234
 
-Disk unchanged:
+loadedDocumentName
+Line 238
 
-• Proposed text is written.
-• The exact successfully written text becomes the new baseline.
-• Normal subsequent edits continue working.
+loadedDocumentURL
+Line 239
 
-Disk already equals proposed text:
+savedDocumentEditorText
+Line 240
 
-• No write occurs.
-• The verified disk text becomes the baseline.
-• The requested slot state is applied.
-• The operation succeeds without a false conflict.
+blockedDocumentSaveResult
+Line 244
 
-Disk changed externally:
+Their roles are:
 
-• No write occurs.
-• The external file is preserved.
-• The baseline is not replaced with stale local text.
-• The operation returns false.
+documentEditorText:
+Current visible and editable buffer.
 
-Disk deleted:
+savedDocumentEditorText:
+Exact text last loaded successfully from disk or saved successfully.
 
-• The file is not recreated.
-• No write occurs.
-• The operation returns false.
+loadedDocumentName:
+Filename associated with the editor baseline.
 
-Read or write failure:
+loadedDocumentURL:
+URL associated with the editor baseline.
 
-• The operation returns false.
-• The baseline is not updated.
+blockedDocumentSaveResult:
+Persistent conflict/failure state that can block unsafe transitions.
 
-7. Rejected-edit behavior
+8. EDITOR LOADING PATH
 
-persistSlotLines(_:) continues to apply new slot lines only after a saved or synchronized result.
+Primary loader:
 
-For conflict, missing, or failure:
+loadSelectedDocumentText()
+Lines 1384–1413
 
-• The proposed slot lines are not applied to ContentView.
-• The previously displayed screen state remains visible.
-• The disk file remains untouched.
-• A warning clearly states that the attempted edit was not saved.
+It resolves either:
 
-This uses the safe rollback behavior permitted by the specification. No external replacement is automatically loaded over the visible screen. Navigating away and returning will use the normal disk-loading path.
+• selectedTextFileURL in Text mode.
+• selectedDocumentFileURL in Screens mode.
 
-8. Caller-result corrections
+On successful reading, it synchronously updates:
 
-Three existing wrappers previously discarded persistSlotLines(_:) failure:
+documentEditorText = loadedText
+savedDocumentEditorText = loadedText
+loadedDocumentName = fileURL.lastPathComponent
+loadedDocumentURL = fileURL
+blockedDocumentSaveResult = nil
 
-• Grid resize always returned true.
-• Tile movement returned its new anchor.
-• Slot duplication always returned true.
+Lines 1399–1406.
 
-They now propagate rejection:
+It wraps these changes with isLoadingDocumentText, preventing the editor-text onChange handler from saving the freshly loaded text.
 
-• Resize returns false.
-• Movement returns nil.
-• Duplication returns false.
+Text-file-specific loader:
 
-The existing restoration, undo, redo, cut, paste, delete, and direct slot-edit paths already receive the persistence Bool result through their existing callback structures.
+loadTextFile(_:)
+Lines 1415–1434
 
-9. User warnings
+This performs equivalent editor and baseline updates for a selected .txt file.
 
-External modification:
+9. WHAT TRIGGERS AN EDITOR RELOAD
 
-Title:
-File Changed Externally
+Settings body observers:
 
-Message:
-This screen was changed outside ESP.
-Your edit has not been saved.
+Lines 502–527
 
-Deleted file:
+Initial Settings load:
 
-Title:
-File Removed
+.task {
+loadSelectedDocumentText()
 
-Message:
-This screen was removed outside ESP.
-Your edit has not been saved.
+}
 
-Other failure:
+Lines 502–504.
 
-Title:
-File Could Not Be Saved
+File-path array change:
 
-Message:
-Your edit has not been saved.
+.onChange(of: documentFiles.map(.path))
 
-No overwrite, merge, Save As, or automatic conflict resolution was added.
+Lines 508–512.
 
-10. Main Screen write-path audit
+Selected screen filename change:
 
-Confirmed Main Screen screen-content operations use persistSlotLines(_:) through:
+.onChange(of: selectedDocumentName)
 
-• Grid resizing.
-• Tile movement.
-• Slot duplication.
-• Slot editing.
-• Restore operations.
-• Cut and paste.
-• Popup duplication and resizing.
-• Undo and redo.
-• Delete-all and related slot clearing.
+Lines 513–518.
 
-The separate saveSelectedDocumentAndReload(_:) blind writer remains in ContentView but is still unused after F2B.3. It was not activated or modified.
+List-category change:
 
-Default document creation remains an explicit creation workflow rather than an existing-screen edit.
+.onChange(of: listModeRawValue)
 
-Screen configuration JSON writes are separate from .screen content persistence and were not changed.
+Lines 519–523.
 
-11. Remaining limitations
+Editor changes:
 
-Some Main Screen editing actions historically ignore the returned Bool after calling updateFunctionKeySlot. The central ContentView writer nevertheless rejects the save, does not apply the proposed screen state, and presents the warning. Those actions may close their transient editor or popup, but the displayed screen returns to or retains its previous state.
+.onChange(of: documentEditorText)
 
-The unused saveSelectedDocumentAndReload(_:) function remains inherently unprotected if reactivated later.
+Lines 524–527.
 
-No foreground monitoring or automatic external-file refresh was added.
+That last observer saves; it does not reload.
 
-12. Validation
+The selected screen URL is resolved by filename:
 
-Xcode live diagnostics:
+selectedDocumentFileURL
+Lines 1884–1886
 
-No issues found in ContentView.swift.
+The available screen list is derived from the cached documentDirectorySnapshot:
 
-Build result:
+availableDocumentURLs
+Lines 1896–1903.
 
-The ESP32BLE project built successfully.
+10. EXACT SAME-FILENAME FAILURE
 
-Build duration:
+Trace for Widgets.screen:
 
-32.563 seconds.
+A. Widgets.screen is selected.
 
-No build errors were reported.
+loadSelectedDocumentText() reads it and sets:
 
-The application and simulator were not launched.
+loadedDocumentName = "Widgets.screen"
+loadedDocumentURL = Documents/Widgets.screen
+documentEditorText = old contents
+savedDocumentEditorText = old contents
 
-The SwiftUI guidance influenced keeping the baseline and alert state private to ContentView and applying UI state only after persistence succeeds.
+B. A replacement Widgets.screen is chosen.
+
+handleImportedSelection(_:importMode:) creates an import session.
+
+C. Duplicate detection finds the existing filename.
+
+processPendingImportSession(_:) reaches the duplicate branch at lines 2838–2850.
+
+D. The user chooses Replace Existing.
+
+resolvePendingImportConflictByReplacing() calls importReplacingExistingFile(...).
+
+E. The destination is replaced.
+
+For normal screen import, the existing file is removed and the imported file is moved into Documents.
+
+F. Import completion refreshes the file list.
+
+The refreshed array still contains the same path:
+
+Documents/Widgets.screen
+
+The expression observed by Settings is:
+
+documentFiles.map(.path)
+
+Its value is effectively unchanged.
+
+G. Import completion calls loadFunctionKeys(firstImportedDocumentURL).
+
+ContentView reads the replacement and updates Main state.
+
+H. ContentView assigns:
+
+selectedDocumentName = "Widgets.screen"
+
+But selectedDocumentName was already "Widgets.screen".
+
+I. No editor reload occurs.
+
+Neither observed editor trigger changes:
+
+• The selected filename remains the same.
+• The screen path list remains the same.
+
+The table's importRefreshID changes, but that identity applies only to SettingsDocumentTableSection. It does not recreate or reload the editor.
+
+This is the first confirmed missing operation: no call to loadSelectedDocumentText() follows successful replacement of the currently loaded editor document.
+
+11. WHY SWITCHING AWAY AND BACK WORKS
+
+Selecting a different screen changes selectedDocumentName.
+
+The observer at lines 513–518 runs:
+
+1. saveCurrentDocumentText()
+2. loadSelectedDocumentText()
+
+Selecting Widgets.screen again changes selectedDocumentName back to Widgets.screen, so the same observer runs again and reads the replacement from disk.
+
+That explains the observed recovery exactly.
+
+12. DIFFERENT-FILENAME IMPORT
+
+CONFIRMED SOURCE BEHAVIOUR:
+
+finishPendingImportSession(_:) stores the first successfully imported screen URL in session.firstImportedDocumentURL and calls loadFunctionKeys(firstImportedDocumentURL).
+
+If Another.screen is imported while Widgets.screen is selected:
+
+1. ContentView loads Another.screen.
+2. selectedDocumentName changes from Widgets.screen to Another.screen.
+3. The Settings selectedDocumentName observer runs.
+4. It safely processes the old editor through saveCurrentDocumentText().
+5. If the transition is permitted, loadSelectedDocumentText() loads Another.screen.
+
+Thus, a different filename has an existing selection-change signal that a same-filename replacement lacks.
+
+13. DIRTY EDITOR BEHAVIOUR
+
+The editor uses immediate automatic saving:
+
+.onChange(of: documentEditorText) {
+guard !isLoadingDocumentText else { return }
+
+saveCurrentDocumentText()
+
+}
+
+Lines 524–527.
+
+Therefore, under normal successful operation, there is not a prolonged unsaved editor state: text changes immediately pass through the protected save function.
+
+A genuinely locally modified but unsaved state can still exist when:
+
+• A save fails.
+• A disk conflict is detected.
+• A blocked save result prevents the write.
+• State changes occur around an import or alert transition.
+
+Current replacement import does not ask saveCurrentDocumentText() to validate the editor before replacing the destination. The explicit Replace Existing action directly performs the import replacement.
+
+After successful replacement, if the old editor remains visible:
+
+• documentEditorText contains the pre-import text.
+• savedDocumentEditorText contains the pre-import baseline.
+• The disk contains the imported text.
+
+The next protected save compares all three.
+
+If the old editor has no local changes:
+
+LOCAL == BASELINE
+DISK != BASELINE
+
+saveDocumentText(_:to:) reloads disk into the editor and returns .reloadedFromDisk.
+
+Lines 1604–1609.
+
+If the editor contains local changes:
+
+LOCAL != BASELINE
+DISK != BASELINE
+DISK != LOCAL
+
+saveDocumentText(_:to:) sets .conflict, presents File Changed Externally, and does not overwrite the import.
+
+Lines 1612–1615.
+
+Thus, current F2B protection prevents the stale editor from silently overwriting the imported version.
+
+However, it does not proactively update the editor immediately after the explicit replacement.
+
+14. INTERACTION WITH EXISTING SAVE PROTECTION
+
+Protected save function:
+
+saveDocumentText(_:to:)
+Lines 1558–1630
+
+It verifies:
+
+• The requested URL matches loadedDocumentName.
+• The requested URL matches loadedDocumentURL.
+• The file still exists.
+• Current disk text, saved baseline, and local editor text are consistent.
+
+Its key decisions are:
+
+Disk already equals local:
+Lines 1599–1601
+No write; baseline synchronized.
+
+Local equals baseline but disk changed:
+Lines 1604–1609
+Reload disk into editor.
+
+Disk does not equal baseline and local has changed:
+Lines 1612–1615
+Conflict; no write.
+
+Disk unchanged since baseline and local changed:
+Lines 1618–1622
+Safe write and baseline update.
+
+Confirmed deletion handling:
+
+clearLoadedDocumentAfterConfirmedDeletion()
+Lines 1520–1536
+
+Zero-screen navigation protection:
+
+saveAndReturnToMain(using:)
+Lines 1473–1501
+
+Main Screen has its separate disk baseline in ContentView.loadFunctionKeys(from:) at lines 700–701.
+
+RECOMMENDATION:
+
+The import correction should not call saveDocumentText(_:to:) after replacement. That would treat an intentional replacement import as an external conflict when local text differs.
+
+Instead, after successful explicit Replace Existing, the imported disk version should be deliberately loaded into the editor and installed as the new baseline. This is consistent with the stated rule that a successful explicit replacement import is authoritative.
+
+15. MINIMUM SAFE CORRECTION
+
+Recommended file:
+
+ESP32BLE/ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
+
+No ContentView change is necessary.
+
+Preferred correction point:
+
+recordSuccessfulImport(...)
+Lines 3013–3053
+
+Why this is the safest small central point:
+
+• It executes only after the file operation succeeds.
+• It receives the actual destination targetURL.
+• It knows the ImportedContentKind.
+• It covers normal screen import and full-backup replacement.
+• It does not run after an import failure.
+• It avoids relying on selectedDocumentName changing.
+• It avoids relying on the cached path list changing.
+
+Recommended behaviour:
+
+After recording a successful document import:
+
+1. Check contentKind == .document.
+2. Check that targetURL identifies the same file as loadedDocumentURL.
+3. If so, call the existing loadSelectedDocumentText().
+4. Let loadSelectedDocumentText() update:
+   • documentEditorText
+   • savedDocumentEditorText
+   • loadedDocumentName
+   • loadedDocumentURL
+   • blockedDocumentSaveResult
+5. Do not invoke the protected save path first.
+6. Do not write editor contents to disk.
+
+A small helper could make the intent explicit, for example:
+
+reloadEditorAfterSuccessfulImportIfNeeded(at:)
+
+The helper should:
+
+• Compare standardized destination and loaded URLs, or otherwise use a reliable same-file comparison.
+• Do nothing for images, sounds, PDFs, configurations, or unrelated screen files.
+• Reload only after successful document installation.
+• Use the existing loading logic and isLoadingDocumentText protection.
+
+Alternative correction point:
+
+importReplacingExistingFile(...)
+Lines 3179–3231
+
+Reloading there immediately after a successful document replacement would also fix the reported case. However, recordSuccessfulImport(...) is more central and also covers successful non-conflict imports that resolve to the currently loaded identity.
+
+Important implementation detail:
+
+The reload must be performed before any later observer can interpret the old editor buffer against the new disk contents. The loader updates the editor and baseline together under isLoadingDocumentText, preventing recursive autosave.
+
+16. IMPORT FAILURE BEHAVIOUR
+
+If replacement import fails:
+
+• recordSuccessfulImport(...) is not called.
+• recordImportFailure(...) records the failure.
+• renameAlertMessage reports the problem.
+• The proposed reload would not run.
+• Existing editor text and baseline remain unchanged.
+
+This satisfies the requirement that a failed import must not replace the visible editor contents.
+
+17. OTHER IMPORTS
+
+Different screen filename:
+
+Existing behaviour should remain:
+
+• The imported screen becomes the selected Main document through loadFunctionKeys.
+• selectedDocumentName changes.
+• The Settings observer loads it.
+
+Unrelated imported screen:
+
+If the product intends firstImportedDocumentURL to become selected, that existing behaviour remains unchanged.
+
+Images, sounds, PDFs, configurations:
+
+The proposed guard on contentKind == .document leaves them unaffected.
+
+Keep Both:
+
+The new uniquely named file does not equal loadedDocumentURL, so the current editor remains unchanged until the existing selection mechanism selects another screen.
+
+Skip:
+
+No successful import is recorded, so no reload occurs.
+
+Full backup:
+
+If the full restore successfully replaces the document currently loaded in the editor, the same post-success reload can synchronize the editor and baseline. Other restored files remain unaffected.
+
+18. FILE-LIST REFRESH FINDINGS
+
+ContentView.refreshDocumentFiles()
+ContentView.swift lines 524–560
+
+It rescans Documents and updates:
+
+documentFiles
+documentDirectorySnapshot
+
+Settings receives both arrays at:
+
+ContentView.swift lines 2809–2812.
+
+Settings derives its screen URLs from documentDirectorySnapshot at:
+
+Set_Screen.swift lines 1896–1903.
+
+Import completion refreshes these arrays through:
+
+markImportedContentChanged()
+Set_Screen.swift lines 3985–3988.
+
+For a replacement, the filename/path set does not change. Consequently, the file table can represent the correct current file while the editor retains old in-memory contents.
+
+This means the file list and editor can temporarily represent different versions of the same file.
+
+19. DEVICE TEST CHECKLIST
+
+TEST A — SAME-FILENAME REPLACEMENT
+
+1. Select Widgets.screen.
+2. Note its editor contents.
+3. Import a different Widgets.screen.
+4. Choose Replace Existing.
+
+Expected:
+
+• Import succeeds.
+• Editor immediately displays imported contents.
+• Editor baseline matches imported disk text.
+• No screen switching is required.
+
+TEST B — DIFFERENT-FILENAME IMPORT
+
+1. Select Widgets.screen.
+2. Import Another.screen.
+
+Expected:
+
+• Existing selection behaviour remains unchanged.
+• Another.screen is selected and loaded according to current import behaviour.
+• No stale Widgets.screen contents appear under Another.screen.
+
+TEST C — LOCALLY EDITED FILE
+
+1. Select Widgets.screen.
+2. Edit its contents.
+3. Confirm normal autosave has completed where applicable.
+4. Import replacement Widgets.screen.
+5. Choose Replace Existing.
+
+Expected:
+
+• Successful explicit replacement becomes authoritative.
+• Editor displays imported contents.
+• Old local editor text does not overwrite the import.
+• No false conflict remains after the imported file becomes the new baseline.
+
+TEST D — FAILED IMPORT
+
+1. Attempt a corrupt, inaccessible, or otherwise failing import.
+
+Expected:
+
+• Existing editor contents remain visible.
+• Existing baseline remains intact.
+• No editor reload occurs.
+• Existing import error appears.
+
+TEST E — MAIN SCREEN
+
+1. Replace selected Widgets.screen.
+2. Return to Main.
+
+Expected:
+
+• Main displays imported contents.
+• Settings and Main agree on the file version.
+
+TEST F — EDIT AFTER IMPORT
+
+1. Replace Widgets.screen.
+2. Confirm imported contents appear.
+3. Edit the imported contents.
+
+Expected:
+
+• Protected save succeeds normally.
+• No false File Changed Externally alert.
+• The edit is saved against the imported baseline.
+
+TEST G — EXTERNAL REPLACEMENT
+
+1. Replace Widgets.screen through Finder/iTunes rather than Settings import.
+2. Make a local editor edit or trigger a protected transition.
+
+Expected:
+
+• Existing three-way conflict protection remains active.
+• No imported-file-specific automatic reload is applied.
+• External contents are not overwritten.
+
+TEST H — IPAD AND IPHONE
+
+Repeat same-name replacement on both layouts.
+
+Expected:
+
+• Shared Settings logic behaves identically.
+• No layout changes are involved.
+
+20. REMAINING RISKS
+
+CONFIRMED:
+
+The normal screen-import replacement removes the destination before installing its replacement. A failed import after deletion could leave the destination absent. This is separate from the stale-editor issue.
+
+RECOMMENDATION:
+
+Do not broaden F2C.3 into an atomic-import rewrite. The editor refresh can be corrected independently and minimally.
+
+Care is also required not to reload an unrelated selected editor merely because some other document was imported. The target destination must match the editor’s loaded URL.
+
+A full-backup import can replace several files. The correction should evaluate each successfully imported document rather than assuming only session.firstImportedDocumentURL matters.
+
+No source changes were made during this investigation.

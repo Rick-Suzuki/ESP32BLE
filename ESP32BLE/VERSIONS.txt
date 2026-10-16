@@ -1,4 +1,17 @@
 
+
+todo - tomorrow
+---------------
+test widgets
+
+F2C.4: Extend the existing safe-replacement mechanism to ordinary screen imports.
+
+--------------------------------
+
+261016 Fri 2004
+F2C.3 - SETTINGS EDITOR — SAME-FILENAME IMPORT REFRESH
+V62.64
+
 261016 Fri 1619
 F2B.4 — Main Screen edit protection - complete
 V62.63

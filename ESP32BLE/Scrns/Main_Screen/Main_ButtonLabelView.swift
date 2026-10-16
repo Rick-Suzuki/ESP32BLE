@@ -356,7 +356,8 @@ struct MainScreenButtonLabelView: View {
             MainGridStopwatchWidgetView(
                 title: rightTitleWithoutColorPrefix,
                 fontSize: boxFontSize,
-                foregroundColor: buttonTextColor
+                foregroundColor: buttonTextColor,
+                isInteractionEnabled: !isGridEditModeEnabled
             )
         case .ambientSound(let filename):
             MainGridAmbientSoundWidgetView(
@@ -1480,6 +1481,7 @@ private struct MainGridStopwatchWidgetView: View {
     let title: String
     let fontSize: Double
     let foregroundColor: Color
+    let isInteractionEnabled: Bool
 
     @State private var elapsedTenths = 0
     @State private var isRunning = false
@@ -1504,13 +1506,19 @@ private struct MainGridStopwatchWidgetView: View {
         .foregroundStyle(foregroundColor)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .contentShape(Rectangle())
-        .onTapGesture {
-            isRunning.toggle()
-        }
-        .onLongPressGesture(minimumDuration: 0.5) {
-            isRunning = false
-            elapsedTenths = 0
-        }
+        .gesture(
+            TapGesture(count: 2)
+                .onEnded {
+                    elapsedTenths = 0
+                }
+                .exclusively(before:
+                    TapGesture()
+                        .onEnded {
+                            isRunning.toggle()
+                        }
+                ),
+            including: isInteractionEnabled ? .all : .none
+        )
         .onReceive(ticker) { _ in
             guard isRunning else {
                 return

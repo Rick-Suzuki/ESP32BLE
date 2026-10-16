@@ -81,9 +81,9 @@ struct SettingsScreen: View {
 
         var allowsDocumentTransition: Bool {
             switch self {
-            case .unchanged, .saved, .reloadedFromDisk:
+            case .unchanged, .saved, .reloadedFromDisk, .missing:
                 return true
-            case .conflict, .missing, .failed:
+            case .conflict, .failed:
                 return false
             }
         }
@@ -1123,6 +1123,7 @@ struct SettingsScreen: View {
             soundScrollPositionID: soundScrollPositionID,
             pdfScrollPositionID: pdfScrollPositionID,
             allScrollPositionID: allScrollPositionID,
+            refreshFiles: refreshDocumentFiles,
             canDeleteDocuments: canDeleteDocuments,
             imagePreviewSection: settingsTablePreviewSection,
             loadFunctionKeys: handleSettingsDocumentSelection,
@@ -1476,8 +1477,81 @@ struct SettingsScreen: View {
         }
 
         let saveResult = saveCurrentDocumentText(textToSave)
-        if saveResult.allowsDocumentTransition {
-            returnToMain()
+        guard saveResult.allowsDocumentTransition else {
+            return
+        }
+
+        do {
+            guard try hasScreenDocumentsOnDisk() else {
+                presentDocumentSaveAlert(
+                    title: "No Screens Available",
+                    message: "Please create a new screen or import a screen before going to Main."
+                )
+                return
+            }
+        } catch {
+            presentDocumentSaveAlert(
+                title: "File Could Not Be Saved",
+                message: "The Documents folder could not be accessed. Please try again."
+            )
+            return
+        }
+
+        returnToMain()
+    }
+
+    private func hasScreenDocumentsOnDisk() throws -> Bool {
+        guard let directoryURL = currentDocumentsDirectoryURL else {
+            throw CocoaError(.fileReadUnknown)
+        }
+
+        let fileURLs = try FileManager.default.contentsOfDirectory(
+            at: directoryURL,
+            includingPropertiesForKeys: [.isRegularFileKey],
+            options: [.skipsHiddenFiles]
+        )
+        let regularFileURLs = try fileURLs.filter { fileURL in
+            try fileURL.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile == true
+        }
+
+        return !preferredScreenDocumentURLs(from: regularFileURLs).isEmpty
+    }
+
+    private func clearLoadedDocumentAfterConfirmedDeletion() {
+        let deletedDocumentName = loadedDocumentName
+        let deletedDocumentDisplayName = URL(fileURLWithPath: deletedDocumentName)
+            .deletingPathExtension()
+            .lastPathComponent
+
+        isLoadingDocumentText = true
+        loadedDocumentName = ""
+        loadedDocumentURL = nil
+        blockedDocumentSaveResult = nil
+        savedDocumentEditorText = ""
+        documentEditorText = ""
+        if documentNameDraft == deletedDocumentName || documentNameDraft == deletedDocumentDisplayName {
+            documentNameDraft = ""
+        }
+        isLoadingDocumentText = false
+    }
+
+    private func isConfirmedMissingDocument(at fileURL: URL) throws -> Bool {
+        do {
+            _ = try fileURL.resourceValues(forKeys: [.isRegularFileKey])
+            return false
+        } catch {
+            let cocoaError = error as NSError
+            let missingFileErrorCodes = [
+                CocoaError.Code.fileNoSuchFile.rawValue,
+                CocoaError.Code.fileReadNoSuchFile.rawValue
+            ]
+
+            guard cocoaError.domain == NSCocoaErrorDomain,
+                  missingFileErrorCodes.contains(cocoaError.code) else {
+                throw error
+            }
+
+            return true
         }
     }
 
@@ -1492,14 +1566,31 @@ struct SettingsScreen: View {
         }
 
         if let blockedDocumentSaveResult {
-            presentDocumentSaveAlert(for: blockedDocumentSaveResult)
-            return blockedDocumentSaveResult
+            if blockedDocumentSaveResult == .missing {
+                do {
+                    if try isConfirmedMissingDocument(at: fileURL) {
+                        clearLoadedDocumentAfterConfirmedDeletion()
+                        return .missing
+                    }
+                    self.blockedDocumentSaveResult = nil
+                } catch {
+                    presentDocumentSaveAlert(for: .failed)
+                    return .failed
+                }
+            } else {
+                presentDocumentSaveAlert(for: blockedDocumentSaveResult)
+                return blockedDocumentSaveResult
+            }
         }
 
-        guard FileManager.default.fileExists(atPath: fileURL.path) else {
-            blockedDocumentSaveResult = .missing
-            presentDocumentSaveAlert(for: .missing)
-            return .missing
+        do {
+            if try isConfirmedMissingDocument(at: fileURL) {
+                clearLoadedDocumentAfterConfirmedDeletion()
+                return .missing
+            }
+        } catch {
+            presentDocumentSaveAlert(for: .failed)
+            return .failed
         }
 
         do {
@@ -2936,6 +3027,7 @@ struct SettingsScreen: View {
             if session.firstImportedDocumentURL == nil {
                 session.firstImportedDocumentURL = targetURL
             }
+            reloadEditorAfterSuccessfulImportIfNeeded(at: targetURL)
         case .config:
             session.existingConfigNames.insert(fileNameKey)
         case .text:
@@ -2959,6 +3051,18 @@ struct SettingsScreen: View {
                 session.firstImportedPDFURL = targetURL
             }
         }
+    }
+
+    private func reloadEditorAfterSuccessfulImportIfNeeded(at targetURL: URL) {
+        guard listMode == .files,
+              let loadedDocumentURL,
+              let selectedDocumentFileURL,
+              loadedDocumentURL.standardizedFileURL == targetURL.standardizedFileURL,
+              selectedDocumentFileURL.standardizedFileURL == targetURL.standardizedFileURL else {
+            return
+        }
+
+        loadSelectedDocumentText()
     }
 
     private func recordImportFailure(fileName: String, error: Error, session: inout PendingImportSession) {

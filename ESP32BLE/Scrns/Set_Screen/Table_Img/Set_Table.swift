@@ -28,6 +28,7 @@ struct SettingsDocumentTableSection: View {
     @Binding var soundScrollPositionID: String?
     @Binding var pdfScrollPositionID: String?
     @Binding var allScrollPositionID: String?
+    let refreshFiles: () -> Void
     let canDeleteDocuments: Bool
     let imagePreviewSection: AnyView
     let loadFunctionKeys: (URL) -> Void
@@ -43,6 +44,8 @@ struct SettingsDocumentTableSection: View {
     let deletePDF: (URL) -> Void
     let deleteAllFile: (URL) -> Void
     let showsOuterBorder: Bool
+    @State private var showsRefreshConfirmation = false
+    @State private var refreshConfirmationTask: Task<Void, Never>?
 
 	// set table font size for iphone
     private var tableRowFont: Font? {
@@ -100,6 +103,22 @@ struct SettingsDocumentTableSection: View {
                 .scrollPosition(id: activeScrollPositionID, anchor: .top)
                 .background(.clear)
                 .frame(height: listHeight)
+                .refreshable {
+                    refreshFiles()
+                    showRefreshConfirmation()
+                }
+                .overlay(alignment: .top) {
+                    if showsRefreshConfirmation {
+                        Text("Refreshed Files")
+                            .font(.caption)
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(Color.gray.opacity(0.9), in: .capsule)
+                            .padding(.top, 8)
+                            .allowsHitTesting(false)
+                    }
+                }
 
                 itemCountBox
                     .frame(height: itemCountHeight)
@@ -122,6 +141,19 @@ struct SettingsDocumentTableSection: View {
             }
         }
         .clipShape(.rect(cornerRadius: 0))
+        .onDisappear {
+            refreshConfirmationTask?.cancel()
+        }
+    }
+
+    private func showRefreshConfirmation() {
+        refreshConfirmationTask?.cancel()
+        showsRefreshConfirmation = true
+        refreshConfirmationTask = Task {
+            try? await Task.sleep(nanoseconds: 1_500_000_000)
+            guard !Task.isCancelled else { return }
+            showsRefreshConfirmation = false
+        }
     }
 
     private func safeHeight(_ height: CGFloat) -> CGFloat {
