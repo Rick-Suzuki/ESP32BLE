@@ -14,6 +14,34 @@ import UIKit
 import Combine
 import PDFKit
 
+// MARK: - BM:🅱️  W2A: Command Classification
+private enum CommandClassification {
+    case internalCommand
+    case file
+    case external
+}
+
+private func commandClassification(for token: String) -> CommandClassification {
+    let trimmedToken = token.trimmingCharacters(in: .whitespacesAndNewlines)
+
+    if trimmedToken.hasPrefix(".") {
+        return .internalCommand
+    }
+
+    let recognizedFileExtensions: Set<String> = [
+        "screen", "s", "txt", "md", "pdf",
+        "png", "jpg", "jpeg", "gif", "heic", "webp",
+        "mp3", "wav", "m4a", "aiff", "aac", "caf"
+    ]
+    let pathExtension = URL(fileURLWithPath: trimmedToken).pathExtension.lowercased()
+
+    if recognizedFileExtensions.contains(pathExtension) {
+        return .file
+    }
+
+    return .external
+}
+
 // MARK: - BM:🅱️🅱️🅱️ ESP-OUTPUT diagnostic probe
 private enum ESPOutputProbe {
     private static var sequenceNumber = 0
@@ -139,6 +167,12 @@ extension MainScreen {
 		
         guard mainGridButtonMode != .disabled else {
             return
+        }
+
+        // MARK: - BM:🅱️  Main Screen button command logging
+        if db_btnCode {
+            let command = entry.rawLine.components(separatedBy: "::").first ?? entry.rawLine
+            print("🐞 \(command)")
         }
 
         if mainGridButtonMode.speaksText {

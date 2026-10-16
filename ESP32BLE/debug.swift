@@ -10,7 +10,7 @@ import AVFoundation
 import Foundation
 
 // debug BT - prints
-nonisolated let db_bt = false
+nonisolated let db_btnCode = true
 
 nonisolated let db_dbCode = true
 

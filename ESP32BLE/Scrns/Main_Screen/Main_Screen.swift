@@ -356,80 +356,115 @@ private let smartButtonSwatchHexColors = [
 		// *** TIME, DAY, DATE ETC ***
 		//
 		("clock", "clock","""
-Inserts the current time.
+**Insert a Digiral Clock**
 	
+**Syntax:** clock
+
 Optionally specify a city:
 	
 clock Paris
 clock Tokyo
+
+**Note:** This command works without an ESP32 or Mac Helper connection.
 """),
 		//
 		//----------------------------------------
 		//
 		("date", "date ", """
-Inserts the current date.
+**Insert the Current Date**
  
+**Syntax:** date
+
 Optionally specify a city:
  
 date Paris
 date Tokyo
+
+**Note:** This command works without an ESP32 or Mac Helper connection.
 """),
 		//
 		//----------------------------------------
 		//
 		("year", "year ", """
-Inserts the current year.
+**Insert the current year**
  
+**Syntax:** year
+
 Optionally specify a city:
  
 year Paris
 year Tokyo
+
+**Note:** This command works without an ESP32 or Mac Helper connection.
 """),
 		//
 		//----------------------------------------
 		//
 		("month", "month ", """
-Inserts the current month.
+**Insert the current month**
+
+**Syntax:** month
+
+Optionally specify a city:
+ 
+month Paris
+month Tokyo
+
+**Note:** This command works without an ESP32 or Mac Helper connection.
 """),
 		//
 		//----------------------------------------
 		//
 		("day", "day ", """
-Inserts the current day.
+**Insert the current day**
  
+**Syntax:** day
+
 Optionally specify a city:
  
 day Paris
 day Tokyo
+
+**Note:** This command works without an ESP32 or Mac Helper connection.
 """),
 		//
 		//----------------------------------------
 		//
 		("day of week", "dow ", """
-Inserts the day of the week.
+**Insert the day of the week**
  
+**Syntax:** dow
+
 Optionally specify a city:
  
 dow Paris
 dow Tokyo
+
+**Note:** This command works without an ESP32 or Mac Helper connection.
 """),
 		//
 		//----------------------------------------
 		//
 		("hour", "hour ", """
 Inserts the current hour.
+
+**Note:** This command works without an ESP32 or Mac Helper connection.
 """),
 		//
 		//----------------------------------------
 		//
 		("mins", "min ", """
 Inserts the current minutes.
+
+**Note:** This command works without an ESP32 or Mac Helper connection.
 """),
 		//
 		//----------------------------------------
 		//
 		("secs", "sec ", """
 Inserts the current seconds.
+
+**Note:** This command works without an ESP32 or Mac Helper connection.
 """),
 		//
 		//-----------------------------------------------------------------------------------------------
@@ -445,6 +480,8 @@ in the file list.
 		("next", "next", """
 Goes to the next document
 in the file list.
+
+**Note:** This command works without an ESP32 or Mac Helper connection.
 """),
 		//
 		//----------------------------------------
@@ -452,6 +489,8 @@ in the file list.
 		("back", "back", """
 Goes back in the
 loaded page stack.
+
+**Note:** This command works without an ESP32 or Mac Helper connection.
 """),
 		//
 		//----------------------------------------
@@ -459,6 +498,8 @@ loaded page stack.
 		("forward", "forw", """
 Goes forward in the
 loaded page stack.
+
+**Note:** This command works without an ESP32 or Mac Helper connection.
 """),
 		//
 		//----------------------------------------
@@ -466,6 +507,8 @@ loaded page stack.
 		("home", "home", """
 Goes to the
 home page.
+
+**Note:** This command works without an ESP32 or Mac Helper connection.
 """),
 		//
 		//-----------------------------------------------------------------------------------------------
@@ -476,12 +519,16 @@ home page.
 		//
 		("play sound", "snd snd.mp3", """
 Plays a sound file.
+
+**Note:** This command works without an ESP32 or Mac Helper connection.
 """),
 		//
 		//----------------------------------------
 		//
 		("speak text", "spk hello", """
 Speaks text aloud.
+
+**Note:** This command works without an ESP32 or Mac Helper connection.
 """),
 		//
 		//----------------------------------------
@@ -500,6 +547,8 @@ a command chain.
 		("tap minus", "minus 10", """
 Subtracts from a
 tap counter.
+
+**Note:** This command works without an ESP32 or Mac Helper connection.
 """),
 		//
 		//----------------------------------------
@@ -507,6 +556,8 @@ tap counter.
 		("tap add", "add ", """
 Adds to a
 tap counter.
+
+**Note:** This command works without an ESP32 or Mac Helper connection.
 """),
 		//
 		//----------------------------------------
@@ -514,6 +565,8 @@ tap counter.
 		("random number", "rnd 0 100", """
 Generates a random
 number.
+
+**Note:** This command works without an ESP32 or Mac Helper connection.
 """),
 		//
 		//----------------------------------------
@@ -521,20 +574,45 @@ number.
 		("random line", "rnd file.txt", """
 Uses a random line
 from a file.
+
+**Note:** This command works without an ESP32 or Mac Helper connection.
 """),
 		//
 		//-----------------------------------------------------------------------------------------------
 		// *** IOS SYSTEM ***
+		//
+		//
+		//----------------------------------------
+		//
+		("copy cb","cb","""
+**Copy to Clipboard**
+Copies the specified text to the iOS clipboard.
+ 
+**Syntax:** cb text
+ 
+**Example:** cb Hello World
+ 
+The clipboard will contain *Hello World*.
+ 
+ **Note:** This command works without an ESP32 or Mac Helper connection.
+"""),
 		//
 		//----------------------------------------
 		//
 		("device power", "power ", """
 Shows the device
 power state.
+
+**Note:** This command works without an ESP32 or Mac Helper connection.
 """),
+		//
+		//----------------------------------------
+		//
 		("ambient sound", "amb snd.mp3", """
 Starts ambient sound
 playback.
+
+**Note:** This command works without an ESP32 or Mac Helper connection.
 """),
 		//
 		//----------------------------------------
@@ -542,6 +620,8 @@ playback.
 		("timer sound", "timer 60 snd.wav", """
 Runs a timer that
 plays sound.
+
+**Note:** This command works without an ESP32 or Mac Helper connection.
 """),
 		//
 		//----------------------------------------
@@ -549,6 +629,8 @@ plays sound.
 		("timer speak", "timer 10 hello", """
 Runs a timer that
 speaks text.
+
+**Note:** This command works without an ESP32 or Mac Helper connection.
 """),
 		//
 		//----------------------------------------
@@ -556,6 +638,8 @@ speaks text.
 		("run shortcut", "sc shortcutName", """
 Runs an iOS
 shortcut.
+
+**Note:** This command works without an ESP32 or Mac Helper connection.
 """),
 		//
 		//----------------------------------------
@@ -564,7 +648,7 @@ shortcut.
 		 "app mail",	// example code
 // details
 """
-***Opens an App***	
+***Open an App***	
   
 iOS Apps that can be opened on device:
 
@@ -572,18 +656,25 @@ mail			notes
 messages		facetime
 maps			music
 calendar	    .   
+
+**Note:** This command works without an ESP32 or Mac Helper connection.
 """),
 		//
 		//----------------------------------------
 		//
 		("preview file", "file file.txt", """
 Previews a file.
+
+**Note:** This command works without an ESP32 or Mac Helper connection.
 """),
 		//
 		//----------------------------------------
 		//
 		("wait", "wait 1", """
-format: wait number
+Wait for a length of time
+
+Syntax: wait number
+
 number can be int like 1 or a fraction 0.5 = half a second
 
 This is a chain command, so
@@ -599,15 +690,28 @@ sends F1, waits one send then sends sp(space)
 		// *** ESP32 CMDS ***
 		//
 		("Esp32 out", "out 32 1", """
-Sends an ESP32
-output command.
+**Set an ESP32 Output Pin State**
+
+**Syntax:** out *num1 num2*
+*num1* is the pin to send to
+*num2* is the state, 1 or 0
+
+**Note:** 
+This command requires an ESP32 connection. Not all pins will work, it will depend on your device.
 """),
 		//
 		//----------------------------------------
 		//
 		("Esp32 pwm", "pwm 32 5 4", """
-Sends an ESP32
-PWM command.
+**Sends an ESP32 PWM Command**
+
+**Syntax:** pwm *num1 num2 num3*
+*num1* is the pin to send to
+*num2* is the mark ratio
+*num3* is the space ratio
+
+**Note:** 
+This command requires an ESP32 connection. Not all pins will work, it will depend on your device.
 """),
 	] // END OF SMART COMMENTS
 	//

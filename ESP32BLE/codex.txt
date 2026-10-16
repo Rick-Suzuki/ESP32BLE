@@ -1,61 +1,23 @@
-Implemented B2e successfully.
+W2A implementation complete.
 
-1. File changed:
-ESP32BLE/Scrns/BLE/BLE_KB_Manager.swift
+Changed file:
+ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift
 
-2. Exact lines changed:
-Lines 457–466 in centralManager(_:didConnect:).
+Added at approximately lines 17–43:
 
-3. Guard location:
-Immediately after entering didConnect, before B1 classification, connection-state changes, or service discovery.
+• Private enum: CommandClassification
+• Cases: internalCommand, file, external
+• Private helper: commandClassification(for:)
 
-4. Callback accepted only when:
-• isDeliberatelyStopped is false, and
-• The peripheral is an expected temporary probe, or
-• Both selectedPeripheralID and esp32Peripheral match its UUID.
+Validation:
 
-5. Callback rejected when:
-• BLE is deliberately stopped, or
-• The peripheral has neither valid probe intent nor valid selected-device intent.
-
-6. Rejection behavior:
-• Logs one “REJECTED STALE didConnect” diagnostic.
-• Calls cancelPeripheralConnection exactly once.
-• Returns immediately.
-
-7. Diagnostic includes:
-• Peripheral UUID
-• isDeliberatelyStopped
-• expectedProbe
-• expectedSelected
-• selectedPeripheralID
-• Active peripheral UUID
-• Connection-attempt number
-
-The existing logging mechanism supplies the required “[BLE-CONNECT-PROBE] 🐞” prefix.
-
-8. Rejected callbacks cannot modify application connection state. They return before:
-• isConnected changes
-• connectionText changes
-• esp32Peripheral assignment
-• Probe promotion
-• Discovery tracking changes
-• Service discovery
-
-9. B1 promotion remains unchanged.
-
-10. B2a discovery and initialization deduplication remains unchanged.
-
-11. B2b duplicate-connect prevention remains unchanged.
-
-12. B2d pending-disconnect reconnection remains unchanged.
-
-13. Validation:
-• Xcode file diagnostics: No issues found.
-• Full Xcode project build: Successful.
-• No new stored state, timers, or connection bookkeeping added.
-• No other functions or files were modified for B2e.
-• No commit or other Git write operation was performed.
-
-14. Remaining limitation:
-A stale callback sharing the same UUID as a legitimate new Stop → Start connection can satisfy the intent guard. As requested, that separate lifecycle-serialization problem remains deferred.
+• Leading “.” returns internalCommand.
+• Listed file extensions return file case-insensitively.
+• Other tokens return external.
+• The helper performs no file lookup or command execution.
+• Search confirmed its only occurrence is its declaration; it is not called.
+• No existing parsing, recognition, execution, widget, WAIT, preview, navigation, audio, or transport path changed.
+• File diagnostics: no issues.
+• Project build: successful, with no errors.
+• The app was not launched.
+• No other files were modified.
