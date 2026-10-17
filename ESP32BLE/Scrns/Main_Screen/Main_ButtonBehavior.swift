@@ -90,10 +90,10 @@ extension MainScreen {
     }
 
     func buttonTitle(for entry: FunctionKeyEntry) -> String {
-        let navigationDefaultLabel = navigationCommandDefaultLabel(for: entry.primaryDisplayText)
+        let commandDefaultLabel = commandDefaultLabel(for: entry)
         let alternateDisplayText = effectiveAlternateDisplayText(for: entry)
 
-        guard entry.displayUsesAlternateText || navigationDefaultLabel != nil else {
+        guard entry.displayUsesAlternateText || commandDefaultLabel != nil else {
             return displayText(from: rawLineWithoutHiddenMetadata(entry))
         }
 
@@ -161,7 +161,39 @@ extension MainScreen {
             return alternateDisplayText
         }
 
-        return navigationCommandDefaultLabel(for: entry.primaryDisplayText) ?? alternateDisplayText
+        return commandDefaultLabel(for: entry) ?? alternateDisplayText
+    }
+
+    private func commandDefaultLabel(for entry: FunctionKeyEntry) -> String? {
+        if let navigationLabel = navigationCommandDefaultLabel(for: entry.primaryDisplayText) {
+            return navigationLabel
+        }
+
+        guard entry.sendTexts.count == 1,
+              let sendText = entry.sendTexts.first,
+              sendText.hasPrefix(".") else {
+            return nil
+        }
+
+        let displayText = String(sendText.dropFirst())
+
+        if normalizedNumericBluetoothCommand(
+            from: displayText,
+            command: "out",
+            expectedArgumentCount: 2
+        ) != nil {
+            return displayText
+        }
+
+        if normalizedNumericBluetoothCommand(
+            from: displayText,
+            command: "pwm",
+            expectedArgumentCount: 3
+        ) != nil {
+            return displayText
+        }
+
+        return nil
     }
 
     func isHexColorPrefix(_ text: String) -> Bool {

@@ -1,4 +1,8 @@
 
+261017 Sat 1629
+esp cmds improved
+V62.68
+
 261017 Sat 1617
 prev, next, forw,back widgets fixed
 V62.67
