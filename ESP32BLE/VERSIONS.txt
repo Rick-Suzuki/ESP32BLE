@@ -1,4 +1,8 @@
 
+261017 Sat 1617
+prev, next, forw,back widgets fixed
+V62.67
+
 261017 Sat 1527
 before start of fix widgets
 V62.66

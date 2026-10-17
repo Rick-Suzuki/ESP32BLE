@@ -1,994 +1,531 @@
-ESP32BLE — WIDGET-001
-PHASE 2 READ-ONLY INVESTIGATION REPORT
+ESP32BLE — WIDGET-002
+COMMAND DEFAULT-TEXT INVESTIGATION REPORT
 
-Scope confirmation
-
-Read-only investigation completed.
+READ-ONLY RESULT
 
 No files were modified.
 No build was performed.
 The application and simulator were not launched.
-No Git operations were performed.
-No diagnostic logging was added.
 
-A. WIDGET ARCHITECTURE SUMMARY
+A. WORKING W1 MECHANISM SUMMARY
 
-1. Screen-file parsing and stored representation
+Relevant files:
 
-File:
 ESP32BLE/ESP32BLE/Scrns/ContentView.swift
 
-Important locations:
-
 • FunctionKeyEntry: lines 67–82
+• parsedActionTokens(from:): lines 91–111
 • functionKeyEntry(from:): lines 2582–2628
 • parsedSendTexts(from:): lines 2630–2644
-• widget-command recognition list: lines 2646–2656
-• parsedWidgetSendTexts(from:): lines 2658–2695
-
-A screen line is stored literally in FunctionKeyEntry.rawLine.
-
-The parser derives:
-
-• sendTexts: commands/actions from the left side
-• alternateDisplayText: visible text or symbol configuration from the right side
-• buttonColorCode
-• visibility flags
-
-The format is effectively:
-
-command or action :: alternate display text
-
-If there is no “::”, the entire line becomes both rawLine and a single sendTexts entry.
-
-Widget identifiers are not stored separately in the .screen file. They are reconstructed dynamically by inspecting sendTexts.
-
-Consequences:
-
-• Command names are stored literally.
-• Renaming commands without aliases would break existing screens.
-• Default labels are generated dynamically from rawLine/sendTexts.
-• Adding an alias is safer than renaming an existing command.
-
-2. Widget recognition and parsing
-
-File:
-ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift
-
-Important locations:
-
-• targetWidgetDescriptorForGridEntry(_:): lines 779–780
-• targetWidgetDescriptorForSendText(_:): lines 1117–1295
-• widget recognition list: lines 1298–1307
-• MainGridWidgetDescriptor definition:
-ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_ButtonLabelView.swift, lines 764–782
-
-Recognition is duplicated in two places:
-
-• ContentView.swift lines 2646–2656
-• Main_ButtonBehavior.swift lines 1298–1307
-
-Both lists currently recognize:
-
-.add
-.minus
-.power
-.rnd
-.random
-.clock
-.date
-.dow
-.sec
-.min
-.hour
-.day
-.month
-.year
-.timer
-.stop
-.stopwatch
-.amb
-.ambient
-
-Aliases already exist for:
-
-• .rnd and .random
-• .stop and .stopwatch
-• .amb and .ambient
-
-There is no general alias registry. Aliases are implemented by listing multiple strings in switch cases and recognition arrays.
-
-3. Widget execution
-
-File:
-ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift
-
-Important locations:
-
-• sendMainGridEntry(_:): lines 166–324
-• Bluetooth/action filtering: lines 349–369
-• interactive-widget detection: lines 1576–1600
-
-Widget commands are filtered out of Bluetooth output at lines 349–369.
-
-Interactive widgets are rendered without a normal SwiftUI Button wrapper:
-
-ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_GridSection.swift
-
-• gridButtonView(...): lines 387–439
-• interactive-widget branch: lines 396–400
-• ordinary button branch: lines 402–438
-
-Widget interaction is implemented inside the widget views themselves.
-
-4. Main Screen rendering
-
-Files:
-
-ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
-
-• Main grid supplies mainGridButtonLabel: lines 1399–1405
 
 ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift
 
-• mainGridButtonLabel(...): lines 1518–1574
-• SF Symbol parser: lines 1654–1672
+• buttonTitle(for:): lines 92–110
+• resolvedAlternateDisplayText(for:): lines 129–156
+• effectiveAlternateDisplayText(for:): lines 158–165
+• navigationCommandDefaultLabel(for:): lines 684–697
+• mainGridButtonLabel(...): lines 1543–1599
 
 ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_ButtonLabelView.swift
 
-• overall button rendering: lines 53–161
-• widget rendering switch: lines 168–390
-• symbol rendering: lines 683–699
-• widget state/view implementations: lines 789 onward
+• MainScreenButtonLabelView: line 6
+• buttonContent: lines 127–162
 
-MainScreenButtonLabelView checks widgetDescriptor before rightSymbolDisplay:
+Confirmed mechanism:
 
-• Widget content wins at lines 129–130.
-• Ordinary SF Symbol rendering is only reached at lines 131–144.
+1. The left side of a screen entry becomes sendTexts.
+2. FunctionKeyEntry.primaryDisplayText joins sendTexts with colons.
+3. Text after “::” becomes alternateDisplayText.
+4. Both a missing right side and an explicitly empty right side produce alternateDisplayText == nil:
+   • “.prev”
+   • “.prev::”
+5. effectiveAlternateDisplayText(for:) first preserves any nonempty explicit right text.
+6. When explicit text is empty, it asks navigationCommandDefaultLabel(for:) for a fallback.
+7. buttonTitle(for:) then applies the selected display mode:
+   • Left: primaryDisplayText
+   • Right: effective alternate text
+   • Both: primary plus effective alternate
+   • Last: last component of effective alternate
+8. mainGridButtonLabel(...) passes those resolved strings to MainScreenButtonLabelView.
+9. Ordinary textual buttons are finally rendered by textLabel(title: title) at Main_ButtonLabelView.swift line 160.
 
-That priority is central to the add, minus, stopwatch, and power symptoms.
+This mechanism is suitable for reuse. The missing part is a command-specific default-label resolver covering the requested commands rather than navigation alone.
 
-5. Editor preview rendering
+Current behavior for all seven groups:
 
-File:
-ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
+When no explicit right-hand text exists, navigationCommandDefaultLabel returns nil. buttonTitle(for:) therefore exits at lines 96–98 and displays the serialized command rather than providing distinct Left/Right/Both/Last content.
 
-Important locations:
+Explicit right-hand text is already supported universally through “::” and takes precedence.
 
-• smartButtonPreview(...): lines 4129–4236
-• editor SF Symbol validation: lines 4255–4270
-• smartButtonSFSymbolDisplay: lines 4272–4278
-• preview text binding: lines 4280–4297
+B. SEVEN COMMAND GROUPS
 
-The editor preview does not use MainScreenButtonLabelView and does not render live widget content.
+1. HOME
 
-It previews only:
+Actual syntax:
+home
 
-• an SF Symbol plus editable subtitle, or
-• ordinary editable text
+Leading period:
+No. Source execution recognizes only the unprefixed word “home”.
 
-This is a separate rendering path from the actual Main Screen widget.
+Arguments:
+None.
 
-Therefore, a valid SF Symbol may appear correctly in the editor preview but be treated as plain widget title/configuration text on the Main Screen.
+Recognition:
+Main_ButtonBehavior.swift
+targetDocumentNameForSendText(_:), lines 699–740
+Exact recognition and conversion to “home.screen”: lines 728–730
 
-6. iPhone and iPad sharing
+Execution:
+Main_ButtonBehavior.swift
+sendMainGridEntry(_:), document resolution at lines 233–245
+selectDocumentNamedFromGrid(...) dispatch at lines 317–331
 
-The core components are shared by iPhone and iPad:
+Current default label:
+No generated right-hand default. A bare “home” is displayed as its raw command.
 
-• FunctionKeyEntry parsing
-• command recognition
-• widget descriptor parsing
-• execution
-• MainScreenButtonLabelView
-• individual widget views
-• file lookup and preview handling
-• widget state
+Desired default:
+home
 
-Platform differences are primarily editor layout and sizing.
+Explicit right-hand text:
+Supported through “home::Display Text”.
 
-Examples:
+Display-mode status:
+Not semantically correct when no right text exists. Since left and desired right values are both “home”, the visual difference is mainly visible in Both mode.
 
-• Main_Screen.swift lines 4135–4144 select different preview dimensions.
-• Lines 4156–4175 select iPad/iPhone symbol sizing.
-• Lines 4197–4212 select ordinary preview sizing.
-• Main_ButtonBehavior.swift line 1545 uses an inset border only when !isPad.
+Documentation concern:
+The Main Screen help advertises “.home”, but execution recognizes “home”. This is a confirmed syntax mismatch outside the requested display-only work.
 
-There is no separate iPad widget command parser.
-
-B. ISSUE-BY-ISSUE FINDINGS
-
-1. CLOCK — working reference
-
-Classification:
-DISPLAY / COMMAND PARSING
-
-Confirmed behavior:
-
-• .clock is recognized in both parser lists:
-ContentView.swift lines 2647–2650
-Main_ButtonBehavior.swift lines 1299–1302
-• It maps to .clock(cityLabel:) at Main_ButtonBehavior.swift lines 1147–1155.
-• It updates every second using TimelineView at Main_ButtonLabelView.swift lines 170–185.
-• Time formatting is HH:mm:ss at lines 439–445.
-• An optional city argument is used to resolve the timezone.
-• Ordinary button text comes from rightTitleWithoutColorPrefix through widgetCityLabel, lines 405–408.
-• The header appears only when ordinary right-side text exists, lines 173–175.
-• If the right-side content is an SF Symbol, widgetHeaderContent renders the symbol, lines 393–403.
-• The editor preview is not a clock preview. It previews raw editable text or an SF Symbol through Main_Screen.swift lines 4129–4297.
-
-Cause of correct behavior:
-
-Clock has explicit composition logic for:
-
-• optional header
-• optional SF Symbol
-• live time value
-• timezone argument
+Relevant location:
+Main_ButtonBehavior.swift, lines 699–740
 
 Risk:
-REFERENCE ONLY — no correction recommended.
+MEDIUM, because the command syntax should be resolved separately before standardizing its display fallback.
 
-2. DATE
+2. FILE PREVIEW
 
-Classification:
-DISPLAY
-
-Confirmed behavior:
-
-• .date maps to .date(cityLabel:) at Main_ButtonBehavior.swift lines 1219–1227.
-• Date updates once per minute at Main_ButtonLabelView.swift lines 186–199.
-• It always calls widgetHeaderContent at line 189.
-• dateHeaderText returns ordinary button text when present:
-Main_ButtonLabelView.swift lines 550–554.
-• When ordinary text is absent, it calls widgetDateCityCode:
-lines 555–556.
-• widgetDateCityCode derives a city/timezone abbreviation:
-lines 568–620.
-• The actual date is formatted separately as yy.MM.dd:
-lines 542–547.
-
-Most likely cause:
-
-The city name/code is an explicit fallback label, not an accidental timezone-calculation artifact.
-
-It is intentional in the current source, although it conflicts with the requested behavior.
-
-The city argument is still useful internally for timezone selection. It does not need to be shown.
-
-Difference from .clock:
-
-• Clock displays a header only when widgetCityLabel exists.
-• Date always displays a header and synthesizes a timezone/city code when no text exists.
-
-Smallest possible correction:
-
-Make the date header conditional, like clock, while retaining cityLabel for timezone calculations.
-
-Do not alter dateValueText, date formatting, or timezone lookup.
-
-Shared problem:
-
-No. The fallback is specific to .date.
-
-Regression risk:
-LOW
-
-Device-testing hypothesis:
-
-Confirm whether a user-supplied city argument without ordinary display text should remain invisible or should be treated as an intentional visible header. The current architecture separates the command city from right-side button text, but the requested outcome suggests it should remain internal.
-
-3. DAY
-
-Classification:
-NAMING
-
-Confirmed behavior:
-
-• .day maps to .day(cityLabel:) at Main_ButtonBehavior.swift lines 1156–1164.
-• It displays the ordinal day-of-month at Main_ButtonLabelView.swift lines 200–215.
-• Ordinal generation is at lines 507–524.
-• The help table explicitly describes .day as “day of month”:
-Main_Screen.swift lines 442–459.
-• Day of week is a separate .dow command:
-Main_Screen.swift lines 463–479.
-
-Existing aliases:
-
-None for .day.
-
-Could .daynum be introduced?
-
-Yes, but it must be added to both duplicated recognition lists and to the descriptor switch.
-
-Existing .day screens can remain compatible by retaining .day and adding .daynum as an alias.
-
-Does the current parser support aliases?
-
-Only manually. There is no generic alias mechanism. Existing aliases are hard-coded switch cases and duplicated command arrays.
-
-Smallest possible correction:
-
-Add .daynum alongside .day in:
-
-• ContentView.swift widget command list
-• Main_ButtonBehavior.swift widget command list
-• Main_ButtonBehavior.swift .day switch case
-
-Regression risk:
-LOW, provided .day remains supported.
-
-4. STOPWATCH
-
-Classification:
-SF SYMBOL / DISPLAY
-
-Confirmed behavior:
-
-• .stop and .stopwatch are aliases:
-Main_ButtonBehavior.swift lines 1275–1276.
-• Main rendering passes rightTitleWithoutColorPrefix as title:
-Main_ButtonLabelView.swift lines 355–361.
-• MainGridStopwatchWidgetView displays that title using Text:
-lines 1490–1498.
-• A valid symbol name such as “stopwatch” is therefore displayed literally as title text inside the widget.
-• The ordinary SF Symbol path is bypassed because widgetDescriptor is checked first:
-lines 127–144.
-• The editor preview independently recognizes “stopwatch” as a valid SF Symbol:
-Main_Screen.swift lines 4255–4278.
-
-Most likely cause:
-
-Confirmed: a valid SF Symbol identifier is being passed to the stopwatch widget as visible text rather than rendered as an Image.
-
-Smallest possible correction:
-
-Give stopwatch widget content the same symbol-aware header handling used by clock/date, while preserving ordinary text as text.
-
-Do not change timing or gestures.
-
-Shared problem:
-
-Yes. The same widget-first rendering priority affects add, minus, random, power, timer, and ambient widgets to varying degrees.
-
-Regression risk:
-MEDIUM, because symbol-vs-text interpretation must remain compatible with saved screens that intentionally use a word matching an SF Symbol identifier.
-
-5. NAVIGATION COMMANDS
-
-Classification:
-COMMAND PARSING / DISPLAY
-
-Confirmed behavior:
-
-Execution recognizes only unprefixed tokens:
-
-• back: Main_ButtonBehavior.swift lines 658–660
-• forw: lines 662–664
-• prev: lines 666–668
-• next: lines 670–672
-
-The help table currently advertises period-prefixed forms:
-
-• .prev: Main_Screen.swift lines 560–570
-• .next: lines 575–585
-• .back: lines 590–600
-• .forw: lines 605–615
-
-Period-prefixed navigation tokens are not included in either widget list and are not accepted by the navigation matchers.
-
-Therefore:
-
-• “prev” is recognized and executed.
-• “.prev” is not recognized as navigation.
-• “.prev” remains an ordinary sendTexts token.
-• Its default label is the literal raw command, including the period.
-
-Execution logic itself is sound:
-
-• Recognition results are gathered at Main_ButtonBehavior.swift lines 197–200.
-• Navigation actions execute at lines 326–347.
-
-Smallest safe correction:
-
-Accept both prefixed and unprefixed forms in the four is...DocumentCommandText functions.
-
-For default labels, strip the leading period only for a recognized bare navigation alias. Do not globally strip periods from button text.
-
-Existing screens:
-
-Unprefixed screens remain compatible.
-Period-prefixed screens begin working as the documentation already claims.
-This is additive.
-
-Shared problem:
-
-Yes. All four navigation commands share the same exact-match implementation.
-
-Regression risk:
-LOW to MEDIUM.
-
-The parsing change is low risk. Label normalization is medium risk unless narrowly limited to recognized bare navigation commands.
-
-6. FILE COMMANDS AND PREVIEWS
-
-Classification:
-FILE HANDLING / COMMAND PARSING
-
-Confirmed syntax:
-
-Explicit preview syntax is:
-
+Actual syntax:
 file filename.ext
 
-Recognition occurs at:
-
-• targetPreviewFilenameForSendText:
-Main_ButtonBehavior.swift lines 874–883
-• execution:
-lines 282–284
-• wait-chain execution:
-lines 424–426
-• help entry:
-Main_Screen.swift lines 791–795
-
-Bare filenames are not interpreted as preview commands.
-
-Important distinction:
-
-commandClassification(for:) recognizes extensions at Main_ButtonBehavior.swift lines 24–43, but that function is diagnostic classification only. It does not execute previews.
-
-Lookup rules:
-
-• Exact filename first.
-• Then case-insensitive lastPathComponent match.
-• Documents directory first.
-• App bundle second.
-
-Locations:
-
-• resolvedPreviewFileURL: lines 1012–1029
-• matchedRegularFileURL: lines 1031–1051
-
-Preview type handling:
-
-• Any UTF-8-readable file is treated as text:
-lines 989–992.
-• A PDF is supported only when it has exactly one page:
-lines 994–1000 and 1053–1078.
-• A multi-page PDF falls through to UIImage validation and is likely reported as unsupported:
-lines 1003–1009.
-• UIImage-readable files such as supported JPG/PNG images use the image preview:
-lines 1003–1009.
-• Presentation UI is in Main_FilePreviewOverlay.swift.
-
-Does the preview problem occur with explicit “file”?
-
-Source conclusions:
-
-• file spk.txt should preview if the file exists in Documents or the bundle and is UTF-8 readable.
-• file aces2.jpg should preview if UIImage can decode it.
-• file macshortcuts.pdf previews only if it is a one-page PDF that renders successfully.
-• A multi-page PDF is a confirmed unsupported path in the current implementation.
-
-If an explicitly commanded TXT or JPG still does not preview, device testing is required to inspect filename, location, case, file availability, or decoding.
-
-Is automatic filename recognition safe?
-
-Not as a blanket extension rule.
-
-Reasons:
-
-• Ordinary button text may legitimately end in .txt, .pdf, or .jpg.
-• Legacy screen/navigation handling already gives .txt special historical meaning in parts of the code.
-• Sound files are already recognized by extension without “file”.
-• .rnd filename.txt uses .txt for a different widget.
-• “spk filename.txt” has separate semantics.
-
-Smallest safe future approach:
-
-Do not interpret every extension automatically. If desired, use a narrow rule that requires both:
-
-• a supported preview extension, and
-• a successful lookup of an existing regular file,
-
-while excluding known command contexts.
-
-Even that should be tested carefully against ordinary button text.
-
-Regression risk:
-HIGH for blanket automatic recognition.
-MEDIUM for existence-checked, context-aware recognition.
-
-7. ADD
-
-Classification:
-SF SYMBOL / DISPLAY
-
-Confirmed behavior:
-
-• .add maps to .add:
-Main_ButtonBehavior.swift lines 1230–1231.
-• Main rendering passes rightTitleWithoutColorPrefix as configurationText:
-Main_ButtonLabelView.swift lines 321–326.
-• MainGridStepUpCounterWidgetView parses the text as count/title configuration:
-lines 849–915.
-• It does not render Image(systemName:).
-• The widget-first branch prevents the ordinary SF Symbol renderer from being used:
-lines 127–144.
-• The editor preview can display a valid configured symbol:
-Main_Screen.swift lines 4155–4195.
-
-Expected symbol:
-
-No hard-coded add symbol is defined in the widget implementation. The expected identifier depends on the right-side text stored by the screen/editor. A common identifier such as “plus” would be treated as the visible counter title, not as an image.
-
-Smallest possible correction:
-
-Make the add widget header symbol-aware before feeding the remaining subtitle/configuration to the counter.
-
-Do not alter counter behavior.
-
-Shared problem:
-
-Yes. Same widget/SF precedence issue as stopwatch and minus.
-
-Regression risk:
-MEDIUM
-
-8. MINUS
-
-Classification:
-DISPLAY / SF SYMBOL
-
-Confirmed behavior:
-
-• .minus maps to .minus(initialCount:) at Main_ButtonBehavior.swift lines 1232–1242.
-• MainGridStepDownCounterWidgetView receives the complete rightTitleWithoutColorPrefix as its title:
-Main_ButtonLabelView.swift lines 327–333.
-• It renders that title verbatim with Text:
-lines 925–934.
-• rightTitleWithoutColorPrefix removes only a six-character color prefix:
-lines 650–660.
-• It does not remove or interpret a symbol-name separator colon.
-• A value such as “minus:” therefore remains “minus:” inside the widget.
-• Ordinary SF Symbol parsing would understand name/subtitle colon composition, but that path is bypassed for widgets.
-
-Origin of colon:
-
-Confirmed: it comes from the right-side display/configuration string and is retained by the widget title path.
-
-Smallest possible correction:
-
-Use the parsed SF Symbol name/subtitle representation for the widget header, or at minimum remove only the symbol separator when the first component is confirmed to be a valid SF Symbol.
-
-Do not globally strip colons; colons are meaningful in titles and configuration.
-
-Shared problem:
-
-Yes. Same rendering precedence as add and stopwatch.
-
-Regression risk:
-MEDIUM
-
-9. RANDOM NUMBER
-
-Classification:
-COMMAND PARSING, with a documentation/editor mismatch
-
-Confirmed behavior:
-
-The runtime supports:
-
-.rnd
-.rnd maximum
-.rnd minimum maximum
-.random with the same forms
-.rnd filename.txt
-
-Parsing is at Main_ButtonBehavior.swift lines 1243–1274.
-
-.rnd 0 100 is valid source syntax and produces range 0...100.
-
-Execution/display:
-
-• MainGridRandomNumberWidgetView receives the range at Main_ButtonLabelView.swift lines 334–341.
-• It generates a value when tapped:
-lines 1579–1581 and 1606–1631.
-• It normalizes reversed bounds:
-lines 1600–1604.
-
-Likely reason for reported failure:
-
-The smart-command table inserts “rnd 0 100” without the leading period:
-
-Main_Screen.swift lines 691–695.
-
-The widget parser recognizes only .rnd/.random. Therefore “rnd 0 100” is not a widget and is handled as ordinary action/Bluetooth text.
-
-If the exact stored command is .rnd 0 100, the source indicates it should work. That case requires device testing to distinguish interaction mode, saved line parsing, or stale screen content.
-
-Smallest possible correction:
-
-First correct the command-table insertion to use .rnd 0 100, or deliberately add unprefixed aliases if backward compatibility requires them.
-
-Adding unprefixed aliases is broader and could conflict with existing ordinary/Bluetooth commands.
-
-Shared problem:
-
-The same help-table mismatch appears for add, minus, power, and several other rows that omit their required period.
-
-Regression risk:
-LOW for correcting editor/help insertion.
-MEDIUM to HIGH for accepting unprefixed widget aliases.
-
-10. CB
-
-Classification:
-COMMAND PARSING / NAMING
-
-Confirmed behavior:
-
-• Clipboard command is recognized only when text begins with “cb ”:
-Main_ButtonBehavior.swift lines 854–871.
-• It removes quotation characters and backslashes, then copies the remaining text.
-• Execution occurs at lines 278–280.
-• Help documents cb text:
-Main_Screen.swift lines 713–724.
-
-.cb is not currently recognized.
-
-Bare cb without following text also produces no clipboard target because recognition requires “cb ” and a nonempty result.
-
-Could both coexist?
-
-Yes. Recognition could accept both “cb ” and “.cb ”.
-
-Compatibility:
-
-Retaining cb preserves existing screens.
-Replacing cb with .cb would break saved screens.
-Adding .cb as an alias is the safe approach.
-
-Regression risk:
-LOW, provided cb remains supported.
-
-11. POWER
-
-Classification:
-DISPLAY / SF SYMBOL
-
-Confirmed behavior:
-
-• .power maps to .power:
-Main_ButtonBehavior.swift lines 1228–1229.
-• The power branch creates MainGridBatteryWidgetView with only font size and foreground color:
-Main_ButtonLabelView.swift lines 316–320.
-• It does not receive ordinary button text.
-• It does not receive rightSymbolDisplay.
-• Battery view hard-codes state words such as charging, full, battery, unknown:
-lines 789–847.
-• The ordinary SF Symbol path is bypassed for the widget.
-• The editor preview may still show a valid configured SF Symbol because it uses a separate path.
-
-Most likely cause:
-
-Confirmed: .power replaces the normal button content with a battery widget that has no title or symbol input.
-
-No symbol identifier is hard-coded in the power widget, so the source does not establish one expected symbol.
-
-Smallest possible correction:
-
-Allow MainGridBatteryWidgetView to receive/render the same symbol-aware or ordinary header content used by clock/date.
-
-Do not alter battery monitoring or percentage behavior.
-
-Shared problem:
-
-Yes. Same widget-first rendering issue, but power is more restrictive because it ignores right-side text completely.
-
-Regression risk:
-MEDIUM
-
-C. SHARED ROOT CAUSES
-
-1. Widget rendering takes precedence over SF Symbol rendering
-
-Main_ButtonLabelView.swift lines 127–144 checks widgetDescriptor first.
-
-Consequences:
-
-• stopwatch symbol name becomes visible text
-• add symbol name becomes counter configuration/title
-• minus symbol syntax including colon becomes title text
-• power ignores symbol and ordinary text
-• random/timer/ambient may have similar symbol/title inconsistencies
-
-This is the main shared display cause.
-
-2. Editor preview and actual button use different rendering paths
-
-Editor:
-Main_Screen.swift lines 4129–4297
-
-Actual button:
-Main_ButtonBehavior.swift lines 1518–1574
-Main_ButtonLabelView.swift lines 53–390
-
-The editor validates and renders SF Symbols directly.
-The actual widget often treats the same right-side value as widget configuration or title.
-
-This explains “correct preview but incorrect Main Screen” behavior.
-
-3. Command definitions are duplicated
-
-Widget recognition is duplicated in:
-
-• ContentView.swift lines 2646–2656
-• Main_ButtonBehavior.swift lines 1298–1307
-
-Any alias must currently be added in both places and in the descriptor switch.
-
-Risk: partial changes can make a command parse differently during screen loading and runtime recognition.
-
-4. Help/editor command examples disagree with runtime syntax
-
 Examples:
+file spk.txt
+file macshortcuts.pdf
+file aces2.jpg
 
-• Runtime requires .rnd; help inserts rnd.
-• Runtime requires .add; help inserts add.
-• Runtime requires .minus; help inserts minus.
-• Runtime requires .power; help inserts power.
-• Help advertises .prev/.next/.back/.forw, while runtime accepts only unprefixed versions.
+Leading period:
+No.
 
-This is a second shared root cause, separate from display rendering.
+Arguments:
+A nonempty filename is required.
 
-5. Colon has multiple meanings
+Recognition:
+Main_ButtonBehavior.swift
+targetPreviewFilenameForSendText(_:), lines 899–910
 
-Colon is used for:
+Execution:
+Main_ButtonBehavior.swift
+targetPreviewFilenameForGridEntry(_:), lines 751–753
+sendMainGridEntry(_:), lines 292–294
 
-• chained commands
-• SF Symbol subtitle separation
-• widget configuration/title separation
-• display modes
+Current default label:
+The full raw command, such as “file spk.txt”.
 
-A general colon-removal fix would be unsafe.
+Desired default:
+The extracted filename, such as “spk.txt”.
 
-D. COMMAND SYNTAX AND COMPATIBILITY
+Filename handling:
+The implementation removes exactly the “file ” prefix and trims only leading/trailing whitespace. Internal spaces are preserved. Extensions are preserved and are not interpreted by the recognizer.
 
-Current widget syntax:
+Examples that source parsing supports:
+file My Notes.txt
+file Annual Report.pdf
+file holiday photo.jpg
 
-.clock [city]
-.date [city]
-.day [city]
-.dow [city]
-.month [city]
-.year [city]
-.hour [city]
-.min [city]
-.sec [city]
-.add
-.minus [initial count]
-.rnd [minimum] [maximum]
-.random [minimum] [maximum]
-.stop
-.stopwatch
-.power
-.timer ...
-.amb filename
-.ambient filename
+Explicit right-hand text:
+Supported.
 
-Existing aliases:
+Display-mode status:
+Incorrect without explicit right text; correct with explicit right text.
 
-.rnd / .random
-.stop / .stopwatch
-.amb / .ambient
+Relevant location:
+Main_ButtonBehavior.swift, lines 899–910
 
-Not currently supported:
+Risk:
+LOW–MEDIUM.
 
-.daynum
-.cb
-.prev
-.next
-.back
-.forw
+The display fallback can reuse the filename extraction rule without changing file lookup or preview execution.
 
-Currently supported navigation:
+3. OPEN APP
 
-prev
-next
-back
-forw
+Actual syntax:
+app application-reference
 
-Clipboard:
+Examples supported by source:
+app Safari
+app Apple Notes
+app maps
+app customscheme://...
 
+Leading period:
+No.
+
+Arguments:
+A nonempty application reference is required.
+
+Recognition:
+Main_ButtonBehavior.swift
+targetAppURLForSendText(_:), lines 808–847
+
+Execution:
+Main_ButtonBehavior.swift
+targetAppURLForGridEntry(_:), lines 755–757
+sendMainGridEntry(_:), lines 276–285
+
+Application representation:
+The command stores a user-entered application name or URL scheme, not a bundle identifier.
+
+Known names are mapped to schemes:
+• Notes or Apple Notes → mobilenotes://
+• Mail → message://
+• Messages or iMessage → sms:
+• FaceTime → facetime://
+• Maps → maps://
+• Music → music://
+• Calendar → calshow://
+• Phone → tel://
+
+Unknown names are normalized into a lowercase URL scheme. If the argument contains a colon, it is interpreted directly as a URL.
+
+Current default label:
+The full command, such as “app Safari”.
+
+Desired default:
+The application name.
+
+Ambiguity:
+The source cannot always derive a human-readable application name. For example:
+• “Apple Notes” and “Notes” resolve to the same app.
+• “applenotes” is accepted but is not necessarily the desired visible spelling.
+• A custom URL such as “myapp://open/page” has no reliable application display name.
+
+Safest display rule:
+Use the exact entered operand after “app ”, preserving capitalization and spaces. Do not attempt to derive a name from the resulting URL.
+
+Explicit right-hand text:
+Supported and especially useful for custom URLs.
+
+Relevant location:
+Main_ButtonBehavior.swift, lines 808–847
+
+Risk:
+MEDIUM because “application name” is not always available as structured data.
+
+4. RUN SHORTCUT
+
+Actual syntax:
+sc shortcut-name
+shortcut shortcut-name
+
+Leading period:
+No.
+
+Arguments:
+A nonempty shortcut name is required.
+
+Recognition:
+Main_ButtonBehavior.swift
+targetShortcutURLForSendText(_:), lines 849–877
+isShortcutCommandText(_:), lines 1335–1340
+
+Execution:
+Main_ButtonBehavior.swift
+targetShortcutURLForGridEntry(_:), lines 759–761
+sendMainGridEntry(_:), lines 313–315
+
+Shortcut-name handling:
+The code removes either “sc ” or “shortcut ” once, trims the result, then URL-encodes the entire remaining name. Spaces and characters such as “&” are preserved as part of the shortcut name through percent encoding.
+
+Current default label:
+The full command.
+
+Desired default:
+The extracted shortcut name.
+
+Explicit right-hand text:
+Supported.
+
+Display-mode status:
+Incorrect without explicit right text; correct with explicit text.
+
+Relevant location:
+Main_ButtonBehavior.swift, lines 849–877
+
+Risk:
+LOW.
+
+5. OUT
+
+Actual syntax:
+out integer integer
+
+Leading period:
+No.
+
+Arguments:
+Exactly two integer arguments are required for command normalization.
+
+Recognition and conversion:
+Main_ButtonBehavior.swift
+normalizedBluetoothSendText(_:), lines 1478–1508
+normalizedNumericBluetoothCommand(...), lines 1510–1527
+
+A valid command such as:
+out 4 1
+
+is converted for BLE transmission to:
+out:4:1
+
+Execution:
+It remains in bluetoothSendTexts and is sent through sendKeyboardOutputTokens:
+Main_ButtonBehavior.swift, lines 233–268 and 333–334
+
+Current default label:
+The full original command.
+
+Desired default:
+out
+
+Explicit right-hand text:
+Supported.
+
+Important behavior:
+An invalid OUT form is not rejected as an OUT command. It falls through and may be treated as ordinary Bluetooth text. Therefore, a display fallback should only be generated when the same exact numeric syntax is valid.
+
+Relevant location:
+Main_ButtonBehavior.swift, lines 1478–1527
+
+Risk:
+LOW if the display helper validates two integer arguments; MEDIUM if it merely checks for an “out ” prefix.
+
+6. PWM
+
+Actual syntax:
+pwm integer integer integer
+
+Leading period:
+No.
+
+Arguments:
+Exactly three integer arguments are required for normalization.
+
+Recognition and conversion:
+Main_ButtonBehavior.swift
+normalizedBluetoothSendText(_:), lines 1494–1500
+normalizedNumericBluetoothCommand(...), lines 1510–1527
+
+A valid command is converted to:
+pwm:value:value:value
+
+Execution:
+Same BLE path as OUT.
+
+Current default label:
+The full original command.
+
+Desired default:
+pwm
+
+Explicit right-hand text:
+Supported.
+
+Important behavior:
+As with OUT, invalid syntax falls through as ordinary Bluetooth text. The default resolver must use exact numeric validation.
+
+Relevant location:
+Main_ButtonBehavior.swift, lines 1494–1527
+
+Risk:
+LOW with exact validation; MEDIUM with prefix-only matching.
+
+7. CLIPBOARD
+
+Actual syntax:
 cb text
 
-Screen compatibility conclusion:
+Leading period:
+No.
 
-Commands are stored literally in .screen lines. Future changes should add aliases and retain all existing spellings.
+“.cb” support:
+Not currently recognized.
 
-Recommended compatibility policy:
+Arguments:
+Nonempty clipboard text is required.
 
-• Keep .day; add .daynum.
-• Keep cb; optionally add .cb.
-• Keep prev/next/back/forw; add period-prefixed aliases.
-• Keep .rnd/.random.
-• Avoid silently converting existing stored screen content.
+Recognition and parsing:
+Main_ButtonBehavior.swift
+targetClipboardTextForSendText(_:), lines 879–897
 
-E. FILE-PREVIEW FINDINGS
+Execution:
+Main_ButtonBehavior.swift
+targetClipboardTextForGridEntry(_:), lines 747–749
+sendMainGridEntry(_:), lines 288–290
 
-Explicit “file ” is intentionally required by the execution parser.
+Clipboard-text handling:
+The complete content after “cb ” is collected and trimmed. Spaces are supported. Quote characters and backslashes are then removed before the text is written to UIPasteboard.
 
-Bare extensions are classified for diagnostics but do not trigger previews.
+Current default label:
+The complete command, including copied text.
 
-Confirmed support:
+Desired default:
+cb
 
-• UTF-8 text files
-• UIImage-readable image files
-• one-page PDFs
+Explicit right-hand text:
+Supported.
 
-Confirmed limitation:
+Display-mode status:
+Incorrect without explicit right text; correct with explicit text.
 
-• Multi-page PDFs are not supported by the current PDF rendering branch.
+Compatibility concern:
+A future change from “cb ” to “.cb ” is a separate command-recognition decision. The default-label implementation should not silently recognize “.cb” before command execution does.
 
-Lookup is by complete filename, including extension:
+Relevant location:
+Main_ButtonBehavior.swift, lines 879–897
 
-• exact match first
-• case-insensitive filename match second
-• Documents before bundle
+Risk:
+MEDIUM because clipboard text is free-form and future command syntax remains undecided.
 
-Automatic recognition based solely on extension is unsafe because ordinary labels and other command families also use filename-looking strings.
+C. SHARED IMPLEMENTATION OPPORTUNITIES
 
-Explicit-file preview testing should be grouped as:
+One shared command-default helper is appropriate.
 
-• file spk.txt
-• file aces2.jpg
-• file one-page.pdf
-• file multi-page.pdf
-• missing file
-• case-different filename
+Recommended structure:
 
-F. RECOMMENDED FIX GROUPS
+• Keep resolvedAlternateDisplayText(for:) responsible only for real explicit right-hand text.
+• Extend effectiveAlternateDisplayText(for:) so that, after confirming explicit text is empty, it asks one command-specific default resolver.
+• Preserve navigationCommandDefaultLabel(for:) or call it from the new shared resolver.
+• Make the new resolver return nil for unrelated commands.
 
-Phase 1 — Navigation aliases and labels
+Suggested command-specific outputs:
 
-Change only navigation recognition and narrowly scoped default-label generation.
+• .prev → prev
+• .next → next
+• .back → back
+• .forw → forw
+• home → home
+• file <filename> → exact filename
+• app <reference> → exact entered operand
+• sc <name> → exact shortcut name
+• shortcut <name> → exact shortcut name
+• valid out <int> <int> → out
+• valid pwm <int> <int> <int> → pwm
+• cb <text> → cb
+
+Only Main_ButtonBehavior.swift should require modification for default-label behavior.
+
+ContentView.swift, command execution, stored screen data, and MainScreenButtonLabelView should not need modification.
+
+D. SPECIAL CASES AND AMBIGUITIES
+
+Command chains
+
+parsedActionTokens(from:) separates left-hand commands on colons at ContentView.swift lines 91–111.
+
+A shared default resolver should only generate an argument-derived default when the entry contains one applicable command. For a multi-command chain, selecting one command’s filename, shortcut name, or label could misrepresent the button’s actual actions.
+
+Recommendation:
+Require entry.sendTexts.count == 1 for these generated defaults unless a specific chain-display policy is later defined.
+
+Colons inside arguments
+
+Because colons delimit action chains, unrestricted operands containing colons can be split before command recognition.
+
+HTTP and HTTPS receive a special parsing exception at ContentView.swift lines 2630–2637. File, shortcut, and clipboard commands do not.
+
+The Open App parser accepts colon-containing URLs, but the screen-line parser may split such a command before it reaches targetAppURLForSendText. This is a pre-existing parsing limitation, not a default-label issue.
+
+Explicit right text
+
+functionKeyEntry(from:) stores a nonempty right side as alternateDisplayText at ContentView.swift lines 2617–2627. effectiveAlternateDisplayText(for:) returns it before any fallback. This precedence can be preserved without special cases.
+
+SF Symbols and emoji
+
+SF Symbol and emoji detection intentionally use resolvedAlternateDisplayText rather than effectiveAlternateDisplayText:
+
+• parsedSFSymbolDisplay(for:), Main_ButtonBehavior.swift lines 1679–1697
+• parsedEmojiDisplay(for:), lines 1699–1715
+
+Therefore, generated textual defaults will not accidentally become SF Symbol or emoji specifications. This separation should be retained.
+
+Colour prefixes
+
+resolvedAlternateDisplayText(for:) strips a right-side hexadecimal colour component at Main_ButtonBehavior.swift lines 139–153. The fallback should be applied after this resolution, as navigation currently does.
+
+Dynamic widgets
+
+The requested commands do not enter the widget renderer. No changes are needed to MainScreenButtonLabelView’s widget branch. The excluded clock, date, random, stopwatch, stop, and timer commands can remain untouched.
+
+HOME mismatch
+
+Confirmed source behavior is “home”, while help content advertises “.home”. This should be treated as a separate command-syntax task. A display-only change should not make “.home” appear supported.
+
+E. RECOMMENDED IMPLEMENTATION ORDER
+
+Stage 1: Shared fallback and fixed-label commands
+
+Implement the shared right-hand fallback mechanism for:
+
+• Valid OUT
+• Valid PWM
+
+These have unambiguous desired labels and no free-form display-name decisions.
 
 Test together:
 
-.prev
-.next
-.back
-.forw
-prev
-next
-back
-forw
+• Left, Right, Both, Last
+• Valid and invalid numeric argument counts
+• Explicit right text
+• Ordinary strings beginning with “out” or “pwm”
 
-Build after the change, then user-test existing and new screens.
+Stage 2: Operand-derived labels
 
-Phase 2 — Date fallback only
+Implement:
 
-Remove the automatic city/code header when no ordinary button text exists, without altering timezone or date formatting.
+• FILE
+• SC
+• SHORTCUT
 
-Test:
+These share the safe rule “remove one recognized prefix and preserve the complete remaining operand.”
 
-.date
-.date Tokyo
-.date with ordinary text
-.clock
-.clock Tokyo
-.clock with ordinary text
+Test together:
 
-Clock should be treated as the regression reference.
+• Names with spaces
+• Extensions
+• Ampersands in shortcut names
+• Explicit right text
+• Single-command versus chained entries
 
-Phase 3 — Shared widget header/SF Symbol composition
+Stage 3: Commands requiring policy confirmation
 
-Introduce one shared, symbol-aware widget header treatment, then apply it carefully to:
+Implement after confirming policy:
 
-.stopwatch
-.add
-.minus
-.power
+• APP: recommend displaying the exact entered operand
+• CB: retain current “cb ” recognition only
+• HOME: resolve the documented “.home” versus implemented “home” mismatch first
 
-Test each with:
+Device testing is advisable for all stages because display-mode state is user-configurable. APP, shortcut launching, clipboard copying, file preview, and BLE transmission also require device-level execution confirmation, although their execution paths need not change.
 
-• no right-side text
-• ordinary right-side text
-• valid SF Symbol only
-• valid SF Symbol plus subtitle
-• text containing a legitimate colon
+F. RECOMMENDED FIRST IMPLEMENTATION TASK
 
-This should be one shared correction rather than four unrelated symbol hacks.
+Recommended first task:
 
-Phase 4 — Command aliases and command-table consistency
+Extend the existing effectiveAlternateDisplayText(for:) path with a single command-default resolver, initially supporting only valid OUT and PWM commands while retaining the four navigation mappings.
 
-Potential changes:
+Scope:
 
-• add .daynum while retaining .day
-• add .cb while retaining cb
-• make help/editor insert .rnd, .add, .minus, and .power consistently
+• Modify only Main_ButtonBehavior.swift.
+• Do not modify recognition or execution.
+• Require exact numeric arity matching the existing normalizer.
+• Preserve explicit alternateDisplayText.
+• Return nil for every unrelated command.
+• Preserve Left, Right, Both, and Last selection in buttonTitle(for:).
 
-Test:
-
-.day
-.daynum
-cb text
-.cb text
-.rnd 0 100
-.random 0 100
-saved screens using existing commands
-
-Phase 5 — File preview, separately
-
-First test explicit file commands without changing recognition.
-
-Only after those results decide whether narrow automatic filename recognition is desirable.
-
-Test text, JPG, one-page PDF, multi-page PDF, missing file, and ordinary text ending with a known extension.
-
-G. RISKS AND UNRESOLVED QUESTIONS
-
-Confirmed source findings:
-
-• Date city/code fallback is explicit.
-• Period-prefixed navigation commands are not recognized.
-• .rnd 0 100 is supported by runtime parsing.
-• Help inserts rnd 0 100 without the required period.
-• .cb is unsupported.
-• SF Symbol rendering is bypassed when a widget descriptor exists.
-• Stopwatch treats its right-side symbol identifier as title text.
-• Power cannot display supplied ordinary text.
-• File preview requires “file ”.
-• PDF preview supports exactly one page.
-
-Questions requiring device testing:
-
-1. What exact stored .screen lines produced the add, minus, stopwatch, and power examples?
-
-The right-side “::” values determine whether a valid SF Symbol, subtitle, color prefix, or literal colon is involved.
-
-2. Does file spk.txt fail when the file is definitely in the app Documents directory?
-
-If yes, inspect file availability/encoding.
-
-3. Is macshortcuts.pdf multi-page?
-
-If so, the source explains its failure.
-
-4. Does the failing random button contain “rnd 0 100” or “.rnd 0 100” in the saved screen?
-
-The former is confirmed unsupported as a widget; the latter is supported.
-
-5. What symbol was expected for .add and .power?
-
-Neither widget hard-codes an expected symbol. The exact identifier must come from the stored alternate display text.
-
-H. RECOMMENDED FIRST FIX
-
-Navigation aliases should be the first implementation task.
-
-Reason:
-
-• The defect is fully confirmed from source.
-• Documentation already advertises the period-prefixed syntax.
-• All four commands share one small recognition area.
-• Existing unprefixed screens can remain compatible.
-• Navigation history logic does not need to change.
-• The visible-label correction can be narrowly limited to recognized bare navigation commands.
-
-Recommended first test set:
-
-.prev
-.next
-.back
-.forw
-prev
-next
-back
-forw
-
-Regression risk:
-LOW to MEDIUM
-
-After that, the isolated .date fallback correction is the safest next task.
+This establishes the reusable mechanism with the least syntax ambiguity. File and shortcut operand extraction can then be added as a separate, easily tested task.

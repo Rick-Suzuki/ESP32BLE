@@ -90,11 +90,12 @@ extension MainScreen {
     }
 
     func buttonTitle(for entry: FunctionKeyEntry) -> String {
-        guard entry.displayUsesAlternateText else {
+        let navigationDefaultLabel = navigationCommandDefaultLabel(for: entry.primaryDisplayText)
+        let alternateDisplayText = effectiveAlternateDisplayText(for: entry)
+
+        guard entry.displayUsesAlternateText || navigationDefaultLabel != nil else {
             return displayText(from: rawLineWithoutHiddenMetadata(entry))
         }
-
-        let alternateDisplayText = resolvedAlternateDisplayText(for: entry)
 
         switch displayMode {
         case .left:
@@ -152,6 +153,15 @@ extension MainScreen {
         }
 
         return rawRightText
+    }
+
+    private func effectiveAlternateDisplayText(for entry: FunctionKeyEntry) -> String {
+        let alternateDisplayText = resolvedAlternateDisplayText(for: entry)
+        guard alternateDisplayText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return alternateDisplayText
+        }
+
+        return navigationCommandDefaultLabel(for: entry.primaryDisplayText) ?? alternateDisplayText
     }
 
     func isHexColorPrefix(_ text: String) -> Bool {
@@ -656,19 +666,34 @@ extension MainScreen {
     }
 
     func isBackDocumentCommandText(_ sendText: String) -> Bool {
-        sendText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == "back"
+        sendText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == ".back"
     }
 
     func isForwardDocumentCommandText(_ sendText: String) -> Bool {
-        sendText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == "forw"
+        sendText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == ".forw"
     }
 
     func isPreviousDocumentCommandText(_ sendText: String) -> Bool {
-        sendText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == "prev"
+        sendText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == ".prev"
     }
 
     func isNextDocumentCommandText(_ sendText: String) -> Bool {
-        sendText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == "next"
+        sendText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == ".next"
+    }
+
+    private func navigationCommandDefaultLabel(for title: String) -> String? {
+        switch title.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+        case ".prev":
+            return "prev"
+        case ".next":
+            return "next"
+        case ".back":
+            return "back"
+        case ".forw":
+            return "forw"
+        default:
+            return nil
+        }
     }
 
     func targetDocumentNameForSendText(_ sendText: String) -> String? {
@@ -1523,7 +1548,7 @@ extension MainScreen {
         backgroundOpacity: Double
     ) -> some View {
         let leftTitle = displayText(from: entry.primaryDisplayText)
-        let rightTitle = displayText(from: resolvedAlternateDisplayText(for: entry))
+        let rightTitle = displayText(from: effectiveAlternateDisplayText(for: entry))
         let title = buttonTitle(for: entry)
 
         return MainScreenButtonLabelView(

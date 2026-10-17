@@ -659,7 +659,7 @@ anything you want
 		//
 		//----------------------------------------
 		//
-		("wait time", "wait 5", """
+		("wait time", ".wait 5", """
 Waits before continuing
 a command chain.
 """),
@@ -670,7 +670,7 @@ a command chain.
 		//
 		//----------------------------------------
 		//
-		("tap minus", "minus 10", """
+		("tap minus", ".minus 10", """
 Subtracts from a
 tap counter.
 
@@ -679,7 +679,7 @@ tap counter.
 		//
 		//----------------------------------------
 		//
-		("tap add", "add ", """
+		("tap add", ".add ", """
 Adds to a
 tap counter.
 
@@ -697,7 +697,7 @@ number.
 		//
 		//----------------------------------------
 		//
-		("random line", "rnd file.txt", """
+		("random line", ".rnd file.txt", """
 Uses a random line
 from a file.
 
@@ -710,7 +710,7 @@ from a file.
 		//
 		//----------------------------------------
 		//
-		("copy cb","cb","""
+		("copy cb",".cb","""
 **Copy to Clipboard**
 Copies the specified text to the iOS clipboard.
  
@@ -725,7 +725,7 @@ The clipboard will contain *Hello World*.
 		//
 		//----------------------------------------
 		//
-		("device power", "power ", """
+		("device power", ".power ", """
 Shows the device
 power state.
 
@@ -771,7 +771,7 @@ shortcut.
 		//----------------------------------------
 		//
 		("open app",	// table title
-		 "app mail",	// example code
+		 ".app mail",	// example code
 // details
 """
 ***Open an App***	
@@ -788,7 +788,7 @@ calendar	    .
 		//
 		//----------------------------------------
 		//
-		("preview file", "file file.txt", """
+		("preview file", " file.txt", """
 Previews a file.
 
 **Note:** This command works without an ESP32 or Mac Helper connection.
@@ -796,10 +796,10 @@ Previews a file.
 		//
 		//----------------------------------------
 		//
-		("wait", "wait 1", """
+		("wait", ".wait 1", """
 Wait for a length of time
 
-Syntax: wait number
+Syntax: .wait number
 
 number can be int like 1 or a fraction 0.5 = half a second
 
@@ -815,10 +815,10 @@ sends F1, waits one send then sends sp(space)
 		//-----------------------------------------------------------------------------------------------
 		// *** ESP32 CMDS ***
 		//
-		("Esp32 out", "out 32 1", """
+		("Esp32 out", ".out 32 1", """
 **Set an ESP32 Output Pin State**
 
-**Syntax:** out *num1 num2*
+**Syntax:**.out *num1 num2*
 *num1* is the pin to send to
 *num2* is the state, 1 or 0
 
@@ -828,10 +828,10 @@ This command requires an ESP32 connection. Not all pins will work, it will depen
 		//
 		//----------------------------------------
 		//
-		("Esp32 pwm", "pwm 32 5 4", """
+		("Esp32 pwm", ".pwm 32 5 4", """
 **Sends an ESP32 PWM Command**
 
-**Syntax:** pwm *num1 num2 num3*
+**Syntax:**.pwm *num1 num2 num3*
 *num1* is the pin to send to
 *num2* is the mark ratio
 *num3* is the space ratio
