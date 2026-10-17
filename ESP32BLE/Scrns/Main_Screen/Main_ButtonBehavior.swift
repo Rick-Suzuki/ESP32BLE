@@ -177,6 +177,28 @@ extension MainScreen {
 
         let displayText = String(sendText.dropFirst())
 
+        if displayText.lowercased() == "home" {
+            return displayText
+        }
+
+        let commandParts = displayText.split(maxSplits: 1, whereSeparator: { $0.isWhitespace })
+        if commandParts.count == 2 {
+            let command = commandParts[0].lowercased()
+            let operand = commandParts[1].trimmingCharacters(in: .whitespacesAndNewlines)
+            if (command == "app" || command == "cb"), !operand.isEmpty {
+                return displayText
+            }
+        }
+
+        let shortcutParts = displayText.split(maxSplits: 1, whereSeparator: { $0.isWhitespace })
+        if shortcutParts.count == 2 {
+            let shortcutCommand = shortcutParts[0].lowercased()
+            let shortcutName = shortcutParts[1].trimmingCharacters(in: .whitespacesAndNewlines)
+            if (shortcutCommand == "sc" || shortcutCommand == "shortcut"), !shortcutName.isEmpty {
+                return displayText
+            }
+        }
+
         if normalizedNumericBluetoothCommand(
             from: displayText,
             command: "out",
@@ -673,8 +695,9 @@ extension MainScreen {
     }
 
     func targetDocumentNameForGridEntry(_ entry: FunctionKeyEntry) -> String? {
-        let target = entry.sendTexts.first(where: { targetDocumentNameForSendText($0) != nil })
-        return target
+        entry.sendTexts
+            .compactMap { targetDocumentNameForSendText($0) }
+            .first
     }
 
     func targetBackDocumentCommandForGridEntry(_ entry: FunctionKeyEntry) -> Bool {
@@ -732,6 +755,7 @@ extension MainScreen {
         let trimmedSendText = sendText.trimmingCharacters(in: .whitespacesAndNewlines)
         let loweredSendText = trimmedSendText.lowercased()
         let isScreenLinkTraceCandidate = loweredSendText == "home" ||
+            loweredSendText == ".home" ||
             loweredSendText.hasSuffix(".\(legacyScreenDocumentFileExtension)") ||
             loweredSendText.hasSuffix(".\(screenDocumentFileExtension)")
         if isScreenLinkTraceCandidate {
@@ -757,7 +781,7 @@ extension MainScreen {
             return nil
         }
 
-        if loweredSendText == "home" {
+        if loweredSendText == "home" || loweredSendText == ".home" {
             return "home.screen"
         }
 
@@ -841,11 +865,16 @@ extension MainScreen {
         let trimmedSendText = sendText.trimmingCharacters(in: .whitespacesAndNewlines)
         let loweredSendText = trimmedSendText.lowercased()
 
-        guard loweredSendText.hasPrefix("app ") else {
+        let appCommandLength: Int
+        if loweredSendText.hasPrefix(".app ") {
+            appCommandLength = 5
+        } else if loweredSendText.hasPrefix("app ") {
+            appCommandLength = 4
+        } else {
             return nil
         }
 
-        let appName = String(trimmedSendText.dropFirst(4)).trimmingCharacters(in: .whitespacesAndNewlines)
+        let appName = String(trimmedSendText.dropFirst(appCommandLength)).trimmingCharacters(in: .whitespacesAndNewlines)
         guard !appName.isEmpty else {
             return nil
         }
@@ -912,12 +941,17 @@ extension MainScreen {
         let trimmedSendText = sendText.trimmingCharacters(in: .whitespacesAndNewlines)
         let loweredSendText = trimmedSendText.lowercased()
 
-        guard loweredSendText.hasPrefix("cb ") else {
+        let clipboardCommandLength: Int
+        if loweredSendText.hasPrefix(".cb ") {
+            clipboardCommandLength = 4
+        } else if loweredSendText.hasPrefix("cb ") {
+            clipboardCommandLength = 3
+        } else {
             return nil
         }
 
         let quoteCharacters = CharacterSet(charactersIn: "'\"‘’“”`´")
-        let clipboardText = String(trimmedSendText.dropFirst(3))
+        let clipboardText = String(trimmedSendText.dropFirst(clipboardCommandLength))
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .unicodeScalars
             .filter { !quoteCharacters.contains($0) }
@@ -949,6 +983,7 @@ extension MainScreen {
         guard !loweredSendText.hasPrefix("amb "),
               !loweredSendText.hasPrefix("ambient "),
               !loweredSendText.hasPrefix("cb "),
+              !loweredSendText.hasPrefix(".cb "),
               !isWaitCommandText(loweredSendText),
               !isShortcutCommandText(loweredSendText),
               !isBareWidgetCommandText(loweredSendText) else {

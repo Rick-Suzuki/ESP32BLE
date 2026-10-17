@@ -1,3 +1,6 @@
+261017 Sat 1738
+widgets updated, home working
+V62.69
 
 261017 Sat 1629
 esp cmds improved
