@@ -382,8 +382,10 @@ final class MacConnectionManager: ObservableObject {
                 return
             }
 
-            self.receive(on: connection)
-        }
+			Task { @MainActor in
+				self.receive(on: connection)
+			}
+		}
     }
 
     private func processReceivedData(_ data: Data) {

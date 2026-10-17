@@ -354,86 +354,122 @@ private let smartButtonSwatchHexColors = [
 		//
 		//-----------------------------------------------------------------------------------------------
 		// *** TIME, DAY, DATE ETC ***
-		//
-		("clock", "clock","""
-**Insert a Digiral Clock**
+		// table    cmd		details
+		("clock", ".clock ","""
+**Insert a Digital Clock**
 	
-**Syntax:** clock
+**Syntax:** 	.clock
+
+**Display:**	13.05:41
+
+**Display with btn text:**	
+    hello
+13.05:41
 
 Optionally specify a city:
 	
-clock Paris
-clock Tokyo
+.clock Paris
+.clock Tokyo
 
-**Note:** This command works without an ESP32 or Mac Helper connection.
+**Notes:** This command works without an ESP32 or Mac Helper connection.
 """),
 		//
 		//----------------------------------------
 		//
-		("date", "date ", """
+		("date", ".date ", """
 **Insert the Current Date**
  
-**Syntax:** date
+**Syntax:** .date
+
+**Display:**	26.10.17
+
+**Display with btn text:**	
+   hello
+26.10.17
 
 Optionally specify a city:
  
-date Paris
-date Tokyo
+.date Paris
+.date Tokyo
 
 **Note:** This command works without an ESP32 or Mac Helper connection.
 """),
 		//
 		//----------------------------------------
 		//
-		("year", "year ", """
+		("year", ".year ", """
 **Insert the current year**
  
-**Syntax:** year
+**Syntax:** .year
+
+**Display:**	2026
+
+**Display with btn text:**	
+  hello
+2026
 
 Optionally specify a city:
  
-year Paris
-year Tokyo
+.year Paris
+.year Tokyo
 
 **Note:** This command works without an ESP32 or Mac Helper connection.
 """),
 		//
 		//----------------------------------------
 		//
-		("month", "month ", """
+		("month", ".month ", """
 **Insert the current month**
 
-**Syntax:** month
+**Syntax:** .month
 
 Optionally specify a city:
  
-month Paris
-month Tokyo
+**Display:**	10
+
+**Display with btn text:**	
+ hello
+10
+
+.month Paris
+.month Tokyo
 
 **Note:** This command works without an ESP32 or Mac Helper connection.
 """),
 		//
 		//----------------------------------------
 		//
-		("day", "day ", """
+		("day of month", ".day ", """
 **Insert the current day**
  
-**Syntax:** day
+**Syntax:** .day
+
+**Display:**	17th
+
+**Display with btn text:**	
+  hello
+17th
 
 Optionally specify a city:
  
-day Paris
-day Tokyo
+.day Paris
+.day Tokyo
 
 **Note:** This command works without an ESP32 or Mac Helper connection.
 """),
 		//
 		//----------------------------------------
 		//
-		("day of week", "dow ", """
+		("day of week", ".dow ", """
 **Insert the day of the week**
  
-**Syntax:** dow
+**Syntax:** .dow
+
+**Display:**	Monday
+
+**Display with btn text:**	
+  hello
+Monday
 
 Optionally specify a city:
  
@@ -445,24 +481,75 @@ dow Tokyo
 		//
 		//----------------------------------------
 		//
-		("hour", "hour ", """
-Inserts the current hour.
+		("hour", ".hour ", """
+**Insert the current hour**
+
+**Syntax:** .hour
+
+**Display:**	12
+
+**Display with btn text:**	
+  hello
+12
+
+Optionally specify a city:
+ 
+.hour Paris
+.hour Tokyo
 
 **Note:** This command works without an ESP32 or Mac Helper connection.
 """),
 		//
 		//----------------------------------------
 		//
-		("mins", "min ", """
-Inserts the current minutes.
+		("mins", ".min ", """
+**Insert the current minutes**
+
+**Syntax:** .min
+
+**Display:**	42
+
+**Display with btn text:**	
+  hello
+42
 
 **Note:** This command works without an ESP32 or Mac Helper connection.
 """),
 		//
 		//----------------------------------------
 		//
-		("secs", "sec ", """
-Inserts the current seconds.
+		("secs", ".sec ", """
+**Insert the current seconds**
+
+**Syntax:** .sec
+
+**Display:**	42
+
+**Display with btn text:**	
+  hello
+42
+
+**Note:** This command works without an ESP32 or Mac Helper connection.
+"""),
+		//
+		//----------------------------------------
+		//
+		("stopwatch", ".stop ", """
+**Inserts a stopwatch**
+
+**Insert the current seconds**
+
+**Syntax:** .stop
+
+**Display:**	01:02:03
+
+**Display with btn text:**	
+  hello
+01:02:03
+
+**taps**
+1 tap	-	pause
+2 taps	-	reset
 
 **Note:** This command works without an ESP32 or Mac Helper connection.
 """),
@@ -470,47 +557,79 @@ Inserts the current seconds.
 		//-----------------------------------------------------------------------------------------------
 		// *** BACK, FORWARD ETC ***
 		//
-		("prev", "prev", """
-Goes to the previous document
-in the file list.
-"""),
-		//
-		//----------------------------------------
-		//
-		("next", "next", """
-Goes to the next document
-in the file list.
+		("prev", ".prev", """
+**Goes to the previous screen in list**
+
+**Syntax:** .prev
+
+**Display:** prev
+ 
+**Display with btn text:**	
+anything you want
 
 **Note:** This command works without an ESP32 or Mac Helper connection.
 """),
 		//
 		//----------------------------------------
 		//
-		("back", "back", """
-Goes back in the
-loaded page stack.
+		("next", ".next", """
+**Goes to the next screen in list**
+
+**Syntax:** .next
+
+**Display:** next
+ 
+**Display with btn text:**	
+anything you want
 
 **Note:** This command works without an ESP32 or Mac Helper connection.
 """),
 		//
 		//----------------------------------------
 		//
-		("forward", "forw", """
-Goes forward in the
-loaded page stack.
+		("back", ".back", """
+**Goes backward in the loaded page stack**
+
+**Syntax:** .back
+
+**Display:** backward
+ 
+**Display with btn text:**	
+anything you want
 
 **Note:** This command works without an ESP32 or Mac Helper connection.
 """),
 		//
 		//----------------------------------------
 		//
-		("home", "home", """
-Goes to the
-home page.
+		("forward", ".forw", """
+**Goes forward in the loaded page stack**
+
+**Syntax:** .forw
+
+**Display:** forward
+ 
+**Display with btn text:**	
+anything you want
 
 **Note:** This command works without an ESP32 or Mac Helper connection.
 """),
 		//
+		//----------------------------------------
+		//
+		("home", ".home", """
+**Goes to home.screen page**
+
+**Syntax:** .home
+
+**Display:** home
+ 
+**Display with btn text:**	
+anything you want
+
+**Note:** This command works without an ESP32 or Mac Helper connection.
+"""),
+		// TODO
 		//-----------------------------------------------------------------------------------------------
 		// *** MEDIA ***
 		//
@@ -525,8 +644,15 @@ Plays a sound file.
 		//
 		//----------------------------------------
 		//
-		("speak text", "spk hello", """
-Speaks text aloud.
+		("speak text", ".spk hello", """
+**Speaks text aloud**
+
+**Syntax:** .spk [some text]
+
+**Display:** spk hello
+ 
+**Display with btn text:**	
+anything you want
 
 **Note:** This command works without an ESP32 or Mac Helper connection.
 """),
@@ -562,7 +688,7 @@ tap counter.
 		//
 		//----------------------------------------
 		//
-		("random number", "rnd 0 100", """
+		("random number", ".rnd 0 100", """
 Generates a random
 number.
 

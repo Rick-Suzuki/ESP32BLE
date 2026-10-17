@@ -2,6 +2,10 @@ import SwiftUI
 import UIKit
 import UniformTypeIdentifiers
 
+enum SettingsArchiveError: Error {
+    case unsupportedFormat
+}
+
 private struct SettingsTextFileDocument: FileDocument {
     static var readableContentTypes: [UTType] { [.plainText] }
     static var writableContentTypes: [UTType] { [.plainText] }
@@ -157,7 +161,7 @@ struct SettingsArchiveFileDocument: FileDocument {
             guard generalPurposeFlags & 0x0008 == 0,
                   compressionMethod == 0,
                   compressedSize == uncompressedSize else {
-                throw CocoaError(.fileReadUnsupportedScheme)
+                throw SettingsArchiveError.unsupportedFormat
             }
 
             let fileNameOffset = offset + 30

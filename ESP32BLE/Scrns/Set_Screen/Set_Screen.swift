@@ -2653,7 +2653,9 @@ struct SettingsScreen: View {
                 )
             } catch {
                 db("IMPORT_TRACE all_files_archive_validation=invalid error=\(error.localizedDescription)")
-                renameAlertMessage = "Couldn't import full backup: \(error.localizedDescription)"
+                renameAlertMessage = error is SettingsArchiveError
+                    ? settingsUnsupportedFullBackupZIPMessage
+                    : "Couldn't import full backup: \(error.localizedDescription)"
             }
         }
     }
@@ -2797,6 +2799,9 @@ struct SettingsScreen: View {
                 } catch {
                     db("IMPORT_TRACE zip_classification=invalid_archive filename=\(targetFileName) error=\(error.localizedDescription)")
                     db("Failed to import screen package \(targetFileName): \(error.localizedDescription)")
+                    if error is SettingsArchiveError {
+                        renameAlertMessage = settingsUnsupportedScreenZIPMessage
+                    }
                 }
                 continue
             }
@@ -4446,12 +4451,35 @@ Import Screen(s) only accepts individual .screen files or ZIP packages containin
 To import this backup, select Restore Full Backup from the Import menu.
 """
 
+private let settingsUnsupportedFullBackupZIPMessage = """
+This ZIP archive uses a compression format or ZIP feature that ESP cannot read.
+
+ESP currently supports ZIP archives created by its own Export Backup function.
+
+To restore a full backup, please use a ZIP file previously exported by ESP.
+"""
+
+private let settingsUnsupportedScreenZIPMessage = """
+This ZIP archive uses a compression format or ZIP feature that ESP cannot read.
+
+ESP currently supports screen ZIP archives created by its own Export function.
+"""
+
 private struct SettingsRenameAlertModifier: ViewModifier {
     @Binding var message: String?
     let isPresented: Binding<Bool>
 
     private var alertTitle: String {
-        message == settingsFullBackupImportRejectedMessage ? "Full Backup Detected" : "Alert"
+        if message == settingsFullBackupImportRejectedMessage {
+            return "Full Backup Detected"
+        }
+
+        if message == settingsUnsupportedFullBackupZIPMessage ||
+            message == settingsUnsupportedScreenZIPMessage {
+            return "Unsupported ZIP Format"
+        }
+
+        return "Alert"
     }
 
     private var dismissButtonTitle: String {
