@@ -1540,19 +1540,84 @@ struct SettingsScreen: View {
             _ = try fileURL.resourceValues(forKeys: [.isRegularFileKey])
             return false
         } catch {
-            let cocoaError = error as NSError
-            let missingFileErrorCodes = [
-                CocoaError.Code.fileNoSuchFile.rawValue,
-                CocoaError.Code.fileReadNoSuchFile.rawValue
-            ]
-
-            guard cocoaError.domain == NSCocoaErrorDomain,
-                  missingFileErrorCodes.contains(cocoaError.code) else {
+            guard isConfirmedMissingDocument(
+                error,
+                at: fileURL,
+                stage: "resource check"
+            ) else {
                 throw error
             }
 
             return true
         }
+    }
+
+    private func isConfirmedMissingDocument(
+        _ error: Error,
+        at fileURL: URL,
+        stage: String
+    ) -> Bool {
+        let fileError = error as NSError
+        if isMissingFileError(fileError) {
+            logDocumentFileError(fileError, stage: stage, fileURL: fileURL, classification: "confirmed missing")
+            return true
+        }
+
+        let parentDirectoryURL = fileURL.deletingLastPathComponent()
+        guard let directoryContents = try? FileManager.default.contentsOfDirectory(
+            at: parentDirectoryURL,
+            includingPropertiesForKeys: nil
+        ) else {
+            logDocumentFileError(fileError, stage: stage, fileURL: fileURL, classification: "genuine failure")
+            return false
+        }
+
+        let targetURL = fileURL.standardizedFileURL
+        let documentExists = directoryContents.contains { $0.standardizedFileURL == targetURL }
+        let classification = documentExists ? "genuine failure" : "confirmed missing"
+        logDocumentFileError(fileError, stage: stage, fileURL: fileURL, classification: classification)
+        return !documentExists
+    }
+
+    private func isMissingFileError(_ error: NSError) -> Bool {
+        let missingCocoaErrorCodes = [
+            CocoaError.Code.fileNoSuchFile.rawValue,
+            CocoaError.Code.fileReadNoSuchFile.rawValue
+        ]
+        if error.domain == NSCocoaErrorDomain,
+           missingCocoaErrorCodes.contains(error.code) {
+            return true
+        }
+
+        if error.domain == NSPOSIXErrorDomain, error.code == ENOENT {
+            return true
+        }
+
+        if let underlyingError = error.userInfo[NSUnderlyingErrorKey] as? NSError {
+            return isMissingFileError(underlyingError)
+        }
+
+        return false
+    }
+
+    private func logDocumentFileError(
+        _ error: NSError,
+        stage: String,
+        fileURL: URL,
+        classification: String
+    ) {
+        print("🐞 [SET-001] stage=\(stage) filename=\(fileURL.lastPathComponent) domain=\(error.domain) code=\(error.code) classification=\(classification)")
+    }
+
+    private func handleConfirmedMissingDocument(_ text: String) -> DocumentSaveResult {
+        guard text == savedDocumentEditorText else {
+            blockedDocumentSaveResult = .missing
+            presentDocumentSaveAlert(for: .missing)
+            return .failed
+        }
+
+        clearLoadedDocumentAfterConfirmedDeletion()
+        return .missing
     }
 
     private func saveDocumentText(_ text: String, to fileURL: URL) -> DocumentSaveResult {
@@ -1569,8 +1634,7 @@ struct SettingsScreen: View {
             if blockedDocumentSaveResult == .missing {
                 do {
                     if try isConfirmedMissingDocument(at: fileURL) {
-                        clearLoadedDocumentAfterConfirmedDeletion()
-                        return .missing
+                        return handleConfirmedMissingDocument(text)
                     }
                     self.blockedDocumentSaveResult = nil
                 } catch {
@@ -1585,42 +1649,56 @@ struct SettingsScreen: View {
 
         do {
             if try isConfirmedMissingDocument(at: fileURL) {
-                clearLoadedDocumentAfterConfirmedDeletion()
-                return .missing
+                return handleConfirmedMissingDocument(text)
             }
         } catch {
             presentDocumentSaveAlert(for: .failed)
             return .failed
         }
 
+        let diskText: String
         do {
-            let diskText = try String(contentsOf: fileURL, encoding: .utf8)
-
-            if diskText == text {
-                savedDocumentEditorText = diskText
-                return .unchanged
+            diskText = try String(contentsOf: fileURL, encoding: .utf8)
+        } catch {
+            if isConfirmedMissingDocument(error, at: fileURL, stage: "read") {
+                return handleConfirmedMissingDocument(text)
             }
+            presentDocumentSaveAlert(
+                title: "File Could Not Be Saved",
+                message: "The file could not be read or saved. Your changes have not been saved."
+            )
+            return .failed
+        }
 
-            if text == savedDocumentEditorText {
-                isLoadingDocumentText = true
-                documentEditorText = diskText
-                savedDocumentEditorText = diskText
-                isLoadingDocumentText = false
-                return .reloadedFromDisk
-            }
+        if diskText == text {
+            savedDocumentEditorText = diskText
+            return .unchanged
+        }
 
-            guard diskText == savedDocumentEditorText else {
-                blockedDocumentSaveResult = .conflict
-                presentDocumentSaveAlert(for: .conflict)
-                return .conflict
-            }
+        if text == savedDocumentEditorText {
+            isLoadingDocumentText = true
+            documentEditorText = diskText
+            savedDocumentEditorText = diskText
+            isLoadingDocumentText = false
+            return .reloadedFromDisk
+        }
 
+        guard diskText == savedDocumentEditorText else {
+            blockedDocumentSaveResult = .conflict
+            presentDocumentSaveAlert(for: .conflict)
+            return .conflict
+        }
+
+        do {
             try text.write(to: fileURL, atomically: true, encoding: .utf8)
             savedDocumentEditorText = text
             loadedDocumentName = fileURL.lastPathComponent
             loadedDocumentURL = fileURL
             return .saved
         } catch {
+            if isConfirmedMissingDocument(error, at: fileURL, stage: "write") {
+                return handleConfirmedMissingDocument(text)
+            }
             presentDocumentSaveAlert(
                 title: "File Could Not Be Saved",
                 message: "The file could not be read or saved. Your changes have not been saved."

@@ -1,3 +1,8 @@
+261018 Sun 0929
+settings rename - fixed
+V62.71
+
+
 261018 Sun 0904
 sf symbols confused with text-fixed
 V62.70
