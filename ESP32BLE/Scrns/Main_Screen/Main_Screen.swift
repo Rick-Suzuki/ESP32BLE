@@ -807,10 +807,10 @@ number can be int like 1 or a fraction 0.5 = half a second
 
 This is a chain command, so
 
-F1:wait 10:hello.txt
+F1:.wait 10:hello.txt
 sends F1 then waits 10 secs, the opens hello.txt
 
-F1:wait 1:sp
+F1:.wait 1:sp
 sends F1, waits one send then sends sp(space)
 """),
 		//

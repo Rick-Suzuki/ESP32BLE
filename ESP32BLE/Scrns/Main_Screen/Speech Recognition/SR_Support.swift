@@ -58,6 +58,17 @@ extension MainScreen {
 
         unmatchedSpeechText = nil
 
+        if containsWaitCommand(in: matchingEntry.sendTexts) {
+            Task { @MainActor in
+                await runWaitChainCommandTokens(
+                    matchingEntry.sendTexts,
+                    sourceEntry: matchingEntry,
+                    respectsBluetoothMode: true
+                )
+            }
+            return
+        }
+
         let bluetoothSendTexts = bluetoothSendTexts(for: matchingEntry)
         let targetDocumentName = targetDocumentNameForGridEntry(matchingEntry)
         let targetPreviewFilename = targetPreviewFilenameForGridEntry(matchingEntry)

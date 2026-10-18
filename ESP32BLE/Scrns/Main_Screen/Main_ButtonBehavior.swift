@@ -444,6 +444,8 @@ extension MainScreen {
         sourceEntry _: FunctionKeyEntry?,
         respectsBluetoothMode: Bool
     ) async {
+        var pendingModifierTokens: [String] = []
+
         for actionToken in actionTokens {
             let trimmedActionToken = actionToken.trimmingCharacters(in: .whitespacesAndNewlines)
             let loweredActionToken = trimmedActionToken.lowercased()
@@ -452,9 +454,10 @@ extension MainScreen {
             }
 
             if isWaitCommandText(loweredActionToken) {
+                pendingModifierTokens.removeAll()
                 guard let waitDuration = waitDurationForSendText(trimmedActionToken) else {
                     alertTitle = "Invalid wait"
-                    renameAlertMessage = "Use wait followed by seconds,\nfor example wait 1 or wait 0.5."
+                    renameAlertMessage = "Use .wait followed by seconds,\nfor example .wait 1 or .wait 0.5."
                     return
                 }
 
@@ -464,11 +467,13 @@ extension MainScreen {
             }
 
             if let targetURL = targetURLForSendText(trimmedActionToken) {
+                pendingModifierTokens.removeAll()
                 await UIApplication.shared.open(targetURL)
                 continue
             }
 
             if let targetAppURL = targetAppURLForSendText(trimmedActionToken) {
+                pendingModifierTokens.removeAll()
                 UIApplication.shared.open(targetAppURL) { success in
                     guard !success else {
                         return
@@ -481,55 +486,66 @@ extension MainScreen {
             }
 
             if let targetClipboardText = targetClipboardTextForSendText(trimmedActionToken) {
+                pendingModifierTokens.removeAll()
                 UIPasteboard.general.string = targetClipboardText
                 continue
             }
 
             if let targetPreviewFilename = targetPreviewFilenameForSendText(trimmedActionToken) {
+                pendingModifierTokens.removeAll()
                 openPreviewFile(named: targetPreviewFilename)
                 continue
             }
 
             if let targetSoundFilename = targetSoundFilenameForSendText(trimmedActionToken) {
+                pendingModifierTokens.removeAll()
                 playMainGridSound(named: targetSoundFilename)
                 continue
             }
 
             if let targetSpokenText = targetSpokenTextForSendText(trimmedActionToken) {
+                pendingModifierTokens.removeAll()
                 speakMainGridText(targetSpokenText)
                 continue
             } else if let targetSpokenFilename = targetSpokenFilenameForSendText(trimmedActionToken) {
+                pendingModifierTokens.removeAll()
                 alertTitle = "File Not Found"
                 renameAlertMessage = "Couldn't find \(targetSpokenFilename.lowercased())."
                 return
             }
 
             if let targetShortcutURL = targetShortcutURLForSendText(trimmedActionToken) {
+                pendingModifierTokens.removeAll()
                 await UIApplication.shared.open(targetShortcutURL)
                 continue
             }
 
             if isBackDocumentCommandText(trimmedActionToken) {
+                pendingModifierTokens.removeAll()
                 goBackToPreviousDocument()
                 continue
             }
 
             if isForwardDocumentCommandText(trimmedActionToken) {
+                pendingModifierTokens.removeAll()
                 goForwardToNextDocument()
                 continue
             }
 
             if isPreviousDocumentCommandText(trimmedActionToken) {
+                pendingModifierTokens.removeAll()
                 selectPreviousDocument()
                 continue
             }
 
             if isNextDocumentCommandText(trimmedActionToken) {
+                pendingModifierTokens.removeAll()
                 selectNextDocument()
                 continue
             }
 
             if let targetDocumentName = targetDocumentNameForSendText(trimmedActionToken) {
+                pendingModifierTokens.removeAll()
                 let didSelectDocument = selectDocumentNamedFromGrid(targetDocumentName)
                 guard didSelectDocument else {
                     alertTitle = "File Not Found"
@@ -540,6 +556,27 @@ extension MainScreen {
             }
 
             if targetWidgetDescriptorForSendText(trimmedActionToken) != nil {
+                pendingModifierTokens.removeAll()
+                continue
+            }
+
+            let bluetoothSendText = normalizedBluetoothSendText(trimmedActionToken)
+            if KeyboardModifier(token: bluetoothSendText) != nil {
+                pendingModifierTokens.append(bluetoothSendText)
+                continue
+            }
+
+            if !pendingModifierTokens.isEmpty {
+                let keyboardCommandTokens = pendingModifierTokens + [bluetoothSendText]
+                let didSendKeyboardCommand = sendKeyboardOutputTokens(
+                    keyboardCommandTokens,
+                    respectsButtonMode: respectsBluetoothMode
+                )
+                pendingModifierTokens.removeAll()
+
+                guard didSendKeyboardCommand else {
+                    return
+                }
                 continue
             }
 
@@ -550,6 +587,8 @@ extension MainScreen {
                 return
             }
         }
+
+        pendingModifierTokens.removeAll()
     }
 
     private func sendBluetoothCommandToken(
@@ -1412,7 +1451,7 @@ extension MainScreen {
         let trimmedSendText = sendText.trimmingCharacters(in: .whitespacesAndNewlines)
         let parts = trimmedSendText.split(maxSplits: 1, whereSeparator: { $0.isWhitespace })
         guard parts.count == 2,
-              parts[0].lowercased() == "wait" else {
+              parts[0].lowercased() == ".wait" else {
             return nil
         }
 
@@ -1425,7 +1464,7 @@ extension MainScreen {
     }
 
     func isWaitCommandText(_ loweredText: String) -> Bool {
-        loweredText == "wait" || loweredText.hasPrefix("wait ")
+        loweredText == ".wait" || loweredText.hasPrefix(".wait ")
     }
 
     private func timerCompletion(from text: String) -> MainGridTimerCompletion? {

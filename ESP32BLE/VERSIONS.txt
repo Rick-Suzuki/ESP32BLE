@@ -1,3 +1,7 @@
+261019 Mon 0853
+.wait commands, multiple .wait(s) possible
+V63.75
+
 261018 Sun 1716
 .ordinal command change from .day
 V63.74

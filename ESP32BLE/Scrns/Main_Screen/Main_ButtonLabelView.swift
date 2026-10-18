@@ -208,21 +208,21 @@ struct MainScreenButtonLabelView: View {
                     Text(clockText(for: context.date, cityLabel: cityLabel))
                         .font(.system(size: boxFontSize, weight: .bold, design: .rounded))
                         .monospacedDigit()
-                        .lineLimit(1)
+                        .multilineTextAlignment(.center)
                         .minimumScaleFactor(0.5)
                 }
                 .foregroundStyle(buttonTextColor)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-        case .date:
+        case .date(let cityLabel):
             TimelineView(.periodic(from: .now, by: 60)) { context in
                 VStack(spacing: 4) {
                     renderWidgetHeader()
 
-                    Text(dateValueText(for: context.date))
+                    Text(dateValueText(for: context.date, cityLabel: cityLabel))
                         .font(.system(size: boxFontSize, weight: .bold, design: .rounded))
                         .monospacedDigit()
-                        .lineLimit(1)
+                        .multilineTextAlignment(.center)
                         .minimumScaleFactor(0.5)
                 }
                 .foregroundStyle(buttonTextColor)
@@ -235,7 +235,7 @@ struct MainScreenButtonLabelView: View {
 
                     Text(dayOfMonthOrdinalText(for: context.date, cityLabel: cityLabel))
                         .font(.system(size: boxFontSize, weight: .bold, design: .rounded))
-                        .lineLimit(1)
+                        .multilineTextAlignment(.center)
                         .minimumScaleFactor(0.5)
                 }
                 .foregroundStyle(buttonTextColor)
@@ -248,7 +248,7 @@ struct MainScreenButtonLabelView: View {
 
                     Text(monthNameText(for: context.date, cityLabel: cityLabel))
                         .font(.system(size: boxFontSize, weight: .bold, design: .rounded))
-                        .lineLimit(1)
+                        .multilineTextAlignment(.center)
                         .minimumScaleFactor(0.5)
                 }
                 .foregroundStyle(buttonTextColor)
@@ -262,7 +262,7 @@ struct MainScreenButtonLabelView: View {
                     Text(yearText(for: context.date, cityLabel: cityLabel))
                         .font(.system(size: boxFontSize, weight: .bold, design: .rounded))
                         .monospacedDigit()
-                        .lineLimit(1)
+                        .multilineTextAlignment(.center)
                         .minimumScaleFactor(0.5)
                 }
                 .foregroundStyle(buttonTextColor)
@@ -276,7 +276,7 @@ struct MainScreenButtonLabelView: View {
                     Text(widgetTimeComponentText(for: context.date, cityLabel: cityLabel, format: "ss"))
                         .font(.system(size: boxFontSize, weight: .bold, design: .rounded))
                         .monospacedDigit()
-                        .lineLimit(1)
+                        .multilineTextAlignment(.center)
                         .minimumScaleFactor(0.5)
                 }
                 .foregroundStyle(buttonTextColor)
@@ -290,7 +290,7 @@ struct MainScreenButtonLabelView: View {
                     Text(widgetTimeComponentText(for: context.date, cityLabel: cityLabel, format: "mm"))
                         .font(.system(size: boxFontSize, weight: .bold, design: .rounded))
                         .monospacedDigit()
-                        .lineLimit(1)
+                        .multilineTextAlignment(.center)
                         .minimumScaleFactor(0.5)
                 }
                 .foregroundStyle(buttonTextColor)
@@ -304,20 +304,20 @@ struct MainScreenButtonLabelView: View {
                     Text(widgetTimeComponentText(for: context.date, cityLabel: cityLabel, format: "HH"))
                         .font(.system(size: boxFontSize, weight: .bold, design: .rounded))
                         .monospacedDigit()
-                        .lineLimit(1)
+                        .multilineTextAlignment(.center)
                         .minimumScaleFactor(0.5)
                 }
                 .foregroundStyle(buttonTextColor)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-        case .dow:
+        case .dow(let cityLabel):
             TimelineView(.periodic(from: .now, by: 60)) { context in
                 VStack(spacing: 4) {
                     renderWidgetHeader()
 
-                    Text(dateFullWeekdayText(for: context.date))
+                    Text(dateFullWeekdayText(for: context.date, cityLabel: cityLabel))
                         .font(.system(size: boxFontSize, weight: .bold, design: .rounded))
-                        .lineLimit(1)
+                        .multilineTextAlignment(.center)
                         .minimumScaleFactor(0.5)
                 }
                 .foregroundStyle(buttonTextColor)
@@ -530,11 +530,13 @@ struct MainScreenButtonLabelView: View {
     }
 
     private func clockText(for date: Date, cityLabel: String?) -> String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale.current
-        formatter.timeZone = widgetTimeZone(for: cityLabel) ?? widgetTimeZone ?? .current
-        formatter.dateFormat = "HH:mm:ss"
-        return formatter.string(from: date)
+        dateTimeWidgetText(cityLabel: cityLabel) { timeZone in
+            let formatter = DateFormatter()
+            formatter.locale = Locale.current
+            formatter.timeZone = timeZone
+            formatter.dateFormat = "HH:mm:ss"
+            return formatter.string(from: date)
+        }
     }
 
     private func dateWeekdayText(for date: Date) -> String {
@@ -545,20 +547,24 @@ struct MainScreenButtonLabelView: View {
         return formatter.string(from: date)
     }
 
-    private func dateFullWeekdayText(for date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale.current
-        formatter.timeZone = widgetTimeZone ?? .current
-        formatter.dateFormat = "EEEE"
-        return formatter.string(from: date)
+    private func dateFullWeekdayText(for date: Date, cityLabel: String?) -> String {
+        dateTimeWidgetText(cityLabel: cityLabel) { timeZone in
+            let formatter = DateFormatter()
+            formatter.locale = Locale.current
+            formatter.timeZone = timeZone
+            formatter.dateFormat = "EEEE"
+            return formatter.string(from: date)
+        }
     }
 
     private func widgetTimeComponentText(for date: Date, cityLabel: String?, format: String) -> String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale.current
-        formatter.timeZone = widgetTimeZone(for: cityLabel) ?? .current
-        formatter.dateFormat = format
-        return formatter.string(from: date)
+        dateTimeWidgetText(cityLabel: cityLabel) { timeZone in
+            let formatter = DateFormatter()
+            formatter.locale = Locale.current
+            formatter.timeZone = timeZone
+            formatter.dateFormat = format
+            return formatter.string(from: date)
+        }
     }
 
     private func parseWidgetTimerDuration(_ durationText: String) -> Int {
@@ -598,46 +604,69 @@ struct MainScreenButtonLabelView: View {
     }
 
     private func dayOfMonthOrdinalText(for date: Date, cityLabel: String?) -> String {
-        var calendar = Calendar.current
-        calendar.timeZone = widgetTimeZone(for: cityLabel) ?? .current
-        let day = calendar.component(.day, from: date)
-        let suffix: String
-        switch day % 100 {
-        case 11, 12, 13:
-            suffix = "th"
-        default:
-            switch day % 10 {
-            case 1: suffix = "st"
-            case 2: suffix = "nd"
-            case 3: suffix = "rd"
-            default: suffix = "th"
+        dateTimeWidgetText(cityLabel: cityLabel) { timeZone in
+            var calendar = Calendar.current
+            calendar.timeZone = timeZone
+            let day = calendar.component(.day, from: date)
+            let suffix: String
+            switch day % 100 {
+            case 11, 12, 13:
+                suffix = "th"
+            default:
+                switch day % 10 {
+                case 1: suffix = "st"
+                case 2: suffix = "nd"
+                case 3: suffix = "rd"
+                default: suffix = "th"
+                }
             }
+            return "\(day)\(suffix)"
         }
-        return "\(day)\(suffix)"
     }
 
     private func monthNameText(for date: Date, cityLabel: String?) -> String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale.current
-        formatter.timeZone = widgetTimeZone(for: cityLabel) ?? .current
-        formatter.dateFormat = "LLLL"
-        return formatter.string(from: date)
+        dateTimeWidgetText(cityLabel: cityLabel) { timeZone in
+            let formatter = DateFormatter()
+            formatter.locale = Locale.current
+            formatter.timeZone = timeZone
+            formatter.dateFormat = "LLLL"
+            return formatter.string(from: date)
+        }
     }
 
     private func yearText(for date: Date, cityLabel: String?) -> String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale.current
-        formatter.timeZone = widgetTimeZone(for: cityLabel) ?? .current
-        formatter.dateFormat = "yyyy"
-        return formatter.string(from: date)
+        dateTimeWidgetText(cityLabel: cityLabel) { timeZone in
+            let formatter = DateFormatter()
+            formatter.locale = Locale.current
+            formatter.timeZone = timeZone
+            formatter.dateFormat = "yyyy"
+            return formatter.string(from: date)
+        }
     }
 
-    private func dateValueText(for date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale.current
-        formatter.timeZone = widgetTimeZone ?? .current
-        formatter.dateFormat = "yy.MM.dd"
-        return formatter.string(from: date)
+    private func dateValueText(for date: Date, cityLabel: String?) -> String {
+        dateTimeWidgetText(cityLabel: cityLabel) { timeZone in
+            let formatter = DateFormatter()
+            formatter.locale = Locale.current
+            formatter.timeZone = timeZone
+            formatter.dateFormat = "yy.MM.dd"
+            return formatter.string(from: date)
+        }
+    }
+
+    private func dateTimeWidgetText(
+        cityLabel: String?,
+        value: (TimeZone) -> String
+    ) -> String {
+        guard let cityLabel else {
+            return value(.current)
+        }
+
+        guard let timeZone = widgetTimeZone(for: cityLabel) else {
+            return "City not recognized"
+        }
+
+        return value(timeZone)
     }
 
     private func dateHeaderText(for date: Date, cityLabel: String?) -> String {
