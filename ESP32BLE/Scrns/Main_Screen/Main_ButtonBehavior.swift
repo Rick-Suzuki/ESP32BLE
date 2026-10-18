@@ -1633,6 +1633,7 @@ extension MainScreen {
             rightTitle: rightTitle,
             displayMode: displayMode,
             widgetDescriptor: targetWidgetDescriptorForGridEntry(entry),
+            widgetHeaderContent: widgetHeaderContent(for: entry),
             rightSymbolDisplay: parsedSFSymbolDisplay(for: entry),
             rightEmojiDisplay: parsedEmojiDisplay(for: entry),
             boxFontSize: boxFontSize,
@@ -1669,6 +1670,60 @@ extension MainScreen {
             shouldSpeakWidgetSelections: mainGridButtonMode.speaksText,
             speakText: speakMainGridText
         )
+    }
+
+    func widgetHeaderContent(for entry: FunctionKeyEntry) -> MainGridWidgetHeaderContent {
+        guard targetWidgetDescriptorForGridEntry(entry) != nil else {
+            return .none
+        }
+
+        let configuredText = displayText(from: resolvedAlternateDisplayText(for: entry))
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let configuredHeader: MainGridWidgetHeaderContent
+        if let symbolDisplay = parsedSFSymbolDisplay(for: entry) {
+            configuredHeader = .symbol(name: symbolDisplay.name, subtitle: symbolDisplay.subtitle)
+        } else if let emojiDisplay = parsedEmojiDisplay(for: entry) {
+            configuredHeader = .emoji(emoji: emojiDisplay.emoji, subtitle: emojiDisplay.subtitle)
+        } else if !configuredText.isEmpty {
+            configuredHeader = .text(configuredText)
+        } else {
+            configuredHeader = .none
+        }
+
+        let completeCommand = displayText(from: entry.primaryDisplayText)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let commandHeader: MainGridWidgetHeaderContent = completeCommand.isEmpty
+            ? .none
+            : .command(completeCommand)
+
+        switch displayMode {
+        case .left:
+            return commandHeader
+        case .right:
+            return configuredHeader
+        case .last:
+            guard !configuredText.isEmpty else {
+                return .none
+            }
+            return .text(displayTextAfterLastColon(in: configuredText))
+        case .both:
+            guard !completeCommand.isEmpty else {
+                return configuredHeader
+            }
+
+            switch configuredHeader {
+            case .symbol(let name, let subtitle):
+                return .commandWithSymbol(command: completeCommand, name: name, subtitle: subtitle)
+            case .emoji(let emoji, let subtitle):
+                return .commandWithEmoji(command: completeCommand, emoji: emoji, subtitle: subtitle)
+            case .text(let text):
+                return .commandWithText(command: completeCommand, text: text)
+            case .command, .none:
+                return commandHeader
+            case .commandWithSymbol, .commandWithEmoji, .commandWithText:
+                return configuredHeader
+            }
+        }
     }
 
     func isInteractiveMainGridWidgetEntry(_ entry: FunctionKeyEntry) -> Bool {

@@ -1,12 +1,14 @@
+261018 Sun 1125
+most bad widgets fixed
+V62.72
+
 261018 Sun 0929
 settings rename - fixed
 V62.71
 
-
 261018 Sun 0904
 sf symbols confused with text-fixed
 V62.70
-
 
 261017 Sat 1738
 widgets updated, home working

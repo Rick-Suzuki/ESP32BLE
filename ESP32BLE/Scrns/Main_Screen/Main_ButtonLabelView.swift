@@ -3,6 +3,17 @@ import UIKit
 import AVFoundation
 import Combine
 
+enum MainGridWidgetHeaderContent {
+    case symbol(name: String, subtitle: String?)
+    case emoji(emoji: String, subtitle: String?)
+    case text(String)
+    case command(String)
+    case commandWithSymbol(command: String, name: String, subtitle: String?)
+    case commandWithEmoji(command: String, emoji: String, subtitle: String?)
+    case commandWithText(command: String, text: String)
+    case none
+}
+
 struct MainScreenButtonLabelView: View {
     // Easy-to-tune size for buttons that display only a single emoji.
     private let loneEmojiScaleMultiplier: CGFloat = 1.5
@@ -14,6 +25,7 @@ struct MainScreenButtonLabelView: View {
     let rightTitle: String
     let displayMode: FunctionKeyDisplayMode
     let widgetDescriptor: MainGridWidgetDescriptor?
+    let widgetHeaderContent: MainGridWidgetHeaderContent
     let rightSymbolDisplay: (name: String, subtitle: String?)?
     let rightEmojiDisplay: (emoji: String, subtitle: String?)?
     let boxFontSize: Double
@@ -127,7 +139,11 @@ struct MainScreenButtonLabelView: View {
     @ViewBuilder
     private var buttonContent: some View {
         if let widgetDescriptor {
-            widgetContent(descriptor: widgetDescriptor)
+            if displayMode == .left && usesCorrectedWidgetDisplayModes(widgetDescriptor) {
+                textLabel(title: leftTitle)
+            } else {
+                widgetContent(descriptor: widgetDescriptor)
+            }
         } else if let rightSymbolDisplay {
             switch displayMode {
             case .left:
@@ -160,6 +176,16 @@ struct MainScreenButtonLabelView: View {
             textLabel(title: title)
         }
     }
+
+    private func usesCorrectedWidgetDisplayModes(_ descriptor: MainGridWidgetDescriptor) -> Bool {
+        switch descriptor {
+        case .clock, .day, .month, .year, .second, .minute, .hour, .dow, .date,
+             .power, .add, .minus, .random, .textFileRandom, .stopwatch:
+            return true
+        case .ambientSound, .timer:
+            return false
+        }
+    }
 	//
 	//-----------------------------------------------------------------------------------------------
 	// MARK: - BM:😎 FUNCS widgetContent
@@ -170,9 +196,7 @@ struct MainScreenButtonLabelView: View {
         case .clock(let cityLabel):
             TimelineView(.periodic(from: .now, by: 1)) { context in
                 VStack(spacing: 4) {
-                    if let widgetCityLabel {
-                        widgetHeaderContent(fallbackTitle: widgetCityLabel)
-                    }
+                    renderWidgetHeader()
 
                     Text(clockText(for: context.date, cityLabel: cityLabel))
                         .font(.system(size: boxFontSize, weight: .bold, design: .rounded))
@@ -183,10 +207,10 @@ struct MainScreenButtonLabelView: View {
                 .foregroundStyle(buttonTextColor)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-        case .date(let cityLabel):
+        case .date:
             TimelineView(.periodic(from: .now, by: 60)) { context in
                 VStack(spacing: 4) {
-                    widgetHeaderContent(fallbackTitle: dateHeaderText(for: context.date, cityLabel: cityLabel))
+                    renderWidgetHeader()
 
                     Text(dateValueText(for: context.date))
                         .font(.system(size: boxFontSize, weight: .bold, design: .rounded))
@@ -199,11 +223,8 @@ struct MainScreenButtonLabelView: View {
             }
         case .day(let cityLabel):
             TimelineView(.periodic(from: .now, by: 60)) { context in
-                let headerText = dowHeaderText(for: context.date, cityLabel: cityLabel)
                 VStack(spacing: 4) {
-                    if !headerText.isEmpty {
-                        widgetHeaderContent(fallbackTitle: headerText)
-                    }
+                    renderWidgetHeader()
 
                     Text(dayOfMonthOrdinalText(for: context.date, cityLabel: cityLabel))
                         .font(.system(size: boxFontSize, weight: .bold, design: .rounded))
@@ -215,11 +236,8 @@ struct MainScreenButtonLabelView: View {
             }
         case .month(let cityLabel):
             TimelineView(.periodic(from: .now, by: 60)) { context in
-                let headerText = dowHeaderText(for: context.date, cityLabel: cityLabel)
                 VStack(spacing: 4) {
-                    if !headerText.isEmpty {
-                        widgetHeaderContent(fallbackTitle: headerText)
-                    }
+                    renderWidgetHeader()
 
                     Text(monthNameText(for: context.date, cityLabel: cityLabel))
                         .font(.system(size: boxFontSize, weight: .bold, design: .rounded))
@@ -231,11 +249,8 @@ struct MainScreenButtonLabelView: View {
             }
         case .year(let cityLabel):
             TimelineView(.periodic(from: .now, by: 60)) { context in
-                let headerText = dowHeaderText(for: context.date, cityLabel: cityLabel)
                 VStack(spacing: 4) {
-                    if !headerText.isEmpty {
-                        widgetHeaderContent(fallbackTitle: headerText)
-                    }
+                    renderWidgetHeader()
 
                     Text(yearText(for: context.date, cityLabel: cityLabel))
                         .font(.system(size: boxFontSize, weight: .bold, design: .rounded))
@@ -248,11 +263,8 @@ struct MainScreenButtonLabelView: View {
             }
         case .second(let cityLabel):
             TimelineView(.periodic(from: .now, by: 1)) { context in
-                let headerText = dowHeaderText(for: context.date, cityLabel: cityLabel)
                 VStack(spacing: 4) {
-                    if !headerText.isEmpty {
-                        widgetHeaderContent(fallbackTitle: headerText)
-                    }
+                    renderWidgetHeader()
 
                     Text(widgetTimeComponentText(for: context.date, cityLabel: cityLabel, format: "ss"))
                         .font(.system(size: boxFontSize, weight: .bold, design: .rounded))
@@ -265,11 +277,8 @@ struct MainScreenButtonLabelView: View {
             }
         case .minute(let cityLabel):
             TimelineView(.periodic(from: .now, by: 1)) { context in
-                let headerText = dowHeaderText(for: context.date, cityLabel: cityLabel)
                 VStack(spacing: 4) {
-                    if !headerText.isEmpty {
-                        widgetHeaderContent(fallbackTitle: headerText)
-                    }
+                    renderWidgetHeader()
 
                     Text(widgetTimeComponentText(for: context.date, cityLabel: cityLabel, format: "mm"))
                         .font(.system(size: boxFontSize, weight: .bold, design: .rounded))
@@ -282,11 +291,8 @@ struct MainScreenButtonLabelView: View {
             }
         case .hour(let cityLabel):
             TimelineView(.periodic(from: .now, by: 1)) { context in
-                let headerText = dowHeaderText(for: context.date, cityLabel: cityLabel)
                 VStack(spacing: 4) {
-                    if !headerText.isEmpty {
-                        widgetHeaderContent(fallbackTitle: headerText)
-                    }
+                    renderWidgetHeader()
 
                     Text(widgetTimeComponentText(for: context.date, cityLabel: cityLabel, format: "HH"))
                         .font(.system(size: boxFontSize, weight: .bold, design: .rounded))
@@ -297,13 +303,10 @@ struct MainScreenButtonLabelView: View {
                 .foregroundStyle(buttonTextColor)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-        case .dow(let cityLabel):
+        case .dow:
             TimelineView(.periodic(from: .now, by: 60)) { context in
-                let headerText = dowHeaderText(for: context.date, cityLabel: cityLabel)
                 VStack(spacing: 4) {
-                    if !headerText.isEmpty {
-                        widgetHeaderContent(fallbackTitle: headerText)
-                    }
+                    renderWidgetHeader()
 
                     Text(dateFullWeekdayText(for: context.date))
                         .font(.system(size: boxFontSize, weight: .bold, design: .rounded))
@@ -314,51 +317,86 @@ struct MainScreenButtonLabelView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         case .power:
-            MainGridBatteryWidgetView(
-                fontSize: boxFontSize,
-                foregroundColor: buttonTextColor
-            )
+            VStack(spacing: 4) {
+                if displayMode == .both {
+                    renderWidgetHeader()
+                }
+                MainGridBatteryWidgetView(
+                    fontSize: boxFontSize,
+                    foregroundColor: buttonTextColor
+                )
+            }
         case .add:
-            MainGridStepUpCounterWidgetView(
-                configurationText: rightTitleWithoutColorPrefix,
-                fontSize: boxFontSize,
-                foregroundColor: buttonTextColor
-            )
+            VStack(spacing: 4) {
+                if displayMode == .both {
+                    renderWidgetHeader()
+                }
+                MainGridStepUpCounterWidgetView(
+                    configurationText: rightTitleWithoutColorPrefix,
+                    showsTitle: displayMode != .both,
+                    fontSize: boxFontSize,
+                    foregroundColor: buttonTextColor
+                )
+            }
         case .minus(let initialCount):
-            MainGridStepDownCounterWidgetView(
-                title: rightTitleWithoutColorPrefix,
-                initialCount: initialCount,
-                fontSize: boxFontSize,
-                foregroundColor: buttonTextColor
-            )
+            VStack(spacing: 4) {
+                if displayMode == .both {
+                    renderWidgetHeader()
+                }
+                MainGridStepDownCounterWidgetView(
+                    title: rightTitleWithoutColorPrefix,
+                    showsTitle: displayMode != .both,
+                    initialCount: initialCount,
+                    fontSize: boxFontSize,
+                    foregroundColor: buttonTextColor
+                )
+            }
         case .random(let minimumValue, let maximumValue):
-            MainGridRandomNumberWidgetView(
-                title: rightTitleWithoutColorPrefix,
-                minimumValue: minimumValue,
-                maximumValue: maximumValue,
-                fontSize: boxFontSize,
-                foregroundColor: buttonTextColor
-            )
+            VStack(spacing: 4) {
+                if displayMode == .both {
+                    renderWidgetHeader()
+                }
+                MainGridRandomNumberWidgetView(
+                    title: rightTitleWithoutColorPrefix,
+                    showsTitle: displayMode != .both,
+                    minimumValue: minimumValue,
+                    maximumValue: maximumValue,
+                    fontSize: boxFontSize,
+                    foregroundColor: buttonTextColor
+                )
+            }
         case .textFileRandom(let filename):
-            MainGridRandomTextWidgetView(
-                title: rightTitleWithoutColorPrefix,
-                filename: filename,
-                fontSize: boxFontSize,
-                foregroundColor: buttonTextColor,
-                onSelectionCommitted: shouldSpeakWidgetSelections ? { selectedText in
-                    speakText(selectedText)
-                } : nil,
-                onRepeatRequested: shouldSpeakWidgetSelections ? { selectedText in
-                    speakText(selectedText)
-                } : nil
-            )
+            VStack(spacing: 4) {
+                if displayMode == .both {
+                    renderWidgetHeader()
+                }
+                MainGridRandomTextWidgetView(
+                    title: rightTitleWithoutColorPrefix,
+                    showsInitialTitle: displayMode != .both,
+                    filename: filename,
+                    fontSize: boxFontSize,
+                    foregroundColor: buttonTextColor,
+                    onSelectionCommitted: shouldSpeakWidgetSelections ? { selectedText in
+                        speakText(selectedText)
+                    } : nil,
+                    onRepeatRequested: shouldSpeakWidgetSelections ? { selectedText in
+                        speakText(selectedText)
+                    } : nil
+                )
+            }
         case .stopwatch:
-            MainGridStopwatchWidgetView(
-                title: rightTitleWithoutColorPrefix,
-                fontSize: boxFontSize,
-                foregroundColor: buttonTextColor,
-                isInteractionEnabled: !isGridEditModeEnabled
-            )
+            VStack(spacing: 4) {
+                if displayMode == .both {
+                    renderWidgetHeader()
+                }
+                MainGridStopwatchWidgetView(
+                    title: rightTitleWithoutColorPrefix,
+                    showsTitle: displayMode != .both,
+                    fontSize: boxFontSize,
+                    foregroundColor: buttonTextColor,
+                    isInteractionEnabled: !isGridEditModeEnabled
+                )
+            }
         case .ambientSound(let filename):
             MainGridAmbientSoundWidgetView(
                 widgetID: widgetID,
@@ -391,7 +429,7 @@ struct MainScreenButtonLabelView: View {
     }
 
     @ViewBuilder
-    private func widgetHeaderContent(fallbackTitle: String) -> some View {
+    private func legacyWidgetHeaderContent(fallbackTitle: String) -> some View {
         if let rightSymbolDisplay {
             symbolContent(name: rightSymbolDisplay.name, subtitle: rightSymbolDisplay.subtitle)
         } else {
@@ -400,6 +438,42 @@ struct MainScreenButtonLabelView: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.4)
         }
+    }
+
+    @ViewBuilder
+    private func renderWidgetHeader() -> some View {
+        switch widgetHeaderContent {
+        case .symbol(let name, let subtitle):
+            symbolContent(name: name, subtitle: subtitle)
+        case .emoji(let emoji, let subtitle):
+            emojiContent(emoji: emoji, subtitle: subtitle)
+        case .text(let text), .command(let text):
+            widgetHeaderText(text)
+        case .commandWithSymbol(let command, let name, let subtitle):
+            VStack(spacing: 4) {
+                widgetHeaderText(command)
+                symbolContent(name: name, subtitle: subtitle)
+            }
+        case .commandWithEmoji(let command, let emoji, let subtitle):
+            VStack(spacing: 4) {
+                widgetHeaderText(command)
+                emojiContent(emoji: emoji, subtitle: subtitle)
+            }
+        case .commandWithText(let command, let text):
+            VStack(spacing: 4) {
+                widgetHeaderText(command)
+                widgetHeaderText(text)
+            }
+        case .none:
+            EmptyView()
+        }
+    }
+
+    private func widgetHeaderText(_ text: String) -> some View {
+        Text(text)
+            .font(.system(size: boxFontSize, weight: .bold, design: .rounded))
+            .lineLimit(1)
+            .minimumScaleFactor(0.4)
     }
 
     private var widgetCityLabel: String? {
@@ -848,6 +922,7 @@ private struct MainGridBatteryWidgetView: View {
 
 private struct MainGridStepUpCounterWidgetView: View {
     let configurationText: String
+    let showsTitle: Bool
     let fontSize: Double
     let foregroundColor: Color
 
@@ -857,7 +932,7 @@ private struct MainGridStepUpCounterWidgetView: View {
 
     var body: some View {
         VStack(spacing: 4) {
-            if !title.isEmpty {
+            if showsTitle && !title.isEmpty {
                 Text(title)
                     .font(.system(size: fontSize, weight: .semibold, design: .rounded))
                     .lineLimit(1)
@@ -916,6 +991,7 @@ private struct MainGridStepUpCounterWidgetView: View {
 
 private struct MainGridStepDownCounterWidgetView: View {
     let title: String
+    let showsTitle: Bool
     let initialCount: Int
     let fontSize: Double
     let foregroundColor: Color
@@ -924,7 +1000,7 @@ private struct MainGridStepDownCounterWidgetView: View {
 
     var body: some View {
         VStack(spacing: 4) {
-            if !title.isEmpty {
+            if showsTitle && !title.isEmpty {
                 Text(title)
                     .font(.system(size: fontSize, weight: .semibold, design: .rounded))
                     .lineLimit(1)
@@ -1479,6 +1555,7 @@ private struct MainGridAmbientSoundWidgetView: View {
 
 private struct MainGridStopwatchWidgetView: View {
     let title: String
+    let showsTitle: Bool
     let fontSize: Double
     let foregroundColor: Color
     let isInteractionEnabled: Bool
@@ -1489,7 +1566,7 @@ private struct MainGridStopwatchWidgetView: View {
 
     var body: some View {
         VStack(spacing: 4) {
-            if !trimmedTitle.isEmpty {
+            if showsTitle && !trimmedTitle.isEmpty {
                 Text(trimmedTitle)
                     .font(.system(size: fontSize, weight: .semibold, design: .rounded))
                     .lineLimit(1)
@@ -1549,6 +1626,7 @@ private struct MainGridStopwatchWidgetView: View {
 
 private struct MainGridRandomNumberWidgetView: View {
     let title: String
+    let showsTitle: Bool
     let minimumValue: Int
     let maximumValue: Int
     let fontSize: Double
@@ -1559,7 +1637,7 @@ private struct MainGridRandomNumberWidgetView: View {
 
     var body: some View {
         VStack(spacing: 4) {
-            if !trimmedTitle.isEmpty {
+            if showsTitle && !trimmedTitle.isEmpty {
                 Text(trimmedTitle)
                     .font(.system(size: fontSize, weight: .semibold, design: .rounded))
                     .lineLimit(1)
@@ -1634,6 +1712,7 @@ private struct MainGridRandomNumberWidgetView: View {
 
 private struct MainGridRandomTextWidgetView: View {
     let title: String
+    let showsInitialTitle: Bool
     let filename: String
     let fontSize: Double
     let foregroundColor: Color
@@ -1645,9 +1724,10 @@ private struct MainGridRandomTextWidgetView: View {
     @State private var shuffledLines: [String] = []
     @State private var nextShuffledLineIndex = 0
     @State private var animationTask: Task<Void, Never>?
+    @State private var hasSelectedLine = false
 
     var body: some View {
-        Text(displayedLine)
+        Text(visibleDisplayedLine)
             .font(.system(size: fontSize, weight: .bold, design: .rounded))
             .multilineTextAlignment(.center)
             .lineLimit(4)
@@ -1672,7 +1752,8 @@ private struct MainGridRandomTextWidgetView: View {
             availableLines = loadLines()
             shuffledLines = []
             nextShuffledLineIndex = 0
-            displayedLine = trimmedTitle
+            hasSelectedLine = false
+            displayedLine = showsInitialTitle ? trimmedTitle : ""
         }
         .onDisappear {
             animationTask?.cancel()
@@ -1681,6 +1762,10 @@ private struct MainGridRandomTextWidgetView: View {
 
     private var trimmedTitle: String {
         title.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var visibleDisplayedLine: String {
+        showsInitialTitle || hasSelectedLine ? displayedLine : ""
     }
 
     private func chooseRandomLine() {
@@ -1696,6 +1781,7 @@ private struct MainGridRandomTextWidgetView: View {
         let selectedLine = nextQueuedLine(from: lines, avoiding: previousLine)
 
         animationTask?.cancel()
+        hasSelectedLine = true
         animationTask = Task {
             for _ in 0..<10 {
                 guard !Task.isCancelled else {

@@ -50,13 +50,13 @@ enum FunctionKeyDisplayMode: CaseIterable {
     var title: String {
         switch self {
         case .left:
-            return "Left cmd"
+            return "Command"
         case .right:
-            return "Right text"
+            return "Button"
         case .last:
-            return "Last txt"
+            return "Btn Text"
         case .both:
-            return "Both texts"
+            return "All"
         }
     }
 }

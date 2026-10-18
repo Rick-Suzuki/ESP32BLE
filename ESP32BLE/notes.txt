@@ -1,29 +1,70 @@
-1
-A cant move left, D can move right
+these are OK
+.spk 
+.out 
+.pwm 
+.home 
+.cb
+.app
+.sc
+media files
+.prev
+.next
+.back
+.forw
 
-2
-A can't move left, B can move right
+these have problems
+.hour
+.min
+.sec
+.date
+.year
+.month
+.dow
+.day
+.power
+.stop
+.plus
+.minus 10
+.rnd 10 100
+.rnd file.txt
+
+both mode, btn contents empty
+1. no commands shown
+
+for hour would expect:
+.hour
+09
+
+.hour
+.min
+.sec
+.date - this has city name above date - remove
+.year
+.month
+.dow
+.day
+.power
+.stop
+.plus
+.minus 10
+.rnd 10 100
+.rnd file.txt
+
+full btn (SF symbol + text)
+.hour
+.min
+.sec
+.date - no SF or text - only city name
+.year
+.month
+.dow
+.day
+.power - - no SF or text, only "charging", add possible SF + text above
+.stop - no SF symbol, only text for SF
+.plus - no SF symbol, text ok
+.minus 10  - no SF symbol, only text for SF
+.rnd 10 100 - no SF symbol, only text for SF
+.rnd file.txt - no SF symbol, only text for SF
 
 
-3a
-starting position
-3b
-after move
-
-4
-A can't move down,D can move up
-
-
-5
-A can't move down, C can move up
-
-
-6a
-start position
-6b
-slide A to left
-
-7a
-start position
-7b
-slide A to right
+commands without comments are ok in this area

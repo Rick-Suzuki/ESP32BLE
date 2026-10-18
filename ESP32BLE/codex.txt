@@ -1,124 +1,441 @@
-SET-001C IMPLEMENTATION REPORT
+CLOCK-001-PROBE REPORT
 
-1. File modified
+Scope and validation
 
-ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
+This was a read-only static-code investigation.
 
-No other files were modified.
-
-2. Functions modified
-
-isConfirmedMissingDocument(at:)
-saveDocumentText(_:to:)
-
-Functions added:
-
-isConfirmedMissingDocument(_:at:stage:)
-isMissingFileError(_:)
-logDocumentFileError(_:stage:fileURL:classification:)
-handleConfirmedMissingDocument(_:)
-
-3. Exact changes
-
-Lines 1538–1553:
-The existing resource-value check now delegates filesystem errors to expanded missing-file classification.
-
-Lines 1555–1580:
-Added classification for ambiguous filesystem errors. It verifies absence by successfully enumerating the parent directory and checking for the exact standardized document URL.
-
-Lines 1582–1601:
-Added recognition for:
-
-• NSCocoaErrorDomain fileNoSuchFile
-• NSCocoaErrorDomain fileReadNoSuchFile
-• NSPOSIXErrorDomain ENOENT
-• Missing-file errors wrapped in NSUnderlyingErrorKey
-
-Lines 1603–1610:
-Added requested filesystem diagnostics.
-
-Lines 1612–1621:
-Added safe handling for confirmed missing documents. A clean editor permits the existing missing-file transition. An editor with unsaved changes is preserved and blocks the transition.
-
-Lines 1623–1708:
-Updated saveDocumentText(_:to:) so resource checks, reads, and writes consistently classify missing-document errors. Read and write error handling are now separate, allowing accurate diagnostic stages.
-
-4. Missing-file detection
-
-An error is classified as confirmed missing when either:
-
-• Its NSError domain and code directly identify a missing file.
-• An underlying NSError identifies a missing file.
-• For another error, the parent directory can be successfully enumerated and the exact standardized document URL is absent.
-
-The correction does not rely solely on fileExists(atPath:).
-
-If the parent directory cannot be enumerated, absence is not considered proven and the original error remains a genuine failure.
-
-5. Genuine filesystem errors
-
-An error remains a genuine failure when:
-
-• The document still appears in its parent directory.
-• The parent directory cannot be inspected reliably.
-• The error is not a recognized missing-file error.
-• A read or atomic write fails for another reason.
-
-Permission, corruption, and other I/O failures therefore continue to display the existing save-failure alert.
-
-External-change conflict detection was not changed.
-
-6. Unsaved editor protection
-
-A confirmed missing file now follows two paths:
-
-• If documentEditorText equals savedDocumentEditorText, the editor is clean. The old baseline is cleared and the existing .missing transition continues.
-• If the values differ, the editor has unsaved changes. Its contents and baseline are preserved, the transition is blocked, and the existing “File Removed” warning is displayed.
-
-The old renamed path is never recreated, and unsaved text is never written into the newly selected document.
-
-7. Operational effects
-
-Rename:
-The stale old URL can now be recognized as missing even if its NSError is not one of the original Cocoa codes. A clean rename transition should no longer produce the generic read/save alert for that condition.
-
-Duplicate:
-Normal duplication behavior is unchanged. Genuine errors remain visible.
-
-Delete:
-Uses the same improved missing-file detection. Clean deleted documents can transition normally; unsaved editor contents are preserved and block the transition.
-
-Automatic-save observers were not disabled or modified.
-
-ContentView was not modified.
-
-8. Diagnostics added
-
-Diagnostics use the requested print format and contain no document contents:
-
-🐞 [SET-001] stage=resource check filename=<name> domain=<domain> code=<code> classification=<confirmed missing|genuine failure>
-
-The stage may be:
-
-resource check
-read
-write
-
-9. Build result
-
-The ESP32BLE project built successfully.
-
-Build time: 39.136 seconds.
-Build errors: none.
-
+No files were modified.
+No build was performed.
 The application and simulator were not launched.
+No Git operations were performed.
 
-10. Remaining risks and uncertainties
+1. Relevant files and functions
 
-Physical-device verification is still required.
+ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift
 
-The new diagnostics will identify the actual NSError domain and code if the problem persists.
+• targetWidgetDescriptorForGridEntry(_:), lines 847–849
+Finds the first widget descriptor represented by the button’s send text.
 
-There remains an unavoidable filesystem race between checking a path and subsequently reading or writing it. Read and write catches now apply the same missing-file classification, limiting that risk.
+• targetWidgetDescriptorForSendText(_:), lines 1211–1249
+Recognizes “.clock”, extracts any command parameter, and creates .clock(cityLabel:).
 
-No claim is made that the physical-device bug is confirmed fixed until the duplicate-and-rename workflow has been tested on the affected device.
+• mainGridButtonLabel(...), lines 1616–1673
+Constructs MainScreenButtonLabelView and supplies:
+• displayMode
+• widgetDescriptor
+• widgetHeaderContent
+• parsed Right Text SF Symbol
+• parsed Right Text emoji
+• command and Right Text titles
+
+• widgetHeaderContent(for:), lines 1675–1727
+Produces the mode-aware structured header.
+
+• parsedSFSymbolDisplay(for:), lines 1807–1826
+Recognizes explicitly colon-encoded SF Symbols using UIImage(systemName:).
+
+• parsedEmojiDisplay(for:), lines 1828–1844
+Parses the configured Right Text emoji and subtitle.
+
+ESP32BLE/Scrns/Main_Screen/Main_ButtonLabelView.swift
+
+• MainScreenButtonLabelView properties, lines 17–50
+Receive displayMode, widgetDescriptor, widgetHeaderContent, parsed symbol information, and other rendering data.
+
+• buttonContent, lines 140–178
+Dispatches recognized widgets to widgetContent(descriptor:) before ordinary button rendering.
+
+• usesCorrectedWidgetDisplayModes(_:), lines 180–188
+Controls the Left CMD command-only bypass added for the other corrected widgets.
+
+• widgetContent(descriptor:), lines 194–430
+Contains the widget-specific SwiftUI rendering.
+
+• .clock case, lines 196–211
+Builds the live clock view.
+
+• legacyWidgetHeaderContent(fallbackTitle:), lines 433–443
+Renders .clock’s current header.
+
+• renderWidgetHeader(), lines 445–472
+Renders the shared structured widget header but is not currently used by .clock.
+
+• widgetCityLabel, lines 481–484
+Derives a legacy clock label from the resolved Right Text.
+
+• clockText(for:cityLabel:), lines 515–521
+Formats the live clock value.
+
+• rightTitleWithoutColorPrefix, lines 726–736
+Removes an optional button-color prefix from Right Text.
+
+• lastRightTitleComponent, lines 738–746
+Implements the ordinary-button Last Text component selection.
+
+• symbolContent(name:subtitle:), lines 759–775
+Renders an actual SF Symbol with Image(systemName:) and its optional subtitle.
+
+• MainGridWidgetDescriptor, lines 840–858
+Defines .clock(cityLabel: String?) separately from .hour, .min, .sec, and the other widgets.
+
+ESP32BLE/Scrns/Main_Screen/Toolbars/Main_BtmRightTxt.swift
+
+• FunctionKeyDisplayMode, lines 3–62
+Defines .left, .right, .last, and .both and their persisted names.
+
+ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
+
+• displayMode state, line 868
+Stores the selected global display mode, initially .right.
+
+2. Current .clock recognition and descriptor
+
+targetWidgetDescriptorForSendText(_:) parses the command at Main_ButtonBehavior.swift lines 1211–1234.
+
+The “.clock” branch is at lines 1241–1249:
+
+• The first whitespace-separated component is “.clock”.
+• Any remaining command components are joined into cityLabel.
+• The result is MainGridWidgetDescriptor.clock(cityLabel: cityLabel).
+
+Examples:
+
+.clock
+Produces:
+.clock(cityLabel: nil)
+
+.clock Tokyo
+Produces:
+.clock(cityLabel: "Tokyo")
+
+The command parameter is therefore available independently from the configured Right Text.
+
+3. Current rendering flow
+
+The current flow is:
+
+1. targetWidgetDescriptorForGridEntry(_:) recognizes .clock.
+2. mainGridButtonLabel(...) supplies the descriptor, display mode, shared header, and parsed Right Text to MainScreenButtonLabelView.
+3. buttonContent sees a widget descriptor at Main_ButtonLabelView.swift line 141.
+4. It checks whether Left CMD should bypass the widget at lines 142–145.
+5. usesCorrectedWidgetDisplayModes(_:) explicitly returns false for .clock at lines 185–186.
+6. The .clock button therefore always enters widgetContent(descriptor:), including in Left CMD mode.
+7. The .clock case constructs a one-second TimelineView at lines 196–211.
+8. Its header comes from legacyWidgetHeaderContent, not renderWidgetHeader.
+9. Its live time comes from clockText(for:cityLabel:).
+
+The global displayMode reaches MainScreenButtonLabelView, but the .clock branch does not use it to choose its header or dynamic-value visibility.
+
+4. Source of the lightbulb SF Symbol
+
+The lightbulb is not hardcoded by the .clock renderer.
+
+mainGridButtonLabel(...) passes parsedSFSymbolDisplay(for: entry) into rightSymbolDisplay at Main_ButtonBehavior.swift lines 1637–1638.
+
+parsedSFSymbolDisplay(for:) at lines 1807–1826:
+
+• Reads the configured alternate/Right Text.
+• Splits it on colons.
+• Requires at least one colon.
+• Validates the first component with UIImage(systemName:).
+• Returns the remaining components as the subtitle.
+
+The .clock renderer then calls legacyWidgetHeaderContent at Main_ButtonLabelView.swift lines 199–200. That helper gives rightSymbolDisplay priority at lines 434–438.
+
+Finally, symbolContent renders the symbol through:
+
+Image(systemName: name)
+
+at Main_ButtonLabelView.swift line 761.
+
+Therefore, the displayed lightbulb originates from the button’s stored Right Text configuration, such as:
+
+lightbulb:clock
+
+or another valid lightbulb SF Symbol identifier followed by “clock”.
+
+It is not a .clock fallback and is not hardcoded into the clock widget.
+
+The precise lightbulb identifier cannot be established without inspecting the specific saved button entry, but the code path conclusively shows that it comes from parsed Right Text.
+
+5. Source of the displayed “clock” text
+
+In the reported symbol-plus-text presentation, “clock” is the SF Symbol subtitle.
+
+parsedSFSymbolDisplay(for:) joins everything following the first colon and returns it as subtitle at Main_ButtonBehavior.swift lines 1820–1825.
+
+symbolContent displays that subtitle through textLabel at Main_ButtonLabelView.swift lines 770–772.
+
+Thus a Right Text value such as:
+
+lightbulb:clock
+
+renders:
+
+• The lightbulb SF Symbol
+• The subtitle “clock”
+
+If the Right Text were not a valid colon-encoded SF Symbol, legacyWidgetHeaderContent would instead render the complete fallback title as ordinary Text at lines 437–441.
+
+6. Source of the live time
+
+The .clock renderer uses:
+
+TimelineView(.periodic(from: .now, by: 1))
+
+at Main_ButtonLabelView.swift line 197.
+
+Every timeline update passes context.date to clockText(for:cityLabel:) at line 203.
+
+clockText(for:cityLabel:) at lines 515–521:
+
+• Creates a DateFormatter.
+• Uses Locale.current.
+• Selects the timezone from the command’s cityLabel first.
+• Falls back to the legacy Right Text-derived timezone.
+• Finally falls back to TimeZone.current.
+• Uses the fixed format “HH:mm:ss”.
+
+The displayed time is therefore regenerated every second. It is not stored widget state.
+
+7. Why Left CMD does not work
+
+Confirmed root cause:
+
+.clock is explicitly excluded from the Left CMD widget bypass.
+
+At Main_ButtonLabelView.swift lines 180–188:
+
+• The 14 recently corrected widgets return true.
+• .clock, .ambientSound, and .timer return false.
+
+Consequently, the condition at lines 142–143 does not render .clock using textLabel(leftTitle). Instead, .clock enters its legacy TimelineView.
+
+That legacy view always displays:
+
+• Its Right Text-derived header, when available.
+• Its live time.
+
+It never checks displayMode.
+
+This directly explains the physical-device result:
+
+• Lightbulb: parsed configured Right Text symbol.
+• “clock”: configured symbol subtitle.
+• “11:00:04”: TimelineView dynamic time.
+
+8. Right Text behavior
+
+Partially correct.
+
+For ordinary configured Right Text:
+
+• The text is displayed above the live time.
+
+For a configured SF Symbol and subtitle:
+
+• The SF Symbol is rendered as an actual Image(systemName:).
+• Its subtitle is displayed.
+• The live time remains displayed.
+
+For absent or empty Right Text:
+
+• widgetCityLabel is nil.
+• No legacy header is added.
+• Only the live time is displayed.
+
+However, the .clock branch does not explicitly select behavior based on .right. It happens to resemble the required Right Text result because its legacy renderer always behaves like a Right Text renderer.
+
+Emoji handling is not fully consistent with the shared renderer. legacyWidgetHeaderContent only has special handling for rightSymbolDisplay; it does not use rightEmojiDisplay. An emoji-with-subtitle configuration can therefore be rendered as legacy ordinary text rather than through emojiContent.
+
+9. Last Text behavior
+
+Incorrect.
+
+The .clock branch does not consult displayMode and does not use:
+
+• lastRightTitleComponent, or
+• the .last result produced by widgetHeaderContent(for:).
+
+For a value such as:
+
+lightbulb:clock
+
+Last Text should display:
+
+clock
+<live time>
+
+
+The current .clock implementation instead continues to display:
+
+<lightbulb SF Symbol>
+
+clock
+<live time>
+
+
+Therefore, .clock currently behaves like its legacy Right Text presentation in Last Text mode.
+
+10. Both Texts behavior
+
+Incorrect.
+
+widgetHeaderContent(for:) already creates combined values such as:
+
+commandWithSymbol
+commandWithEmoji
+commandWithText
+
+for .both at Main_ButtonBehavior.swift lines 1709–1725.
+
+But .clock never calls renderWidgetHeader(), so that combined value is ignored.
+
+The current .clock view displays configured Right Text plus live time, but omits the command.
+
+For:
+
+.clock::lightbulb:clock
+
+the current result is effectively:
+
+<lightbulb>
+
+clock
+<live time>
+
+
+The required result is:
+
+.clock
+<lightbulb>
+
+clock
+<live time>
+
+
+11. Why .clock was excluded from WIDGET-002B-FIX2
+
+The exclusion is explicit at Main_ButtonLabelView.swift lines 185–186.
+
+The earlier correction was deliberately scoped to the 14 specified widgets, and its instructions specifically prohibited investigating or modifying .clock. The code therefore left .clock with its legacy header and TimelineView path.
+
+This is not an implicit descriptor mismatch. It is an intentional scope exclusion in usesCorrectedWidgetDisplayModes(_:).
+
+12. Can the shared header system be reused?
+
+Yes.
+
+No change to MainGridWidgetHeaderContent or widgetHeaderContent(for:) appears necessary.
+
+widgetHeaderContent(for:) only requires that targetWidgetDescriptorForGridEntry(entry) return a widget descriptor. It does not exclude .clock.
+
+For .clock it already calculates:
+
+.left:
+.command containing the complete primary command
+
+.right:
+Configured SF Symbol, emoji, ordinary text, or .none
+
+.last:
+The final configured Right Text component, or .none
+
+.both:
+The complete command combined with the configured symbol, emoji, or text
+
+renderWidgetHeader() at Main_ButtonLabelView.swift lines 445–472 already renders every one of those cases.
+
+The failure is entirely at the consumption point: .clock still uses legacyWidgetHeaderContent instead of renderWidgetHeader.
+
+13. Smallest safe implementation
+
+The smallest correction would be limited to Main_ButtonLabelView.swift:
+
+1. Include .clock in usesCorrectedWidgetDisplayModes(_:) so Left CMD uses the existing command-only bypass.
+
+That would make Left CMD render leftTitle through the ordinary textLabel renderer and would prevent the .clock TimelineView from being entered in that mode.
+
+2. In the .clock case of widgetContent(descriptor:), replace the legacy conditional header:
+
+if let widgetCityLabel {
+legacyWidgetHeaderContent(fallbackTitle: widgetCityLabel)
+
+}
+
+with:
+
+renderWidgetHeader()
+
+This would provide:
+
+Left CMD:
+Handled by the command-only bypass; no header view and no live time.
+
+Right Text:
+Configured symbol, emoji, or text plus live time; no command.
+
+Last Text:
+Final Right Text component plus live time; no command.
+
+Both Texts:
+Complete command plus configured header plus live time.
+
+The descriptor’s cityLabel should continue to be passed unchanged to clockText(for:cityLabel:), preserving command-based timezone handling.
+
+No changes should be needed in:
+
+• Main_ButtonBehavior.swift
+• Command recognition
+• .screen parsing
+• SF Symbol parsing
+• Emoji parsing
+• Date formatting
+• Main Screen layout
+• Other widgets
+
+legacyWidgetHeaderContent should not be removed as part of this targeted correction unless a separate inspection proves it has no remaining callers.
+
+14. Effect of bypassing the clock view in Left CMD
+
+Bypassing the .clock TimelineView in Left CMD would stop constructing its one-second display timeline while Left CMD is selected.
+
+This should not disrupt persistent state because .clock has no timer model, counter, accumulated elapsed value, or mutable clock state. It formats the current context.date whenever its TimelineView is active.
+
+When the user leaves Left CMD, SwiftUI would recreate the clock content and immediately format the current time. There is no stored time that could become stale and no timer state to resume.
+
+This differs from the interactive timer and stopwatch widgets, which maintain operational state outside a simple Date formatter.
+
+15. Differences from the eight working time/date widgets
+
+The important differences are:
+
+• The eight corrected widgets call renderWidgetHeader().
+• .clock calls legacyWidgetHeaderContent.
+
+• The eight corrected widgets are included in usesCorrectedWidgetDisplayModes.
+• .clock is explicitly excluded.
+
+• The eight corrected widgets therefore receive mode-aware header selection.
+• .clock always uses its legacy Right Text-style header.
+
+• .clock updates every second and displays a full “HH:mm:ss” value.
+• The other time/date widgets use their own update intervals and value formatters.
+
+• .clock’s command can contain a city/timezone parameter.
+• That parameter is already carried independently in .clock(cityLabel:) and does not prevent shared-header adoption.
+
+16. Risks and remaining uncertainties
+
+The recommended correction is narrow, but physical-device validation should cover:
+
+• .clock with ordinary Right Text in all four modes.
+• .clock with SF Symbol and subtitle in all four modes.
+• .clock with emoji and subtitle.
+• .clock with explicitly empty Right Text.
+• Bare .clock with no Right Text.
+• Parameterized clock commands such as “.clock Tokyo”.
+• Optional color-prefixed Right Text.
+• Switching repeatedly between Left CMD and another mode to confirm the displayed time immediately resumes at the current second.
+
+One pre-existing concern is that clockText(for:cityLabel:) can fall back to a timezone inferred from Right Text at Main_ButtonLabelView.swift line 518. The recommended display correction need not change that behavior, but it means certain Right Text values that happen to match timezone identifiers may influence the displayed timezone. That is separate from the display-mode bug and should not be changed in this targeted correction.
