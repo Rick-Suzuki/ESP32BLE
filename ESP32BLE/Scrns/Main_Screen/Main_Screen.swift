@@ -679,7 +679,7 @@ tap counter.
 		//
 		//----------------------------------------
 		//
-		("tap add", ".add ", """
+		("tap plus", ".plus ", """
 Adds to a
 tap counter.
 
@@ -4256,7 +4256,8 @@ Tapping a row inserts the key code at the cursor.
         let components = text.components(separatedBy: ":")
         let candidateName = components.first?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
 
-        guard !candidateName.isEmpty,
+        guard components.count > 1,
+              !candidateName.isEmpty,
               !candidateName.contains(where: \.isWhitespace),
               UIImage(systemName: candidateName) != nil else {
             return nil
@@ -5139,7 +5140,8 @@ Tapping a row inserts the key code at the cursor.
         let components = currentText.components(separatedBy: ":")
         let candidateName = components.first?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
 
-        guard !candidateName.isEmpty,
+        guard components.count > 1,
+              !candidateName.isEmpty,
               !candidateName.contains(where: \.isWhitespace),
               UIImage(systemName: candidateName) != nil else {
             return

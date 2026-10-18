@@ -1,296 +1,111 @@
-ESP32BLE — WIDGET-002 / W2C
-.HOME DOCUMENT RESOLUTION INVESTIGATION
+SF-001 IMPLEMENTATION REPORT
 
-READ-ONLY RESULT
+1. Files modified
 
-No files were modified.
-No build was performed.
-The application and simulator were not launched.
-
-A. EXECUTION PATH FOR “home”
-
-1. Stored command
-
-FunctionKeyEntry.sendTexts contains:
-
-["home"]
-
-2. Main Screen action
-
-Main_ButtonBehavior.swift
-sendMainGridEntry(_:), line 230
-
-3. Document recognition
-
-sendMainGridEntry calls:
-
-targetDocumentNameForGridEntry(entry)
-
-at line 288.
-
-4. Grid-entry resolver
-
-Main_ButtonBehavior.swift
-targetDocumentNameForGridEntry(_:), lines 697–700
-
-It calls targetDocumentNameForSendText("home") as a predicate.
-
-5. Command resolver result
-
-Main_ButtonBehavior.swift
-targetDocumentNameForSendText(_:), lines 753–796
-
-For “home”, lines 783–785 return:
-
-home.screen
-
-6. Confirmed defect in the caller
-
-targetDocumentNameForGridEntry(_:) does not return that resolved value.
-
-Instead, lines 697–700 are:
-
-let target = entry.sendTexts.first(where: {
-targetDocumentNameForSendText($0) != nil
-
-})
-return target
-
-Therefore it returns the original sendText:
-
-home
-
-7. Document selection argument
-
-sendMainGridEntry passes:
-
-home
-
-to selectDocumentNamedFromGrid(_:) at lines 378–379.
-
-8. Filename resolution
-
-ContentView.swift
-canonicalDocumentFileName(from:), lines 2755–2764
-
-Because “home” has no recognized extension, it becomes:
-
-home.txt
-
-9. Fallback behavior
-
-selectDocumentNamedFromGrid(_:) first searches for home.txt. If that does not exist, lines 2777–2786 search for a .screen document with the same base key.
-
-home.txt and home.screen both have the base key “home”, so home.screen is found.
-
-This explains why the undotted “home” command works despite the caller discarding “home.screen”.
-
-B. EXECUTION PATH FOR “.home”
-
-1. Stored command
-
-FunctionKeyEntry.sendTexts contains:
-
-[".home"]
-
-2. Main Screen action
-
-sendMainGridEntry(_:), line 230
-
-3. Document recognition
-
-targetDocumentNameForGridEntry(entry) is called at line 288.
-
-4. Command resolver result
-
-targetDocumentNameForSendText(".home") is called.
-
-The W2C handling at lines 783–785 correctly returns:
-
-home.screen
-
-Therefore, .home is recognized by the new handler and is translated correctly inside targetDocumentNameForSendText(_:).
-
-5. Confirmed defect in the caller
-
-targetDocumentNameForGridEntry(_:) uses the resolver only to test whether the command is recognizable. It then returns the original sendText:
-
-.home
-
-The resolved value “home.screen” is discarded.
-
-6. Document selection argument
-
-sendMainGridEntry passes:
-
-.home
-
-to selectDocumentNamedFromGrid(_:).
-
-This exactly matches the device log:
-
-rawName=.home
-
-7. Filename resolution
-
-canonicalDocumentFileName(from:) receives “.home”.
-
-URL path-extension processing does not identify this as a .screen or .txt filename. The function consequently appends the legacy extension:
-
-.home.txt
-
-8. Lookup failure
-
-The exact lookup searches for:
-
-.home.txt
-
-The fallback .screen lookup compares the base key for “.home.txt” against available screen documents.
-
-Its base name is “.home”, which does not match the “home” base name of home.screen.
-
-The lookup fails and produces the logged message at ContentView.swift line 2791.
-
-C. FIRST CONFIRMED DIFFERENCE
-
-Both commands are correctly recognized by:
-
-targetDocumentNameForSendText(_:)
-
-Both resolve to:
-
-home.screen
-
-The first relevant difference occurs after that function returns.
-
-targetDocumentNameForGridEntry(_:) discards the resolved value and returns the original command string:
-
-home  → original “home” passed to selection
-.home → original “.home” passed to selection
-
-The undotted form succeeds only because ContentView’s legacy .txt-to-.screen fallback happens to match “home” with home.screen.
-
-The dotted form fails because the leading period remains part of the filename base.
-
-D. WHY “.home” BECOMES “.home.txt”
-
-ContentView.swift
-canonicalDocumentFileName(from:), lines 2755–2764
-
-The logic is:
-
-• Preserve names already ending in .screen or .txt.
-• Otherwise append .txt.
-
-The raw value passed to it is incorrectly “.home”, not “home.screen”.
-
-It therefore produces:
-
-.home.txt
-
-The filename-resolution code is behaving according to its existing general rules. It is not the source of the defect.
-
-E. TARGET RESOLVER USAGE
-
-targetDocumentNameForSendText(_:) is called and returns the correct result:
-
-home.screen
-
-Its result is used correctly in these locations:
-
-• bluetoothSendTexts(for:), lines 413–433, to prevent document commands from reaching BLE.
-• runWaitChainCommandTokens(...), lines 532–539, which passes the resolved value directly to document selection.
-
-Its result is not used correctly in:
-
-targetDocumentNameForGridEntry(_:), lines 697–700
-
-That function uses it only as a Boolean predicate and returns the matching original string.
-
-The ordinary Main Screen button path uses this faulty wrapper.
-
-F. DEBUG “INTERNAL” CLASSIFICATION
-
-Main_ButtonBehavior.swift:
-
-• commandClassification(for:), lines 24–39
-• Debug output in sendMainGridEntry(_:), lines 236–254
-
-The “.home → internal” log does not come from document-name resolution.
-
-commandClassification(for:) labels every token beginning with a period as “internal” at lines 27–29. It is diagnostic classification only.
-
-It neither resolves home.screen nor dispatches the command.
-
-G. ROOT CAUSE
-
-Confirmed root cause:
-
-targetDocumentNameForGridEntry(:) returns the original matching sendText instead of the resolved result from targetDocumentNameForSendText(:).
-
-Current conceptual behavior:
-
-Find a sendText whose resolved target is nonnil, then return the sendText.
-
-Required behavior:
-
-Resolve each sendText and return the first nonnil resolved document name.
-
-The W2C .home recognition itself is correct.
-
-H. SMALLEST SAFE CORRECTION
-
-Modify only:
-
-Main_ButtonBehavior.swift
-targetDocumentNameForGridEntry(_:), lines 697–700
-
-Recommended implementation:
-
-Return the first nonnil result produced by targetDocumentNameForSendText(_:), rather than returning the original matching sendText.
-
-Conceptually:
-
-entry.sendTexts.compactMap(targetDocumentNameForSendText).first
-
-Expected results:
-
-home
-→ targetDocumentNameForSendText returns home.screen
-→ selectDocumentNamedFromGrid receives home.screen
-
-.home
-→ targetDocumentNameForSendText returns home.screen
-→ selectDocumentNamedFromGrid receives home.screen
-
-Explicit .screen and legacy .txt document names remain unchanged because targetDocumentNameForSendText(_:) already returns those original filenames.
-
-Do not modify selectDocumentNamedFromGrid(_:) or canonicalDocumentFileName(from:).
-
-I. FILE SCOPE
-
-Yes. The correction can be confined entirely to:
+ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
 
 ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift
 
-Only targetDocumentNameForGridEntry(_:) needs correction.
 
-ContentView.swift does not need modification.
+2. Functions modified
 
-J. REGRESSION RISKS
+Main_Screen.swift:
 
-Risk: LOW.
+smartButtonEditorSFSymbolComponents(from:)
+clearSmartButtonSFSymbol()
 
-Expected effects:
+Main_ButtonBehavior.swift:
 
-• home and .home both pass home.screen explicitly.
-• Existing .screen filenames remain unchanged.
-• Existing .txt screen filenames remain unchanged.
-• General filename canonicalization remains unchanged.
-• Navigation history and document selection remain unchanged.
-• BLE filtering already uses the correctly resolved test and remains unchanged.
-• .app, .cb, navigation commands, OUT/PWM, shortcuts, widgets, and display formatting are unaffected.
+parsedSFSymbolDisplay(for:)
 
-One behavior becomes more direct:
 
-The existing undotted “home” command will stop relying on the incidental home.txt-to-home.screen fallback and will use its intended resolved value, home.screen.
+3. Exact changes
+
+Added this requirement to each SF Symbol validation guard:
+
+components.count > 1
+
+This requires an explicit colon separator before a value can be recognized or removed as an SF Symbol.
+
+setSmartButtonSFSymbol(_:) was reviewed but required no direct modification. It already uses smartButtonEditorSFSymbolComponents(from:), so it automatically follows the corrected rule.
+
+Examples now behave as follows:
+
+clock
+Ordinary text.
+
+stop
+Ordinary text.
+
+clock:
+SF Symbol without subtitle.
+
+clock:hello
+SF Symbol with subtitle “hello”.
+
+Selecting “star” over ordinary text “clock” stores:
+
+star:clock
+
+Selecting “star” over explicitly encoded “clock:hello” stores:
+
+star:hello
+
+Deleting the symbol from “clock:clock” produces ordinary text:
+
+clock
+
+Deleting the symbol from “clock:” produces an empty display value.
+
+Attempting symbol deletion on bare “clock” leaves it unchanged.
+
+
+4. Ordinary SF Symbol-name text
+
+Confirmed by code path: bare text has only one colon-separated component, so it no longer passes editor or Main Screen SF Symbol recognition.
+
+Words such as “clock” and “stop” remain ordinary text.
+
+
+5. Explicit selection and deletion
+
+Explicit SF Symbol selection remains supported.
+
+Symbol replacement preserves the existing subtitle.
+
+Deletion only operates when the stored value contains an explicit colon and the prefix is a valid SF Symbol.
+
+
+6. Existing compatibility
+
+Existing colon-encoded values remain compatible:
+
+clock:
+clock:hello
+COLOR:clock:
+COLOR:clock:hello
+
+No storage model or .screen format was changed.
+
+Legacy bare values such as “clock” now intentionally render as ordinary text.
+
+No .screen files were migrated or rewritten.
+
+
+7. Build result
+
+The ESP32BLE project built successfully.
+
+Build time: 38.897 seconds
+Build errors: 0
+
+The application and simulator were not launched.
+
+
+8. Remaining risks or limitations
+
+The intended compatibility change remains: legacy symbol configurations stored without a colon now render as ordinary text.
+
+No other known risks were introduced. Multiline text, emoji, colors, hidden buttons, commands, images, widgets, layouts, and device-specific geometry were not modified.
+
+No Git operations were performed.

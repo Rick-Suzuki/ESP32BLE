@@ -185,7 +185,7 @@ extension MainScreen {
         if commandParts.count == 2 {
             let command = commandParts[0].lowercased()
             let operand = commandParts[1].trimmingCharacters(in: .whitespacesAndNewlines)
-            if (command == "app" || command == "cb"), !operand.isEmpty {
+            if (command == "app" || command == "cb" || command == "spk"), !operand.isEmpty {
                 return displayText
             }
         }
@@ -754,42 +754,29 @@ extension MainScreen {
     func targetDocumentNameForSendText(_ sendText: String) -> String? {
         let trimmedSendText = sendText.trimmingCharacters(in: .whitespacesAndNewlines)
         let loweredSendText = trimmedSendText.lowercased()
-        let isScreenLinkTraceCandidate = loweredSendText == "home" ||
-            loweredSendText == ".home" ||
-            loweredSendText.hasSuffix(".\(legacyScreenDocumentFileExtension)") ||
-            loweredSendText.hasSuffix(".\(screenDocumentFileExtension)")
-        if isScreenLinkTraceCandidate {
-        }
-        guard !loweredSendText.hasPrefix("spk ") else {
-            if isScreenLinkTraceCandidate {
-            }
+        guard speechCommandPrefixLength(for: trimmedSendText) == nil else {
             return nil
         }
         guard !isWaitCommandText(loweredSendText) else {
-            if isScreenLinkTraceCandidate {
-            }
             return nil
         }
         guard !isShortcutCommandText(loweredSendText) else {
-            if isScreenLinkTraceCandidate {
-            }
-            return nil
-        }
-        guard !loweredSendText.hasPrefix("file ") else {
-            if isScreenLinkTraceCandidate {
-            }
             return nil
         }
 
-        if loweredSendText == "home" || loweredSendText == ".home" {
+        if loweredSendText == ".home" {
             return "home.screen"
         }
 
-        if loweredSendText.hasSuffix(".\(legacyScreenDocumentFileExtension)") {
-            return trimmedSendText
+        let pathExtension = URL(fileURLWithPath: trimmedSendText).pathExtension.lowercased()
+        if pathExtension == "s" {
+            return URL(fileURLWithPath: trimmedSendText)
+                .deletingPathExtension()
+                .appendingPathExtension(screenDocumentFileExtension)
+                .lastPathComponent
         }
 
-        if loweredSendText.hasSuffix(".\(screenDocumentFileExtension)") {
+        if pathExtension == screenDocumentFileExtension {
             return trimmedSendText
         }
 
@@ -964,15 +951,16 @@ extension MainScreen {
 
     func targetPreviewFilenameForSendText(_ sendText: String) -> String? {
         let trimmedSendText = sendText.trimmingCharacters(in: .whitespacesAndNewlines)
-        let loweredSendText = trimmedSendText.lowercased()
-
-        guard loweredSendText.hasPrefix("file ") else {
+        guard speechCommandPrefixLength(for: trimmedSendText) == nil else {
             return nil
         }
 
-        let filename = String(trimmedSendText.dropFirst(5))
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        return filename.isEmpty ? nil : filename
+        let pathExtension = URL(fileURLWithPath: trimmedSendText).pathExtension.lowercased()
+        guard supportedPreviewExtensions.contains(pathExtension) else {
+            return nil
+        }
+
+        return trimmedSendText.isEmpty ? nil : trimmedSendText
     }
 
     func targetSoundFilenameForSendText(_ sendText: String) -> String? {
@@ -980,7 +968,8 @@ extension MainScreen {
         let loweredSendText = trimmedSendText.lowercased()
         let soundFilename: String
 
-        guard !loweredSendText.hasPrefix("amb "),
+        guard speechCommandPrefixLength(for: trimmedSendText) == nil,
+              !loweredSendText.hasPrefix("amb "),
               !loweredSendText.hasPrefix("ambient "),
               !loweredSendText.hasPrefix("cb "),
               !loweredSendText.hasPrefix(".cb "),
@@ -1007,13 +996,11 @@ extension MainScreen {
 
     func targetSpokenTextForSendText(_ sendText: String) -> String? {
         let trimmedSendText = sendText.trimmingCharacters(in: .whitespacesAndNewlines)
-        let loweredSendText = trimmedSendText.lowercased()
-
-        guard loweredSendText.hasPrefix("spk ") else {
+        guard let commandPrefixLength = speechCommandPrefixLength(for: trimmedSendText) else {
             return nil
         }
 
-        let spokenText = displayText(from: String(trimmedSendText.dropFirst(4)))
+        let spokenText = displayText(from: String(trimmedSendText.dropFirst(commandPrefixLength)))
             .trimmingCharacters(in: .whitespacesAndNewlines)
         guard !spokenText.isEmpty else {
             return nil
@@ -1028,19 +1015,34 @@ extension MainScreen {
 
     func targetSpokenFilenameForSendText(_ sendText: String) -> String? {
         let trimmedSendText = sendText.trimmingCharacters(in: .whitespacesAndNewlines)
-        let loweredSendText = trimmedSendText.lowercased()
-
-        guard loweredSendText.hasPrefix("spk ") else {
+        guard let commandPrefixLength = speechCommandPrefixLength(for: trimmedSendText) else {
             return nil
         }
 
-        let spokenFilename = displayText(from: String(trimmedSendText.dropFirst(4)))
+        let spokenFilename = displayText(from: String(trimmedSendText.dropFirst(commandPrefixLength)))
             .trimmingCharacters(in: .whitespacesAndNewlines)
         guard spokenFilename.lowercased().hasSuffix(".txt") else {
             return nil
         }
 
         return spokenFilename.isEmpty ? nil : spokenFilename
+    }
+
+    private func speechCommandPrefixLength(for sendText: String) -> Int? {
+        let loweredSendText = sendText.lowercased()
+
+        for command in [".spk", "spk"] where loweredSendText.hasPrefix(command) {
+            guard loweredSendText.count > command.count else {
+                continue
+            }
+
+            let separatorIndex = loweredSendText.index(loweredSendText.startIndex, offsetBy: command.count)
+            if loweredSendText[separatorIndex].isWhitespace {
+                return command.count + 1
+            }
+        }
+
+        return nil
     }
 
     private func spokenTextFileContents(named filename: String) -> String? {
@@ -1319,7 +1321,7 @@ extension MainScreen {
             return .date(cityLabel: cityLabel)
         case ".power":
             return .power
-        case ".add":
+        case ".plus":
             return .add
         case ".minus":
             let initialCount: Int
@@ -1389,7 +1391,7 @@ extension MainScreen {
 
     private func isBareWidgetCommandText(_ loweredText: String) -> Bool {
         let widgetCommands = [
-            ".add", ".minus", ".power", ".rnd", ".random", ".clock", ".date",
+            ".plus", ".minus", ".power", ".rnd", ".random", ".clock", ".date",
             ".dow", ".sec", ".min", ".hour", ".day", ".month", ".year", ".timer",
             ".stop", ".stopwatch", ".amb", ".ambient"
         ]
@@ -1503,6 +1505,10 @@ extension MainScreen {
 
     private var supportedSoundExtensions: Set<String> {
         ["mp3", "wav", "m4a", "aiff", "aac", "caf"]
+    }
+
+    private var supportedPreviewExtensions: Set<String> {
+        ["txt", "md", "pdf", "png", "jpg", "jpeg", "gif", "heic", "webp"]
     }
 
     private func normalizedSoundFilename(_ filename: String) -> String {
@@ -1749,7 +1755,8 @@ extension MainScreen {
         let components = rightText.components(separatedBy: ":")
         let candidateName = components.first?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
 
-        guard !candidateName.isEmpty,
+        guard components.count > 1,
+              !candidateName.isEmpty,
               !candidateName.contains(where: \.isWhitespace),
               UIImage(systemName: candidateName) != nil else {
             return nil

@@ -1,3 +1,8 @@
+261018 Sun 0904
+sf symbols confused with text-fixed
+V62.70
+
+
 261017 Sat 1738
 widgets updated, home working
 V62.69
