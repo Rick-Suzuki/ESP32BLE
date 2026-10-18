@@ -439,10 +439,12 @@ Optionally specify a city:
 		//
 		//----------------------------------------
 		//
-		("day of month", ".day ", """
-**Insert the current day**
+			("day of month", ".ord ", """
+**Insert the current ordinal day**
  
-**Syntax:** .day
+**Syntax:** .ord
+
+**Equivalent:** .ordinal
 
 **Display:**	17th
 
@@ -452,8 +454,8 @@ Optionally specify a city:
 
 Optionally specify a city:
  
-.day Paris
-.day Tokyo
+.ord Paris
+.ordinal Tokyo
 
 **Note:** This command works without an ESP32 or Mac Helper connection.
 """),

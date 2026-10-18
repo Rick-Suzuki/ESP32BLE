@@ -1,6 +1,12 @@
+261018 Sun 1716
+.ordinal command change from .day
+V63.74
+
 261018 Sun 1645
 all widgets working, .ord todo
-V62.73
+V63.73
+
+// slight jump
 
 261018 Sun 1125
 most bad widgets fixed

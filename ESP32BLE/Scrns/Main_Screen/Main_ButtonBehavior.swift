@@ -1247,7 +1247,7 @@ extension MainScreen {
                 cityLabel = nil
             }
             return .clock(cityLabel: cityLabel)
-        case ".day":
+        case ".ord", ".ordinal":
             let cityLabel: String?
             if components.count > 1 {
                 let resolvedCityLabel = components.dropFirst().joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1392,7 +1392,7 @@ extension MainScreen {
     private func isBareWidgetCommandText(_ loweredText: String) -> Bool {
         let widgetCommands = [
             ".plus", ".minus", ".power", ".rnd", ".random", ".clock", ".date",
-            ".dow", ".sec", ".min", ".hour", ".day", ".month", ".year", ".timer",
+            ".dow", ".sec", ".min", ".hour", ".ord", ".ordinal", ".month", ".year", ".timer",
             ".stop", ".stopwatch", ".amb", ".ambient"
         ]
 

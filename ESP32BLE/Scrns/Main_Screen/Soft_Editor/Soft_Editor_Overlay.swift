@@ -226,7 +226,7 @@ struct MainScreenSlotEditorOverlay: View {
 							HStack(spacing: buttonSpacing) {
 								helperInsertButton(label: "clock",			insertedText: "clock ",color:.blue.opacity(0.3))
 								helperInsertButton(label: "date",			insertedText: "date ",color:.blue.opacity(0.3))
-								helperInsertButton(label: "day",			insertedText: "day ",color:.blue.opacity(0.3))
+									helperInsertButton(label: "ord",			insertedText: "ord ",color:.blue.opacity(0.3))
 								helperInsertButton(label: "day of\nweek",	insertedText: "dow ",color:.blue.opacity(0.3))
 								helperInsertButton(label: "year", 			insertedText: "year ", color:.blue.opacity(0.5))
 								helperInsertButton(label: "prev", 			insertedText: "prev", color:.blue.opacity(0.5))

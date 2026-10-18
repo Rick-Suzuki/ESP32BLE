@@ -1,786 +1,1882 @@
-ESP32BLE — UI-002-PROBE
-HIDE ALL MODE FROM DISPLAY MODE SELECTOR
+ESP32BLE — WIDGET-006-PROBE
+ORDINAL COMMANDS AND CITY/TIME-ZONE VALIDATION
 
-READ-ONLY RESULT
+READ-ONLY INVESTIGATION REPORT
 
-No files were modified.
-The project was not built.
-The app and simulator were not launched.
-No tests or Git operations were performed.
+No source files, settings, assets, logs, or reports were modified.
+No build, launch, simulator, test, Git, dependency installation, or network operation was performed.
 
-1. KEY FINDING
 
-The display-mode control is not a Picker, segmented control, menu, or editor-specific selector.
+==================================================
+EXECUTIVE SUMMARY
+==================================================
 
-It is a single Main Screen toolbar Button. Each tap calls advanceDisplayMode(), which advances through the modes using FunctionKeyDisplayMode.next().
+CONFIRMED FROM SOURCE
 
-Consequently, there is:
+1. .day is the ordinal day-of-month widget.
 
-• No selection binding with missing tags.
-• No segmented-control invalid-selection problem.
-• No separate iPhone selector.
-• No separate iPad selector.
-• No button-editor display-mode selector.
-• No per-button display-mode value stored in .screen files.
+It produces hard-coded English values such as:
 
-The smallest safe correction would be to change only the cycling sequence so .last advances to .left instead of .both.
+1st
+2nd
+3rd
+4th
+11th
+12th
+13th
+18th
+21st
+22nd
+23rd
+31st
 
-The .both case, title, persistence decoding, persistence encoding, and rendering can all remain intact.
+The suffix algorithm is correct for every listed example.
 
-2. EXACT SELECTOR LOCATION
+2. The smallest command rename is:
 
-Visible control:
+• Remove ".day" from both recognition lists.
+• Change the parser case from ".day" to ".ord", ".ordinal".
+• Keep the existing internal MainGridWidgetDescriptor.day case if desired.
+• Update help text and the soft-editor insertion button.
+• Remove/update documentation occurrences in notes.txt if that file is intended to remain current.
 
-ESP32BLE/Scrns/Main_Screen/Toolbars/Main_BtmToolbar.swift
+There is no need to rename Calendar.Component.day or other unrelated “day” identifiers.
 
-MainScreenBottomBar
-Lines 240 onward
+3. City resolution is local and offline.
 
-bottomToolbarSpeechControls(...)
-Lines 429–516
+It uses:
 
-Display-mode button:
-Lines 493–514
+TimeZone(identifier:)
+TimeZone.knownTimeZoneIdentifiers
 
-Current implementation:
+There is no CLGeocoder, MapKit, CoreLocation, URLSession, bundled city database, or remote API in the widget resolver.
 
-Button {
-onAdvanceDisplayMode()
+4. The parser treats every token after a date/time command as one city/location label.
 
-} label: {
-Text(displayMode.title)
+Examples:
 
-...
+.clock London
+cityLabel = "London"
 
-}
 
-The current mode’s user-visible name comes from:
+.clock London, UK
+cityLabel = "London, UK"
 
-displayMode.title
 
-The control has a fixed width supplied through displayModeWidth.
+.clock Europe/London
+cityLabel = "Europe/London"
 
-Widths are selected in MainScreenBottomBar.body:
 
-Lines 281–303
+Spaces are preserved by joining the remaining tokens with a single space. Commas are not specially parsed or removed.
 
-Regular layout:
-120 points
+5. Invalid locations silently fall back to the device time zone.
 
-Intermediate compact layout:
-iPad: 88 points
-iPhone: 108 points
+For example, .clock Atlantis produces a plausible device-local time rather than an error.
 
-Most compact layout:
-72 points
+6. Ambiguity is not detected.
 
-Because this is one button rather than four simultaneous segments, hiding All does not change the control’s width or move adjacent controls.
+The resolver selects the first matching IANA identifier. It cannot report multiple matches.
 
-3. IPHONE AND IPAD ARCHITECTURE
+7. Most widgets correctly use the parsed city time zone, including .min. Fractional-hour and fractional-quarter-hour zones work when a valid named time-zone identifier or resolvable identifier tail is supplied.
 
-Both platforms use the same:
+8. Two important inconsistencies exist:
 
-MainScreenBottomBar
+• .date parses a city but rendering ignores the descriptor’s cityLabel.
+• .dow parses a city but rendering ignores the descriptor’s cityLabel.
 
-and the same display-mode Button.
+These two widgets instead consult the button’s alternate/right-hand text as a possible time-zone name.
 
-Main Screen placement is in:
+9. Widgets do not share one timer.
 
-ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
+Each rendered widget creates its own TimelineView. Calendar widgets update every 60 seconds; clock/second/minute/hour update every second.
 
-iPad placement:
-Lines 1204–1218
+10. There is no city-resolution cache or stored resolved IANA identifier.
 
-iPhone placement:
-Lines 1233–1243
+The raw command remains part of the button/document data. Resolution is repeated from local Foundation data during formatting.
 
-Both invoke:
 
-displayModeButtonSection(availableWidth:)
+==================================================
+1. DATE/TIME WIDGET INVENTORY
+==================================================
 
-That function is at lines 2931–2964.
+Shared recognition and parser infrastructure
 
-It creates MainScreenBottomBar and passes:
+Initial document parsing recognizes bare widget commands at:
 
-• displayMode
-• onAdvanceDisplayMode: advanceDisplayMode
+ESP32BLE/ESP32BLE/Scrns/ContentView.swift:2630-2655
 
-Therefore:
+The recognition list is specifically:
 
-• iPhone and iPad do not require separate mode-selection changes.
-• The completed iPhone landscape editor is unrelated.
-• The iPad floating button editor is unrelated.
-• No editor layout changes are required.
-• Toolbar dimensions remain unchanged.
+ESP32BLE/ESP32BLE/Scrns/ContentView.swift:2646-2655
 
-4. INTERNAL DISPLAY-MODE REPRESENTATION
+A second recognition list used by main-button behavior is at:
+
+ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift:1392-1401
+
+The descriptor parser is:
+
+targetWidgetDescriptorForSendText(_:)
+ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift:1211-1390
+
+The descriptor type is:
+
+MainGridWidgetDescriptor
+ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_ButtonLabelView.swift:857-875
+
+Rendering is dispatched by:
+
+widgetContent(descriptor:)
+ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_ButtonLabelView.swift:200-447
+
+
+.clock
+
+Recognition:
+ContentView.swift:2648
+Main_ButtonBehavior.swift:1394
+
+Parser:
+Main_ButtonBehavior.swift:1241-1249
+
+Descriptor:
+MainGridWidgetDescriptor.clock(cityLabel:)
+Main_ButtonLabelView.swift:858
+
+Value and formatting:
+clockText(for:cityLabel:)
+Main_ButtonLabelView.swift:532-538
+
+Rendering:
+Main_ButtonLabelView.swift:203-216
+
+Format:
+HH:mm:ss
+
+Refresh:
+Every 1 second.
+
+Parameters:
+All text after .clock is joined as one optional cityLabel.
+
+Time zone:
+widgetTimeZone(for: cityLabel), then the alternate/right button text’s time zone, then TimeZone.current.
+
+Error behavior:
+An unresolved city silently falls through to the alternate/right text and then device-local time.
+
+
+.hour
+
+Recognition:
+ContentView.swift:2649
+Main_ButtonBehavior.swift:1395
+
+Parser:
+Main_ButtonBehavior.swift:1295-1303
+
+Descriptor:
+MainGridWidgetDescriptor.hour(cityLabel:)
+Main_ButtonLabelView.swift:864
+
+Value and formatting:
+widgetTimeComponentText(for:cityLabel:format:)
+Main_ButtonLabelView.swift:556-562
+
+Rendering:
+Main_ButtonLabelView.swift:299-312
+
+Format:
+HH
+
+Refresh:
+Every 1 second.
+
+Parameters:
+One optional location string comprising all remaining tokens.
+
+Time zone:
+Resolved command city, otherwise TimeZone.current.
+
+Error behavior:
+Silent device-local fallback.
+
+
+.min
+
+Recognition:
+ContentView.swift:2649
+Main_ButtonBehavior.swift:1395
+
+Parser:
+Main_ButtonBehavior.swift:1286-1294
+
+Descriptor:
+MainGridWidgetDescriptor.minute(cityLabel:)
+Main_ButtonLabelView.swift:863
+
+Value and formatting:
+widgetTimeComponentText(... format: "mm")
+Main_ButtonLabelView.swift:556-562
+
+Rendering:
+Main_ButtonLabelView.swift:285-298
+
+Refresh:
+Every 1 second.
+
+Parameters:
+Optional location string.
+
+Time zone:
+Resolved command city, otherwise TimeZone.current.
+
+Error behavior:
+Silent device-local fallback.
+
+
+.sec
+
+Recognition:
+ContentView.swift:2649
+Main_ButtonBehavior.swift:1395
+
+Parser:
+Main_ButtonBehavior.swift:1277-1285
+
+Descriptor:
+MainGridWidgetDescriptor.second(cityLabel:)
+Main_ButtonLabelView.swift:862
+
+Value and formatting:
+widgetTimeComponentText(... format: "ss")
+Main_ButtonLabelView.swift:556-562
+
+Rendering:
+Main_ButtonLabelView.swift:271-284
+
+Refresh:
+Every 1 second.
+
+Parameters:
+Optional location string.
+
+Time zone:
+Resolved command city, otherwise TimeZone.current.
+
+Error behavior:
+Silent device-local fallback.
+
+
+.date
+
+Recognition:
+ContentView.swift:2648
+Main_ButtonBehavior.swift:1394
+
+Parser:
+Main_ButtonBehavior.swift:1313-1321
+
+Descriptor:
+MainGridWidgetDescriptor.date(cityLabel:)
+Main_ButtonLabelView.swift:866
+
+Value and formatting:
+dateValueText(for:)
+Main_ButtonLabelView.swift:635-641
+
+Rendering:
+Main_ButtonLabelView.swift:217-230
+
+Format:
+yy.MM.dd
+
+Refresh:
+Every 60 seconds.
+
+Parameters:
+The parser accepts an optional location string.
+
+Time zone:
+The parsed descriptor cityLabel is ignored by rendering.
+
+dateValueText uses widgetTimeZone, which is derived from rightTitleWithoutColorPrefix, not from the descriptor:
+Main_ButtonLabelView.swift:498-522
+Main_ButtonLabelView.swift:635-640
+
+Error behavior:
+Invalid right-side text silently falls back to device-local time.
+
+
+.year
+
+Recognition:
+ContentView.swift:2649
+Main_ButtonBehavior.swift:1395
+
+Parser:
+Main_ButtonBehavior.swift:1268-1276
+
+Descriptor:
+MainGridWidgetDescriptor.year(cityLabel:)
+Main_ButtonLabelView.swift:861
+
+Value and formatting:
+yearText(for:cityLabel:)
+Main_ButtonLabelView.swift:627-633
+
+Rendering:
+Main_ButtonLabelView.swift:257-270
+
+Format:
+yyyy
+
+Refresh:
+Every 60 seconds.
+
+Parameters:
+Optional location string.
+
+Time zone:
+Resolved command city, otherwise device-local.
+
+Error behavior:
+Silent device-local fallback.
+
+
+.month
+
+Recognition:
+ContentView.swift:2649
+Main_ButtonBehavior.swift:1395
+
+Parser:
+Main_ButtonBehavior.swift:1259-1267
+
+Descriptor:
+MainGridWidgetDescriptor.month(cityLabel:)
+Main_ButtonLabelView.swift:860
+
+Value and formatting:
+monthNameText(for:cityLabel:)
+Main_ButtonLabelView.swift:619-625
+
+Rendering:
+Main_ButtonLabelView.swift:244-256
+
+Format:
+LLLL
+
+Actual output:
+Localized full month name, such as “October”, not numeric “10”.
+
+The help entry currently claims a numeric display:
+Main_Screen.swift:421-438
+
+Refresh:
+Every 60 seconds.
+
+Parameters:
+Optional location string.
+
+Time zone:
+Resolved command city, otherwise device-local.
+
+Error behavior:
+Silent device-local fallback.
+
+
+.dow
+
+Recognition:
+ContentView.swift:2649
+Main_ButtonBehavior.swift:1395
+
+Parser:
+Main_ButtonBehavior.swift:1304-1312
+
+Descriptor:
+MainGridWidgetDescriptor.dow(cityLabel:)
+Main_ButtonLabelView.swift:865
+
+Value and formatting:
+dateFullWeekdayText(for:)
+Main_ButtonLabelView.swift:548-554
+
+Rendering:
+Main_ButtonLabelView.swift:313-325
+
+Format:
+EEEE, localized using Locale.current.
+
+Refresh:
+Every 60 seconds.
+
+Parameters:
+The parser accepts an optional location string.
+
+Time zone:
+The descriptor cityLabel is ignored by rendering.
+
+dateFullWeekdayText uses widgetTimeZone derived from the alternate/right button text:
+Main_ButtonLabelView.swift:498-522
+Main_ButtonLabelView.swift:548-553
+
+Error behavior:
+Silent device-local fallback.
+
+
+.day
+
+Recognition:
+ContentView.swift:2649
+Main_ButtonBehavior.swift:1395
+
+Parser:
+Main_ButtonBehavior.swift:1250-1258
+
+Descriptor:
+MainGridWidgetDescriptor.day(cityLabel:)
+Main_ButtonLabelView.swift:859
+
+Value and formatting:
+dayOfMonthOrdinalText(for:cityLabel:)
+Main_ButtonLabelView.swift:600-617
+
+Rendering:
+Main_ButtonLabelView.swift:231-243
+
+Refresh:
+Every 60 seconds.
+
+Parameters:
+Optional location string.
+
+Time zone:
+Resolved command city, otherwise device-local.
+
+Error behavior:
+Silent device-local fallback.
+
+
+Additional time-related commands
+
+.stop and .stopwatch are aliases for a separate stopwatch widget:
+Main_ButtonBehavior.swift:1369-1370
+Main_ButtonLabelView.swift:872
+
+.timer is a separate duration/countdown widget:
+Main_ButtonBehavior.swift:1376-1386
+Main_ButtonLabelView.swift:874
+
+They do not share civil date/time calculation or city resolution with the listed widgets.
+
+No additional aliases were found for .clock, .hour, .min, .sec, .date, .year, .month, .dow, or .day.
+
+
+==================================================
+2. COMPLETE .day TRACE
+==================================================
+
+CONFIRMED FROM SOURCE
+
+Document recognition:
+
+ContentView.swift:2630-2643 decides whether the left side is a bare widget command.
+
+ContentView.swift:2646-2655 includes ".day".
+
+ContentView.swift:2658-2695 preserves the widget command as a send-text component. A colon followed by whitespace separates multiple actions; spaces inside the command remain part of the same component.
+
+Main recognition:
+
+Main_ButtonBehavior.swift:1211-1226 accepts the text only when isBareWidgetCommandText returns true.
+
+Main_ButtonBehavior.swift:1392-1401 contains the second ".day" recognition entry.
+
+Parameter parsing:
+
+Main_ButtonBehavior.swift:1228-1234 splits on spaces.
+
+Main_ButtonBehavior.swift:1250-1258:
+
+• Recognizes only ".day".
+• Joins every remaining token with a space.
+• Stores the result as cityLabel.
+• Uses nil if there is no remaining text.
+
+Descriptor:
+
+MainGridWidgetDescriptor.day(cityLabel:)
+Main_ButtonLabelView.swift:859
+
+Rendering:
+
+Main_ButtonLabelView.swift:231-243
+
+It creates:
+
+TimelineView(.periodic(from: .now, by: 60))
+
+and renders:
+
+dayOfMonthOrdinalText(for: context.date, cityLabel: cityLabel)
+
+Calculation:
+
+Main_ButtonLabelView.swift:600-603
+
+It copies Calendar.current, changes that calendar’s timeZone to the resolved city zone or TimeZone.current, and extracts Calendar.Component.day.
+
+Suffix calculation:
+
+Main_ButtonLabelView.swift:604-616
+
+• 11, 12, and 13 modulo 100 use “th”.
+• Otherwise, numbers ending in 1 use “st”.
+• Numbers ending in 2 use “nd”.
+• Numbers ending in 3 use “rd”.
+• Everything else uses “th”.
+
+The requested cases are logically correct from the implementation:
+
+1st: correct
+2nd: correct
+3rd: correct
+4th: correct
+11th: correct
+12th: correct
+13th: correct
+18th: correct
+21st: correct
+22nd: correct
+23rd: correct
+31st: correct
+
+Localization:
+
+• The ordinal suffixes are hard-coded English.
+• They do not vary with Locale.current.
+• Calendar.current can represent the user’s configured calendar, so the numeric day itself is not forcibly Gregorian.
+• The resulting English suffix is therefore not localized and could be linguistically inappropriate under a non-English locale or unusual calendar.
+
+City effect:
+
+The city affects .day when it resolves successfully. The selected time zone is placed on Calendar.current before extracting .day.
+
+Local/network behavior:
+
+Everything is calculated locally using Date, Calendar, and TimeZone. No network access is involved.
+
+
+==================================================
+3. EXACT .ord / .ordinal REPLACEMENT POINTS
+==================================================
+
+Smallest safe future implementation
+
+1. Initial command recognition
 
 File:
+ESP32BLE/ESP32BLE/Scrns/ContentView.swift
 
-ESP32BLE/Scrns/Main_Screen/Toolbars/Main_BtmRightTxt.swift
+Lines:
+2646-2655
 
-Enum:
-FunctionKeyDisplayMode
-Lines 3–62
+Required change:
+Remove ".day".
+Add ".ord" and ".ordinal".
 
-Current cases:
+2. Main behavior recognition
 
-.left
-.right
-.last
-.both
+File:
+ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift
 
-Current titles:
+Lines:
+1392-1401
 
-.left → “Command”
-.right → “Button”
-.last → “Btn Text”
-.both → “All”
+Required change:
+Remove ".day".
+Add ".ord" and ".ordinal".
 
-Title mapping:
-Lines 50–61
+3. Descriptor parser
 
-The enum conforms to CaseIterable, but the project does not use FunctionKeyDisplayMode.allCases to construct the UI.
+File:
+ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift
 
-The enum is not RawRepresentable and has no integer raw values. Persistence is implemented through explicit string conversion.
+Lines:
+1250-1258
 
-5. CURRENT FOUR-OPTION CONSTRUCTION
+Required change:
+Replace:
 
-The four choices are not constructed as four visible options.
+case ".day":
 
-They are generated by the next() state machine:
+with one shared parser case:
 
-Main_BtmRightTxt.swift
-Lines 24–35
+case ".ord", ".ordinal":
 
-Current cycle:
+Both would return the same internal descriptor.
 
-.left → .right
-.right → .last
-.last → .both
-.both → .left
+4. Internal descriptor
 
-The visible toolbar Button displays only the current state’s title. A tap advances to the next state.
+File:
+ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_ButtonLabelView.swift
 
-The same advancement function is used by:
+Line:
+859
 
-• The visible Main Screen toolbar Button.
-• The external keyboard shortcut “m”.
+The internal case can safely remain:
 
-External keyboard shortcut:
+case day(cityLabel: String?)
 
-Main_Screen.swift
-Lines 2735–2756
+That is an implementation name rather than a recognized command string.
 
-Therefore, a correction to next() would consistently remove .both from both user-selection paths.
+Keeping it avoids unrelated renderer and switch renaming. Renaming it to ordinal would improve terminology but is not required for the smallest safe change.
 
-6. STATE OWNERSHIP
+5. Rendering
 
-The selected mode is Main Screen state:
+File:
+ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_ButtonLabelView.swift
 
-Main_Screen.swift
-Line 868
+Lines:
+189 and 231-243
 
-@State var displayMode: FunctionKeyDisplayMode = .right
+No behavior change is required if the internal .day descriptor is retained.
 
-It is a Main Screen-wide mode, not a property of an individual button.
+6. Help/autocomplete command row
 
-It controls how every grid button is displayed for the selected document.
+File:
+ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
 
-The current mode reaches the toolbar through:
+Lines:
+442-459
 
-displayModeButtonSection(...)
-Main_Screen.swift
-Lines 2931–2964
+Required future updates:
 
-It reaches individual button rendering through the Main Screen button-label construction in:
+• Change shortcut/insertion text from ".day " to the chosen primary spelling.
+• Document both .ord and .ordinal.
+• Change examples from .day Paris/.day Tokyo.
+• Ensure .day is not advertised.
 
-Main_ButtonBehavior.swift
-mainGridButtonLabel(...)
-Approximately lines 1616–1673
+7. Soft-editor insertion button
 
-MainScreenButtonLabelView receives:
+File:
+ESP32BLE/ESP32BLE/Scrns/Main_Screen/Soft_Editor/Soft_Editor_Overlay.swift
 
-displayMode: FunctionKeyDisplayMode
+Lines:
+225-230, especially line 229
 
-Main_ButtonLabelView.swift
-Line 28
+The “day” insertion control currently inserts "day ". The helper UI must be changed to insert ord or ordinal and should be relabeled accordingly.
 
-Ordinary and widget rendering switch on the same enum.
+8. Project notes/documentation reference
 
-7. SAVED-VALUE REPRESENTATION
+File:
+ESP32BLE/ESP32BLE/notes.txt
 
-Persistence is implemented in:
+Lines:
+23, 45, and 61
 
-ESP32BLE/Scrns/Main_Screen/Main_ModePersistence.swift
+These are documentation/development-note references, not executable recognition.
 
-Persistence filename:
+9. Existing .ord/.ordinal support
 
-.main_screen_view_mode.cfg
+No widget-command implementation of .ord or .ordinal exists.
 
-Defined at lines 3–6.
+The grep matches containing “orderedSame”, “orderedAscending”, and similar identifiers are unrelated and must not be changed.
 
-Stored strings are generated by:
+10. Tests
 
-FunctionKeyDisplayMode.persistedValue
-Main_BtmRightTxt.swift
-Lines 37–48
+No unit-test or UI-test target/source was found in the visible project structure.
 
-Values:
+Scrns/TestArea.swift exists, but no .day, ordinal, city, or time-zone test implementation was found there.
 
-.left → “left cmd”
-.right → “right text”
-.last → “last text”
-.both → “both texts”
+POSSIBLE RISK / REQUIRES TESTING
 
-Decoding is handled by:
+Documents containing .day will stop creating a widget, as explicitly requested. They may instead be treated as ordinary action text depending on the surrounding document parser. Migration is intentionally not recommended because the requirement says not to retain .day compatibility.
 
-FunctionKeyDisplayMode.init(persistedValue:)
-Lines 9–22
 
-Accepted .both spellings:
+==================================================
+4. CITY PARAMETER SYNTAX
+==================================================
 
-• both
-• both text
-• both texts
+CONFIRMED FROM SOURCE
 
-The mode file contains document-name/value entries in this form:
+Grammar at the widget descriptor parser:
 
-document-name=mode-value
+command := widgetName [whitespace locationText]
+locationText := every remaining whitespace-separated token, rejoined with spaces
 
-Reading and writing occurs in:
+Implementation:
+Main_ButtonBehavior.swift:1228-1234
+Main_ButtonBehavior.swift:1241-1321
 
-Main_ModePersistence.swift
-Lines 43–97
+Examples:
 
-The current document’s value is selected at lines 54–57.
+.clock London
+Accepted syntactically.
+Location passed to resolver: "London".
 
-Legacy single-value mode files remain supported at lines 59–60.
+.clock Tokyo
+Accepted syntactically.
+Location passed to resolver: "Tokyo".
 
-8. IMPORTANT CORRECTION ABOUT .SCREEN FILES
+.clock London, UK
+Accepted syntactically.
+Location passed to resolver: "London, UK".
+It is not country-qualified parsing; the comma remains literal, so resolution is expected to fail.
 
-The display mode is not serialized inside each button or inside the .screen document contents.
+.clock Europe/London
+Accepted syntactically.
+TimeZone(identifier: "Europe/London") is attempted directly and should resolve.
 
-Instead, the current Main Screen mode is stored separately in:
+.ord London
+Not currently recognized because .ord is not implemented.
 
-.main_screen_view_mode.cfg
+.day London
+Currently accepted and uses "London" as cityLabel.
 
-The file is keyed by selectedDocumentName.
+Spaces:
+Multiple whitespace runs are collapsed when the tokens are rejoined.
 
-Therefore, the relevant compatibility case is not an “All-mode button.” It is a document whose separately persisted Main Screen display mode is .both.
+Commas:
+No special meaning. They remain part of the lookup query.
 
-Individual ordinary buttons and widgets do not carry their own .left, .right, .last, or .both value.
+Colon plus whitespace:
+At the outer document parser, a colon followed by whitespace separates command/action components:
+ContentView.swift:2663-2695
 
-No .screen migration or rewriting is needed.
+Therefore a location containing ": " cannot remain intact as one widget command.
 
-9. MODE RESTORATION
+Multiple command parameters:
+Date/time commands do not have separately typed parameters. Every token after the command becomes one location label.
 
-Mode restoration occurs in:
+Supported lookup forms:
 
-restorePersistedMainScreenModes()
-Main_ModePersistence.swift
-Lines 23–33
+• Exact identifiers accepted by TimeZone(identifier:).
+• Exact normalized full entries from TimeZone.knownTimeZoneIdentifiers.
+• Exact normalized final path components of known IANA identifiers.
+• A redundant suffix match against “/query”.
 
-It reads the stored value and initializes FunctionKeyDisplayMode.
+Normalization only:
 
-If decoding fails, the fallback is .right.
+• Lowercases.
+• Replaces underscores with spaces.
+• Trims leading/trailing whitespace.
 
-A successfully decoded .both remains .both.
+Implementation:
+Main_ButtonLabelView.swift:715-741
 
-The restored value is immediately written back using the same persistedValue, so a restored .both remains “both texts.”
+City names:
+Only work if the normalized city name equals the final component of a known time-zone identifier.
 
-Restoration is called when MainScreen appears:
+Examples likely to resolve structurally:
 
-Main_Screen.swift
-Lines 1036–1040
+Tokyo -> Asia/Tokyo
+London -> Europe/London
+New York -> America/New_York
+Los Angeles -> America/Los_Angeles
 
-It is also called when the selected document’s display name changes:
+City/airport codes:
+There is no input lookup table for codes such as LON, TYO, HND, NYC, or LAX.
 
-handleSelectedDocumentDisplayNameChange()
-Main_Screen.swift
-Lines 5350–5357
+The manual code dictionary at Main_ButtonLabelView.swift:670-678 is output/display-label code, not city-to-time-zone input resolution.
 
-Therefore, document switching restores each document’s stored display mode.
+Country-qualified names:
+No explicit support.
 
-10. EXISTING .BOTH VALUES
+“London, UK” is not transformed to Europe/London.
 
-Confirmed source behavior if .both remains implemented but is removed from the normal cycle:
+Region-qualified names:
+IANA form is supported, such as Europe/London.
 
-• A stored “both texts” value still decodes as .both.
-• The Main Screen still renders using .both.
-• The toolbar still receives displayMode == .both.
-• displayMode.title still produces “All.”
-• The persistence layer can still write “both texts.”
-• No automatic conversion occurs merely because the value is not reachable from the normal three-mode cycle.
-• Tapping the mode button while currently in .both already advances to .left.
-• Once the user leaves .both, the proposed three-mode cycle would prevent selecting it again through the toolbar or “m” shortcut.
+Human form such as “London, England” is not structurally parsed.
 
-This provides a clean legacy-state exit without silently converting the value when the document is opened.
+Numeric offsets:
+There is no explicit numeric-offset grammar or TimeZone(secondsFromGMT:) usage.
 
-11. SELECTOR BEHAVIOR WITH .BOTH
+A string only works if TimeZone(identifier:) itself accepts that exact representation on the running OS. This was not executed during the read-only probe.
 
-Because the control is a Button rather than a Picker, the missing-tag scenarios in the probe do not apply.
 
-There is no possibility of:
+==================================================
+5. CITY STORAGE AND OWNERSHIP
+==================================================
 
-• No selected segment.
-• SwiftUI choosing a default tag.
-• A Picker warning.
-• An invalid selection binding.
-• Automatic binding mutation caused by removing a Picker option.
+CONFIRMED FROM SOURCE
 
-If .both is restored, the Button simply renders:
+The city is part of the command text.
 
-Text(displayMode.title)
+It is parsed from each button entry’s sendTexts:
+Main_ButtonBehavior.swift:847-849
+Main_ButtonBehavior.swift:1211-1321
 
-which displays “All.”
+It is therefore:
 
-The binding is not mutated until the user explicitly activates the Button or keyboard shortcut.
+• Per command.
+• Effectively per button entry.
+• Stored as part of the document/button’s raw command data.
+• Not a global city setting.
+• Not a separate Settings value.
+• Not stored as a resolved TimeZone.
+• Not cached as an IANA identifier.
 
-This is source-confirmed.
+During rendering, the raw city text is copied into a transient MainGridWidgetDescriptor associated value.
 
-12. OPENING AN EXISTING .BOTH DOCUMENT
+No explicit default city was found.
 
-Opening or selecting a document whose saved mode is “both texts” performs this sequence:
+When no city resolves, TimeZone.current is used.
 
-1. restorePersistedMainScreenModes() reads the document-keyed value.
-2. FunctionKeyDisplayMode.init(persistedValue:) returns .both.
-3. displayMode becomes .both.
-4. savePersistedDisplayMode() writes “both texts” back.
-5. Main Screen rendering continues through existing .both branches.
-6. The toolbar displays “All.”
+Separate alternate/right-button text issue:
 
-No conversion to Command, Button, or Btn Text occurs.
+Main_ButtonLabelView.swift:498-522 defines widgetCityLabel from rightTitleWithoutColorPrefix.
 
-13. EDITOR AND UNRELATED-SAVE RISKS
+That value is separate from the parsed command cityLabel.
 
-The button editors do not own the display mode.
+It affects:
 
-Opening an iPhone or iPad button editor does not change displayMode.
+• .date
+• .dow
+• the secondary fallback path of .clock
+• unused/support helper functions that access widgetTimeZone
 
-The mode is not part of the edited button line or .screen entry.
+It should not be mistaken for a stored global city preference.
 
-Therefore:
 
-• Opening a button editor does not replace .both.
-• Closing the editor without changes does not replace .both.
-• Editing button command text does not replace .both.
-• Editing Right Text does not replace .both.
-• Saving an unrelated button edit does not serialize a new display mode into the .screen file.
+==================================================
+6. CITY-TO-TIME-ZONE RESOLUTION
+==================================================
 
-The persisted mode changes only through code that calls savePersistedDisplayMode(), primarily:
+CONFIRMED FROM SOURCE
 
-advanceDisplayMode()
-Main_ModePersistence.swift
-Lines 18–21
+Primary resolver:
 
-Mode restoration also writes the restored value back unchanged at lines 23–33.
+widgetTimeZone(for:)
+Main_ButtonLabelView.swift:715-734
 
-14. MAIN SCREEN RENDERING PRESERVATION
+A duplicate property resolver exists at:
+Main_ButtonLabelView.swift:503-522
 
-Ordinary rendering remains in:
+Resolution sequence:
 
-Main_ButtonLabelView.swift
-buttonContent
-Lines 147–185
+1. If cityLabel is nil, return nil.
+2. Try TimeZone(identifier: cityLabel).
+3. Normalize the input.
+4. Iterate TimeZone.knownTimeZoneIdentifiers.
+5. Select the first identifier whose:
+   • normalized full identifier equals the query, or
+   • normalized final path component equals the query, or
+   • normalized identifier ends in “/query”.
+6. Create TimeZone from the selected identifier.
+7. Return nil if nothing matched.
 
-It retains all four switch cases:
+Technology:
 
-.left
-.right
-.last
-.both
+• Foundation TimeZone: yes.
+• Foundation Calendar: used by the ordinal calculation.
+• CLGeocoder: no.
+• MapKit: no.
+• CoreLocation: no.
+• Bundled city database: no.
+• Remote API: no.
+• Hard-coded input lookup table: no.
+• Hard-coded output city-code table: yes, but only in widgetDateCityCode at lines 670-678.
 
-Widget header selection remains in:
+Lookup output:
+A Foundation TimeZone.
 
-Main_ButtonBehavior.swift
-widgetHeaderContent(for:)
-Lines 1675–1727
+Caching:
+None.
 
-It retains:
+Persistence:
+No resolved identifier is persisted.
 
-.left
-.right
-.last
-.both
+Failure handling:
+Returns nil, followed by silent fallback to TimeZone.current.
 
-The .both branch continues creating:
+Ambiguity handling:
+None. first(where:) selects the first match.
 
-• commandWithSymbol
-• commandWithEmoji
-• commandWithText
-• command-only fallback where appropriate
+DST:
+Named Foundation time zones automatically carry their rule data, including daylight-saving transitions.
 
-The shared widget renderer remains in:
 
-Main_ButtonLabelView.swift
-renderWidgetHeader()
-Lines 461–488
+==================================================
+7. TIME-ZONE USAGE BY WIDGET
+==================================================
 
-No rendering change is needed.
+CONFIRMED FROM SOURCE
 
-No changes are needed to:
+.clock
 
-• renderWidgetHeader()
-• widgetHeaderText()
-• widgetContent(descriptor:)
-• SF Symbol parsing
-• Emoji parsing
-• Dynamic widget values
-• Widget gestures
-• Ordinary button rendering
+Uses parsed cityLabel first.
+If that fails, it attempts to resolve the alternate/right button text.
+If that fails, uses TimeZone.current.
 
-15. OTHER USER-FACING SELECTION POINTS
+.hour
 
-Confirmed selection paths:
+Uses parsed cityLabel.
+Falls back to TimeZone.current.
 
-1. Main Screen bottom-toolbar mode Button
+.min
 
-Main_BtmToolbar.swift
-Lines 493–514
+Uses parsed cityLabel.
+Falls back to TimeZone.current.
 
-2. External keyboard shortcut “m”
+.sec
 
-Main_Screen.swift
-Lines 2754–2756
+Uses parsed cityLabel.
+Falls back to TimeZone.current.
 
-Both call the same advanceDisplayMode() function.
+.date
 
-No FunctionKeyDisplayMode Picker, segmented control, Menu, context-menu item, Settings selector, or button-editor selector was found.
+Does not use its parsed cityLabel.
+Uses alternate/right button text as widgetCityLabel.
+Falls back to TimeZone.current.
 
-The only user-facing “All” label associated with the display modes is:
+.year
 
-FunctionKeyDisplayMode.title
-Main_BtmRightTxt.swift
-Lines 50–61
+Uses parsed cityLabel.
+Falls back to TimeZone.current.
 
-Other unrelated occurrences of “All,” such as “Delete All,” are unrelated and must remain unchanged.
+.month
 
-16. OPTION COMPARISON
+Uses parsed cityLabel.
+Falls back to TimeZone.current.
 
-OPTION A
-Simply remove the All segment.
+.dow
 
-Assessment:
+Does not use its parsed cityLabel.
+Uses alternate/right button text as widgetCityLabel.
+Falls back to TimeZone.current.
 
-Not directly applicable. There is no segment or option collection to remove.
+.day
 
-The equivalent operation would be to skip .both in next().
+Uses parsed cityLabel.
+Falls back to TimeZone.current.
+
+Current consistency result:
+
+The widgets do not all consistently represent the selected city.
+
+A command set such as:
+
+.clock Tokyo
+.date Tokyo
+.dow Tokyo
+.day Tokyo
+.month Tokyo
+.year Tokyo
+
+can display a Tokyo clock/day/month/year while .date and .dow display the device-local date and weekday.
+
+This is especially visible near midnight and around month/year boundaries.
+
+
+==================================================
+8. MINUTES AND SECONDS
+==================================================
+
+CONFIRMED FROM SOURCE
+
+.min does use the specified city time zone:
+Main_ButtonLabelView.swift:285-298
+Main_ButtonLabelView.swift:556-562
+
+The DateFormatter receives the resolved time zone and format "mm".
+
+Therefore fractional offsets are represented correctly when the supplied location resolves to a valid named zone, including zones structurally equivalent to:
+
+UTC+05:30
+UTC+05:45
+UTC+09:30
+
+The minute may differ from the device’s minute exactly as required.
+
+.sec also passes the resolved city time zone to DateFormatter.
+
+At the same instant, ordinary civil time-zone rules do not change the seconds component, so this is normally redundant. It is nevertheless architecturally consistent with .hour and .min.
+
+No city-specific calendar operation is required for seconds in the current implementation.
+
+POSSIBLE RISK / REQUIRES TESTING
+
+The supported input must resolve to a named identifier or identifier tail. The source does not explicitly support raw strings such as “UTC+05:45” through TimeZone(secondsFromGMT:).
+
+
+==================================================
+9. INVALID CITY BEHAVIOR
+==================================================
+
+CONFIRMED FROM SOURCE
+
+Example:
+
+.clock Atlantis
+
+Resolution returns nil.
+
+clockText then evaluates:
+
+widgetTimeZone(for: "Atlantis")
+?? widgetTimeZone derived from alternate/right text
+
+?? TimeZone.current
+
+
+Result:
+
+• No error.
+• No empty value.
+• No crash.
+• No explicit UTC fallback.
+• No previous-valid-city state.
+• No default-city state.
+• It normally displays device-local time.
+• If the alternate/right button text happens to be a resolvable zone, .clock can use that instead.
+
+For .hour, .min, .sec, .day, .month, and .year, invalid city text directly falls back to TimeZone.current.
+
+For .date and .dow, the command city is ignored regardless of validity.
+
+Invalid input is not distinguishable from:
+
+• No city.
+• A resolver limitation.
+• An ambiguous input.
+• A temporarily unavailable zone, although no network lookup exists.
+
+Safest future error source:
+
+Change resolution from TimeZone? into an explicit result carrying at least:
+
+• localDefault
+• resolved(TimeZone)
+• unknown(input)
+• ambiguous(input, candidates)
+
+Then formatting can avoid silently applying TimeZone.current to an explicitly supplied but invalid city.
+
+
+==================================================
+10. AMBIGUOUS CITY BEHAVIOR
+==================================================
+
+CONFIRMED FROM SOURCE
+
+The resolver cannot detect ambiguity.
+
+It uses:
+
+TimeZone.knownTimeZoneIdentifiers.first { ... }
+
+at:
+Main_ButtonLabelView.swift:725-731
+
+Consequences:
+
+• Multiple candidates are never collected.
+• The first matching identifier wins.
+• No ambiguity error is available.
+• Country qualification is not parsed.
+• Region qualification is only supported when it is already a valid IANA identifier.
+• Device region is not explicitly consulted.
+• Locale.current affects displayed names, not candidate selection.
+
+London examples:
+
+London
+Likely matches Europe/London because its final identifier component is London.
+
+London, England
+No transformation or country parsing exists; likely unresolved.
+
+London, Ontario
+No transformation exists; likely unresolved.
+
+America/Toronto
+Direct IANA identifier and should resolve, but this identifies the time zone rather than the city London, Ontario.
+
+The resolver’s current model cannot safely represent arbitrary same-named cities.
+
+
+==================================================
+11. NO-CITY DEFAULT
+==================================================
+
+CONFIRMED FROM SOURCE
+
+.clock
+
+Uses alternate/right button text if it happens to resolve as a zone; otherwise device TimeZone.current.
+
+.hour
+.min
+.sec
+.day
+.month
+.year
+
+Use TimeZone.current.
+
+.date
+.dow
+
+Use the alternate/right button text if it resolves; otherwise TimeZone.current.
+
+There is no configured default-city setting or previously selected city in the inspected source.
+
+The proposed device-local default is already the general fallback, but .clock, .date, and .dow have the extra alternate-text behavior described above.
+
+
+==================================================
+12. NETWORK AND OFFLINE BEHAVIOR
+==================================================
+
+CONFIRMED FROM SOURCE
+
+City resolution does not require internet access.
+
+No references were found in the widget path to:
+
+• URLSession
+• NWPathMonitor
+• CLGeocoder
+• MKLocalSearch
+• MapKit
+• CoreLocation
+
+First lookup while online:
+Uses local Foundation data only.
+
+Repeated lookup while online:
+Repeats the local resolution.
+
+Previously resolved city offline:
+The raw city is resolved again from local Foundation data.
+
+Previously unseen city offline:
+Works if it matches locally installed Foundation time-zone data.
+
+Temporary network failure:
+No effect on this resolver.
+
+DNS failure:
+No effect.
+
+API failure:
+There is no remote API.
+
+Lookup timeout:
+There is no asynchronous lookup or timeout.
+
+Cache:
+No application cache exists.
+
+Restart persistence:
+The raw command survives as document content. A separately resolved IANA identifier is not persisted.
+
+DST database updates:
+The app relies on the OS-provided time-zone database. Its contents are available offline but can change with OS updates.
+
+
+==================================================
+13. MIDNIGHT, MONTH/YEAR BOUNDARIES, AND DST
+==================================================
+
+CONFIRMED FROM SOURCE
+
+All widgets receive a Date representing an instant from their TimelineView context.
+
+Correct city-local calendar derivation:
+
+• .clock: yes
+• .hour: yes
+• .min: yes
+• .sec: yes
+• .day: yes
+• .month: yes
+• .year: yes
+• .date: no, parsed command city is ignored
+• .dow: no, parsed command city is ignored
+
+Japan/London boundary example:
+
+At an instant where Tokyo is October 18 and London is October 17:
+
+• .day Tokyo can show 18th.
+• .month Tokyo and .year Tokyo use Tokyo’s time zone.
+• .date Tokyo may show the device’s date instead.
+• .dow Tokyo may show the device’s weekday instead.
+
+The same inconsistency applies across:
+
+• Midnight.
+• Month changes.
+• New Year.
+• International Date Line differences.
+
+DST:
+
+Named Foundation TimeZone values are used rather than fixed offsets.
+
+Foundation DateFormatter and Calendar apply the zone’s DST rules for:
+
+• Spring-forward transitions.
+• Repeated autumn hours.
+• Offset changes.
+• Date changes around transitions.
+
+No custom DST arithmetic was found.
+
+POSSIBLE RISK / REQUIRES TESTING
+
+• Each widget owns a separate TimelineView, so their context dates need not be byte-for-byte identical.
+• Timeline schedules can be coalesced by the system.
+• Calendar.current may use a non-Gregorian user calendar, while DateFormatter patterns have locale/calendar behaviors that should be verified under alternate calendar settings.
+
+
+==================================================
+14. WIDGET REFRESH TIMING
+==================================================
+
+CONFIRMED FROM SOURCE
+
+.clock:
+1 second
+Main_ButtonLabelView.swift:204
+
+.sec:
+1 second
+Main_ButtonLabelView.swift:272
+
+.min:
+1 second
+Main_ButtonLabelView.swift:286
+
+.hour:
+1 second
+Main_ButtonLabelView.swift:300
+
+.date:
+60 seconds
+Main_ButtonLabelView.swift:218
+
+.day / future .ord:
+60 seconds
+Main_ButtonLabelView.swift:232
+
+.month:
+60 seconds
+Main_ButtonLabelView.swift:245
+
+.year:
+60 seconds
+Main_ButtonLabelView.swift:258
+
+.dow:
+60 seconds
+Main_ButtonLabelView.swift:314
+
+There is no shared date/time timer. Each widget creates its own TimelineView.
+
+Updates do not depend on network access.
+
+POSSIBLE RISK / REQUIRES TESTING
+
+The 60-second schedules begin at .now when the view is created. They are not explicitly aligned to the next minute or midnight.
+
+Consequences:
+
+• Date/day/month/year/dow may update as much as approximately 60 seconds after the boundary.
+• This applies at midnight, month end, year end, and DST transitions.
+• Backgrounding, power management, and SwiftUI timeline coalescing could delay visible refresh further.
+• A city command edit should create a new descriptor and refresh the view through normal SwiftUI state flow, but immediate propagation was not runtime-tested.
+
+
+==================================================
+15. DISPLAY-MODE IMPLICATIONS
+==================================================
+
+CONFIRMED FROM SOURCE
+
+Display mode definition:
+
+ESP32BLE/ESP32BLE/Scrns/Main_Screen/Toolbars/Main_BtmRightTxt.swift:3-61
+
+Normal cycle:
+
+Command (.left)
+-> Button (.right)
+-> Btn Text (.last)
+-> Command
+
+FunctionKeyDisplayMode.next():
+Main_BtmRightTxt.swift:24-35
+
+Legacy All:
+.both remains recognized and persisted but is not in the normal cycle.
+
+Widget mode handling:
+
+Main_ButtonLabelView.swift:146-153
+
+In Command mode, corrected widgets display leftTitle directly instead of rendering widgetContent.
+
+In Button, Btn Text, and legacy All modes, widgetContent is used and renderWidgetHeader selects the appropriate header:
+Main_ButtonBehavior.swift:1675-1727
+Main_ButtonLabelView.swift:461-487
+
+Error implications:
+
+Command mode:
+Currently displays the raw command. An inline widget error would not appear unless command-mode handling were deliberately changed.
+
+Button mode:
+Can display an error through widgetContent.
+
+Btn Text mode:
+Can display an error through widgetContent, but header/text space is limited.
+
+Legacy All:
+Can display the command, configured header, value, and potentially an error, but has the highest crowding risk.
+
+No change to FunctionKeyDisplayMode.next() is needed or recommended.
+
+
+==================================================
+16. ERROR-PRESENTATION OPTIONS
+==================================================
+
+OPTION A — Error inside the widget
+
+Visibility:
+High in Button, Btn Text, and All modes.
+
+Readability:
+Good if compact, for example “Unknown city” with the input available in a smaller line or accessibility label.
+
+Small-button compatibility:
+Moderate. “Unknown city: Atlantis” may require aggressive scaling or truncation.
+
+Gesture interference:
+None.
+
+Repeated-alert risk:
+None.
+
+iPhone/iPad consistency:
+Strong.
 
 Complexity:
+Low to moderate. The formatter/resolver must return an explicit error state rather than TimeZone?.
 
-One transition change.
+Limitation:
+Command mode currently bypasses widgetContent, so the raw command would still appear instead of the error.
 
-Compatibility:
+Assessment:
+Safest minimal presentation within the current architecture.
 
-Safe if .both decoding and rendering remain untouched.
 
-Existing .both behavior:
+OPTION B — Alert/dialog
 
-Still loads and displays. It becomes unreachable again after the user advances away from it.
+Visibility:
+Very high.
+
+Readability:
+Excellent.
+
+Small-button compatibility:
+Excellent because the message is outside the button.
+
+Gesture interference:
+Requires defining when the alert appears.
+
+Repeated-alert risk:
+High. Timeline refreshes every second or minute; presenting from formatting/rendering would risk repeated alerts and state mutation during view updates.
+
+iPhone/iPad consistency:
+Alerts work on both, but presentation timing and competing alerts require care.
+
+Complexity:
+Moderate to high. The app already has shared alert state in Main_ButtonBehavior.swift:1606-1613 and 1662-1668, but date/time rendering has no error callback.
+
+Assessment:
+Not recommended as the default automatic response.
+
+
+OPTION C — Compact indicator with tap for details
+
+Visibility:
+Moderate. A warning symbol is compact but may be missed.
+
+Readability:
+Good after interaction.
+
+Small-button compatibility:
+Strong.
+
+Gesture interference:
+Material risk. Date/time widgets are currently noninteractive:
+Main_ButtonBehavior.swift:1729-1752
+
+Making them tappable could conflict with button behavior, edit mode, or future actions.
+
+Repeated-alert risk:
+Low if details only appear after an explicit tap.
+
+iPhone/iPad consistency:
+Generally good, but popover versus sheet/alert behavior requires design.
+
+Complexity:
+Moderate to high.
+
+Assessment:
+Useful if detailed ambiguity/error information is required, but not the smallest change.
+
+
+OPTION D — Inline compact fallback plus accessible detail
+
+Example visible content:
+
+⚠ Atlantis
+
+or:
+
+Unknown city
+
+with an accessibility label/value containing:
+
+Unknown city: Atlantis
+
+Visibility:
+Good.
+
+Readability:
+Better than squeezing the complete message into very small buttons.
+
+Small-button compatibility:
+Strong.
+
+Gesture interference:
+None.
+
+Repeated-alert risk:
+None.
+
+iPhone/iPad consistency:
+Strong.
+
+Complexity:
+Moderate.
+
+Assessment:
+Best overall direction. It is essentially a compact version of Option A and fits the current noninteractive widget architecture.
+
+
+Recommended presentation
+
+Use Option D/A:
+
+• Never show a calculated fallback value for an explicitly invalid city.
+• Render a compact inline error.
+• Include the full city in accessibility text.
+• Preserve the raw command in Command mode.
+• Avoid automatic alerts from TimelineView rendering.
+• Consider tap-for-details only later if ambiguity candidate selection becomes necessary.
+
+
+==================================================
+17. RECOMMENDED IMPLEMENTATION STAGES
+==================================================
+
+STAGE A — COMMAND RENAME ONLY
+
+Files:
+
+ESP32BLE/ESP32BLE/Scrns/ContentView.swift
+Function:
+isBareWidgetCommandText(_:)
+Lines 2646-2655
+
+ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift
+Functions:
+targetWidgetDescriptorForSendText(_:)
+isBareWidgetCommandText(_:)
+Lines 1211-1401
+
+ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
+smartCommandRows
+Lines 442-459
+
+ESP32BLE/ESP32BLE/Scrns/Main_Screen/Soft_Editor/Soft_Editor_Overlay.swift
+Widget insertion controls
+Lines 225-240
+
+ESP32BLE/ESP32BLE/notes.txt
+Lines 23, 45, 61, if development notes are intentionally maintained
+
+Changes:
+
+• Remove .day recognition.
+• Add .ord and .ordinal.
+• Map both to the existing .day descriptor.
+• Update help and insertion UI.
+• Do not keep .day as an alias.
 
 Risk:
+Existing .day documents intentionally cease to render that command as a widget.
 
-Very low.
+Testing:
 
-OPTION B
-Use a UI-only selection adapter.
+• .ord
+• .ordinal
+• uppercase/mixed-case variants
+• city parameters
+• confirm .day is rejected
+• confirm both new commands render identically
 
-Assessment:
 
-Unnecessary.
-
-There is no Picker selection whose bound value must match a visible tag.
-
-An adapter would introduce needless state and increase the chance of accidentally translating .both to another value.
-
-Complexity:
-
-Higher than required.
-
-Recommendation:
-
-Do not use.
-
-OPTION C
-Show All only when editing an existing .both button.
-
-Assessment:
-
-The mode is not edited per button, and there is no segmented list of options.
-
-The closest equivalent is the natural behavior already provided by the toolbar Button:
-
-• A restored .both document displays “All.”
-• Tapping it moves to Command.
-• It cannot be selected again after leaving if .last skips to .left.
-
-This is compatible with the user’s preservation requirement.
-
-Complexity:
-
-No extra conditional UI is needed.
-
-OPTION D
-Change only the mode-cycling transition.
-
-Recommended.
-
-Change:
-
-FunctionKeyDisplayMode.next()
-Main_BtmRightTxt.swift
-Lines 24–35
-
-Future transition:
-
-.left → .right
-.right → .last
-.last → .left
-.both → .left
-
-Keep all four enum cases.
-
-Keep .both.title == “All.”
-
-Keep .both.persistedValue == “both texts.”
-
-Keep .both decoding.
-
-Keep every .both rendering branch.
-
-Complexity:
-
-One source file and one behavioral line.
-
-Reversibility:
-
-Immediate; restoring .last → .both restores the four-mode cycle.
-
-17. RECOMMENDED MINIMAL IMPLEMENTATION
+STAGE B — CITY/TIME-ZONE CONSISTENCY
 
 File:
 
-ESP32BLE/Scrns/Main_Screen/Toolbars/Main_BtmRightTxt.swift
+ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_ButtonLabelView.swift
 
-Function:
+Functions/areas:
 
-FunctionKeyDisplayMode.next()
-Lines 24–35
+widgetContent(descriptor:)
+Lines 200-325
 
-Exact future change:
+dateFullWeekdayText(for:)
+Lines 548-554
 
-Change the .last transition from:
+dateValueText(for:)
+Lines 635-641
 
-case .last:
-return .both
+widgetTimeZone and widgetTimeZone(for:)
+Lines 498-522 and 715-734
 
+Changes:
 
-to:
+• Bind cityLabel in the .date and .dow switch cases.
+• Pass cityLabel into their formatting functions.
+• Ensure every civil date/time formatter uses the descriptor’s single resolved time zone.
+• Remove or clearly isolate the alternate/right-title time-zone fallback if it is not intentional.
+• Prefer one shared resolver implementation instead of the current duplicate logic.
 
-case .last:
-return .left
+Risks:
 
+• Existing documents may currently rely accidentally on alternate button text as the time zone.
+• Correcting .date/.dow can alter displayed dates near midnight.
 
-Leave this transition unchanged:
+Testing:
 
-case .both:
-return .left
+• Tokyo versus London at the same instant.
+• Fractional zones.
+• Month/year boundary.
+• Alternate button labels that resemble city names.
+• No-city device-local behavior.
 
 
-Do not modify:
+STAGE C — INVALID-CITY HANDLING
 
-• Enum cases.
-• CaseIterable conformance.
-• init(persistedValue:).
-• persistedValue.
-• title.
-• Main_ModePersistence.swift.
-• MainScreenBottomBar.
-• MainScreen state.
-• Main Screen rendering.
-• Button editors.
-• .screen parsing.
-• Archive code.
+Files:
 
-Why no adapter is required:
+Main_ButtonLabelView.swift
+Main_ButtonBehavior.swift if an error callback/state is needed
 
-The toolbar is a cycling Button rather than a tag-based selector. A restored .both value is valid and independently displayable even if next() no longer enters it.
+Changes:
 
-18. EXPECTED LEGACY .BOTH EXPERIENCE
+• Return an explicit resolution result.
+• Distinguish nil/no-city from explicitly invalid input.
+• Do not fall back silently for invalid explicit input.
+• Render a compact inline error.
+• Add accessibility text with the full location.
 
-Recommended behavior for a document restored in .both:
+Risks:
 
-• Main Screen continues rendering All mode exactly as before.
-• The toolbar temporarily displays “All,” accurately reflecting the active legacy mode.
-• Merely opening the document does not change it.
-• Saving unrelated button edits does not change it.
-• If the user taps “All,” the mode advances to Command and persists “left cmd.”
-• Future taps cycle:
-Command → Button → Btn Text → Command
-• All cannot be reselected through the toolbar or keyboard shortcut.
+• Small-button layout.
+• Localization.
+• Avoid state mutation from TimelineView formatting.
 
-This is the safest way to reconcile:
+Testing:
 
-• Only three user-selectable modes.
-• Preservation of existing .both state.
-• No silent conversion.
-• No misleading toolbar label.
+• Atlantis.
+• Empty city.
+• Whitespace-only city.
+• Punctuation.
+• Invalid IANA identifier.
+• All four display modes.
+• iPhone and iPad.
 
-If “All” must never be visible even while it is actively restored, that would conflict with accurately representing the current mode unless the stored .both value is converted or shown under a misleading label. That is not recommended.
 
-19. LAYOUT EFFECTS
+STAGE D — AMBIGUOUS-CITY HANDLING
 
-No layout dimension needs to change.
+Primary file:
 
-The same Button remains in place with the same:
+Main_ButtonLabelView.swift
 
-• displayModeWidth
-• Height
-• Font
-• Background
-• Border
-• Corner radius
-• Toolbar spacing
+Changes:
 
-Because the control is not a four-segment selector, removing .both from the cycle does not cause the remaining labels to expand or move.
+• Collect all matching known identifiers rather than first(where:).
+• Report multiple matches instead of selecting the first.
+• Accept explicit IANA identifiers as the deterministic escape route.
+• Do not invent a new city database.
 
-Both iPad and iPhone remain unchanged visually except that ordinary cycling no longer reaches the “All” label.
+Limitation:
 
-20. PERSISTENCE AND FILE COMPATIBILITY
+The Foundation identifier list is a time-zone database, not a general city database. It cannot identify every real city or correctly interpret arbitrary “City, Country” strings.
 
-No changes are required to:
+Risks:
 
-• Stored strings.
-• Persistence filenames.
-• Document keys.
-• Defaults.
-• Parsing.
-• .screen format.
-• Existing .screen files.
-• Existing mode configuration files.
-• Rendering compatibility.
+• Alias identifiers can create apparent duplicates.
+• Some same-named cities are not IANA zone identifiers.
+• Human city disambiguation cannot be fully solved with the existing data source.
 
-The .both value remains valid indefinitely.
+Testing:
 
-Backup export/import behavior does not need to change for this UI correction. The implementation should leave all archive code untouched. Any existing treatment of the separate hidden mode configuration file remains exactly as it is today.
+• London
+• Explicit Europe/London
+• London, England
+• London, Ontario
+• Same-tail identifier candidates if present on the OS
 
-21. REGRESSION ASSESSMENT
 
-New ordinary button:
+STAGE E — OFFLINE BEHAVIOR
 
-No effect. Display mode is global, not stored on the button.
+No caching is currently required for offline operation because lookup is already local.
 
-Existing ordinary button:
+Optional future improvement:
 
-No rendering change.
+• Persist a validated IANA identifier with the command/document only if a richer resolver is introduced later.
+• Continue calculating Date values locally with Foundation.
 
-New widget button:
+Risks:
 
-No effect on descriptor recognition or rendering.
+• Time-zone identifier aliases.
+• OS database changes.
+• Migration of stored resolved values.
 
-Existing widget button:
+Testing:
 
-No rendering change.
+• Airplane mode.
+• App restart.
+• Device restart if relevant.
+• DST behavior from stored named identifiers.
 
-Document persisted in .both:
 
-Continues to load and render .both.
+==================================================
+18. COMPLETE RELEVANT SOURCE INDEX
+==================================================
 
-Opening existing .both document:
+Command/document recognition:
 
-Does not convert it.
+ESP32BLE/ESP32BLE/Scrns/ContentView.swift:2630-2695
 
-Closing without changes:
+Main widget parsing:
 
-Does not convert it.
+ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift:847-849
+ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift:1211-1401
 
-Changing unrelated button text:
+Widget construction/header modes:
 
-Does not convert it.
+ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift:1616-1727
 
-Saving an unrelated edit:
+Widget rendering:
 
-Does not write display mode into the .screen file.
+ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_ButtonLabelView.swift:146-195
+ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_ButtonLabelView.swift:200-447
 
-Selecting Command:
+Time-zone resolution:
 
-Works as before.
+ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_ButtonLabelView.swift:498-522
+ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_ButtonLabelView.swift:715-741
 
-Selecting Button:
+Date/time formatting:
 
-Works as before.
+ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_ButtonLabelView.swift:524-562
+ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_ButtonLabelView.swift:600-641
 
-Selecting Btn Text:
+City-code display helper:
 
-Works as before.
+ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_ButtonLabelView.swift:643-713
 
-Advancing from Btn Text:
+Descriptor definition:
 
-Would return directly to Command.
+ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_ButtonLabelView.swift:857-875
 
-iPhone landscape:
+Help/autocomplete rows:
 
-Uses the same toolbar and cycle.
+ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_Screen.swift:353-533
 
-iPad:
+.day help entry:
 
-Uses the same toolbar and cycle.
+ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_Screen.swift:442-459
 
-SF Symbols and emoji:
+Soft-editor widget buttons:
 
-No effect.
+ESP32BLE/ESP32BLE/Scrns/Main_Screen/Soft_Editor/Soft_Editor_Overlay.swift:225-240
 
-Dynamic widget values:
+Display-mode definition and cycle:
 
-No effect.
+ESP32BLE/ESP32BLE/Scrns/Main_Screen/Toolbars/Main_BtmRightTxt.swift:3-61
 
-Existing .screen files:
+Development-note references:
 
-No format or content change.
+ESP32BLE/ESP32BLE/notes.txt:15-67
 
-External keyboard shortcut:
 
-Would follow the same three-mode cycle because it calls advanceDisplayMode().
+==================================================
+19. PHYSICAL-DEVICE TEST CHECKLIST
+==================================================
 
-22. PHYSICAL-DEVICE TEST CHECKLIST
+Command recognition
 
-• Start in Command and tap through:
-Command → Button → Btn Text → Command.
-• Confirm All is not entered during repeated cycling.
-• Repeat using external keyboard shortcut “m.”
-• Verify the same cycle on iPad.
-• Verify the same cycle on iPhone landscape.
-• Open a document whose persisted mode is All.
-• Confirm it still renders the complete All-mode presentation.
-• Confirm the toolbar displays All while that legacy mode remains active.
-• Close and reopen without tapping the mode button.
-• Confirm the document remains in All.
-• Edit unrelated ordinary button text and save.
-• Confirm All remains active.
-• Edit unrelated widget Right Text and save.
-• Confirm All remains active.
-• From legacy All, tap the mode button once.
-• Confirm it changes to Command.
-• Confirm subsequent cycling never returns to All.
-• Verify ordinary SF Symbols in all three selectable modes.
-• Verify emoji in all three selectable modes.
-• Verify widget dynamic values in Button and Btn Text.
-• Verify no toolbar movement or width change.
-• Verify document switching restores each document’s saved mode.
-• Verify existing backup export/import behavior remains unchanged.
+[ ] .ord creates an ordinal widget.
+[ ] .ordinal creates an identical ordinal widget.
+[ ] .ORD and mixed-case forms work if case-insensitive behavior is intended.
+[ ] .day no longer creates a widget.
+[ ] Existing .day documents fail in the intended, visible manner.
+[ ] Soft-editor button inserts the selected new spelling.
+[ ] Help lists both aliases and no longer advertises .day.
 
-23. REMAINING UNCERTAINTIES
+Ordinal formatting
 
-The core implementation does not have a SwiftUI selection uncertainty because the control is a Button, not a Picker.
+[ ] 1st
+[ ] 2nd
+[ ] 3rd
+[ ] 4th
+[ ] 10th
+[ ] 11th
+[ ] 12th
+[ ] 13th
+[ ] 18th
+[ ] 20th
+[ ] 21st
+[ ] 22nd
+[ ] 23rd
+[ ] 30th
+[ ] 31st
 
-Physical-device testing is still appropriate to confirm:
+Location syntax
 
-• The three-step cycle feels correct on both platforms.
-• The external keyboard shortcut follows the same sequence.
-• A real existing “both texts” configuration remains active after opening and unrelated editing.
-• The temporary visibility of “All” for a restored legacy mode matches the user’s preferred experience.
+[ ] Tokyo
+[ ] London
+[ ] New York
+[ ] Los Angeles
+[ ] Europe/London
+[ ] Asia/Tokyo
+[ ] America/New_York
+[ ] London, UK
+[ ] Atlantis
+[ ] Empty location
+[ ] Extra whitespace
+[ ] Underscore versus space forms
 
-Confirmed conclusion:
+Consistency
 
-The smallest safe correction is a single transition change in FunctionKeyDisplayMode.next(): make .last return .left. This removes All from normal user selection while retaining .both, its “All” title, persisted “both texts” value, legacy restoration, and every existing rendering path.
+[ ] .clock, .hour, .min, .sec agree for one selected zone.
+[ ] .date, .ord, .dow, .month, .year agree on the same city-local date.
+[ ] Tokyo and London display different dates when expected.
+[ ] All widgets change together across city-local midnight.
+[ ] Month boundary is correct.
+[ ] Year boundary is correct.
+
+Fractional offsets
+
+[ ] Asia/Kolkata or another UTC+05:30 zone.
+[ ] Asia/Kathmandu for UTC+05:45.
+[ ] Australia/Darwin for UTC+09:30.
+[ ] Confirm .min differs from a whole-hour zone where appropriate.
+
+DST
+
+[ ] Europe/London spring-forward.
+[ ] Europe/London autumn repeated hour.
+[ ] America/New_York spring-forward.
+[ ] America/New_York autumn repeated hour.
+[ ] Zone without DST for comparison.
+
+Refresh
+
+[ ] .sec changes each second.
+[ ] .min changes promptly at the minute.
+[ ] .hour changes promptly at the hour.
+[ ] Date widgets update at midnight.
+[ ] Month updates at month boundary.
+[ ] Year updates at New Year.
+[ ] Values refresh after foregrounding.
+[ ] Editing the city updates without reopening the document.
+
+Offline
+
+[ ] First use of an IANA identifier in airplane mode.
+[ ] First use of an identifier-tail city in airplane mode.
+[ ] Repeated use offline.
+[ ] App restart while offline.
+[ ] No dependency on ESP32 or Mac Helper connection.
+
+Errors
+
+[ ] Atlantis does not show plausible device-local time.
+[ ] Error is visible in Button mode.
+[ ] Error is understandable in Btn Text mode.
+[ ] Error behaves acceptably in legacy All mode.
+[ ] Command mode continues showing the raw command.
+[ ] VoiceOver announces the complete invalid city.
+[ ] No repeating alert appears from timer refresh.
+
+Devices/layout
+
+[ ] Small iPhone buttons.
+[ ] Large iPhone.
+[ ] iPad compact grid.
+[ ] iPad large grid.
+[ ] Dynamic Type accessibility sizes.
+[ ] Portrait and landscape.
+
+
+==================================================
+20. REMAINING UNCERTAINTIES
+==================================================
+
+POSSIBLE RISK / REQUIRES TESTING
+
+1. Exact TimeZone(identifier:) acceptance
+
+The source passes raw strings directly to TimeZone(identifier:). The exact set of accepted aliases, abbreviations, and GMT-style strings is determined by Foundation and the installed OS data. It was not executed during this strictly read-only probe.
+
+2. First-match ordering
+
+Ambiguous matching depends on the ordering of TimeZone.knownTimeZoneIdentifiers. The source makes no stability guarantee of its own.
+
+3. Timeline scheduling
+
+Source confirms requested intervals, but actual delivery can be delayed or coalesced by SwiftUI and system power/background behavior.
+
+4. Immediate city-edit propagation
+
+The state path strongly suggests the descriptor is recreated when the document/button entry changes, but this was not confirmed by launching the app.
+
+5. Alternate/right-text time-zone behavior
+
+It is source-confirmed, but whether it is an intentional historical feature or an accidental coupling cannot be established from implementation alone.
+
+6. Dead/support helpers
+
+clockText(for:), dateWeekdayText(for:), dateHeaderText(for:cityLabel:), dowHeaderText(for:cityLabel:), and widgetDateCityCode(for:cityLabel:) appear disconnected from the active rendering calls inspected here. A future cleanup should not be combined with the command rename.
+
+7. Documentation mismatch
+
+.month renders a localized full month name, while its help says the display is “10”. This is unrelated to the ordinal rename but should be tracked separately.
+
+8. Localization expectations
+
+Ordinal suffixes are English-only. Any future localization policy must decide whether .ord is explicitly English or should use locale-aware ordinal formatting.
+
+9. General city coverage
+
+The resolver only knows IANA zone identifiers and their final components. It is not a comprehensive city resolver. Many valid city names will fail even though their time zone is known under a different representative city.
+
+10. No automated coverage
+
+No dedicated date/time widget unit or UI tests were found. All behavioral conclusions above are source-derived; runtime-sensitive items remain in the physical-device checklist.

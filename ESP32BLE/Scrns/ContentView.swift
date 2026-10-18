@@ -2646,7 +2646,7 @@ struct ContentView: View {
     private func isBareWidgetCommandText(_ loweredText: String) -> Bool {
         let widgetCommands = [
             ".plus", ".minus", ".power", ".rnd", ".random", ".clock", ".date",
-            ".dow", ".sec", ".min", ".hour", ".day", ".month", ".year", ".timer",
+            ".dow", ".sec", ".min", ".hour", ".ord", ".ordinal", ".month", ".year", ".timer",
             ".stop", ".stopwatch", ".amb", ".ambient"
         ]
 
