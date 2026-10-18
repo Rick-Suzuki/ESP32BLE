@@ -1,441 +1,786 @@
-CLOCK-001-PROBE REPORT
+ESP32BLE — UI-002-PROBE
+HIDE ALL MODE FROM DISPLAY MODE SELECTOR
 
-Scope and validation
-
-This was a read-only static-code investigation.
+READ-ONLY RESULT
 
 No files were modified.
-No build was performed.
-The application and simulator were not launched.
-No Git operations were performed.
+The project was not built.
+The app and simulator were not launched.
+No tests or Git operations were performed.
 
-1. Relevant files and functions
+1. KEY FINDING
 
-ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift
+The display-mode control is not a Picker, segmented control, menu, or editor-specific selector.
 
-• targetWidgetDescriptorForGridEntry(_:), lines 847–849
-Finds the first widget descriptor represented by the button’s send text.
+It is a single Main Screen toolbar Button. Each tap calls advanceDisplayMode(), which advances through the modes using FunctionKeyDisplayMode.next().
 
-• targetWidgetDescriptorForSendText(_:), lines 1211–1249
-Recognizes “.clock”, extracts any command parameter, and creates .clock(cityLabel:).
+Consequently, there is:
 
-• mainGridButtonLabel(...), lines 1616–1673
-Constructs MainScreenButtonLabelView and supplies:
-• displayMode
-• widgetDescriptor
-• widgetHeaderContent
-• parsed Right Text SF Symbol
-• parsed Right Text emoji
-• command and Right Text titles
+• No selection binding with missing tags.
+• No segmented-control invalid-selection problem.
+• No separate iPhone selector.
+• No separate iPad selector.
+• No button-editor display-mode selector.
+• No per-button display-mode value stored in .screen files.
 
-• widgetHeaderContent(for:), lines 1675–1727
-Produces the mode-aware structured header.
+The smallest safe correction would be to change only the cycling sequence so .last advances to .left instead of .both.
 
-• parsedSFSymbolDisplay(for:), lines 1807–1826
-Recognizes explicitly colon-encoded SF Symbols using UIImage(systemName:).
+The .both case, title, persistence decoding, persistence encoding, and rendering can all remain intact.
 
-• parsedEmojiDisplay(for:), lines 1828–1844
-Parses the configured Right Text emoji and subtitle.
+2. EXACT SELECTOR LOCATION
 
-ESP32BLE/Scrns/Main_Screen/Main_ButtonLabelView.swift
+Visible control:
 
-• MainScreenButtonLabelView properties, lines 17–50
-Receive displayMode, widgetDescriptor, widgetHeaderContent, parsed symbol information, and other rendering data.
+ESP32BLE/Scrns/Main_Screen/Toolbars/Main_BtmToolbar.swift
 
-• buttonContent, lines 140–178
-Dispatches recognized widgets to widgetContent(descriptor:) before ordinary button rendering.
+MainScreenBottomBar
+Lines 240 onward
 
-• usesCorrectedWidgetDisplayModes(_:), lines 180–188
-Controls the Left CMD command-only bypass added for the other corrected widgets.
+bottomToolbarSpeechControls(...)
+Lines 429–516
 
-• widgetContent(descriptor:), lines 194–430
-Contains the widget-specific SwiftUI rendering.
+Display-mode button:
+Lines 493–514
 
-• .clock case, lines 196–211
-Builds the live clock view.
+Current implementation:
 
-• legacyWidgetHeaderContent(fallbackTitle:), lines 433–443
-Renders .clock’s current header.
+Button {
+onAdvanceDisplayMode()
 
-• renderWidgetHeader(), lines 445–472
-Renders the shared structured widget header but is not currently used by .clock.
+} label: {
+Text(displayMode.title)
 
-• widgetCityLabel, lines 481–484
-Derives a legacy clock label from the resolved Right Text.
-
-• clockText(for:cityLabel:), lines 515–521
-Formats the live clock value.
-
-• rightTitleWithoutColorPrefix, lines 726–736
-Removes an optional button-color prefix from Right Text.
-
-• lastRightTitleComponent, lines 738–746
-Implements the ordinary-button Last Text component selection.
-
-• symbolContent(name:subtitle:), lines 759–775
-Renders an actual SF Symbol with Image(systemName:) and its optional subtitle.
-
-• MainGridWidgetDescriptor, lines 840–858
-Defines .clock(cityLabel: String?) separately from .hour, .min, .sec, and the other widgets.
-
-ESP32BLE/Scrns/Main_Screen/Toolbars/Main_BtmRightTxt.swift
-
-• FunctionKeyDisplayMode, lines 3–62
-Defines .left, .right, .last, and .both and their persisted names.
-
-ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
-
-• displayMode state, line 868
-Stores the selected global display mode, initially .right.
-
-2. Current .clock recognition and descriptor
-
-targetWidgetDescriptorForSendText(_:) parses the command at Main_ButtonBehavior.swift lines 1211–1234.
-
-The “.clock” branch is at lines 1241–1249:
-
-• The first whitespace-separated component is “.clock”.
-• Any remaining command components are joined into cityLabel.
-• The result is MainGridWidgetDescriptor.clock(cityLabel: cityLabel).
-
-Examples:
-
-.clock
-Produces:
-.clock(cityLabel: nil)
-
-.clock Tokyo
-Produces:
-.clock(cityLabel: "Tokyo")
-
-The command parameter is therefore available independently from the configured Right Text.
-
-3. Current rendering flow
-
-The current flow is:
-
-1. targetWidgetDescriptorForGridEntry(_:) recognizes .clock.
-2. mainGridButtonLabel(...) supplies the descriptor, display mode, shared header, and parsed Right Text to MainScreenButtonLabelView.
-3. buttonContent sees a widget descriptor at Main_ButtonLabelView.swift line 141.
-4. It checks whether Left CMD should bypass the widget at lines 142–145.
-5. usesCorrectedWidgetDisplayModes(_:) explicitly returns false for .clock at lines 185–186.
-6. The .clock button therefore always enters widgetContent(descriptor:), including in Left CMD mode.
-7. The .clock case constructs a one-second TimelineView at lines 196–211.
-8. Its header comes from legacyWidgetHeaderContent, not renderWidgetHeader.
-9. Its live time comes from clockText(for:cityLabel:).
-
-The global displayMode reaches MainScreenButtonLabelView, but the .clock branch does not use it to choose its header or dynamic-value visibility.
-
-4. Source of the lightbulb SF Symbol
-
-The lightbulb is not hardcoded by the .clock renderer.
-
-mainGridButtonLabel(...) passes parsedSFSymbolDisplay(for: entry) into rightSymbolDisplay at Main_ButtonBehavior.swift lines 1637–1638.
-
-parsedSFSymbolDisplay(for:) at lines 1807–1826:
-
-• Reads the configured alternate/Right Text.
-• Splits it on colons.
-• Requires at least one colon.
-• Validates the first component with UIImage(systemName:).
-• Returns the remaining components as the subtitle.
-
-The .clock renderer then calls legacyWidgetHeaderContent at Main_ButtonLabelView.swift lines 199–200. That helper gives rightSymbolDisplay priority at lines 434–438.
-
-Finally, symbolContent renders the symbol through:
-
-Image(systemName: name)
-
-at Main_ButtonLabelView.swift line 761.
-
-Therefore, the displayed lightbulb originates from the button’s stored Right Text configuration, such as:
-
-lightbulb:clock
-
-or another valid lightbulb SF Symbol identifier followed by “clock”.
-
-It is not a .clock fallback and is not hardcoded into the clock widget.
-
-The precise lightbulb identifier cannot be established without inspecting the specific saved button entry, but the code path conclusively shows that it comes from parsed Right Text.
-
-5. Source of the displayed “clock” text
-
-In the reported symbol-plus-text presentation, “clock” is the SF Symbol subtitle.
-
-parsedSFSymbolDisplay(for:) joins everything following the first colon and returns it as subtitle at Main_ButtonBehavior.swift lines 1820–1825.
-
-symbolContent displays that subtitle through textLabel at Main_ButtonLabelView.swift lines 770–772.
-
-Thus a Right Text value such as:
-
-lightbulb:clock
-
-renders:
-
-• The lightbulb SF Symbol
-• The subtitle “clock”
-
-If the Right Text were not a valid colon-encoded SF Symbol, legacyWidgetHeaderContent would instead render the complete fallback title as ordinary Text at lines 437–441.
-
-6. Source of the live time
-
-The .clock renderer uses:
-
-TimelineView(.periodic(from: .now, by: 1))
-
-at Main_ButtonLabelView.swift line 197.
-
-Every timeline update passes context.date to clockText(for:cityLabel:) at line 203.
-
-clockText(for:cityLabel:) at lines 515–521:
-
-• Creates a DateFormatter.
-• Uses Locale.current.
-• Selects the timezone from the command’s cityLabel first.
-• Falls back to the legacy Right Text-derived timezone.
-• Finally falls back to TimeZone.current.
-• Uses the fixed format “HH:mm:ss”.
-
-The displayed time is therefore regenerated every second. It is not stored widget state.
-
-7. Why Left CMD does not work
-
-Confirmed root cause:
-
-.clock is explicitly excluded from the Left CMD widget bypass.
-
-At Main_ButtonLabelView.swift lines 180–188:
-
-• The 14 recently corrected widgets return true.
-• .clock, .ambientSound, and .timer return false.
-
-Consequently, the condition at lines 142–143 does not render .clock using textLabel(leftTitle). Instead, .clock enters its legacy TimelineView.
-
-That legacy view always displays:
-
-• Its Right Text-derived header, when available.
-• Its live time.
-
-It never checks displayMode.
-
-This directly explains the physical-device result:
-
-• Lightbulb: parsed configured Right Text symbol.
-• “clock”: configured symbol subtitle.
-• “11:00:04”: TimelineView dynamic time.
-
-8. Right Text behavior
-
-Partially correct.
-
-For ordinary configured Right Text:
-
-• The text is displayed above the live time.
-
-For a configured SF Symbol and subtitle:
-
-• The SF Symbol is rendered as an actual Image(systemName:).
-• Its subtitle is displayed.
-• The live time remains displayed.
-
-For absent or empty Right Text:
-
-• widgetCityLabel is nil.
-• No legacy header is added.
-• Only the live time is displayed.
-
-However, the .clock branch does not explicitly select behavior based on .right. It happens to resemble the required Right Text result because its legacy renderer always behaves like a Right Text renderer.
-
-Emoji handling is not fully consistent with the shared renderer. legacyWidgetHeaderContent only has special handling for rightSymbolDisplay; it does not use rightEmojiDisplay. An emoji-with-subtitle configuration can therefore be rendered as legacy ordinary text rather than through emojiContent.
-
-9. Last Text behavior
-
-Incorrect.
-
-The .clock branch does not consult displayMode and does not use:
-
-• lastRightTitleComponent, or
-• the .last result produced by widgetHeaderContent(for:).
-
-For a value such as:
-
-lightbulb:clock
-
-Last Text should display:
-
-clock
-<live time>
-
-
-The current .clock implementation instead continues to display:
-
-<lightbulb SF Symbol>
-
-clock
-<live time>
-
-
-Therefore, .clock currently behaves like its legacy Right Text presentation in Last Text mode.
-
-10. Both Texts behavior
-
-Incorrect.
-
-widgetHeaderContent(for:) already creates combined values such as:
-
-commandWithSymbol
-commandWithEmoji
-commandWithText
-
-for .both at Main_ButtonBehavior.swift lines 1709–1725.
-
-But .clock never calls renderWidgetHeader(), so that combined value is ignored.
-
-The current .clock view displays configured Right Text plus live time, but omits the command.
-
-For:
-
-.clock::lightbulb:clock
-
-the current result is effectively:
-
-<lightbulb>
-
-clock
-<live time>
-
-
-The required result is:
-
-.clock
-<lightbulb>
-
-clock
-<live time>
-
-
-11. Why .clock was excluded from WIDGET-002B-FIX2
-
-The exclusion is explicit at Main_ButtonLabelView.swift lines 185–186.
-
-The earlier correction was deliberately scoped to the 14 specified widgets, and its instructions specifically prohibited investigating or modifying .clock. The code therefore left .clock with its legacy header and TimelineView path.
-
-This is not an implicit descriptor mismatch. It is an intentional scope exclusion in usesCorrectedWidgetDisplayModes(_:).
-
-12. Can the shared header system be reused?
-
-Yes.
-
-No change to MainGridWidgetHeaderContent or widgetHeaderContent(for:) appears necessary.
-
-widgetHeaderContent(for:) only requires that targetWidgetDescriptorForGridEntry(entry) return a widget descriptor. It does not exclude .clock.
-
-For .clock it already calculates:
-
-.left:
-.command containing the complete primary command
-
-.right:
-Configured SF Symbol, emoji, ordinary text, or .none
-
-.last:
-The final configured Right Text component, or .none
-
-.both:
-The complete command combined with the configured symbol, emoji, or text
-
-renderWidgetHeader() at Main_ButtonLabelView.swift lines 445–472 already renders every one of those cases.
-
-The failure is entirely at the consumption point: .clock still uses legacyWidgetHeaderContent instead of renderWidgetHeader.
-
-13. Smallest safe implementation
-
-The smallest correction would be limited to Main_ButtonLabelView.swift:
-
-1. Include .clock in usesCorrectedWidgetDisplayModes(_:) so Left CMD uses the existing command-only bypass.
-
-That would make Left CMD render leftTitle through the ordinary textLabel renderer and would prevent the .clock TimelineView from being entered in that mode.
-
-2. In the .clock case of widgetContent(descriptor:), replace the legacy conditional header:
-
-if let widgetCityLabel {
-legacyWidgetHeaderContent(fallbackTitle: widgetCityLabel)
+...
 
 }
 
-with:
+The current mode’s user-visible name comes from:
 
+displayMode.title
+
+The control has a fixed width supplied through displayModeWidth.
+
+Widths are selected in MainScreenBottomBar.body:
+
+Lines 281–303
+
+Regular layout:
+120 points
+
+Intermediate compact layout:
+iPad: 88 points
+iPhone: 108 points
+
+Most compact layout:
+72 points
+
+Because this is one button rather than four simultaneous segments, hiding All does not change the control’s width or move adjacent controls.
+
+3. IPHONE AND IPAD ARCHITECTURE
+
+Both platforms use the same:
+
+MainScreenBottomBar
+
+and the same display-mode Button.
+
+Main Screen placement is in:
+
+ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
+
+iPad placement:
+Lines 1204–1218
+
+iPhone placement:
+Lines 1233–1243
+
+Both invoke:
+
+displayModeButtonSection(availableWidth:)
+
+That function is at lines 2931–2964.
+
+It creates MainScreenBottomBar and passes:
+
+• displayMode
+• onAdvanceDisplayMode: advanceDisplayMode
+
+Therefore:
+
+• iPhone and iPad do not require separate mode-selection changes.
+• The completed iPhone landscape editor is unrelated.
+• The iPad floating button editor is unrelated.
+• No editor layout changes are required.
+• Toolbar dimensions remain unchanged.
+
+4. INTERNAL DISPLAY-MODE REPRESENTATION
+
+File:
+
+ESP32BLE/Scrns/Main_Screen/Toolbars/Main_BtmRightTxt.swift
+
+Enum:
+FunctionKeyDisplayMode
+Lines 3–62
+
+Current cases:
+
+.left
+.right
+.last
+.both
+
+Current titles:
+
+.left → “Command”
+.right → “Button”
+.last → “Btn Text”
+.both → “All”
+
+Title mapping:
+Lines 50–61
+
+The enum conforms to CaseIterable, but the project does not use FunctionKeyDisplayMode.allCases to construct the UI.
+
+The enum is not RawRepresentable and has no integer raw values. Persistence is implemented through explicit string conversion.
+
+5. CURRENT FOUR-OPTION CONSTRUCTION
+
+The four choices are not constructed as four visible options.
+
+They are generated by the next() state machine:
+
+Main_BtmRightTxt.swift
+Lines 24–35
+
+Current cycle:
+
+.left → .right
+.right → .last
+.last → .both
+.both → .left
+
+The visible toolbar Button displays only the current state’s title. A tap advances to the next state.
+
+The same advancement function is used by:
+
+• The visible Main Screen toolbar Button.
+• The external keyboard shortcut “m”.
+
+External keyboard shortcut:
+
+Main_Screen.swift
+Lines 2735–2756
+
+Therefore, a correction to next() would consistently remove .both from both user-selection paths.
+
+6. STATE OWNERSHIP
+
+The selected mode is Main Screen state:
+
+Main_Screen.swift
+Line 868
+
+@State var displayMode: FunctionKeyDisplayMode = .right
+
+It is a Main Screen-wide mode, not a property of an individual button.
+
+It controls how every grid button is displayed for the selected document.
+
+The current mode reaches the toolbar through:
+
+displayModeButtonSection(...)
+Main_Screen.swift
+Lines 2931–2964
+
+It reaches individual button rendering through the Main Screen button-label construction in:
+
+Main_ButtonBehavior.swift
+mainGridButtonLabel(...)
+Approximately lines 1616–1673
+
+MainScreenButtonLabelView receives:
+
+displayMode: FunctionKeyDisplayMode
+
+Main_ButtonLabelView.swift
+Line 28
+
+Ordinary and widget rendering switch on the same enum.
+
+7. SAVED-VALUE REPRESENTATION
+
+Persistence is implemented in:
+
+ESP32BLE/Scrns/Main_Screen/Main_ModePersistence.swift
+
+Persistence filename:
+
+.main_screen_view_mode.cfg
+
+Defined at lines 3–6.
+
+Stored strings are generated by:
+
+FunctionKeyDisplayMode.persistedValue
+Main_BtmRightTxt.swift
+Lines 37–48
+
+Values:
+
+.left → “left cmd”
+.right → “right text”
+.last → “last text”
+.both → “both texts”
+
+Decoding is handled by:
+
+FunctionKeyDisplayMode.init(persistedValue:)
+Lines 9–22
+
+Accepted .both spellings:
+
+• both
+• both text
+• both texts
+
+The mode file contains document-name/value entries in this form:
+
+document-name=mode-value
+
+Reading and writing occurs in:
+
+Main_ModePersistence.swift
+Lines 43–97
+
+The current document’s value is selected at lines 54–57.
+
+Legacy single-value mode files remain supported at lines 59–60.
+
+8. IMPORTANT CORRECTION ABOUT .SCREEN FILES
+
+The display mode is not serialized inside each button or inside the .screen document contents.
+
+Instead, the current Main Screen mode is stored separately in:
+
+.main_screen_view_mode.cfg
+
+The file is keyed by selectedDocumentName.
+
+Therefore, the relevant compatibility case is not an “All-mode button.” It is a document whose separately persisted Main Screen display mode is .both.
+
+Individual ordinary buttons and widgets do not carry their own .left, .right, .last, or .both value.
+
+No .screen migration or rewriting is needed.
+
+9. MODE RESTORATION
+
+Mode restoration occurs in:
+
+restorePersistedMainScreenModes()
+Main_ModePersistence.swift
+Lines 23–33
+
+It reads the stored value and initializes FunctionKeyDisplayMode.
+
+If decoding fails, the fallback is .right.
+
+A successfully decoded .both remains .both.
+
+The restored value is immediately written back using the same persistedValue, so a restored .both remains “both texts.”
+
+Restoration is called when MainScreen appears:
+
+Main_Screen.swift
+Lines 1036–1040
+
+It is also called when the selected document’s display name changes:
+
+handleSelectedDocumentDisplayNameChange()
+Main_Screen.swift
+Lines 5350–5357
+
+Therefore, document switching restores each document’s stored display mode.
+
+10. EXISTING .BOTH VALUES
+
+Confirmed source behavior if .both remains implemented but is removed from the normal cycle:
+
+• A stored “both texts” value still decodes as .both.
+• The Main Screen still renders using .both.
+• The toolbar still receives displayMode == .both.
+• displayMode.title still produces “All.”
+• The persistence layer can still write “both texts.”
+• No automatic conversion occurs merely because the value is not reachable from the normal three-mode cycle.
+• Tapping the mode button while currently in .both already advances to .left.
+• Once the user leaves .both, the proposed three-mode cycle would prevent selecting it again through the toolbar or “m” shortcut.
+
+This provides a clean legacy-state exit without silently converting the value when the document is opened.
+
+11. SELECTOR BEHAVIOR WITH .BOTH
+
+Because the control is a Button rather than a Picker, the missing-tag scenarios in the probe do not apply.
+
+There is no possibility of:
+
+• No selected segment.
+• SwiftUI choosing a default tag.
+• A Picker warning.
+• An invalid selection binding.
+• Automatic binding mutation caused by removing a Picker option.
+
+If .both is restored, the Button simply renders:
+
+Text(displayMode.title)
+
+which displays “All.”
+
+The binding is not mutated until the user explicitly activates the Button or keyboard shortcut.
+
+This is source-confirmed.
+
+12. OPENING AN EXISTING .BOTH DOCUMENT
+
+Opening or selecting a document whose saved mode is “both texts” performs this sequence:
+
+1. restorePersistedMainScreenModes() reads the document-keyed value.
+2. FunctionKeyDisplayMode.init(persistedValue:) returns .both.
+3. displayMode becomes .both.
+4. savePersistedDisplayMode() writes “both texts” back.
+5. Main Screen rendering continues through existing .both branches.
+6. The toolbar displays “All.”
+
+No conversion to Command, Button, or Btn Text occurs.
+
+13. EDITOR AND UNRELATED-SAVE RISKS
+
+The button editors do not own the display mode.
+
+Opening an iPhone or iPad button editor does not change displayMode.
+
+The mode is not part of the edited button line or .screen entry.
+
+Therefore:
+
+• Opening a button editor does not replace .both.
+• Closing the editor without changes does not replace .both.
+• Editing button command text does not replace .both.
+• Editing Right Text does not replace .both.
+• Saving an unrelated button edit does not serialize a new display mode into the .screen file.
+
+The persisted mode changes only through code that calls savePersistedDisplayMode(), primarily:
+
+advanceDisplayMode()
+Main_ModePersistence.swift
+Lines 18–21
+
+Mode restoration also writes the restored value back unchanged at lines 23–33.
+
+14. MAIN SCREEN RENDERING PRESERVATION
+
+Ordinary rendering remains in:
+
+Main_ButtonLabelView.swift
+buttonContent
+Lines 147–185
+
+It retains all four switch cases:
+
+.left
+.right
+.last
+.both
+
+Widget header selection remains in:
+
+Main_ButtonBehavior.swift
+widgetHeaderContent(for:)
+Lines 1675–1727
+
+It retains:
+
+.left
+.right
+.last
+.both
+
+The .both branch continues creating:
+
+• commandWithSymbol
+• commandWithEmoji
+• commandWithText
+• command-only fallback where appropriate
+
+The shared widget renderer remains in:
+
+Main_ButtonLabelView.swift
 renderWidgetHeader()
+Lines 461–488
 
-This would provide:
+No rendering change is needed.
 
-Left CMD:
-Handled by the command-only bypass; no header view and no live time.
+No changes are needed to:
 
-Right Text:
-Configured symbol, emoji, or text plus live time; no command.
-
-Last Text:
-Final Right Text component plus live time; no command.
-
-Both Texts:
-Complete command plus configured header plus live time.
-
-The descriptor’s cityLabel should continue to be passed unchanged to clockText(for:cityLabel:), preserving command-based timezone handling.
-
-No changes should be needed in:
-
-• Main_ButtonBehavior.swift
-• Command recognition
-• .screen parsing
+• renderWidgetHeader()
+• widgetHeaderText()
+• widgetContent(descriptor:)
 • SF Symbol parsing
 • Emoji parsing
-• Date formatting
-• Main Screen layout
-• Other widgets
+• Dynamic widget values
+• Widget gestures
+• Ordinary button rendering
 
-legacyWidgetHeaderContent should not be removed as part of this targeted correction unless a separate inspection proves it has no remaining callers.
+15. OTHER USER-FACING SELECTION POINTS
 
-14. Effect of bypassing the clock view in Left CMD
+Confirmed selection paths:
 
-Bypassing the .clock TimelineView in Left CMD would stop constructing its one-second display timeline while Left CMD is selected.
+1. Main Screen bottom-toolbar mode Button
 
-This should not disrupt persistent state because .clock has no timer model, counter, accumulated elapsed value, or mutable clock state. It formats the current context.date whenever its TimelineView is active.
+Main_BtmToolbar.swift
+Lines 493–514
 
-When the user leaves Left CMD, SwiftUI would recreate the clock content and immediately format the current time. There is no stored time that could become stale and no timer state to resume.
+2. External keyboard shortcut “m”
 
-This differs from the interactive timer and stopwatch widgets, which maintain operational state outside a simple Date formatter.
+Main_Screen.swift
+Lines 2754–2756
 
-15. Differences from the eight working time/date widgets
+Both call the same advanceDisplayMode() function.
 
-The important differences are:
+No FunctionKeyDisplayMode Picker, segmented control, Menu, context-menu item, Settings selector, or button-editor selector was found.
 
-• The eight corrected widgets call renderWidgetHeader().
-• .clock calls legacyWidgetHeaderContent.
+The only user-facing “All” label associated with the display modes is:
 
-• The eight corrected widgets are included in usesCorrectedWidgetDisplayModes.
-• .clock is explicitly excluded.
+FunctionKeyDisplayMode.title
+Main_BtmRightTxt.swift
+Lines 50–61
 
-• The eight corrected widgets therefore receive mode-aware header selection.
-• .clock always uses its legacy Right Text-style header.
+Other unrelated occurrences of “All,” such as “Delete All,” are unrelated and must remain unchanged.
 
-• .clock updates every second and displays a full “HH:mm:ss” value.
-• The other time/date widgets use their own update intervals and value formatters.
+16. OPTION COMPARISON
 
-• .clock’s command can contain a city/timezone parameter.
-• That parameter is already carried independently in .clock(cityLabel:) and does not prevent shared-header adoption.
+OPTION A
+Simply remove the All segment.
 
-16. Risks and remaining uncertainties
+Assessment:
 
-The recommended correction is narrow, but physical-device validation should cover:
+Not directly applicable. There is no segment or option collection to remove.
 
-• .clock with ordinary Right Text in all four modes.
-• .clock with SF Symbol and subtitle in all four modes.
-• .clock with emoji and subtitle.
-• .clock with explicitly empty Right Text.
-• Bare .clock with no Right Text.
-• Parameterized clock commands such as “.clock Tokyo”.
-• Optional color-prefixed Right Text.
-• Switching repeatedly between Left CMD and another mode to confirm the displayed time immediately resumes at the current second.
+The equivalent operation would be to skip .both in next().
 
-One pre-existing concern is that clockText(for:cityLabel:) can fall back to a timezone inferred from Right Text at Main_ButtonLabelView.swift line 518. The recommended display correction need not change that behavior, but it means certain Right Text values that happen to match timezone identifiers may influence the displayed timezone. That is separate from the display-mode bug and should not be changed in this targeted correction.
+Complexity:
+
+One transition change.
+
+Compatibility:
+
+Safe if .both decoding and rendering remain untouched.
+
+Existing .both behavior:
+
+Still loads and displays. It becomes unreachable again after the user advances away from it.
+
+Risk:
+
+Very low.
+
+OPTION B
+Use a UI-only selection adapter.
+
+Assessment:
+
+Unnecessary.
+
+There is no Picker selection whose bound value must match a visible tag.
+
+An adapter would introduce needless state and increase the chance of accidentally translating .both to another value.
+
+Complexity:
+
+Higher than required.
+
+Recommendation:
+
+Do not use.
+
+OPTION C
+Show All only when editing an existing .both button.
+
+Assessment:
+
+The mode is not edited per button, and there is no segmented list of options.
+
+The closest equivalent is the natural behavior already provided by the toolbar Button:
+
+• A restored .both document displays “All.”
+• Tapping it moves to Command.
+• It cannot be selected again after leaving if .last skips to .left.
+
+This is compatible with the user’s preservation requirement.
+
+Complexity:
+
+No extra conditional UI is needed.
+
+OPTION D
+Change only the mode-cycling transition.
+
+Recommended.
+
+Change:
+
+FunctionKeyDisplayMode.next()
+Main_BtmRightTxt.swift
+Lines 24–35
+
+Future transition:
+
+.left → .right
+.right → .last
+.last → .left
+.both → .left
+
+Keep all four enum cases.
+
+Keep .both.title == “All.”
+
+Keep .both.persistedValue == “both texts.”
+
+Keep .both decoding.
+
+Keep every .both rendering branch.
+
+Complexity:
+
+One source file and one behavioral line.
+
+Reversibility:
+
+Immediate; restoring .last → .both restores the four-mode cycle.
+
+17. RECOMMENDED MINIMAL IMPLEMENTATION
+
+File:
+
+ESP32BLE/Scrns/Main_Screen/Toolbars/Main_BtmRightTxt.swift
+
+Function:
+
+FunctionKeyDisplayMode.next()
+Lines 24–35
+
+Exact future change:
+
+Change the .last transition from:
+
+case .last:
+return .both
+
+
+to:
+
+case .last:
+return .left
+
+
+Leave this transition unchanged:
+
+case .both:
+return .left
+
+
+Do not modify:
+
+• Enum cases.
+• CaseIterable conformance.
+• init(persistedValue:).
+• persistedValue.
+• title.
+• Main_ModePersistence.swift.
+• MainScreenBottomBar.
+• MainScreen state.
+• Main Screen rendering.
+• Button editors.
+• .screen parsing.
+• Archive code.
+
+Why no adapter is required:
+
+The toolbar is a cycling Button rather than a tag-based selector. A restored .both value is valid and independently displayable even if next() no longer enters it.
+
+18. EXPECTED LEGACY .BOTH EXPERIENCE
+
+Recommended behavior for a document restored in .both:
+
+• Main Screen continues rendering All mode exactly as before.
+• The toolbar temporarily displays “All,” accurately reflecting the active legacy mode.
+• Merely opening the document does not change it.
+• Saving unrelated button edits does not change it.
+• If the user taps “All,” the mode advances to Command and persists “left cmd.”
+• Future taps cycle:
+Command → Button → Btn Text → Command
+• All cannot be reselected through the toolbar or keyboard shortcut.
+
+This is the safest way to reconcile:
+
+• Only three user-selectable modes.
+• Preservation of existing .both state.
+• No silent conversion.
+• No misleading toolbar label.
+
+If “All” must never be visible even while it is actively restored, that would conflict with accurately representing the current mode unless the stored .both value is converted or shown under a misleading label. That is not recommended.
+
+19. LAYOUT EFFECTS
+
+No layout dimension needs to change.
+
+The same Button remains in place with the same:
+
+• displayModeWidth
+• Height
+• Font
+• Background
+• Border
+• Corner radius
+• Toolbar spacing
+
+Because the control is not a four-segment selector, removing .both from the cycle does not cause the remaining labels to expand or move.
+
+Both iPad and iPhone remain unchanged visually except that ordinary cycling no longer reaches the “All” label.
+
+20. PERSISTENCE AND FILE COMPATIBILITY
+
+No changes are required to:
+
+• Stored strings.
+• Persistence filenames.
+• Document keys.
+• Defaults.
+• Parsing.
+• .screen format.
+• Existing .screen files.
+• Existing mode configuration files.
+• Rendering compatibility.
+
+The .both value remains valid indefinitely.
+
+Backup export/import behavior does not need to change for this UI correction. The implementation should leave all archive code untouched. Any existing treatment of the separate hidden mode configuration file remains exactly as it is today.
+
+21. REGRESSION ASSESSMENT
+
+New ordinary button:
+
+No effect. Display mode is global, not stored on the button.
+
+Existing ordinary button:
+
+No rendering change.
+
+New widget button:
+
+No effect on descriptor recognition or rendering.
+
+Existing widget button:
+
+No rendering change.
+
+Document persisted in .both:
+
+Continues to load and render .both.
+
+Opening existing .both document:
+
+Does not convert it.
+
+Closing without changes:
+
+Does not convert it.
+
+Changing unrelated button text:
+
+Does not convert it.
+
+Saving an unrelated edit:
+
+Does not write display mode into the .screen file.
+
+Selecting Command:
+
+Works as before.
+
+Selecting Button:
+
+Works as before.
+
+Selecting Btn Text:
+
+Works as before.
+
+Advancing from Btn Text:
+
+Would return directly to Command.
+
+iPhone landscape:
+
+Uses the same toolbar and cycle.
+
+iPad:
+
+Uses the same toolbar and cycle.
+
+SF Symbols and emoji:
+
+No effect.
+
+Dynamic widget values:
+
+No effect.
+
+Existing .screen files:
+
+No format or content change.
+
+External keyboard shortcut:
+
+Would follow the same three-mode cycle because it calls advanceDisplayMode().
+
+22. PHYSICAL-DEVICE TEST CHECKLIST
+
+• Start in Command and tap through:
+Command → Button → Btn Text → Command.
+• Confirm All is not entered during repeated cycling.
+• Repeat using external keyboard shortcut “m.”
+• Verify the same cycle on iPad.
+• Verify the same cycle on iPhone landscape.
+• Open a document whose persisted mode is All.
+• Confirm it still renders the complete All-mode presentation.
+• Confirm the toolbar displays All while that legacy mode remains active.
+• Close and reopen without tapping the mode button.
+• Confirm the document remains in All.
+• Edit unrelated ordinary button text and save.
+• Confirm All remains active.
+• Edit unrelated widget Right Text and save.
+• Confirm All remains active.
+• From legacy All, tap the mode button once.
+• Confirm it changes to Command.
+• Confirm subsequent cycling never returns to All.
+• Verify ordinary SF Symbols in all three selectable modes.
+• Verify emoji in all three selectable modes.
+• Verify widget dynamic values in Button and Btn Text.
+• Verify no toolbar movement or width change.
+• Verify document switching restores each document’s saved mode.
+• Verify existing backup export/import behavior remains unchanged.
+
+23. REMAINING UNCERTAINTIES
+
+The core implementation does not have a SwiftUI selection uncertainty because the control is a Button, not a Picker.
+
+Physical-device testing is still appropriate to confirm:
+
+• The three-step cycle feels correct on both platforms.
+• The external keyboard shortcut follows the same sequence.
+• A real existing “both texts” configuration remains active after opening and unrelated editing.
+• The temporary visibility of “All” for a restored legacy mode matches the user’s preferred experience.
+
+Confirmed conclusion:
+
+The smallest safe correction is a single transition change in FunctionKeyDisplayMode.next(): make .last return .left. This removes All from normal user selection while retaining .both, its “All” title, persisted “both texts” value, legacy restoration, and every existing rendering path.

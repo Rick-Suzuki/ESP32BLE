@@ -17,6 +17,8 @@ enum MainGridWidgetHeaderContent {
 struct MainScreenButtonLabelView: View {
     // Easy-to-tune size for buttons that display only a single emoji.
     private let loneEmojiScaleMultiplier: CGFloat = 1.5
+    // MARK: - BM:🅱️ Horizontal foreground padding per side, proportional to the actual grid button width.
+    private let mainButtonHorizontalContentPaddingRatio: CGFloat = 0.05
     let entry: FunctionKeyEntry
     let index: Int
     let widgetID: String
@@ -51,6 +53,10 @@ struct MainScreenButtonLabelView: View {
 
     // Adjust emojiScaleMultiplier to tune how much larger emoji should render than text.
     private let emojiScaleMultiplier: CGFloat = 1.5
+
+    private var horizontalPadding: CGFloat {
+        max(8, buttonSize.width * mainButtonHorizontalContentPaddingRatio)
+    }
 
     private func isHexColorPrefix(_ text: String) -> Bool {
         let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -88,7 +94,8 @@ struct MainScreenButtonLabelView: View {
                         .frame(width: buttonSize.width, height: buttonSize.height)
 
                     buttonContent
-                        .padding(8)
+                        .padding(.vertical, 8)
+                        .padding(.horizontal, horizontalPadding)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -180,9 +187,9 @@ struct MainScreenButtonLabelView: View {
     private func usesCorrectedWidgetDisplayModes(_ descriptor: MainGridWidgetDescriptor) -> Bool {
         switch descriptor {
         case .clock, .day, .month, .year, .second, .minute, .hour, .dow, .date,
-             .power, .add, .minus, .random, .textFileRandom, .stopwatch:
+             .power, .add, .minus, .random, .textFileRandom, .stopwatch, .timer:
             return true
-        case .ambientSound, .timer:
+        case .ambientSound:
             return false
         }
     }
@@ -318,64 +325,62 @@ struct MainScreenButtonLabelView: View {
             }
         case .power:
             VStack(spacing: 4) {
-                if displayMode == .both {
-                    renderWidgetHeader()
-                }
+                renderWidgetHeader()
                 MainGridBatteryWidgetView(
                     fontSize: boxFontSize,
                     foregroundColor: buttonTextColor
                 )
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         case .add:
             VStack(spacing: 4) {
-                if displayMode == .both {
-                    renderWidgetHeader()
-                }
+                renderWidgetHeader()
                 MainGridStepUpCounterWidgetView(
                     configurationText: rightTitleWithoutColorPrefix,
-                    showsTitle: displayMode != .both,
+                    showsTitle: false,
                     fontSize: boxFontSize,
-                    foregroundColor: buttonTextColor
+                    foregroundColor: buttonTextColor,
+                    interactionSize: buttonSize
                 )
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         case .minus(let initialCount):
             VStack(spacing: 4) {
-                if displayMode == .both {
-                    renderWidgetHeader()
-                }
+                renderWidgetHeader()
                 MainGridStepDownCounterWidgetView(
                     title: rightTitleWithoutColorPrefix,
-                    showsTitle: displayMode != .both,
+                    showsTitle: false,
                     initialCount: initialCount,
                     fontSize: boxFontSize,
-                    foregroundColor: buttonTextColor
+                    foregroundColor: buttonTextColor,
+                    interactionSize: buttonSize
                 )
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         case .random(let minimumValue, let maximumValue):
             VStack(spacing: 4) {
-                if displayMode == .both {
-                    renderWidgetHeader()
-                }
+                renderWidgetHeader()
                 MainGridRandomNumberWidgetView(
                     title: rightTitleWithoutColorPrefix,
-                    showsTitle: displayMode != .both,
+                    showsTitle: false,
                     minimumValue: minimumValue,
                     maximumValue: maximumValue,
                     fontSize: boxFontSize,
-                    foregroundColor: buttonTextColor
+                    foregroundColor: buttonTextColor,
+                    interactionSize: buttonSize
                 )
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         case .textFileRandom(let filename):
             VStack(spacing: 4) {
-                if displayMode == .both {
-                    renderWidgetHeader()
-                }
+                renderWidgetHeader()
                 MainGridRandomTextWidgetView(
                     title: rightTitleWithoutColorPrefix,
-                    showsInitialTitle: displayMode != .both,
+                    showsInitialTitle: false,
                     filename: filename,
                     fontSize: boxFontSize,
                     foregroundColor: buttonTextColor,
+                    interactionSize: buttonSize,
                     onSelectionCommitted: shouldSpeakWidgetSelections ? { selectedText in
                         speakText(selectedText)
                     } : nil,
@@ -384,47 +389,60 @@ struct MainScreenButtonLabelView: View {
                     } : nil
                 )
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         case .stopwatch:
             VStack(spacing: 4) {
-                if displayMode == .both {
-                    renderWidgetHeader()
-                }
+                renderWidgetHeader()
                 MainGridStopwatchWidgetView(
                     title: rightTitleWithoutColorPrefix,
-                    showsTitle: displayMode != .both,
+                    showsTitle: false,
                     fontSize: boxFontSize,
                     foregroundColor: buttonTextColor,
-                    isInteractionEnabled: !isGridEditModeEnabled
+                    isInteractionEnabled: !isGridEditModeEnabled,
+                    interactionSize: buttonSize
                 )
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         case .ambientSound(let filename):
-            MainGridAmbientSoundWidgetView(
-                widgetID: widgetID,
-                title: rightTitleWithoutColorPrefix,
-                filename: filename,
-                fontSize: boxFontSize,
-                foregroundColor: buttonTextColor,
-                isInteractionEnabled: !isGridEditModeEnabled,
-                sharedState: ambientSoundState,
-                resolveSoundURL: resolveSoundURL,
-                activateAudioSession: activateAudioSession,
-                reportSoundError: reportSoundError
-            )
+            ZStack {
+                renderWidgetHeader(plainTextLineLimit: 4)
+                MainGridAmbientSoundWidgetView(
+                    widgetID: widgetID,
+                    title: rightTitleWithoutColorPrefix,
+                    showsTitle: false,
+                    filename: filename,
+                    fontSize: boxFontSize,
+                    foregroundColor: buttonTextColor,
+                    isInteractionEnabled: !isGridEditModeEnabled,
+                    interactionSize: buttonSize,
+                    sharedState: ambientSoundState,
+                    resolveSoundURL: resolveSoundURL,
+                    activateAudioSession: activateAudioSession,
+                    reportSoundError: reportSoundError
+                )
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         case .timer(let initialDuration, let completion):
-            MainGridTimerWidgetView(
-                widgetID: widgetID,
-                entry: entry,
-                configurationText: rightTitleWithoutColorPrefix,
-                initialDuration: initialDuration,
-                completion: completion,
-                sharedTimer: sharedTimer,
-                fontSize: boxFontSize,
-                foregroundColor: buttonTextColor,
-                onTimerCompletionAction: sendTimerCompletionAction,
-                onPlayCompletionSound: playLoopingSoundNamed,
-                onStopCompletionSound: stopSoundPlayback,
-                onSpeakCompletionText: speakText
-            )
+            VStack(spacing: 4) {
+                renderWidgetHeader()
+                MainGridTimerWidgetView(
+                    widgetID: widgetID,
+                    entry: entry,
+                    configurationText: rightTitleWithoutColorPrefix,
+                    showsTitle: false,
+                    initialDuration: initialDuration,
+                    completion: completion,
+                    sharedTimer: sharedTimer,
+                    fontSize: boxFontSize,
+                    foregroundColor: buttonTextColor,
+                    interactionSize: buttonSize,
+                    onTimerCompletionAction: sendTimerCompletionAction,
+                    onPlayCompletionSound: playLoopingSoundNamed,
+                    onStopCompletionSound: stopSoundPlayback,
+                    onSpeakCompletionText: speakText
+                )
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
 
@@ -441,38 +459,39 @@ struct MainScreenButtonLabelView: View {
     }
 
     @ViewBuilder
-    private func renderWidgetHeader() -> some View {
+    private func renderWidgetHeader(plainTextLineLimit: Int = 1) -> some View {
         switch widgetHeaderContent {
         case .symbol(let name, let subtitle):
             symbolContent(name: name, subtitle: subtitle)
         case .emoji(let emoji, let subtitle):
             emojiContent(emoji: emoji, subtitle: subtitle)
         case .text(let text), .command(let text):
-            widgetHeaderText(text)
+            widgetHeaderText(text, lineLimit: plainTextLineLimit)
         case .commandWithSymbol(let command, let name, let subtitle):
             VStack(spacing: 4) {
-                widgetHeaderText(command)
+                widgetHeaderText(command, lineLimit: plainTextLineLimit)
                 symbolContent(name: name, subtitle: subtitle)
             }
         case .commandWithEmoji(let command, let emoji, let subtitle):
             VStack(spacing: 4) {
-                widgetHeaderText(command)
+                widgetHeaderText(command, lineLimit: plainTextLineLimit)
                 emojiContent(emoji: emoji, subtitle: subtitle)
             }
         case .commandWithText(let command, let text):
             VStack(spacing: 4) {
-                widgetHeaderText(command)
-                widgetHeaderText(text)
+                widgetHeaderText(command, lineLimit: plainTextLineLimit)
+                widgetHeaderText(text, lineLimit: plainTextLineLimit)
             }
         case .none:
             EmptyView()
         }
     }
 
-    private func widgetHeaderText(_ text: String) -> some View {
+    private func widgetHeaderText(_ text: String, lineLimit: Int = 1) -> some View {
         Text(text)
             .font(.system(size: boxFontSize, weight: .bold, design: .rounded))
-            .lineLimit(1)
+            .multilineTextAlignment(.center)
+            .lineLimit(lineLimit)
             .minimumScaleFactor(0.4)
     }
 
@@ -855,7 +874,7 @@ enum MainGridWidgetDescriptor {
     case timer(initialDuration: Int, completion: MainGridTimerCompletion?)
 }
 
-enum MainGridTimerCompletion {
+enum MainGridTimerCompletion: Equatable {
     case sound(filename: String)
     case speech(text: String)
 }
@@ -878,7 +897,7 @@ private struct MainGridBatteryWidgetView: View {
                 .monospacedDigit()
         }
         .foregroundStyle(foregroundColor)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .frame(maxWidth: .infinity)
         .onAppear {
             UIDevice.current.isBatteryMonitoringEnabled = true
             refreshBatteryState()
@@ -925,6 +944,7 @@ private struct MainGridStepUpCounterWidgetView: View {
     let showsTitle: Bool
     let fontSize: Double
     let foregroundColor: Color
+    let interactionSize: CGSize
 
     @State private var initialCount = 0
     @State private var currentCount = 0
@@ -947,8 +967,8 @@ private struct MainGridStepUpCounterWidgetView: View {
                 .minimumScaleFactor(0.2)
         }
         .foregroundStyle(foregroundColor)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .contentShape(Rectangle())
+        .frame(maxWidth: .infinity)
+        .background(fullButtonHitArea)
         .gesture(
             TapGesture(count: 2)
                 .onEnded {
@@ -967,6 +987,11 @@ private struct MainGridStepUpCounterWidgetView: View {
         .onChange(of: configurationText) {
             applyConfiguration()
         }
+    }
+
+    private var fullButtonHitArea: some View {
+        Color.white.opacity(0.001)
+            .frame(width: interactionSize.width, height: interactionSize.height)
     }
 
     private func applyConfiguration() {
@@ -995,6 +1020,7 @@ private struct MainGridStepDownCounterWidgetView: View {
     let initialCount: Int
     let fontSize: Double
     let foregroundColor: Color
+    let interactionSize: CGSize
 
     @State private var currentCount = 0
 
@@ -1015,8 +1041,8 @@ private struct MainGridStepDownCounterWidgetView: View {
                 .minimumScaleFactor(0.2)
         }
         .foregroundStyle(foregroundColor)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .contentShape(Rectangle())
+        .frame(maxWidth: .infinity)
+        .background(fullButtonHitArea)
         .gesture(
             TapGesture(count: 2)
                 .onEnded {
@@ -1035,6 +1061,11 @@ private struct MainGridStepDownCounterWidgetView: View {
         .onChange(of: initialCount) {
             currentCount = max(initialCount, 0)
         }
+    }
+
+    private var fullButtonHitArea: some View {
+        Color.white.opacity(0.001)
+            .frame(width: interactionSize.width, height: interactionSize.height)
     }
 }
 
@@ -1279,6 +1310,38 @@ final class MainGridSharedTimerState: ObservableObject {
     func isCompletionSoundLooping(widgetID: String) -> Bool {
         timerSnapshots[widgetID]?.isCompletionSoundLooping ?? false
     }
+
+    func hasMatchingConfiguration(
+        widgetID: String,
+        duration: Int,
+        completion: MainGridTimerCompletion?
+    ) -> Bool {
+        guard let snapshot = timerSnapshots[widgetID],
+              snapshot.configuredDuration == max(duration, 0) else {
+            return false
+        }
+
+        return timerCompletionsMatch(
+            completions[widgetID] ?? nil,
+            normalizedCompletion(completion)
+        )
+    }
+
+    private func timerCompletionsMatch(
+        _ lhs: MainGridTimerCompletion?,
+        _ rhs: MainGridTimerCompletion?
+    ) -> Bool {
+        switch (lhs, rhs) {
+        case (nil, nil):
+            return true
+        case (.sound(let lhsFilename), .sound(let rhsFilename)):
+            return lhsFilename == rhsFilename
+        case (.speech(let lhsText), .speech(let rhsText)):
+            return lhsText == rhsText
+        default:
+            return false
+        }
+    }
 }
 
 final class MainGridAmbientSoundState: ObservableObject {
@@ -1355,11 +1418,13 @@ private struct MainGridTimerWidgetView: View {
     let widgetID: String
     let entry: FunctionKeyEntry
     let configurationText: String
+    let showsTitle: Bool
     let initialDuration: Int
     let completion: MainGridTimerCompletion?
     @ObservedObject var sharedTimer: MainGridSharedTimerState
     let fontSize: Double
     let foregroundColor: Color
+    let interactionSize: CGSize
     let onTimerCompletionAction: (FunctionKeyEntry) -> Bool
     let onPlayCompletionSound: (String) -> Void
     let onStopCompletionSound: () -> Void
@@ -1370,7 +1435,7 @@ private struct MainGridTimerWidgetView: View {
 
     var body: some View {
         VStack(spacing: 4) {
-            if !title.isEmpty {
+            if showsTitle && !title.isEmpty {
                 Text(title)
                     .font(.system(size: fontSize, weight: .semibold, design: .rounded))
                     .lineLimit(2)
@@ -1385,8 +1450,8 @@ private struct MainGridTimerWidgetView: View {
                 .minimumScaleFactor(0.5)
         }
         .foregroundStyle(foregroundColor)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .contentShape(Rectangle())
+        .frame(maxWidth: .infinity)
+        .background(fullButtonHitArea)
         .gesture(
             TapGesture(count: 2)
                 .onEnded {
@@ -1408,6 +1473,14 @@ private struct MainGridTimerWidgetView: View {
         .onChange(of: initialDuration) {
             applyConfiguration()
         }
+        .onChange(of: completion) {
+            applyConfiguration()
+        }
+    }
+
+    private var fullButtonHitArea: some View {
+        Color.white.opacity(0.001)
+            .frame(width: interactionSize.width, height: interactionSize.height)
     }
 
     private var displayedRemainingSeconds: Int {
@@ -1433,6 +1506,14 @@ private struct MainGridTimerWidgetView: View {
 
         guard !sharedTimer.isRunning(widgetID: widgetID),
               !sharedTimer.isCompletionSoundLooping(widgetID: widgetID) else {
+            return
+        }
+
+        guard !sharedTimer.hasMatchingConfiguration(
+            widgetID: widgetID,
+            duration: configuredDuration,
+            completion: completion
+        ) else {
             return
         }
 
@@ -1489,23 +1570,19 @@ private struct MainGridTimerWidgetView: View {
 private struct MainGridAmbientSoundWidgetView: View {
     let widgetID: String
     let title: String
+    let showsTitle: Bool
     let filename: String
     let fontSize: Double
     let foregroundColor: Color
     let isInteractionEnabled: Bool
+    let interactionSize: CGSize
     @ObservedObject var sharedState: MainGridAmbientSoundState
     let resolveSoundURL: (String) -> URL?
     let activateAudioSession: () async -> Void
     let reportSoundError: (String, String) -> Void
 
     var body: some View {
-        Text(displayTitle)
-            .font(.system(size: fontSize, weight: .bold, design: .rounded))
-            .lineLimit(4)
-            .minimumScaleFactor(0.2)
-            .multilineTextAlignment(.center)
-            .foregroundStyle(foregroundColor)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        interactionContent
             .contentShape(Rectangle())
             .gesture(
                 TapGesture(count: 3)
@@ -1544,6 +1621,22 @@ private struct MainGridAmbientSoundWidgetView: View {
             )
     }
 
+    @ViewBuilder
+    private var interactionContent: some View {
+        if showsTitle {
+            Text(displayTitle)
+                .font(.system(size: fontSize, weight: .bold, design: .rounded))
+                .lineLimit(4)
+                .minimumScaleFactor(0.2)
+                .multilineTextAlignment(.center)
+                .foregroundStyle(foregroundColor)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else {
+            Color.white.opacity(0.001)
+                .frame(width: interactionSize.width, height: interactionSize.height)
+        }
+    }
+
     private var displayTitle: String {
         let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard trimmedTitle.isEmpty else {
@@ -1559,6 +1652,7 @@ private struct MainGridStopwatchWidgetView: View {
     let fontSize: Double
     let foregroundColor: Color
     let isInteractionEnabled: Bool
+    let interactionSize: CGSize
 
     @State private var elapsedTenths = 0
     @State private var isRunning = false
@@ -1581,8 +1675,8 @@ private struct MainGridStopwatchWidgetView: View {
                 .minimumScaleFactor(0.2)
         }
         .foregroundStyle(foregroundColor)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .contentShape(Rectangle())
+        .frame(maxWidth: .infinity)
+        .background(fullButtonHitArea)
         .gesture(
             TapGesture(count: 2)
                 .onEnded {
@@ -1603,6 +1697,11 @@ private struct MainGridStopwatchWidgetView: View {
 
             elapsedTenths += 1
         }
+    }
+
+    private var fullButtonHitArea: some View {
+        Color.white.opacity(0.001)
+            .frame(width: interactionSize.width, height: interactionSize.height)
     }
 
     private var trimmedTitle: String {
@@ -1631,6 +1730,7 @@ private struct MainGridRandomNumberWidgetView: View {
     let maximumValue: Int
     let fontSize: Double
     let foregroundColor: Color
+    let interactionSize: CGSize
 
     @State private var displayedValue = 0
     @State private var animationTask: Task<Void, Never>?
@@ -1652,8 +1752,8 @@ private struct MainGridRandomNumberWidgetView: View {
                 .minimumScaleFactor(0.2)
         }
         .foregroundStyle(foregroundColor)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .contentShape(Rectangle())
+        .frame(maxWidth: .infinity)
+        .background(fullButtonHitArea)
         .onTapGesture {
             generateRandomValue()
         }
@@ -1669,6 +1769,11 @@ private struct MainGridRandomNumberWidgetView: View {
         .onDisappear {
             animationTask?.cancel()
         }
+    }
+
+    private var fullButtonHitArea: some View {
+        Color.white.opacity(0.001)
+            .frame(width: interactionSize.width, height: interactionSize.height)
     }
 
     private var trimmedTitle: String {
@@ -1716,6 +1821,7 @@ private struct MainGridRandomTextWidgetView: View {
     let filename: String
     let fontSize: Double
     let foregroundColor: Color
+    let interactionSize: CGSize
     let onSelectionCommitted: ((String) -> Void)?
     let onRepeatRequested: ((String) -> Void)?
 
@@ -1732,10 +1838,10 @@ private struct MainGridRandomTextWidgetView: View {
             .multilineTextAlignment(.center)
             .lineLimit(4)
             .minimumScaleFactor(0.2)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .frame(maxWidth: .infinity)
         .foregroundStyle(foregroundColor)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .contentShape(Rectangle())
+        .frame(maxWidth: .infinity)
+        .background(fullButtonHitArea)
         .gesture(
             TapGesture(count: 2)
                 .onEnded {
@@ -1758,6 +1864,11 @@ private struct MainGridRandomTextWidgetView: View {
         .onDisappear {
             animationTask?.cancel()
         }
+    }
+
+    private var fullButtonHitArea: some View {
+        Color.white.opacity(0.001)
+            .frame(width: interactionSize.width, height: interactionSize.height)
     }
 
     private var trimmedTitle: String {

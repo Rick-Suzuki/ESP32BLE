@@ -1,3 +1,7 @@
+261018 Sun 1645
+all widgets working, .ord todo
+V62.73
+
 261018 Sun 1125
 most bad widgets fixed
 V62.72

@@ -28,7 +28,7 @@ enum FunctionKeyDisplayMode: CaseIterable {
         case .right:
             return .last
         case .last:
-            return .both
+            return .left
         case .both:
             return .left
         }
