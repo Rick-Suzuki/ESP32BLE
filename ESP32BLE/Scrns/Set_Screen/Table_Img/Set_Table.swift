@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct SettingsDocumentTableSection: View {
     enum ListMode {
@@ -239,7 +240,9 @@ struct SettingsDocumentTableSection: View {
 
         return Button {
             ButtonClickFeedback.playIfEnabled()
-            loadFunctionKeys(fileURL)
+            handleFileSelection(fileURL) {
+                loadFunctionKeys(fileURL)
+            }
         } label: {
             HStack {
                 Text(fileURL.lastPathComponent)
@@ -291,7 +294,9 @@ struct SettingsDocumentTableSection: View {
 
         return Button {
             ButtonClickFeedback.playIfEnabled()
-            loadTextFile(textURL)
+            handleFileSelection(textURL) {
+                loadTextFile(textURL)
+            }
         } label: {
             HStack {
                 Text(textURL.lastPathComponent)
@@ -333,7 +338,9 @@ struct SettingsDocumentTableSection: View {
 
         return Button {
             ButtonClickFeedback.playIfEnabled()
-            selectImage(imageURL)
+            handleFileSelection(imageURL) {
+                selectImage(imageURL)
+            }
         } label: {
             HStack {
                 Text(imageURL.lastPathComponent)
@@ -375,7 +382,9 @@ struct SettingsDocumentTableSection: View {
 
         return Button {
             ButtonClickFeedback.playIfEnabled()
-            selectSound(soundURL)
+            handleFileSelection(soundURL) {
+                selectSound(soundURL)
+            }
         } label: {
             HStack {
                 Text(soundURL.lastPathComponent)
@@ -417,7 +426,9 @@ struct SettingsDocumentTableSection: View {
 
         return Button {
             ButtonClickFeedback.playIfEnabled()
-            selectPDF(pdfURL)
+            handleFileSelection(pdfURL) {
+                selectPDF(pdfURL)
+            }
         } label: {
             HStack {
                 Text(pdfURL.lastPathComponent)
@@ -455,25 +466,30 @@ struct SettingsDocumentTableSection: View {
     }
 
     private func allFilesRow(for fileURL: URL) -> some View {
-        HStack {
-            Text(fileURL.lastPathComponent)
-                .font(tableRowFont)
-                .foregroundStyle(.white)
-                .multilineTextAlignment(.leading)
-                .fixedSize(horizontal: false, vertical: true)
+        Button {
+            handleFileSelection(fileURL)
+        } label: {
+            HStack {
+                Text(fileURL.lastPathComponent)
+                    .font(tableRowFont)
+                    .foregroundStyle(.white)
+                    .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
 
-            Spacer()
+                Spacer()
+            }
+            .padding(.leading, 10)
+            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            .background(Color.black)
+            .overlay {
+                Rectangle()
+                    .fill(Color.gray.opacity(0.6))
+                    .frame(height: 1)
+                    .frame(maxHeight: .infinity, alignment: .bottom)
+            }
+            .contentShape(.rect)
         }
-        .padding(.leading, 10)
-        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-        .background(Color.black)
-        .overlay {
-            Rectangle()
-                .fill(Color.gray.opacity(0.6))
-                .frame(height: 1)
-                .frame(maxHeight: .infinity, alignment: .bottom)
-        }
-        .contentShape(.rect)
+        .buttonStyle(.plain)
         .id(fileURL.path)
         .listRowInsets(EdgeInsets())
         .listRowSeparator(.hidden)
@@ -485,5 +501,10 @@ struct SettingsDocumentTableSection: View {
                 Label("Delete", systemImage: "trash")
             }
         }
+    }
+
+    private func handleFileSelection(_ fileURL: URL, action: () -> Void = {}) {
+        action()
+        UIPasteboard.general.string = fileURL.lastPathComponent
     }
 }

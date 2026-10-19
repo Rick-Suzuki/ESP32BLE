@@ -166,7 +166,7 @@ struct MainScreen: View {
         "xmark", "arrow.left", "arrow.right", "arrow.uturn.backward",
 		
 		// row 1
-        "delete.right.fill", "arrow.up", "arrow.down", "arrow.uturn.forward",
+        "delete.right.fill", "", "doc.on.clipboard", "arrow.uturn.forward",
 		
 		// row 2
         "delete.backward.fill", "", ""	// mode btn here
@@ -4764,6 +4764,8 @@ Tapping a row inserts the key code at the cursor.
             } else if systemName == "arrow.down" {
                 ButtonClickFeedback.playIfEnabled()
                 smartScriptEditingModel.moveCaretDown()
+            } else if systemName == "doc.on.clipboard" {
+                pasteSmartActionTextFromSystemClipboard()
             } else if systemName == "delete.right.fill" {
                 ButtonClickFeedback.playIfEnabled()
                 smartScriptEditingModel.deleteForward()
@@ -4831,6 +4833,10 @@ Tapping a row inserts the key code at the cursor.
 
         if systemName == "xmark" || systemName == "delete.right.fill" || systemName == "delete.backward.fill" {
             return .red
+        }
+
+        if systemName == "doc.on.clipboard" {
+            return .green
         }
 
         if systemName.isEmpty {
@@ -4931,6 +4937,16 @@ Tapping a row inserts the key code at the cursor.
 
     private func insertSmartActionTextAtSelection(_ insertedText: String) {
         smartScriptEditingModel.replaceSelection(with: editorSmartScriptText(fromStoredText: insertedText))
+        smartActionTextBinding.wrappedValue = smartScriptEditingModel.scriptText
+    }
+
+    private func pasteSmartActionTextFromSystemClipboard() {
+        guard let clipboardText = UIPasteboard.general.string, !clipboardText.isEmpty else {
+            return
+        }
+
+        ButtonClickFeedback.playIfEnabled()
+        smartScriptEditingModel.replaceSelection(with: clipboardText)
         smartActionTextBinding.wrappedValue = smartScriptEditingModel.scriptText
     }
 

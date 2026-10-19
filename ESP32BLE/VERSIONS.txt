@@ -1,3 +1,7 @@
+261019 Mon 2024
+clipboard working, one feature to add
+V63.84
+
 
 261019 Mon 1917
 Core Midi working
