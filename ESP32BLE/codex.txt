@@ -1,402 +1,308 @@
-ESP32BLE — ESP-AUDIO-001F-C1
-IMPLEMENTATION REPORT
-
 1. Files modified
 
-• ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
-• ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift
-• ESP32BLE/Scrns/Main_Screen/Speech Recognition/SR_Support.swift
+ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
 
-No other files were modified.
+ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift
 
-2. Functions added
+ESP32BLE/Scrns/Main_Screen/Main_ButtonLabelView.swift
 
-Main_ButtonBehavior.swift:
+ESP32BLE/Scrns/Main_Screen/Toolbars/Main_BtmToolbar.swift
 
-• startWaitChainCommandTokens(_:sourceEntry:respectsBluetoothMode:)
-• cancelAllWaitChainCommands()
 
-3. Functions modified
-
-Main_ButtonBehavior.swift:
-
-• sendMainGridEntry(_:)
-• runWaitChainCommandTokens(_:sourceEntry:respectsBluetoothMode:)
-• stopAllMainGridMedia()
+2. Activity state properties added
 
 Main_Screen.swift:
 
-• MainScreen state declarations
-• testEditingSlotText()
+• speechSynthesisActive
+• ordinarySoundActive
+• speechPlaybackDelegate
+• soundPlaybackDelegate
+• isMediaOrWaitActive computed property
 
-SR_Support.swift:
+Main_ButtonLabelView.swift:
 
-• applyRecognizedSpeech(_:)
+• MainGridAmbientSoundState.isPlaybackActive
 
-4. Wait Task registry design
+The existing activeWaitChainTasks registry remains the wait-activity source.
 
-Main_Screen.swift:867 now owns:
 
-activeWaitChainTasks: [UUID: Task<Void, Never>]
+3. Ordinary audio lifecycle tracking
 
-Properties of the registry:
+playMainGridSound(named:repeats:volumePercentage:) now sets ordinarySoundActive when a valid request begins.
 
-• MainActor-owned.
-• One unique UUID per wait sequence.
-• Contains every active wait-chain Task.
-• Supports simultaneous independent sequences.
-• Is cleared immediately during Universal Stop.
-• Can support Phase C2 later through an emptiness check.
-• Does not use a manager, actor, ObservableObject, timer, or global state.
+It remains active during:
 
-5. Task registration order
+• Audio-session activation
+• Background player preparation
+• Playback
+• Future paused playback
 
-startWaitChainCommandTokens(...) is MainActor-isolated.
+It is cleared by current-request activation/preparation/playback failure, natural completion, or stopMainGridSoundPlayback().
 
-It:
 
-1. Creates the sequence UUID.
-2. Constructs the MainActor Task.
-3. Registers the Task in activeWaitChainTasks.
-4. Returns to the MainActor scheduler.
-5. The Task then begins executing the command chain.
+4. Ordinary natural-completion delegate
 
-Because the launcher is synchronous and MainActor-isolated, the newly created MainActor Task cannot execute its command body during that same non-suspending actor turn before registration completes.
+Added MainGridSoundPlaybackDelegate in Main_ButtonBehavior.swift:21.
 
-This ensures a sequence beginning with .sm is registered before it attempts to cancel itself.
+It implements audioPlayerDidFinishPlaying(_:successfully:) and forwards completion to MainActor.
 
-6. Shared wait launcher
+Each delegate retains its originating sound request UUID. The completion handler clears activity only when that UUID still equals soundPlaybackRequestID.
 
-Main_ButtonBehavior.swift:495–514 contains the shared launcher.
 
-The launcher preserves:
+5. Ambient activity tracking
 
-• Original command tokens.
-• Original sourceEntry.
-• Existing respectsBluetoothMode behavior.
-• Existing MainActor execution.
-• Existing executor implementation.
+MainGridAmbientSoundState now publishes read-only isPlaybackActive at Main_ButtonLabelView.swift:1385.
 
-Its Task uses deferred ID-specific cleanup:
+It becomes true when ambient activation/preparation begins and remains true during looping playback.
 
-activeWaitChainTasks.removeValue(forKey: sequenceID)
+It becomes false when playback stops or the current activation, preparation, or play operation fails.
 
-7. All three launch paths
 
-All identified wait launch paths now use the shared launcher.
+6. Speech activity tracking
 
-Manual Main Screen buttons:
+speakMainGridText(_:) sets speechSynthesisActive after accepting a request and assigning its UUID.
 
-Main_ButtonBehavior.swift:312–319
+Activity remains true through activation, queuing, and speech playback.
 
-Speech-triggered buttons:
+stopSpokenGridText() clears it synchronously.
 
-SR_Support.swift:61–68
 
-Keyboard/editor testing:
+7. Speech completion/cancellation delegate
 
-Main_Screen.swift:5262–5269
+Added MainGridSpeechPlaybackDelegate in Main_ButtonBehavior.swift:39.
 
-No direct Task { @MainActor in runWaitChainCommandTokens(...) } launch remains in those paths.
+It handles:
 
-8. Cancellation helper
+• speechSynthesizer(_:didFinish:)
+• speechSynthesizer(_:didCancel:)
 
-Main_ButtonBehavior.swift:517–524 adds:
+The delegate records both the speech request UUID and the expected AVSpeechUtterance identity. Only the matching utterance can report completion, and the MainActor closure additionally verifies speechPlaybackRequestID before clearing activity.
 
-cancelAllWaitChainCommands()
 
-It:
+8. Wait registry observation
 
-1. Copies the currently registered Task handles.
-2. Clears activeWaitChainTasks immediately.
-3. Cancels every copied Task.
+activeWaitChainTasks was already declared as @State in Main_Screen.swift:871.
 
-It is safe when:
+No new registry or cancellation mechanism was introduced. Registering, removing, or clearing tasks therefore causes SwiftUI to reevaluate toolbar activity.
 
-• No sequence is active.
-• One sequence is active.
-• Multiple sequences are active.
-• Stop is invoked repeatedly.
-• A cancelled Task later performs deferred cleanup.
 
-Only wait-chain Tasks in this registry are cancelled.
+9. Aggregate activity Boolean
 
-9. Universal Stop integration
+Main_Screen.swift:5463 now computes isMediaOrWaitActive from:
 
-stopAllMainGridMedia() now executes in this order:
+• ordinarySoundActive
+• mainGridAmbientSoundState.isPlaybackActive
+• speechSynthesisActive
+• !activeWaitChainTasks.isEmpty
 
-1. cancelAllWaitChainCommands()
-2. stopSpokenGridText()
-3. stopMainGridSoundPlayback()
-4. mainGridAmbientSoundState.stopPlayback()
+Speech recognition, connection state, button mode, and ordinary timer state are not included.
 
-The existing three media-stop operations remain intact.
 
-No audio cleanup logic was duplicated.
+10. Stop button colour changes
 
-10. Task.sleep cancellation handling
+Main_BtmToolbar.swift:625 now uses:
 
-The previous:
+• Dark grey existing inactive background when idle
+• Subdued green when active
 
-try? await Task.sleep(...)
+The active green is:
 
-was replaced with explicit do/catch.
+Color(red: 0.16, green: 0.42, blue: 0.22)
 
-If cancellation interrupts the sleep:
+The Stop symbol remains white.
 
-• Task.sleep throws.
-• The catch returns from the executor.
-• No subsequent token executes.
-• Cancellation is not treated as successful wait completion.
 
-Wait duration calculation and invalid-wait handling were not changed.
+11. Removal of Speech-mode styling
 
-11. Cancellation checks
+The Stop button no longer derives its background, border, or opacity from Speech mode.
 
-The executor now checks Task.isCancelled:
+The previous blue border was replaced with a clear stroke using the same line width.
 
-• Before processing every token.
-• Before entering Task.sleep.
-• Immediately after Task.sleep.
 
-All checks return immediately from the executor.
+12. Geometry preservation
 
-Commands following a cancelled wait cannot execute.
+The following remain unchanged:
 
-Because other token dispatch is synchronous on MainActor, Stop cannot interleave between a cancellation check and the associated synchronous dispatch. Any following iteration performs another cancellation check.
+• Toolbar order
+• Stop button position
+• Width
+• Height
+• Corner radius
+• SF Symbol
+• Symbol font
+• HStack spacing
+• Padding
+• iPhone/iPad sizing
+• Neighbouring controls
 
-12. Stop inside a sequence
 
-The .sm and .stopmedia wait-chain branch now:
+13. Always-clickable behaviour
 
-1. Clears pending modifier tokens.
-2. Calls stopAllMainGridMedia().
-3. Cancels all registered sequences, including itself.
-4. Returns immediately.
+No disabled or hit-testing condition was added.
 
-It no longer continues to later tokens.
+The button continues calling onStopMedia and remains clickable while idle, active, in Edit Mode, and in every Main Screen button mode.
 
-For:
 
-Sound.wav:.wait 5:.sm:.wait 5:Other.wav
+14. Request-ID and stale-callback protection
 
-Other.wav cannot execute after .sm.
+Ordinary completion handlers compare their captured request UUID with soundPlaybackRequestID.
 
-13. Multiple simultaneous waits
+Speech callbacks verify both utterance identity and speechPlaybackRequestID.
 
-Every wait chain has a separate UUID and Task handle.
+Ambient failure paths retain the existing playbackRequestID checks.
 
-Universal Stop copies and cancels every Task in the registry, not merely:
+Old callbacks therefore cannot clear activity belonging to newer requests.
 
-• The newest sequence.
-• The oldest sequence.
-• The sequence containing .sm.
 
-Two simultaneous waits are both interrupted promptly.
+15. Failure-path handling
 
-14. New sequences after Stop
+Current ordinary requests clear activity on:
 
-Universal Stop clears the old registry.
+• Audio-session activation failure
+• Background preparation failure
+• player.play() failure
 
-A subsequent sequence:
+Current ambient requests clear activity on:
 
-• Receives a new UUID.
-• Creates a new Task.
-• Registers independently.
-• Runs normally.
+• Missing file
+• Activation failure
+• Preparation failure
+• player.play() failure
 
-There is no shared cancelled generation or flag that can incorrectly affect later sequences.
+Current speech requests clear activity on activation failure.
 
-15. Registry cleanup safety
+Stale failures return without changing newer activity or displaying obsolete alerts.
 
-Task cleanup removes only its own UUID.
 
-If Universal Stop has already cleared the dictionary:
+16. Natural completion behaviour
 
-• removeValue(forKey:) is harmless.
+Ordinary non-looping sounds clear activity through AVAudioPlayerDelegate.
 
-An older Task cannot:
+Speech synthesis clears activity through AVSpeechSynthesizerDelegate.
 
-• Clear the registry.
-• Remove a newer UUID.
-• Cancel a newer Task.
-• Decrement an unguarded counter.
+Ambient playback loops indefinitely, so its activity ends through existing stop/replacement/failure paths.
 
-16. Keyboard modifier safety
+No polling was introduced.
 
-pendingModifierTokens remains local to each executor invocation.
 
-A local defer now clears it for every exit path, including:
+17. Universal Stop integration
 
-• Sleep cancellation.
-• Pre-token cancellation.
-• Invalid wait.
-• Stop command.
-• Transport failure.
-• Normal completion.
+The existing stopAllMainGridMedia() implementation was not changed.
 
-The .sm and .stopmedia branch also clears modifiers before invoking Universal Stop.
+Its existing calls now clear observable activity through:
 
-No modifier can be transmitted after sequence cancellation or leak into another sequence.
+• stopSpokenGridText()
+• stopMainGridSoundPlayback()
+• mainGridAmbientSoundState.stopPlayback()
+• Clearing/cancelling activeWaitChainTasks
 
-17. Audio request-ID protection
 
-The following were not changed:
+18. C1 wait cancellation preservation
 
-• soundPlaybackRequestID
-• speechPlaybackRequestID
-• Ambient playback request ID handling
-• Ordinary player preparation
-• Ambient player preparation
+The following remain unchanged:
 
-Universal Stop still invalidates pending audio operations through the existing media stop functions.
+• Shared wait launcher
+• UUID-based task registry
+• Cancellation of all registered wait tasks
+• Task.sleep cancellation handling
+• Task.isCancelled checks
+• ID-specific cleanup
+• Stop aliases inside wait sequences
+• Ability to start new waits after Stop
 
-Wait Task cancellation does not directly cancel unrelated audio preparation Tasks.
 
-18. Speech recognition preservation
+19. Speech recognition preservation
 
-Speech-triggered wait sequences now use the shared launcher.
+No speech-recognition source files or behaviour were modified.
 
-No changes were made to:
+Microphone handling, recognition callbacks, recognition lifecycle, and speech-recognition suppression of speech synthesis remain unchanged.
 
-• Speech matching.
-• Recognition callbacks.
-• Microphone handling.
-• Recognition startup or shutdown.
-• Recognition feedback.
-• Speech auto-off.
-• SR_Manager.swift.
 
-Universal Stop does not disable speech recognition.
+20. Timer preservation
 
-19. Timer preservation
+Timer implementations and timer parsing were not modified.
 
-No timer state or timer implementation was modified.
+Timer-generated ordinary audio uses the existing ordinary sound channel and is represented by ordinarySoundActive while preparing or playing.
 
-Universal Stop does not cancel timer Tasks.
 
-Timer-triggered audio remains governed by the existing ordinary media request-ID behavior.
+21. BLE/Mac preservation
 
-20. BLE/Mac behavior preservation
+No BLE or Mac Helper source or transport logic was modified.
 
-No BLE or Mac Helper files were modified.
+Stop aliases and keyboard transmission behaviour remain unchanged.
 
-Existing:
-
-• Keyboard output behavior.
-• Mode checks.
-• Stop-alias filtering.
-• Modifier grouping.
-• Transport formatting.
-
-remain unchanged.
-
-21. Stop button UI preservation
-
-Main_BtmToolbar.swift was not modified.
-
-The square Stop button retains its existing:
-
-• Position.
-• Dimensions.
-• Symbol.
-• Colors.
-• Border.
-• Opacity.
-• Enabled behavior.
-• Toolbar spacing.
-• iPhone layout.
-• iPad layout.
-
-Because it already calls stopAllMainGridMedia(), it automatically gains wait cancellation.
-
-No activity-color implementation was added.
 
 22. Build result
 
-The ESP32BLE project built successfully using the existing Xcode configuration.
-
-Build duration: approximately 40 seconds.
+Xcode BuildProject completed successfully in approximately 29 seconds.
 
 The app and simulator were not launched.
 
-23. Compiler and concurrency warnings
 
-The full build reported:
+23. Compiler/concurrency warnings
 
-• No compiler errors.
-• No new warnings.
-• No actor-isolation errors.
-• No Sendable warnings.
-• No Task ownership diagnostics.
-• No API availability errors.
+The completed Xcode build reported:
 
-Main_ButtonBehavior.swift also passed Xcode’s quick file diagnostics with no issues. Quick diagnostics for the larger Main_Screen.swift and SR_Support.swift requests timed out, but both compiled successfully in the full build.
+• No compiler errors
+• No actor-isolation warnings
+• No Sendable warnings
+• No delegate-isolation warnings
+• No API-availability warnings
+• No new concurrency diagnostics
+
+The implementation follows the Swift concurrency guidance by keeping UI state MainActor-owned and having nonisolated delegate callbacks explicitly hop to MainActor.
+
 
 24. Remaining risks
 
-Physical testing is required to confirm:
+Physical testing is still needed to verify:
 
-• Device-observed prompt sleep interruption.
-• Cancellation at very tight timing boundaries.
-• Correct behavior with several simultaneous button and speech sequences.
-• No late output from previously pending sequences.
-• New sequences start normally immediately after Stop.
+• Device-time delegate callback behaviour
+• Exact toolbar redraw timing
+• Natural completion of timer-generated audio
+• Speech finish and cancellation transitions
+• Rapid replacement of sound and speech requests
+• Combined media and wait activity
 
-No runtime or physical testing was performed.
+The successful build cannot confirm visual appearance or runtime callback timing.
+
 
 25. Recommended physical tests
 
-1. Start .wait 10:SoundA.wav, press square Stop after three seconds, and confirm SoundA never starts.
-2. Start .wait 10:SoundA.wav and .wait 20:SoundB.wav, press Stop, and confirm neither starts.
-3. Test the same cancellation using .sm.
-4. Test the same cancellation using .stopmedia.
-5. Test uppercase .SM and .STOPMEDIA.
-6. Test SoundA.wav:.wait 5:SoundB.wav and Stop during the wait.
-7. Test Sound.wav:.wait 5:.sm:.wait 5:Other.wav.
-8. Repeat the previous test with .stopmedia.
-9. Test .sm:.wait 5:Sound.wav; the immediate Stop must cancel its own registered chain.
-10. Cancel one long wait, then immediately start .wait 2:SoundB.wav; only SoundB should start.
-11. Trigger overlapping manual and speech wait sequences, then Stop.
-12. Trigger an editor-test wait sequence, then Stop.
-13. Stop during ordinary sound activation or preparation.
-14. Stop during speech synthesis activation.
-15. Repeatedly press Stop with no active waits.
-16. Verify modifier combinations still work around waits.
-17. Verify .stop and .stopwatch remain stopwatch widgets.
-18. Verify no .sm or .stopmedia payload reaches BLE or Mac Helper.
-19. Verify speech recognition continues after Stop.
-20. Verify running timers are unaffected.
+1. Confirm the idle Stop button is dark grey with a white symbol and no blue border.
 
-26. Unrelated files
+2. Start an ordinary sound and confirm the button turns green during preparation and playback.
 
-No unrelated files were modified.
+3. Let an ordinary sound finish naturally and confirm it returns grey.
 
-Specifically untouched:
+4. Rapidly replace Sound A with Sound B and confirm Sound A’s completion cannot turn the button grey while B remains active.
 
-• Main_BtmToolbar.swift
-• Main_ButtonLabelView.swift
-• Main_GridSection.swift
-• SR_Manager.swift
-• Set_Screen.swift
-• Editors
-• Timer implementations
-• AudioSessionOperationCoordinator
-• MainGridSoundPlayerPreparer
-• BLE managers
-• Mac Helper
-• Firmware
-• Project files
-• Assets
-• Documentation
-• .screen files
-• .txt files
-• Logs
+5. Start and stop ambient playback; verify green during preparation/playback and grey after stopping.
 
-No ordinary sound gestures or activity colors were implemented.
+6. Start speech synthesis and let it finish naturally.
 
-27. Git operations
+7. Stop speech during pending activation and during playback.
 
-No Git operations were performed.
+8. Rapidly replace Speech A with Speech B and confirm stale cancellation does not clear B’s activity.
 
-No commits, tags, branches, resets, or backups were created.
+9. Start one and multiple wait sequences and verify green remains until the last sequence ends.
+
+10. Cancel waits using .sm, .stopmedia, and the square Stop button.
+
+11. Test simultaneous ordinary, ambient, speech, and wait activity; stopping one subsystem must not make the button grey while another remains active.
+
+12. Verify the square button remains clickable in Edit Mode and every Main Screen mode.
+
+13. Verify iPhone and iPad toolbar geometry remains unchanged.
+
+
+26. Unrelated-file confirmation
+
+Only the four permitted source files were modified.
+
+No ordinary sound gestures, polling, layout redesign, audio-session changes, parser changes, or unrelated fixes were introduced.
+
+
+27. Git confirmation
+
+No Git operations, commits, tags, or backups were performed.

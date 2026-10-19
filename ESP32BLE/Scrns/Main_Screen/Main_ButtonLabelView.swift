@@ -1382,6 +1382,7 @@ final class MainGridSharedTimerState: ObservableObject {
 final class MainGridAmbientSoundState: ObservableObject {
     @Published var activeWidgetID: String?
     @Published var isPlaying = false
+    @Published private(set) var isPlaybackActive = false
 
     private var activeFilename: String?
     private var pendingWidgetID: String?
@@ -1462,12 +1463,14 @@ final class MainGridAmbientSoundState: ObservableObject {
         let requestID = UUID()
         playbackRequestID = requestID
         pendingWidgetID = widgetID
+        isPlaybackActive = true
 
         guard let audioURL = resolveSoundURL(filename) else {
             guard playbackRequestID == requestID else {
                 return
             }
             pendingWidgetID = nil
+            isPlaybackActive = false
             reportSoundError("Sound Not Found", "Couldn't find \(filename).")
             return
         }
@@ -1477,6 +1480,7 @@ final class MainGridAmbientSoundState: ObservableObject {
                 return
             }
             pendingWidgetID = nil
+            isPlaybackActive = false
             reportSoundError("Sound Error", "Couldn't play \(filename).")
             return
         }
@@ -1496,11 +1500,13 @@ final class MainGridAmbientSoundState: ObservableObject {
             player.volume = volume
             guard player.play() else {
                 pendingWidgetID = nil
+                isPlaybackActive = false
                 reportSoundError("Sound Error", "Couldn't play \(filename).")
                 return
             }
             self.player = player
             pendingWidgetID = nil
+            isPlaybackActive = true
             activeWidgetID = widgetID
             activeFilename = filename
             isPlaying = true
@@ -1509,6 +1515,7 @@ final class MainGridAmbientSoundState: ObservableObject {
                 return
             }
             pendingWidgetID = nil
+            isPlaybackActive = false
             reportSoundError("Sound Error", "Couldn't play \(filename).")
         }
     }
@@ -1525,6 +1532,7 @@ final class MainGridAmbientSoundState: ObservableObject {
         activeWidgetID = nil
         activeFilename = nil
         isPlaying = false
+        isPlaybackActive = false
     }
 }
 

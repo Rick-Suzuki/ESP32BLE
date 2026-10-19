@@ -18,6 +18,66 @@ private enum MainGridSoundPreparationError: Error {
     case preparationFailed
 }
 
+final class MainGridSoundPlaybackDelegate: NSObject, AVAudioPlayerDelegate {
+    nonisolated let requestID: UUID
+    nonisolated let onCompletion: @MainActor @Sendable (UUID) -> Void
+
+    init(requestID: UUID, onCompletion: @escaping @MainActor @Sendable (UUID) -> Void) {
+        self.requestID = requestID
+        self.onCompletion = onCompletion
+    }
+
+    nonisolated func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
+        let requestID = requestID
+        let onCompletion = onCompletion
+        Task { @MainActor in
+            onCompletion(requestID)
+        }
+    }
+}
+
+final class MainGridSpeechPlaybackDelegate: NSObject, AVSpeechSynthesizerDelegate {
+    nonisolated let requestID: UUID
+    nonisolated let utteranceID: ObjectIdentifier
+    nonisolated let onCompletion: @MainActor @Sendable (UUID) -> Void
+
+    init(
+        requestID: UUID,
+        utterance: AVSpeechUtterance,
+        onCompletion: @escaping @MainActor @Sendable (UUID) -> Void
+    ) {
+        self.requestID = requestID
+        utteranceID = ObjectIdentifier(utterance)
+        self.onCompletion = onCompletion
+    }
+
+    nonisolated func speechSynthesizer(
+        _ synthesizer: AVSpeechSynthesizer,
+        didFinish utterance: AVSpeechUtterance
+    ) {
+        finishIfCurrentUtterance(utterance)
+    }
+
+    nonisolated func speechSynthesizer(
+        _ synthesizer: AVSpeechSynthesizer,
+        didCancel utterance: AVSpeechUtterance
+    ) {
+        finishIfCurrentUtterance(utterance)
+    }
+
+    nonisolated private func finishIfCurrentUtterance(_ utterance: AVSpeechUtterance) {
+        guard ObjectIdentifier(utterance) == utteranceID else {
+            return
+        }
+
+        let requestID = requestID
+        let onCompletion = onCompletion
+        Task { @MainActor in
+            onCompletion(requestID)
+        }
+    }
+}
+
 struct MainGridSoundRequest {
     let filename: String
     let volumePercentage: Int
@@ -799,9 +859,14 @@ extension MainScreen {
         stopSpokenGridText()
         let requestID = UUID()
         speechPlaybackRequestID = requestID
+        speechSynthesisActive = true
 
         Task {
             guard await activateAudioSessionForSpeechPlayback() else {
+                guard speechPlaybackRequestID == requestID else {
+                    return
+                }
+                speechSynthesisActive = false
                 return
             }
 
@@ -812,6 +877,18 @@ extension MainScreen {
             let utterance = AVSpeechUtterance(string: spokenText)
             utterance.voice = resolvedSpeechVoice
             utterance.rate = Float(clampedTextToSpeechRate)
+            let playbackDelegate = MainGridSpeechPlaybackDelegate(
+                requestID: requestID,
+                utterance: utterance
+            ) { completedRequestID in
+                guard speechPlaybackRequestID == completedRequestID else {
+                    return
+                }
+                speechSynthesisActive = false
+                speechPlaybackDelegate = nil
+            }
+            speechPlaybackDelegate = playbackDelegate
+            speechSynthesizer.delegate = playbackDelegate
             speechSynthesizer.speak(utterance)
         }
     }
@@ -1710,14 +1787,17 @@ extension MainScreen {
 
         let requestID = UUID()
         soundPlaybackRequestID = requestID
+        ordinarySoundActive = true
         soundEffectPlayer?.stop()
         soundEffectPlayer = nil
+        soundPlaybackDelegate = nil
 
         Task {
             guard await activateAudioSessionForSpeechPlayback() else {
                 guard soundPlaybackRequestID == requestID else {
                     return
                 }
+                ordinarySoundActive = false
                 alertTitle = "Sound Error"
                 renameAlertMessage = "Couldn't play \(filename)."
                 return
@@ -1736,9 +1816,20 @@ extension MainScreen {
                     return
                 }
                 player.volume = Float(volumePercentage) / 100.0
+                let playbackDelegate = MainGridSoundPlaybackDelegate(requestID: requestID) { completedRequestID in
+                    guard soundPlaybackRequestID == completedRequestID else {
+                        return
+                    }
+                    ordinarySoundActive = false
+                    soundPlaybackDelegate = nil
+                }
+                soundPlaybackDelegate = playbackDelegate
+                player.delegate = playbackDelegate
                 soundEffectPlayer = player
                 guard player.play() else {
                     soundEffectPlayer = nil
+                    soundPlaybackDelegate = nil
+                    ordinarySoundActive = false
                     alertTitle = "Sound Error"
                     renameAlertMessage = "Couldn't play \(filename)."
                     return
@@ -1747,6 +1838,8 @@ extension MainScreen {
                 guard soundPlaybackRequestID == requestID else {
                     return
                 }
+                ordinarySoundActive = false
+                soundPlaybackDelegate = nil
                 alertTitle = "Sound Error"
                 renameAlertMessage = "Couldn't play \(filename)."
             }
@@ -1757,6 +1850,8 @@ extension MainScreen {
         soundPlaybackRequestID = UUID()
         soundEffectPlayer?.stop()
         soundEffectPlayer = nil
+        soundPlaybackDelegate = nil
+        ordinarySoundActive = false
     }
 
     func soundURL(named filename: String) -> URL? {

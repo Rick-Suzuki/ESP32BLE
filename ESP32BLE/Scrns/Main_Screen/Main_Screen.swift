@@ -862,8 +862,12 @@ This command requires an ESP32 connection. Not all pins will work, it will depen
     @StateObject var speechRecognition = SpeechRecognitionManager()
     @State var speechSynthesizer = AVSpeechSynthesizer()
     @State var speechPlaybackRequestID = UUID()
+    @State var speechPlaybackDelegate: MainGridSpeechPlaybackDelegate?
+    @State var speechSynthesisActive = false
     @State var soundEffectPlayer: AVAudioPlayer?
     @State var soundPlaybackRequestID = UUID()
+    @State var soundPlaybackDelegate: MainGridSoundPlaybackDelegate?
+    @State var ordinarySoundActive = false
     @State var activeWaitChainTasks: [UUID: Task<Void, Never>] = [:]
     @StateObject var mainGridTimerState = MainGridSharedTimerState()
     @StateObject var mainGridAmbientSoundState = MainGridAmbientSoundState()
@@ -2947,6 +2951,7 @@ Tapping a row inserts the key code at the cursor.
             outputMode: outputMode,
             isBluetoothConnected: ble.isConnected,
             isMacConnected: macConnection.canSend,
+            isMediaOrWaitActive: isMediaOrWaitActive,
             mainGridButtonMode: mainGridButtonMode,
             displayMode: displayMode,
             displayModeButtonColor: displayModeButtonColor,
@@ -5449,7 +5454,17 @@ Tapping a row inserts the key code at the cursor.
 
     func stopSpokenGridText() {
         speechPlaybackRequestID = UUID()
+        speechSynthesisActive = false
         speechSynthesizer.stopSpeaking(at: .immediate)
+        speechSynthesizer.delegate = nil
+        speechPlaybackDelegate = nil
+    }
+
+    var isMediaOrWaitActive: Bool {
+        ordinarySoundActive ||
+            mainGridAmbientSoundState.isPlaybackActive ||
+            speechSynthesisActive ||
+            !activeWaitChainTasks.isEmpty
     }
 
     @ViewBuilder

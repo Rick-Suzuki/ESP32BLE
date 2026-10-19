@@ -257,8 +257,9 @@ struct MainScreenBottomBar: View {
     let speechRecognitionDisplayColor: Color
     let isSpeechRecognitionEnabled: Bool
 	    let outputMode: OutputMode
-	    let isBluetoothConnected: Bool
-	    let isMacConnected: Bool
+    let isBluetoothConnected: Bool
+    let isMacConnected: Bool
+    let isMediaOrWaitActive: Bool
     let mainGridButtonMode: MainGridButtonMode
     let displayMode: FunctionKeyDisplayMode
     let displayModeButtonColor: Color
@@ -621,25 +622,16 @@ struct MainScreenBottomBar: View {
         }
         .buttonStyle(.plain)
         .foregroundStyle(.white)
-        .background(stopMediaButtonBackgroundColor)
+        .background(isMediaOrWaitActive ? stopMediaActiveBackgroundColor : inactiveButtonBackgroundColor)
         .overlay {
             RoundedRectangle(cornerRadius: cornerRadius)
-                .stroke(stopMediaButtonBorderColor, lineWidth: 2)
+                .stroke(Color.clear, lineWidth: 2)
         }
         .clipShape(.rect(cornerRadius: cornerRadius))
-        .opacity(usesActiveStopMediaStyling ? 1 : 0.55)
     }
 
-    private var stopMediaButtonBackgroundColor: Color {
-        mainGridButtonMode == .speech ? speechRecognitionActiveColor : inactiveButtonBackgroundColor
-    }
-
-    private var stopMediaButtonBorderColor: Color {
-        mainGridButtonMode == .speech ? speechRecognitionActiveColor : inactiveButtonBorderColor
-    }
-
-    private var usesActiveStopMediaStyling: Bool {
-        !isGridEditModeEnabled && mainGridButtonMode == .speech
+    private var stopMediaActiveBackgroundColor: Color {
+        Color(red: 0.16, green: 0.42, blue: 0.22)
     }
 
     private var isFontResetButtonEnabled: Bool {
