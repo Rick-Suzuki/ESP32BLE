@@ -59,13 +59,11 @@ extension MainScreen {
         unmatchedSpeechText = nil
 
         if containsWaitCommand(in: matchingEntry.sendTexts) {
-            Task { @MainActor in
-                await runWaitChainCommandTokens(
-                    matchingEntry.sendTexts,
-                    sourceEntry: matchingEntry,
-                    respectsBluetoothMode: true
-                )
-            }
+            startWaitChainCommandTokens(
+                matchingEntry.sendTexts,
+                sourceEntry: matchingEntry,
+                respectsBluetoothMode: true
+            )
             return
         }
 

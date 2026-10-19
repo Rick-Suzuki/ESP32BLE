@@ -864,6 +864,7 @@ This command requires an ESP32 connection. Not all pins will work, it will depen
     @State var speechPlaybackRequestID = UUID()
     @State var soundEffectPlayer: AVAudioPlayer?
     @State var soundPlaybackRequestID = UUID()
+    @State var activeWaitChainTasks: [UUID: Task<Void, Never>] = [:]
     @StateObject var mainGridTimerState = MainGridSharedTimerState()
     @StateObject var mainGridAmbientSoundState = MainGridAmbientSoundState()
     @ObservedObject var ble: BLEKeyboardManager
@@ -5259,13 +5260,11 @@ Tapping a row inserts the key code at the cursor.
         let actionTokens = parsedActionTokens(from: actionText)
 
         if containsWaitCommand(in: actionTokens) {
-            Task { @MainActor in
-                await runWaitChainCommandTokens(
-                    actionTokens,
-                    sourceEntry: nil,
-                    respectsBluetoothMode: false
-                )
-            }
+            startWaitChainCommandTokens(
+                actionTokens,
+                sourceEntry: nil,
+                respectsBluetoothMode: false
+            )
             return
         }
 

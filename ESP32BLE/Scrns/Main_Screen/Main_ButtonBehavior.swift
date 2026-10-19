@@ -310,13 +310,11 @@ extension MainScreen {
         }
 
         if containsWaitCommand(in: entry.sendTexts) {
-            Task { @MainActor in
-                await runWaitChainCommandTokens(
-                    entry.sendTexts,
-                    sourceEntry: entry,
-                    respectsBluetoothMode: true
-                )
-            }
+            startWaitChainCommandTokens(
+                entry.sendTexts,
+                sourceEntry: entry,
+                respectsBluetoothMode: true
+            )
             return
         }
 
@@ -494,14 +492,53 @@ extension MainScreen {
     }
 
     @MainActor
+    func startWaitChainCommandTokens(
+        _ actionTokens: [String],
+        sourceEntry: FunctionKeyEntry?,
+        respectsBluetoothMode: Bool
+    ) {
+        let sequenceID = UUID()
+        let task = Task { @MainActor in
+            defer {
+                activeWaitChainTasks.removeValue(forKey: sequenceID)
+            }
+
+            await runWaitChainCommandTokens(
+                actionTokens,
+                sourceEntry: sourceEntry,
+                respectsBluetoothMode: respectsBluetoothMode
+            )
+        }
+
+        activeWaitChainTasks[sequenceID] = task
+    }
+
+    @MainActor
+    func cancelAllWaitChainCommands() {
+        let tasks = Array(activeWaitChainTasks.values)
+        activeWaitChainTasks.removeAll()
+
+        for task in tasks {
+            task.cancel()
+        }
+    }
+
+    @MainActor
     func runWaitChainCommandTokens(
         _ actionTokens: [String],
         sourceEntry _: FunctionKeyEntry?,
         respectsBluetoothMode: Bool
     ) async {
         var pendingModifierTokens: [String] = []
+        defer {
+            pendingModifierTokens.removeAll()
+        }
 
         for actionToken in actionTokens {
+            guard !Task.isCancelled else {
+                return
+            }
+
             let trimmedActionToken = actionToken.trimmingCharacters(in: .whitespacesAndNewlines)
             let loweredActionToken = trimmedActionToken.lowercased()
             guard !trimmedActionToken.isEmpty else {
@@ -517,14 +554,26 @@ extension MainScreen {
                 }
 
                 let nanoseconds = min(waitDuration * 1_000_000_000, Double(UInt64.max))
-                try? await Task.sleep(nanoseconds: UInt64(nanoseconds.rounded()))
+                guard !Task.isCancelled else {
+                    return
+                }
+
+                do {
+                    try await Task.sleep(nanoseconds: UInt64(nanoseconds.rounded()))
+                } catch {
+                    return
+                }
+
+                guard !Task.isCancelled else {
+                    return
+                }
                 continue
             }
 
             if isStopMediaCommandText(trimmedActionToken) {
                 pendingModifierTokens.removeAll()
                 stopAllMainGridMedia()
-                continue
+                return
             }
 
             if let targetURL = targetURLForSendText(trimmedActionToken) {
@@ -658,7 +707,6 @@ extension MainScreen {
             }
         }
 
-        pendingModifierTokens.removeAll()
     }
 
     private func sendBluetoothCommandToken(
@@ -1623,6 +1671,7 @@ extension MainScreen {
     }
 
     func stopAllMainGridMedia() {
+        cancelAllWaitChainCommands()
         stopSpokenGridText()
         stopMainGridSoundPlayback()
         mainGridAmbientSoundState.stopPlayback()
