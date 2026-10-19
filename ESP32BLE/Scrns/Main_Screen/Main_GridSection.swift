@@ -10,6 +10,7 @@
  then into ContentView.swift where the data is actually changed.
  */
 import SwiftUI
+import UIKit
 
 typealias GridDimensions = (columns: Int, rows: Int)
 
@@ -95,6 +96,7 @@ func functionKeyGridDimensions(for itemCount: Int) -> GridDimensions {
 }
 
 struct MainScreenGridSection<ButtonLabel: View>: View {
+    @Environment(\.scenePhase) private var scenePhase
     let availableWidth: CGFloat
     let reservedBottomInset: CGFloat
     let functionKeys: [FunctionKeyEntry]
@@ -113,6 +115,8 @@ struct MainScreenGridSection<ButtonLabel: View>: View {
     let isEmptyEntry: (FunctionKeyEntry) -> Bool
     let isInteractiveWidgetEntry: (FunctionKeyEntry) -> Bool
     let isSimpleOrdinarySoundEntry: (FunctionKeyEntry) -> Bool
+    let midiNoteNumber: (FunctionKeyEntry) -> Int?
+    let onMIDITouchDown: (Int) -> Void
     let sendLine: (FunctionKeyEntry) -> Void
     let onSimpleOrdinarySoundSingleTap: (FunctionKeyEntry, Int) -> Void
     let onSimpleOrdinarySoundDoubleTap: (FunctionKeyEntry, Int) -> Void
@@ -422,59 +426,191 @@ struct MainScreenGridSection<ButtonLabel: View>: View {
                             }
                         }
                 )
-                .simultaneousGesture(dragGesture(entry, index, gridDimensions))
-                .simultaneousGesture(slotEditorLongPressGesture(index: index))
         } else if !isGridEditModeEnabled && isInteractiveWidgetEntry(entry) {
             buttonLabel(entry, index, buttonHeight, buttonSize)
                 .contentShape(Rectangle())
-                .simultaneousGesture(dragGesture(entry, index, gridDimensions))
-                .simultaneousGesture(slotEditorLongPressGesture(index: index))
-        } else {
-            Button {
-                guard longPressedEditIndex != index else {
-                    longPressedEditIndex = nil
-                    return
-                }
-
-                guard !isGridEditModeEnabled else {
-                    return
-                }
-
-                onButtonClick()
-
-                guard bleSendEnabled else {
-                    return
-                }
-
-                sendLine(entry)
-            } label: {
+        } else if !isGridEditModeEnabled, let midiNote = midiNoteNumber(entry) {
+            ZStack {
                 buttonLabel(entry, index, buttonHeight, buttonSize)
-            }
-            .buttonStyle(.plain)
-            .contentShape(Rectangle())
-            .simultaneousGesture(dragGesture(entry, index, gridDimensions))
-            .simultaneousGesture(
-                TapGesture()
-                    .onEnded {
-                        guard isGridEditModeEnabled else {
-                            return
-                        }
+                    .allowsHitTesting(false)
 
-                        onSingleEditTap(entry, index, buttonFrame, gridDimensions)
+                MIDITouchView(
+                    note: midiNote,
+                    isEnabled: scenePhase == .active,
+                    onDown: onMIDITouchDown
+                )
+            }
+        } else {
+            editingGestures(
+                Button {
+                    guard longPressedEditIndex != index else {
+                        longPressedEditIndex = nil
+                        return
                     }
-            )
-            .simultaneousGesture(
-                slotEditorLongPressGesture(index: index)
+
+                    guard !isGridEditModeEnabled else {
+                        return
+                    }
+
+                    onButtonClick()
+
+                    guard bleSendEnabled else {
+                        return
+                    }
+
+                    sendLine(entry)
+                } label: {
+                    buttonLabel(entry, index, buttonHeight, buttonSize)
+                }
+                .buttonStyle(.plain)
+                .contentShape(Rectangle()),
+                entry: entry,
+                index: index,
+                buttonFrame: buttonFrame,
+                gridDimensions: gridDimensions
             )
         }
     }
 
+    @ViewBuilder
+    private func editingGestures<Content: View>(
+        _ content: Content,
+        entry: FunctionKeyEntry,
+        index: Int,
+        buttonFrame: CGRect,
+        gridDimensions: GridDimensions
+    ) -> some View {
+        if isGridEditModeEnabled {
+            content
+                .simultaneousGesture(dragGesture(entry, index, gridDimensions))
+                .simultaneousGesture(
+                    TapGesture()
+                        .onEnded {
+                            onSingleEditTap(entry, index, buttonFrame, gridDimensions)
+                        }
+                )
+                .simultaneousGesture(
+                    slotEditorLongPressGesture(index: index)
+                )
+        } else {
+            content
+        }
+    }
+
     private func slotEditorLongPressGesture(index: Int) -> some Gesture {
-        LongPressGesture(minimumDuration: 0.4)
+        LongPressGesture(minimumDuration: 0.25)
             .onEnded { _ in
+                guard isGridEditModeEnabled else {
+                    return
+                }
+
                 longPressedEditIndex = index
                 onBeginSlotEditing(index)
             }
+    }
+}
+
+private struct MIDITouchView: UIViewRepresentable {
+    let note: Int
+    let isEnabled: Bool
+    let onDown: (Int) -> Void
+
+    func makeUIView(context: Context) -> MIDITouchCaptureView {
+        MIDITouchCaptureView()
+    }
+
+    func updateUIView(_ uiView: MIDITouchCaptureView, context: Context) {
+        uiView.configure(note: note, isEnabled: isEnabled, onDown: onDown)
+    }
+
+    static func dismantleUIView(_ uiView: MIDITouchCaptureView, coordinator: ()) {
+        uiView.cancelActiveTouch()
+    }
+}
+
+private final class MIDITouchCaptureView: UIView {
+    private var note: Int?
+    private var onDown: ((Int) -> Void)?
+    private var activeTouch: UITouch?
+    private var activeNote: Int?
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        backgroundColor = .clear
+        isMultipleTouchEnabled = false
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    func configure(note: Int, isEnabled: Bool, onDown: @escaping (Int) -> Void) {
+        if activeNote != nil && (self.note != note || !isEnabled) {
+            cancelActiveTouch()
+        }
+
+        self.note = note
+        self.onDown = onDown
+        isUserInteractionEnabled = isEnabled
+    }
+
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        guard activeTouch == nil,
+              let touch = touches.first,
+              let note else {
+            return
+        }
+
+        activeTouch = touch
+        activeNote = note
+        print("🐞 [MIDI-TOUCH] DOWN note=\(note)")
+        onDown?(note)
+    }
+
+    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
+        guard let activeTouch,
+              touches.contains(where: { $0 === activeTouch }),
+              !bounds.contains(activeTouch.location(in: self)) else {
+            return
+        }
+
+        cancelActiveTouch()
+    }
+
+    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+        guard let activeTouch,
+              touches.contains(where: { $0 === activeTouch }),
+              let activeNote else {
+            return
+        }
+
+        let endedInside = bounds.contains(activeTouch.location(in: self))
+        self.activeTouch = nil
+        self.activeNote = nil
+        if endedInside {
+            print("🐞 [MIDI-TOUCH] UP note=\(activeNote)")
+        } else {
+            print("🐞 [MIDI-TOUCH] CANCEL note=\(activeNote)")
+        }
+    }
+
+    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
+        guard let activeTouch,
+              touches.contains(where: { $0 === activeTouch }) else {
+            return
+        }
+
+        cancelActiveTouch()
+    }
+
+    func cancelActiveTouch() {
+        guard let activeNote else {
+            return
+        }
+
+        activeTouch = nil
+        self.activeNote = nil
+        print("🐞 [MIDI-TOUCH] CANCEL note=\(activeNote)")
     }
 }
 

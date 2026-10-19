@@ -336,6 +336,10 @@ extension MainScreen {
             return
         }
 
+        if midiNoteNumberForGridEntry(entry) != nil {
+            return
+        }
+
         // MARK: - BM:🅱️  Main Screen button command logging
         if db_btnCode {
             let command = entry.rawLine.components(separatedBy: "::").first ?? entry.rawLine
@@ -504,6 +508,27 @@ extension MainScreen {
         }
 
         _ = sendBluetoothIfNeeded()
+    }
+
+    func midiNoteNumberForGridEntry(_ entry: FunctionKeyEntry) -> Int? {
+        guard entry.sendTexts.count == 1,
+              entry.sendTexts[0].trimmingCharacters(in: .whitespacesAndNewlines) == ".midi 60" else {
+            return nil
+        }
+
+        return 60
+    }
+
+    func sendMIDINoteOnFromTouch(_ note: Int) {
+        guard note == 60,
+              !isGridEditModeEnabled,
+              mainGridButtonMode.sendsBluetooth,
+              outputMode == .mac,
+              macConnection.canSend else {
+            return
+        }
+
+        _ = macConnection.sendAuthenticatedCommand("MIDI:NOTE_ON:60:100:1")
     }
 
     private func runDocumentNavigationCommandIfNeeded(

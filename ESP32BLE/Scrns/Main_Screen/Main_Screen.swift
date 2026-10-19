@@ -1410,6 +1410,8 @@ Tapping a row inserts the key code at the cursor.
             isEmptyEntry: isEmptyButtonEntry,
             isInteractiveWidgetEntry: isInteractiveMainGridWidgetEntry,
             isSimpleOrdinarySoundEntry: isSimpleOrdinarySoundEntry,
+            midiNoteNumber: midiNoteNumberForGridEntry,
+            onMIDITouchDown: sendMIDINoteOnFromTouch,
             sendLine: sendMainGridEntry,
             onSimpleOrdinarySoundSingleTap: handleSimpleOrdinarySoundSingleTap,
             onSimpleOrdinarySoundDoubleTap: handleSimpleOrdinarySoundDoubleTap,

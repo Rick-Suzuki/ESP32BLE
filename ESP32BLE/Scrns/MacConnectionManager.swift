@@ -282,6 +282,15 @@ final class MacConnectionManager: ObservableObject {
         return true
     }
 
+    func sendAuthenticatedCommand(_ command: String) -> Bool {
+        guard canSend else {
+            return false
+        }
+
+        send(command)
+        return true
+    }
+
     private func send(_ message: String) {
         sendFramedMessage(message, requiresAuthentication: true)
     }
