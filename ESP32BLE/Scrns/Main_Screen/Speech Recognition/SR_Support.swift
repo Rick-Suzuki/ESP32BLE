@@ -69,10 +69,25 @@ extension MainScreen {
             return
         }
 
+        if matchingEntry.sendTexts.contains(where: isStopMediaCommandText) {
+            stopAllMainGridMedia()
+            return
+        }
+
         let bluetoothSendTexts = bluetoothSendTexts(for: matchingEntry)
         let targetDocumentName = targetDocumentNameForGridEntry(matchingEntry)
         let targetPreviewFilename = targetPreviewFilenameForGridEntry(matchingEntry)
-        let targetSoundFilename = targetSoundFilenameForGridEntry(matchingEntry)
+        let targetSoundResult = targetSoundRequestForGridEntry(matchingEntry)
+        let targetSoundRequest: MainGridSoundRequest?
+        switch targetSoundResult {
+        case .request(let request):
+            targetSoundRequest = request
+        case .invalidVolume:
+            showInvalidSoundVolumeAlert()
+            return
+        case nil:
+            targetSoundRequest = nil
+        }
         let targetSpokenFilename = targetSpokenFilenameForGridEntry(matchingEntry)
         let targetSpokenText = targetSpokenTextForGridEntry(matchingEntry)
         var didSendBluetooth = false
@@ -107,14 +122,17 @@ extension MainScreen {
             openPreviewFile(named: targetPreviewFilename)
         }
 
-        if targetSoundFilename != nil || targetSpokenText != nil || targetSpokenFilename != nil {
+        if targetSoundRequest != nil || targetSpokenText != nil || targetSpokenFilename != nil {
             guard sendBluetoothIfNeeded() else {
                 return
             }
         }
 
-        if let targetSoundFilename {
-            playMainGridSound(named: targetSoundFilename)
+        if let targetSoundRequest {
+            playMainGridSound(
+                named: targetSoundRequest.filename,
+                volumePercentage: targetSoundRequest.volumePercentage
+            )
         }
 
         if let targetSpokenText {
@@ -298,14 +316,12 @@ extension MainScreen {
         }
     }
 
-    func activateAudioSessionForSpeechPlayback() async {
-        let audioSession = AVAudioSession.sharedInstance()
-        try? audioSession.setCategory(.playback, mode: .spokenAudio, options: [.duckOthers])
-
-        if #available(iOS 27.0, *) {
-            _ = try? await audioSession.activate()
-        } else {
-            try? audioSession.setActive(true)
+    func activateAudioSessionForSpeechPlayback() async -> Bool {
+        do {
+            try await AudioSessionOperationCoordinator.shared.configurePlaybackSession()
+            return true
+        } catch {
+            return false
         }
     }
 

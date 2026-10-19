@@ -736,7 +736,7 @@ power state.
 		//
 		//----------------------------------------
 		//
-		("ambient sound", "amb snd.mp3", """
+		("ambient sound", ".amb snd.mp3 50", """
 Starts ambient sound
 playback.
 
@@ -861,7 +861,9 @@ This command requires an ESP32 connection. Not all pins will work, it will depen
     @State var speechRecognitionAutoOffTask: Task<Void, Never>?
     @StateObject var speechRecognition = SpeechRecognitionManager()
     @State var speechSynthesizer = AVSpeechSynthesizer()
+    @State var speechPlaybackRequestID = UUID()
     @State var soundEffectPlayer: AVAudioPlayer?
+    @State var soundPlaybackRequestID = UUID()
     @StateObject var mainGridTimerState = MainGridSharedTimerState()
     @StateObject var mainGridAmbientSoundState = MainGridAmbientSoundState()
     @ObservedObject var ble: BLEKeyboardManager
@@ -2960,7 +2962,7 @@ Tapping a row inserts the key code at the cursor.
             onResetBoxFontSize: resetBoxFontSize,
             onToggleSpeechRecognition: { isSpkRecEnabled.toggle() },
             onCycleMainGridButtonMode: cycleMainGridButtonMode,
-            onStopSpeech: stopSpokenGridText,
+            onStopMedia: stopAllMainGridMedia,
             onAdvanceDisplayMode: advanceDisplayMode
         )
     }
@@ -5268,7 +5270,9 @@ Tapping a row inserts the key code at the cursor.
         }
 
         for actionToken in actionTokens {
-            if let clipboardText = targetClipboardTextForSendText(actionToken) {
+            if isStopMediaCommandText(actionToken) {
+                stopAllMainGridMedia()
+            } else if let clipboardText = targetClipboardTextForSendText(actionToken) {
                 UIPasteboard.general.string = clipboardText
             }
         }
@@ -5278,17 +5282,28 @@ Tapping a row inserts the key code at the cursor.
                     targetDocumentNameForSendText(actionToken) == nil &&
                     targetURLForSendText(actionToken) == nil &&
                     targetShortcutURLForSendText(actionToken) == nil &&
-                    targetSoundFilenameForSendText(actionToken) == nil &&
+                    targetSoundRequestForSendText(actionToken) == nil &&
                     targetSpokenTextForSendText(actionToken) == nil &&
                     targetSpokenFilenameForSendText(actionToken) == nil &&
                     targetAppURLForSendText(actionToken) == nil &&
                     targetClipboardTextForSendText(actionToken) == nil &&
                     targetPreviewFilenameForSendText(actionToken) == nil &&
+                    !isStopMediaCommandText(actionToken) &&
                     !isWaitCommandText(actionToken.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()) &&
                     targetWidgetDescriptorForSendText(actionToken) == nil
             }
             .map(normalizedBluetoothSendText)
-        let targetSoundFilename = actionTokens.compactMap(targetSoundFilenameForSendText).first
+        let targetSoundResult = actionTokens.compactMap(targetSoundRequestForSendText).first
+        let targetSoundRequest: MainGridSoundRequest?
+        switch targetSoundResult {
+        case .request(let request):
+            targetSoundRequest = request
+        case .invalidVolume:
+            showInvalidSoundVolumeAlert()
+            return
+        case nil:
+            targetSoundRequest = nil
+        }
         let targetSpokenFilename = actionTokens.compactMap(targetSpokenFilenameForSendText).first
         let targetSpokenText = actionTokens.compactMap(targetSpokenTextForSendText).first
         let targetShortcutURL = actionTokens.compactMap(targetShortcutURLForSendText).first
@@ -5300,8 +5315,11 @@ Tapping a row inserts the key code at the cursor.
             return
         }
 
-        if let targetSoundFilename {
-            playMainGridSound(named: targetSoundFilename)
+        if let targetSoundRequest {
+            playMainGridSound(
+                named: targetSoundRequest.filename,
+                volumePercentage: targetSoundRequest.volumePercentage
+            )
         }
 
         if let targetSpokenText {
@@ -5431,6 +5449,7 @@ Tapping a row inserts the key code at the cursor.
     }
 
     func stopSpokenGridText() {
+        speechPlaybackRequestID = UUID()
         speechSynthesizer.stopSpeaking(at: .immediate)
     }
 

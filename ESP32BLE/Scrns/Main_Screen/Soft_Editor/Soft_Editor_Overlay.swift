@@ -245,7 +245,7 @@ struct MainScreenSlotEditorOverlay: View {
 							}
 							
 							HStack(spacing: buttonSpacing) {
-								helperInsertButton(label: "amb\nsnd", 		insertedText: "amb snd.mp3",color:.purple.opacity(0.3))
+								helperInsertButton(label: "amb\nsnd", 		insertedText: ".amb snd.mp3 50",color:.purple.opacity(0.3))
 								helperInsertButton(label: "play\nsnd", 		insertedText: "snd snd mp3",color:.purple.opacity(0.3))
 								helperInsertButton(label: "spk\ntext", 		insertedText: "spk hello",color:.purple.opacity(0.3))
 								helperInsertButton(label: "Esp32\nout", 	insertedText: "out 32 1",color:.orange.opacity(0.3))

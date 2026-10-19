@@ -275,7 +275,7 @@ struct MainScreenBottomBar: View {
     let onResetBoxFontSize: () -> Void
     let onToggleSpeechRecognition: () -> Void
     let onCycleMainGridButtonMode: () -> Void
-    let onStopSpeech: () -> Void
+    let onStopMedia: () -> Void
     let onAdvanceDisplayMode: () -> Void
 
     var body: some View {
@@ -474,7 +474,7 @@ struct MainScreenBottomBar: View {
                 .clipShape(.rect(cornerRadius: bottomToolbarCornerRadius))
 
             HStack(spacing: 8) {
-                stopSpeechButton(buttonHeight: toolbarButtonHeight, cornerRadius: bottomToolbarCornerRadius)
+                stopMediaButton(buttonHeight: toolbarButtonHeight, cornerRadius: bottomToolbarCornerRadius)
 
                 toggleButton(
                     title: mainGridButtonMode.title,
@@ -610,9 +610,9 @@ struct MainScreenBottomBar: View {
 			.opacity(isEnabled ? 0.7 : 0.35)
     }
 
-    private func stopSpeechButton(buttonHeight: CGFloat, cornerRadius: CGFloat) -> some View {
+    private func stopMediaButton(buttonHeight: CGFloat, cornerRadius: CGFloat) -> some View {
         Button {
-            onStopSpeech()
+            onStopMedia()
         } label: {
             Image(systemName: "stop.fill")
                 .font(.headline)
@@ -620,26 +620,25 @@ struct MainScreenBottomBar: View {
                 .contentShape(.rect)
         }
         .buttonStyle(.plain)
-        .disabled(!isStopSpeechEnabled)
         .foregroundStyle(.white)
-        .background(stopSpeechButtonBackgroundColor)
+        .background(stopMediaButtonBackgroundColor)
         .overlay {
             RoundedRectangle(cornerRadius: cornerRadius)
-                .stroke(stopSpeechButtonBorderColor, lineWidth: 2)
+                .stroke(stopMediaButtonBorderColor, lineWidth: 2)
         }
         .clipShape(.rect(cornerRadius: cornerRadius))
-        .opacity(isStopSpeechEnabled ? 1 : 0.55)
+        .opacity(usesActiveStopMediaStyling ? 1 : 0.55)
     }
 
-    private var stopSpeechButtonBackgroundColor: Color {
+    private var stopMediaButtonBackgroundColor: Color {
         mainGridButtonMode == .speech ? speechRecognitionActiveColor : inactiveButtonBackgroundColor
     }
 
-    private var stopSpeechButtonBorderColor: Color {
+    private var stopMediaButtonBorderColor: Color {
         mainGridButtonMode == .speech ? speechRecognitionActiveColor : inactiveButtonBorderColor
     }
 
-    private var isStopSpeechEnabled: Bool {
+    private var usesActiveStopMediaStyling: Bool {
         !isGridEditModeEnabled && mainGridButtonMode == .speech
     }
 

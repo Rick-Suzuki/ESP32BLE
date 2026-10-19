@@ -46,7 +46,7 @@ struct MainScreenButtonLabelView: View {
     let stopSoundPlayback: () -> Void
     let sendTimerCompletionAction: (FunctionKeyEntry) -> Bool
     let resolveSoundURL: (String) -> URL?
-    let activateAudioSession: () async -> Void
+    let activateAudioSession: () async -> Bool
     let reportSoundError: (String, String) -> Void
     let shouldSpeakWidgetSelections: Bool
     let speakText: (String) -> Void
@@ -403,7 +403,7 @@ struct MainScreenButtonLabelView: View {
                 )
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-        case .ambientSound(let filename):
+        case .ambientSound(let filename, let volume):
             ZStack {
                 renderWidgetHeader(plainTextLineLimit: 4)
                 MainGridAmbientSoundWidgetView(
@@ -411,6 +411,7 @@ struct MainScreenButtonLabelView: View {
                     title: rightTitleWithoutColorPrefix,
                     showsTitle: false,
                     filename: filename,
+                    volume: volume,
                     fontSize: boxFontSize,
                     foregroundColor: buttonTextColor,
                     isInteractionEnabled: !isGridEditModeEnabled,
@@ -899,8 +900,13 @@ enum MainGridWidgetDescriptor {
     case random(minimumValue: Int, maximumValue: Int)
     case textFileRandom(filename: String)
     case stopwatch
-    case ambientSound(filename: String)
+    case ambientSound(filename: String, volume: MainGridAmbientSoundVolume)
     case timer(initialDuration: Int, completion: MainGridTimerCompletion?)
+}
+
+enum MainGridAmbientSoundVolume {
+    case percentage(Int)
+    case invalid(String)
 }
 
 enum MainGridTimerCompletion: Equatable {
@@ -1375,17 +1381,19 @@ final class MainGridSharedTimerState: ObservableObject {
 
 final class MainGridAmbientSoundState: ObservableObject {
     @Published var activeWidgetID: String?
-    @Published var currentVolume: Float = 0.05
     @Published var isPlaying = false
 
     private var activeFilename: String?
+    private var pendingWidgetID: String?
     private var player: AVAudioPlayer?
+    private var playbackRequestID = UUID()
 
     func togglePlayback(
         widgetID: String,
         filename: String,
+        volume: Float,
         resolveSoundURL: (String) -> URL?,
-        activateAudioSession: () async -> Void,
+        activateAudioSession: () async -> Bool,
         reportSoundError: (String, String) -> Void
     ) async {
         let normalizedFilename = filename.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1393,50 +1401,127 @@ final class MainGridAmbientSoundState: ObservableObject {
             return
         }
 
-        if activeWidgetID == widgetID, isPlaying {
+        if (activeWidgetID == widgetID && isPlaying) || pendingWidgetID == widgetID {
             stopPlayback()
             return
         }
 
-        if activeWidgetID != widgetID || activeFilename != normalizedFilename {
-            currentVolume = 0.05
-        }
-
-        guard let audioURL = resolveSoundURL(normalizedFilename) else {
-            reportSoundError("Sound Not Found", "Couldn't find \(normalizedFilename).")
-            return
-        }
-
-        await activateAudioSession()
-
-        do {
-            let player = try AVAudioPlayer(contentsOf: audioURL)
-            player.numberOfLoops = -1
-            player.volume = currentVolume
-            player.prepareToPlay()
-            player.play()
-            self.player = player
-            activeWidgetID = widgetID
-            activeFilename = normalizedFilename
-            isPlaying = true
-        } catch {
-            reportSoundError("Sound Error", "Couldn't play \(normalizedFilename).")
-        }
+        await startPlayback(
+            widgetID: widgetID,
+            filename: normalizedFilename,
+            volume: volume,
+            resolveSoundURL: resolveSoundURL,
+            activateAudioSession: activateAudioSession,
+            reportSoundError: reportSoundError
+        )
     }
 
-    func adjustVolume(widgetID: String, by delta: Float) {
-        guard activeWidgetID == nil || activeWidgetID == widgetID else {
+    func restartPlayback(
+        widgetID: String,
+        filename: String,
+        volume: Float,
+        resolveSoundURL: (String) -> URL?,
+        activateAudioSession: () async -> Bool,
+        reportSoundError: (String, String) -> Void
+    ) async {
+        let normalizedFilename = filename.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalizedFilename.isEmpty else {
             return
         }
 
-        let updatedVolume = min(max(currentVolume + delta, 0.0), 1.0)
-        currentVolume = updatedVolume
-        player?.volume = updatedVolume
+        if activeWidgetID == widgetID,
+           activeFilename == normalizedFilename,
+           isPlaying,
+           let player {
+            playbackRequestID = UUID()
+            player.currentTime = 0
+            player.play()
+            return
+        }
+
+        await startPlayback(
+            widgetID: widgetID,
+            filename: normalizedFilename,
+            volume: volume,
+            resolveSoundURL: resolveSoundURL,
+            activateAudioSession: activateAudioSession,
+            reportSoundError: reportSoundError
+        )
+    }
+
+    private func startPlayback(
+        widgetID: String,
+        filename: String,
+        volume: Float,
+        resolveSoundURL: (String) -> URL?,
+        activateAudioSession: () async -> Bool,
+        reportSoundError: (String, String) -> Void
+    ) async {
+        stopCurrentPlayer()
+
+        let requestID = UUID()
+        playbackRequestID = requestID
+        pendingWidgetID = widgetID
+
+        guard let audioURL = resolveSoundURL(filename) else {
+            guard playbackRequestID == requestID else {
+                return
+            }
+            pendingWidgetID = nil
+            reportSoundError("Sound Not Found", "Couldn't find \(filename).")
+            return
+        }
+
+        guard await activateAudioSession() else {
+            guard playbackRequestID == requestID else {
+                return
+            }
+            pendingWidgetID = nil
+            reportSoundError("Sound Error", "Couldn't play \(filename).")
+            return
+        }
+
+        guard playbackRequestID == requestID else {
+            return
+        }
+
+        do {
+            let player = try await MainGridSoundPlayerPreparer.shared.preparePlayer(
+                at: audioURL,
+                repeats: true
+            )
+            guard playbackRequestID == requestID else {
+                return
+            }
+            player.volume = volume
+            guard player.play() else {
+                pendingWidgetID = nil
+                reportSoundError("Sound Error", "Couldn't play \(filename).")
+                return
+            }
+            self.player = player
+            pendingWidgetID = nil
+            activeWidgetID = widgetID
+            activeFilename = filename
+            isPlaying = true
+        } catch {
+            guard playbackRequestID == requestID else {
+                return
+            }
+            pendingWidgetID = nil
+            reportSoundError("Sound Error", "Couldn't play \(filename).")
+        }
     }
 
     func stopPlayback() {
+        playbackRequestID = UUID()
+        stopCurrentPlayer()
+    }
+
+    private func stopCurrentPlayer() {
         player?.stop()
         player = nil
+        pendingWidgetID = nil
         activeWidgetID = nil
         activeFilename = nil
         isPlaying = false
@@ -1601,13 +1686,14 @@ private struct MainGridAmbientSoundWidgetView: View {
     let title: String
     let showsTitle: Bool
     let filename: String
+    let volume: MainGridAmbientSoundVolume
     let fontSize: Double
     let foregroundColor: Color
     let isInteractionEnabled: Bool
     let interactionSize: CGSize
     @ObservedObject var sharedState: MainGridAmbientSoundState
     let resolveSoundURL: (String) -> URL?
-    let activateAudioSession: () async -> Void
+    let activateAudioSession: () async -> Bool
     let reportSoundError: (String, String) -> Void
 
     var body: some View {
@@ -1615,27 +1701,14 @@ private struct MainGridAmbientSoundWidgetView: View {
             .contentShape(Rectangle())
             .gesture(
                 TapGesture(count: 3)
-                    .onEnded {
-                        guard isInteractionEnabled else {
-                            return
-                        }
-                        Task {
-                            await sharedState.togglePlayback(
-                                widgetID: widgetID,
-                                filename: filename,
-                                resolveSoundURL: resolveSoundURL,
-                                activateAudioSession: activateAudioSession,
-                                reportSoundError: reportSoundError
-                            )
-                        }
-                    }
+                    .onEnded { }
                     .exclusively(before:
                         TapGesture(count: 2)
                             .onEnded {
                                 guard isInteractionEnabled else {
                                     return
                                 }
-                                sharedState.adjustVolume(widgetID: widgetID, by: 0.05)
+                                restartPlayback()
                             }
                             .exclusively(before:
                                 TapGesture()
@@ -1643,11 +1716,58 @@ private struct MainGridAmbientSoundWidgetView: View {
                                         guard isInteractionEnabled else {
                                             return
                                         }
-                                        sharedState.adjustVolume(widgetID: widgetID, by: -0.05)
+                                        togglePlayback()
                                     }
                             )
                     )
             )
+    }
+
+    private func togglePlayback() {
+        guard let volume = resolvedVolume else {
+            return
+        }
+
+        Task {
+            await sharedState.togglePlayback(
+                widgetID: widgetID,
+                filename: filename,
+                volume: volume,
+                resolveSoundURL: resolveSoundURL,
+                activateAudioSession: activateAudioSession,
+                reportSoundError: reportSoundError
+            )
+        }
+    }
+
+    private func restartPlayback() {
+        guard let volume = resolvedVolume else {
+            return
+        }
+
+        Task {
+            await sharedState.restartPlayback(
+                widgetID: widgetID,
+                filename: filename,
+                volume: volume,
+                resolveSoundURL: resolveSoundURL,
+                activateAudioSession: activateAudioSession,
+                reportSoundError: reportSoundError
+            )
+        }
+    }
+
+    private var resolvedVolume: Float? {
+        switch volume {
+        case .percentage(let percentage):
+            return Float(percentage) / 100.0
+        case .invalid(let value):
+            reportSoundError(
+                "Invalid Ambient Volume",
+                "Use a volume from 0 through 100. \(value) is outside that range."
+            )
+            return nil
+        }
     }
 
     @ViewBuilder

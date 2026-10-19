@@ -1,1250 +1,402 @@
-1. Executive summary
+ESP32BLE — ESP-AUDIO-001F-A
+IMPLEMENTATION REPORT
 
-Warning A and Warning B are produced by different synchronous operations:
+1. Files modified
 
-Warning A:
-ESP32BLE/ESP32BLE/Scrns/Main_Screen/Speech Recognition/SR_Support.swift:303
+• ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift
+• ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
+• ESP32BLE/Scrns/Main_Screen/Speech Recognition/SR_Support.swift
+• ESP32BLE/Scrns/Main_Screen/Toolbars/Main_BtmToolbar.swift
 
-Offending call:
+No other files were modified.
 
-try? audioSession.setCategory(
-.playback,
+2. Functions modified
 
-mode: .spokenAudio,
+Main_ButtonBehavior.swift:
 
-options: [.duckOthers]
+• sendMainGridEntry(_:)
+• bluetoothSendTexts(for:)
+• runWaitChainCommandTokens(_:sourceEntry:respectsBluetoothMode:)
+• speakMainGridText(_:)
 
-)
+New functions:
 
-This is a synchronous AVAudioSession category change. It runs on MainActor and can cause an immediate audio-route reconfiguration when the shared session is already active.
+• isStopMediaCommandText(_:)
+• stopAllMainGridMedia()
 
-Despite its location in SR_Support.swift, this function does not start or stop speech recognition. It prepares the shared audio session for speech synthesis and sound playback.
+Main_Screen.swift:
 
-Warning B:
-ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift:1498
+• MainScreen state declarations
+• MainScreenBottomBar construction
+• testEditingSlotText()
+• stopSpokenGridText()
 
-Offending call:
+SR_Support.swift:
 
-player.prepareToPlay()
+• applyRecognizedSpeech(_:)
 
-Apple documents that prepareToPlay() preloads buffers, acquires audio hardware, and activates the audio session. It is synchronous. The enclosing Task inherits MainActor, so preparation occurs on the main thread.
+Main_BtmToolbar.swift:
 
-The warnings are therefore different operations sharing an underlying audio-session ownership problem:
+• MainScreenBottomBar callback declaration
+• Toolbar Stop-button call site
+• stopSpeechButton renamed to stopMediaButton
+• Related private styling property names
 
-• Several features independently reconfigure the same AVAudioSession.
-• Playback setup remains MainActor-isolated.
-• Session configuration and player preparation are not centrally serialized.
-• Playback can potentially reconfigure a speech-recognition session.
-• Playback activation is partly redundant: the code explicitly activates the session and then calls prepareToPlay(), which may activate it again.
+3. Shared universal stop implementation
 
-Both warnings represent responsiveness risks. Warning A also exposes a potential speech-recognition/playback conflict.
+stopAllMainGridMedia() was added at Main_ButtonBehavior.swift:1625.
 
-The safest approach is two implementation stages:
+It synchronously calls:
 
-1. Move and serialize AVAudioSession configuration and activation away from MainActor while preserving strict ordering.
-2. Prepare AVAudioPlayer away from MainActor, returning to MainActor only to update SwiftUI state and begin/store playback.
+• stopSpokenGridText()
+• stopMainGridSoundPlayback()
+• mainGridAmbientSoundState.stopPlayback()
 
-Simply dispatching individual calls to an arbitrary global queue is not recommended because category changes, activation, deactivation, AVAudioEngine startup, and player preparation must remain ordered.
+All three user-facing routes call this same helper:
 
-No source files were modified. No build or runtime testing was performed.
+• .sm
+• .stopmedia
+• Square toolbar Stop button
 
-2. Warning A — exact cause
+No new audio manager, queue, timer, or asynchronous stop mechanism was introduced.
 
-Location:
+4. .sm recognition
 
-ESP32BLE/ESP32BLE/Scrns/Main_Screen/Speech Recognition/SR_Support.swift:301-310
+isStopMediaCommandText(_:) was added at Main_ButtonBehavior.swift:1616.
 
-Function:
+It recognizes .sm only after trimming surrounding whitespace and lowercasing the complete token.
 
-activateAudioSessionForSpeechPlayback()
+It does not use prefix matching, so these do not match:
 
-Exact statement:
+• .small
+• .smoke
+• .sm extra
 
-SR_Support.swift:303
+5. .stopmedia recognition
 
-try? audioSession.setCategory(.playback, mode: .spokenAudio, options: [.duckOthers])
+The same shared predicate recognizes .stopmedia as an exact complete command.
 
-2.1 API
+It does not match:
 
-The API is:
+• .stopmediaextra
+• .stopmedia extra
 
-func setCategory(
-_ category: AVAudioSession.Category,
+6. Case-insensitive matching
 
-mode: AVAudioSession.Mode,
+The predicate lowercases the trimmed command before comparison.
 
-options: AVAudioSession.CategoryOptions = []
+These are therefore supported:
 
-) throws
+• .sm
+• .SM
+• .stopmedia
+• .STOPMEDIA
+• Mixed-case equivalents
 
-It synchronously sets the shared audio session to:
+7. .stop stopwatch preservation
 
-Category: playback
-Mode: spokenAudio
-Options: duckOthers
+The existing .stop and .stopwatch widget parsing was not modified.
 
-2.2 Synchronous behavior
+They remain stopwatch widget commands.
 
-setCategory is not async. There is no asynchronous setCategory equivalent in the installed iOS 27 SDK.
+8. Manual button execution
 
-Apple documents that changing category or mode while a session is active causes an immediate route change. That reconfiguration can require communication with audio services and hardware.
+Main_ButtonBehavior.swift:323–325 now detects either stop alias after existing .wait routing.
 
-2.3 Is the session active?
+A matching manual button:
 
-The source does not check whether the session is already active.
+• Calls stopAllMainGridMedia().
+• Returns immediately.
+• Does not execute the existing keyboard-output path.
+• Preserves the existing button-mode guard and click-feedback behavior.
+• Preserves Edit Mode behavior.
 
-It can be active for several reasons:
+9. .wait execution
 
-• A preceding playback operation activated it.
-• An AVAudioPlayer prepared or started playback.
-• AVSpeechSynthesizer is using the application audio session.
-• Speech recognition activated the session as .record.
-• Another sound or ambient-sound command remains active.
+Main_ButtonBehavior.swift:524–528 handles stop aliases inside runWaitChainCommandTokens(...).
 
-Therefore, the warning’s “while the audio session is active” condition is reproducible from the source-level design, although the exact active state for a particular runtime warning requires runtime observation.
+The branch:
 
-2.4 Why it runs on the main thread
+• Clears pending keyboard modifier tokens.
+• Calls the shared universal stop helper.
+• Continues processing the remaining command tokens.
 
-The project settings are:
+It does not return from or cancel the sequence.
 
-SWIFT_VERSION: 5.0
-SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
-SWIFT_STRICT_CONCURRENCY: minimal
-IPHONEOS_DEPLOYMENT_TARGET: 17.6
-SDK: iPhoneOS 27.0
+Therefore a sequence such as:
 
-MainScreen and its extension methods are MainActor-isolated under the project’s default isolation.
+Sound.wav:.wait 5:.sm:.wait 2:Other.wav
 
-Callers use:
+continues through all five operations in order.
 
-Task {
-await activateAudioSessionForSpeechPlayback()
+Wait duration handling, Task.sleep, concurrency, and cancellation behavior were not changed.
 
-}
+10. Speech-triggered execution
 
-A Task created from a MainActor context inherits that actor. Declaring a function async does not automatically move its synchronous work off MainActor.
+SR_Support.swift:72–75 now detects stop aliases after the existing wait-chain branch and before speech-specific command extraction.
 
-The setCategory call occurs before the first suspension inside activateAudioSessionForSpeechPlayback, so it executes synchronously on MainActor.
+It:
 
-2.5 Which operation triggers it?
+• Calls the shared universal stop helper.
+• Returns immediately.
+• Prevents duplicate processing or transport output.
 
-This function is used for playback, not recognition startup.
+Speech matching, feedback, recognition lifecycle, microphone handling, and auto-off behavior were not changed.
 
-Confirmed direct callers include:
+Speech entries containing .wait continue to use the existing wait-chain executor, which now recognizes the stop aliases.
 
-Speech synthesis:
-ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift:670-689
+11. Keyboard/editor testing
 
-Sound playback:
-ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift:1485-1505
+Main_Screen.swift:5273–5276 executes stop aliases locally in testEditingSlotText().
 
-Ambient-sound playback:
-ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift:1687-1700
-ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_ButtonLabelView.swift:1384-1424
+Main_Screen.swift:5291 excludes both aliases from its keyboard transport token collection.
 
-It can therefore be triggered by:
+Wait-containing editor tests continue through the shared wait-chain executor.
 
-• .spk commands
-• Main Screen spoken-button feedback
-• Sound-file commands, including snd commands and direct audio filenames
-• Timer completion speech or sound
-• Ambient-sound widgets
-• Other Main Screen calls to speakMainGridText or playMainGridSound
+No editor UI or tokenization changes were made.
 
-It is not directly part of:
+12. BLE/Mac filtering
 
-• Speech-recognition permission handling
-• Recognition startup
-• Recognition shutdown
-• Recognition restart
-• Audio-engine tap installation
+Main_ButtonBehavior.swift:479 excludes stop aliases from bluetoothSendTexts(for:).
 
-2.6 Repetition
+The keyboard/editor test filter also excludes them at Main_Screen.swift:5291.
 
-The playback helper unconditionally calls setCategory every time it runs.
+Neither .sm nor .stopmedia is sent to:
 
-It does not check whether the current session is already:
+• ESP32 BLE
+• Mac Helper
 
-.playback
-.spokenAudio
-[.duckOthers]
+No BLE or Mac transport code was modified.
 
-Repeated speech and sound commands can therefore repeat an unnecessary synchronous category assignment and possible route reconfiguration.
+13. Square Stop button changes
 
-2.7 Potential UI pause
+The callback was renamed from:
 
-Confirmed:
+onStopSpeech
 
-• The call is synchronous.
-• It executes on MainActor.
-• It may trigger immediate audio reconfiguration.
-• Xcode reports the runtime warning at that statement.
+to:
 
-Likely:
+onStopMedia
 
-The delay is usually short, but route changes, Bluetooth audio changes, interruptions, or competing audio sessions can make it noticeable.
+Main_Screen.swift:2965 connects it directly to:
 
-Runtime testing is required to measure the duration on the affected device.
+stopAllMainGridMedia
 
-3. Warning B — exact cause
+Main_BtmToolbar.swift:613–630 retains the existing button while routing its action through onStopMedia().
 
-Location:
+14. Button availability
 
-ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift:1485-1505
+The Stop button no longer has a .disabled(...) modifier.
 
-Function:
+It is now actionable:
 
-playMainGridSound(named:repeats:)
+• In active mode
+• In disabled button mode
+• In speech mode
+• In spk/active mode
+• In Edit Mode
+• Whether or not media is currently playing
 
-Exact statement:
+15. iPhone/iPad appearance preservation
 
-Main_ButtonBehavior.swift:1498
+The following were preserved:
 
-player.prepareToPlay()
+• stop.fill SF Symbol
+• Existing toolbar position
+• Existing neighbouring controls
+• Existing spacing
+• Existing corner radius
+• Existing background and border colors
+• Existing mode-dependent opacity
+• Existing 40-point iPad width
+• Existing 52-point iPhone width
+• Existing toolbar-provided button height
 
-3.1 API
+Interaction availability was separated from the existing visual styling. The button can now be tapped even while retaining its previously dimmed appearance outside its visually active Speech-mode state.
 
-The API is:
+16. Ordinary sound stopping
 
-func prepareToPlay() -> Bool
+Universal Stop reuses stopMainGridSoundPlayback().
 
-The return value is currently ignored.
+That function continues to:
 
-3.2 What it does
+• Replace soundPlaybackRequestID.
+• Stop the retained ordinary player.
+• Release soundEffectPlayer.
 
-Apple documents that prepareToPlay:
+This also invalidates pending activation and background preparation.
 
-• Preloads audio buffers.
-• Acquires audio hardware needed for playback.
-• Activates the audio session.
-• Is automatically performed by play() if it was not done explicitly.
-• Reduces delay between play() and audible output.
+Ordinary parsing, volume, immediate replacement, and preparation were unchanged.
 
-It is therefore more than a memory-only preparation call.
+17. Ambient sound stopping
 
-3.3 Activation or deactivation
+Universal Stop reuses mainGridAmbientSoundState.stopPlayback().
 
-prepareToPlay activates or ensures activation of the audio session. It does not deactivate it.
+That function continues to:
 
-The code does not explicitly deactivate the playback session when the sound finishes.
+• Replace its playback request ID.
+• Stop the ambient player.
+• Release the player.
+• Clear pending and active widget identity.
+• Clear filename and playing state.
 
-stopMainGridSoundPlayback only does:
+Main_ButtonLabelView.swift was not modified.
 
-soundEffectPlayer?.stop()
-soundEffectPlayer = nil
+18. Speech synthesis stopping
 
-Main_ButtonBehavior.swift:1508-1511
+stopSpokenGridText() still calls:
 
-3.4 Synchronous operation
+speechSynthesizer.stopSpeaking(at: .immediate)
 
-prepareToPlay is synchronous. There is no asynchronous AVAudioPlayer prepareToPlay API in the installed SDK.
+It now first invalidates the active speech request ID.
 
-Removing it and relying on play() is not a reliable warning fix. Apple documents that play() performs the preparation automatically, so the blocking work could merely move to player.play() on the main thread.
+19. Speech request-ID protection
 
-3.5 Why it runs on the main thread
+A MainActor-owned state value was added:
 
-playMainGridSound is MainActor-isolated through MainScreen and the project’s default MainActor isolation.
+speechPlaybackRequestID
 
-It creates:
+Main_Screen.swift:864
 
-Task {
-await activateAudioSessionForSpeechPlayback()
+Every accepted speech synthesis request now:
 
-...
+1. Stops and invalidates the preceding request.
+2. Installs a new UUID.
+3. Starts audio-session activation.
+4. Checks that UUID after activation.
+5. Speaks only if it remains current.
 
-player.prepareToPlay()
+The validation is at Main_ButtonBehavior.swift:760–762.
 
-}
+20. Stale asynchronous request safety
 
-Main_ButtonBehavior.swift:1492-1505
+An older speech request can no longer stop newer speech after activation because the old stopSpokenGridText() call was moved before the asynchronous activation begins.
 
-That Task inherits MainActor.
+If Stop or a newer speech request changes the UUID while activation is pending, the older Task returns silently before creating or speaking its utterance.
 
-Although awaiting audioSession.activate() suspends on iOS 27, execution resumes on MainActor afterward. AVAudioPlayer construction, prepareToPlay, play, and soundEffectPlayer state assignment all therefore execute on MainActor.
+Ordinary and ambient stale-request protection continues using their existing request identifiers.
 
-3.6 Triggering commands and actions
+21. Speech recognition preservation
 
-The warning is associated with sound playback.
+Universal Stop does not:
 
-The parser recognizes audio commands in:
+• Change isSpkRecEnabled.
+• Stop recognition.
+• Remove microphone input.
+• Restart recognition.
+• Modify recognition callbacks.
+• Modify SR_Manager.swift.
 
-ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift:1005-1034
+Existing .spk suppression while recognition is enabled remains unchanged.
 
-Supported sources include:
+22. Timer and .wait preservation
 
-• snd <filename>
-• A direct supported audio filename
-• Timer-completion sound
-• Wait-chain sound commands
-• Speech-triggered buttons containing sound commands
-• Other calls to playMainGridSound
+Universal Stop does not call timer state or timer stop functions.
 
-Relevant calls include:
+No timer implementation was modified.
 
-Normal Main Screen path:
-Main_ButtonBehavior.swift:356-357
+Universal Stop does not retain or cancel wait-chain Tasks. A future media command in an already-running wait sequence can still start playback, as required.
 
-Wait-chain path:
-Main_ButtonBehavior.swift:500-503
+23. Audio-session preservation
 
-Speech path:
-SR_Support.swift:116-117
+No calls were added to:
 
-Timer/widget wiring:
-Main_ButtonBehavior.swift:1689-1691
+• AVAudioSession.setCategory
+• AVAudioSession.setActive
+• AudioSessionOperationCoordinator
 
-3.7 Repeated activation
+Universal Stop does not deactivate or reconfigure the audio session.
 
-playMainGridSound performs:
+SR_Manager.swift and MainGridSoundPlayerPreparer were untouched.
 
-1. Playback-category configuration.
-2. Explicit AVAudioSession activation.
-3. AVAudioPlayer prepareToPlay, which also activates/acquires audio hardware.
-4. play.
+24. Build result
 
-The explicit activation may already have made the session active, but prepareToPlay still performs its player/hardware preparation. The source therefore contains potentially redundant activation-related work, although the exact internal optimization performed by AVFAudio is not visible.
+The ESP32BLE project built successfully using the existing Xcode project configuration.
 
-3.8 UI blocking
-
-Confirmed:
-
-• prepareToPlay is synchronous.
-• It runs on MainActor.
-• It may allocate buffers and acquire hardware.
-• The runtime warning directly identifies that call.
-
-This is a real responsiveness risk, especially for:
-
-• Large or compressed audio files
-• First playback after launch
-• Route changes
-• Bluetooth audio routes
-• Rapid sequential sound commands
-
-The actual pause duration requires Instruments or physical-device observation.
-
-4. Relevant source paths and line numbers
-
-Speech playback session configuration:
-
-ESP32BLE/ESP32BLE/Scrns/Main_Screen/Speech Recognition/SR_Support.swift:301-310
-activateAudioSessionForSpeechPlayback()
-
-Speech-recognition manager and ownership:
-
-ESP32BLE/ESP32BLE/Scrns/Main_Screen/Speech Recognition/SR_Manager.swift:197-215
-SpeechRecognitionManager, AVAudioEngine, and AVAudioSession fields
-
-ESP32BLE/ESP32BLE/Scrns/Main_Screen/Speech Recognition/SR_Manager.swift:222-264
-Enable, disable, startup, and shutdown entry points
-
-ESP32BLE/ESP32BLE/Scrns/Main_Screen/Speech Recognition/SR_Manager.swift:266-311
-Speech and microphone permissions
-
-ESP32BLE/ESP32BLE/Scrns/Main_Screen/Speech Recognition/SR_Manager.swift:313-321
-Recording category and session activation
-
-ESP32BLE/ESP32BLE/Scrns/Main_Screen/Speech Recognition/SR_Manager.swift:323-359
-Request, tap, audio-engine startup, and recognition task
-
-ESP32BLE/ESP32BLE/Scrns/Main_Screen/Speech Recognition/SR_Manager.swift:361-417
-Recognition callbacks and silence handling
-
-ESP32BLE/ESP32BLE/Scrns/Main_Screen/Speech Recognition/SR_Manager.swift:428-475
-Recognition shutdown, session deactivation, and restart
-
-Speech synthesis:
-
-ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift:662-690
-speakMainGridEntry and speakMainGridText
-
-Sound playback:
-
-ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift:1485-1511
-playMainGridSound and stopMainGridSoundPlayback
-
-Ambient sound:
-
-ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_ButtonLabelView.swift:1376-1443
-MainGridAmbientSoundState
-
-Sound preview:
-
-ESP32BLE/ESP32BLE/Scrns/Set_Screen/Set_Screen.swift:2356-2376
-playSelectedSoundPreview
-
-Main Screen lifecycle:
-
-ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_Screen.swift:1078-1096
-Speech toggle, recognition-result handling, and onDisappear
-
-5. Audio-session ownership
-
-The app has multiple effective owners of the single process-wide AVAudioSession.
-
-5.1 SpeechRecognitionManager
-
-The manager stores:
-
-private let audioSession = AVAudioSession.sharedInstance()
-
-SR_Manager.swift:203
-
-For recognition startup it changes the shared session to:
-
-.record
-.measurement
-.duckOthers
-
-SR_Manager.swift:313-320
-
-It activates the session and then installs the input tap and starts AVAudioEngine.
-
-For shutdown it stops recognition and the engine, removes the input tap, then deactivates the session:
-
-SR_Manager.swift:428-454
-
-5.2 Speech synthesis
-
-MainScreen stores:
-
-AVSpeechSynthesizer
-
-Main_Screen.swift:863
-
-speakMainGridText explicitly changes the application session to playback/spokenAudio and activates it before calling speak:
-
-Main_ButtonBehavior.swift:670-689
-SR_Support.swift:301-310
-
-No usesApplicationAudioSession override was found. Therefore the synthesizer uses the application’s shared session under its default behavior.
-
-5.3 Main sound playback
-
-playMainGridSound changes and activates the same shared session, then constructs and prepares an AVAudioPlayer:
-
-Main_ButtonBehavior.swift:1485-1505
-
-5.4 Ambient sound
-
-MainGridAmbientSoundState invokes the same activation callback and then prepares another AVAudioPlayer:
-
-Main_ButtonLabelView.swift:1410-1421
-
-5.5 Settings sound preview
-
-Set Screen sound preview creates and prepares AVAudioPlayer directly:
-
-Set_Screen.swift:2365-2376
-
-It does not explicitly configure or activate AVAudioSession first. prepareToPlay consequently performs activation itself.
-
-5.6 Ownership conclusion
-
-There is no single audio-session owner.
-
-Speech recognition, speech synthesis, ordinary sound playback, ambient playback, and settings previews independently depend on or modify the shared session.
-
-No explicit audio-session interruption observer, route-change observer, AVAudioPlayerDelegate completion handling, or AVSpeechSynthesizerDelegate restoration logic was found.
-
-6. Threading and MainActor analysis
-
-6.1 Project isolation
-
-The target uses default MainActor isolation.
-
-SpeechRecognitionManager is additionally explicitly declared @MainActor:
-
-SR_Manager.swift:197-198
-
-This ensures its published state and audio-engine lifecycle are serialized with UI state.
-
-6.2 UI state that must remain MainActor-isolated
-
-The following should remain MainActor-bound:
-
-• @Published recognition results and displayState
-• SwiftUI @State such as isSpkRecEnabled
-• Alerts
-• soundEffectPlayer storage
-• Speech-recognition LED and display changes
-• Timer/widget observable state
-• Recognition session identifiers if the manager remains MainActor-owned
-
-6.3 Work that need not inherently be on MainActor
-
-These operations do not update UI directly:
-
-• AVAudioSession setCategory
-• AVAudioSession activation/deactivation
-• AVAudioPlayer construction
-• AVAudioPlayer prepareToPlay
-• File decoding and buffer preparation
-
-They can potentially execute elsewhere, but they must be serialized relative to one another and relative to audio-engine startup/shutdown.
-
-6.4 Audio-engine operations requiring ordered handling
-
-These should not be casually dispatched independently:
-
-• Setting the category to .record
-• Activating the recording session
-• Installing/removing the input tap
-• AVAudioEngine prepare/start/stop
-• Ending/cancelling recognition
-• Deactivating the session
-• Switching to .playback
-• Preparing or starting an AVAudioPlayer
-
-Moving only one call to DispatchQueue.global().async could allow playback configuration to race with recognition startup or shutdown.
-
-6.5 Task behavior
-
-Task { } does not mean “background thread.”
-
-Tasks created in MainScreen or SpeechRecognitionManager inherit MainActor. Awaiting an async activation temporarily suspends the task, but later statements resume under the same actor isolation.
-
-7. Speech-recognition lifecycle
-
-7.1 Enable
-
-SwiftUI watches isSpkRecEnabled:
-
-Main_Screen.swift:1078-1080
-
-handleSpeechRecognitionToggle calls:
-
-speechRecognition.setListeningEnabled(true)
-
-SR_Support.swift:236-247
-
-7.2 Permissions
-
-startListeningIfNeeded checks:
-
-• Speech-recognition authorization
-• Microphone recording permission
-
-SR_Manager.swift:235-253
-SR_Manager.swift:266-311
-
-SFSpeechRecognizer authorization uses a continuation around its callback.
-
-Microphone permission uses AVAudioApplication.requestRecordPermission with a continuation.
-
-7.3 Session setup
-
-configureAudioSession performs:
-
-setCategory(.record, mode: .measurement, options: [.duckOthers])
-
-Then:
-
-iOS 27:
-await audioSession.activate()
-
-iOS 17.6-26:
-audioSession.setActive(true)
-
-SR_Manager.swift:313-320
-
-The iOS 27 path uses asynchronous activation.
-
-The older deployment-target path uses synchronous activation while MainActor-isolated and is itself a potential main-thread responsiveness risk, even though it is not one of the two reported warnings.
-
-7.4 Engine setup
-
-startRecognitionSession:
-
-• Creates a session UUID.
-• Creates SFSpeechAudioBufferRecognitionRequest.
-• Enables partial results.
-• Requests on-device recognition when available.
-• Gets AVAudioEngine inputNode and format.
-• Removes an existing tap if necessary.
-• Installs a new tap.
-• Calls audioEngine.prepare().
-• Calls audioEngine.start().
-• Creates SFSpeechRecognitionTask.
-
-SR_Manager.swift:323-359
-
-The tap appends buffers to the recognition request.
-
-Recognition callbacks explicitly hop to MainActor at lines 354-357.
-
-7.5 Recognition results
-
-Partial results update latestTranscript and reset the silence timer:
-
-SR_Manager.swift:361-405
-
-Final results commit the transcript and finish the session:
-
-SR_Manager.swift:370-388
-
-Silence timeout also commits and finishes:
-
-SR_Manager.swift:408-417
-
-7.6 Shutdown
-
-finishRecognitionSession:
-
-• Cancels the silence task.
-• Cancels the recognition task.
-• Ends the request’s audio stream.
-• Stops AVAudioEngine.
-• Removes the input tap.
-• Clears transcript and session identity.
-• Deactivates AVAudioSession.
-• Updates disabled display state if listening is no longer wanted.
-• Optionally schedules restart.
-
-SR_Manager.swift:428-475
-
-7.7 Restart
-
-If listening remains enabled, recognition restarts after 150 milliseconds:
-
-SR_Manager.swift:464-474
-
-Thus the recording session is deactivated and reactivated after each committed recognition result.
-
-7.8 Error and availability handling
-
-Recognition errors cause finish/restart:
-
-SR_Manager.swift:384-388
-
-Recognizer availability changes either schedule startup or finish the session:
-
-SR_Manager.swift:482-497
-
-7.9 Interruption handling
-
-No explicit AVAudioSession interruption or route-change notification handling was found.
-
-The system or recognition task may surface an error, which then drives the general finish/restart path, but there is no interruption-specific policy.
-
-8. Speech synthesis and playback interactions
-
-8.1 Speech synthesis while recognition is enabled
-
-speakMainGridText contains:
-
-guard !isSpkRecEnabled else {
-return
-
-}
-
-Main_ButtonBehavior.swift:670-673
-
-This deliberately prevents speech synthesis while recognition is enabled. It reduces feedback loops and avoids directly changing the session to playback during active recognition.
-
-This applies to .spk and other uses of speakMainGridText.
-
-8.2 Sound playback while recognition is enabled
-
-playMainGridSound has no equivalent guard.
-
-A sound command can therefore call activateAudioSessionForSpeechPlayback while speech recognition has configured the session as:
-
-.record / measurement
-
-If the session remains active, line 303 switches it to:
-
-.playback / spokenAudio
-
-Apple documents that changing category or mode while active causes an immediate change. This may disrupt AVAudioEngine input or trigger recognition errors.
-
-The source does not explicitly coordinate this transition with SpeechRecognitionManager.
-
-8.3 Ambient sound while recognition is enabled
-
-Ambient playback uses the same playback-session callback and likewise has no visible recognition guard.
-
-It can therefore compete with speech recognition.
-
-8.4 Restoration after speech and sound
-
-Speech recognition reestablishes .record/.measurement whenever it restarts.
-
-Playback code does not explicitly restore a prior recording category after speech or sound completes.
-
-No audio-player completion delegate restores the session.
-
-No speech-synthesizer completion delegate restores the session.
-
-If recognition is enabled, synthesis is prevented, but ordinary or ambient sound can still change the shared session.
-
-8.5 Repeated audio commands
-
-Every speech or sound start calls the playback activation helper again.
-
-Sequential sound commands can:
-
-• Repeat setCategory
-• Repeat activation
-• Prepare new players
-• Replace soundEffectPlayer while previous playback may be active
-
-The old player is generally released when soundEffectPlayer is replaced, but there is no explicit stop immediately before every replacement.
-
-9. Whether the warnings are related
-
-The best classification is:
-
-C. Different operations sharing an underlying lifecycle problem.
-
-Warning A is a synchronous category/mode/options change.
-
-Warning B is synchronous AVAudioPlayer preparation and implicit session activation.
-
-They are not two reports of the exact same statement.
-
-They are connected because playMainGridSound executes both operations in sequence:
-
-1. activateAudioSessionForSpeechPlayback
-2. AVAudioPlayer.prepareToPlay
-
-They also share these design conditions:
-
-• Both run on MainActor.
-• Both affect the shared AVAudioSession.
-• Both may perform audio-service or hardware work.
-• Multiple independent components manipulate the session.
-• There is no common serialized audio-session coordinator.
-• Playback and recognition configuration can overlap.
-
-10. Available Apple APIs
-
-10.1 Synchronous activation
-
-Existing API:
-
-func setActive(
-_ active: Bool,
-
-options: AVAudioSession.SetActiveOptions = []
-
-) throws
-
-Apple’s installed SDK header explicitly describes activation as synchronous and blocking and recommends not calling it from a thread where a long blocking operation is problematic.
-
-Available from iOS 3.0 for the basic overload and iOS 6.0 for the options overload.
-
-10.2 Asynchronous activation
-
-Objective-C SDK signature:
-
-• (void)activateWithOptions:
-(AVAudioSessionActivationOptions)options
-
-completionHandler:
-(void (^)(BOOL activated, NSError *error))handler
-
-
-Swift completion-handler form:
-
-func activate(
-options: AVAudioSessionActivationOptions = [],
-
-completionHandler:
-
-    @escaping @Sendable (Bool, Error?) -> Void
-
-)
-
-The Swift concurrency importer also provides the async form used by the project:
-
-try await audioSession.activate()
-
-The source shows it returns a Boolean result, currently ignored.
-
-Availability from the installed SDK header:
-
-iOS 27.0+
-tvOS 27.0+
-visionOS 27.0+
-watchOS 5.0+
-Unavailable on macOS
-
-The app already uses this correctly behind:
-
-if #available(iOS 27.0, *)
-
-10.3 Asynchronous deactivation
-
-Objective-C SDK signature:
-
-• (void)deactivateWithOptions:
-(AVAudioSessionDeactivationOptions)options
-
-completionHandler:
-(void (^)(BOOL deactivated, NSError *error))handler
-
-
-Swift async use in the project:
-
-try await audioSession.deactivate(
-options: [.notifyOthersOnDeactivation]
-
-)
-
-Availability:
-
-iOS 27.0+
-watchOS 27.0+
-tvOS 27.0+
-visionOS 27.0+
-Unavailable on macOS
-
-10.4 Category setting
-
-Existing signature:
-
-func setCategory(
-_ category: AVAudioSession.Category,
-
-mode: AVAudioSession.Mode,
-
-options: AVAudioSession.CategoryOptions = []
-
-) throws
-
-No asynchronous category-setting alternative was found in the installed iOS 27 SDK.
-
-10.5 AVAudioPlayer preparation
-
-Signature:
-
-func prepareToPlay() -> Bool
-
-No asynchronous prepareToPlay alternative was found.
-
-play() starts playback asynchronously, but Apple documents that it internally performs preparation when prepareToPlay was not called. Removing prepareToPlay does not guarantee removal of main-thread setup work.
-
-10.6 Deployment implications
-
-The deployment target is iOS 17.6.
-
-The asynchronous AVAudioSession activation/deactivation APIs cannot replace the legacy path unconditionally. The app must retain a fallback for iOS 17.6 through iOS 26.
-
-For those systems, synchronous setActive must run in a controlled non-main execution context if main-thread blocking is to be eliminated.
-
-11. Possible fixes and trade-offs
-
-OPTION A: Use asynchronous AVAudioSession activation/deactivation
-
-Applicable to:
-
-• Explicit activation and deactivation
-• iOS 27 and later
-
-Already used in:
-
-SR_Support.swift:305-308
-SR_Manager.swift:316-320
-SR_Manager.swift:450-454
-
-Advantages:
-
-• Does not block MainActor during activation/deactivation.
-• Preserves an explicit completion point.
-• Apple-provided implementation.
-• Clear success/error reporting.
-
-Limitations:
-
-• Does not make setCategory asynchronous.
-• Does not make AVAudioPlayer.prepareToPlay asynchronous.
-• Does not cover the deployment target’s iOS 17.6-26 range.
-• Does not by itself coordinate competing recognition and playback configuration.
-
-Expected warning effect:
-
-• Eliminates warnings caused specifically by synchronous setActive on iOS 27.
-• Does not directly eliminate Warning A or Warning B.
-
-OPTION B: Move blocking work to a serialized non-main execution context
-
-Applicable to:
-
-• setCategory
-• iOS 17.6-26 setActive fallback
-• AVAudioPlayer construction and prepareToPlay
-• Potentially recognition session activation/deactivation
-
-Advantages:
-
-• Directly addresses main-thread blocking.
-• Can preserve strict audio-operation ordering.
-• Supports the deployment target.
-• Can coordinate recording and playback category changes.
-
-Risks:
-
-• A random global queue is unsafe because operations may overlap or reorder.
-• AVAudioEngine lifecycle and playback lifecycle must not race.
-• SwiftUI and @Published state must return to MainActor.
-• AVAudioPlayer ownership must be clearly transferred and not mutated concurrently.
-• Adding a dedicated actor or serial executor is a larger change than moving one line.
-
-Expected warning effect:
-
-• Warning A should disappear when setCategory no longer executes on the main thread.
-• Warning B should disappear when preparation no longer executes on the main thread.
-• Runtime verification is required.
-
-OPTION C: Reduce unnecessary activation and category changes
-
-Possible checks include avoiding setCategory when category, mode, and options already match the desired playback configuration.
-
-Advantages:
-
-• Reduces repeated route changes.
-• Reduces unnecessary audio-service calls.
-• May reduce warning frequency.
-• Helps sequential speech and sound commands.
-
-Risks:
-
-• Reading category state and deciding whether to change it must still be serialized.
-• The first transition remains synchronous.
-• Another component can change the shared session between the check and use.
-• Skipping explicit activation before prepareToPlay may leave implicit activation on MainActor.
-• Session “already active” state is not directly exposed as a simple reliable public Boolean.
-
-Expected warning effect:
-
-• May reduce occurrences.
-• Cannot guarantee elimination.
-
-OPTION D: Preserve existing behavior
-
-Advantages:
-
-• No lifecycle regressions.
-• The warnings may correspond to brief pauses on many devices.
-• Existing audio behavior remains known.
-
-Risks:
-
-• Main-thread blocking remains.
-• First sound playback or route transitions may visibly pause.
-• Sound playback can still compete with active recognition.
-• Future diagnostics may identify additional call sites, such as ambient sound and Settings preview.
-
-Expected warning effect:
-
-• None.
-
-12. Recommended smallest safe fix
-
-The safest solution is not a bare DispatchQueue.global().async wrapper.
-
-12.1 Warning A recommendation
-
-Exact file:
-
-ESP32BLE/ESP32BLE/Scrns/Main_Screen/Speech Recognition/SR_Support.swift
-
-Exact function:
-
-activateAudioSessionForSpeechPlayback()
-
-Offending statement:
-
-SR_Support.swift:303
-audioSession.setCategory(...)
-
-Recommended restructuring:
-
-• Move playback category configuration and activation into a dedicated serialized, non-main audio-session execution context.
-• Keep setCategory followed by activation as one ordered operation.
-• On iOS 27+, await the existing asynchronous activate API.
-• On iOS 17.6-26, execute synchronous setActive(true) on the same serialized non-main context.
-• Return success or an error rather than silently ignoring every failure.
-• Update alerts or UI state on MainActor only after the audio operation completes.
-
-Lifecycle requirements:
-
-• Do not allow recognition’s .record configuration to interleave with playback’s .playback configuration.
-• Decide explicitly whether active recognition should block, stop, or be restored after sound playback.
-• Preserve the existing behavior for .spk, which currently does nothing while speech recognition is enabled.
-
-Expected result:
-
-• setCategory no longer blocks MainActor.
-• Legacy setActive fallback no longer blocks MainActor.
-• Audio-session transitions become ordered.
-
-12.2 Warning B recommendation
-
-Exact file:
-
-ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift
-
-Exact function:
-
-playMainGridSound(named:repeats:)
-
-Offending statement:
-
-Main_ButtonBehavior.swift:1498
-player.prepareToPlay()
-
-Recommended restructuring:
-
-• Resolve the URL and perform UI validation on MainActor.
-• Await serialized playback-session configuration.
-• Construct and prepare AVAudioPlayer in a controlled non-main operation.
-• Check the Bool returned by prepareToPlay.
-• Return the prepared player to MainActor.
-• On MainActor, start playback and assign soundEffectPlayer.
-• Report errors through the existing alert state on MainActor.
-
-Lifecycle requirements:
-
-• Do not start playback until session activation completes.
-• Prevent a stale preparation result from replacing a newer sound command if overlapping commands are possible.
-• Ensure the player remains strongly retained.
-• Avoid concurrent mutation of the same player from multiple isolation contexts.
-
-Expected result:
-
-• Buffer loading and hardware preparation no longer block MainActor.
-• Existing playback state remains SwiftUI-safe.
-
-12.3 Related call sites
-
-After the two reported warnings are fixed, the same pattern should be assessed separately at:
-
-Main_ButtonLabelView.swift:1413-1417
-Ambient AVAudioPlayer preparation
-
-Set_Screen.swift:2369-2373
-Sound-preview AVAudioPlayer preparation
-
-These are not part of the two requested warning locations, so they should not be changed incidentally.
-
-13. Whether to split implementation into separate stages
-
-Recommendation: two small implementation stages.
-
-Stage A: Audio-session configuration and activation
-
-Primary files/functions:
-
-• SR_Support.swift
-activateAudioSessionForSpeechPlayback()
-
-• SR_Manager.swift
-configureAudioSession()
-finishRecognitionSession(shouldRestart:)
-
-A shared serialized mechanism may be required if recognition and playback are to be made race-free. If the implementation is restricted to one file, it can remove the immediate Warning A but cannot completely coordinate ownership.
-
-Stage B: AVAudioPlayer preparation
-
-Primary file/function:
-
-• Main_ButtonBehavior.swift
-playMainGridSound(named:repeats:)
-
-This stage should consume the ordered session-activation result from Stage A and move player preparation off MainActor.
-
-Reasons to split:
-
-• Warning A is session configuration.
-• Warning B is player/hardware preparation.
-• They have different APIs and error paths.
-• Warning B should be built on top of the ordering established in Stage A.
-• Separate stages make speech-recognition regressions easier to isolate.
-
-Related ambient-sound and Settings-preview warnings should be separate follow-up work unless physically observed as part of the same reproduction.
-
-14. Production risk classification
-
-Warning A: MEDIUM
-
-Responsiveness risk:
-MEDIUM
-
-setCategory is synchronous on MainActor and may perform an immediate route change.
-
-Correctness risk:
-LOW to MEDIUM
-
-The call itself is valid, but sound playback can change an active recognition session from .record to .playback without coordination.
-
-Reliability risk:
-MEDIUM
-
-Concurrent or closely spaced recognition and playback transitions can produce recognition errors or unexpected routing.
-
-Audio-session conflict risk:
-MEDIUM
-
-Multiple components independently configure the same shared session.
-
-Warning B: MEDIUM
-
-Responsiveness risk:
-MEDIUM
-
-prepareToPlay performs buffer and hardware preparation synchronously on MainActor.
-
-Correctness risk:
-LOW
-
-The call is semantically correct and playback should normally succeed.
-
-Reliability risk:
-LOW to MEDIUM
-
-Large files, route changes, or overlapping sound requests may increase latency or ordering problems.
-
-Audio-session conflict risk:
-LOW to MEDIUM
-
-The player preparation follows explicit activation, but still interacts with the shared session.
-
-Neither warning is evidence of an automatic App Store rejection.
-
-15. Physical verification plan
-
-1. Speech-recognition startup
-
-• Enable recognition.
-• Confirm permission prompts still work.
-• Confirm recognizing state and microphone capture begin.
-• Measure time from toggle to active recognition.
-• Verify no main-thread audio-session warning.
-
-2. Speech-recognition shutdown
-
-• Disable recognition while idle.
-• Disable while receiving partial text.
-• Confirm the input tap is removed and LED/display becomes disabled.
-• Verify deactivation ordering.
-
-3. Recognition restart
-
-• Speak a recognized phrase.
-• Confirm transcript commits.
-• Confirm recognition restarts after approximately 150 milliseconds.
-• Repeat several times rapidly.
-
-4. Warning A playback test
-
-• Trigger .spk while recognition is disabled.
-• Trigger several sequential .spk commands.
-• Trigger ordinary sound playback.
-• Confirm setCategory warning no longer appears.
-• Confirm other audio is still ducked as expected.
-
-5. Warning B sound test
-
-• Play a short sound for the first time after launch.
-• Play it repeatedly.
-• Play a large or compressed file.
-• Confirm prepareToPlay warning no longer appears.
-• Confirm playback latency is acceptable.
-
-6. Speech-recognition interaction
-
-• Enable recognition.
-• Trigger a sound-file command.
-• Observe whether recognition stops, errors, restarts, or continues.
-• Verify the chosen lifecycle policy is consistent.
-
-7. Speech synthesis interaction
-
-• Confirm .spk remains suppressed while recognition is enabled.
-• Disable recognition and immediately invoke .spk.
-• Confirm the session transitions to playback correctly.
-
-8. Ambient sound
-
-• Start and stop an ambient-sound widget.
-• Change volume.
-• Enable recognition while ambient sound is active.
-• Check for category conflicts and warnings.
-
-9. Timer completion
-
-• Test both spoken and sound timer completions.
-• Test completion during another playback operation.
-• Test completion after a .wait sequence.
-
-10. Sequential and overlapping commands
-
-• Run multiple sound commands close together.
-• Run sound commands from independent .wait sequences.
-• Confirm an older preparation cannot replace a newer requested sound.
-
-11. Interruptions
-
-• Test an incoming call or Siri interruption.
-• Test Bluetooth headset connection and disconnection.
-• Test route changes between speaker, receiver, wired, and Bluetooth output.
-
-12. Background and foreground
-
-• Start recognition, background the app, then return.
-• Repeat with sound or ambient playback.
-• Confirm session state is restored appropriately.
-
-13. Device coverage
-
-• Test both iPhone and iPad.
-• Test at least one iOS 17.6-26 device if supported.
-• Test iOS 27 separately to exercise the new async activation APIs.
-
-16. Remaining uncertainties
-
-CONFIRMED FROM SOURCE
-
-• Warning A’s statement is synchronous setCategory.
-• Warning B’s statement is synchronous prepareToPlay.
-• Both execute under MainActor.
-• prepareToPlay activates/acquires the audio session.
-• Speech recognition and playback modify the same shared session.
-• Playback category setup is repeated for each invocation.
-• Sound playback is not blocked while speech recognition is enabled.
-• The project deployment target is iOS 17.6.
-• Async activation/deactivation is available on iOS 27+.
-• There is no async setCategory or prepareToPlay API in the installed SDK.
-• No interruption-specific session handling was found.
-
-LIKELY BUT NOT VERIFIED
-
-• Warning A occurs when setCategory changes an already-active session.
-• Warning B represents hardware/buffer preparation or redundant implicit activation.
-• First playback and route changes have the greatest UI-pause risk.
-• Sound playback during recognition may force a recognition failure or restart.
-
-REQUIRES RUNTIME TESTING
-
-• Exact blocking duration on each device.
-• Whether explicit async activation prevents any portion of prepareToPlay’s internal activation work.
-• Whether recognition reliably recovers after sound playback.
-• Whether Bluetooth routes increase warning frequency.
-• Whether ambient sound and Settings sound preview produce equivalent warnings.
-• Whether overlapping sound commands can replace player state out of order.
-
-17. Confirmation that no files changed
-
-No source files were modified during this investigation.
-
-No project files, assets, documentation, text files, logs, firmware, or Mac Helper files were modified.
-
-No build was performed.
+Build duration: approximately 46 seconds.
 
 The app and simulator were not launched.
 
+25. Compiler and concurrency warnings
+
+The build reported:
+
+• No compiler errors.
+• No new warnings.
+• No actor-isolation errors.
+• No Sendable diagnostics.
+• No API availability errors.
+
+Quick Xcode diagnostics also found no issues in:
+
+• Main_ButtonBehavior.swift
+• SR_Support.swift
+• Main_BtmToolbar.swift
+
+The quick diagnostic request for the large Main_Screen.swift file timed out, but the complete project build compiled it successfully.
+
+26. Remaining risks
+
+Physical testing is still required to confirm:
+
+• Immediate perceived stopping on a device.
+• Toolbar hit testing in every mode and Edit Mode.
+• No stale synthesized speech after slower audio-session activation.
+• BLE and Mac Helper logs contain no stop-command payloads.
+• Existing dimmed Stop-button styling remains visually acceptable while tappable.
+
 No physical runtime testing was performed.
 
+27. Recommended physical tests
+
+1. Start an ordinary sound and press .sm.
+2. Start an ordinary sound and press .stopmedia.
+3. Repeat with uppercase aliases.
+4. Start ambient playback and use each alias.
+5. Start ordinary and ambient playback together, then use Universal Stop.
+6. Start .spk and press the toolbar Stop button.
+7. Trigger .spk and immediately press Stop while activation is pending.
+8. Repeatedly press Stop while nothing is playing.
+9. Verify .small, .smoke, and .stopmediaextra do not trigger Stop.
+10. Verify .stop still creates a stopwatch widget.
+11. Test Sound.wav:.wait 5:.sm:.wait 2:Other.wav.
+12. Press toolbar Stop during .wait 5:Sound.wav and confirm the later sound still starts.
+13. Trigger .sm through speech recognition and confirm recognition remains enabled.
+14. Verify .sm and .stopmedia produce no BLE output.
+15. Verify they produce no Mac Helper output.
+16. Test the square Stop button in every button mode.
+17. Test it while Edit Mode is enabled.
+18. Verify timer state is unaffected.
+19. Verify iPhone and iPad toolbar geometry is unchanged.
+
+28. Unrelated files
+
+No unrelated files were modified.
+
+Specifically untouched:
+
+• Main_GridSection.swift
+• Main_ButtonLabelView.swift
+• ContentView.swift
+• Set_Screen.swift
+• SR_Manager.swift
+• Editors
+• Timer implementations
+• BLE managers
+• Mac Helper
+• Firmware
+• Assets
+• Documentation
+• Project files
+• Build settings
+• .screen files
+• .txt files
+• Logs
+
+Ordinary sound gestures were not implemented.
+
+29. Git operations
+
 No Git operations were performed.
+
+No commits, tags, branches, resets, or backups were created.

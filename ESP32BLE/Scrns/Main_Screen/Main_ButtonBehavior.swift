@@ -14,6 +14,42 @@ import UIKit
 import Combine
 import PDFKit
 
+private enum MainGridSoundPreparationError: Error {
+    case preparationFailed
+}
+
+struct MainGridSoundRequest {
+    let filename: String
+    let volumePercentage: Int
+}
+
+enum MainGridSoundRequestParseResult {
+    case request(MainGridSoundRequest)
+    case invalidVolume
+}
+
+actor MainGridSoundPlayerPreparer {
+    static let shared = MainGridSoundPlayerPreparer()
+    private static let preparationQueue = DispatchQueue(label: "ESP32BLE.MainGridSoundPreparation")
+
+    func preparePlayer(at audioURL: URL, repeats: Bool) async throws -> AVAudioPlayer {
+        try await withCheckedThrowingContinuation { continuation in
+            Self.preparationQueue.async {
+                do {
+                    let player = try AVAudioPlayer(contentsOf: audioURL)
+                    player.numberOfLoops = repeats ? -1 : 0
+                    guard player.prepareToPlay() else {
+                        throw MainGridSoundPreparationError.preparationFailed
+                    }
+                    continuation.resume(returning: player)
+                } catch {
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
+    }
+}
+
 // MARK: - BM:🅱️  W2A: Command Classification
 private enum CommandClassification {
     case internalCommand
@@ -284,10 +320,25 @@ extension MainScreen {
             return
         }
 
+        if entry.sendTexts.contains(where: isStopMediaCommandText) {
+            stopAllMainGridMedia()
+            return
+        }
+
         let bluetoothSendTexts = bluetoothSendTexts(for: entry)
         let targetDocumentName = targetDocumentNameForGridEntry(entry)
         let targetURL = targetURLForGridEntry(entry)
-        let targetSoundFilename = targetSoundFilenameForGridEntry(entry)
+        let targetSoundResult = targetSoundRequestForGridEntry(entry)
+        let targetSoundRequest: MainGridSoundRequest?
+        switch targetSoundResult {
+        case .request(let request):
+            targetSoundRequest = request
+        case .invalidVolume:
+            showInvalidSoundVolumeAlert()
+            return
+        case nil:
+            targetSoundRequest = nil
+        }
         let targetAppURL = targetAppURLForGridEntry(entry)
         let targetClipboardText = targetClipboardTextForGridEntry(entry)
         let targetPreviewFilename = targetPreviewFilenameForGridEntry(entry)
@@ -298,7 +349,7 @@ extension MainScreen {
         } else if targetPreviewFilename != nil {
         } else {
         }
-        let hasPostBluetoothChainCommand = targetSoundFilename != nil ||
+        let hasPostBluetoothChainCommand = targetSoundRequest != nil ||
             targetSpokenText != nil ||
             targetSpokenFilename != nil ||
             targetShortcutURL != nil
@@ -353,8 +404,11 @@ extension MainScreen {
             }
         }
 
-        if let targetSoundFilename {
-            playMainGridSound(named: targetSoundFilename)
+        if let targetSoundRequest {
+            playMainGridSound(
+                named: targetSoundRequest.filename,
+                volumePercentage: targetSoundRequest.volumePercentage
+            )
         }
 
         if let targetSpokenText {
@@ -416,12 +470,13 @@ extension MainScreen {
                 targetDocumentNameForSendText(sendText) == nil &&
                 targetURLForSendText(sendText) == nil &&
                 targetShortcutURLForSendText(sendText) == nil &&
-                targetSoundFilenameForSendText(sendText) == nil &&
+                targetSoundRequestForSendText(sendText) == nil &&
                 targetSpokenTextForSendText(sendText) == nil &&
                 targetSpokenFilenameForSendText(sendText) == nil &&
                 targetAppURLForSendText(sendText) == nil &&
                 targetClipboardTextForSendText(sendText) == nil &&
                 targetPreviewFilenameForSendText(sendText) == nil &&
+                !isStopMediaCommandText(sendText) &&
                 !isBackDocumentCommandText(sendText) &&
                 !isForwardDocumentCommandText(sendText) &&
                 !isPreviousDocumentCommandText(sendText) &&
@@ -466,6 +521,12 @@ extension MainScreen {
                 continue
             }
 
+            if isStopMediaCommandText(trimmedActionToken) {
+                pendingModifierTokens.removeAll()
+                stopAllMainGridMedia()
+                continue
+            }
+
             if let targetURL = targetURLForSendText(trimmedActionToken) {
                 pendingModifierTokens.removeAll()
                 await UIApplication.shared.open(targetURL)
@@ -497,9 +558,18 @@ extension MainScreen {
                 continue
             }
 
-            if let targetSoundFilename = targetSoundFilenameForSendText(trimmedActionToken) {
+            if let targetSoundResult = targetSoundRequestForSendText(trimmedActionToken) {
                 pendingModifierTokens.removeAll()
-                playMainGridSound(named: targetSoundFilename)
+                switch targetSoundResult {
+                case .request(let request):
+                    playMainGridSound(
+                        named: request.filename,
+                        volumePercentage: request.volumePercentage
+                    )
+                case .invalidVolume:
+                    showInvalidSoundVolumeAlert()
+                    return
+                }
                 continue
             }
 
@@ -678,9 +748,18 @@ extension MainScreen {
             return
         }
 
+        stopSpokenGridText()
+        let requestID = UUID()
+        speechPlaybackRequestID = requestID
+
         Task {
-            stopSpokenGridText()
-            await activateAudioSessionForSpeechPlayback()
+            guard await activateAudioSessionForSpeechPlayback() else {
+                return
+            }
+
+            guard speechPlaybackRequestID == requestID else {
+                return
+            }
 
             let utterance = AVSpeechUtterance(string: spokenText)
             utterance.voice = resolvedSpeechVoice
@@ -875,6 +954,10 @@ extension MainScreen {
         entry.sendTexts.compactMap(targetSoundFilenameForSendText).first
     }
 
+    func targetSoundRequestForGridEntry(_ entry: FunctionKeyEntry) -> MainGridSoundRequestParseResult? {
+        entry.sendTexts.compactMap(targetSoundRequestForSendText).first
+    }
+
     func targetSpokenTextForGridEntry(_ entry: FunctionKeyEntry) -> String? {
         entry.sendTexts.compactMap(targetSpokenTextForSendText).first
     }
@@ -1003,9 +1086,17 @@ extension MainScreen {
     }
 
     func targetSoundFilenameForSendText(_ sendText: String) -> String? {
+        guard case .request(let request) = targetSoundRequestForSendText(sendText) else {
+            return nil
+        }
+
+        return request.filename
+    }
+
+    func targetSoundRequestForSendText(_ sendText: String) -> MainGridSoundRequestParseResult? {
         let trimmedSendText = sendText.trimmingCharacters(in: .whitespacesAndNewlines)
         let loweredSendText = trimmedSendText.lowercased()
-        let soundFilename: String
+        let soundArguments: String
 
         guard speechCommandPrefixLength(for: trimmedSendText) == nil,
               !loweredSendText.hasPrefix("amb "),
@@ -1019,18 +1110,42 @@ extension MainScreen {
         }
 
         if loweredSendText.hasPrefix("snd ") {
-            soundFilename = String(trimmedSendText.dropFirst(4))
+            soundArguments = String(trimmedSendText.dropFirst(4))
         } else {
-            soundFilename = trimmedSendText
+            soundArguments = trimmedSendText
         }
 
-        let normalizedFilename = normalizedSoundFilename(soundFilename)
-        let pathExtension = URL(fileURLWithPath: normalizedFilename).pathExtension.lowercased()
-        guard supportedSoundExtensions.contains(pathExtension) else {
+        let normalizedArguments = normalizedSoundFilename(soundArguments)
+        guard !normalizedArguments.isEmpty else {
             return nil
         }
 
-        return normalizedFilename.isEmpty ? nil : normalizedFilename
+        if hasSupportedSoundExtension(normalizedArguments) {
+            return .request(MainGridSoundRequest(
+                filename: normalizedArguments,
+                volumePercentage: 100
+            ))
+        }
+
+        let components = normalizedArguments.split(whereSeparator: { $0.isWhitespace })
+        guard components.count > 1, let volumeToken = components.last else {
+            return nil
+        }
+
+        let filename = normalizedSoundFilename(String(components.dropLast().joined(separator: " ")))
+        guard hasSupportedSoundExtension(filename) else {
+            return nil
+        }
+
+        guard let volumePercentage = Int(volumeToken),
+              (0...100).contains(volumePercentage) else {
+            return .invalidVolume
+        }
+
+        return .request(MainGridSoundRequest(
+            filename: filename,
+            volumePercentage: volumePercentage
+        ))
     }
 
     func targetSpokenTextForSendText(_ sendText: String) -> String? {
@@ -1253,11 +1368,9 @@ extension MainScreen {
         let widgetText: String
 
         if loweredSendText.hasPrefix(".amb ") {
-            let filename = normalizedSoundFilename(String(trimmedSendText.dropFirst(5)))
-            return filename.isEmpty ? nil : .ambientSound(filename: filename)
+            return ambientSoundDescriptor(from: String(trimmedSendText.dropFirst(5)))
         } else if loweredSendText.hasPrefix(".ambient ") {
-            let filename = normalizedSoundFilename(String(trimmedSendText.dropFirst(9)))
-            return filename.isEmpty ? nil : .ambientSound(filename: filename)
+            return ambientSoundDescriptor(from: String(trimmedSendText.dropFirst(9)))
         } else if isBareWidgetCommandText(loweredSendText) {
             widgetText = trimmedSendText
         } else {
@@ -1408,10 +1521,7 @@ extension MainScreen {
         case ".stop", ".stopwatch":
             return .stopwatch
         case ".amb", ".ambient":
-            let filename = components.count > 1
-                ? normalizedSoundFilename(String(components.dropFirst().joined(separator: " ")))
-                : ""
-            return filename.isEmpty ? nil : .ambientSound(filename: filename)
+            return ambientSoundDescriptor(from: String(components.dropFirst().joined(separator: " ")))
         case ".timer":
             let initialDuration = components.count > 1
                 ? parseWidgetTimerDuration(String(components[1]))
@@ -1426,6 +1536,42 @@ extension MainScreen {
         default:
             return nil
         }
+    }
+
+    private func ambientSoundDescriptor(from commandArguments: String) -> MainGridWidgetDescriptor? {
+        let normalizedArguments = normalizedSoundFilename(commandArguments)
+        guard !normalizedArguments.isEmpty else {
+            return nil
+        }
+
+        let components = normalizedArguments.split(whereSeparator: { $0.isWhitespace })
+        guard let finalComponent = components.last else {
+            return nil
+        }
+
+        if let volumePercentage = Int(finalComponent) {
+            let filename = normalizedSoundFilename(String(components.dropLast().joined(separator: " ")))
+            guard !filename.isEmpty else {
+                return nil
+            }
+
+            guard (0...100).contains(volumePercentage) else {
+                return .ambientSound(
+                    filename: filename,
+                    volume: .invalid(String(finalComponent))
+                )
+            }
+
+            return .ambientSound(
+                filename: filename,
+                volume: .percentage(volumePercentage)
+            )
+        }
+
+        return .ambientSound(
+            filename: normalizedArguments,
+            volume: .percentage(100)
+        )
     }
 
     private func isBareWidgetCommandText(_ loweredText: String) -> Bool {
@@ -1467,6 +1613,21 @@ extension MainScreen {
         loweredText == ".wait" || loweredText.hasPrefix(".wait ")
     }
 
+    func isStopMediaCommandText(_ text: String) -> Bool {
+        switch text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+        case ".sm", ".stopmedia":
+            return true
+        default:
+            return false
+        }
+    }
+
+    func stopAllMainGridMedia() {
+        stopSpokenGridText()
+        stopMainGridSoundPlayback()
+        mainGridAmbientSoundState.stopPlayback()
+    }
+
     private func timerCompletion(from text: String) -> MainGridTimerCompletion? {
         let trimmedText = displayText(from: text).trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedText.isEmpty else {
@@ -1482,23 +1643,61 @@ extension MainScreen {
         return .speech(text: trimmedText)
     }
 
-    func playMainGridSound(named filename: String, repeats: Bool = false) {
+    func playMainGridSound(
+        named filename: String,
+        repeats: Bool = false,
+        volumePercentage: Int = 100
+    ) {
+        guard (0...100).contains(volumePercentage) else {
+            showInvalidSoundVolumeAlert()
+            return
+        }
+
         guard let audioURL = soundURL(named: filename) else {
             alertTitle = "Sound Not Found"
             renameAlertMessage = "Couldn't find \(filename)."
             return
         }
 
+        let requestID = UUID()
+        soundPlaybackRequestID = requestID
+        soundEffectPlayer?.stop()
+        soundEffectPlayer = nil
+
         Task {
-            await activateAudioSessionForSpeechPlayback()
+            guard await activateAudioSessionForSpeechPlayback() else {
+                guard soundPlaybackRequestID == requestID else {
+                    return
+                }
+                alertTitle = "Sound Error"
+                renameAlertMessage = "Couldn't play \(filename)."
+                return
+            }
+
+            guard soundPlaybackRequestID == requestID else {
+                return
+            }
 
             do {
-                let player = try AVAudioPlayer(contentsOf: audioURL)
-                player.numberOfLoops = repeats ? -1 : 0
-                player.prepareToPlay()
-                player.play()
+                let player = try await MainGridSoundPlayerPreparer.shared.preparePlayer(
+                    at: audioURL,
+                    repeats: repeats
+                )
+                guard soundPlaybackRequestID == requestID else {
+                    return
+                }
+                player.volume = Float(volumePercentage) / 100.0
                 soundEffectPlayer = player
+                guard player.play() else {
+                    soundEffectPlayer = nil
+                    alertTitle = "Sound Error"
+                    renameAlertMessage = "Couldn't play \(filename)."
+                    return
+                }
             } catch {
+                guard soundPlaybackRequestID == requestID else {
+                    return
+                }
                 alertTitle = "Sound Error"
                 renameAlertMessage = "Couldn't play \(filename)."
             }
@@ -1506,6 +1705,7 @@ extension MainScreen {
     }
 
     func stopMainGridSoundPlayback() {
+        soundPlaybackRequestID = UUID()
         soundEffectPlayer?.stop()
         soundEffectPlayer = nil
     }
@@ -1544,6 +1744,15 @@ extension MainScreen {
 
     private var supportedSoundExtensions: Set<String> {
         ["mp3", "wav", "m4a", "aiff", "aac", "caf"]
+    }
+
+    private func hasSupportedSoundExtension(_ filename: String) -> Bool {
+        supportedSoundExtensions.contains(URL(fileURLWithPath: filename).pathExtension.lowercased())
+    }
+
+    func showInvalidSoundVolumeAlert() {
+        alertTitle = "Invalid Sound Volume"
+        renameAlertMessage = "Volume must be between 0 and 100."
     }
 
     private var supportedPreviewExtensions: Set<String> {

@@ -1,5 +1,6 @@
 import AVFAudio
 import Combine
+import Dispatch
 import Speech
 import SwiftUI
 
@@ -194,13 +195,118 @@ enum SpeechRecognitionDisplayState: Equatable {
     case recognized(String)
 }
 
+actor AudioSessionOperationCoordinator {
+    static let shared = AudioSessionOperationCoordinator()
+    private static let blockingQueue = DispatchQueue(label: "ESP32BLE.AudioSessionOperations")
+
+    private var isOperationInProgress = false
+    private var operationWaiters: [CheckedContinuation<Void, Never>] = []
+    private var sessionGeneration: UInt64 = 0
+
+    func configurePlaybackSession() async throws {
+        await acquireOperation()
+        defer { releaseOperation() }
+
+        let audioSession = AVAudioSession.sharedInstance()
+        try await performBlocking {
+            if audioSession.category != .playback ||
+                audioSession.mode != .spokenAudio ||
+                audioSession.categoryOptions != [.duckOthers] {
+                try audioSession.setCategory(.playback, mode: .spokenAudio, options: [.duckOthers])
+            }
+        }
+
+        if #available(iOS 27.0, *) {
+            _ = try await audioSession.activate()
+        } else {
+            try await performBlocking {
+                try audioSession.setActive(true)
+            }
+        }
+
+        sessionGeneration &+= 1
+    }
+
+    func configureRecordingSession() async throws -> UInt64 {
+        await acquireOperation()
+        defer { releaseOperation() }
+
+        let audioSession = AVAudioSession.sharedInstance()
+        try await performBlocking {
+            if audioSession.category != .record ||
+                audioSession.mode != .measurement ||
+                audioSession.categoryOptions != [.duckOthers] {
+                try audioSession.setCategory(.record, mode: .measurement, options: [.duckOthers])
+            }
+        }
+
+        if #available(iOS 27.0, *) {
+            _ = try await audioSession.activate()
+        } else {
+            try await performBlocking {
+                try audioSession.setActive(true)
+            }
+        }
+
+        sessionGeneration &+= 1
+        return sessionGeneration
+    }
+
+    func deactivateRecordingSession(ifCurrent generation: UInt64) async throws {
+        await acquireOperation()
+        defer { releaseOperation() }
+
+        guard generation == sessionGeneration else {
+            return
+        }
+
+        let audioSession = AVAudioSession.sharedInstance()
+        if #available(iOS 27.0, *) {
+            _ = try await audioSession.deactivate(options: [.notifyOthersOnDeactivation])
+        } else {
+            try await performBlocking {
+                try audioSession.setActive(false, options: .notifyOthersOnDeactivation)
+            }
+        }
+    }
+
+    private func acquireOperation() async {
+        if !isOperationInProgress {
+            isOperationInProgress = true
+            return
+        }
+
+        await withCheckedContinuation { continuation in
+            operationWaiters.append(continuation)
+        }
+    }
+
+    private func releaseOperation() {
+        guard !operationWaiters.isEmpty else {
+            isOperationInProgress = false
+            return
+        }
+
+        operationWaiters.removeFirst().resume()
+    }
+
+    private func performBlocking<T: Sendable>(
+        _ operation: @escaping @Sendable () throws -> T
+    ) async throws -> T {
+        try await withCheckedThrowingContinuation { continuation in
+            Self.blockingQueue.async {
+                continuation.resume(with: Result(catching: operation))
+            }
+        }
+    }
+}
+
 @MainActor
 final class SpeechRecognitionManager: NSObject, ObservableObject {
     @Published private(set) var latestRecognition: SpeechRecognitionEvent?
     @Published private(set) var displayState: SpeechRecognitionDisplayState = .disabled
 
     private let audioEngine = AVAudioEngine()
-    private let audioSession = AVAudioSession.sharedInstance()
     private let silenceDuration: Duration = .milliseconds(700)
     private let restartDelay: Duration = .milliseconds(150)
 
@@ -213,6 +319,7 @@ final class SpeechRecognitionManager: NSObject, ObservableObject {
     private var latestTranscript = ""
     private var activeSessionID: UUID?
     private var isInputTapInstalled = false
+    private var audioSessionGeneration: UInt64?
 
     override init() {
         super.init()
@@ -311,13 +418,7 @@ final class SpeechRecognitionManager: NSObject, ObservableObject {
     }
 
     private func configureAudioSession() async throws {
-        try audioSession.setCategory(.record, mode: .measurement, options: [.duckOthers])
-
-        if #available(iOS 27.0, *) {
-            _ = try await audioSession.activate()
-        } else {
-            try audioSession.setActive(true)
-        }
+        audioSessionGeneration = try await AudioSessionOperationCoordinator.shared.configureRecordingSession()
     }
 
     private func startRecognitionSession(using speechRecognizer: SFSpeechRecognizer) throws {
@@ -447,10 +548,11 @@ final class SpeechRecognitionManager: NSObject, ObservableObject {
         latestTranscript = ""
         activeSessionID = nil
 
-        if #available(iOS 27.0, *) {
-            _ = try? await audioSession.deactivate(options: [.notifyOthersOnDeactivation])
-        } else {
-            try? audioSession.setActive(false, options: .notifyOthersOnDeactivation)
+        if let audioSessionGeneration {
+            self.audioSessionGeneration = nil
+            try? await AudioSessionOperationCoordinator.shared.deactivateRecordingSession(
+                ifCurrent: audioSessionGeneration
+            )
         }
 
         if !wantsListening {
