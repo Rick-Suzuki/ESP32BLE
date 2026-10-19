@@ -1,3 +1,8 @@
+
+261020 Tue 0852
+clipboard complete
+V63.85
+
 261019 Mon 2024
 clipboard working, one feature to add
 V63.84

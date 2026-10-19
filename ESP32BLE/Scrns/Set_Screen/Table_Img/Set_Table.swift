@@ -47,6 +47,8 @@ struct SettingsDocumentTableSection: View {
     let showsOuterBorder: Bool
     @State private var showsRefreshConfirmation = false
     @State private var refreshConfirmationTask: Task<Void, Never>?
+    @State private var tableFeedbackMessage: String?
+    @State private var tableFeedbackTask: Task<Void, Never>?
 
 	// set table font size for iphone
     private var tableRowFont: Font? {
@@ -108,19 +110,43 @@ struct SettingsDocumentTableSection: View {
                     refreshFiles()
                     showRefreshConfirmation()
                 }
-                .overlay(alignment: .top) {
-                    if showsRefreshConfirmation {
-                        Text("Refreshed Files")
-                            .font(.caption)
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 6)
-                            .background(Color.gray.opacity(0.9), in: .capsule)
-                            .padding(.top, 8)
-                            .allowsHitTesting(false)
-                    }
-                }
-
+				.overlay(alignment: .top) {
+					if let tableFeedbackMessage {
+						Text(tableFeedbackMessage)
+							.font(.caption)
+							.foregroundStyle(.green)
+							.padding(.horizontal, 15)
+							.padding(.vertical, 6)
+							.background(
+								Color.black.opacity(0.9),
+								in: .rect(cornerRadius: 10)
+							)
+							.overlay {
+								RoundedRectangle(cornerRadius: 10)
+									.stroke(.white, lineWidth: 1)
+							}
+							.padding(.top, 8)
+							.allowsHitTesting(false)
+						
+					} else if showsRefreshConfirmation {
+						Text("Refreshed Files")
+							.font(.caption)
+							.foregroundStyle(.green)
+							.padding(.horizontal, 15)
+							.padding(.vertical, 6)
+							.background(
+								Color.black.opacity(0.9),
+								in: .rect(cornerRadius: 10)
+							)
+							.overlay {
+								RoundedRectangle(cornerRadius: 10)
+									.stroke(.white, lineWidth: 1)
+							}
+							.padding(.top, 8)
+							.allowsHitTesting(false)
+					}
+				}
+				
                 itemCountBox
                     .frame(height: itemCountHeight)
 
@@ -144,6 +170,7 @@ struct SettingsDocumentTableSection: View {
         .clipShape(.rect(cornerRadius: 0))
         .onDisappear {
             refreshConfirmationTask?.cancel()
+            tableFeedbackTask?.cancel()
         }
     }
 
@@ -154,6 +181,16 @@ struct SettingsDocumentTableSection: View {
             try? await Task.sleep(nanoseconds: 1_500_000_000)
             guard !Task.isCancelled else { return }
             showsRefreshConfirmation = false
+        }
+    }
+
+    private func showTableFeedback(_ message: String) {
+        tableFeedbackTask?.cancel()
+        tableFeedbackMessage = message
+        tableFeedbackTask = Task {
+            try? await Task.sleep(nanoseconds: 2_000_000_000)
+            guard !Task.isCancelled else { return }
+            tableFeedbackMessage = nil
         }
     }
 
@@ -240,9 +277,8 @@ struct SettingsDocumentTableSection: View {
 
         return Button {
             ButtonClickFeedback.playIfEnabled()
-            handleFileSelection(fileURL) {
-                loadFunctionKeys(fileURL)
-            }
+            handleFileSelection(fileURL)
+            showTableFeedback("Copied name")
         } label: {
             HStack {
                 Text(fileURL.lastPathComponent)
@@ -266,6 +302,12 @@ struct SettingsDocumentTableSection: View {
             .contentShape(.rect)
         }
         .buttonStyle(.plain)
+        .simultaneousGesture(
+            TapGesture(count: 2)
+                .onEnded {
+                    handleScreenDoubleTap(fileURL)
+                }
+        )
         .id(fileURL.path)
         .listRowInsets(EdgeInsets())
         .listRowSeparator(.hidden)
@@ -506,5 +548,15 @@ struct SettingsDocumentTableSection: View {
     private func handleFileSelection(_ fileURL: URL, action: () -> Void = {}) {
         action()
         UIPasteboard.general.string = fileURL.lastPathComponent
+    }
+
+    private func handleScreenDoubleTap(_ fileURL: URL) {
+        UIPasteboard.general.string = fileURL.lastPathComponent
+        loadFunctionKeys(fileURL)
+
+        Task { @MainActor in
+            await Task.yield()
+            showTableFeedback("Changed screen")
+        }
     }
 }

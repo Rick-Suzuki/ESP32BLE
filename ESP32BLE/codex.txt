@@ -1,318 +1,41 @@
-1. Files modified
+ESP-CLIPBOARD-004 implemented successfully.
 
-ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
+Files changed:
 
-ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift
+ESP32BLE/ESP32BLE/Scrns/Set_Screen/Table_Img/Set_Table.swift
 
-ESP32BLE/Scrns/Main_Screen/Main_GridSection.swift
+Single tap:
 
+• Preserves button-click feedback.
+• Immediately copies the complete filename, including extension.
+• Does not load or change the active screen.
+• Displays “Copied name” inside the Settings table for two seconds.
 
-2. Simple-sound classification
+Double tap:
 
-Added isSimpleOrdinarySoundEntry(_:) at Main_ButtonBehavior.swift:1093.
+• Copies the complete filename.
+• Calls the existing loadFunctionKeys callback.
+• Preserves existing screen-loading and selection behavior.
+• Displays “Change screen” inside the Settings table for two seconds.
+• The message supersedes the constituent single-tap feedback.
 
-An entry qualifies only when:
+Feedback handling:
 
-• entry.sendTexts.count == 1
-• targetSoundRequestForSendText(_:) returns a valid ordinary sound request
+• Uses a cancellable task.
+• A newer message replaces the previous message and restarts the two-second duration.
+• Pending feedback is cancelled when the table disappears.
+• The existing “Refreshed Files” feedback remains unchanged.
 
-The existing parser remains the sole authority for filenames, extensions, snd prefixes, and volume.
+Scope:
 
-Ambient, wait, compound, invalid-volume, keyboard, speech, and widget commands do not qualify.
+• Only the Screens row behavior changed.
+• Text, images, sounds, PDFs, and All-files behavior remain unchanged.
+• No navigation or history behavior was changed.
+• No comments or debug prints were added.
+• No text or project files were modified.
 
+Validation:
 
-3. Gesture routing
-
-MainScreenGridSection receives:
-
-• isSimpleOrdinarySoundEntry
-• onSimpleOrdinarySoundSingleTap
-• onSimpleOrdinarySoundDoubleTap
-
-Only qualifying buttons outside Edit Mode enter the new gesture branch.
-
-Other buttons continue through their existing Button or interactive-widget paths.
-
-
-4. Single-tap behaviour
-
-handleSimpleOrdinarySoundSingleTap(_:index:) implements:
-
-• Stopped: starts from the beginning
-• Preparing: records a pending pause
-• Playing: calls AVAudioPlayer.pause()
-• Paused with a prepared player: calls play() to resume
-• Paused while still preparing: changes the intent back to playing
-
-Existing click feedback and disabled-mode guards remain active.
-
-
-5. Double-tap behaviour
-
-handleSimpleOrdinarySoundDoubleTap(_:index:) starts a new ordinary sound request through playMainGridSound(...).
-
-This:
-
-• Stops and replaces the current ordinary player
-• Invalidates pending preparation
-• Prepares a new player off-main
-• Starts from time zero
-
-It works while stopped, preparing, playing, or paused.
-
-
-6. Playback state representation
-
-Added MainGridOrdinarySoundPlaybackPhase at Main_ButtonBehavior.swift:91 with:
-
-• stopped
-• preparing
-• playing
-• paused
-
-MainScreen now stores:
-
-• ordinarySoundGestureOwnerID
-• ordinarySoundGestureRequest
-• ordinarySoundGestureRequestID
-• ordinarySoundPlaybackPhase
-
-
-7. Button ownership identity
-
-Ownership uses the project’s existing document-and-slot identity pattern:
-
-selectedDocumentName#index
-
-Two buttons containing the same filename therefore remain distinct owners.
-
-Changing documents or selecting a different slot produces a different identity.
-
-
-8. Pause/resume implementation
-
-Pause uses the existing soundEffectPlayer.pause().
-
-Resume uses the same retained AVAudioPlayer and calls play(), preserving currentTime.
-
-No additional ordinary player or playback manager was introduced.
-
-A paused sound keeps ordinarySoundActive true, so Universal Stop remains green.
-
-
-9. Preparation-time tap handling
-
-When the owning button is tapped during preparation:
-
-• Phase changes from preparing to paused.
-• Activation and background preparation continue.
-• The prepared player is retained.
-• play() is not called.
-• The player remains paused at time zero.
-
-A subsequent tap before preparation completes changes the phase back to preparing, allowing playback to begin when preparation finishes.
-
-A double tap installs a new request UUID, invalidating the older preparation.
-
-
-10. Natural completion handling
-
-The existing MainGridSoundPlaybackDelegate still reports natural completion.
-
-Its request-ID-protected callback now also clears:
-
-• Gesture owner
-• Gesture request
-• Gesture request ID
-• Playback phase
-
-A stale player callback cannot clear a newer request.
-
-
-11. Universal Stop integration
-
-stopMainGridSoundPlayback() now clears all ordinary gesture state in addition to its existing behaviour.
-
-Universal Stop therefore:
-
-• Invalidates pending ordinary preparation
-• Stops and releases the player
-• Clears pause/resume ownership
-• Resets the phase to stopped
-• Clears ordinarySoundActive
-
-The ambient, speech, and wait cancellation operations remain intact.
-
-
-12. Other ordinary-source replacement behaviour
-
-playMainGridSound(...) remains the shared playback path.
-
-Its new gesture parameters default to nil. Consequently, every non-gesture caller automatically clears previous gesture ownership after validating the new filename and volume.
-
-This covers:
-
-• Compound commands
-• Wait sequences
-• Speech-triggered commands
-• Keyboard/editor testing
-• Timer-completion sounds
-
-A missing file or invalid volume returns before clearing the existing sound or gesture state, preserving prior behaviour.
-
-
-13. Green/grey Stop indicator preservation
-
-ordinarySoundActive remains the activity source.
-
-It stays true while a gesture-owned sound is:
-
-• Preparing
-• Playing
-• Paused at time zero
-• Paused during playback
-
-Natural completion, Universal Stop, or current-request failure clears it.
-
-No Stop button UI or aggregate activity logic was modified.
-
-
-14. Ambient preservation
-
-Main_ButtonLabelView.swift was not modified.
-
-Ambient parsing, player ownership, volume, looping, request protection, and single/double/triple-tap handling remain unchanged.
-
-Ordinary pause, resume, and restart do not affect ambient playback.
-
-
-15. Wait cancellation preservation
-
-The C1 wait registry, shared launcher, cancellation handling, Task.sleep handling, and stop-inside-sequence behaviour were not modified.
-
-Compound buttons containing .wait do not receive simple-sound gestures.
-
-
-16. Speech preservation
-
-Speech recognition files were not modified.
-
-Existing speech-synthesis behaviour in speech-capable button modes is preserved when a simple sound gesture executes.
-
-Speech-recognition suppression and request-ID handling remain unchanged.
-
-
-17. Edit Mode preservation
-
-The new gesture branch requires Edit Mode to be disabled.
-
-In Edit Mode, buttons continue through the existing path for:
-
-• Popup selection
-• Dragging
-• Long-press editing
-
-Popup positioning and editor behaviour were not changed.
-
-
-18. iPhone/iPad gesture preservation
-
-No device-specific layout or sizing code was changed.
-
-Existing drag and long-press gestures remain attached to simple sound buttons.
-
-The implementation uses the same grid path on iPhone and iPad.
-
-
-19. Audio preparation preservation
-
-MainGridSoundPlayerPreparer remains unchanged.
-
-AVAudioPlayer construction and prepareToPlay() remain off MainActor.
-
-AudioSessionOperationCoordinator and audio-session activation policy were not modified.
-
-
-20. Build result
-
-The Xcode project built successfully.
-
-Build duration was approximately 45 seconds.
-
-The app and simulator were not launched.
-
-
-21. Compiler/concurrency warnings
-
-The build reported:
-
-• No compiler errors
-• No actor-isolation warnings
-• No Sendable warnings
-• No gesture ambiguity diagnostics
-• No API-availability warnings
-• No new concurrency diagnostics
-
-
-22. Remaining risks
-
-Physical testing is required to verify:
-
-• System single/double-tap recognition timing
-• Long-press interaction on physical devices
-• Pause requests during real-world preparation timing
-• AVAudioPlayer resume behaviour across supported audio formats
-• Behaviour when an audio file is removed after playback begins
-
-No runtime testing was performed.
-
-
-23. Recommended physical tests
-
-1. Single tap a stopped simple sound and confirm playback starts.
-
-2. Single tap again and confirm it pauses at its current position.
-
-3. Single tap again and confirm it resumes from that position.
-
-4. Double tap while playing and confirm restart from zero without an intervening pause.
-
-5. Double tap while paused and confirm restart from zero.
-
-6. Double tap after natural completion and confirm a new start.
-
-7. Rapidly single tap twice during preparation and confirm the prepared player remains paused at zero.
-
-8. Tap again during that pending pause and confirm it plays after preparation.
-
-9. Double tap during preparation and confirm only the newest request starts.
-
-10. Test two buttons containing the same filename and volume; verify ownership follows the specific button.
-
-11. Replace a paused simple sound using another simple sound button.
-
-12. Replace it using a compound command, wait sequence, speech trigger, editor test, and timer sound.
-
-13. Confirm a paused sound keeps the Stop button green.
-
-14. Confirm natural completion returns the Stop button grey when nothing else is active.
-
-15. Confirm Universal Stop clears paused and pending gesture state.
-
-16. Confirm ambient playback continues during ordinary pause/resume/restart.
-
-17. Confirm Edit Mode tap, drag, and long-press behaviour.
-
-18. Test both iPhone and iPad layouts.
-
-
-24. Unrelated-file confirmation
-
-Only the three permitted source files were modified.
-
-No ambient, toolbar, speech-recognition, editor, BLE, Mac Helper, firmware, asset, project, or documentation files were changed.
-
-
-25. Git confirmation
-
-No Git operations, commits, tags, or backups were performed.
+• Xcode file diagnostics: no issues found.
+• Full Xcode project build: succeeded.
+• Build errors: none.
