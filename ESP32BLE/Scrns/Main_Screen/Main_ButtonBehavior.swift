@@ -88,6 +88,13 @@ enum MainGridSoundRequestParseResult {
     case invalidVolume
 }
 
+enum MainGridOrdinarySoundPlaybackPhase {
+    case stopped
+    case preparing
+    case playing
+    case paused
+}
+
 actor MainGridSoundPlayerPreparer {
     static let shared = MainGridSoundPlayerPreparer()
     private static let preparationQueue = DispatchQueue(label: "ESP32BLE.MainGridSoundPreparation")
@@ -1083,6 +1090,99 @@ extension MainScreen {
         entry.sendTexts.compactMap(targetSoundRequestForSendText).first
     }
 
+    func isSimpleOrdinarySoundEntry(_ entry: FunctionKeyEntry) -> Bool {
+        guard entry.sendTexts.count == 1,
+              case .request = targetSoundRequestForSendText(entry.sendTexts[0]) else {
+            return false
+        }
+
+        return true
+    }
+
+    func handleSimpleOrdinarySoundSingleTap(_ entry: FunctionKeyEntry, index: Int) {
+        guard mainGridButtonMode != .disabled,
+              entry.sendTexts.count == 1,
+              case .request(let request) = targetSoundRequestForSendText(entry.sendTexts[0]) else {
+            return
+        }
+
+        if mainGridButtonMode.speaksText {
+            speakMainGridEntry(entry)
+        }
+
+        playMainGridSound(
+            named: request.filename,
+            volumePercentage: request.volumePercentage,
+            gestureOwnerID: mainGridOrdinarySoundGestureOwnerID(index: index),
+            gestureRequest: request
+        )
+    }
+
+    func handleSimpleOrdinarySoundDoubleTap(_ entry: FunctionKeyEntry, index: Int) {
+        guard mainGridButtonMode != .disabled,
+              entry.sendTexts.count == 1,
+              case .request(let request) = targetSoundRequestForSendText(entry.sendTexts[0]) else {
+            return
+        }
+
+        if mainGridButtonMode.speaksText {
+            speakMainGridEntry(entry)
+        }
+
+        let ownerID = mainGridOrdinarySoundGestureOwnerID(index: index)
+        guard ordinarySoundGestureOwnerID == ownerID else {
+            playMainGridSound(
+                named: request.filename,
+                volumePercentage: request.volumePercentage,
+                gestureOwnerID: ownerID,
+                gestureRequest: request
+            )
+            return
+        }
+
+        switch ordinarySoundPlaybackPhase {
+        case .preparing:
+            ordinarySoundPlaybackPhase = .paused
+        case .playing:
+            soundEffectPlayer?.pause()
+            ordinarySoundPlaybackPhase = .paused
+        case .paused:
+            if let soundEffectPlayer {
+                guard soundEffectPlayer.play() else {
+                    stopMainGridSoundPlayback()
+                    alertTitle = "Sound Error"
+                    renameAlertMessage = "Couldn't play \(request.filename)."
+                    return
+                }
+                ordinarySoundPlaybackPhase = .playing
+            } else {
+                ordinarySoundPlaybackPhase = .preparing
+            }
+        case .stopped:
+            playMainGridSound(
+                named: request.filename,
+                volumePercentage: request.volumePercentage,
+                gestureOwnerID: ownerID,
+                gestureRequest: request
+            )
+        }
+    }
+
+    private func mainGridOrdinarySoundGestureOwnerID(index: Int) -> String {
+        "\(selectedDocumentName)#\(index)"
+    }
+
+    private func clearMainGridOrdinarySoundGestureState(matching requestID: UUID? = nil) {
+        if let requestID, ordinarySoundGestureRequestID != requestID {
+            return
+        }
+
+        ordinarySoundGestureOwnerID = nil
+        ordinarySoundGestureRequest = nil
+        ordinarySoundGestureRequestID = nil
+        ordinarySoundPlaybackPhase = .stopped
+    }
+
     func targetSpokenTextForGridEntry(_ entry: FunctionKeyEntry) -> String? {
         entry.sendTexts.compactMap(targetSpokenTextForSendText).first
     }
@@ -1772,7 +1872,9 @@ extension MainScreen {
     func playMainGridSound(
         named filename: String,
         repeats: Bool = false,
-        volumePercentage: Int = 100
+        volumePercentage: Int = 100,
+        gestureOwnerID: String? = nil,
+        gestureRequest: MainGridSoundRequest? = nil
     ) {
         guard (0...100).contains(volumePercentage) else {
             showInvalidSoundVolumeAlert()
@@ -1787,6 +1889,13 @@ extension MainScreen {
 
         let requestID = UUID()
         soundPlaybackRequestID = requestID
+        clearMainGridOrdinarySoundGestureState()
+        if let gestureOwnerID, let gestureRequest {
+            ordinarySoundGestureOwnerID = gestureOwnerID
+            ordinarySoundGestureRequest = gestureRequest
+            ordinarySoundGestureRequestID = requestID
+            ordinarySoundPlaybackPhase = .preparing
+        }
         ordinarySoundActive = true
         soundEffectPlayer?.stop()
         soundEffectPlayer = nil
@@ -1798,6 +1907,7 @@ extension MainScreen {
                     return
                 }
                 ordinarySoundActive = false
+                clearMainGridOrdinarySoundGestureState(matching: requestID)
                 alertTitle = "Sound Error"
                 renameAlertMessage = "Couldn't play \(filename)."
                 return
@@ -1822,17 +1932,26 @@ extension MainScreen {
                     }
                     ordinarySoundActive = false
                     soundPlaybackDelegate = nil
+                    clearMainGridOrdinarySoundGestureState(matching: completedRequestID)
                 }
                 soundPlaybackDelegate = playbackDelegate
                 player.delegate = playbackDelegate
                 soundEffectPlayer = player
+                if ordinarySoundGestureRequestID == requestID,
+                   ordinarySoundPlaybackPhase == .paused {
+                    return
+                }
                 guard player.play() else {
                     soundEffectPlayer = nil
                     soundPlaybackDelegate = nil
                     ordinarySoundActive = false
+                    clearMainGridOrdinarySoundGestureState(matching: requestID)
                     alertTitle = "Sound Error"
                     renameAlertMessage = "Couldn't play \(filename)."
                     return
+                }
+                if ordinarySoundGestureRequestID == requestID {
+                    ordinarySoundPlaybackPhase = .playing
                 }
             } catch {
                 guard soundPlaybackRequestID == requestID else {
@@ -1840,6 +1959,7 @@ extension MainScreen {
                 }
                 ordinarySoundActive = false
                 soundPlaybackDelegate = nil
+                clearMainGridOrdinarySoundGestureState(matching: requestID)
                 alertTitle = "Sound Error"
                 renameAlertMessage = "Couldn't play \(filename)."
             }
@@ -1852,6 +1972,7 @@ extension MainScreen {
         soundEffectPlayer = nil
         soundPlaybackDelegate = nil
         ordinarySoundActive = false
+        clearMainGridOrdinarySoundGestureState()
     }
 
     func soundURL(named filename: String) -> URL? {

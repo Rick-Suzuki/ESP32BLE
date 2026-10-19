@@ -4,305 +4,315 @@ ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
 
 ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift
 
-ESP32BLE/Scrns/Main_Screen/Main_ButtonLabelView.swift
+ESP32BLE/Scrns/Main_Screen/Main_GridSection.swift
 
-ESP32BLE/Scrns/Main_Screen/Toolbars/Main_BtmToolbar.swift
 
+2. Simple-sound classification
 
-2. Activity state properties added
+Added isSimpleOrdinarySoundEntry(_:) at Main_ButtonBehavior.swift:1093.
 
-Main_Screen.swift:
+An entry qualifies only when:
 
-• speechSynthesisActive
-• ordinarySoundActive
-• speechPlaybackDelegate
-• soundPlaybackDelegate
-• isMediaOrWaitActive computed property
+• entry.sendTexts.count == 1
+• targetSoundRequestForSendText(_:) returns a valid ordinary sound request
 
-Main_ButtonLabelView.swift:
+The existing parser remains the sole authority for filenames, extensions, snd prefixes, and volume.
 
-• MainGridAmbientSoundState.isPlaybackActive
+Ambient, wait, compound, invalid-volume, keyboard, speech, and widget commands do not qualify.
 
-The existing activeWaitChainTasks registry remains the wait-activity source.
 
+3. Gesture routing
 
-3. Ordinary audio lifecycle tracking
+MainScreenGridSection receives:
 
-playMainGridSound(named:repeats:volumePercentage:) now sets ordinarySoundActive when a valid request begins.
+• isSimpleOrdinarySoundEntry
+• onSimpleOrdinarySoundSingleTap
+• onSimpleOrdinarySoundDoubleTap
 
-It remains active during:
+Only qualifying buttons outside Edit Mode enter the new gesture branch.
 
-• Audio-session activation
-• Background player preparation
-• Playback
-• Future paused playback
+Other buttons continue through their existing Button or interactive-widget paths.
 
-It is cleared by current-request activation/preparation/playback failure, natural completion, or stopMainGridSoundPlayback().
 
+4. Single-tap behaviour
 
-4. Ordinary natural-completion delegate
+handleSimpleOrdinarySoundSingleTap(_:index:) implements:
 
-Added MainGridSoundPlaybackDelegate in Main_ButtonBehavior.swift:21.
+• Stopped: starts from the beginning
+• Preparing: records a pending pause
+• Playing: calls AVAudioPlayer.pause()
+• Paused with a prepared player: calls play() to resume
+• Paused while still preparing: changes the intent back to playing
 
-It implements audioPlayerDidFinishPlaying(_:successfully:) and forwards completion to MainActor.
+Existing click feedback and disabled-mode guards remain active.
 
-Each delegate retains its originating sound request UUID. The completion handler clears activity only when that UUID still equals soundPlaybackRequestID.
 
+5. Double-tap behaviour
 
-5. Ambient activity tracking
+handleSimpleOrdinarySoundDoubleTap(_:index:) starts a new ordinary sound request through playMainGridSound(...).
 
-MainGridAmbientSoundState now publishes read-only isPlaybackActive at Main_ButtonLabelView.swift:1385.
+This:
 
-It becomes true when ambient activation/preparation begins and remains true during looping playback.
+• Stops and replaces the current ordinary player
+• Invalidates pending preparation
+• Prepares a new player off-main
+• Starts from time zero
 
-It becomes false when playback stops or the current activation, preparation, or play operation fails.
+It works while stopped, preparing, playing, or paused.
 
 
-6. Speech activity tracking
+6. Playback state representation
 
-speakMainGridText(_:) sets speechSynthesisActive after accepting a request and assigning its UUID.
+Added MainGridOrdinarySoundPlaybackPhase at Main_ButtonBehavior.swift:91 with:
 
-Activity remains true through activation, queuing, and speech playback.
+• stopped
+• preparing
+• playing
+• paused
 
-stopSpokenGridText() clears it synchronously.
+MainScreen now stores:
 
+• ordinarySoundGestureOwnerID
+• ordinarySoundGestureRequest
+• ordinarySoundGestureRequestID
+• ordinarySoundPlaybackPhase
 
-7. Speech completion/cancellation delegate
 
-Added MainGridSpeechPlaybackDelegate in Main_ButtonBehavior.swift:39.
+7. Button ownership identity
 
-It handles:
+Ownership uses the project’s existing document-and-slot identity pattern:
 
-• speechSynthesizer(_:didFinish:)
-• speechSynthesizer(_:didCancel:)
+selectedDocumentName#index
 
-The delegate records both the speech request UUID and the expected AVSpeechUtterance identity. Only the matching utterance can report completion, and the MainActor closure additionally verifies speechPlaybackRequestID before clearing activity.
+Two buttons containing the same filename therefore remain distinct owners.
 
+Changing documents or selecting a different slot produces a different identity.
 
-8. Wait registry observation
 
-activeWaitChainTasks was already declared as @State in Main_Screen.swift:871.
+8. Pause/resume implementation
 
-No new registry or cancellation mechanism was introduced. Registering, removing, or clearing tasks therefore causes SwiftUI to reevaluate toolbar activity.
+Pause uses the existing soundEffectPlayer.pause().
 
+Resume uses the same retained AVAudioPlayer and calls play(), preserving currentTime.
 
-9. Aggregate activity Boolean
+No additional ordinary player or playback manager was introduced.
 
-Main_Screen.swift:5463 now computes isMediaOrWaitActive from:
+A paused sound keeps ordinarySoundActive true, so Universal Stop remains green.
 
-• ordinarySoundActive
-• mainGridAmbientSoundState.isPlaybackActive
-• speechSynthesisActive
-• !activeWaitChainTasks.isEmpty
 
-Speech recognition, connection state, button mode, and ordinary timer state are not included.
+9. Preparation-time tap handling
 
+When the owning button is tapped during preparation:
 
-10. Stop button colour changes
+• Phase changes from preparing to paused.
+• Activation and background preparation continue.
+• The prepared player is retained.
+• play() is not called.
+• The player remains paused at time zero.
 
-Main_BtmToolbar.swift:625 now uses:
+A subsequent tap before preparation completes changes the phase back to preparing, allowing playback to begin when preparation finishes.
 
-• Dark grey existing inactive background when idle
-• Subdued green when active
+A double tap installs a new request UUID, invalidating the older preparation.
 
-The active green is:
 
-Color(red: 0.16, green: 0.42, blue: 0.22)
+10. Natural completion handling
 
-The Stop symbol remains white.
+The existing MainGridSoundPlaybackDelegate still reports natural completion.
 
+Its request-ID-protected callback now also clears:
 
-11. Removal of Speech-mode styling
+• Gesture owner
+• Gesture request
+• Gesture request ID
+• Playback phase
 
-The Stop button no longer derives its background, border, or opacity from Speech mode.
+A stale player callback cannot clear a newer request.
 
-The previous blue border was replaced with a clear stroke using the same line width.
 
+11. Universal Stop integration
 
-12. Geometry preservation
+stopMainGridSoundPlayback() now clears all ordinary gesture state in addition to its existing behaviour.
 
-The following remain unchanged:
+Universal Stop therefore:
 
-• Toolbar order
-• Stop button position
-• Width
-• Height
-• Corner radius
-• SF Symbol
-• Symbol font
-• HStack spacing
-• Padding
-• iPhone/iPad sizing
-• Neighbouring controls
+• Invalidates pending ordinary preparation
+• Stops and releases the player
+• Clears pause/resume ownership
+• Resets the phase to stopped
+• Clears ordinarySoundActive
 
+The ambient, speech, and wait cancellation operations remain intact.
 
-13. Always-clickable behaviour
 
-No disabled or hit-testing condition was added.
+12. Other ordinary-source replacement behaviour
 
-The button continues calling onStopMedia and remains clickable while idle, active, in Edit Mode, and in every Main Screen button mode.
+playMainGridSound(...) remains the shared playback path.
 
+Its new gesture parameters default to nil. Consequently, every non-gesture caller automatically clears previous gesture ownership after validating the new filename and volume.
 
-14. Request-ID and stale-callback protection
+This covers:
 
-Ordinary completion handlers compare their captured request UUID with soundPlaybackRequestID.
+• Compound commands
+• Wait sequences
+• Speech-triggered commands
+• Keyboard/editor testing
+• Timer-completion sounds
 
-Speech callbacks verify both utterance identity and speechPlaybackRequestID.
+A missing file or invalid volume returns before clearing the existing sound or gesture state, preserving prior behaviour.
 
-Ambient failure paths retain the existing playbackRequestID checks.
 
-Old callbacks therefore cannot clear activity belonging to newer requests.
+13. Green/grey Stop indicator preservation
 
+ordinarySoundActive remains the activity source.
 
-15. Failure-path handling
+It stays true while a gesture-owned sound is:
 
-Current ordinary requests clear activity on:
+• Preparing
+• Playing
+• Paused at time zero
+• Paused during playback
 
-• Audio-session activation failure
-• Background preparation failure
-• player.play() failure
+Natural completion, Universal Stop, or current-request failure clears it.
 
-Current ambient requests clear activity on:
+No Stop button UI or aggregate activity logic was modified.
 
-• Missing file
-• Activation failure
-• Preparation failure
-• player.play() failure
 
-Current speech requests clear activity on activation failure.
+14. Ambient preservation
 
-Stale failures return without changing newer activity or displaying obsolete alerts.
+Main_ButtonLabelView.swift was not modified.
 
+Ambient parsing, player ownership, volume, looping, request protection, and single/double/triple-tap handling remain unchanged.
 
-16. Natural completion behaviour
+Ordinary pause, resume, and restart do not affect ambient playback.
 
-Ordinary non-looping sounds clear activity through AVAudioPlayerDelegate.
 
-Speech synthesis clears activity through AVSpeechSynthesizerDelegate.
+15. Wait cancellation preservation
 
-Ambient playback loops indefinitely, so its activity ends through existing stop/replacement/failure paths.
+The C1 wait registry, shared launcher, cancellation handling, Task.sleep handling, and stop-inside-sequence behaviour were not modified.
 
-No polling was introduced.
+Compound buttons containing .wait do not receive simple-sound gestures.
 
 
-17. Universal Stop integration
+16. Speech preservation
 
-The existing stopAllMainGridMedia() implementation was not changed.
+Speech recognition files were not modified.
 
-Its existing calls now clear observable activity through:
+Existing speech-synthesis behaviour in speech-capable button modes is preserved when a simple sound gesture executes.
 
-• stopSpokenGridText()
-• stopMainGridSoundPlayback()
-• mainGridAmbientSoundState.stopPlayback()
-• Clearing/cancelling activeWaitChainTasks
+Speech-recognition suppression and request-ID handling remain unchanged.
 
 
-18. C1 wait cancellation preservation
+17. Edit Mode preservation
 
-The following remain unchanged:
+The new gesture branch requires Edit Mode to be disabled.
 
-• Shared wait launcher
-• UUID-based task registry
-• Cancellation of all registered wait tasks
-• Task.sleep cancellation handling
-• Task.isCancelled checks
-• ID-specific cleanup
-• Stop aliases inside wait sequences
-• Ability to start new waits after Stop
+In Edit Mode, buttons continue through the existing path for:
 
+• Popup selection
+• Dragging
+• Long-press editing
 
-19. Speech recognition preservation
+Popup positioning and editor behaviour were not changed.
 
-No speech-recognition source files or behaviour were modified.
 
-Microphone handling, recognition callbacks, recognition lifecycle, and speech-recognition suppression of speech synthesis remain unchanged.
+18. iPhone/iPad gesture preservation
 
+No device-specific layout or sizing code was changed.
 
-20. Timer preservation
+Existing drag and long-press gestures remain attached to simple sound buttons.
 
-Timer implementations and timer parsing were not modified.
+The implementation uses the same grid path on iPhone and iPad.
 
-Timer-generated ordinary audio uses the existing ordinary sound channel and is represented by ordinarySoundActive while preparing or playing.
 
+19. Audio preparation preservation
 
-21. BLE/Mac preservation
+MainGridSoundPlayerPreparer remains unchanged.
 
-No BLE or Mac Helper source or transport logic was modified.
+AVAudioPlayer construction and prepareToPlay() remain off MainActor.
 
-Stop aliases and keyboard transmission behaviour remain unchanged.
+AudioSessionOperationCoordinator and audio-session activation policy were not modified.
 
 
-22. Build result
+20. Build result
 
-Xcode BuildProject completed successfully in approximately 29 seconds.
+The Xcode project built successfully.
+
+Build duration was approximately 45 seconds.
 
 The app and simulator were not launched.
 
 
-23. Compiler/concurrency warnings
+21. Compiler/concurrency warnings
 
-The completed Xcode build reported:
+The build reported:
 
 • No compiler errors
 • No actor-isolation warnings
 • No Sendable warnings
-• No delegate-isolation warnings
+• No gesture ambiguity diagnostics
 • No API-availability warnings
 • No new concurrency diagnostics
 
-The implementation follows the Swift concurrency guidance by keeping UI state MainActor-owned and having nonisolated delegate callbacks explicitly hop to MainActor.
+
+22. Remaining risks
+
+Physical testing is required to verify:
+
+• System single/double-tap recognition timing
+• Long-press interaction on physical devices
+• Pause requests during real-world preparation timing
+• AVAudioPlayer resume behaviour across supported audio formats
+• Behaviour when an audio file is removed after playback begins
+
+No runtime testing was performed.
 
 
-24. Remaining risks
+23. Recommended physical tests
 
-Physical testing is still needed to verify:
+1. Single tap a stopped simple sound and confirm playback starts.
 
-• Device-time delegate callback behaviour
-• Exact toolbar redraw timing
-• Natural completion of timer-generated audio
-• Speech finish and cancellation transitions
-• Rapid replacement of sound and speech requests
-• Combined media and wait activity
+2. Single tap again and confirm it pauses at its current position.
 
-The successful build cannot confirm visual appearance or runtime callback timing.
+3. Single tap again and confirm it resumes from that position.
 
+4. Double tap while playing and confirm restart from zero without an intervening pause.
 
-25. Recommended physical tests
+5. Double tap while paused and confirm restart from zero.
 
-1. Confirm the idle Stop button is dark grey with a white symbol and no blue border.
+6. Double tap after natural completion and confirm a new start.
 
-2. Start an ordinary sound and confirm the button turns green during preparation and playback.
+7. Rapidly single tap twice during preparation and confirm the prepared player remains paused at zero.
 
-3. Let an ordinary sound finish naturally and confirm it returns grey.
+8. Tap again during that pending pause and confirm it plays after preparation.
 
-4. Rapidly replace Sound A with Sound B and confirm Sound A’s completion cannot turn the button grey while B remains active.
+9. Double tap during preparation and confirm only the newest request starts.
 
-5. Start and stop ambient playback; verify green during preparation/playback and grey after stopping.
+10. Test two buttons containing the same filename and volume; verify ownership follows the specific button.
 
-6. Start speech synthesis and let it finish naturally.
+11. Replace a paused simple sound using another simple sound button.
 
-7. Stop speech during pending activation and during playback.
+12. Replace it using a compound command, wait sequence, speech trigger, editor test, and timer sound.
 
-8. Rapidly replace Speech A with Speech B and confirm stale cancellation does not clear B’s activity.
+13. Confirm a paused sound keeps the Stop button green.
 
-9. Start one and multiple wait sequences and verify green remains until the last sequence ends.
+14. Confirm natural completion returns the Stop button grey when nothing else is active.
 
-10. Cancel waits using .sm, .stopmedia, and the square Stop button.
+15. Confirm Universal Stop clears paused and pending gesture state.
 
-11. Test simultaneous ordinary, ambient, speech, and wait activity; stopping one subsystem must not make the button grey while another remains active.
+16. Confirm ambient playback continues during ordinary pause/resume/restart.
 
-12. Verify the square button remains clickable in Edit Mode and every Main Screen mode.
+17. Confirm Edit Mode tap, drag, and long-press behaviour.
 
-13. Verify iPhone and iPad toolbar geometry remains unchanged.
+18. Test both iPhone and iPad layouts.
 
 
-26. Unrelated-file confirmation
+24. Unrelated-file confirmation
 
-Only the four permitted source files were modified.
+Only the three permitted source files were modified.
 
-No ordinary sound gestures, polling, layout redesign, audio-session changes, parser changes, or unrelated fixes were introduced.
+No ambient, toolbar, speech-recognition, editor, BLE, Mac Helper, firmware, asset, project, or documentation files were changed.
 
 
-27. Git confirmation
+25. Git confirmation
 
 No Git operations, commits, tags, or backups were performed.

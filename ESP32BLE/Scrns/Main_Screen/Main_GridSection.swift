@@ -112,7 +112,10 @@ struct MainScreenGridSection<ButtonLabel: View>: View {
     let isHiddenEntry: (FunctionKeyEntry) -> Bool
     let isEmptyEntry: (FunctionKeyEntry) -> Bool
     let isInteractiveWidgetEntry: (FunctionKeyEntry) -> Bool
+    let isSimpleOrdinarySoundEntry: (FunctionKeyEntry) -> Bool
     let sendLine: (FunctionKeyEntry) -> Void
+    let onSimpleOrdinarySoundSingleTap: (FunctionKeyEntry, Int) -> Void
+    let onSimpleOrdinarySoundDoubleTap: (FunctionKeyEntry, Int) -> Void
     let onBeginSlotEditing: (Int) -> Void
     let buttonLabel: (FunctionKeyEntry, Int, CGFloat, CGSize) -> ButtonLabel
     let dragGesture: (FunctionKeyEntry, Int, GridDimensions) -> AnyGesture<DragGesture.Value>
@@ -393,7 +396,35 @@ struct MainScreenGridSection<ButtonLabel: View>: View {
         buttonFrame: CGRect,
         gridDimensions: GridDimensions
     ) -> some View {
-        if !isGridEditModeEnabled && isInteractiveWidgetEntry(entry) {
+        if !isGridEditModeEnabled && isSimpleOrdinarySoundEntry(entry) {
+            buttonLabel(entry, index, buttonHeight, buttonSize)
+                .contentShape(Rectangle())
+                .gesture(
+                    TapGesture(count: 2)
+                        .exclusively(before: TapGesture(count: 1))
+                        .onEnded { gesture in
+                            guard longPressedEditIndex != index else {
+                                longPressedEditIndex = nil
+                                return
+                            }
+
+                            onButtonClick()
+
+                            guard bleSendEnabled else {
+                                return
+                            }
+
+                            switch gesture {
+                            case .first:
+                                onSimpleOrdinarySoundDoubleTap(entry, index)
+                            case .second:
+                                onSimpleOrdinarySoundSingleTap(entry, index)
+                            }
+                        }
+                )
+                .simultaneousGesture(dragGesture(entry, index, gridDimensions))
+                .simultaneousGesture(slotEditorLongPressGesture(index: index))
+        } else if !isGridEditModeEnabled && isInteractiveWidgetEntry(entry) {
             buttonLabel(entry, index, buttonHeight, buttonSize)
                 .contentShape(Rectangle())
                 .simultaneousGesture(dragGesture(entry, index, gridDimensions))

@@ -868,6 +868,10 @@ This command requires an ESP32 connection. Not all pins will work, it will depen
     @State var soundPlaybackRequestID = UUID()
     @State var soundPlaybackDelegate: MainGridSoundPlaybackDelegate?
     @State var ordinarySoundActive = false
+    @State var ordinarySoundGestureOwnerID: String?
+    @State var ordinarySoundGestureRequest: MainGridSoundRequest?
+    @State var ordinarySoundGestureRequestID: UUID?
+    @State var ordinarySoundPlaybackPhase: MainGridOrdinarySoundPlaybackPhase = .stopped
     @State var activeWaitChainTasks: [UUID: Task<Void, Never>] = [:]
     @StateObject var mainGridTimerState = MainGridSharedTimerState()
     @StateObject var mainGridAmbientSoundState = MainGridAmbientSoundState()
@@ -1405,7 +1409,10 @@ Tapping a row inserts the key code at the cursor.
             isHiddenEntry: isMainGridEntryHidden,
             isEmptyEntry: isEmptyButtonEntry,
             isInteractiveWidgetEntry: isInteractiveMainGridWidgetEntry,
+            isSimpleOrdinarySoundEntry: isSimpleOrdinarySoundEntry,
             sendLine: sendMainGridEntry,
+            onSimpleOrdinarySoundSingleTap: handleSimpleOrdinarySoundSingleTap,
+            onSimpleOrdinarySoundDoubleTap: handleSimpleOrdinarySoundDoubleTap,
             onBeginSlotEditing: beginSlotEditing,
             buttonLabel: { entry, index, buttonHeight, buttonSize in
                 mainGridButtonLabel(
