@@ -336,7 +336,7 @@ extension MainScreen {
             return
         }
 
-        if midiNoteNumberForGridEntry(entry) != nil {
+        if isMIDICommandForGridEntry(entry) {
             return
         }
 
@@ -511,16 +511,34 @@ extension MainScreen {
     }
 
     func midiNoteNumberForGridEntry(_ entry: FunctionKeyEntry) -> Int? {
-        guard entry.sendTexts.count == 1,
-              entry.sendTexts[0].trimmingCharacters(in: .whitespacesAndNewlines) == ".midi 60" else {
+        guard entry.sendTexts.count == 1 else {
             return nil
         }
 
-        return 60
+        let components = entry.sendTexts[0]
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .split(whereSeparator: \.isWhitespace)
+        guard components.count == 2,
+              components[0] == ".midi",
+              let note = Int(components[1]),
+              (0...127).contains(note) else {
+            return nil
+        }
+
+        return note
+    }
+
+    private func isMIDICommandForGridEntry(_ entry: FunctionKeyEntry) -> Bool {
+        entry.sendTexts.contains { sendText in
+            sendText
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+                .split(whereSeparator: \.isWhitespace)
+                .first == ".midi"
+        }
     }
 
     func sendMIDINoteOnFromTouch(_ note: Int) {
-        guard note == 60,
+        guard (0...127).contains(note),
               !isGridEditModeEnabled,
               mainGridButtonMode.sendsBluetooth,
               outputMode == .mac,
@@ -528,16 +546,16 @@ extension MainScreen {
             return
         }
 
-        _ = macConnection.sendAuthenticatedCommand("MIDI:NOTE_ON:60:100:1")
+        _ = macConnection.sendAuthenticatedCommand("MIDI:NOTE_ON:\(note):100:1")
     }
 
     func sendMIDINoteOffFromTouch(_ note: Int) {
-        guard note == 60,
+        guard (0...127).contains(note),
               macConnection.canSend else {
             return
         }
 
-        _ = macConnection.sendAuthenticatedCommand("MIDI:NOTE_OFF:60:1")
+        _ = macConnection.sendAuthenticatedCommand("MIDI:NOTE_OFF:\(note):1")
     }
 
     private func runDocumentNavigationCommandIfNeeded(

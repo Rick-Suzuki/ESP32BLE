@@ -1,3 +1,8 @@
+
+261019 Mon 1917
+Core Midi working
+V63.83
+
 261019 Mon 1822
 long notes allowed
 V63.82
