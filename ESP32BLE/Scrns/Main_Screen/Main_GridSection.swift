@@ -117,6 +117,7 @@ struct MainScreenGridSection<ButtonLabel: View>: View {
     let isSimpleOrdinarySoundEntry: (FunctionKeyEntry) -> Bool
     let midiNoteNumber: (FunctionKeyEntry) -> Int?
     let onMIDITouchDown: (Int) -> Void
+    let onMIDITouchUp: (Int) -> Void
     let sendLine: (FunctionKeyEntry) -> Void
     let onSimpleOrdinarySoundSingleTap: (FunctionKeyEntry, Int) -> Void
     let onSimpleOrdinarySoundDoubleTap: (FunctionKeyEntry, Int) -> Void
@@ -437,7 +438,8 @@ struct MainScreenGridSection<ButtonLabel: View>: View {
                 MIDITouchView(
                     note: midiNote,
                     isEnabled: scenePhase == .active,
-                    onDown: onMIDITouchDown
+                    onDown: onMIDITouchDown,
+                    onUp: onMIDITouchUp
                 )
             }
         } else {
@@ -514,13 +516,14 @@ private struct MIDITouchView: UIViewRepresentable {
     let note: Int
     let isEnabled: Bool
     let onDown: (Int) -> Void
+    let onUp: (Int) -> Void
 
     func makeUIView(context: Context) -> MIDITouchCaptureView {
         MIDITouchCaptureView()
     }
 
     func updateUIView(_ uiView: MIDITouchCaptureView, context: Context) {
-        uiView.configure(note: note, isEnabled: isEnabled, onDown: onDown)
+        uiView.configure(note: note, isEnabled: isEnabled, onDown: onDown, onUp: onUp)
     }
 
     static func dismantleUIView(_ uiView: MIDITouchCaptureView, coordinator: ()) {
@@ -531,6 +534,7 @@ private struct MIDITouchView: UIViewRepresentable {
 private final class MIDITouchCaptureView: UIView {
     private var note: Int?
     private var onDown: ((Int) -> Void)?
+    private var onUp: ((Int) -> Void)?
     private var activeTouch: UITouch?
     private var activeNote: Int?
 
@@ -544,13 +548,19 @@ private final class MIDITouchCaptureView: UIView {
         fatalError("init(coder:) has not been implemented")
     }
 
-    func configure(note: Int, isEnabled: Bool, onDown: @escaping (Int) -> Void) {
+    func configure(
+        note: Int,
+        isEnabled: Bool,
+        onDown: @escaping (Int) -> Void,
+        onUp: @escaping (Int) -> Void
+    ) {
         if activeNote != nil && (self.note != note || !isEnabled) {
             cancelActiveTouch()
         }
 
         self.note = note
         self.onDown = onDown
+        self.onUp = onUp
         isUserInteractionEnabled = isEnabled
     }
 
@@ -585,13 +595,14 @@ private final class MIDITouchCaptureView: UIView {
         }
 
         let endedInside = bounds.contains(activeTouch.location(in: self))
-        self.activeTouch = nil
-        self.activeNote = nil
         if endedInside {
             print("🐞 [MIDI-TOUCH] UP note=\(activeNote)")
         } else {
             print("🐞 [MIDI-TOUCH] CANCEL note=\(activeNote)")
         }
+        onUp?(activeNote)
+        self.activeTouch = nil
+        self.activeNote = nil
     }
 
     override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -608,9 +619,10 @@ private final class MIDITouchCaptureView: UIView {
             return
         }
 
+        print("🐞 [MIDI-TOUCH] CANCEL note=\(activeNote)")
+        onUp?(activeNote)
         activeTouch = nil
         self.activeNote = nil
-        print("🐞 [MIDI-TOUCH] CANCEL note=\(activeNote)")
     }
 }
 

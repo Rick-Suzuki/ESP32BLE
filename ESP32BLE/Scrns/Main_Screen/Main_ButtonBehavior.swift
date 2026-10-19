@@ -531,6 +531,15 @@ extension MainScreen {
         _ = macConnection.sendAuthenticatedCommand("MIDI:NOTE_ON:60:100:1")
     }
 
+    func sendMIDINoteOffFromTouch(_ note: Int) {
+        guard note == 60,
+              macConnection.canSend else {
+            return
+        }
+
+        _ = macConnection.sendAuthenticatedCommand("MIDI:NOTE_OFF:60:1")
+    }
+
     private func runDocumentNavigationCommandIfNeeded(
         shouldGoBackToPreviousDocument: Bool,
         shouldGoForwardToNextDocument: Bool,
