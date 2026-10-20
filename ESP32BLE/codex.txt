@@ -1,149 +1,378 @@
-ESP-TEMPLATE-001E-B implementation is complete.
+ESP-BACKUP-002-A — Restore notification
 
-Files modified:
+Relevant source
+
+File:
+ESP32BLE/ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
+
+Locations:
+
+• Completion-alert state: line 334
+• Native Restore Complete alert: lines 718–722
+• State reset in beginRestoreAllFiles(): lines 924–928
+• Restore completion decision in finishPendingImportSession(_:): lines 3931–3977
+• Existing Settings feedback overlay: lines 1344–1362
+• Existing timed-feedback helper: lines 1505–1513
+• Feedback-task cancellation on Settings disappearance: lines 737–739
+
+Current behavior
+
+The current blocking notification uses:
+
+@State private var isRestoreCompleteAlertPresented = false
+
+The alert presents:
+
+• Restore Complete
+• Your backup has been restored successfully.
+• OK
+
+beginRestoreAllFiles() resets the state before every restore.
+
+finishPendingImportSession(_:) sets the state only after:
+
+• Pending import state is cleared.
+• Temporary extraction cleanup is attempted.
+• Template discovery is refreshed when applicable.
+• General file collections are refreshed.
+• Any imported screen or selected resource updates are completed.
+
+The existing success conditions are:
+
+• importMode is .allFiles.
+• importedAnything is true, enforced by the preceding guard.
+• failedFileCount is zero.
+• skipFileNameKeys is empty.
+• skipTemplatePairKeys is empty.
+• renameAlertMessage is nil.
+
+Consequently, the alert is suppressed for ordinary imports, cancellation, invalid ZIPs, failures, partial failures and restores that skipped any ordinary file or template pair.
+
+Existing timed notification infrastructure
+
+Settings already has a suitable nonblocking notification mechanism:
+
+• templateFeedbackMessage stores the visible text.
+• templateFeedbackTask owns the dismissal operation.
+• showTemplateFeedback(_:) cancels the previous task.
+• The new message is displayed immediately.
+• A new Task waits for two seconds.
+• The task checks cancellation before clearing the message.
+• The overlay uses allowsHitTesting(false), so it does not block Settings interaction.
+
+This currently displays “Template applied” and “Template saved”.
+
+The existing cancellation behavior prevents an older timer from hiding a newer notification:
+
+1. The previous task is cancelled.
+2. The new message replaces the old message.
+3. The cancelled task exits without clearing the new message.
+4. A new two-second task controls the new message.
+
+Recommended minimal implementation
+
+Reuse the existing banner rather than creating a second timer system.
+
+The smallest behavioral change would be:
+
+• Remove isRestoreCompleteAlertPresented.
+• Remove the Restore Complete .alert modifier.
+• Remove its reset from beginRestoreAllFiles().
+• Keep the existing restore success condition unchanged.
+• At that condition, call:
+showTemplateFeedback("Restore Complete")
+
+For clearer naming, the private infrastructure could be generalized to:
+
+• settingsFeedbackMessage
+• settingsFeedbackTask
+• showSettingsFeedback(_:)
+
+That rename would also update the two existing template-feedback call sites, but would not change their behavior.
+
+Keeping the existing template-oriented names would produce a smaller diff, while generalizing them would make the shared purpose clearer. Either is technically safe.
+
+Position and layout
+
+The existing overlay is attached to SettingsDocumentTableSection and aligned to its top.
+
+It appears:
+
+• Below the Settings toolbar.
+• Inside the table area.
+• Above table content.
+• Without changing layout height.
+• Without affecting safe-area or toolbar geometry.
+• Without intercepting touches.
+
+This is a suitable interpretation of “near the top of Settings” and already works with the current iPhone/iPad table layout.
+
+If the desired location is instead centered across the entire Settings width, a new outer overlay would be required. That would be a larger layout change and is unnecessary unless device testing shows the table-area placement is unsuitable.
+
+Risks and device checks
+
+• Backup, restore and template messages would share one slot. A newer message would intentionally replace an older one.
+• A two-second message can disappear while the user is not looking at the table area, but this is expected for nonblocking feedback.
+• The existing overlay has no explicit transition or animation; none is required.
+• The table refresh changes importRefreshID, but the feedback state belongs to SettingsScreen rather than the table, so the message can be shown after refresh.
+• Manual checks are needed for iPhone landscape, iPad mini and larger iPads to confirm the table-top position remains clearly visible.
+
+ESP-BACKUP-002-B — Backup notification
+
+Relevant source
+
+Files:
 
 ESP32BLE/ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
 
-ESP32BLE/ESP32BLE/Scrns/TemplateDocument.swift
+ESP32BLE/ESP32BLE/Scrns/Set_Screen/Set_ArchiveDocuments.swift
 
-Files and functions changed:
+Locations in Set_Screen.swift:
 
-Set_Screen.swift:
+• Create Full Backup menu action: lines 526–530
+• archiveExportPresenter: lines 742–756
+• prepareArchiveExport(): lines 2751–2766
+• ZIP UTType: lines 4935–4937
+• Default ZIP filename: lines 4939–4942
+• makeFullArchiveData(): lines 4945 onward
+• Timed feedback helper: lines 1505–1513
 
-• Extended ImportedContentKind with dedicated template document and template configuration cases.
-• Extended FullArchiveImport and FullArchiveEntryClassification with logical template pairs.
-• Extended PendingImportSession and FullRestorePreflight with pair-aware restore and skip state.
-• Extended fullArchiveStructure(in:) to recognize templates/.
-• Template-only backups now qualify as Full Backups.
-• Extended fullArchiveEntryPlan(for:) with strict template path and filename validation.
-• Extended classifyFullArchiveEntries(...) to assemble template documents and optional sidecars into logical pairs.
-• Added rejection for orphaned template configuration sidecars.
-• Added case-insensitive, canonically normalized duplicate detection for template destinations.
-• Extended makeFullRestorePreflight(...) with pair-level conflict detection.
-• Added processTemplateRestorePairs(session:).
-• Extended Skip All handling to skip complete template pairs.
-• Extended finishPendingImportSession(...) to refresh Plates and its selected description after template restore attempts.
+Locations in Set_ArchiveDocuments.swift:
 
-TemplateDocument.swift:
+• SettingsArchiveFileDocument: lines 32–61
+• ZIP readable/writable types: lines 38–44
+• FileWrapper generation: lines 59–61
 
-• Added TemplateRestoreResult.
-• Added TemplateRestoreError with distinct ordinary rollback and critical rollback failure cases.
-• Added templateFileNameCollisionKey(_:).
-• Added restoreTemplateDocumentPair(...).
-• Added focused snapshot, verification and rollback helpers.
+Current export flow
 
-Archive handling:
+1. The user selects Create Full Backup.
+2. prepareArchiveExport() calls saveCurrentDocumentText().
+3. It verifies hasArchiveExportContent.
+4. makeFullArchiveData() creates the ZIP bytes.
+5. SettingsArchiveFileDocument stores those bytes.
+6. isExportingArchive becomes true.
+7. SwiftUI presents fileExporter.
+8. SettingsArchiveFileDocument.fileWrapper(configuration:) supplies the ZIP bytes.
+9. The system writes the document to the destination selected by the user.
+10. The fileExporter completion closure receives Result<URL, Error>.
+11. Failures currently set renameAlertMessage.
+12. exportArchiveDocument is cleared after completion.
 
-• Recognizes only exact paths shaped like:
+Exact successful-save point
 
-templates/Name.template
+The correct success point is:
 
-templates/Name.template.config.json
+archiveExportPresenter’s fileExporter completion closure, when result is .success.
 
-• Restores both files directly into Documents.
-• Does not create Documents/templates.
-• Rejects unsupported files inside templates/.
-• Rejects orphaned sidecars.
-• Rejects leading slash, repeated slash, nested paths, backslashes and invalid template filenames.
-• Rejects case-only and canonically equivalent duplicate destinations.
-• Preserves malformed sidecar bytes without decoding them.
-• Older backups without templates remain valid.
+Generating archiveData is not sufficient. At that stage the user has not selected a destination and may still cancel.
 
-Conflict behaviour:
+Recommended completion handling
 
-Replace All:
+Change the completion closure conceptually to:
 
-• If either pair member exists, the complete pair is treated as conflicting.
-• Sidecar is published first when supplied.
-• Template document is published last.
-• A sidecar-less restored template removes an existing stale destination sidecar.
-• Both previous destination files are restored if publication fails.
+• .success:
+show the shared “Backup Complete” feedback.
+• .failure:
+preserve the existing renameAlertMessage behavior.
+• Always:
+clear exportArchiveDocument.
 
-Skip All:
+The existing FileDocument fileExporter overload documents that:
 
-• A conflict involving either pair member skips the entire pair.
-• It cannot restore one member while retaining the other from a different version.
+• Its completion callback receives success or failure.
+• If the user cancels, the completion callback is not called.
+• SwiftUI clears isPresented before invoking completion.
 
-Cancel:
+Therefore, presenting “Backup Complete” only from the .success case will not show it on cancellation. Apple fileExporter documentation
 
-• Template pairs are not published during preflight.
-• Cancel retains the existing cleanup path and publishes no files.
+What success guarantees
 
-Rollback behaviour:
+A successful callback means the system export operation completed and produced the destination URL. It is the appropriate application-level point for saying the backup was saved.
 
-• Existing destination bytes and original presence are recorded.
-• Incoming bytes are staged and verified in the destination filesystem.
-• Destination state is rechecked before publication.
-• Final bytes and sidecar presence are verified.
-• Failed publication attempts restore the exact previous pair.
-• Operation-created files are removed when the corresponding original was absent.
-• Ordinary publication failure returns publicationFailedAndRolledBack.
-• Failed rollback returns the distinct rollbackFailed critical error.
-• Restore reporting counts one failure per logical template pair.
+It does not guarantee that an iCloud or third-party File Provider has completed every subsequent server upload or cross-device synchronization step. Those activities can continue after the coordinated local/provider write succeeds.
 
-Refresh and navigation:
+The message should therefore mean “the export was successfully handed to and completed by the selected destination provider,” not “the cloud service has fully synchronized it everywhere.”
 
-• Plates discovery refreshes after template restoration attempts.
-• Existing selected-template descriptions reload when appropriate.
-• Missing selected templates are cleared through the existing refresh logic.
-• Templates are never automatically applied.
-• Settings category is unchanged.
-• Template-only restore does not call loadFunctionKeys and therefore does not change the active screen or navigation history.
-• Existing first-imported-screen loading remains unchanged for backups containing screens.
+Recommended shared mechanism
 
-Build result:
+Use the same feedback state and task for:
 
-• Xcode diagnostics found no issues in either modified file.
-• Full ESP32BLE build completed successfully.
-• Build errors: none.
+• Template saved
+• Template applied
+• Restore Complete
+• Backup Complete
 
-Isolated tests performed:
+The existing task-cancellation logic already ensures that an older dismissal cannot erase a newer message.
 
-• Restored a complete template pair successfully.
-• Verified exact restored template bytes.
-• Verified malformed sidecar bytes were preserved exactly.
-• Replaced an existing pair with a sidecar-less template.
-• Verified the new template bytes.
-• Verified the stale destination sidecar was removed.
-• Verified no physical templates directory was created.
-• Verified composed and decomposed Unicode filenames produce equal collision keys.
-• Verified case-only filename variants produce equal collision keys.
-• Verified rejection of:
-   • ../Bad.template
-   • .Hidden.template
-   • Backslash-containing names
-   • Colon-containing names
-• All temporary test directories were removed.
-• No user Documents files were used.
+No ZIP generation, filename, destination, file type or provider behavior needs to change.
 
-Source-level checks performed:
+Potential limitation
 
-• Template-only archives count as valid Full Backups.
-• Orphaned sidecars are rejected.
-• Replace All processes complete pairs.
-• Skip All records pair keys and skips complete pairs.
-• Cancel occurs before template publication.
-• Existing screen, text, image, sound, PDF and screen-configuration branches remain in place.
-• Existing Create Full Backup and Export menu implementations were not changed in this phase.
-• Diff whitespace validation passed.
+The current cancellation overload does not execute the completion closure on user cancellation. Consequently, exportArchiveDocument may remain populated after cancellation under the current implementation.
 
-Remaining risks and limitations:
+That is a separate cleanup concern and does not cause a false Backup Complete notification. It does not need to be changed for the requested notification behavior.
 
-• Forced rollback-failure injection was not executable through the temporary snippet because Foundation’s replacement method is not open for subclass overriding. The critical rollback path is compiled and distinguishable in source but still warrants controlled fault-injection or device filesystem testing.
-• No whole-backup rollback was introduced for unrelated file categories, as required.
-• No physical-device restore testing was performed.
-• The existing ZIP reader limitations remain unchanged.
+ESP-BACKUP-002-C — iOS 17 Move wording
 
-Suggested manual device tests:
+Current export configuration
 
-• Restore a template-only backup and verify the active screen is unchanged.
-• Test Replace All where both template files already exist.
-• Test Replace All where only the sidecar exists.
-• Test Skip All for both collision forms.
-• Cancel the conflict dialog and verify no template changes.
-• Restore while the affected template is selected in Plates and verify its description reloads.
-• Restore on iPhone landscape, iPad and iPad mini.
-• Restore an older backup with no templates.
-• Restore a combined backup and verify the existing first imported screen behaviour is preserved.
+The Full Backup exporter uses one SwiftUI path on all supported iPhones and iPads:
 
-ESP-TEMPLATE-001E-B IMPLEMENTATION COMPLETE
+.fileExporter(
+isPresented: $isExportingArchive,
+
+document: exportArchiveDocument,
+
+contentType: archiveExportType,
+
+defaultFilename: archiveExportDefaultFilename()
+
+)
+
+Configuration details:
+
+• Document type: SettingsArchiveFileDocument conforming to FileDocument.
+• Document payload: regular-file FileWrapper containing ZIP bytes.
+• Content type: UTType(filenameExtension: "zip") ?? .data.
+• Writable type: the same ZIP type.
+• Filename: ESP_yyMMdd_HHmmss.zip.
+• File dialog option: .displayFileExtensions.
+• No platform-specific iOS 17 branch.
+• No UIDocumentPickerViewController is used for Full Backup.
+• Current deployment target: iOS 17.6.
+• Current SDK: iPhoneOS 27.0.
+• Supported devices: iPhone and iPad.
+
+Does ESP specify “Move”?
+
+No.
+
+The source contains no “Move” or “Save” confirmation-button title for the exporter.
+
+The only related file-dialog modifier is:
+
+.fileDialogBrowserOptions(.displayFileExtensions)
+
+That controls extension visibility, not confirmation wording.
+
+Who supplies the wording?
+
+The displayed confirmation title is supplied by Apple’s native Files/document-picker interface.
+
+Apple’s UIKit documentation describes exporting a local document as selecting a destination where the picker either moves or copies the document. This underlying transfer terminology makes “Move” plausible for an export implementation that stages a local file before publishing it. UIDocumentPickerViewController documentation
+
+However, the SwiftUI API does not document that iOS 17 must display “Move”, nor does it promise a particular confirmation-button title.
+
+Could FileDocument or ZIP configuration cause it?
+
+No source evidence indicates that the ZIP content type or default filename selects the word “Move”.
+
+The FileDocument exporter necessarily supplies a FileWrapper which SwiftUI may stage as a temporary local document before invoking the system destination picker. It is plausible that iOS 17 exposes the underlying move-style wording for that implementation while newer systems present the more user-friendly “Save”.
+
+That explanation is an inference from the framework architecture, not a documented Apple guarantee.
+
+Is this a documented iOS 17 difference?
+
+No official documentation was found stating that iOS 17 always labels SwiftUI fileExporter confirmation as “Move”.
+
+The observation is confirmed on the reported iPad Pro, but it must be treated as an OS/device/provider-specific presentation behavior rather than a universal iOS 17 rule.
+
+Can SwiftUI change the label on iOS?
+
+Apple provides fileDialogConfirmationLabel(_:), but its documentation explicitly describes it as a macOS customization.
+
+It is not a supported iOS mechanism for forcing the Files confirmation title to “Save”. Apple fileDialogConfirmationLabel documentation
+
+Therefore, adding:
+
+.fileDialogConfirmationLabel("Save")
+
+would not be a supported iPhone/iPad correction.
+
+Would UIKit change the wording?
+
+UIKit offers:
+
+UIDocumentPickerViewController(
+forExporting: urls,
+
+asCopy: true
+
+)
+
+The asCopy value changes whether the supplied local document is copied rather than moved. Apple UIKit initializer documentation
+
+This might influence the system wording, but Apple does not document the exact button title. It therefore cannot guarantee “Save” on iOS 17.
+
+Moving to UIKit would also require:
+
+• Creating and managing a temporary ZIP URL.
+• Presenting a UIViewControllerRepresentable.
+• Implementing picker delegate handling.
+• Distinguishing success and cancellation.
+• Cleaning temporary files safely.
+• Preserving Files and File Provider behavior.
+• Testing iCloud Drive and third-party providers.
+• Replacing a currently successful FileDocument workflow.
+
+That is not a small wording-only correction.
+
+Verified findings
+
+• ESP does not set the Move label.
+• There is one SwiftUI exporter path for iOS 17 and newer.
+• The Full Backup is exported as a ZIP FileDocument.
+• The export succeeds on the affected iPad.
+• Apple controls the native iOS Files UI.
+• The documented confirmation-label customization is macOS-only.
+• No supported iOS property guarantees a “Save” label.
+• The deployment target includes iOS 17.6.
+
+Uncertainties
+
+• Whether the label difference comes specifically from iOS 17, that iPad’s exact point release, or its selected Files provider.
+• Whether the wording changes between On My iPad, iCloud Drive and a third-party provider.
+• Whether the same OS/device displays a different title when exporting another FileDocument type.
+• Whether a UIKit asCopy exporter would display Save, Copy or another system-selected title.
+
+Recommended action
+
+Retain the native SwiftUI fileExporter.
+
+“Move” is cosmetically undesirable, but the operation is successful and there is no documented, small iOS API for replacing the label.
+
+Replacing the exporter would add substantial lifecycle and provider risk for an unguaranteed wording change.
+
+Smallest additional diagnostic
+
+On the affected iOS 17 iPad Pro, export the same backup to:
+
+• On My iPad
+• iCloud Drive
+• Any installed third-party File Provider
+
+Record whether the label changes by destination.
+
+Then repeat one destination on a newer iPadOS device.
+
+This will distinguish an OS-wide presentation difference from provider-specific behavior without changing application code.
+
+Final recommendation
+
+Implement 002-A and 002-B together as one small Settings-only phase:
+
+1. Generalize or reuse the existing timed feedback state.
+2. Remove the Restore Complete Boolean and blocking alert.
+3. Preserve the current restore success condition.
+4. Show “Restore Complete” through the shared two-second feedback helper.
+5. In fileExporter’s .success case, show “Backup Complete”.
+6. Preserve the current failure handler.
+7. Leave cancellation without feedback.
+8. Keep the existing cancellation-safe task replacement behavior.
+9. Do not alter ZIP creation, restore logic or file-provider integration.
+
+Keep 002-C separate and make no exporter change unless further device testing identifies a reproducible provider-independent issue and Apple exposes a supported iOS control.
+
+No files were modified. No formatter, export, restore, backup, project change or device test was performed.
+
+ESP-BACKUP-002 PROBE COMPLETE — NO FILES MODIFIED

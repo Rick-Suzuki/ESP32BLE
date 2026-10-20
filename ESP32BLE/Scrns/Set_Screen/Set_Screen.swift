@@ -378,8 +378,8 @@ struct SettingsScreen: View {
     @State private var saveAsTemplateSourceName: String?
     @State private var templateNameDraft = ""
     @State private var templateDescriptionDraft = ""
-    @State private var templateFeedbackMessage: String?
-    @State private var templateFeedbackTask: Task<Void, Never>?
+    @State private var settingsFeedbackMessage: String?
+    @State private var settingsFeedbackTask: Task<Void, Never>?
 
     var body: some View {
         configuredSettingsScreen
@@ -729,7 +729,7 @@ struct SettingsScreen: View {
             archiveExportPresenter
         }
         .onDisappear {
-            templateFeedbackTask?.cancel()
+            settingsFeedbackTask?.cancel()
         }
     }
 
@@ -741,7 +741,10 @@ struct SettingsScreen: View {
                 contentType: archiveExportType,
                 defaultFilename: archiveExportDefaultFilename()
             ) { result in
-                if case let .failure(error) = result {
+                switch result {
+                case .success:
+                    showSettingsFeedback("Backup Complete")
+                case .failure(let error):
                     renameAlertMessage = error.localizedDescription
                 }
                 exportArchiveDocument = nil
@@ -1335,8 +1338,8 @@ struct SettingsScreen: View {
         )
         .id(importRefreshID)
         .overlay(alignment: .top) {
-            if let templateFeedbackMessage {
-                Text(templateFeedbackMessage)
+            if let settingsFeedbackMessage {
+                Text(settingsFeedbackMessage)
                     .font(.subheadline)
                     .foregroundStyle(.green)
                     .padding(.horizontal, 15)
@@ -1483,7 +1486,7 @@ struct SettingsScreen: View {
                 pendingApplication.targetName
             )
             loadSelectedDocumentText()
-            showTemplateFeedback("Template applied")
+            showSettingsFeedback("Template applied")
         } catch {
             let title: String
             if case .rollbackFailed = error as? TemplateApplicationError {
@@ -1495,13 +1498,13 @@ struct SettingsScreen: View {
         }
     }
 
-    private func showTemplateFeedback(_ message: String) {
-        templateFeedbackTask?.cancel()
-        templateFeedbackMessage = message
-        templateFeedbackTask = Task {
+    private func showSettingsFeedback(_ message: String) {
+        settingsFeedbackTask?.cancel()
+        settingsFeedbackMessage = message
+        settingsFeedbackTask = Task {
             try? await Task.sleep(nanoseconds: 2_000_000_000)
             guard !Task.isCancelled else { return }
-            templateFeedbackMessage = nil
+            settingsFeedbackMessage = nil
         }
     }
 
@@ -2716,7 +2719,7 @@ struct SettingsScreen: View {
                 expectedSourceName
             )
             refreshTemplateFiles()
-            showTemplateFeedback("Template saved")
+            showSettingsFeedback("Template saved")
             templateNameDraft = ""
             templateDescriptionDraft = ""
         } catch {
@@ -3959,6 +3962,14 @@ struct SettingsScreen: View {
         if let firstImportedPDFURL = session.firstImportedPDFURL,
            session.importListMode == .pdfs || selectedPDFURL == nil {
             persistSelectedPDF(firstImportedPDFURL)
+        }
+
+        if session.importMode == .allFiles,
+           session.failedFileCount == 0,
+           session.skipFileNameKeys.isEmpty,
+           session.skipTemplatePairKeys.isEmpty,
+           renameAlertMessage == nil {
+            showSettingsFeedback("Restore Complete")
         }
     }
 

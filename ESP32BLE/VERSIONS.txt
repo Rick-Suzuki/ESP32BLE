@@ -1,3 +1,7 @@
+261020 Tue 1547
+msg on restore/backup, pro has move msg, midi development restart
+V64.05
+
 261020 Tue 1426
 restore templates from full backup
 V64.04
