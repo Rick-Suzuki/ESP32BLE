@@ -115,8 +115,8 @@ struct MainScreenGridSection<ButtonLabel: View>: View {
     let isEmptyEntry: (FunctionKeyEntry) -> Bool
     let isInteractiveWidgetEntry: (FunctionKeyEntry) -> Bool
     let isSimpleOrdinarySoundEntry: (FunctionKeyEntry) -> Bool
-    let midiNoteNumber: (FunctionKeyEntry) -> Int?
-    let onMIDITouchDown: (Int) -> Void
+    let midiCommand: (FunctionKeyEntry) -> (note: Int, velocity: Int)?
+    let onMIDITouchDown: (Int, Int) -> Void
     let onMIDITouchUp: (Int) -> Void
     let sendLine: (FunctionKeyEntry) -> Void
     let onSimpleOrdinarySoundSingleTap: (FunctionKeyEntry, Int) -> Void
@@ -430,15 +430,17 @@ struct MainScreenGridSection<ButtonLabel: View>: View {
         } else if !isGridEditModeEnabled && isInteractiveWidgetEntry(entry) {
             buttonLabel(entry, index, buttonHeight, buttonSize)
                 .contentShape(Rectangle())
-        } else if !isGridEditModeEnabled, let midiNote = midiNoteNumber(entry) {
+        } else if !isGridEditModeEnabled, let midiCommand = midiCommand(entry) {
             ZStack {
                 buttonLabel(entry, index, buttonHeight, buttonSize)
                     .allowsHitTesting(false)
 
                 MIDITouchView(
-                    note: midiNote,
+                    note: midiCommand.note,
                     isEnabled: scenePhase == .active,
-                    onDown: onMIDITouchDown,
+                    onDown: { note in
+                        onMIDITouchDown(note, midiCommand.velocity)
+                    },
                     onUp: onMIDITouchUp
                 )
             }

@@ -1,378 +1,270 @@
-ESP-BACKUP-002-A — Restore notification
+MIDI-010A-FIX — READ-ONLY PARSING INVESTIGATION
 
-Relevant source
+1. Exact root cause
 
-File:
-ESP32BLE/ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
+The observed behavior matches the previously compiled MIDI parser, not the current source in the working tree.
 
-Locations:
+The rejecting condition in the previous implementation was:
 
-• Completion-alert state: line 334
-• Native Restore Complete alert: lines 718–722
-• State reset in beginRestoreAllFiles(): lines 924–928
-• Restore completion decision in finishPendingImportSession(_:): lines 3931–3977
-• Existing Settings feedback overlay: lines 1344–1362
-• Existing timed-feedback helper: lines 1505–1513
-• Feedback-task cancellation on Settings disappearance: lines 737–739
+components.count == 2
 
-Current behavior
+That implementation accepted only:
 
-The current blocking notification uses:
+.midi <note>
 
-@State private var isRestoreCompleteAlertPresented = false
+It rejected:
 
-The alert presents:
+.midi <note> <velocity>
 
-• Restore Complete
-• Your backup has been restored successfully.
-• OK
+When the parser rejected the three-component command, the grid created a normal button instead of MIDITouchView. Tapping that normal button called sendMainGridEntry(:), where isMIDICommandForGridEntry(:) deliberately suppressed anything beginning with “.midi”. Consequently, the command produced no ESP32BLE command log, sent nothing to ESPMacHelper, and played no note.
 
-beginRestoreAllFiles() resets the state before every restore.
+The current uncommitted source already changes the condition to:
 
-finishPendingImportSession(_:) sets the state only after:
+components.count == 2 || components.count == 3
 
-• Pending import state is cleared.
-• Temporary extraction cleanup is attempted.
-• Template discovery is refreshed when applicable.
-• General file collections are refreshed.
-• Any imported screen or selected resource updates are completed.
+Therefore, the reported runtime behavior strongly indicates that the device is running a build made from the earlier exact-two-component implementation.
 
-The existing success conditions are:
+2. Complete parsing and routing path
 
-• importMode is .allFiles.
-• importedAnything is true, enforced by the preceding guard.
-• failedFileCount is zero.
-• skipFileNameKeys is empty.
-• skipTemplatePairKeys is empty.
-• renameAlertMessage is nil.
+Stored command loading:
 
-Consequently, the alert is suppressed for ordinary imports, cancellation, invalid ZIPs, failures, partial failures and restores that skipped any ordinary file or template pair.
+ContentView.swift
+normalizedSlotLines(from:) reads stored slot lines.
+applySlotLines(_:) stores them and calls normalizedFunctionKeys(from:).
+normalizedFunctionKeys(from:) calls functionKeyEntry(from:) for each slot.
+functionKeyEntry(from:) separates action text from optional display metadata using “::”.
+parsedSendTexts(from:) calls parsedActionTokens(from:) for MIDI commands.
+parsedActionTokens(from:) splits on colons, not whitespace.
 
-Existing timed notification infrastructure
+Therefore:
 
-Settings already has a suitable nonblocking notification mechanism:
+“.midi 60” becomes:
+sendTexts = [“.midi 60”]
 
-• templateFeedbackMessage stores the visible text.
-• templateFeedbackTask owns the dismissal operation.
-• showTemplateFeedback(_:) cancels the previous task.
-• The new message is displayed immediately.
-• A new Task waits for two seconds.
-• The task checks cancellation before clearing the message.
-• The overlay uses allowsHitTesting(false), so it does not block Settings interaction.
+“.midi 60 100” becomes:
+sendTexts = [“.midi 60 100”]
 
-This currently displays “Template applied” and “Template saved”.
+“.midi 60 30” becomes:
+sendTexts = [“.midi 60 30”]
 
-The existing cancellation behavior prevents an older timer from hiding a newer notification:
+No command is rejected in ContentView.swift, and each command becomes a FunctionKeyEntry containing exactly one sendTexts element.
 
-1. The previous task is cancelled.
-2. The new message replaces the old message.
-3. The cancelled task exits without clearing the new message.
-4. A new two-second task controls the new message.
+Grid construction:
 
-Recommended minimal implementation
+Main_Screen.swift
+mainGridSection(...) passes:
 
-Reuse the existing banner rather than creating a second timer system.
+midiCommandForGridEntry
+sendMIDINoteOnFromTouch
+sendMIDINoteOffFromTouch
 
-The smallest behavioral change would be:
+to MainScreenGridSection.
 
-• Remove isRestoreCompleteAlertPresented.
-• Remove the Restore Complete .alert modifier.
-• Remove its reset from beginRestoreAllFiles().
-• Keep the existing restore success condition unchanged.
-• At that condition, call:
-showTemplateFeedback("Restore Complete")
+Main_GridSection.swift
+gridButtonView(...) calls midiCommand(entry).
 
-For clearer naming, the private infrastructure could be generalized to:
+If parsing returns a note and velocity, it creates MIDITouchView. Its onDown closure captures midiCommand.velocity and calls:
 
-• settingsFeedbackMessage
-• settingsFeedbackTask
-• showSettingsFeedback(_:)
+onMIDITouchDown(note, midiCommand.velocity)
 
-That rename would also update the two existing template-feedback call sites, but would not change their behavior.
+If parsing returns nil, execution falls through to the normal Button implementation. That button calls sendMainGridEntry(entry).
 
-Keeping the existing template-oriented names would produce a smaller diff, while generalizing them would make the shared purpose clearer. Either is technically safe.
+Normal-button MIDI suppression:
 
-Position and layout
+Main_ButtonBehavior.swift
+sendMainGridEntry(:) first calls isMIDICommandForGridEntry(:).
 
-The existing overlay is attached to SettingsDocumentTableSection and aligned to its top.
+That classifier recognizes any send text whose first whitespace-separated component is exactly “.midi”. It does not validate argument count.
 
-It appears:
+If recognized, sendMainGridEntry(_:) returns immediately. This prevents malformed MIDI commands—and MIDI commands that failed the touch parser—from falling through to normal keyboard or text transmission.
 
-• Below the Settings toolbar.
-• Inside the table area.
-• Above table content.
-• Without changing layout height.
-• Without affecting safe-area or toolbar geometry.
-• Without intercepting touches.
+This early return also occurs before the normal button-command logging block, explaining why rejected explicit-velocity commands do not appear in the ESP32BLE console.
 
-This is a suitable interpretation of “near the top of Settings” and already works with the current iPhone/iPad table layout.
+3. Working versus failing command trace
 
-If the desired location is instead centered across the entire Settings width, a new outer overlay would be required. That would be a larger layout change and is unnecessary unless device testing shows the table-area placement is unsuitable.
+.midi 60
 
-Risks and device checks
+ContentView creates:
+sendTexts = [“.midi 60”]
 
-• Backup, restore and template messages would share one slot. A newer message would intentionally replace an older one.
-• A two-second message can disappear while the user is not looking at the table area, but this is expected for nonblocking feedback.
-• The existing overlay has no explicit transition or animation; none is required.
-• The table refresh changes importRefreshID, but the feedback state belongs to SettingsScreen rather than the table, so the message can be shown after refresh.
-• Manual checks are needed for iPhone landscape, iPad mini and larger iPads to confirm the table-top position remains clearly visible.
+The MIDI parser splits that string into:
+[“.midi”, “60”]
 
-ESP-BACKUP-002-B — Backup notification
+Previous compiled parser:
+components.count == 2 succeeds.
 
-Relevant source
+Current source parser:
+components.count == 2 || components.count == 3 succeeds.
 
-Files:
+The note is parsed as 60.
+Velocity defaults to 100.
+MIDITouchView is created.
+Its onDown closure calls sendMIDINoteOnFromTouch(60, 100).
+Assuming the connection and mode guards pass, it sends:
 
-ESP32BLE/ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
+MIDI:NOTE_ON:60:100:1
 
-ESP32BLE/ESP32BLE/Scrns/Set_Screen/Set_ArchiveDocuments.swift
+.midi 60 100
 
-Locations in Set_Screen.swift:
+ContentView creates:
+sendTexts = [“.midi 60 100”]
 
-• Create Full Backup menu action: lines 526–530
-• archiveExportPresenter: lines 742–756
-• prepareArchiveExport(): lines 2751–2766
-• ZIP UTType: lines 4935–4937
-• Default ZIP filename: lines 4939–4942
-• makeFullArchiveData(): lines 4945 onward
-• Timed feedback helper: lines 1505–1513
+The MIDI parser splits that string into:
+[“.midi”, “60”, “100”]
 
-Locations in Set_ArchiveDocuments.swift:
+Previous compiled parser:
+components.count == 2 fails.
 
-• SettingsArchiveFileDocument: lines 32–61
-• ZIP readable/writable types: lines 38–44
-• FileWrapper generation: lines 59–61
+No MIDITouchView is created.
+The normal Button path is created.
+On tap, sendMainGridEntry(_:) is called.
+isMIDICommandForGridEntry(_:) recognizes the “.midi” prefix.
+sendMainGridEntry(_:) returns before logging or transmission.
+sendMIDINoteOnFromTouch is never reached.
 
-Current export flow
+Current source parser:
+The three-component count succeeds.
+Note 60 and velocity 100 are valid.
+MIDITouchView is created.
+The onDown closure passes velocity 100 correctly.
+sendMIDINoteOnFromTouch(60, 100) is reached.
 
-1. The user selects Create Full Backup.
-2. prepareArchiveExport() calls saveCurrentDocumentText().
-3. It verifies hasArchiveExportContent.
-4. makeFullArchiveData() creates the ZIP bytes.
-5. SettingsArchiveFileDocument stores those bytes.
-6. isExportingArchive becomes true.
-7. SwiftUI presents fileExporter.
-8. SettingsArchiveFileDocument.fileWrapper(configuration:) supplies the ZIP bytes.
-9. The system writes the document to the destination selected by the user.
-10. The fileExporter completion closure receives Result<URL, Error>.
-11. Failures currently set renameAlertMessage.
-12. exportArchiveDocument is cleared after completion.
+.midi 60 30
 
-Exact successful-save point
+ContentView creates:
+sendTexts = [“.midi 60 30”]
 
-The correct success point is:
+The MIDI parser splits that string into:
+[“.midi”, “60”, “30”]
 
-archiveExportPresenter’s fileExporter completion closure, when result is .success.
+Previous compiled parser:
+components.count == 2 fails.
 
-Generating archiveData is not sufficient. At that stage the user has not selected a destination and may still cancel.
+The same normal-button and MIDI-suppression path occurs:
+No MIDITouchView.
+No Note On callback.
+No ESP32BLE command log.
+No transmission to ESPMacHelper.
 
-Recommended completion handling
+Current source parser:
+The three-component count succeeds.
+Note 60 and velocity 30 are valid.
+MIDITouchView is created.
+The closure calls sendMIDINoteOnFromTouch(60, 30).
+Assuming its runtime guards pass, it sends:
 
-Change the completion closure conceptually to:
+MIDI:NOTE_ON:60:30:1
 
-• .success:
-show the shared “Backup Complete” feedback.
-• .failure:
-preserve the existing renameAlertMessage behavior.
-• Always:
-clear exportArchiveDocument.
+The behavior is identical for explicit velocity 50 or any other valid value from 1 through 127.
 
-The existing FileDocument fileExporter overload documents that:
+4. Velocity-passing verification
 
-• Its completion callback receives success or failure.
-• If the user cancels, the completion callback is not called.
-• SwiftUI clears isPresented before invoking completion.
+The current source passes velocity correctly throughout the touch path.
 
-Therefore, presenting “Backup Complete” only from the .success case will not show it on cancellation. Apple fileExporter documentation
+midiCommandForGridEntry(_:) returns:
 
-What success guarantees
+(note: Int, velocity: Int)
 
-A successful callback means the system export operation completed and produced the destination URL. It is the appropriate application-level point for saying the backup was saved.
+Main_GridSection.swift captures midiCommand.velocity in the MIDITouchView onDown closure:
 
-It does not guarantee that an iCloud or third-party File Provider has completed every subsequent server upload or cross-device synchronization step. Those activities can continue after the coordinated local/provider write succeeds.
+onMIDITouchDown(note, midiCommand.velocity)
 
-The message should therefore mean “the export was successfully handed to and completed by the selected destination provider,” not “the cloud service has fully synchronized it everywhere.”
+Main_Screen.swift connects onMIDITouchDown directly to:
 
-Recommended shared mechanism
+sendMIDINoteOnFromTouch
 
-Use the same feedback state and task for:
+sendMIDINoteOnFromTouch(_:velocity:) validates velocity in 1...127 and constructs:
 
-• Template saved
-• Template applied
-• Restore Complete
-• Backup Complete
+MIDI:NOTE_ON:<note>:<velocity>:1
 
-The existing task-cancellation logic already ensures that an older dismissal cannot erase a newer message.
+No incorrect optional handling or closure capture was found.
 
-No ZIP generation, filename, destination, file type or provider behavior needs to change.
+No velocity is stored inside MIDITouchView itself, but this is intentional: the surrounding closure captures the parsed velocity and supplies it when touch-down occurs.
 
-Potential limitation
+5. Relevant source file and function
 
-The current cancellation overload does not execute the completion closure on user cancellation. Consequently, exportArchiveDocument may remain populated after cancellation under the current implementation.
+The original rejection is in:
 
-That is a separate cleanup concern and does not cause a false Backup Complete notification. It does not need to be changed for the requested notification behavior.
+Main_ButtonBehavior.swift
+midiNoteNumberForGridEntry(_:)
 
-ESP-BACKUP-002-C — iOS 17 Move wording
+Its exact-two-component condition was:
 
-Current export configuration
+components.count == 2
 
-The Full Backup exporter uses one SwiftUI path on all supported iPhones and iPads:
+The current working-tree replacement is:
 
-.fileExporter(
-isPresented: $isExportingArchive,
+Main_ButtonBehavior.swift
+midiCommandForGridEntry(_:)
 
-document: exportArchiveDocument,
+Its current condition is:
 
-contentType: archiveExportType,
+components.count == 2 || components.count == 3
 
-defaultFilename: archiveExportDefaultFilename()
+The secondary suppression that makes the failure silent is in:
 
-)
+Main_ButtonBehavior.swift
+sendMainGridEntry(_:)
 
-Configuration details:
+Specifically:
 
-• Document type: SettingsArchiveFileDocument conforming to FileDocument.
-• Document payload: regular-file FileWrapper containing ZIP bytes.
-• Content type: UTType(filenameExtension: "zip") ?? .data.
-• Writable type: the same ZIP type.
-• Filename: ESP_yyMMdd_HHmmss.zip.
-• File dialog option: .displayFileExtensions.
-• No platform-specific iOS 17 branch.
-• No UIDocumentPickerViewController is used for Full Backup.
-• Current deployment target: iOS 17.6.
-• Current SDK: iPhoneOS 27.0.
-• Supported devices: iPhone and iPad.
+if isMIDICommandForGridEntry(entry) {
+return
 
-Does ESP specify “Move”?
+}
 
-No.
+The normal-versus-MIDI touch-view routing is in:
 
-The source contains no “Move” or “Save” confirmation-button title for the exporter.
+Main_GridSection.swift
+gridButtonView(...)
 
-The only related file-dialog modifier is:
+The callback wiring is in:
 
-.fileDialogBrowserOptions(.displayFileExtensions)
+Main_Screen.swift
+mainGridSection(...)
 
-That controls extension visibility, not confirmation wording.
+6. Smallest recommended fix
 
-Who supplies the wording?
+The smallest source correction is to allow either two or three whitespace-separated components in the MIDI grid parser, parse the third component as velocity when present, and retain 100 as the default when omitted.
 
-The displayed confirmation title is supplied by Apple’s native Files/document-picker interface.
+That correction is already present as an uncommitted change in the current ESP32BLE working tree.
 
-Apple’s UIKit documentation describes exporting a local document as selecting a destination where the picker either moves or copies the document. This underlying transfer terminology makes “Move” plausible for an export implementation that stages a local file before publishing it. UIDocumentPickerViewController documentation
+No additional parsing, routing, gesture, touch, polyphony, Note Off, editor, template, backup/restore, or ESPMacHelper change is indicated.
 
-However, the SwiftUI API does not document that iOS 17 must display “Move”, nor does it promise a particular confirmation-button title.
+To make the current source behavior reach the device, ESP32BLE must eventually be rebuilt and installed. No build was performed during this investigation, as requested.
 
-Could FileDocument or ZIP configuration cause it?
+The correction is limited to ESP32BLE. ESPMacHelper is not responsible for the command disappearing before the iOS console and touch callback.
 
-No source evidence indicates that the ZIP content type or default filename selects the word “Move”.
+7. Regression risks
 
-The FileDocument exporter necessarily supplies a FileWrapper which SwiftUI may stage as a temporary local document before invoking the system destination picker. It is plausible that iOS 17 exposes the underlying move-style wording for that implementation while newer systems present the more user-friendly “Save”.
+The parser should continue requiring exactly one FunctionKeyEntry sendTexts element.
 
-That explanation is an inference from the framework architecture, not a documented Apple guarantee.
+Valid notes must remain restricted to 0...127.
 
-Is this a documented iOS 17 difference?
+Explicit velocity must remain restricted to 1...127.
 
-No official documentation was found stating that iOS 17 always labels SwiftUI fileExporter confirmation as “Move”.
+Missing, malformed, out-of-range, or extra arguments must continue returning nil.
 
-The observation is confirmed on the reported iPad Pro, but it must be treated as an OS/device/provider-specific presentation behavior rather than a universal iOS 17 rule.
+The case-sensitive “.midi” classification must remain consistent between midiCommandForGridEntry(:) and isMIDICommandForGridEntry(:).
 
-Can SwiftUI change the label on iOS?
+The suppression in sendMainGridEntry(_:) should remain. Removing it would risk sending malformed MIDI command text through the normal keyboard-output path.
 
-Apple provides fileDialogConfirmationLabel(_:), but its documentation explicitly describes it as a macOS customization.
+The two-component form must continue defaulting to velocity 100.
 
-It is not a supported iOS mechanism for forcing the Files confirmation title to “Save”. Apple fileDialogConfirmationLabel documentation
+No touch-handling change is required.
 
-Therefore, adding:
+8. Read-only confirmation
 
-.fileDialogConfirmationLabel("Save")
+No files were modified.
 
-would not be a supported iPhone/iPad correction.
+No files were created or deleted.
 
-Would UIKit change the wording?
+No build was performed.
 
-UIKit offers:
+No tests were run.
 
-UIDocumentPickerViewController(
-forExporting: urls,
+No commits, tags, or backups were created.
 
-asCopy: true
+No text files, console logs, or version notes were changed.
 
-)
-
-The asCopy value changes whether the supplied local document is copied rather than moved. Apple UIKit initializer documentation
-
-This might influence the system wording, but Apple does not document the exact button title. It therefore cannot guarantee “Save” on iOS 17.
-
-Moving to UIKit would also require:
-
-• Creating and managing a temporary ZIP URL.
-• Presenting a UIViewControllerRepresentable.
-• Implementing picker delegate handling.
-• Distinguishing success and cancellation.
-• Cleaning temporary files safely.
-• Preserving Files and File Provider behavior.
-• Testing iCloud Drive and third-party providers.
-• Replacing a currently successful FileDocument workflow.
-
-That is not a small wording-only correction.
-
-Verified findings
-
-• ESP does not set the Move label.
-• There is one SwiftUI exporter path for iOS 17 and newer.
-• The Full Backup is exported as a ZIP FileDocument.
-• The export succeeds on the affected iPad.
-• Apple controls the native iOS Files UI.
-• The documented confirmation-label customization is macOS-only.
-• No supported iOS property guarantees a “Save” label.
-• The deployment target includes iOS 17.6.
-
-Uncertainties
-
-• Whether the label difference comes specifically from iOS 17, that iPad’s exact point release, or its selected Files provider.
-• Whether the wording changes between On My iPad, iCloud Drive and a third-party provider.
-• Whether the same OS/device displays a different title when exporting another FileDocument type.
-• Whether a UIKit asCopy exporter would display Save, Copy or another system-selected title.
-
-Recommended action
-
-Retain the native SwiftUI fileExporter.
-
-“Move” is cosmetically undesirable, but the operation is successful and there is no documented, small iOS API for replacing the label.
-
-Replacing the exporter would add substantial lifecycle and provider risk for an unguaranteed wording change.
-
-Smallest additional diagnostic
-
-On the affected iOS 17 iPad Pro, export the same backup to:
-
-• On My iPad
-• iCloud Drive
-• Any installed third-party File Provider
-
-Record whether the label changes by destination.
-
-Then repeat one destination on a newer iPadOS device.
-
-This will distinguish an OS-wide presentation difference from provider-specific behavior without changing application code.
-
-Final recommendation
-
-Implement 002-A and 002-B together as one small Settings-only phase:
-
-1. Generalize or reuse the existing timed feedback state.
-2. Remove the Restore Complete Boolean and blocking alert.
-3. Preserve the current restore success condition.
-4. Show “Restore Complete” through the shared two-second feedback helper.
-5. In fileExporter’s .success case, show “Backup Complete”.
-6. Preserve the current failure handler.
-7. Leave cancellation without feedback.
-8. Keep the existing cancellation-safe task replacement behavior.
-9. Do not alter ZIP creation, restore logic or file-provider integration.
-
-Keep 002-C separate and make no exporter change unless further device testing identifies a reproducible provider-independent issue and Apple exposes a supported iOS control.
-
-No files were modified. No formatter, export, restore, backup, project change or device test was performed.
-
-ESP-BACKUP-002 PROBE COMPLETE — NO FILES MODIFIED
+Only the ESP32BLE iOS/iPadOS project was inspected.

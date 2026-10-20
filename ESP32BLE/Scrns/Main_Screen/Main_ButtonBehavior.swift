@@ -510,7 +510,7 @@ extension MainScreen {
         _ = sendBluetoothIfNeeded()
     }
 
-    func midiNoteNumberForGridEntry(_ entry: FunctionKeyEntry) -> Int? {
+    func midiCommandForGridEntry(_ entry: FunctionKeyEntry) -> (note: Int, velocity: Int)? {
         guard entry.sendTexts.count == 1 else {
             return nil
         }
@@ -518,14 +518,25 @@ extension MainScreen {
         let components = entry.sendTexts[0]
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .split(whereSeparator: \.isWhitespace)
-        guard components.count == 2,
+        guard components.count == 2 || components.count == 3,
               components[0] == ".midi",
               let note = Int(components[1]),
               (0...127).contains(note) else {
             return nil
         }
 
-        return note
+        let velocity: Int
+        if components.count == 3 {
+            guard let parsedVelocity = Int(components[2]),
+                  (1...127).contains(parsedVelocity) else {
+                return nil
+            }
+            velocity = parsedVelocity
+        } else {
+            velocity = 100
+        }
+
+        return (note, velocity)
     }
 
     private func isMIDICommandForGridEntry(_ entry: FunctionKeyEntry) -> Bool {
@@ -537,8 +548,9 @@ extension MainScreen {
         }
     }
 
-    func sendMIDINoteOnFromTouch(_ note: Int) {
+    func sendMIDINoteOnFromTouch(_ note: Int, velocity: Int) {
         guard (0...127).contains(note),
+              (1...127).contains(velocity),
               !isGridEditModeEnabled,
               mainGridButtonMode.sendsBluetooth,
               outputMode == .mac,
@@ -546,7 +558,7 @@ extension MainScreen {
             return
         }
 
-        _ = macConnection.sendAuthenticatedCommand("MIDI:NOTE_ON:\(note):100:1")
+        _ = macConnection.sendAuthenticatedCommand("MIDI:NOTE_ON:\(note):\(velocity):1")
     }
 
     func sendMIDINoteOffFromTouch(_ note: Int) {

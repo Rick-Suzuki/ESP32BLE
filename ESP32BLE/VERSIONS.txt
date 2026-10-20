@@ -1,3 +1,13 @@
+
+261020 Tue 1636
+optional velocity added
+V64.06
+
+
+//
+// MIDI restart - 261020 Tue 1555
+//----------------------------------------
+//
 261020 Tue 1547
 msg on restore/backup, pro has move msg, midi development restart
 V64.05
