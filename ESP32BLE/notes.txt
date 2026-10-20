@@ -13,8 +13,13 @@ codex build (add 10s)
 3:30 not including codex results
 4:47 - including results
 
+codex probe
+can be long 20 mins or short 1:04
+
+
+
 run ipad
-30s
+30s - a restart would speed this up
 
 copy results to gpt
 15s

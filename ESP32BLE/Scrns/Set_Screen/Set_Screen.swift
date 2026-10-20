@@ -2476,7 +2476,7 @@ struct SettingsScreen: View {
         case .pdfs:
             return selectedPDFDisplayName
         case .templates:
-            return "Templates"
+            return selectedDocumentDisplayName
         case .all:
             return "all files"
         }
