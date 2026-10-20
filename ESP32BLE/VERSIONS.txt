@@ -1,3 +1,7 @@
+261020 Tue 1358
+templates can be deleted
+V64.01
+
 261020 Tue 1335
 when in templates mode, display screen name
 V64.00

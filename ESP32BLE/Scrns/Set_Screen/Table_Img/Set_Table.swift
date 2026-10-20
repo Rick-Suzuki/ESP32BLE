@@ -51,6 +51,7 @@ struct SettingsDocumentTableSection: View {
     let deleteAllFile: (URL) -> Void
     let selectTemplate: (URL) -> Void
     let applyTemplate: (URL) -> Void
+    let deleteTemplate: (URL) -> Void
     let showsOuterBorder: Bool
     @State private var showsRefreshConfirmation = false
     @State private var refreshConfirmationTask: Task<Void, Never>?
@@ -649,6 +650,13 @@ struct SettingsDocumentTableSection: View {
         .listRowInsets(EdgeInsets())
         .listRowSeparator(.hidden)
         .listRowBackground(Color.clear)
+        .swipeActions(edge: .leading, allowsFullSwipe: false) {
+            Button(role: .destructive) {
+                deleteTemplate(templateURL)
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
+        }
     }
 
     private func handleFileSelection(_ fileURL: URL, action: () -> Void = {}) {

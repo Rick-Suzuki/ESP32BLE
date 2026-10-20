@@ -895,6 +895,126 @@ private func replacePreparedTemplateFile(
     }
 }
 
+
+enum TemplateDeletionError: LocalizedError {
+    case invalidTemplateURL(URL)
+    case invalidParentDirectory(URL)
+    case templateNotFound(URL)
+    case templateIsNotRegularFile(URL)
+    case configurationIsNotRegularFile(URL)
+    case stagingPreparationFailed(URL, Error)
+    case stagingFailedAndRolledBack(Error)
+    case rollbackFailed(stagingError: Error, rollbackError: Error)
+    case cleanupFailed(URL, Error)
+
+    var errorDescription: String? {
+        switch self {
+        case .invalidTemplateURL(let url):
+            return "\(url.lastPathComponent) is not a template document."
+        case .invalidParentDirectory(let url):
+            return "The template folder \(url.path) is not available."
+        case .templateNotFound(let url):
+            return "The template \(url.lastPathComponent) does not exist."
+        case .templateIsNotRegularFile(let url):
+            return "The template \(url.lastPathComponent) is not a regular file."
+        case .configurationIsNotRegularFile(let url):
+            return "The template configuration \(url.lastPathComponent) is not a regular file."
+        case .stagingPreparationFailed(let url, let error):
+            return "Template deletion could not be prepared in \(url.lastPathComponent): \(error.localizedDescription)"
+        case .stagingFailedAndRolledBack(let error):
+            return "The template could not be deleted. Its files were restored: \(error.localizedDescription)"
+        case .rollbackFailed(let stagingError, let rollbackError):
+            return "Critical template deletion error. Staging failed (\(stagingError.localizedDescription)) and the original files could not be fully restored (\(rollbackError.localizedDescription))."
+        case .cleanupFailed(let url, let error):
+            return "The template was staged for deletion, but cleanup of \(url.lastPathComponent) failed: \(error.localizedDescription)"
+        }
+    }
+}
+
+func deleteTemplateDocument(
+    at templateURL: URL,
+    fileManager: FileManager = .default
+) throws {
+    guard isTemplateDocumentURL(templateURL) else {
+        throw TemplateDeletionError.invalidTemplateURL(templateURL)
+    }
+
+    let normalizedTemplateURL = templateURL.standardizedFileURL
+    let parentDirectoryURL = normalizedTemplateURL.deletingLastPathComponent()
+    let expectedTemplateURL = parentDirectoryURL
+        .appendingPathComponent(normalizedTemplateURL.lastPathComponent)
+        .standardizedFileURL
+    guard expectedTemplateURL == normalizedTemplateURL,
+          (try? parentDirectoryURL.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true else {
+        throw TemplateDeletionError.invalidParentDirectory(parentDirectoryURL)
+    }
+
+    guard fileManager.fileExists(atPath: normalizedTemplateURL.path) else {
+        throw TemplateDeletionError.templateNotFound(normalizedTemplateURL)
+    }
+    guard (try? normalizedTemplateURL.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) == true else {
+        throw TemplateDeletionError.templateIsNotRegularFile(normalizedTemplateURL)
+    }
+
+    let configurationURL = templateConfigURL(forTemplateDocumentURL: normalizedTemplateURL)
+    let configurationExists = fileManager.fileExists(atPath: configurationURL.path)
+    if configurationExists,
+       (try? configurationURL.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) != true {
+        throw TemplateDeletionError.configurationIsNotRegularFile(configurationURL)
+    }
+
+    let stagingDirectoryURL = parentDirectoryURL
+        .appendingPathComponent(".template-deletion-\(UUID().uuidString)", isDirectory: true)
+    do {
+        try fileManager.createDirectory(
+            at: stagingDirectoryURL,
+            withIntermediateDirectories: false
+        )
+    } catch {
+        throw TemplateDeletionError.stagingPreparationFailed(stagingDirectoryURL, error)
+    }
+
+    let stagedTemplateURL = stagingDirectoryURL
+        .appendingPathComponent(normalizedTemplateURL.lastPathComponent)
+    let stagedConfigurationURL = stagingDirectoryURL
+        .appendingPathComponent(configurationURL.lastPathComponent)
+    var templateWasStaged = false
+
+    do {
+        try fileManager.moveItem(at: normalizedTemplateURL, to: stagedTemplateURL)
+        templateWasStaged = true
+
+        if configurationExists {
+            try fileManager.moveItem(at: configurationURL, to: stagedConfigurationURL)
+        }
+    } catch {
+        let stagingError = error
+        do {
+            if templateWasStaged {
+                guard !fileManager.fileExists(atPath: normalizedTemplateURL.path) else {
+                    throw CocoaError(.fileWriteFileExists)
+                }
+                try fileManager.moveItem(at: stagedTemplateURL, to: normalizedTemplateURL)
+            }
+            if fileManager.fileExists(atPath: stagingDirectoryURL.path) {
+                try fileManager.removeItem(at: stagingDirectoryURL)
+            }
+        } catch {
+            throw TemplateDeletionError.rollbackFailed(
+                stagingError: stagingError,
+                rollbackError: error
+            )
+        }
+        throw TemplateDeletionError.stagingFailedAndRolledBack(stagingError)
+    }
+
+    do {
+        try fileManager.removeItem(at: stagingDirectoryURL)
+    } catch {
+        throw TemplateDeletionError.cleanupFailed(stagingDirectoryURL, error)
+    }
+}
+
 private func restoreTemplateApplicationTarget(
     documentURL: URL,
     originalDocumentData: Data,

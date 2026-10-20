@@ -1,723 +1,181 @@
-ESP-TEMPLATE-001D-C-FIX1 — READ-ONLY PROBE REPORT
+ESP-TEMPLATE-001D-D1 IMPLEMENTATION REPORT
 
-1. Exact top-filename view and source
+1. Files changed
 
-File:
+• ESP32BLE/ESP32BLE/Scrns/TemplateDocument.swift
+• ESP32BLE/ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
+• ESP32BLE/ESP32BLE/Scrns/Set_Screen/Table_Img/Set_Table.swift
 
-ESP32BLE/ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
+No other files, project settings, user documents, or .txt files were modified.
 
-View:
+2. New deletion helper
 
-settingsTitleControl(availableWidth:)
+Added deleteTemplateDocument(at:fileManager:) in TemplateDocument.swift.
 
-Relevant lines:
+The helper:
 
-• Function begins around line 999.
-• iOS 18+ title Text is around lines 1024–1028.
-• Older-iOS SettingsUIKitVisualButton title is around lines 1041–1050.
-• Rename TextField is around lines 1003–1015.
+• Accepts only .template URLs.
+• Validates the containing directory.
+• Requires the template to exist as a regular file.
+• Uses templateConfigURL(forTemplateDocumentURL:) for its sidecar.
+• Accepts a missing sidecar.
+• Rejects a sidecar that exists but is not a regular file.
+• Cannot target .screen or normal .config.json files.
 
-Both platform paths display:
+Deletion sequence:
 
-currentTitleDisplayName
+1. Creates a unique hidden staging directory beside the template.
+2. Moves the template into staging.
+3. Moves the sidecar when present.
+4. Restores the template if sidecar staging fails.
+5. Removes the staging directory only after all applicable files are staged.
+6. Reports success only after final cleanup completes.
 
-The title’s width is calculated by settingsTitleWidth(for:) at approximately lines 1062–1071.
+TemplateDeletionError distinguishes:
 
-The extension is removed before display. Each category-specific display-name helper uses deletingPathExtension(), including selectedDocumentDisplayName at lines 2311–2313.
+• Invalid template URL.
+• Invalid parent directory.
+• Missing template.
+• Non-regular template or sidecar.
+• Staging preparation failure.
+• Staging failure with successful restoration.
+• Critical rollback failure.
+• Final cleanup failure.
 
-2. Authoritative active-screen identity
+Rollback never overwrites an existing destination. A rollback collision produces a critical rollback error.
 
-The authoritative active-screen filename is:
+If final cleanup fails, the recoverable staged files remain in the hidden staging directory and the operation reports failure.
 
-ContentView.selectedDocumentName
+3. Settings callback and reconciliation
 
-Location:
+Added deleteTemplate(_:) in Set_Screen.swift.
 
-ESP32BLE/ESP32BLE/Scrns/ContentView.swift, approximately line 212.
+It:
 
-Declaration:
+• Calls deleteTemplateDocument(at:).
+• Never calls the Screens deletion function.
+• Refreshes template discovery after success.
+• Clears the selected template and description through existing refresh reconciliation when the deleted template disappears.
+• Preserves the Plates category.
+• Does not modify selectedDocumentName, the Settings editor, Main Screen contents, or navigation history.
 
-@AppStorage("selectedDocumentName")
-private var selectedDocumentName = ...
+On failure it:
 
-ContentView supplies this directly to SettingsScreen:
+• Refreshes template discovery to reflect the actual filesystem state.
+• Clears stale selection when necessary.
+• Presents the existing native Settings error alert.
+• Uses “Critical Template Deletion Error” for rollback failure.
+• Never reports success after staging or cleanup failure.
 
-ContentView.launchedSettingsScreen
-Approximately lines 2897–2926.
+4. Swipe action implementation
 
-Relevant argument:
+SettingsDocumentTableSection now receives a template-specific deleteTemplate callback.
 
-selectedDocumentName: selectedDocumentName
+templateRow(for:) has the native action:
 
-SettingsScreen receives it as:
+• Leading edge, physically right swipe.
+• Red destructive Delete action.
+• Trash icon.
+• allowsFullSwipe: false.
+• No confirmation.
+• No trailing/left-swipe action.
 
-let selectedDocumentName: String
+The row retains:
 
-Location:
+• Exclusive double-before-single tap gesture.
+• Single-tap selection and description.
+• Double-tap Apply confirmation.
+• Selected-row highlighting.
+• Description panel.
+• Existing geometry and List identity.
+• Default accessibility selection action.
+• Named Apply Template accessibility action.
 
-Set_Screen.swift, approximately line 272.
+The native SwiftUI swipe pattern follows the existing Screens implementation and SwiftUI guidance.
 
-Therefore Settings already has a reliable active-screen identity. No new binding, AppStorage value, or duplicate source of truth is needed.
+5. Build result
 
-Settings resolves the active screen URL using:
+ESP32BLE built successfully in Xcode.
 
-selectedDocumentFileURL
+Build errors: None.
 
-Set_Screen.swift, lines 2281–2283.
+TemplateDocument.swift live diagnostics: No issues.
 
-That function searches the available screen documents for selectedDocumentName.
+Whitespace validation: Passed.
 
-3. Settings selection and editor state relationships
+6. Isolated tests performed
 
-The relevant state values are separate, although the top-title presentation combines them.
+All checks used a unique temporary directory outside the user’s Documents directory.
 
-Active screen
+Valid template with sidecar:
 
-• selectedDocumentName
-• Owned by ContentView.
-• Stored in AppStorage.
-• Passed into SettingsScreen.
-• Represents the screen loaded into Main.
-• Used for template creation, template application, screen rename, active-screen highlighting, and active-screen URL resolution.
+• Template removed.
+• Sidecar removed.
+• Passed.
 
-Screen table selection
+Template without sidecar:
 
-The Screens table does not have a separate browsing selection.
+• Template removed successfully.
+• Passed.
 
-Its selected styling directly compares each row against selectedDocumentName:
+Non-template URL:
 
-Set_Table.swift, lines 325–337.
+• Rejected with TemplateDeletionError.
+• Passed.
 
-A single tap does not change selectedDocumentName. A double tap changes the actual active screen.
+Missing template:
 
-Template table selection
+• Rejected with TemplateDeletionError.
+• Passed.
 
-• selectedTemplateURL
-• templateDescriptionState
+Unrelated file preservation:
 
-Owned locally by SettingsScreen.
+• Unrelated .screen file remained untouched.
+• Passed.
 
-These values affect only Plates selection and description display. They do not change selectedDocumentName.
+Forced second staged-move failure:
 
-Text selection
+• Error reported.
+• Already-staged template restored.
+• Original sidecar remained present.
+• Passed.
 
-• selectedTextFileName
-• selectedTextFileURL
+Forced final cleanup failure:
 
-Text selection controls which text file is loaded into the Settings editor.
+• cleanupFailed reported.
+• Success was not reported.
+• Passed.
 
-Images, sounds, and PDFs
+Source checks confirmed:
 
-Their selections are maintained separately through:
+• The exclusive Plates tap gesture remains present.
+• The new swipe action uses the leading edge.
+• Full-swipe deletion remains disabled.
+• Existing category swipe actions were not changed.
 
-• selectedImageURL and persisted image state.
-• selectedSoundURL and persisted sound state.
-• selectedPDFURL and persisted PDF state.
+7. Limitations and remaining risks
 
-Settings editor identity
+• Moving two files cannot form one atomic filesystem transaction.
+• A critical filesystem failure can prevent rollback; this is reported distinctly.
+• A final cleanup failure can leave recoverable files inside the hidden staging directory.
+• No persistent recovery journal was introduced.
+• Native List gesture arbitration and VoiceOver action ordering require device testing.
+• No tests touched actual user templates.
 
-The editor tracks its file independently using:
+8. Suggested manual device tests
 
-• loadedDocumentName
-• loadedDocumentURL
-• documentEditorText
-• savedDocumentEditorText
+On iPhone landscape, iPad, and iPad mini:
 
-loadSelectedDocumentText() chooses either:
+• Swipe a template physically right and confirm Delete appears.
+• Confirm a full swipe does not delete.
+• Tap Delete and verify the row and description disappear.
+• Verify the item count updates.
+• Delete an unselected template and verify the current selection remains.
+• Confirm single tap still selects and displays the description.
+• Confirm double tap still opens Apply.
+• Confirm vertical list scrolling remains responsive.
+• Confirm no left-swipe action appears.
+• Confirm the active screen and Settings editor remain unchanged.
+• With VoiceOver, verify Select, Apply Template, and Delete actions are discoverable and usable.
 
-• selectedTextFileURL when listMode is .text.
-• selectedDocumentFileURL for every other category.
-
-This occurs around Set_Screen.swift lines 1703–1725.
-
-Top filename
-
-The top filename is computed by currentTitleDisplayName, not directly by selectedDocumentName.
-
-Set_Screen.swift, approximately lines 2466–2483:
-
-• Screens: selectedDocumentDisplayName
-• Text: selectedTextDisplayName
-• Images: selectedImageDisplayName
-• Sounds: selectedSoundDisplayName
-• PDFs: selectedPDFDisplayName
-• Plates: literal “Templates”
-• All Files: literal “all files”
-
-This is the source of the reported behaviour.
-
-4. Category-switch behaviour
-
-The category menu changes listMode through listModeRawValue.
-
-The central category-change handler is:
-
-.onChange(of: listModeRawValue)
-
-Set_Screen.swift, approximately lines 604–613.
-
-It currently:
-
-1. Clears Plates selection when leaving Plates.
-2. Calls saveCurrentDocumentText().
-3. Calls loadSelectedDocumentText() when transition is allowed.
-
-Because currentTitleDisplayName switches on listMode, changing categories immediately recalculates the top filename.
-
-The current results are:
-
-• Screens: active screen basename.
-• PlatesESP-TEMPLATE-001D-C-FIX1 — READ-ONLY PROBE REPORT
-
-1. Exact top-filename view and source
-
-File:
-
-ESP32BLE/ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
-
-View:
-
-settingsTitleControl(availableWidth:)
-
-Relevant locations:
-
-• Function starts around line 999.
-• iOS 18+ Text display: line 1024.
-• Older-iOS SettingsUIKitVisualButton title: line 1042.
-• Editable TextField: lines 1003–1015.
-• Width calculation: settingsTitleWidth(for:) at lines 1062–1071.
-
-The displayed value is:
-
-currentTitleDisplayName
-
-The non-editing control uses it in both implementations:
-
-Text(currentTitleDisplayName)
-
-and:
-
-SettingsUIKitVisualButton(
-title: currentTitleDisplayName,
-
-...
-
-)
-
-While editing, the control displays:
-
-TextField("", text: $documentNameDraft)
-
-The extension is removed before display by the category-specific display-name properties. For the active screen, selectedDocumentDisplayName uses:
-
-URL(fileURLWithPath: selectedDocumentName)
-.deletingPathExtension()
-
-.lastPathComponent
-
-
-This is at approximately lines 2311–2313.
-
-2. Authoritative active-screen identity
-
-The authoritative active-screen name is:
-
-ContentView.selectedDocumentName
-
-Location:
-
-ESP32BLE/ESP32BLE/Scrns/ContentView.swift, approximately line 212.
-
-Declaration:
-
-@AppStorage("selectedDocumentName")
-private var selectedDocumentName = ...
-
-ContentView passes this value directly into SettingsScreen:
-
-ESP32BLE/ESP32BLE/Scrns/ContentView.swift, lines 2897–2922.
-
-Relevant argument:
-
-selectedDocumentName: selectedDocumentName
-
-SettingsScreen receives it as:
-
-let selectedDocumentName: String
-
-at approximately line 272 of Set_Screen.swift.
-
-This is not a binding, but SettingsScreen is reconstructed when ContentView’s state changes, so the new active name propagates into Settings.
-
-ContentView updates selectedDocumentName when loadFunctionKeys(from:) successfully loads another screen. The assignment occurs around line 702.
-
-3. Settings selection and editor state relationships
-
-The current states are separate, although the top-title computation combines them.
-
-Active screen:
-
-• selectedDocumentName
-• Owned by ContentView.
-• Stored in AppStorage.
-• Passed into Settings.
-• Identifies the screen currently loaded in Main.
-
-Screen table selection:
-
-• Also represented by selectedDocumentName.
-• A screen row is highlighted when its filename equals selectedDocumentName.
-• There is no separate “browsed screen row” selection.
-• A single screen tap does not select it.
-• A double screen tap changes the active screen.
-
-Template selection:
-
-• selectedTemplateURL
-• Owned locally by SettingsScreen.
-• Used only for Plates highlighting and description display.
-• Does not change selectedDocumentName.
-
-Text selection:
-
-• selectedTextFileName
-• Owned locally by SettingsScreen.
-• Determines the selected text file and Settings editor content.
-
-Image selection:
-
-• selectedImageURL, derived from persisted image name/path values.
-• Used for image highlighting, preview, and background selection.
-
-Sound selection:
-
-• selectedSoundURL, derived from persisted sound name/path values.
-• Used for highlighting and playback preview.
-
-PDF selection:
-
-• selectedPDFURL, derived from persisted PDF name/path values.
-• Used for highlighting and preview.
-
-Settings editor identity:
-
-• loadedDocumentName
-• loadedDocumentURL
-• savedDocumentEditorText
-• documentEditorText
-
-These values determine which file is actually open in the Settings editor and protect conflict-aware saving.
-
-Top filename:
-
-• currentTitleDisplayName
-• Computed from listMode and the current category’s selected item.
-• It is not currently an active-screen-only value.
-
-The states themselves are mostly independent. The accidental coupling is in currentTitleDisplayName and the associated title-editing logic.
-
-4. Category-switch behaviour
-
-The central category state is listMode, backed by:
-
-@AppStorage("settingsListMode")
-private var listModeRawValue
-
-The category Menu assigns:
-
-listMode = mode
-
-The existing onChange handler for listModeRawValue is around lines 604–613. It:
-
-• Clears template selection when leaving Plates.
-• Calls saveCurrentDocumentText().
-• Calls loadSelectedDocumentText() when transition is allowed.
-
-loadSelectedDocumentText() chooses its editor file using:
-
-let fileURL = listMode == .text
-? selectedTextFileURL
-
-: selectedDocumentFileURL
-
-
-Therefore:
-
-• Text loads the selected text file into the editor.
-• Every other category reloads the active screen into the editor.
-
-The top filename is then recalculated by currentTitleDisplayName:
-
-Set_Screen.swift, approximately lines 2466–2483.
-
-Current mapping:
-
-• Screens: selectedDocumentDisplayName
-• Text: selectedTextDisplayName
-• Images: selectedImageDisplayName
-• Sounds: selectedSoundDisplayName
-• PDFs: selectedPDFDisplayName
-• Plates: “Templates”
-• All Files: “all files”
-
-This category switch is the direct cause of the reported problem.
-
-The category change does not itself change selectedDocumentName. It only changes which unrelated value currentTitleDisplayName presents.
-
-Markdown does not have a distinct SettingsListMode in the inspected implementation. The Text list currently filters for the legacy text extension. Other Markdown files can appear through All Files, where a tap only copies the filename.
-
-5. Row-selection behaviour
-
-Screens single tap
-
-Set_Table.swift, documentRow(for:), approximately lines 325–382.
-
-Actions:
-
-• Plays click feedback.
-• Copies the complete filename.
-• Shows “Copied name.”
-
-Effects:
-
-• Active screen: unchanged.
-• Screen-table selection: unchanged.
-• Editor content: unchanged directly.
-• Top filename: unchanged while Screens is displayed.
-
-Screens double tap
-
-handleScreenDoubleTap(_:), approximately lines 659–666.
-
-Actions:
-
-• Copies the filename.
-• Calls loadFunctionKeys(fileURL).
-• Shows “Changed screen.”
-
-Settings passes handleSettingsDocumentSelection as loadFunctionKeys. That calls the ContentView selectDocument callback.
-
-Effects:
-
-• Active screen: changes.
-• selectedDocumentName: changes after successful loading.
-• Settings editor: reloads through onChange(of: selectedDocumentName).
-• Top filename: intentionally updates to the new active screen.
-• History: this callback uses ContentView.selectDocument(_:) without recordHistory, so it does not call the history-recording overload.
-
-Template single tap
-
-Effects:
-
-• selectedTemplateURL changes.
-• Description loads.
-• Active screen remains unchanged.
-• Settings editor remains associated with the active screen.
-• Current top filename becomes “Templates” because listMode is templates, not because of the selected template.
-
-Template double tap
-
-Effects before confirmation:
-
-• Selects the template.
-• Updates description.
-• Opens Apply confirmation.
-• Active screen remains unchanged.
-
-After confirmed Apply:
-
-• Template contents replace the existing active screen contents/configuration.
-• selectedDocumentName remains unchanged.
-• Main and Settings editor reload the same screen.
-• Top filename should remain the same active-screen name.
-
-Text single tap
-
-Set_Table.swift calls loadTextFile(_:).
-
-Effects:
-
-• selectedTextFileName changes.
-• The text file is loaded into the Settings editor.
-• loadedDocumentName and loadedDocumentURL become the text file.
-• Top filename changes to the text filename through currentTitleDisplayName.
-• Active screen remains unchanged.
-
-Image single tap
-
-Effects:
-
-• Image selection is persisted.
-• Preview/background selection updates.
-• Top filename changes to the selected image basename.
-• Active screen remains unchanged.
-
-Sound single tap
-
-Effects:
-
-• Sound selection is persisted.
-• Sound preview plays.
-• Top filename changes to the selected sound basename.
-• Active screen remains unchanged.
-
-PDF single tap
-
-Effects:
-
-• PDF selection is persisted.
-• PDF preview updates.
-• Top filename changes to the selected PDF basename.
-• Active screen remains unchanged.
-
-All Files single tap
-
-Effects:
-
-• Copies the filename.
-• Does not establish a selected All Files row.
-• Does not load the file into the editor.
-• Top filename remains the literal “all files.”
-• Active screen remains unchanged.
-
-6. Saving and file-operation dependencies
-
-The displayed-title system is also part of filename editing, so it is not purely decorative.
-
-currentTitleDisplayName is used for:
-
-• The visible title.
-• Initializing documentNameDraft on Settings appearance.
-• Initializing the draft when title editing begins.
-• Resetting the draft after loading editor contents.
-• Resetting the draft after rename completion.
-• Cancelling filename editing.
-
-canEditCurrentTitle is category-dependent:
-
-• Screens: active screen can be renamed.
-• Images: selected image can be renamed.
-• Sounds: selected sound can be renamed.
-• PDFs: selected PDF can be renamed.
-• Text: disabled.
-• Plates: disabled.
-• All Files: disabled.
-
-commitNameEdit() is also category-dependent:
-
-• Screens calls renameDocument.
-• Images calls renameSelectedImage.
-• Sounds calls renameSelectedSound.
-• PDFs calls renameSelectedPDF.
-
-Consequently, changing currentTitleDisplayName globally without considering title editing could make the control display the active screen while still renaming an image, sound, or PDF. That would be misleading and potentially unsafe.
-
-Editor saving does not use currentTitleDisplayName or documentNameDraft.
-
-Conflict-aware saving uses:
-
-• loadedDocumentName
-• loadedDocumentURL
-• savedDocumentEditorText
-• documentEditorText
-
-saveCurrentDocumentText() resolves through fileURLForLoadedDocumentName() and verifies the loaded name and URL match. These values should remain untouched.
-
-Other dependencies:
-
-• Screen URL resolution uses selectedDocumentName and selectedDocumentFileURL.
-• Save as Template uses the active selectedDocumentName and selectedDocumentFileURL.
-• Apply Template uses selectedDocumentName as the expected target.
-• Main reload uses ContentView’s selectedDocumentName and selectedDocumentURL().
-• Screen rename uses ContentView.renameSelectedDocument.
-• Screen deletion uses ContentView.deleteDocument and selects a fallback when deleting the active screen.
-• Navigation history is owned by ContentView.
-• Import/export logic has its own category and selected-file rules.
-• Table highlighting uses category-specific selection state.
-
-None of those authoritative values should be changed to solve this display issue.
-
-7. Root cause
-
-The root cause is currentTitleDisplayName in Set_Screen.swift, approximately lines 2466–2483.
-
-It deliberately derives the top title from listMode:
-
-switch listMode {
-case .files:
-return selectedDocumentDisplayName
-
-case .text:
-return selectedTextDisplayName
-
-case .images:
-return selectedImageDisplayName
-
-case .sounds:
-return selectedSoundDisplayName
-
-case .pdfs:
-return selectedPDFDisplayName
-
-case .templates:
-return "Templates"
-
-case .all:
-return "all files"
-
-}
-
-The top control therefore represents the selected item in the current category rather than the active screen.
-
-The new Plates selection did not corrupt or replace selectedDocumentName. It merely made the existing category-dependent title behaviour more visible.
-
-Set_Table.swift is not responsible for rendering the top filename.
-
-8. Recommended minimal fix
-
-The smallest safe correction belongs only in:
-
-ESP32BLE/ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
-
-Recommended approach:
-
-1. Add an explicitly named active-screen display property, or reuse selectedDocumentDisplayName directly:
-
-private var activeScreenDisplayName: String {
-selectedDocumentDisplayName
-
-}
-
-2. Use activeScreenDisplayName for the non-editing top label in both branches of settingsTitleControl(availableWidth:):
-
-• Text(activeScreenDisplayName)
-• SettingsUIKitVisualButton(title: activeScreenDisplayName, ...)
-
-3. Do not change:
-
-• selectedDocumentName
-• loadedDocumentName
-• loadedDocumentURL
-• Category selection state
-• Editor state
-• Template selection
-• ContentView callbacks
-• Screen history
-
-Important rename consideration:
-
-The current top control is also the category-specific rename entry point. Merely changing its visible label while retaining image/sound/PDF rename behaviour would create a mismatch: the control would show “home” but could rename an image or sound when tapped.
-
-The safest coherent implementation is therefore to make the top control semantically active-screen-only:
-
-• Display activeScreenDisplayName in every category.
-• Initialize documentNameDraft from activeScreenDisplayName.
-• Make title editing target renameDocument, the active screen, regardless of category.
-• Base title editability on selectedDocumentFileURL rather than the current category.
-
-This preserves the active-screen source of truth and prevents a displayed active-screen name from invoking an unrelated asset rename.
-
-However, the current top control appears to be the existing UI for renaming images, sounds, and PDFs. Converting it to active-screen-only would remove that category-specific rename entry point unless those rename actions exist elsewhere. No alternative rename control was found during this probe.
-
-Therefore there are two implementation choices:
-
-Minimal visual-only change:
-
-• Show selectedDocumentDisplayName in the non-editing title.
-• Keep existing category-specific rename state and functions.
-• Smallest code change and preserves file operations.
-• Risk: tapping the title in Images, Sounds, or PDFs temporarily changes the field to the category item and renames that item. The control’s display and action are semantically inconsistent.
-
-Coherent active-screen-only change:
-
-• Make display, draft, editability, and commit action all use the active screen.
-• Safest interpretation of “the top filename always displays the active screen.”
-• Requires deciding what happens to the existing image/sound/PDF rename access.
-
-Recommendation:
-
-Use the coherent active-screen-only version, but confirm whether category-specific image, sound, and PDF renaming may stop using this top control. If those rename workflows must remain available, they need a separate category-specific rename entry point; that is no longer a display-only fix.
-
-No ContentView or Set_Table changes are needed because selectedDocumentName is already reliably available in Settings.
-
-9. Regression risks
-
-Changing the active screen while Settings is open:
-
-• selectedDocumentName updates through ContentView.
-• The corrected title will automatically update.
-• The Settings editor already reloads through onChange(of: selectedDocumentName).
-
-Returning from Settings to Main:
-
-• No special handling is needed.
-• selectedDocumentName remains authoritative.
-
-Applying a template:
-
-• Active filename remains unchanged.
-• Corrected title remains unchanged.
-• Main and Settings editor reload the replaced contents.
-
-Saving a template:
-
-• Uses selectedDocumentName and selectedDocumentFileURL.
-• The title correction should not affect it.
-
-Renaming the active screen:
-
-• ContentView updates selectedDocumentName after successful rename.
-• Corrected title should update automatically.
-• Care is required not to disconnect documentNameDraft from the intended rename target.
-
-Deleting the active screen:
-
-• ContentView selects and loads its fallback screen.
-• selectedDocumentName changes to that fallback.
-• Corrected title should update automatically.
-
-Creating or importing a screen:
-
-• If the operation selects the new screen, selectedDocumentName provides the new title.
-• If it merely adds a file, the title should remain unchanged.
-
-Switching Settings categories:
-
-• The corrected title remains derived from selectedDocumentName.
-• Category-specific table selections and editor loading remain independent.
-
-Refreshing file lists:
-
-• The title remains stable unless refresh causes ContentView to replace a missing active screen with a fallback.
-
-Screen single tap:
-
-• Title remains unchanged.
-
-Screen double tap:
-
-• Title intentionally changes because the actual active screen changes.
-
-Template browsing:
-
-• Title remains unchanged.
-
-Text, image, sound, PDF, Markdown, and All Files browsing:
-
-• Title remains unchanged.
-
-Primary risk:
-
-• The top control currently combines display and category-specific rename behaviour. The eventual fix must keep its displayed identity and rename target consistent.
-
-10. Implementation phase assessment
-
-The visual correction can be implemented in one very small phase affecting only Set_Screen.swift.
-
-A fully coherent correction can also remain one small phase if the top title is authorized to become active-screen-only for both display and rename.
-
-If image, sound, and PDF rename access must remain exactly as it is, a product decision or separate rename control is required before implementation. That broader solution should not be guessed.
-
-No files were modified. No formatter, build, backup, commit, tag, or document operation was performed.
-
-ESP-TEMPLATE-001D-C-FIX1 PROBE COMPLETE
+ESP-TEMPLATE-001D-D1 IMPLEMENTATION COMPLETE

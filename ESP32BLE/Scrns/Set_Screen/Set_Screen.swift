@@ -1302,6 +1302,7 @@ struct SettingsScreen: View {
             deleteAllFile: deleteAllFile,
             selectTemplate: selectTemplateForDescription,
             applyTemplate: prepareTemplateApplication,
+            deleteTemplate: deleteTemplate,
             showsOuterBorder: isPad
         )
         .id(importRefreshID)
@@ -1370,6 +1371,22 @@ struct SettingsScreen: View {
     private func clearTemplateSelection() {
         selectedTemplateURL = nil
         templateDescriptionState = nil
+    }
+
+    private func deleteTemplate(_ templateURL: URL) {
+        do {
+            try deleteTemplateDocument(at: templateURL)
+            refreshTemplateFiles()
+        } catch {
+            refreshTemplateFiles()
+            let title: String
+            if case .rollbackFailed = error as? TemplateDeletionError {
+                title = "Critical Template Deletion Error"
+            } else {
+                title = "Template Could Not Be Deleted"
+            }
+            presentDocumentSaveAlert(title: title, message: error.localizedDescription)
+        }
     }
 
     private func prepareTemplateApplication(_ templateURL: URL) {
