@@ -16,8 +16,6 @@ codex build (add 10s)
 codex probe
 can be long 20 mins or short 1:04
 
-
-
 run ipad
 30s - a restart would speed this up
 
@@ -26,6 +24,6 @@ copy results to gpt
 
 commit/backup system
 1:00
-- This can be reduced to 10 seconds by
-editing the version list or adding to the version list while something else is happening,
-such as a codex.
+- This can be reduced to 10 seconds
+editing the version list, and doing
+a commit while gpt is reading reports

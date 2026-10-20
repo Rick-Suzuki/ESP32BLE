@@ -4726,7 +4726,16 @@ struct SettingsScreen: View {
             !availableTextURLs.isEmpty ||
             !availableImageURLs.isEmpty ||
             !availableSoundURLs.isEmpty ||
-            !availablePDFURLs.isEmpty
+            !availablePDFURLs.isEmpty ||
+            !availableTemplateURLsForArchiveExport.isEmpty
+    }
+
+    private var availableTemplateURLsForArchiveExport: [URL] {
+        guard let documentsDirectoryURL = currentDocumentsDirectoryURL else {
+            return []
+        }
+
+        return discoverTemplateDocumentURLs(in: documentsDirectoryURL)
     }
 
     private var archiveExportType: UTType {
@@ -4785,8 +4794,39 @@ struct SettingsScreen: View {
             folderName: "PDFs",
             to: &entries
         )
+        try appendTemplateArchiveEntries(to: &entries)
 
         return try SettingsArchiveFileDocument.makeArchiveData(with: entries)
+    }
+
+    private func appendTemplateArchiveEntries(
+        to entries: inout [SettingsArchiveFileDocument.ArchiveEntry]
+    ) throws {
+        for templateURL in availableTemplateURLsForArchiveExport {
+            entries.append(
+                SettingsArchiveFileDocument.ArchiveEntry(
+                    fileName: "templates/\(templateURL.lastPathComponent)",
+                    data: try Data(contentsOf: templateURL)
+                )
+            )
+
+            let configurationURL = templateConfigURL(forTemplateDocumentURL: templateURL)
+            guard FileManager.default.fileExists(atPath: configurationURL.path) else {
+                continue
+            }
+
+            let resourceValues = try configurationURL.resourceValues(forKeys: [.isRegularFileKey])
+            guard resourceValues.isRegularFile == true else {
+                throw CocoaError(.fileReadUnknown)
+            }
+
+            entries.append(
+                SettingsArchiveFileDocument.ArchiveEntry(
+                    fileName: "templates/\(configurationURL.lastPathComponent)",
+                    data: try Data(contentsOf: configurationURL)
+                )
+            )
+        }
     }
 
     private func appendArchiveEntries(

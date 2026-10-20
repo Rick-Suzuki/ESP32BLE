@@ -1,42 +1,74 @@
-ESP-TEMPLATE-001E-MENU implementation is complete.
+ESP-TEMPLATE-001E-A implementation is complete.
 
 Files modified:
 
 ESP32BLE/ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
 
-Exact changes:
+Exact code changes:
 
-• Replaced canExportInCurrentListMode with canExportActiveScreen.
-• canExportActiveScreen reuses the existing active-screen validation from canSaveCurrentScreenAsTemplate.
-• Export 1 Screen now uses canExportActiveScreen.
-• Save as Template retains canSaveCurrentScreenAsTemplate.
-• Create Full Backup now uses the existing hasArchiveExportContent.
-• The whole Export menu is enabled when any of those operations is available.
-• Removed all Export menu availability dependence on listMode.
+• Added availableTemplateURLsForArchiveExport.
+• It performs fresh discovery from Documents using discoverTemplateDocumentURLs(in:).
+• Updated hasArchiveExportContent so discovered templates count as backupable content.
+• Added appendTemplateArchiveEntries(to:).
+• makeFullArchiveData() now calls that helper after preserving all existing backup entries.
+• Templates are stored only as:
 
-Validation:
+templates/<filename>.template
 
-• All three menu entries remain declared and visible.
-• Export 1 Screen still resolves selectedDocumentFileURL from selectedDocumentName.
-• Selecting a template or resource cannot change its export source.
-• Save as Template validation and implementation are unchanged.
-• Create Full Backup implementation and ZIP handling are unchanged.
-• No references to canExportInCurrentListMode remain.
-• Xcode file diagnostics reported no issues.
-• ESP32BLE built successfully with zero build errors.
-• No physical-device testing was performed.
+• Existing regular sidecars are stored only as:
+
+templates/<filename>.template.config.json
+
+• Template and sidecar contents are read directly as Data without decoding or modification.
+• Missing sidecars are omitted without creating replacements.
+• Existing but non-regular or unreadable sidecars cause backup creation to fail.
+• A template disappearing or becoming unreadable during backup also causes failure.
+• No Documents/templates directory is created.
+• Archive.json and its format version remain unchanged.
+• Existing Export menu availability remains category-independent.
+
+Build result:
+
+• Xcode file diagnostics: no issues.
+• Full ESP32BLE build: successful.
+• Build errors: none.
+
+Validation performed:
+
+• Confirmed only Set_Screen.swift is modified.
+• Confirmed existing Screens, Configs, Text, Images, Sounds and PDFs assembly remains unchanged.
+• Confirmed template discovery does not rely solely on cached templateURLs.
+• Ran an isolated temporary-directory discovery check:
+   • Valid .template file was discovered.
+   • Template sidecar was excluded from document discovery.
+   • Ordinary .screen file was excluded.
+   • Template inside a hidden staging directory was excluded.
+• Ran an in-memory ZIP round-trip:
+   • Template entry retained its exact nested path.
+   • Sidecar entry retained its exact nested path.
+   • Template bytes were unchanged.
+   • Malformed sidecar bytes were unchanged.
+   • No template entry appeared at the ZIP root.
+• No real Documents files or user templates were used.
+
+Verified ZIP entries:
+
+templates/MIDI 8x8.template
+templates/MIDI 8x8.template.config.json
 
 Remaining limitations:
 
-• Template-only backup eligibility is unchanged and remains reserved for 001E-A.
-• The pre-existing handling of saveCurrentDocumentText() results in Export 1 Screen and Create Full Backup was not changed, as required.
+• Restore Full Backup does not yet recognize templates/ entries; that remains 001E-B.
+• The existing generic “Couldn't create Archive.zip.” presentation remains unchanged if a template read fails.
+• No physical-device export was performed.
 
-Suggested manual tests:
+Suggested manual device tests:
 
-• Open every Settings category and confirm all three menu entries remain visible.
-• In Plates, verify Export 1 Screen exports the active .screen, not the selected template.
-• Verify Save as Template continues using the active screen.
-• Verify Create Full Backup remains available whenever existing backupable content is present.
-• Verify screen-specific actions are disabled when no valid active screen exists.
+• Create a backup with no templates and confirm existing contents remain unchanged.
+• Create a backup with complete and missing-sidecar templates.
+• Inspect the ZIP and verify templates appear only under templates/.
+• Verify a template-only installation enables Create Full Backup.
+• Verify Create Full Backup remains available from every Settings category.
+• Verify no Documents/templates directory is created.
 
-ESP-TEMPLATE-001E-MENU IMPLEMENTATION COMPLETE
+ESP-TEMPLATE-001E-A IMPLEMENTATION COMPLETE

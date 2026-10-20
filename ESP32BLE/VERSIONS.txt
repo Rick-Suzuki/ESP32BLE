@@ -1,3 +1,7 @@
+261020 Tue 1420
+template full backup
+V64.03
+
 261020 Tue 1414
 Export menu available in template mode
 V64.02
