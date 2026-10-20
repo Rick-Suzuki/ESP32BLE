@@ -1,3 +1,8 @@
+261020 Tue 1414
+Export menu available in template mode
+V64.02
+
+
 261020 Tue 1358
 templates can be deleted
 V64.01

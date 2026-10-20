@@ -1,5 +1,5 @@
 compile times
-
+-------------
 
 GPT
 create codex
@@ -23,3 +23,9 @@ run ipad
 
 copy results to gpt
 15s
+
+commit/backup system
+1:00
+- This can be reduced to 10 seconds by
+editing the version list or adding to the version list while something else is happening,
+such as a codex.

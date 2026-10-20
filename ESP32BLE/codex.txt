@@ -1,181 +1,42 @@
-ESP-TEMPLATE-001D-D1 IMPLEMENTATION REPORT
+ESP-TEMPLATE-001E-MENU implementation is complete.
 
-1. Files changed
+Files modified:
 
-• ESP32BLE/ESP32BLE/Scrns/TemplateDocument.swift
-• ESP32BLE/ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
-• ESP32BLE/ESP32BLE/Scrns/Set_Screen/Table_Img/Set_Table.swift
+ESP32BLE/ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
 
-No other files, project settings, user documents, or .txt files were modified.
+Exact changes:
 
-2. New deletion helper
+• Replaced canExportInCurrentListMode with canExportActiveScreen.
+• canExportActiveScreen reuses the existing active-screen validation from canSaveCurrentScreenAsTemplate.
+• Export 1 Screen now uses canExportActiveScreen.
+• Save as Template retains canSaveCurrentScreenAsTemplate.
+• Create Full Backup now uses the existing hasArchiveExportContent.
+• The whole Export menu is enabled when any of those operations is available.
+• Removed all Export menu availability dependence on listMode.
 
-Added deleteTemplateDocument(at:fileManager:) in TemplateDocument.swift.
+Validation:
 
-The helper:
+• All three menu entries remain declared and visible.
+• Export 1 Screen still resolves selectedDocumentFileURL from selectedDocumentName.
+• Selecting a template or resource cannot change its export source.
+• Save as Template validation and implementation are unchanged.
+• Create Full Backup implementation and ZIP handling are unchanged.
+• No references to canExportInCurrentListMode remain.
+• Xcode file diagnostics reported no issues.
+• ESP32BLE built successfully with zero build errors.
+• No physical-device testing was performed.
 
-• Accepts only .template URLs.
-• Validates the containing directory.
-• Requires the template to exist as a regular file.
-• Uses templateConfigURL(forTemplateDocumentURL:) for its sidecar.
-• Accepts a missing sidecar.
-• Rejects a sidecar that exists but is not a regular file.
-• Cannot target .screen or normal .config.json files.
+Remaining limitations:
 
-Deletion sequence:
+• Template-only backup eligibility is unchanged and remains reserved for 001E-A.
+• The pre-existing handling of saveCurrentDocumentText() results in Export 1 Screen and Create Full Backup was not changed, as required.
 
-1. Creates a unique hidden staging directory beside the template.
-2. Moves the template into staging.
-3. Moves the sidecar when present.
-4. Restores the template if sidecar staging fails.
-5. Removes the staging directory only after all applicable files are staged.
-6. Reports success only after final cleanup completes.
+Suggested manual tests:
 
-TemplateDeletionError distinguishes:
+• Open every Settings category and confirm all three menu entries remain visible.
+• In Plates, verify Export 1 Screen exports the active .screen, not the selected template.
+• Verify Save as Template continues using the active screen.
+• Verify Create Full Backup remains available whenever existing backupable content is present.
+• Verify screen-specific actions are disabled when no valid active screen exists.
 
-• Invalid template URL.
-• Invalid parent directory.
-• Missing template.
-• Non-regular template or sidecar.
-• Staging preparation failure.
-• Staging failure with successful restoration.
-• Critical rollback failure.
-• Final cleanup failure.
-
-Rollback never overwrites an existing destination. A rollback collision produces a critical rollback error.
-
-If final cleanup fails, the recoverable staged files remain in the hidden staging directory and the operation reports failure.
-
-3. Settings callback and reconciliation
-
-Added deleteTemplate(_:) in Set_Screen.swift.
-
-It:
-
-• Calls deleteTemplateDocument(at:).
-• Never calls the Screens deletion function.
-• Refreshes template discovery after success.
-• Clears the selected template and description through existing refresh reconciliation when the deleted template disappears.
-• Preserves the Plates category.
-• Does not modify selectedDocumentName, the Settings editor, Main Screen contents, or navigation history.
-
-On failure it:
-
-• Refreshes template discovery to reflect the actual filesystem state.
-• Clears stale selection when necessary.
-• Presents the existing native Settings error alert.
-• Uses “Critical Template Deletion Error” for rollback failure.
-• Never reports success after staging or cleanup failure.
-
-4. Swipe action implementation
-
-SettingsDocumentTableSection now receives a template-specific deleteTemplate callback.
-
-templateRow(for:) has the native action:
-
-• Leading edge, physically right swipe.
-• Red destructive Delete action.
-• Trash icon.
-• allowsFullSwipe: false.
-• No confirmation.
-• No trailing/left-swipe action.
-
-The row retains:
-
-• Exclusive double-before-single tap gesture.
-• Single-tap selection and description.
-• Double-tap Apply confirmation.
-• Selected-row highlighting.
-• Description panel.
-• Existing geometry and List identity.
-• Default accessibility selection action.
-• Named Apply Template accessibility action.
-
-The native SwiftUI swipe pattern follows the existing Screens implementation and SwiftUI guidance.
-
-5. Build result
-
-ESP32BLE built successfully in Xcode.
-
-Build errors: None.
-
-TemplateDocument.swift live diagnostics: No issues.
-
-Whitespace validation: Passed.
-
-6. Isolated tests performed
-
-All checks used a unique temporary directory outside the user’s Documents directory.
-
-Valid template with sidecar:
-
-• Template removed.
-• Sidecar removed.
-• Passed.
-
-Template without sidecar:
-
-• Template removed successfully.
-• Passed.
-
-Non-template URL:
-
-• Rejected with TemplateDeletionError.
-• Passed.
-
-Missing template:
-
-• Rejected with TemplateDeletionError.
-• Passed.
-
-Unrelated file preservation:
-
-• Unrelated .screen file remained untouched.
-• Passed.
-
-Forced second staged-move failure:
-
-• Error reported.
-• Already-staged template restored.
-• Original sidecar remained present.
-• Passed.
-
-Forced final cleanup failure:
-
-• cleanupFailed reported.
-• Success was not reported.
-• Passed.
-
-Source checks confirmed:
-
-• The exclusive Plates tap gesture remains present.
-• The new swipe action uses the leading edge.
-• Full-swipe deletion remains disabled.
-• Existing category swipe actions were not changed.
-
-7. Limitations and remaining risks
-
-• Moving two files cannot form one atomic filesystem transaction.
-• A critical filesystem failure can prevent rollback; this is reported distinctly.
-• A final cleanup failure can leave recoverable files inside the hidden staging directory.
-• No persistent recovery journal was introduced.
-• Native List gesture arbitration and VoiceOver action ordering require device testing.
-• No tests touched actual user templates.
-
-8. Suggested manual device tests
-
-On iPhone landscape, iPad, and iPad mini:
-
-• Swipe a template physically right and confirm Delete appears.
-• Confirm a full swipe does not delete.
-• Tap Delete and verify the row and description disappear.
-• Verify the item count updates.
-• Delete an unselected template and verify the current selection remains.
-• Confirm single tap still selects and displays the description.
-• Confirm double tap still opens Apply.
-• Confirm vertical list scrolling remains responsive.
-• Confirm no left-swipe action appears.
-• Confirm the active screen and Settings editor remain unchanged.
-• With VoiceOver, verify Select, Apply Template, and Delete actions are discoverable and usable.
-
-ESP-TEMPLATE-001D-D1 IMPLEMENTATION COMPLETE
+ESP-TEMPLATE-001E-MENU IMPLEMENTATION COMPLETE

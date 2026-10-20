@@ -488,7 +488,7 @@ struct SettingsScreen: View {
 						ButtonClickFeedback.playIfEnabled()
 						prepareSingleFileExport()
 					}
-					.disabled(!canExportInCurrentListMode)
+					.disabled(!canExportActiveScreen)
 					Button("Save as Template") {
 						ButtonClickFeedback.playIfEnabled()
 						beginSaveAsTemplate()
@@ -498,7 +498,7 @@ struct SettingsScreen: View {
 							ButtonClickFeedback.playIfEnabled()
 							prepareArchiveExport()
 						}
-						.disabled(!canExportInCurrentListMode)
+						.disabled(!hasArchiveExportContent)
 				} label: {
 				Image(systemName: "square.and.arrow.up")
 					.font(.title)
@@ -846,8 +846,8 @@ struct SettingsScreen: View {
         "\(listModeRawValue)|\(selectedTextFileName)|\(selectedImagePath)|\(selectedSoundPath)|\(selectedPDFPath)"
     }
 
-    private var canExportInCurrentListMode: Bool {
-        listMode != .templates
+    private var canExportActiveScreen: Bool {
+        canSaveCurrentScreenAsTemplate
     }
 
     private var canSaveCurrentScreenAsTemplate: Bool {
@@ -857,7 +857,7 @@ struct SettingsScreen: View {
     }
 
     private var canUseExportMenu: Bool {
-        canExportInCurrentListMode || canSaveCurrentScreenAsTemplate
+        canExportActiveScreen || canSaveCurrentScreenAsTemplate || hasArchiveExportContent
     }
 
     private var isImporting: Binding<Bool> {
