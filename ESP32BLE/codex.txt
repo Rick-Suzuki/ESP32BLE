@@ -1,500 +1,452 @@
-MIDI-010B — MIDI CHANNELS
-READ-ONLY ARCHITECTURE REPORT
-
-1. Current parser and proposed architecture
-
-Current ESP32BLE parsing is in:
-
-ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift
-midiCommandForGridEntry(_:)
-
-It currently:
-
-Accepts exactly one sendTexts entry.
-Splits that entry on whitespace.
-Accepts two or three components.
-Requires the first component to be exactly “.midi”.
-Validates note as 0...127.
-Validates explicit velocity as 1...127.
-Defaults omitted velocity to 100.
-Returns a tuple containing note and velocity.
-
-Current accepted forms:
-
-.midi 60
-.midi 60 50
-
-The proposed four-component form requires expanding the accepted count to 2...4:
-
-.midi <note>
-.midi <note> <velocity>
-.midi <note> <velocity> <channel>
-
-Under this syntax, “.midi 60 3” remains velocity 3, not channel 3. A channel override cannot be specified without also specifying velocity. This avoids ambiguity and preserves existing command behavior.
-
-Recommended parsed representation:
-
-struct MIDICommand {
-let note: UInt8
-
-let velocity: UInt8
-
-let channelOverride: UInt8?
-
-}
-
-The parser should preserve the user-facing channel as 1...16. It should not convert to CoreMIDI’s zero-based channel during ESP32BLE command parsing.
-
-A separate resolved representation is recommended:
-
-struct ResolvedMIDINoteCommand {
-let note: UInt8
-
-let velocity: UInt8
-
-let channel: UInt8
-
-}
-
-Here, channel is still the wire/display value 1...16.
-
-Resolution would be conceptually:
-
-effectiveChannel = channelOverride ?? defaultMIDIChannel
-
-The default must be defensively clamped or validated as 1...16 before use.
-
-The wire command should remain one-based:
-
-MIDI:NOTE_ON:<note>:<velocity>:<channel>
-MIDI:NOTE_OFF:<note>:<channel>
-
-Dedicated parser recommendation:
-
-Yes. This is the appropriate point to move parsing into a dedicated MIDICommandParser.swift file.
-
-The parser has already grown beyond a note-only helper. Adding channels and the anticipated named-note, Control Change, Program Change, and toggle features inside Main_ButtonBehavior.swift would mix syntax policy with UI execution and network behavior.
-
-A dedicated parser should:
-
-Own whitespace normalization.
-Own exact argument-count validation.
-Own numeric range validation.
-Return structured command data.
-Have no SwiftUI dependency.
-Have no network dependency.
-Have no CoreMIDI dependency.
-Keep one-based display/wire channels separate from zero-based CoreMIDI channels.
-Be directly unit-testable.
-
-A reasonable initial API would be conceptually:
-
-MIDICommandParser.parse(_ text: String) -> MIDICommand?
-
-The parser should parse only the currently authorized Note command. Future command types can later be represented by an enum without changing the button-routing code repeatedly.
-
-Named-note conversion should eventually occur in this ESP32BLE parser. ESPMacHelper should continue receiving numeric note, velocity, and channel fields only.
-
-2. Recommended Settings location and persistence
-
-ESP32BLE already uses @AppStorage extensively for device-local preferences.
-
-Examples include:
-
-speechRecognitionAutoOffMinutes
-keyboardTimingOnMs
-keyboardTimingOffMs
-keepScreenAwake
-outputMode
-settingsStatusBarVisible
-textToSpeechRate
-
-This is backed by UserDefaults and is independent of .screen documents.
-
-Recommended persistence:
-
-@AppStorage("midiDefaultChannel") private var midiDefaultChannel = 1
-
-The value should be constrained to 1...16 by the Settings control and validated again when resolved for transmission. The initial default should be 1.
-
-The setting must not be added to:
-
-ScreenDocument
-TemplateDocument
-Screen configuration JSON
-Document backup/restore models
-.screen serialization
-
-Recommended UI location:
-
-The most coherent location is the Connection area in Settings, near the Mac output controls in SettingsAvailableDevicesPanel.
-
-MIDI output is currently available only through the Mac connection, so the setting belongs with the Mac transport configuration rather than keyboard timing, screen layout, image settings, or per-document controls.
-
-It can be shown when Mac output is selected, or remain visible but clearly labeled as a Mac MIDI preference. Showing it for Mac output only is the cleaner arrangement.
-
-The relevant view is:
-
-ESP32BLE/Scrns/Set_Screen/Btm_Area/Set_AvailableDevices.swift
-SettingsAvailableDevicesPanel
-
-Smallest persistence/data-flow approach:
-
-SettingsAvailableDevicesPanel reads and writes midiDefaultChannel using @AppStorage.
-MainScreen reads the same key using @AppStorage.
-
-Because both wrappers observe the same UserDefaults key, changing the value in Settings propagates to MainScreen without storing it in ContentView or passing a binding through SettingsScreen and SettingsBottomControlsSection.
-
-For stronger key consistency, the storage key and valid range should be centralized in the new MIDI parser/model file rather than duplicated as string literals.
-
-3. Required ESP32BLE modifications
-
-A. Add the dedicated parser/model
-
-Create MIDICommandParser.swift containing:
-
-MIDICommand
-ResolvedMIDINoteCommand or an equivalent note identity
-MIDICommandParser
-The default-channel storage key
-The valid note, velocity, and channel ranges
-A resolver from optional override to effective channel
-
-B. Replace tuple parsing
-
-Main_ButtonBehavior.swift currently returns:
-
-(note: Int, velocity: Int)
-
-It should return a structured command containing:
-
-note
-velocity
-optional channel override
-
-The effective channel should be resolved from the override and the current device-local default before the touch begins.
-
-C. Send channel in Note On
-
-sendMIDINoteOnFromTouch currently accepts note and velocity and always transmits channel 1.
-
-It must accept the resolved channel and transmit:
-
-MIDI:NOTE_ON:<note>:<velocity>:<channel>
-
-All three values should remain defensively validated.
-
-D. Send channel in Note Off
-
-sendMIDINoteOffFromTouch currently accepts only note and always transmits channel 1.
-
-It must receive both the original note and original channel and transmit:
-
-MIDI:NOTE_OFF:<note>:<channel>
-
-It must not read the current Settings value while releasing a held note.
-
-E. Preserve the channel in the touch identity
-
-Main_GridSection.swift currently stores only:
-
-activeNote
-
-The active touch must instead preserve at least:
-
-note
-channel
-
-Velocity is needed only for Note On. Note Off needs the exact note/channel identity established by Note On.
-
-F. Add Settings persistence and UI
-
-SettingsAvailableDevicesPanel should expose an integer selector constrained to 1...16 and persisted with @AppStorage.
-
-MainScreen should observe the same device-local preference.
-
-No ContentView, screen-document, template, archive, editor, or backup changes are required if @AppStorage is used directly in the Settings panel and MainScreen.
-
-4. Required ESPMacHelper modifications
-
-Production Helper files inspected:
-
-ESPMacHelper/ESPMacHelper/MacNetworkServer.swift
-ESPMacHelper/ESPMacHelper/MIDIOutputService.swift
-
-MacNetworkServer.swift currently parses these exact wire forms:
-
-MIDI:NOTE_ON:<note>:<velocity>:1
-MIDI:NOTE_OFF:<note>:1
-
-The parser explicitly requires the final component to equal “1”.
-
-ParsedMIDICommand currently drops channel information:
-
-case noteOn(note: UInt8, velocity: UInt8)
-case noteOff(UInt8)
-
-handleCommand then hard-codes CoreMIDI channel 0:
-
-startNetworkNote(... channel: 0 ...)
-stopNetworkNote(... channel: 0 ...)
-
-Required changes in MacNetworkServer.swift:
-
-Parse wire channel as an integer.
-Validate wire channel as 1...16.
-Include the channel in both ParsedMIDICommand cases.
-Convert to zero-based CoreMIDI channel by subtracting one.
-Pass the resulting 0...15 value to MIDIOutputService.
-
-Conceptually:
-
-wireChannel: 1...16
-coreMIDIChannel = wireChannel - 1
-
-MIDIOutputService.swift already accepts a zero-based channel in:
-
-startNetworkNote(note:velocity:channel:clientID:)
-stopNetworkNote(note:channel:clientID:)
-
-It already passes that channel to:
-
+MIDI-LATENCY-001
+END-TO-END MIDI LATENCY INVESTIGATION
+
+SUMMARY
+
+No intentional 50–60 ms delay was found in the MIDI-specific touch, parsing, transmission, or CoreMIDI code.
+
+Note On starts directly from UIKit touchesBegan. It does not wait for touch release, a SwiftUI Button, a gesture recognizer, a timer, a debounce, or keyboard timing.
+
+However, three plausible avoidable latency sources exist:
+
+1. ESP32BLE performs synchronous diagnostic formatting and printing before calling Network.framework send.
+2. ESPMacHelper hops received data from its Network.framework queue to the main actor, then performs logging, timestamp formatting, published UI-state updates, command-history insertion, and activity-indicator work before submitting MIDI.
+3. The connection uses default TCP parameters and does not explicitly disable Nagle’s algorithm for these small messages.
+
+These are credible contributors to variable latency, particularly while running under Xcode or when either application’s main thread is busy. Static inspection cannot establish whether they account for the subjectively estimated 50–60 ms.
+
+1. Complete Note On path
+
+The production path is:
+
+iPad touchscreen event
+MIDITouchCaptureView.touchesBegan
+onDown callback
+MainScreen.sendMIDINoteOnFromTouch
+MacConnectionManager.sendAuthenticatedCommand
+MacConnectionManager.sendFramedMessage
+NWConnection.send
+Wi-Fi/TCP transport
+MacNetworkServer NWConnection.receive callback
+Task { @MainActor }
+processReceivedData
+processCompleteCommand
+handleCommand
+parseMIDICommand
+MIDIOutputService.startNetworkNote
+MIDIOutputService.startNote
 MIDI1UPNoteOn
-MIDI1UPNoteOff
+MIDIOutputService.sendMessage
+MIDIEventListAdd
+MIDIReceivedEventList
+CoreMIDI virtual source
+Logic Pro
 
-Therefore, no functional production change is required in MIDIOutputService.swift for basic 16-channel support.
+2. iPad touch detection
 
-The Helper’s menu test note can remain on its existing channel 1, represented internally as channel 0.
-
-5. Note On/Note Off channel-preservation strategy
-
-Current iOS touch identity:
-
-MIDITouchCaptureView stores activeNote only.
-
-Current callbacks:
-
-onDown(Int)
-onUp(Int)
-
-That is insufficient once the channel can vary.
-
-Recommended touch identity:
-
-struct MIDINoteIdentity: Hashable {
-let note: UInt8
-
-let channel: UInt8
-
-}
-
-Recommended flow:
-
-The button command is parsed.
-The effective channel is resolved using the button override or current default.
-MIDITouchView receives a fully resolved command.
-touchesBegan records the resolved note/channel identity as the active identity.
-Note On uses that identity and the parsed velocity.
-touchesEnded sends Note Off using the stored active identity.
-touchesCancelled sends Note Off using the same stored active identity.
-cancelActiveTouch() sends Note Off using the same stored active identity.
-
-The active identity must be captured at touch-down time. Note Off must not recompute the channel from:
-
-The current Settings value.
-The latest SwiftUI render.
-The current button command.
-A newly supplied closure’s captured default channel.
-
-This guarantees:
-
-Changing the default channel while a note is held does not redirect its Note Off.
-Touch cancellation releases the original channel.
-A button with an explicit override releases on that override.
-A button without an override releases on the default that was effective when the touch began.
-
-The safest callback shape is to pass the stored identity as an argument:
-
-onDown(ResolvedMIDINoteCommand)
-onUp(MIDINoteIdentity)
-
-That is safer than relying on closures that capture the channel because SwiftUI can update the representable and replace those closures while a touch is active.
-
-6. Same-note/different-channel ownership findings
-
-MIDIOutputService already defines:
-
-NoteKey(note, channel)
-
-Its active-note dictionary is keyed by NoteKey:
-
-activeNoteOwners: [NoteKey: Set<NoteOwner>]
-
-Therefore:
-
-Note 60 on channel 1 and note 60 on channel 3 are independent keys.
-A Note Off for note 60/channel 1 does not release note 60/channel 3.
-Disconnect cleanup finds every NoteKey owned by the disconnecting client, including notes on different channels.
-MIDI panic/shutdown iterates all active NoteKeys and emits Note Off on each key’s stored channel.
-Two different ESP32BLE clients can share the same note/channel safely; the actual Note Off is emitted only after the final owning client releases it.
-Two buttons from the same client can play the same note on different channels independently because their NoteKeys differ by channel.
-
-One existing ownership limitation should be preserved and tested:
-
-NoteOwner is keyed only by network client ID, not by individual touch or button.
-
-If the same ESP32BLE client holds the same note on the same channel from two different buttons, both presses map to the same owner and NoteKey. The second press does not add another independent ownership count, and the first release can stop the shared note.
-
-That limitation already exists and is not introduced by channels. Same-note/different-channel operation is independent and should work correctly once the Helper passes the parsed channel through.
-
-7. Automated testing recommendations
-
-ESP32BLE parser tests:
-
-“.midi 60” parses as note 60, velocity 100, no channel override.
-“.midi 60 50” parses as note 60, velocity 50, no channel override.
-“.midi 60 50 3” parses as note 60, velocity 50, channel override 3.
-“.midi 60 100 16” parses as channel override 16.
-Default resolution uses channel 1 initially.
-Changing the default resolves an override-free command to the new value.
-An explicit override ignores the default.
-Leading, trailing, and repeated whitespace are handled consistently.
-Tabs between arguments are handled consistently.
-Notes 0 and 127 are accepted.
-Notes -1 and 128 are rejected.
-Velocities 1 and 127 are accepted.
-Velocities 0 and 128 are rejected.
-Channels 1 and 16 are accepted.
-Channels 0 and 17 are rejected.
-Missing arguments are rejected.
-Non-numeric arguments are rejected.
-Extra arguments are rejected.
-“.MIDI” remains rejected if case sensitivity is intentionally retained.
-“.midi 60 3” remains velocity 3 with no channel override.
-
-ESP32BLE touch-state tests:
-
-Touch-down stores the resolved channel.
-Changing the default while held does not change the release channel.
-Normal touch end uses the original channel.
-Move-out cancellation uses the original channel.
-System cancellation uses the original channel.
-View dismantling uses the original channel.
-Two buttons using the same note on different channels generate distinct Note On and Note Off pairs.
-Multiple different notes remain independent.
-
-ESPMacHelper parser tests:
-
-NOTE_ON accepts wire channels 1 and 16.
-NOTE_OFF accepts wire channels 1 and 16.
-Wire channel 1 becomes CoreMIDI channel 0.
-Wire channel 16 becomes CoreMIDI channel 15.
-Channels 0 and 17 are rejected.
-Malformed and extra fields are rejected.
-Invalid MIDI commands do not fall through to keyboard or text execution.
-
-MIDIOutputService ownership tests:
-
-Same note on different channels creates separate NoteKeys.
-Same note/channel from two clients remains active until both clients release it.
-Disconnect releases every channel owned by that client.
-Disconnecting one client does not release a shared key still owned by another client.
-Panic/shutdown emits Note Off using every NoteKey’s stored channel.
-Same client, same note, different channels remains independent.
-
-Use the Swift Testing framework for pure parser and ownership tests.
-
-8. Smallest safe implementation sequence
-
-Step 1:
-Add the ESP32BLE MIDI command model and centralized parser, preserving all current note and velocity behavior.
-
-Step 2:
-Add parser tests for current syntax before enabling channels.
-
-Step 3:
-Extend parsing to the optional fourth channel argument and add boundary/malformed-input tests.
-
-Step 4:
-Add the device-local @AppStorage default channel with initial value 1 and the Settings control.
-
-Step 5:
-Resolve the effective channel before touch-down and carry note/channel as the active touch identity.
-
-Step 6:
-Update ESP32BLE Note On and Note Off wire commands to include that resolved channel.
-
-Step 7:
-Extend MacNetworkServer’s parsed MIDI command to retain the wire channel, validate 1...16, convert it to 0...15, and pass it to MIDIOutputService.
-
-Step 8:
-Add Helper parser and ownership tests.
-
-Step 9:
-Perform integration testing for held notes, cancellation, simultaneous channels, disconnect cleanup, and panic.
-
-This order keeps the existing channel-1 behavior working at each stage and isolates parser changes from touch-lifetime changes.
-
-9. Exact files expected to change
-
-Minimum ESP32BLE production changes:
-
-ESP32BLE/Scrns/MIDI/MIDICommandParser.swift
-New dedicated parser, models, ranges, and preference key.
-
-ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift
-Use the structured parser and send channel-aware Note On/Note Off messages.
+Relevant file:
 
 ESP32BLE/Scrns/Main_Screen/Main_GridSection.swift
-Carry the original note/channel identity through touch end and cancellation.
 
+A valid MIDI entry creates MIDITouchView directly. The visible button label has hit testing disabled, and the transparent UIKit MIDITouchCaptureView receives the touch.
+
+Note On is triggered by:
+
+MIDITouchCaptureView.touchesBegan(_:with:)
+
+The exact touch-time operations are:
+
+Guard against a duplicate active touch.
+Take the first UITouch.
+Read the already-configured note.
+Save the active touch and note.
+Print the MIDI touch-down diagnostic.
+Invoke onDown immediately.
+
+There is no wait for touchesEnded.
+
+There is no movement threshold before Note On. Movement is examined only after Note On in touchesMoved, where leaving the view cancels the active note.
+
+There is no SwiftUI Button action in the valid MIDI path.
+
+The ordinary Button branch exists only when midiCommand(entry) returns nil. A valid MIDI command takes the MIDITouchView branch instead.
+
+The TapGesture and double-tap recognition at Main_GridSection.swift lines 404–429 belong to ordinary sound buttons, not MIDI buttons.
+
+The LongPressGesture belongs to grid-edit mode. MIDI touch capture is created only when grid-edit mode is disabled.
+
+No timer, Task.sleep, debounce, animation, asyncAfter, or explicit dispatch occurs between touchesBegan and the MIDI callback.
+
+The synchronous touch-down print occurs before onDown:
+
+print("🐞 [MIDI-TOUCH] DOWN note=...")
+onDown?(note)
+
+Console output can become comparatively expensive when attached to Xcode, although the actual cost was not measured.
+
+3. MIDI parsing and routing
+
+Relevant files:
+
+ESP32BLE/Scrns/MIDI/MIDICommandParser.swift
+ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift
+ESP32BLE/Scrns/Main_Screen/Main_GridSection.swift
 ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
-Observe the device-local default and resolve/pass MIDI commands.
 
-ESP32BLE/Scrns/Set_Screen/Btm_Area/Set_AvailableDevices.swift
-Add the MIDI Default Channel control using @AppStorage.
+MIDICommandParser performs only synchronous string splitting and integer validation.
 
-No change should be necessary in:
+The parser is called by midiCommandForGridEntry(_:) while SwiftUI constructs/evaluates gridButtonView. It is not called from touchesBegan.
 
-ContentView.swift
-ScreenDocument.swift
-TemplateDocument.swift
-Editors
-Archive/backup/restore code
+The rendered MIDITouchView already contains:
 
-Minimum ESPMacHelper production change:
+The parsed note.
+A closure capturing the parsed velocity.
+
+Consequently, touch-down does not reparse the command.
+
+The recently added channel override and default-channel resolver are not used in the current transmission path. They introduce no touch-time work.
+
+Main_Screen.swift directly connects:
+
+onMIDITouchDown: sendMIDINoteOnFromTouch
+
+sendMIDINoteOnFromTouch performs only synchronous guards and string interpolation before calling the network manager.
+
+The command does not pass through:
+
+sendMainGridEntry
+Ordinary keyboard handling
+Bluetooth token processing
+Keyboard timing
+Wait-chain processing
+Speech processing
+Audio playback
+Button-click feedback
+
+Keyboard timing settings therefore do not affect MIDI Note On.
+
+4. ESP32BLE network transmission
+
+Relevant file:
+
+ESP32BLE/Scrns/MacConnectionManager.swift
+
+MacConnectionManager is @MainActor. The touch callback and transmission preparation therefore run on the main actor.
+
+sendAuthenticatedCommand performs:
+
+A canSend guard.
+A direct call to send(_:)
+A direct call to sendFramedMessage(_:requiresAuthentication:)
+
+Authentication does not add per-note cryptographic work. The connection has already been authenticated; the method only checks the authenticated state.
+
+sendFramedMessage then:
+
+Appends a newline delimiter.
+Checks the connection and authentication state.
+UTF-8 encodes the short command.
+Formats and prints a detailed payload diagnostic.
+Calls NWConnection.send.
+
+NWConnection.send is asynchronous. The code does not wait for its completion before returning. Its completion handler handles errors only.
+
+Important critical-path diagnostic work:
+
+ESPMacTransportProbe.printPayload(data) runs before NWConnection.send.
+
+That function:
+
+Maps every byte to a decimal string.
+Joins all byte strings.
+Walks the data again to create an escaped payload.
+Prints the complete formatted diagnostic.
+
+The MIDI message is small, so the pure computation should ordinarily be small. The synchronous console output is less predictable, especially during debugging.
+
+5. TCP behavior
+
+Both ESP32BLE and ESPMacHelper use:
+
+NWParameters.tcp
+
+Neither side explicitly configures:
+
+NWProtocolTCP.Options.noDelay
+
+Apple documents noDelay as the option that disables Nagle’s algorithm.
+
+The current code therefore does not explicitly request latency-oriented handling for small TCP writes.
+
+This is a plausible investigation target because MIDI messages are very small and sent individually. TCP packet coalescing and delayed acknowledgments can sometimes produce latency patterns in the tens-of-milliseconds range.
+
+Static inspection cannot determine:
+
+The effective default behavior chosen by Network.framework.
+Whether Nagle is actually delaying these particular packets.
+Whether Wi-Fi scheduling dominates instead.
+Whether the reported delay is present on every Note On or only under certain packet sequences.
+
+This should be measured before changing TCP configuration.
+
+There is no application-level send queue, batching timer, debounce, or deliberate delay in ESP32BLE.
+
+6. ESPMacHelper network reception
+
+Relevant file:
 
 ESPMacHelper/ESPMacHelper/MacNetworkServer.swift
-Parse, validate, preserve, convert, and dispatch channels.
 
-No functional change should be necessary in:
+The NWConnection runs on a private serial DispatchQueue named:
+
+MacNetworkServer
+
+The receive callback does not parse or execute the message directly on that queue. When data arrives, it schedules:
+
+Task { @MainActor in
+self.processReceivedData(...)
+
+}
+
+This introduces a main-actor scheduling hop before MIDI processing.
+
+If the Helper’s main actor is busy rendering UI, processing logs, or doing unrelated work, the MIDI message waits for main-actor availability.
+
+The receive call is rearmed immediately on the Network.framework callback queue, so no receive timer exists.
+
+The buffer processing is synchronous:
+
+Append received data.
+Search for the newline delimiter.
+Extract the frame.
+Decode UTF-8.
+Call processCompleteCommand.
+
+No artificial delay exists in framing.
+
+The command is complete as soon as the newline arrives. It does not wait for additional bytes after finding that delimiter.
+
+7. ESPMacHelper work before MIDI submission
+
+processCompleteCommand performs substantial non-MIDI work before handleCommand:
+
+Capture Date and DispatchTime.
+Print the received message.
+Check authenticated client state.
+Allocate a command-probe sequence number.
+Format and print a RECEIVED probe.
+Print the raw message.
+Assign the @Published lastReceived property.
+Build a display representation.
+Format a timestamp with DateFormatter.
+Insert a ReceivedCommand at the beginning of an @Published history array.
+Trim that array if necessary.
+Update the @Published activity-indicator state.
+Schedule an asyncAfter operation to clear the indicator.
+Format and print an EXECUTE START probe.
+Finally call handleCommand.
+
+The 0.5-second activity-indicator duration does not delay Note On. Its asyncAfter block runs later.
+
+The act of scheduling that block and changing published UI state occurs before Note On, however.
+
+The command history is limited to 50 entries, so array insertion is not large, but it still performs allocation, formatting, observation invalidation, and potential SwiftUI update scheduling on the main actor.
+
+The multiple synchronous print calls are also on the pre-MIDI critical path.
+
+This is the largest concentration of avoidable application work found between network receipt and CoreMIDI submission.
+
+8. Helper MIDI parsing
+
+handleCommand trims the message and tries parseMIDICommand first.
+
+For valid MIDI input:
+
+It does not query Accessibility permission.
+It does not execute keyboard parsing.
+It does not execute text handling.
+It does not use key-down or inter-key delays.
+It directly calls MIDIOutputService.
+
+The two keyboard-delay constants in MacNetworkServer are both zero and are unrelated to valid MIDI commands.
+
+MIDI parsing consists only of:
+
+Splitting on colons.
+Checking field count and fixed strings.
+Parsing UInt8 values.
+Validating note and velocity.
+Validating the current fixed channel 1 field.
+
+This work is synchronous and negligible compared with scheduling, logging, or network transport.
+
+9. MIDIOutputService and CoreMIDI
+
+Relevant file:
 
 ESPMacHelper/ESPMacHelper/MIDIOutputService.swift
 
-Recommended test additions:
+MIDIOutputService is @MainActor.
 
-An ESP32BLE parser/touch-state test file.
-An ESPMacHelper MIDI parser/ownership test file.
-Project metadata only if test targets or new source-file membership are not already folder-synchronized.
+startNetworkNote creates a NoteKey and calls startNote.
 
-10. Read-only confirmation
+startNote:
 
-No source files were modified.
+Looks up current note owners.
+Checks duplicate ownership.
+Builds a MIDI 1.0 Universal MIDI Packet Note On.
+Calls sendMessage.
+Records ownership after successful submission.
 
-No files were created or deleted.
+There are no timers, tasks, sleeps, dispatches, or debounces in the network Note On path.
+
+sendMessage:
+
+Checks that the virtual source exists.
+Initializes a MIDIEventList.
+Adds one event using MIDIEventListAdd.
+Uses timestamp 0.
+Calls MIDIReceivedEventList immediately.
+
+No future timestamp is supplied. The application does not deliberately schedule the event for later delivery.
+
+MIDIReceivedEventList distributes incoming events from the virtual source to connected CoreMIDI clients. Logic Pro is downstream from this call.
+
+The MIDI Note On log occurs after successful CoreMIDI submission, so that specific print does not delay the Note On submission.
+
+10. Shortest critical path
+
+The shortest actual code path is:
+
+touchesBegan
+touch diagnostic print
+onDown closure
+sendMIDINoteOnFromTouch
+sendAuthenticatedCommand
+UTF-8 framing
+transport diagnostic formatting and print
+NWConnection.send
+TCP/Wi-Fi
+NWConnection receive callback
+main-actor Task scheduling
+newline extraction
+receive/probe prints
+published UI/history work
+handleCommand
+MIDI parsing
+ownership lookup
+MIDIEventList creation
+MIDIReceivedEventList
+
+There is no intentional musical timing delay in this path.
+
+11. Most likely software contributors
+
+Highest priority:
+
+Mac Helper main-actor hop and pre-execution work.
+
+All incoming data is moved to the main actor, and several logging and UI-history operations occur before handleCommand. This can introduce variable latency when the main thread is occupied.
+
+Second priority:
+
+TCP small-message behavior.
+
+Neither connection explicitly enables TCP noDelay. This is a plausible source of tens-of-milliseconds delay but is not proven by inspection.
+
+Third priority:
+
+Synchronous diagnostics before sending and before executing.
+
+ESP32BLE performs detailed payload logging before NWConnection.send.
+MIDITouchCaptureView prints before invoking onDown.
+ESPMacHelper performs several prints before CoreMIDI submission.
+
+Debug-console attachment can amplify these costs.
+
+Lower priority:
+
+Command parsing, integer conversion, ownership dictionaries, and MIDIEventList construction.
+
+These are small synchronous operations with no waiting mechanism.
+
+12. Touchscreen versus physical keyboard
+
+A USB MIDI keyboard has a fundamentally shorter transport path:
+
+Physical key scan
+USB MIDI
+CoreMIDI
+Logic Pro
+
+The iPad path includes:
+
+Touchscreen scan and event delivery
+UIKit main-run-loop delivery
+Application processing
+Wi-Fi
+TCP
+Mac receive scheduling
+Mac main-actor processing
+CoreMIDI
+Logic Pro
+
+Even with perfect application code, the iPad/Wi-Fi path should be expected to have more latency and jitter than direct USB MIDI.
+
+This does not prove that the entire perceived difference is unavoidable. It means the comparison includes both software-path differences and physical-interface differences.
+
+13. Recommended next investigation
+
+Before changing behavior, measure distinct boundaries in a release-style run:
+
+Touch event received on iPad.
+Immediately before NWConnection.send.
+Mac receive callback arrival before the main-actor hop.
+Start of main-actor processing.
+Immediately before MIDIReceivedEventList.
+Logic Pro or CoreMIDI receipt.
+
+The existing Helper command probes measure only portions of the Mac-side path and perform logging that can itself perturb timing.
+
+Useful controlled comparisons would be:
+
+Run without Xcode consoles attached.
+Compare Debug and Release builds.
+Temporarily disable existing diagnostics in a dedicated approved experiment.
+Compare Wi-Fi conditions and proximity.
+Compare repeated isolated Note Ons against rapid Note On/Note Off sequences.
+Measure whether delay is constant or occurs in clusters.
+Measure the private Network queue to main-actor wait separately.
+Test TCP noDelay as an isolated later experiment.
+
+No optimization should be selected solely from the subjective 50–60 ms estimate.
+
+14. Overall conclusion
+
+The MIDI touch implementation is already using the earliest normal UIKit touch callback and does not wait for gesture recognition or release.
+
+The iPad sends immediately after synchronous guards and diagnostics.
+
+CoreMIDI submission is immediate and uses no future timestamp.
+
+The main avoidable architectural concern is that ESPMacHelper moves incoming network data to the main actor and performs diagnostic and UI bookkeeping before submitting MIDI.
+
+Default TCP small-packet behavior and synchronous console logging are additional plausible contributors.
+
+There is not enough evidence from static inspection to assign a measured latency to any one stage or confirm the reported 50–60 ms.
+
+15. Read-only confirmation
+
+No files were modified or created.
+
+No diagnostics were added.
 
 No builds or tests were run.
 
 No commits, tags, or backups were created.
 
-No .txt files, console logs, editors, templates, or backup/restore code were modified.
+No .txt files or logs were modified.
 
-The experimental Test Area Helper was not inspected beyond excluding its discovered path from all source reads.
+The experimental Test Area Helper was not inspected.
 
-Only the production ESPMacHelper files were inspected.
-
-The ESP32BLE repository was clean at the final status check. The production ESPMacHelper repository already showed a modified Xcode user-interface state file:
-
-ESPMacHelper.xcodeproj/project.xcworkspace/xcuserdata/rick.xcuserdatad/UserInterfaceState.xcuserstate
-
-No source modification was made to that file or any other file during this investigation.
+Existing working-tree changes in ESP32BLE and the production Helper’s Xcode user-state file were left untouched.

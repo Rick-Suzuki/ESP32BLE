@@ -1,3 +1,7 @@
+261020 Tue 1733
+investigating potential latency problems
+V64.08
+
 
 261020 Tue 1702
 dedicated midi file

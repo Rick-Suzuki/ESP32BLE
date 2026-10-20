@@ -12,6 +12,7 @@ struct SettingsAvailableDevicesPanel: View {
     let imageControlButtons: AnyView
     let presentDeleteAllDataConfirmation: () -> Void
     @State private var macPairingButtonWidth: CGFloat = 132
+    @AppStorage(MIDIChannelSettings.storageKey) private var midiDefaultChannel = MIDIChannelSettings.defaultChannel
 
     private var bodyButtonCornerRadius: CGFloat {
         isPad ? 18 : 10
@@ -143,8 +144,21 @@ struct SettingsAvailableDevicesPanel: View {
 
             if outputMode == .mac {
                 macPairingControls
+                midiDefaultChannelControl
             }
         }
+    }
+
+    private var midiDefaultChannelControl: some View {
+        Picker("MIDI Default Channel", selection: $midiDefaultChannel) {
+            ForEach(MIDIChannelSettings.validRange, id: \.self) { channel in
+                Text("Channel \(channel)")
+                    .tag(channel)
+            }
+        }
+        .pickerStyle(.menu)
+        .font(.caption.weight(.semibold))
+        .tint(.white)
     }
 
     private var macPairingControls: some View {
