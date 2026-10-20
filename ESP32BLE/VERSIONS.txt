@@ -1,6 +1,10 @@
 
+261020 Tue 0941
+ESP-TEMPLATE-001B — Plate Settings Category
+V63.86
+
 261020 Tue 0852
-clipboard complete
+clipboard complete, before templates
 V63.85
 
 261019 Mon 2024

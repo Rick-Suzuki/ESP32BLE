@@ -10,6 +10,7 @@ struct SettingsScreen: View {
         case images
         case sounds
         case pdfs
+        case templates
         case all
 
         var buttonTitle: String {
@@ -24,6 +25,8 @@ struct SettingsScreen: View {
                 return "snds"
             case .pdfs:
                 return "pdfs"
+            case .templates:
+                return "plates"
             case .all:
                 return "all"
             }
@@ -40,6 +43,8 @@ struct SettingsScreen: View {
             case .sounds:
                 self = .pdfs
             case .pdfs:
+                self = .templates
+            case .templates:
                 self = developerMode ? .all : .files
             case .all:
                 self = .files
@@ -255,6 +260,7 @@ struct SettingsScreen: View {
     @AppStorage("settingsImagesScrollPositionID") private var imageScrollPositionIDStorage = ""
     @AppStorage("settingsSoundsScrollPositionID") private var soundScrollPositionIDStorage = ""
     @AppStorage("settingsPDFsScrollPositionID") private var pdfScrollPositionIDStorage = ""
+    @AppStorage("settingsTemplatesScrollPositionID") private var templateScrollPositionIDStorage = ""
     @AppStorage("settingsAllScrollPositionID") private var allScrollPositionIDStorage = ""
     @State private var pendingImportListMode: SettingsListMode?
     @State private var pendingImportMode: SettingsImportMode?
@@ -286,6 +292,7 @@ struct SettingsScreen: View {
     @FocusState private var isDocumentNameFieldFocused: Bool
     @State private var isCancellingDocumentNameFromOutsideTap = false
     @State private var selectedTextFileName = ""
+    @State private var templateURLs: [URL] = []
 
     var body: some View {
         configuredSettingsScreen
@@ -501,6 +508,7 @@ struct SettingsScreen: View {
         }
         .task {
             loadSelectedDocumentText()
+            refreshTemplateFiles()
         }
         .task {
             await observeSettingsKeyboardHide()
@@ -694,12 +702,19 @@ struct SettingsScreen: View {
         )
     }
 
+    private var templateScrollPositionID: Binding<String?> {
+        Binding(
+            get: { templateScrollPositionIDStorage.isEmpty ? nil : templateScrollPositionIDStorage },
+            set: { templateScrollPositionIDStorage = $0 ?? "" }
+        )
+    }
+
     private var settingsModeEditResetKey: String {
         "\(listModeRawValue)|\(selectedTextFileName)|\(selectedImagePath)|\(selectedSoundPath)|\(selectedPDFPath)"
     }
 
     private var canExportInCurrentListMode: Bool {
-        true
+        listMode != .templates
     }
 
     private var isImporting: Binding<Bool> {
@@ -1116,14 +1131,16 @@ struct SettingsScreen: View {
             selectedSoundURL: selectedSoundURL,
             pdfURLs: availablePDFURLs,
             selectedPDFURL: selectedPDFURL,
+            templateURLs: templateURLs,
             allFileURLs: availableAllFileURLs,
             fileScrollPositionID: fileScrollPositionID,
             textScrollPositionID: textScrollPositionID,
             imageScrollPositionID: imageScrollPositionID,
             soundScrollPositionID: soundScrollPositionID,
             pdfScrollPositionID: pdfScrollPositionID,
+            templateScrollPositionID: templateScrollPositionID,
             allScrollPositionID: allScrollPositionID,
-            refreshFiles: refreshDocumentFiles,
+            refreshFiles: refreshSettingsFileCollections,
             canDeleteDocuments: canDeleteDocuments,
             imagePreviewSection: settingsTablePreviewSection,
             loadFunctionKeys: handleSettingsDocumentSelection,
@@ -1159,6 +1176,8 @@ struct SettingsScreen: View {
             return .sounds
         case .pdfs:
             return .pdfs
+        case .templates:
+            return .templates
         case .all:
             return .all
         }
@@ -2041,11 +2060,31 @@ struct SettingsScreen: View {
             .sorted { $0.lastPathComponent.localizedCaseInsensitiveCompare($1.lastPathComponent) == .orderedAscending }
     }
 
+    private func refreshSettingsFileCollections() {
+        refreshDocumentFiles()
+        refreshTemplateFiles()
+    }
+
+    private func refreshTemplateFiles() {
+        guard let documentsDirectoryURL = FileManager.default.urls(
+            for: .documentDirectory,
+            in: .userDomainMask
+        ).first else {
+            templateURLs = []
+            return
+        }
+
+        templateURLs = discoverTemplateDocumentURLs(in: documentsDirectoryURL)
+    }
+
     private var availableAllFileURLs: [URL] {
         return documentDirectorySnapshot
             .filter { url in
                 let values = try? url.resourceValues(forKeys: [.isRegularFileKey])
-                return values?.isRegularFile == true && (developerMode || !isInternalFile(url))
+                return values?.isRegularFile == true &&
+                    !isTemplateDocumentURL(url) &&
+                    !isTemplateConfigurationURL(url) &&
+                    (developerMode || !isInternalFile(url))
             }
             .sorted { $0.lastPathComponent.localizedCaseInsensitiveCompare($1.lastPathComponent) == .orderedAscending }
     }
@@ -2124,6 +2163,8 @@ struct SettingsScreen: View {
             return selectedSoundDisplayName
         case .pdfs:
             return selectedPDFDisplayName
+        case .templates:
+            return "Templates"
         case .all:
             return "all files"
         }
@@ -2141,6 +2182,8 @@ struct SettingsScreen: View {
             return selectedSoundURL != nil
         case .pdfs:
             return selectedPDFURL != nil
+        case .templates:
+            return false
         case .all:
             return false
         }
@@ -2172,6 +2215,8 @@ struct SettingsScreen: View {
             alertMessage = renameSelectedSound(to: proposedName)
         case .pdfs:
             alertMessage = renameSelectedPDF(to: proposedName)
+        case .templates:
+            return
         case .all:
             return
         }

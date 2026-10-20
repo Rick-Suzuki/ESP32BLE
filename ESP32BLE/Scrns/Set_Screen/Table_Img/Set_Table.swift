@@ -8,6 +8,7 @@ struct SettingsDocumentTableSection: View {
         case images
         case sounds
         case pdfs
+        case templates
         case all
     }
 
@@ -22,12 +23,14 @@ struct SettingsDocumentTableSection: View {
     let selectedSoundURL: URL?
     let pdfURLs: [URL]
     let selectedPDFURL: URL?
+    let templateURLs: [URL]
     let allFileURLs: [URL]
     @Binding var fileScrollPositionID: String?
     @Binding var textScrollPositionID: String?
     @Binding var imageScrollPositionID: String?
     @Binding var soundScrollPositionID: String?
     @Binding var pdfScrollPositionID: String?
+    @Binding var templateScrollPositionID: String?
     @Binding var allScrollPositionID: String?
     let refreshFiles: () -> Void
     let canDeleteDocuments: Bool
@@ -94,6 +97,11 @@ struct SettingsDocumentTableSection: View {
                             pdfRow(for: pdfURL)
                         }
                         .scrollTargetLayout()
+                    case .templates:
+                        ForEach(templateURLs, id: \.path) { templateURL in
+                            templateRow(for: templateURL)
+                        }
+                        .scrollTargetLayout()
                     case .all:
                         ForEach(allFileURLs, id: \.path) { fileURL in
                             allFilesRow(for: fileURL)
@@ -113,7 +121,7 @@ struct SettingsDocumentTableSection: View {
 				.overlay(alignment: .top) {
 					if let tableFeedbackMessage {
 						Text(tableFeedbackMessage)
-							.font(.caption)
+							.font(.subheadline)
 							.foregroundStyle(.green)
 							.padding(.horizontal, 15)
 							.padding(.vertical, 6)
@@ -130,7 +138,7 @@ struct SettingsDocumentTableSection: View {
 						
 					} else if showsRefreshConfirmation {
 						Text("Refreshed Files")
-							.font(.caption)
+							.font(.subheadline)
 							.foregroundStyle(.green)
 							.padding(.horizontal, 15)
 							.padding(.vertical, 6)
@@ -250,6 +258,8 @@ struct SettingsDocumentTableSection: View {
             return soundURLs.count
         case .pdfs:
             return pdfURLs.count
+        case .templates:
+            return templateURLs.count
         case .all:
             return allFileURLs.count
         }
@@ -267,6 +277,8 @@ struct SettingsDocumentTableSection: View {
             return $soundScrollPositionID
         case .pdfs:
             return $pdfScrollPositionID
+        case .templates:
+            return $templateScrollPositionID
         case .all:
             return $allScrollPositionID
         }
@@ -543,6 +555,31 @@ struct SettingsDocumentTableSection: View {
                 Label("Delete", systemImage: "trash")
             }
         }
+    }
+
+    private func templateRow(for templateURL: URL) -> some View {
+        HStack {
+            Text(templateURL.lastPathComponent)
+                .font(tableRowFont)
+                .foregroundStyle(.white)
+                .multilineTextAlignment(.leading)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Spacer()
+        }
+        .padding(.leading, 10)
+        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+        .background(Color.black)
+        .overlay {
+            Rectangle()
+                .fill(Color.gray.opacity(0.6))
+                .frame(height: 1)
+                .frame(maxHeight: .infinity, alignment: .bottom)
+        }
+        .id(templateURL.path)
+        .listRowInsets(EdgeInsets())
+        .listRowSeparator(.hidden)
+        .listRowBackground(Color.clear)
     }
 
     private func handleFileSelection(_ fileURL: URL, action: () -> Void = {}) {

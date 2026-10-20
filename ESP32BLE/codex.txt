@@ -1,41 +1,131 @@
-ESP-CLIPBOARD-004 implemented successfully.
+ESP-TEMPLATE-001B — IMPLEMENTATION REPORT
 
-Files changed:
+1. Files modified
 
+ESP32BLE/ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
 ESP32BLE/ESP32BLE/Scrns/Set_Screen/Table_Img/Set_Table.swift
 
-Single tap:
+The Xcode project file was not modified in this phase.
 
-• Preserves button-click feedback.
-• Immediately copies the complete filename, including extension.
-• Does not load or change the active screen.
-• Displays “Copied name” inside the Settings table for two seconds.
+2. Settings category integration
 
-Double tap:
+Added a dedicated templates list mode with the category label exactly:
 
-• Copies the complete filename.
-• Calls the existing loadFunctionKeys callback.
-• Preserves existing screen-loading and selection behavior.
-• Displays “Change screen” inside the Settings table for two seconds.
-• The message supersedes the constituent single-tap feedback.
+Plate
 
-Feedback handling:
+It participates in the existing category cycle after PDFs and before developer-only All Files.
 
-• Uses a cancellable task.
-• A newer message replaces the previous message and restarts the two-second duration.
-• Pending feedback is cancelled when the table disappears.
-• The existing “Refreshed Files” feedback remains unchanged.
+Existing categories and their behavior remain unchanged.
 
-Scope:
+3. iPhone layout handling
 
-• Only the Screens row behavior changed.
-• Text, images, sounds, PDFs, and All-files behavior remain unchanged.
-• No navigation or history behavior was changed.
-• No comments or debug prints were added.
-• No text or project files were modified.
+The existing interface uses one cycling category button rather than displaying every category simultaneously.
 
-Validation:
+Therefore:
 
-• Xcode file diagnostics: no issues found.
-• Full Xcode project build: succeeded.
-• Build errors: none.
+• No additional horizontal control was added.
+• No toolbar resizing was necessary.
+• Toolbar height is unchanged.
+• No clipping or overlapping controls were introduced.
+• Main Screen and Button Editor layouts were untouched.
+
+4. iPad layout handling
+
+Plate uses the same category button, style, width, font, and interaction mechanism as existing categories.
+
+No iPad-specific offsets or layout changes were added.
+
+5. Template discovery integration
+
+Settings now maintains a read-only template URL collection.
+
+It is populated using:
+
+discoverTemplateDocumentURLs(in:fileManager:)
+
+Discovery occurs:
+
+• When Settings appears.
+• When the shared table pull-to-refresh action runs.
+
+Discovery does not create templates, sidecars, migrations, or defaults. Template configurations are not decoded while populating the list.
+
+6. Template table implementation
+
+Added a dedicated templates mode to SettingsDocumentTableSection.
+
+The table:
+
+• Displays complete filenames including .template.
+• Uses stable URL path identity.
+• Uses the existing table font, row height, background, separator, spacing, scrolling, border, and item-count conventions.
+• Supports any normal number of template files.
+• Maintains an independent Plate scroll position.
+
+Template rows are plain, noninteractive rows. They contain no:
+
+• Button action
+• Tap gesture
+• Double-tap gesture
+• Clipboard operation
+• Swipe action
+• Apply operation
+• File mutation
+
+7. Empty-list behavior
+
+An empty template directory produces:
+
+0 items
+
+The table remains valid and scrollable without errors or placeholder files.
+
+No sample templates were created.
+
+8. Existing behavior preserved
+
+Screens retain:
+
+• Single-tap filename copying.
+• Double-tap screen changing.
+• Existing feedback messages.
+• Existing duplicate and delete actions.
+
+Templates and template sidecars remain excluded from All Files.
+
+Plate does not enable screen repair, new-screen creation, title editing, or template export.
+
+9. Build result
+
+ESP32BLE build:
+
+SUCCESS
+
+Build errors:
+
+None
+
+10. Tests performed
+
+Build verification:
+
+• Full ESP32BLE Xcode build completed successfully.
+• Both modified files compiled successfully.
+• Exhaustive list-mode switches compile with the new templates case.
+• Existing TemplateDocument helpers resolve correctly from Settings.
+
+Source-path verification:
+
+• Plate is reachable in normal and developer category cycles.
+• Template discovery runs on Settings appearance and pull-to-refresh.
+• Sidecars are excluded by the existing discovery helper.
+• Template rows have no interactive or modifying handlers.
+• No Main Screen or Button Editor source was changed.
+
+Actual device testing:
+
+Not performed. Visual appearance and touch behavior were verified through source inspection and compilation, not by launching on an iPhone or iPad.
+
+No persistent test templates were created.
+
+ESP-TEMPLATE-001B COMPLETE
