@@ -1,205 +1,248 @@
-MIDI-010B-4 IMPLEMENTATION REPORT
+MIDI-012 IMPLEMENTATION REPORT
 
 1. Exact file modified
 
 Production ESPMacHelper:
 
-ESPMacHelper/MacNetworkServer.swift
+ESPMacHelper/MIDIOutputService.swift
 
-MIDIOutputService.swift did not require modification.
+MacNetworkServer.swift was not modified.
 
-The existing Xcode UserInterfaceState.xcuserstate modification was already present and was not changed intentionally.
+ESP32BLE and the experimental Test Area Helper were not modified.
 
-ESP32BLE and the experimental Test Area Helper were not modified during this phase.
-
-
-2. ParsedMIDICommand changes
-
-Note On now retains:
-
-note: UInt8
-velocity: UInt8
-networkChannel: UInt8
-
-Note Off now retains:
-
-note: UInt8
-networkChannel: UInt8
-
-The networkChannel name identifies it as the user-facing, one-based value received from ESP32BLE.
+The existing Xcode UserInterfaceState.xcuserstate modification was already present and was not intentionally changed.
 
 
-3. Channel validation
+2. Old ownership representation
 
-Both Note On and Note Off accept channels 1 through 16.
+The previous representation was:
 
-The parser rejects:
+[NoteKey: Set<NoteOwner>]
 
-Channel 0.
-Channel 17 or higher.
-Negative channels.
-Non-numeric channels.
-Missing channel fields.
-Extra fields.
-Malformed MIDI commands.
-
-No invalid channel is silently replaced with channel 1.
-
-Existing validation remains:
-
-Note: 0...127.
-Velocity: 1...127.
+A Set could record that a client owned a note, but could not represent multiple simultaneous presses from that same client.
 
 
-4. Channel conversion
+3. New ownership representation
 
-Conversion occurs once in MacNetworkServer.handleCommand, immediately before dispatch to MIDIOutputService.
+The new representation is:
 
-Conversion:
+[NoteKey: [NoteOwner: Int]]
 
-coreMIDIChannel = networkChannel - 1
+NoteKey remains:
 
-Therefore:
+note
+CoreMIDI channel
 
-Network 1 becomes CoreMIDI 0.
-Network 2 becomes CoreMIDI 1.
-Network 16 becomes CoreMIDI 15.
+NoteOwner remains:
 
-MIDIOutputService continues to receive and store only zero-based CoreMIDI channels.
+menuTest
+networkClient(clientID)
 
-
-5. Note On handling
-
-Example input:
-
-MIDI:NOTE_ON:60:127:2
-
-Parsed values:
-
-Note 60.
-Velocity 127.
-Network channel 2.
-
-Dispatched to MIDIOutputService as CoreMIDI channel 1.
-
-The existing immediate CoreMIDI submission path remains unchanged.
+Each owner now has an independent positive active-press count.
 
 
-6. Note Off handling
+4. Note On handling
 
-Example input:
+startNote now:
 
-MIDI:NOTE_OFF:60:2
+Submits every accepted Note On through the existing sendMessage function.
+Preserves the supplied velocity and channel.
+Increments the matching owner’s count only after successful CoreMIDI submission.
+No longer suppresses Note On because the note or owner is already active.
 
-Parsed values:
-
-Note 60.
-Network channel 2.
-
-Dispatched to MIDIOutputService as CoreMIDI channel 1.
-
-Note Off uses the channel supplied by the network command and does not affect note 60 on another channel.
+No preliminary Note Off is generated.
 
 
-7. Note and channel ownership
+5. Note Off handling
 
-MIDIOutputService already keys active notes using:
+stopNote now:
 
-NoteKey(note: UInt8, channel: UInt8)
+Rejects unmatched ownership safely.
+Reads only the requesting owner’s count.
+Decrements the count by exactly one.
+Removes the owner when its count reaches zero.
+Sends no CoreMIDI Note Off while another count remains.
+Sends one CoreMIDI Note Off when the complete NoteKey becomes unowned.
+Removes the empty NoteKey only after successful Note Off submission.
 
-Consequently, these are independent identities:
+Counts cannot become negative.
 
-Note 60, channel 1.
-Note 60, channel 2.
 
-Stopping note 60 on channel 1 does not stop note 60 on channel 2.
+6. Same-client overlapping behavior
+
+For one client pressing the same note/channel twice:
+
+First Note On:
+
+Count becomes 1.
+CoreMIDI Note On is submitted.
+
+Second Note On:
+
+Count becomes 2.
+Another CoreMIDI Note On is submitted.
+
+First release:
+
+Count becomes 1.
+No CoreMIDI Note Off is submitted.
+
+Final release:
+
+Count reaches zero.
+One CoreMIDI Note Off is submitted.
+The NoteKey is removed.
+
+The result is the same regardless of which physical button releases first because both presses intentionally share the same client/note/channel counter.
+
+
+7. Multi-client behavior
+
+Different clients have separate NoteOwner keys.
+
+For two clients holding the same NoteKey:
+
+Both Note On messages are forwarded to CoreMIDI.
+Each client receives its own count.
+One client’s Note Off changes only that client’s count.
+No final Note Off is sent while the other client still owns the note.
+The final owner’s release sends CoreMIDI Note Off.
+
+
+8. Multichannel compatibility
+
+NoteKey continues to include the CoreMIDI channel.
+
+The same note on channels 1 and 2 remains two independent NoteKeys.
 
 Different notes on the same channel also remain independent.
 
-
-8. Multiple-client behavior
-
-Ownership remains a set of network client identifiers for each note/channel key.
-
-When multiple clients own the same note and channel:
-
-The first owner sends the CoreMIDI Note On.
-Additional owners are recorded without duplicating Note On.
-CoreMIDI Note Off is sent only when the last owner releases the note.
-
-This behavior was not redesigned.
+Network-channel conversion remains in MacNetworkServer and was not changed.
 
 
 9. Disconnect cleanup
 
-MacNetworkServer continues to call releaseNetworkNotes(for:) when:
+releaseNetworkNotes(for:) now locates every NoteKey with ownership counts for the disconnecting client.
 
-A client connection is removed.
-The network server stops.
+releaseAllPresses removes that client’s entire count for each affected NoteKey.
 
-releaseNetworkNotes examines every note/channel identity owned by that client. Notes still owned by another client remain active.
+If other owners remain:
 
-Panic and shutdown cleanup continue to send Note Off using each stored note’s CoreMIDI channel.
+Their counts are preserved.
+No CoreMIDI Note Off is sent.
+
+If the disconnected client was the final owner:
+
+One CoreMIDI Note Off is sent.
+The empty NoteKey is removed.
+
+No loop emits multiple Note Off events for multiple presses belonging to the same disconnected client.
 
 
-10. Build result
+10. Menu-test compatibility
+
+menuTest remains a distinct NoteOwner.
+
+The menu-test Note On is always forwarded and receives its own count.
+
+If a network client holds the same NoteKey:
+
+Releasing the menu test removes only the menu-test ownership.
+No Note Off is sent while the network owner remains.
+
+The existing menu-test timer and controls were not changed.
+
+
+11. Server shutdown
+
+releaseAllActiveNotes continues to:
+
+Send one Note Off for every active NoteKey.
+Clear all ownership state.
+Dispose of the existing CoreMIDI endpoint through the unchanged shutdown path.
+
+No second CoreMIDI output mechanism was introduced.
+
+
+12. Submission failure consistency
+
+A Note On count is added only after sendMessage succeeds.
+
+For the final Note Off, ownership is removed only after sendMessage succeeds.
+
+If final Note Off submission fails, the original ownership remains available for later cleanup rather than being silently discarded.
+
+Nonfinal releases require no CoreMIDI submission and commit their reduced count immediately.
+
+
+13. Focused validation
+
+Source-level tracing covered:
+
+One note and one owner.
+Two overlapping presses from the same client.
+Both same-client release orders.
+Same note/channel from two clients.
+Same note on different channels.
+Different notes on the same channel.
+Disconnecting one of multiple owners.
+Disconnecting the final owner.
+Menu-test and network-client overlap.
+Unmatched Note Off.
+Rapid balanced Note On/Note Off sequences.
+Server shutdown.
+CoreMIDI submission failure ordering.
+
+Confirmed:
+
+Every successful Note On reaches sendMessage.
+No stored count is zero or negative.
+One owner cannot decrement another owner.
+One channel cannot affect another channel.
+Disconnect cleanup removes all counts for the disconnected client.
+git diff --check passed.
+
+No physical iPad, network, Logic Pro, or synthesizer testing was performed.
+
+
+14. Build result
 
 Production ESPMacHelper built successfully.
 
 Exit status: 0.
 
-The command-line build used -disable-sandbox so Swift macro plug-ins could execute inside the tool environment. No project setting was changed.
+One existing warning remains in MIDIOutputService.swift:
 
-One pre-existing warning remains in MIDIOutputService.swift:
+The MIDIEventListAdd result is non-optional, so comparing it with nil always returns true.
 
-The result of MIDIEventListAdd is non-optional, making its nil comparison always true.
-
-This warning is unrelated to MIDI channel support.
+This warning predates MIDI-012 and was not changed.
 
 
-11. Focused checks performed
+15. Known MIDI limitation
 
-Source-level validation confirmed:
+Reference counting guarantees:
 
-Channel 1 converts to CoreMIDI channel 0.
-Channel 2 converts to CoreMIDI channel 1.
-Channel 16 converts to CoreMIDI channel 15.
-Channels 0 and 17 are rejected.
-Malformed and missing channel fields are rejected.
-Note and velocity validation remains unchanged.
-Note On and Note Off both retain their parsed channel.
-Ownership remains keyed by note plus channel.
-Disconnect cleanup processes every owned note/channel key.
-Invalid MIDI-prefixed commands remain suppressed instead of falling through to keyboard handling.
-Non-MIDI command handling was not changed.
+Every successful press forwards Note On.
+Overlapping presses are counted.
+The first release does not prematurely send final Note Off.
+The final release sends Note Off.
 
-git diff --check passed.
+MIDI Note Off still contains only note and channel. It cannot identify an individual physical button or synthesized voice.
 
-No physical-device, Logic Pro, or live multi-client tests were performed.
+Receiving instruments may retrigger, stack, replace, or release overlapping identical notes differently. This implementation does not attempt synthesizer-specific voice management.
 
 
-12. Known limitation
+16. Scope confirmation
 
-Two buttons from the same client using the identical note and channel share the same network-client ownership entry. Releasing one can therefore release that shared identity.
+Network parsing and wire format were unchanged.
 
-This existing limitation is outside MIDI-010B-4 and was not changed.
+Authentication, pairing, Bonjour, and connection handling were unchanged.
 
+CoreMIDI endpoint creation and message encoding were unchanged.
 
-13. Scope confirmation
+Keyboard, accessibility, menu bar, and status-window behavior were unchanged.
 
-Network authentication and pairing were unchanged.
-
-TCP configuration and framing were unchanged.
-
-Bonjour and connection management were unchanged.
-
-Keyboard injection and timing were unchanged.
-
-Command history, UI, and accessibility handling were unchanged.
-
-CoreMIDI output timing and virtual-source creation were unchanged.
-
-No latency optimization was introduced.
+ESP32BLE source files were not modified during this phase.
 
 No project files, text files, logs, or version notes were modified.
 

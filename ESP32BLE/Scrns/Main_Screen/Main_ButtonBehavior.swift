@@ -278,6 +278,10 @@ extension MainScreen {
             return nil
         }
 
+        if let midiCommand = MIDICommandParser.parse(sendText) {
+            return midiCommand.noteDisplayName
+        }
+
         let displayText = String(sendText.dropFirst())
 
         if displayText.lowercased() == "home" {

@@ -1,6 +1,10 @@
 
+261021 Wed 0854
+multiple same notes - working
+V64.10
+
 261020 Tue 1806
-muliple midi channels available
+multiple midi channels available
 V64.09
 
 261020 Tue 1733
