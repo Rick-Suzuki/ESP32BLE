@@ -83,6 +83,8 @@ struct SettingsScreen: View {
         case image
         case sound
         case pdf
+        case templateDocument
+        case templateConfiguration
     }
 
     private enum SettingsImportMode {
@@ -124,6 +126,7 @@ struct SettingsScreen: View {
         case unsupportedArchiveEntry(String)
         case duplicateDestinationFilename(String)
         case invalidScreenConfiguration(String)
+        case orphanedTemplateConfiguration(String)
 
         var errorDescription: String? {
             switch self {
@@ -137,6 +140,8 @@ struct SettingsScreen: View {
                 return "Duplicate filenames in backup: \(fileName)."
             case .invalidScreenConfiguration(let fileName):
                 return "Invalid screen configuration in backup: \(fileName)."
+            case .orphanedTemplateConfiguration(let fileName):
+                return "Template configuration has no matching template in backup: \(fileName)."
             }
         }
     }
@@ -163,6 +168,9 @@ struct SettingsScreen: View {
         var existingImageNames: Set<String>
         var existingSoundNames: Set<String>
         var existingPDFNames: Set<String>
+        var templateRestorePairs: [TemplateArchiveRestorePair] = []
+        var skipTemplatePairKeys: Set<String> = []
+        var templateRestoreAttempted = false
         var firstImportedDocumentURL: URL?
         var firstImportedTextURL: URL?
         var firstImportedImageURL: URL?
@@ -184,18 +192,37 @@ struct SettingsScreen: View {
     private struct FullArchiveImport {
         let fileURLs: [URL]
         let configURLsByName: [String: URL]
+        let templatePairs: [TemplateArchiveRestorePair]
         let temporaryDirectoryURL: URL
+    }
+
+    private struct TemplateArchiveRestorePair {
+        let templateFileName: String
+        let templateData: Data
+        let configurationData: Data?
+
+        var templateKey: String {
+            templateFileNameCollisionKey(templateFileName)
+        }
+
+        var configurationKey: String {
+            templateFileNameCollisionKey(
+                templateConfigFileName(forTemplateDocumentName: templateFileName)
+            )
+        }
     }
 
     private struct PendingFullRestore {
         var session: PendingImportSession
         let skipFileNameKeys: Set<String>
+        let skipTemplatePairKeys: Set<String>
     }
 
     private struct FullRestorePreflight {
         var session: PendingImportSession
         let conflictFileNameKeys: Set<String>
         let skipFileNameKeys: Set<String>
+        let skipTemplatePairKeys: Set<String>
     }
 
     private struct FullArchiveEntryPlan {
@@ -209,6 +236,7 @@ struct SettingsScreen: View {
     private struct FullArchiveEntryClassification {
         let fileURLs: [URL]
         let configURLsByName: [String: URL]
+        let templatePairs: [TemplateArchiveRestorePair]
     }
 
     private struct SettingsStoredGridDimensions: Codable {
@@ -3183,7 +3211,8 @@ struct SettingsScreen: View {
 
                 pendingFullRestore = PendingFullRestore(
                     session: preflight.session,
-                    skipFileNameKeys: preflight.skipFileNameKeys
+                    skipFileNameKeys: preflight.skipFileNameKeys,
+                    skipTemplatePairKeys: preflight.skipTemplatePairKeys
                 )
             } catch {
                 db("IMPORT_TRACE all_files_archive_validation=invalid error=\(error.localizedDescription)")
@@ -3199,6 +3228,12 @@ struct SettingsScreen: View {
         let destinationFileNameKeys = archiveImport.fileURLs.map { $0.lastPathComponent.lowercased() }
         let existingFileNameKeys = existingDocumentDirectoryFileNameKeys(in: directoryURL)
         let conflictFileNameKeys = Set(destinationFileNameKeys.filter { existingFileNameKeys.contains($0) })
+        let existingTemplateDestinationKeys = existingTemplateDestinationFileNameKeys(in: directoryURL)
+        let conflictingTemplatePairs = archiveImport.templatePairs.filter {
+            existingTemplateDestinationKeys.contains($0.templateKey) ||
+                existingTemplateDestinationKeys.contains($0.configurationKey)
+        }
+        let templateConflictKeys = Set(conflictingTemplatePairs.map(\.templateKey))
         let screenConflictConfigKeys = Set(archiveImport.fileURLs.compactMap { fileURL -> String? in
             guard isScreenDocumentURL(fileURL),
                   conflictFileNameKeys.contains(fileURL.lastPathComponent.lowercased()) else {
@@ -3215,12 +3250,28 @@ struct SettingsScreen: View {
             selectedConfigURLsByName: archiveImport.configURLsByName
         )
         session.temporaryImportDirectoryURLs.append(archiveImport.temporaryDirectoryURL)
+        session.templateRestorePairs = archiveImport.templatePairs
 
         return FullRestorePreflight(
             session: session,
-            conflictFileNameKeys: conflictFileNameKeys,
-            skipFileNameKeys: conflictFileNameKeys.union(screenConflictConfigKeys)
+            conflictFileNameKeys: conflictFileNameKeys.union(templateConflictKeys),
+            skipFileNameKeys: conflictFileNameKeys.union(screenConflictConfigKeys),
+            skipTemplatePairKeys: templateConflictKeys
         )
+    }
+
+    private func existingTemplateDestinationFileNameKeys(in directoryURL: URL) -> Set<String> {
+        let fileURLs = (try? FileManager.default.contentsOfDirectory(
+            at: directoryURL,
+            includingPropertiesForKeys: [.isRegularFileKey, .isSymbolicLinkKey],
+            options: [.skipsHiddenFiles]
+        )) ?? []
+
+        return Set(fileURLs.compactMap { url in
+            let values = try? url.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
+            guard values?.isRegularFile == true || values?.isSymbolicLink == true else { return nil }
+            return templateFileNameCollisionKey(url.lastPathComponent)
+        })
     }
 
     private func existingDocumentDirectoryFileNameKeys(in directoryURL: URL) -> Set<String> {
@@ -3248,6 +3299,7 @@ struct SettingsScreen: View {
             processPendingImportSession(restore.session)
         case .skipAll:
             restore.session.skipFileNameKeys = restore.skipFileNameKeys
+            restore.session.skipTemplatePairKeys = restore.skipTemplatePairKeys
             processPendingImportSession(restore.session)
         }
     }
@@ -3284,6 +3336,7 @@ struct SettingsScreen: View {
 
     private func processPendingImportSession(_ session: PendingImportSession) {
         var session = session
+        processTemplateRestorePairs(session: &session)
         if session.importMode == .allFiles {
         }
 
@@ -3549,6 +3602,36 @@ struct SettingsScreen: View {
         finishPendingImportSession(session)
     }
 
+    private func processTemplateRestorePairs(session: inout PendingImportSession) {
+        guard session.importMode == .allFiles, !session.templateRestorePairs.isEmpty else {
+            return
+        }
+
+        let templatePairs = session.templateRestorePairs
+        session.templateRestorePairs = []
+        session.templateRestoreAttempted = true
+
+        for pair in templatePairs {
+            guard !session.skipTemplatePairKeys.contains(pair.templateKey) else {
+                continue
+            }
+
+            do {
+                _ = try restoreTemplateDocumentPair(
+                    templateFileName: pair.templateFileName,
+                    templateData: pair.templateData,
+                    configurationData: pair.configurationData,
+                    to: session.directoryURL
+                )
+                session.importedAnything = true
+                session.importedFileCount += 1
+            } catch {
+                session.failedFileCount += 1
+                renameAlertMessage = "Couldn't restore template \(pair.templateFileName): \(error.localizedDescription)"
+            }
+        }
+    }
+
     private func recordSuccessfulImport(
         targetURL: URL,
         fileNameKey: String,
@@ -3589,6 +3672,8 @@ struct SettingsScreen: View {
             if session.firstImportedPDFURL == nil {
                 session.firstImportedPDFURL = targetURL
             }
+        case .templateDocument, .templateConfiguration:
+            break
         }
     }
 
@@ -3843,6 +3928,10 @@ struct SettingsScreen: View {
 
         cleanupTemporaryImportDirectories(session.temporaryImportDirectoryURLs)
 
+        if session.templateRestoreAttempted {
+            refreshTemplateFiles()
+        }
+
         if session.importMode == .allFiles,
            session.failedFileCount > 0,
            renameAlertMessage == nil {
@@ -4015,6 +4104,7 @@ struct SettingsScreen: View {
             return FullArchiveImport(
                 fileURLs: classification.fileURLs,
                 configURLsByName: classification.configURLsByName,
+                templatePairs: classification.templatePairs,
                 temporaryDirectoryURL: temporaryDirectoryURL
             )
         } catch {
@@ -4036,6 +4126,8 @@ struct SettingsScreen: View {
         var imageURLs: [URL] = []
         var soundURLs: [URL] = []
         var pdfURLs: [URL] = []
+        var templateDocumentsByKey: [String: (fileName: String, data: Data)] = [:]
+        var templateConfigurationsByTemplateKey: [String: Data] = [:]
 
         for entry in entries {
             guard entry.fileName != "Archive.json" else {
@@ -4047,6 +4139,21 @@ struct SettingsScreen: View {
                 throw RestoreArchiveValidationError.duplicateDestinationFilename(plan.fileName)
             }
             seenFileNameKeys.insert(plan.fileNameKey)
+
+            switch plan.contentKind {
+            case .templateDocument:
+                templateDocumentsByKey[templateFileNameCollisionKey(plan.fileName)] = (
+                    fileName: plan.fileName,
+                    data: plan.entry.data
+                )
+                continue
+            case .templateConfiguration:
+                let templateFileName = String(plan.fileName.dropLast(".config.json".count))
+                templateConfigurationsByTemplateKey[templateFileNameCollisionKey(templateFileName)] = plan.entry.data
+                continue
+            default:
+                break
+            }
 
             let extractedURL = temporaryDirectoryURL.appendingPathComponent(plan.fileName)
             try plan.entry.data.write(to: extractedURL, options: [.atomic])
@@ -4065,12 +4172,40 @@ struct SettingsScreen: View {
                 soundURLs.append(extractedURL)
             case .pdf:
                 pdfURLs.append(extractedURL)
+            case .templateDocument, .templateConfiguration:
+                break
             }
         }
 
+        if let orphanedConfigurationKey = templateConfigurationsByTemplateKey.keys.first(where: {
+            templateDocumentsByKey[$0] == nil
+        }) {
+            let orphanedFileName = entries.first(where: { entry in
+                guard entry.fileName.hasPrefix("templates/") else { return false }
+                let fileName = String(entry.fileName.dropFirst("templates/".count))
+                guard isTemplateConfigurationURL(URL(fileURLWithPath: fileName)) else { return false }
+                let templateFileName = String(fileName.dropLast(".config.json".count))
+                return templateFileNameCollisionKey(templateFileName) == orphanedConfigurationKey
+            })?.fileName ?? orphanedConfigurationKey
+            throw RestoreArchiveValidationError.orphanedTemplateConfiguration(orphanedFileName)
+        }
+
+        let templatePairs = templateDocumentsByKey
+            .map { key, document in
+                TemplateArchiveRestorePair(
+                    templateFileName: document.fileName,
+                    templateData: document.data,
+                    configurationData: templateConfigurationsByTemplateKey[key]
+                )
+            }
+            .sorted {
+                $0.templateFileName.localizedCaseInsensitiveCompare($1.templateFileName) == .orderedAscending
+            }
+
         return FullArchiveEntryClassification(
             fileURLs: configURLs + screenURLs + textURLs + imageURLs + soundURLs + pdfURLs,
-            configURLsByName: configURLsByName
+            configURLsByName: configURLsByName,
+            templatePairs: templatePairs
         )
     }
 
@@ -4083,6 +4218,13 @@ struct SettingsScreen: View {
         let folderName = components[0]
         guard let fileName = sanitizedArchiveFileName(components[1]) else {
             throw RestoreArchiveValidationError.invalidArchivePath(entry.fileName)
+        }
+
+        if folderName == "templates" {
+            guard entry.fileName == "templates/\(fileName)",
+                  !entry.fileName.contains("\\") else {
+                throw RestoreArchiveValidationError.invalidArchivePath(entry.fileName)
+            }
         }
 
         let pathExtension = URL(fileURLWithPath: fileName).pathExtension.lowercased()
@@ -4106,8 +4248,20 @@ struct SettingsScreen: View {
             contentKind = .sound
         case "PDFs" where supportedImportedPDFExtensions.contains(pathExtension):
             contentKind = .pdf
+        case "templates" where isValidTemplateArchiveDocumentFileName(fileName):
+            contentKind = .templateDocument
+        case "templates" where isValidTemplateArchiveConfigurationFileName(fileName):
+            contentKind = .templateConfiguration
         default:
             throw RestoreArchiveValidationError.unsupportedArchiveEntry(entry.fileName)
+        }
+
+        let fileNameKey: String
+        switch contentKind {
+        case .templateDocument, .templateConfiguration:
+            fileNameKey = templateFileNameCollisionKey(fileName)
+        default:
+            fileNameKey = fileName.lowercased()
         }
 
         return FullArchiveEntryPlan(
@@ -4115,8 +4269,29 @@ struct SettingsScreen: View {
             folderName: folderName,
             fileName: fileName,
             contentKind: contentKind,
-            fileNameKey: fileName.lowercased()
+            fileNameKey: fileNameKey
         )
+    }
+
+    private func isValidTemplateArchiveDocumentFileName(_ fileName: String) -> Bool {
+        guard isTemplateDocumentFileName(fileName),
+              URL(fileURLWithPath: fileName).lastPathComponent == fileName else {
+            return false
+        }
+        guard let normalizedFileName = try? normalizedTemplateDocumentFileName(from: fileName) else {
+            return false
+        }
+        return templateFileNameCollisionKey(normalizedFileName) == templateFileNameCollisionKey(fileName)
+    }
+
+    private func isValidTemplateArchiveConfigurationFileName(_ fileName: String) -> Bool {
+        guard isTemplateConfigurationURL(URL(fileURLWithPath: fileName)),
+              fileName.lowercased().hasSuffix(".config.json") else {
+            return false
+        }
+        let templateFileName = String(fileName.dropLast(".config.json".count))
+        return isValidTemplateArchiveDocumentFileName(templateFileName) &&
+            fileName == templateConfigFileName(forTemplateDocumentName: templateFileName)
     }
 
     private func fullArchiveStructure(
@@ -4129,6 +4304,7 @@ struct SettingsScreen: View {
         hasImagesFolder: Bool,
         hasSoundsFolder: Bool,
         hasPDFsFolder: Bool,
+        hasTemplatesFolder: Bool,
         isFullArchive: Bool
     ) {
         let hasManifest = entries.contains { $0.fileName == "Archive.json" }
@@ -4138,12 +4314,14 @@ struct SettingsScreen: View {
         let hasImagesFolder = entries.contains { $0.fileName.hasPrefix("Images/") }
         let hasSoundsFolder = entries.contains { $0.fileName.hasPrefix("Sounds/") }
         let hasPDFsFolder = entries.contains { $0.fileName.hasPrefix("PDFs/") }
+        let hasTemplatesFolder = entries.contains { $0.fileName.hasPrefix("templates/") }
         let hasArchiveContentFolder = hasScreensFolder ||
             hasConfigsFolder ||
             hasTextFolder ||
             hasImagesFolder ||
             hasSoundsFolder ||
-            hasPDFsFolder
+            hasPDFsFolder ||
+            hasTemplatesFolder
 
         return (
             hasManifest: hasManifest,
@@ -4153,6 +4331,7 @@ struct SettingsScreen: View {
             hasImagesFolder: hasImagesFolder,
             hasSoundsFolder: hasSoundsFolder,
             hasPDFsFolder: hasPDFsFolder,
+            hasTemplatesFolder: hasTemplatesFolder,
             isFullArchive: hasManifest && hasArchiveContentFolder
         )
     }

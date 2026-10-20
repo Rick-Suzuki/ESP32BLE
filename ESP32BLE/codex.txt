@@ -1,74 +1,149 @@
-ESP-TEMPLATE-001E-A implementation is complete.
+ESP-TEMPLATE-001E-B implementation is complete.
 
 Files modified:
 
 ESP32BLE/ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
 
-Exact code changes:
+ESP32BLE/ESP32BLE/Scrns/TemplateDocument.swift
 
-• Added availableTemplateURLsForArchiveExport.
-• It performs fresh discovery from Documents using discoverTemplateDocumentURLs(in:).
-• Updated hasArchiveExportContent so discovered templates count as backupable content.
-• Added appendTemplateArchiveEntries(to:).
-• makeFullArchiveData() now calls that helper after preserving all existing backup entries.
-• Templates are stored only as:
+Files and functions changed:
 
-templates/<filename>.template
+Set_Screen.swift:
 
-• Existing regular sidecars are stored only as:
+• Extended ImportedContentKind with dedicated template document and template configuration cases.
+• Extended FullArchiveImport and FullArchiveEntryClassification with logical template pairs.
+• Extended PendingImportSession and FullRestorePreflight with pair-aware restore and skip state.
+• Extended fullArchiveStructure(in:) to recognize templates/.
+• Template-only backups now qualify as Full Backups.
+• Extended fullArchiveEntryPlan(for:) with strict template path and filename validation.
+• Extended classifyFullArchiveEntries(...) to assemble template documents and optional sidecars into logical pairs.
+• Added rejection for orphaned template configuration sidecars.
+• Added case-insensitive, canonically normalized duplicate detection for template destinations.
+• Extended makeFullRestorePreflight(...) with pair-level conflict detection.
+• Added processTemplateRestorePairs(session:).
+• Extended Skip All handling to skip complete template pairs.
+• Extended finishPendingImportSession(...) to refresh Plates and its selected description after template restore attempts.
 
-templates/<filename>.template.config.json
+TemplateDocument.swift:
 
-• Template and sidecar contents are read directly as Data without decoding or modification.
-• Missing sidecars are omitted without creating replacements.
-• Existing but non-regular or unreadable sidecars cause backup creation to fail.
-• A template disappearing or becoming unreadable during backup also causes failure.
-• No Documents/templates directory is created.
-• Archive.json and its format version remain unchanged.
-• Existing Export menu availability remains category-independent.
+• Added TemplateRestoreResult.
+• Added TemplateRestoreError with distinct ordinary rollback and critical rollback failure cases.
+• Added templateFileNameCollisionKey(_:).
+• Added restoreTemplateDocumentPair(...).
+• Added focused snapshot, verification and rollback helpers.
+
+Archive handling:
+
+• Recognizes only exact paths shaped like:
+
+templates/Name.template
+
+templates/Name.template.config.json
+
+• Restores both files directly into Documents.
+• Does not create Documents/templates.
+• Rejects unsupported files inside templates/.
+• Rejects orphaned sidecars.
+• Rejects leading slash, repeated slash, nested paths, backslashes and invalid template filenames.
+• Rejects case-only and canonically equivalent duplicate destinations.
+• Preserves malformed sidecar bytes without decoding them.
+• Older backups without templates remain valid.
+
+Conflict behaviour:
+
+Replace All:
+
+• If either pair member exists, the complete pair is treated as conflicting.
+• Sidecar is published first when supplied.
+• Template document is published last.
+• A sidecar-less restored template removes an existing stale destination sidecar.
+• Both previous destination files are restored if publication fails.
+
+Skip All:
+
+• A conflict involving either pair member skips the entire pair.
+• It cannot restore one member while retaining the other from a different version.
+
+Cancel:
+
+• Template pairs are not published during preflight.
+• Cancel retains the existing cleanup path and publishes no files.
+
+Rollback behaviour:
+
+• Existing destination bytes and original presence are recorded.
+• Incoming bytes are staged and verified in the destination filesystem.
+• Destination state is rechecked before publication.
+• Final bytes and sidecar presence are verified.
+• Failed publication attempts restore the exact previous pair.
+• Operation-created files are removed when the corresponding original was absent.
+• Ordinary publication failure returns publicationFailedAndRolledBack.
+• Failed rollback returns the distinct rollbackFailed critical error.
+• Restore reporting counts one failure per logical template pair.
+
+Refresh and navigation:
+
+• Plates discovery refreshes after template restoration attempts.
+• Existing selected-template descriptions reload when appropriate.
+• Missing selected templates are cleared through the existing refresh logic.
+• Templates are never automatically applied.
+• Settings category is unchanged.
+• Template-only restore does not call loadFunctionKeys and therefore does not change the active screen or navigation history.
+• Existing first-imported-screen loading remains unchanged for backups containing screens.
 
 Build result:
 
-• Xcode file diagnostics: no issues.
-• Full ESP32BLE build: successful.
+• Xcode diagnostics found no issues in either modified file.
+• Full ESP32BLE build completed successfully.
 • Build errors: none.
 
-Validation performed:
+Isolated tests performed:
 
-• Confirmed only Set_Screen.swift is modified.
-• Confirmed existing Screens, Configs, Text, Images, Sounds and PDFs assembly remains unchanged.
-• Confirmed template discovery does not rely solely on cached templateURLs.
-• Ran an isolated temporary-directory discovery check:
-   • Valid .template file was discovered.
-   • Template sidecar was excluded from document discovery.
-   • Ordinary .screen file was excluded.
-   • Template inside a hidden staging directory was excluded.
-• Ran an in-memory ZIP round-trip:
-   • Template entry retained its exact nested path.
-   • Sidecar entry retained its exact nested path.
-   • Template bytes were unchanged.
-   • Malformed sidecar bytes were unchanged.
-   • No template entry appeared at the ZIP root.
-• No real Documents files or user templates were used.
+• Restored a complete template pair successfully.
+• Verified exact restored template bytes.
+• Verified malformed sidecar bytes were preserved exactly.
+• Replaced an existing pair with a sidecar-less template.
+• Verified the new template bytes.
+• Verified the stale destination sidecar was removed.
+• Verified no physical templates directory was created.
+• Verified composed and decomposed Unicode filenames produce equal collision keys.
+• Verified case-only filename variants produce equal collision keys.
+• Verified rejection of:
+   • ../Bad.template
+   • .Hidden.template
+   • Backslash-containing names
+   • Colon-containing names
+• All temporary test directories were removed.
+• No user Documents files were used.
 
-Verified ZIP entries:
+Source-level checks performed:
 
-templates/MIDI 8x8.template
-templates/MIDI 8x8.template.config.json
+• Template-only archives count as valid Full Backups.
+• Orphaned sidecars are rejected.
+• Replace All processes complete pairs.
+• Skip All records pair keys and skips complete pairs.
+• Cancel occurs before template publication.
+• Existing screen, text, image, sound, PDF and screen-configuration branches remain in place.
+• Existing Create Full Backup and Export menu implementations were not changed in this phase.
+• Diff whitespace validation passed.
 
-Remaining limitations:
+Remaining risks and limitations:
 
-• Restore Full Backup does not yet recognize templates/ entries; that remains 001E-B.
-• The existing generic “Couldn't create Archive.zip.” presentation remains unchanged if a template read fails.
-• No physical-device export was performed.
+• Forced rollback-failure injection was not executable through the temporary snippet because Foundation’s replacement method is not open for subclass overriding. The critical rollback path is compiled and distinguishable in source but still warrants controlled fault-injection or device filesystem testing.
+• No whole-backup rollback was introduced for unrelated file categories, as required.
+• No physical-device restore testing was performed.
+• The existing ZIP reader limitations remain unchanged.
 
 Suggested manual device tests:
 
-• Create a backup with no templates and confirm existing contents remain unchanged.
-• Create a backup with complete and missing-sidecar templates.
-• Inspect the ZIP and verify templates appear only under templates/.
-• Verify a template-only installation enables Create Full Backup.
-• Verify Create Full Backup remains available from every Settings category.
-• Verify no Documents/templates directory is created.
+• Restore a template-only backup and verify the active screen is unchanged.
+• Test Replace All where both template files already exist.
+• Test Replace All where only the sidecar exists.
+• Test Skip All for both collision forms.
+• Cancel the conflict dialog and verify no template changes.
+• Restore while the affected template is selected in Plates and verify its description reloads.
+• Restore on iPhone landscape, iPad and iPad mini.
+• Restore an older backup with no templates.
+• Restore a combined backup and verify the existing first imported screen behaviour is preserved.
 
-ESP-TEMPLATE-001E-A IMPLEMENTATION COMPLETE
+ESP-TEMPLATE-001E-B IMPLEMENTATION COMPLETE

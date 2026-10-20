@@ -1,3 +1,7 @@
+261020 Tue 1426
+restore templates from full backup
+V64.04
+
 261020 Tue 1420
 template full backup
 V64.03

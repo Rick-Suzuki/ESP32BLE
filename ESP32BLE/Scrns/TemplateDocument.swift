@@ -895,6 +895,251 @@ private func replacePreparedTemplateFile(
     }
 }
 
+struct TemplateRestoreResult {
+    let templateURL: URL
+    let configurationURL: URL
+}
+
+enum TemplateRestoreError: LocalizedError {
+    case invalidTemplateFileName(String)
+    case invalidDestinationDirectory(URL)
+    case destinationIsNotRegularFile(URL)
+    case destinationSnapshotFailed(URL, Error)
+    case preparationFailed(URL, Error)
+    case destinationChanged(URL)
+    case publicationFailedAndRolledBack(Error)
+    case rollbackFailed(publicationError: Error, rollbackError: Error)
+
+    var errorDescription: String? {
+        switch self {
+        case .invalidTemplateFileName(let fileName):
+            return "Invalid template filename in backup: \(fileName)."
+        case .invalidDestinationDirectory(let url):
+            return "The template restore destination \(url.path) is not available."
+        case .destinationIsNotRegularFile(let url):
+            return "The existing destination \(url.lastPathComponent) is not a regular file."
+        case .destinationSnapshotFailed(let url, let error):
+            return "The existing template pair could not be preserved at \(url.lastPathComponent): \(error.localizedDescription)"
+        case .preparationFailed(let url, let error):
+            return "The restored template pair could not be prepared at \(url.lastPathComponent): \(error.localizedDescription)"
+        case .destinationChanged(let url):
+            return "The template destination \(url.lastPathComponent) changed during restore preparation."
+        case .publicationFailedAndRolledBack(let error):
+            return "The template pair could not be restored. Its previous files were restored: \(error.localizedDescription)"
+        case .rollbackFailed(let publicationError, let rollbackError):
+            return "Critical template restore error. Publication failed (\(publicationError.localizedDescription)) and the previous pair could not be fully restored (\(rollbackError.localizedDescription))."
+        }
+    }
+}
+
+func templateFileNameCollisionKey(_ fileName: String) -> String {
+    fileName
+        .precomposedStringWithCanonicalMapping
+        .folding(options: [.caseInsensitive], locale: Locale(identifier: "en_US_POSIX"))
+}
+
+func restoreTemplateDocumentPair(
+    templateFileName: String,
+    templateData: Data,
+    configurationData: Data?,
+    to destinationDirectoryURL: URL,
+    fileManager: FileManager = .default
+) throws -> TemplateRestoreResult {
+    let normalizedFileName: String
+    do {
+        normalizedFileName = try normalizedTemplateDocumentFileName(from: templateFileName)
+    } catch {
+        throw TemplateRestoreError.invalidTemplateFileName(templateFileName)
+    }
+    guard isTemplateDocumentFileName(templateFileName),
+          templateFileNameCollisionKey(normalizedFileName) == templateFileNameCollisionKey(templateFileName) else {
+        throw TemplateRestoreError.invalidTemplateFileName(templateFileName)
+    }
+
+    let normalizedDirectoryURL = destinationDirectoryURL.standardizedFileURL
+    guard (try? normalizedDirectoryURL.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey]).isDirectory) == true,
+          (try? normalizedDirectoryURL.resourceValues(forKeys: [.isSymbolicLinkKey]).isSymbolicLink) != true else {
+        throw TemplateRestoreError.invalidDestinationDirectory(normalizedDirectoryURL)
+    }
+
+    let templateURL = normalizedDirectoryURL
+        .appendingPathComponent(templateFileName)
+        .standardizedFileURL
+    let configurationURL = templateConfigURL(forTemplateDocumentURL: templateURL).standardizedFileURL
+    guard templateURL.deletingLastPathComponent() == normalizedDirectoryURL,
+          configurationURL.deletingLastPathComponent() == normalizedDirectoryURL else {
+        throw TemplateRestoreError.invalidDestinationDirectory(normalizedDirectoryURL)
+    }
+
+    let originalTemplateData = try snapshotTemplateRestoreDestination(
+        at: templateURL,
+        fileManager: fileManager
+    )
+    let originalConfigurationData = try snapshotTemplateRestoreDestination(
+        at: configurationURL,
+        fileManager: fileManager
+    )
+
+    let operationID = UUID().uuidString
+    let preparedTemplateURL = normalizedDirectoryURL
+        .appendingPathComponent(".template-restore-\(operationID).template.tmp")
+    let preparedConfigurationURL = normalizedDirectoryURL
+        .appendingPathComponent(".template-restore-\(operationID).config.tmp")
+    defer {
+        try? fileManager.removeItem(at: preparedTemplateURL)
+        try? fileManager.removeItem(at: preparedConfigurationURL)
+    }
+
+    do {
+        try templateData.write(to: preparedTemplateURL, options: [.atomic])
+        guard try Data(contentsOf: preparedTemplateURL) == templateData else {
+            throw CocoaError(.fileReadCorruptFile)
+        }
+        if let configurationData {
+            try configurationData.write(to: preparedConfigurationURL, options: [.atomic])
+            guard try Data(contentsOf: preparedConfigurationURL) == configurationData else {
+                throw CocoaError(.fileReadCorruptFile)
+            }
+        }
+    } catch {
+        throw TemplateRestoreError.preparationFailed(normalizedDirectoryURL, error)
+    }
+
+    guard try templateRestoreDestinationMatchesSnapshot(
+        at: templateURL,
+        snapshot: originalTemplateData,
+        fileManager: fileManager
+    ) else {
+        throw TemplateRestoreError.destinationChanged(templateURL)
+    }
+    guard try templateRestoreDestinationMatchesSnapshot(
+        at: configurationURL,
+        snapshot: originalConfigurationData,
+        fileManager: fileManager
+    ) else {
+        throw TemplateRestoreError.destinationChanged(configurationURL)
+    }
+
+    do {
+        if configurationData != nil {
+            try replacePreparedTemplateFile(
+                at: preparedConfigurationURL,
+                destinationURL: configurationURL,
+                fileManager: fileManager
+            )
+        } else if fileManager.fileExists(atPath: configurationURL.path) {
+            try fileManager.removeItem(at: configurationURL)
+        }
+
+        try replacePreparedTemplateFile(
+            at: preparedTemplateURL,
+            destinationURL: templateURL,
+            fileManager: fileManager
+        )
+
+        guard try Data(contentsOf: templateURL) == templateData else {
+            throw CocoaError(.fileReadCorruptFile)
+        }
+        if let configurationData {
+            guard fileManager.fileExists(atPath: configurationURL.path),
+                  try Data(contentsOf: configurationURL) == configurationData else {
+                throw CocoaError(.fileReadCorruptFile)
+            }
+        } else if fileManager.fileExists(atPath: configurationURL.path) {
+            throw CocoaError(.fileWriteUnknown)
+        }
+    } catch {
+        let publicationError = error
+        do {
+            try restoreTemplatePairSnapshot(
+                templateURL: templateURL,
+                templateData: originalTemplateData,
+                configurationURL: configurationURL,
+                configurationData: originalConfigurationData,
+                fileManager: fileManager
+            )
+        } catch {
+            throw TemplateRestoreError.rollbackFailed(
+                publicationError: publicationError,
+                rollbackError: error
+            )
+        }
+        throw TemplateRestoreError.publicationFailedAndRolledBack(publicationError)
+    }
+
+    return TemplateRestoreResult(
+        templateURL: templateURL,
+        configurationURL: configurationURL
+    )
+}
+
+private func snapshotTemplateRestoreDestination(
+    at url: URL,
+    fileManager: FileManager
+) throws -> Data? {
+    guard fileManager.fileExists(atPath: url.path) else { return nil }
+    do {
+        let values = try url.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
+        guard values.isRegularFile == true, values.isSymbolicLink != true else {
+            throw TemplateRestoreError.destinationIsNotRegularFile(url)
+        }
+        return try Data(contentsOf: url)
+    } catch let error as TemplateRestoreError {
+        throw error
+    } catch {
+        throw TemplateRestoreError.destinationSnapshotFailed(url, error)
+    }
+}
+
+private func templateRestoreDestinationMatchesSnapshot(
+    at url: URL,
+    snapshot: Data?,
+    fileManager: FileManager
+) throws -> Bool {
+    if let snapshot {
+        guard fileManager.fileExists(atPath: url.path) else { return false }
+        let values = try url.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
+        guard values.isRegularFile == true, values.isSymbolicLink != true else { return false }
+        return try Data(contentsOf: url) == snapshot
+    }
+    return !fileManager.fileExists(atPath: url.path)
+}
+
+private func restoreTemplatePairSnapshot(
+    templateURL: URL,
+    templateData: Data?,
+    configurationURL: URL,
+    configurationData: Data?,
+    fileManager: FileManager
+) throws {
+    try restoreTemplateSnapshotFile(configurationData, at: configurationURL, fileManager: fileManager)
+    try restoreTemplateSnapshotFile(templateData, at: templateURL, fileManager: fileManager)
+
+    guard try templateRestoreDestinationMatchesSnapshot(
+        at: templateURL,
+        snapshot: templateData,
+        fileManager: fileManager
+    ), try templateRestoreDestinationMatchesSnapshot(
+        at: configurationURL,
+        snapshot: configurationData,
+        fileManager: fileManager
+    ) else {
+        throw CocoaError(.fileWriteUnknown)
+    }
+}
+
+private func restoreTemplateSnapshotFile(
+    _ data: Data?,
+    at url: URL,
+    fileManager: FileManager
+) throws {
+    if let data {
+        try data.write(to: url, options: [.atomic])
+    } else if fileManager.fileExists(atPath: url.path) {
+        try fileManager.removeItem(at: url)
+    }
+}
+
 
 enum TemplateDeletionError: LocalizedError {
     case invalidTemplateURL(URL)
