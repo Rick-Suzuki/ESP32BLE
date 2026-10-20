@@ -171,6 +171,406 @@ func saveTemplateConfiguration(
     }
 }
 
+struct TemplateCreationResult {
+    let templateURL: URL
+    let configurationURL: URL
+    let templateFileName: String
+}
+
+enum TemplateCreationError: LocalizedError {
+    case invalidSourceURL(URL)
+    case sourceNameMismatch(expected: String, actual: String)
+    case sourceSelectionChanged(expected: String, actual: String)
+    case sourceNotFound(URL)
+    case sourceIsNotRegularFile(URL)
+    case unreadableSource(URL, Error)
+    case invalidSourceUTF8(URL)
+    case missingSourceConfiguration(URL)
+    case unreadableSourceConfiguration(URL, Error)
+    case emptySourceConfiguration(URL)
+    case invalidSourceConfiguration(URL, Error)
+    case invalidButtonCount(Int, maximum: Int)
+    case invalidGrid(rows: Int, columns: Int, buttonCount: Int, maximum: Int)
+    case emptyTemplateName
+    case invalidTemplateName(String)
+    case templateNameTooLong(String)
+    case destinationOutsideDocuments(URL)
+    case destinationDirectoryUnreadable(URL, Error)
+    case destinationCollision(String)
+    case preparationFailed(URL, Error)
+    case sourceChangedDuringPreparation(URL)
+    case publicationFailedAndCleanedUp(Error)
+    case cleanupFailed(creationError: Error, cleanupError: Error)
+
+    var errorDescription: String? {
+        switch self {
+        case .invalidSourceURL(let url):
+            return "\(url.lastPathComponent) is not a screen document."
+        case .sourceNameMismatch(let expected, let actual):
+            return "The source screen changed from \(expected) to \(actual)."
+        case .sourceSelectionChanged(let expected, let actual):
+            return "The selected screen changed from \(expected) to \(actual)."
+        case .sourceNotFound(let url):
+            return "The source screen \(url.lastPathComponent) does not exist."
+        case .sourceIsNotRegularFile(let url):
+            return "The source screen \(url.lastPathComponent) is not a regular file."
+        case .unreadableSource(let url, let error):
+            return "The source screen \(url.lastPathComponent) could not be read: \(error.localizedDescription)"
+        case .invalidSourceUTF8(let url):
+            return "The source screen \(url.lastPathComponent) is not valid UTF-8."
+        case .missingSourceConfiguration(let url):
+            return "The source configuration \(url.lastPathComponent) does not exist."
+        case .unreadableSourceConfiguration(let url, let error):
+            return "The source configuration \(url.lastPathComponent) could not be read: \(error.localizedDescription)"
+        case .emptySourceConfiguration(let url):
+            return "The source configuration \(url.lastPathComponent) is empty."
+        case .invalidSourceConfiguration(let url, let error):
+            return "The source configuration \(url.lastPathComponent) is invalid: \(error.localizedDescription)"
+        case .invalidButtonCount(let count, let maximum):
+            return "The source screen contains \(count) button lines, but the supported maximum is \(maximum)."
+        case .invalidGrid(let rows, let columns, let buttonCount, let maximum):
+            return "The source grid \(rows)x\(columns) is not compatible with \(buttonCount) button lines and the supported maximum of \(maximum)."
+        case .emptyTemplateName:
+            return "The template name cannot be blank."
+        case .invalidTemplateName(let name):
+            return "\(name) is not a valid template filename."
+        case .templateNameTooLong(let name):
+            return "The template filename \(name) is too long."
+        case .destinationOutsideDocuments(let url):
+            return "The template destination \(url.lastPathComponent) is outside the Documents directory."
+        case .destinationDirectoryUnreadable(let url, let error):
+            return "The destination directory \(url.lastPathComponent) could not be read: \(error.localizedDescription)"
+        case .destinationCollision(let fileName):
+            return "A template file named \(fileName) already exists."
+        case .preparationFailed(let url, let error):
+            return "The template file \(url.lastPathComponent) could not be prepared: \(error.localizedDescription)"
+        case .sourceChangedDuringPreparation(let url):
+            return "The source file \(url.lastPathComponent) changed while the template was being prepared."
+        case .publicationFailedAndCleanedUp(let error):
+            return "The template could not be created and the incomplete files were removed: \(error.localizedDescription)"
+        case .cleanupFailed(let creationError, let cleanupError):
+            return "The template could not be created and its incomplete files could not be fully removed. Creation error: \(creationError.localizedDescription) Cleanup error: \(cleanupError.localizedDescription)"
+        }
+    }
+}
+
+func normalizedTemplateDocumentFileName(from requestedName: String) throws -> String {
+    let trimmedName = requestedName.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !trimmedName.isEmpty else {
+        throw TemplateCreationError.emptyTemplateName
+    }
+    guard trimmedName != ".",
+          trimmedName != "..",
+          !trimmedName.hasPrefix("."),
+          !trimmedName.contains("/"),
+          !trimmedName.contains("\\"),
+          !trimmedName.contains(":"),
+          !trimmedName.unicodeScalars.contains(where: CharacterSet.controlCharacters.contains) else {
+        throw TemplateCreationError.invalidTemplateName(trimmedName)
+    }
+
+    let templateSuffix = ".\(templateDocumentFileExtension)"
+    let baseName: String
+    if trimmedName.lowercased().hasSuffix(templateSuffix) {
+        baseName = String(trimmedName.dropLast(templateSuffix.count))
+    } else {
+        baseName = trimmedName
+    }
+    guard !baseName.isEmpty,
+          baseName != ".",
+          baseName != "..",
+          !baseName.hasPrefix(".") else {
+        throw TemplateCreationError.invalidTemplateName(trimmedName)
+    }
+
+    let fileName = "\(baseName)\(templateSuffix)"
+    let configurationFileName = templateConfigFileName(forTemplateDocumentName: fileName)
+    let maximumFileNameByteCount = 255
+    guard fileName.lengthOfBytes(using: .utf8) <= maximumFileNameByteCount,
+          configurationFileName.lengthOfBytes(using: .utf8) <= maximumFileNameByteCount else {
+        throw TemplateCreationError.templateNameTooLong(fileName)
+    }
+    return fileName
+}
+
+func createTemplateDocument(
+    from sourceDocumentURL: URL,
+    expectedSourceDocumentName: String,
+    requestedTemplateName: String,
+    description: String?,
+    selectedSourceDocumentName: () -> String,
+    maximumButtonCount: Int,
+    effectiveButtonLineCount: (String) -> Int,
+    fileManager: FileManager = .default
+) throws -> TemplateCreationResult {
+    guard isScreenDocumentURL(sourceDocumentURL) else {
+        throw TemplateCreationError.invalidSourceURL(sourceDocumentURL)
+    }
+    guard sourceDocumentURL.lastPathComponent == expectedSourceDocumentName else {
+        throw TemplateCreationError.sourceNameMismatch(
+            expected: expectedSourceDocumentName,
+            actual: sourceDocumentURL.lastPathComponent
+        )
+    }
+    let initiallySelectedName = selectedSourceDocumentName()
+    guard initiallySelectedName == expectedSourceDocumentName else {
+        throw TemplateCreationError.sourceSelectionChanged(
+            expected: expectedSourceDocumentName,
+            actual: initiallySelectedName
+        )
+    }
+    guard fileManager.fileExists(atPath: sourceDocumentURL.path) else {
+        throw TemplateCreationError.sourceNotFound(sourceDocumentURL)
+    }
+    do {
+        let values = try sourceDocumentURL.resourceValues(forKeys: [.isRegularFileKey])
+        guard values.isRegularFile == true else {
+            throw TemplateCreationError.sourceIsNotRegularFile(sourceDocumentURL)
+        }
+    } catch let error as TemplateCreationError {
+        throw error
+    } catch {
+        throw TemplateCreationError.unreadableSource(sourceDocumentURL, error)
+    }
+
+    let sourceData: Data
+    do {
+        sourceData = try Data(contentsOf: sourceDocumentURL)
+    } catch {
+        throw TemplateCreationError.unreadableSource(sourceDocumentURL, error)
+    }
+    guard let sourceContents = String(data: sourceData, encoding: .utf8) else {
+        throw TemplateCreationError.invalidSourceUTF8(sourceDocumentURL)
+    }
+
+    let buttonCount = effectiveButtonLineCount(sourceContents)
+    guard maximumButtonCount > 0,
+          buttonCount >= 0,
+          buttonCount <= maximumButtonCount else {
+        throw TemplateCreationError.invalidButtonCount(buttonCount, maximum: maximumButtonCount)
+    }
+
+    let sourceConfigurationURL = configURL(forDocumentURL: sourceDocumentURL)
+    guard fileManager.fileExists(atPath: sourceConfigurationURL.path) else {
+        throw TemplateCreationError.missingSourceConfiguration(sourceConfigurationURL)
+    }
+    let sourceConfigurationData: Data
+    do {
+        sourceConfigurationData = try Data(contentsOf: sourceConfigurationURL)
+    } catch {
+        throw TemplateCreationError.unreadableSourceConfiguration(sourceConfigurationURL, error)
+    }
+    guard !sourceConfigurationData.isEmpty else {
+        throw TemplateCreationError.emptySourceConfiguration(sourceConfigurationURL)
+    }
+
+    let sourceConfiguration: ScreenConfig
+    do {
+        sourceConfiguration = try JSONDecoder().decode(ScreenConfig.self, from: sourceConfigurationData)
+    } catch {
+        throw TemplateCreationError.invalidSourceConfiguration(sourceConfigurationURL, error)
+    }
+
+    let grid = sourceConfiguration.grid
+    let (gridCapacity, gridOverflow) = grid.rows.multipliedReportingOverflow(by: grid.columns)
+    guard grid.rows > 0,
+          grid.columns > 0,
+          !gridOverflow,
+          gridCapacity >= max(buttonCount, 1),
+          gridCapacity <= maximumButtonCount else {
+        throw TemplateCreationError.invalidGrid(
+            rows: grid.rows,
+            columns: grid.columns,
+            buttonCount: buttonCount,
+            maximum: maximumButtonCount
+        )
+    }
+
+    let templateFileName = try normalizedTemplateDocumentFileName(from: requestedTemplateName)
+    let destinationDirectoryURL = sourceDocumentURL.deletingLastPathComponent().standardizedFileURL
+    let templateURL = destinationDirectoryURL.appendingPathComponent(templateFileName).standardizedFileURL
+    let templateConfigurationURL = templateConfigURL(forTemplateDocumentURL: templateURL).standardizedFileURL
+    guard templateURL.deletingLastPathComponent() == destinationDirectoryURL,
+          templateConfigurationURL.deletingLastPathComponent() == destinationDirectoryURL else {
+        throw TemplateCreationError.destinationOutsideDocuments(templateURL)
+    }
+
+    let trimmedDescription = description?.trimmingCharacters(in: .whitespacesAndNewlines)
+    let templateConfiguration = TemplateConfiguration(
+        screenConfig: sourceConfiguration,
+        description: trimmedDescription?.isEmpty == false ? trimmedDescription : nil
+    )
+    let templateConfigurationData: Data
+    do {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        templateConfigurationData = try encoder.encode(templateConfiguration)
+    } catch {
+        throw TemplateCreationError.invalidSourceConfiguration(sourceConfigurationURL, error)
+    }
+
+    try rejectTemplateCreationCollisions(
+        in: destinationDirectoryURL,
+        templateFileName: templateFileName,
+        configurationFileName: templateConfigurationURL.lastPathComponent,
+        fileManager: fileManager
+    )
+
+    let operationID = UUID().uuidString
+    let preparedTemplateURL = destinationDirectoryURL.appendingPathComponent(".esp-template-create-\(operationID).template.tmp")
+    let preparedConfigurationURL = destinationDirectoryURL.appendingPathComponent(".esp-template-create-\(operationID).config.tmp")
+    var createdTemplate = false
+    var createdConfiguration = false
+    var publicationStarted = false
+
+    do {
+        do {
+            try sourceData.write(to: preparedTemplateURL, options: [.atomic])
+            try templateConfigurationData.write(to: preparedConfigurationURL, options: [.atomic])
+
+            let preparedTemplateData = try Data(contentsOf: preparedTemplateURL)
+            let preparedConfigurationData = try Data(contentsOf: preparedConfigurationURL)
+            guard preparedTemplateData == sourceData,
+                  String(data: preparedTemplateData, encoding: .utf8) != nil,
+                  preparedConfigurationData == templateConfigurationData,
+                  try JSONDecoder().decode(TemplateConfiguration.self, from: preparedConfigurationData) == templateConfiguration else {
+                throw CocoaError(.fileReadCorruptFile)
+            }
+        } catch {
+            throw TemplateCreationError.preparationFailed(destinationDirectoryURL, error)
+        }
+
+        let selectedNameBeforePublication = selectedSourceDocumentName()
+        guard selectedNameBeforePublication == expectedSourceDocumentName else {
+            throw TemplateCreationError.sourceSelectionChanged(
+                expected: expectedSourceDocumentName,
+                actual: selectedNameBeforePublication
+            )
+        }
+        let currentSourceData: Data
+        let currentSourceConfigurationData: Data
+        do {
+            currentSourceData = try Data(contentsOf: sourceDocumentURL)
+            currentSourceConfigurationData = try Data(contentsOf: sourceConfigurationURL)
+        } catch {
+            throw TemplateCreationError.sourceChangedDuringPreparation(sourceDocumentURL)
+        }
+        guard currentSourceData == sourceData else {
+            throw TemplateCreationError.sourceChangedDuringPreparation(sourceDocumentURL)
+        }
+        guard currentSourceConfigurationData == sourceConfigurationData else {
+            throw TemplateCreationError.sourceChangedDuringPreparation(sourceConfigurationURL)
+        }
+
+        try rejectTemplateCreationCollisions(
+            in: destinationDirectoryURL,
+            templateFileName: templateFileName,
+            configurationFileName: templateConfigurationURL.lastPathComponent,
+            fileManager: fileManager
+        )
+
+        publicationStarted = true
+        try fileManager.moveItem(at: preparedConfigurationURL, to: templateConfigurationURL)
+        createdConfiguration = true
+        try fileManager.moveItem(at: preparedTemplateURL, to: templateURL)
+        createdTemplate = true
+
+        let finalTemplateData = try Data(contentsOf: templateURL)
+        let finalConfigurationData = try Data(contentsOf: templateConfigurationURL)
+        guard finalTemplateData == sourceData,
+              String(data: finalTemplateData, encoding: .utf8) != nil,
+              finalConfigurationData == templateConfigurationData,
+              try JSONDecoder().decode(TemplateConfiguration.self, from: finalConfigurationData) == templateConfiguration else {
+            throw CocoaError(.fileReadCorruptFile)
+        }
+    } catch {
+        let creationError = error
+        do {
+            try cleanupTemplateCreationFiles(
+                preparedTemplateURL: preparedTemplateURL,
+                preparedConfigurationURL: preparedConfigurationURL,
+                createdTemplateURL: createdTemplate ? templateURL : nil,
+                createdConfigurationURL: createdConfiguration ? templateConfigurationURL : nil,
+                fileManager: fileManager
+            )
+        } catch {
+            throw TemplateCreationError.cleanupFailed(
+                creationError: creationError,
+                cleanupError: error
+            )
+        }
+        if publicationStarted {
+            throw TemplateCreationError.publicationFailedAndCleanedUp(creationError)
+        }
+        throw creationError
+    }
+
+    return TemplateCreationResult(
+        templateURL: templateURL,
+        configurationURL: templateConfigurationURL,
+        templateFileName: templateFileName
+    )
+}
+
+private func templateCreationCollisionKey(_ fileName: String) -> String {
+    fileName
+        .precomposedStringWithCanonicalMapping
+        .folding(options: [.caseInsensitive], locale: Locale(identifier: "en_US_POSIX"))
+}
+
+private func rejectTemplateCreationCollisions(
+    in directoryURL: URL,
+    templateFileName: String,
+    configurationFileName: String,
+    fileManager: FileManager
+) throws {
+    let directoryURLs: [URL]
+    do {
+        directoryURLs = try fileManager.contentsOfDirectory(
+            at: directoryURL,
+            includingPropertiesForKeys: nil,
+            options: []
+        )
+    } catch {
+        throw TemplateCreationError.destinationDirectoryUnreadable(directoryURL, error)
+    }
+
+    let existingKeys = Set(directoryURLs.map { templateCreationCollisionKey($0.lastPathComponent) })
+    if existingKeys.contains(templateCreationCollisionKey(templateFileName)) {
+        throw TemplateCreationError.destinationCollision(templateFileName)
+    }
+    if existingKeys.contains(templateCreationCollisionKey(configurationFileName)) {
+        throw TemplateCreationError.destinationCollision(configurationFileName)
+    }
+}
+
+private func cleanupTemplateCreationFiles(
+    preparedTemplateURL: URL,
+    preparedConfigurationURL: URL,
+    createdTemplateURL: URL?,
+    createdConfigurationURL: URL?,
+    fileManager: FileManager
+) throws {
+    var firstCleanupError: Error?
+    for fileURL in [
+        createdTemplateURL,
+        createdConfigurationURL,
+        Optional(preparedTemplateURL),
+        Optional(preparedConfigurationURL)
+    ].compactMap({ $0 }) where fileManager.fileExists(atPath: fileURL.path) {
+        do {
+            try fileManager.removeItem(at: fileURL)
+        } catch {
+            if firstCleanupError == nil {
+                firstCleanupError = error
+            }
+        }
+    }
+    if let firstCleanupError {
+        throw firstCleanupError
+    }
+}
+
 struct TemplateApplicationResult {
     let targetDocumentURL: URL
     let templateContents: String

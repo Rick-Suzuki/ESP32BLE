@@ -1,118 +1,123 @@
+ESP-TEMPLATE-001D-C IMPLEMENTATION REPORT
+
 1. Files modified
 
-• ESP32BLE/ESP32BLE/Scrns/ContentView.swift
-• ESP32BLE/ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
-• ESP32BLE/ESP32BLE/Scrns/Set_Screen/Table_Img/Set_Table.swift
+• ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
+• ESP32BLE/Scrns/Set_Screen/Table_Img/Set_Table.swift
 
-No project, document, .txt, log, dropdown, editor-layout, Mac Helper, or Test Area files were modified.
+Existing unrelated workspace changes, including .txt files, were left untouched.
 
-2. Plates row interaction
+2. Single-tap implementation
 
-• Template rows are now plain-style Buttons.
-• A single tap preserves existing click feedback and row appearance.
-• The row sends only the template URL through a dedicated selectTemplate callback.
-• It does not use the ordinary clipboard/file-selection handler.
-• No double-tap, clipboard, swipe, preview, or immediate application behavior was added.
-• Existing Screens row behavior was unchanged.
+A single tap now:
 
-3. Confirmation state and presentation
+• Selects the template.
+• Loads its configuration through loadTemplateConfiguration(for:).
+• Displays its trimmed description.
+• Displays “No description” for missing or empty descriptions.
+• Displays “Description unavailable” for invalid, missing, or unreadable configurations.
+• Does not open Apply or change the active screen.
 
-Settings now captures:
+3. Double-tap implementation
 
-• Template URL.
-• Complete template filename.
-• Expected target screen filename.
-• Trimmed optional description.
+Template rows use an exclusive gesture:
 
-A native SwiftUI alert displays:
+• Double tap has priority over single tap.
+• Double tap selects the template, refreshes its description, and invokes the existing Apply confirmation.
+• No timer or custom tap counter was added.
+• Button feedback plays once per recognized action.
 
-• “Apply Template?”
+4. Description presentation
+
+• The description appears only when Plates is active and a template is selected.
+• It is below the independently scrolling template list and above the item-count row.
+• Its height is bounded by the available table height.
+• Long descriptions scroll independently.
+• The item-count row remains reserved and visible.
+
+5. Apply confirmation changes
+
+The alert retains:
+
 • Template filename.
-• Target filename.
-• Optional description when nonempty.
+• Target screen filename.
 • Replacement warning.
-• Cancel action.
-• Destructive Apply action.
+• Cancel and Apply actions.
 
-Cancel does not invoke the template engine.
+The optional description was removed from the alert. Existing validation, conflict-aware saving, Apply action, and application engine remain unchanged.
 
-4. Pending editor-save handling
+6. Selection highlighting
 
-Before showing confirmation, Settings:
+The selected template uses:
 
-• Verifies the template is still a regular file.
-• Loads and validates its configuration.
-• Resolves and validates the selected target screen.
-• Calls the existing conflict-aware saveCurrentDocumentText().
-• Aborts for conflict, missing file, or save failure.
-• Uses the existing native save-error presentation.
+• Green filename.
+• Bold font.
+• Existing black background, row height, padding, wrapping, separators, and identity.
 
-Unsaved editor content is therefore not silently discarded.
+Other categories were unchanged.
 
-5. Application callback integration
+7. Category-change behaviour
 
-ContentView passes applyTemplateToSelectedDocument(...) into Settings.
+Leaving Plates clears:
 
-Apply:
+• Selected template URL.
+• Displayed description state.
+• Inline description error state.
 
-• Reconfirms the selected filename.
-• Calls the existing 001C-A engine.
-• Does not write either target file directly.
-• Does not call the history-recording screen-selection path.
-• Leaves replacement validation, verification, and rollback to the existing engine.
+Returning to Plates therefore starts without a selection or description panel. Scroll-position state remains unchanged.
 
-6. Settings editor refresh
+8. Refresh handling
 
-After successful application, Settings calls loadSelectedDocumentText().
+Template refresh now:
 
-This refreshes:
+• Retains an existing selected template.
+• Reloads its description and reflects sidecar changes.
+• Shows “Description unavailable” if its sidecar becomes invalid.
+• Clears selection if the template disappears.
+• Does not reload or apply any screen.
 
-• Editor text.
-• Saved-text baseline.
-• Loaded document URL and filename.
+9. Accessibility
 
-This prevents stale pre-template editor content from overwriting the newly applied screen or causing a false external-change conflict.
+Each gesture-driven template row now provides:
 
-7. Success and error feedback
+• Button and selected traits.
+• Template filename label.
+• Selection value.
+• Default accessibility action for selection.
+• Named “Apply Template” accessibility action.
 
-• Success displays “Template applied” for two seconds inside the Settings table area.
-• Ordinary failures use “Template Could Not Be Applied”.
-• Template-loading failures use “Template Could Not Be Opened”.
-• Critical rollback failures use the distinct title “Critical Template Error”.
-• Success is shown only after the engine returns successfully and the editor reload begins.
+VoiceOver interaction still requires manual device verification.
 
-The SwiftUI guidance informed the use of native Button and alert controls, private view-owned state, and a separate confirmation presentation branch.
+10. Build result
 
-8. Build result
+ESP32BLE built successfully in Xcode.
 
-ESP32BLE built successfully through Xcode.
+Build errors: None.
 
-Build errors: none.
+11. Checks performed
 
-All three modified files passed Xcode live diagnostics with zero issues.
+• Full Xcode project build.
+• Source-level verification of exclusive gesture composition.
+• Verified the Apply message no longer includes the description.
+• Verified existing Screens simultaneous double-tap implementation was unchanged.
+• Verified whitespace with git diff --check.
+• Verified only the two approved source files were edited during this phase.
 
-9. Tests performed
+12. Device tests still required
 
-Source and compilation verification confirmed:
+• Physical single- versus double-tap recognition.
+• List scrolling alongside row gestures.
+• iPhone landscape description sizing.
+• iPad and iPad mini layout.
+• Long-description scrolling.
+• Pull-to-refresh after external sidecar changes or deletion.
+• VoiceOver selection and named Apply action.
+• Cancel and successful Apply workflows using actual template files.
 
-• Plates rows invoke only the dedicated confirmation callback.
-• Confirmation precedes application.
-• Apply invokes the existing 001C-A engine.
-• Cancel has no replacement action.
-• Description trimming and omission are implemented.
-• Settings reload occurs only after successful application.
-• Screens table handling was not changed.
-• Dropdown labels and widths were not changed.
-• No automatic application path was introduced.
+13. Remaining risks
 
-No real screen or template files were used or modified. No persistent sample templates were created.
+• Single-tap recognition waits for the native double-tap recognition interval. This is required to prevent a double tap from firing the single action first.
+• Gesture and VoiceOver behaviour should be confirmed on physical devices.
+• External description changes appear after reselection or explicit refresh; no filesystem polling was introduced.
 
-Actual alert presentation and touch interaction were not device-tested in this phase.
-
-10. Remaining concerns
-
-• iPhone landscape, iPad, and iPad mini presentation should still receive device verification.
-• Forced filesystem and rollback failures were not injected through the UI; those paths remain handled by the previously implemented engine.
-• The success overlay and existing refresh feedback occupy the same general table region, although they are not normally triggered simultaneously.
-
-ESP-TEMPLATE-001C-B COMPLETE
+ESP-TEMPLATE-001D-C COMPLETE

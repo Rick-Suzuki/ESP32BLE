@@ -225,7 +225,23 @@ struct SettingsScreen: View {
         let templateURL: URL
         let templateName: String
         let targetName: String
-        let description: String?
+    }
+
+    private enum TemplateDescriptionState {
+        case description(String)
+        case noDescription
+        case unavailable
+
+        var displayText: String {
+            switch self {
+            case .description(let description):
+                return description
+            case .noDescription:
+                return "No description"
+            case .unavailable:
+                return "Description unavailable"
+            }
+        }
     }
 
     private let ttsControlColor = Color(red: 0.0, green: 0.2, blue: 0.45)
@@ -257,6 +273,7 @@ struct SettingsScreen: View {
     let refreshDocumentFiles: () -> Void
     let refreshDocumentFilesAfterDeletingAllData: () -> Void
     let loadFunctionKeys: (URL) -> Void
+    let createTemplate: (String, String?, String) throws -> TemplateCreationResult
     let applyTemplate: (URL, String) throws -> TemplateApplicationResult
     let saveSelectedDocumentAndReload: (String) -> Void
     let renameDocument: (String) -> String?
@@ -325,8 +342,14 @@ struct SettingsScreen: View {
     @State private var isCancellingDocumentNameFromOutsideTap = false
     @State private var selectedTextFileName = ""
     @State private var templateURLs: [URL] = []
+    @State private var selectedTemplateURL: URL?
+    @State private var templateDescriptionState: TemplateDescriptionState?
     @State private var pendingTemplateApplication: PendingTemplateApplication?
     @State private var isTemplateApplicationAlertPresented = false
+    @State private var isSaveAsTemplateAlertPresented = false
+    @State private var saveAsTemplateSourceName: String?
+    @State private var templateNameDraft = ""
+    @State private var templateDescriptionDraft = ""
     @State private var templateFeedbackMessage: String?
     @State private var templateFeedbackTask: Task<Void, Never>?
 
@@ -460,24 +483,45 @@ struct SettingsScreen: View {
 			//----------------------------------------
 			// export btn/menu
 			//
-			Menu {
-				Button("Export 1 Screen") {
-					ButtonClickFeedback.playIfEnabled()
-					prepareSingleFileExport()
-				}
-					Button("Create Full Backup") {
+				Menu {
+					Button("Export 1 Screen") {
 						ButtonClickFeedback.playIfEnabled()
-						prepareArchiveExport()
+						prepareSingleFileExport()
 					}
-			} label: {
+					.disabled(!canExportInCurrentListMode)
+					Button("Save as Template") {
+						ButtonClickFeedback.playIfEnabled()
+						beginSaveAsTemplate()
+					}
+					.disabled(!canSaveCurrentScreenAsTemplate)
+						Button("Create Full Backup") {
+							ButtonClickFeedback.playIfEnabled()
+							prepareArchiveExport()
+						}
+						.disabled(!canExportInCurrentListMode)
+				} label: {
 				Image(systemName: "square.and.arrow.up")
 					.font(.title)
 					.foregroundStyle(.white)
 			}
-				.contentShape(.rect)
-				.accessibilityLabel("Export to iCloud")
-            .disabled(!canExportInCurrentListMode)
-            .opacity(canExportInCurrentListMode ? 1 : 0.45)
+					.contentShape(.rect)
+					.accessibilityLabel("Export to iCloud")
+	            .disabled(!canUseExportMenu)
+	            .opacity(canUseExportMenu ? 1 : 0.45)
+					.alert("Save as Template", isPresented: $isSaveAsTemplateAlertPresented) {
+						TextField("Template name", text: $templateNameDraft)
+							.textInputAutocapitalization(.words)
+							.autocorrectionDisabled()
+						TextField("Description (optional)", text: $templateDescriptionDraft)
+						Button("Cancel", role: .cancel) {
+							cancelSaveAsTemplate()
+						}
+						Button("Save") {
+							saveAsTemplate()
+						}
+					} message: {
+						Text("Save the current screen's contents and settings as a reusable template.")
+					}
 			
 			Spacer()
 			//
@@ -560,6 +604,9 @@ struct SettingsScreen: View {
             cancelNameEditing()
         }
         .onChange(of: listModeRawValue) {
+            if listMode != .templates {
+                clearTemplateSelection()
+            }
             if saveCurrentDocumentText().allowsDocumentTransition {
                 loadSelectedDocumentText()
             }
@@ -801,6 +848,16 @@ struct SettingsScreen: View {
 
     private var canExportInCurrentListMode: Bool {
         listMode != .templates
+    }
+
+    private var canSaveCurrentScreenAsTemplate: Bool {
+        guard let selectedDocumentFileURL else { return false }
+        return selectedDocumentFileURL.lastPathComponent == selectedDocumentName &&
+            isScreenDocumentURL(selectedDocumentFileURL)
+    }
+
+    private var canUseExportMenu: Bool {
+        canExportInCurrentListMode || canSaveCurrentScreenAsTemplate
     }
 
     private var isImporting: Binding<Bool> {
@@ -1218,6 +1275,8 @@ struct SettingsScreen: View {
             pdfURLs: availablePDFURLs,
             selectedPDFURL: selectedPDFURL,
             templateURLs: templateURLs,
+            selectedTemplateURL: selectedTemplateURL,
+            templateDescription: templateDescriptionState?.displayText,
             allFileURLs: availableAllFileURLs,
             fileScrollPositionID: fileScrollPositionID,
             textScrollPositionID: textScrollPositionID,
@@ -1241,7 +1300,8 @@ struct SettingsScreen: View {
             selectPDF: selectPDF,
             deletePDF: deletePDF,
             deleteAllFile: deleteAllFile,
-            selectTemplate: prepareTemplateApplication,
+            selectTemplate: selectTemplateForDescription,
+            applyTemplate: prepareTemplateApplication,
             showsOuterBorder: isPad
         )
         .id(importRefreshID)
@@ -1286,11 +1346,30 @@ struct SettingsScreen: View {
             "Template: \(pendingTemplateApplication.templateName)",
             "Target: \(pendingTemplateApplication.targetName)"
         ]
-        if let description = pendingTemplateApplication.description {
-            lines.append("Description: \(description)")
-        }
-        lines.append("The current screen's contents and settings will be replaced.")
+        lines.append("This will replace the target screen's buttons and configuration.")
         return lines.joined(separator: "\n\n")
+    }
+
+    private func selectTemplateForDescription(_ templateURL: URL) {
+        selectedTemplateURL = templateURL
+
+        do {
+            let configuration = try loadTemplateConfiguration(for: templateURL)
+            let description = configuration.description?
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            if let description, !description.isEmpty {
+                templateDescriptionState = .description(description)
+            } else {
+                templateDescriptionState = .noDescription
+            }
+        } catch {
+            templateDescriptionState = .unavailable
+        }
+    }
+
+    private func clearTemplateSelection() {
+        selectedTemplateURL = nil
+        templateDescriptionState = nil
     }
 
     private func prepareTemplateApplication(_ templateURL: URL) {
@@ -1299,7 +1378,7 @@ struct SettingsScreen: View {
             guard values.isRegularFile == true else {
                 throw TemplateConfigurationError.templateDocumentNotFound(templateURL)
             }
-            let configuration = try loadTemplateConfiguration(for: templateURL)
+            _ = try loadTemplateConfiguration(for: templateURL)
             guard let targetURL = selectedDocumentFileURL,
                   targetURL.lastPathComponent == selectedDocumentName,
                   isScreenDocumentURL(targetURL),
@@ -1324,13 +1403,10 @@ struct SettingsScreen: View {
                 return
             }
 
-            let trimmedDescription = configuration.description?
-                .trimmingCharacters(in: .whitespacesAndNewlines)
             pendingTemplateApplication = PendingTemplateApplication(
                 templateURL: templateURL,
                 templateName: templateURL.lastPathComponent,
-                targetName: selectedDocumentName,
-                description: trimmedDescription?.isEmpty == false ? trimmedDescription : nil
+                targetName: selectedDocumentName
             )
             isTemplateApplicationAlertPresented = true
         } catch {
@@ -2295,10 +2371,22 @@ struct SettingsScreen: View {
             in: .userDomainMask
         ).first else {
             templateURLs = []
+            clearTemplateSelection()
             return
         }
 
-        templateURLs = discoverTemplateDocumentURLs(in: documentsDirectoryURL)
+        let refreshedTemplateURLs = discoverTemplateDocumentURLs(in: documentsDirectoryURL)
+        templateURLs = refreshedTemplateURLs
+
+        guard let selectedTemplateURL else { return }
+        guard refreshedTemplateURLs.contains(where: {
+            $0.standardizedFileURL == selectedTemplateURL.standardizedFileURL
+        }) else {
+            clearTemplateSelection()
+            return
+        }
+
+        selectTemplateForDescription(selectedTemplateURL)
     }
 
     private var availableAllFileURLs: [URL] {
@@ -2512,6 +2600,88 @@ struct SettingsScreen: View {
             loadFunctionKeys(fileURL)
         } catch {
             db("Failed to create document: \(fileURL.lastPathComponent)")
+        }
+    }
+
+    private func beginSaveAsTemplate() {
+        guard canSaveCurrentScreenAsTemplate else {
+            presentDocumentSaveAlert(
+                title: "Template Could Not Be Saved",
+                message: "The selected screen is not available."
+            )
+            return
+        }
+
+        saveAsTemplateSourceName = selectedDocumentName
+        templateNameDraft = URL(fileURLWithPath: selectedDocumentName)
+            .deletingPathExtension()
+            .lastPathComponent
+        templateDescriptionDraft = ""
+        isSaveAsTemplateAlertPresented = true
+    }
+
+    private func cancelSaveAsTemplate() {
+        saveAsTemplateSourceName = nil
+        templateNameDraft = ""
+        templateDescriptionDraft = ""
+    }
+
+    private func saveAsTemplate() {
+        guard let expectedSourceName = saveAsTemplateSourceName else { return }
+        let requestedName = templateNameDraft
+        let requestedDescription = templateDescriptionDraft
+        saveAsTemplateSourceName = nil
+
+        guard selectedDocumentName == expectedSourceName else {
+            presentDocumentSaveAlert(
+                title: "Template Could Not Be Saved",
+                message: TemplateCreationError.sourceSelectionChanged(
+                    expected: expectedSourceName,
+                    actual: selectedDocumentName
+                ).localizedDescription
+            )
+            return
+        }
+
+        let saveResult = saveCurrentDocumentText()
+        switch saveResult {
+        case .unchanged, .saved, .reloadedFromDisk:
+            break
+        case .missing:
+            presentDocumentSaveAlert(for: .missing)
+            return
+        case .conflict, .failed:
+            return
+        }
+
+        guard let sourceURL = selectedDocumentFileURL,
+              sourceURL.lastPathComponent == expectedSourceName,
+              isScreenDocumentURL(sourceURL) else {
+            presentDocumentSaveAlert(
+                title: "Template Could Not Be Saved",
+                message: "The selected screen is no longer available."
+            )
+            return
+        }
+
+        do {
+            _ = try createTemplate(
+                requestedName,
+                requestedDescription,
+                expectedSourceName
+            )
+            refreshTemplateFiles()
+            showTemplateFeedback("Template saved")
+            templateNameDraft = ""
+            templateDescriptionDraft = ""
+        } catch {
+            let title: String
+            if case .cleanupFailed = error as? TemplateCreationError {
+                title = "Critical Template Error"
+            } else {
+                title = "Template Could Not Be Saved"
+            }
+            presentDocumentSaveAlert(title: title, message: error.localizedDescription)
         }
     }
 

@@ -1,70 +1,20 @@
-these are OK
-.spk 
-.out 
-.pwm 
-.home 
-.cb
-.app
-.sc
-media files
-.prev
-.next
-.back
-.forw
-
-these have problems
-.hour
-.min
-.sec
-.date
-.year
-.month
-.dow
-.day
-.power
-.stop
-.plus
-.minus 10
-.rnd 10 100
-.rnd file.txt
-
-both mode, btn contents empty
-1. no commands shown
-
-for hour would expect:
-.hour
-09
-
-.hour
-.min
-.sec
-.date - this has city name above date - remove
-.year
-.month
-.dow
-.day
-.power
-.stop
-.plus
-.minus 10
-.rnd 10 100
-.rnd file.txt
-
-full btn (SF symbol + text)
-.hour
-.min
-.sec
-.date - no SF or text - only city name
-.year
-.month
-.dow
-.day
-.power - - no SF or text, only "charging", add possible SF + text above
-.stop - no SF symbol, only text for SF
-.plus - no SF symbol, text ok
-.minus 10  - no SF symbol, only text for SF
-.rnd 10 100 - no SF symbol, only text for SF
-.rnd file.txt - no SF symbol, only text for SF
+compile times
 
 
-commands without comments are ok in this area
+GPT
+create codex
+30s
+
+copy instructions, start pun
+5s
+
+
+codex build (add 10s)
+3:30 not including codex results
+4:47 - including results
+
+run ipad
+30s
+
+copy results to gpt
+15s

@@ -24,6 +24,8 @@ struct SettingsDocumentTableSection: View {
     let pdfURLs: [URL]
     let selectedPDFURL: URL?
     let templateURLs: [URL]
+    let selectedTemplateURL: URL?
+    let templateDescription: String?
     let allFileURLs: [URL]
     @Binding var fileScrollPositionID: String?
     @Binding var textScrollPositionID: String?
@@ -48,6 +50,7 @@ struct SettingsDocumentTableSection: View {
     let deletePDF: (URL) -> Void
     let deleteAllFile: (URL) -> Void
     let selectTemplate: (URL) -> Void
+    let applyTemplate: (URL) -> Void
     let showsOuterBorder: Bool
     @State private var showsRefreshConfirmation = false
     @State private var refreshConfirmationTask: Task<Void, Never>?
@@ -68,7 +71,8 @@ struct SettingsDocumentTableSection: View {
             let availableHeight = safeHeight(geometry.size.height)
             let itemCountHeight = itemCountReservedHeight
             let previewHeight = previewReservedHeight(for: geometry.size.width)
-            let listHeight = max(0, availableHeight - itemCountHeight - previewHeight)
+            let descriptionHeight = templateDescriptionReservedHeight(for: availableHeight)
+            let listHeight = max(0, availableHeight - itemCountHeight - previewHeight - descriptionHeight)
 
             VStack(alignment: .leading, spacing: 0) {
                 List {
@@ -156,6 +160,11 @@ struct SettingsDocumentTableSection: View {
 					}
 				}
 				
+                if descriptionHeight > 0, let templateDescription {
+                    templateDescriptionSection(templateDescription)
+                        .frame(height: descriptionHeight)
+                }
+
                 itemCountBox
                     .frame(height: itemCountHeight)
 
@@ -211,6 +220,34 @@ struct SettingsDocumentTableSection: View {
         guard listMode == .images || listMode == .pdfs else { return 0 }
         let safeWidth = width.isFinite ? max(0, width) : 0
         return safeWidth / 1.3
+    }
+
+    private func templateDescriptionReservedHeight(for availableHeight: CGFloat) -> CGFloat {
+        guard listMode == .templates,
+              selectedTemplateURL != nil,
+              templateDescription != nil else {
+            return 0
+        }
+
+        let availableDescriptionHeight = max(0, availableHeight - itemCountReservedHeight)
+        return min(availableDescriptionHeight, min(120, max(60, availableHeight * 0.22)))
+    }
+
+    private func templateDescriptionSection(_ description: String) -> some View {
+        ScrollView {
+            Text(description)
+                .font(tableRowFont)
+                .foregroundStyle(.white)
+                .multilineTextAlignment(.leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(10)
+        }
+        .background(Color.gray.opacity(0.16))
+        .overlay(alignment: .top) {
+            Rectangle()
+                .fill(Color.gray)
+                .frame(height: 1)
+        }
     }
 
 		//
@@ -559,30 +596,55 @@ struct SettingsDocumentTableSection: View {
     }
 
     private func templateRow(for templateURL: URL) -> some View {
-        Button {
+        let isSelected = selectedTemplateURL?.standardizedFileURL == templateURL.standardizedFileURL
+        let selectionGesture = TapGesture(count: 2)
+            .onEnded {
+                ButtonClickFeedback.playIfEnabled()
+                selectTemplate(templateURL)
+                applyTemplate(templateURL)
+            }
+            .exclusively(
+                before: TapGesture(count: 1)
+                    .onEnded {
+                        ButtonClickFeedback.playIfEnabled()
+                        selectTemplate(templateURL)
+                    }
+            )
+
+        return HStack {
+            Text(templateURL.lastPathComponent)
+                .font(tableRowFont)
+                .fontWeight(isSelected ? .bold : .regular)
+                .foregroundStyle(isSelected ? Color.green : .white)
+                .multilineTextAlignment(.leading)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Spacer()
+        }
+        .padding(.leading, 10)
+        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+        .background(Color.black)
+        .overlay {
+            Rectangle()
+                .fill(Color.gray.opacity(0.6))
+                .frame(height: 1)
+                .frame(maxHeight: .infinity, alignment: .bottom)
+        }
+        .contentShape(.rect)
+        .gesture(selectionGesture)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(templateURL.lastPathComponent)
+        .accessibilityValue(isSelected ? "Selected" : "Not selected")
+        .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
+        .accessibilityAction {
             ButtonClickFeedback.playIfEnabled()
             selectTemplate(templateURL)
-        } label: {
-            HStack {
-                Text(templateURL.lastPathComponent)
-                    .font(tableRowFont)
-                    .foregroundStyle(.white)
-                    .multilineTextAlignment(.leading)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                Spacer()
-            }
-            .padding(.leading, 10)
-            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-            .background(Color.black)
-            .overlay {
-                Rectangle()
-                    .fill(Color.gray.opacity(0.6))
-                    .frame(height: 1)
-                    .frame(maxHeight: .infinity, alignment: .bottom)
-            }
         }
-        .buttonStyle(.plain)
+        .accessibilityAction(named: "Apply Template") {
+            ButtonClickFeedback.playIfEnabled()
+            selectTemplate(templateURL)
+            applyTemplate(templateURL)
+        }
         .id(templateURL.path)
         .listRowInsets(EdgeInsets())
         .listRowSeparator(.hidden)

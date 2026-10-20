@@ -712,6 +712,43 @@ struct ContentView: View {
     }
 
     @discardableResult
+    private func createTemplateFromSelectedDocument(
+        requestedName: String,
+        description: String?,
+        expectedSourceDocumentName: String
+    ) throws -> TemplateCreationResult {
+        guard selectedDocumentName == expectedSourceDocumentName else {
+            throw TemplateCreationError.sourceSelectionChanged(
+                expected: expectedSourceDocumentName,
+                actual: selectedDocumentName
+            )
+        }
+        guard let sourceDocumentURL = selectedDocumentURL() else {
+            let unresolvedSourceURL = documentsDirectoryURL()?
+                .appendingPathComponent(expectedSourceDocumentName) ??
+                URL(fileURLWithPath: expectedSourceDocumentName)
+            throw TemplateCreationError.sourceNotFound(unresolvedSourceURL)
+        }
+        if let documentsDirectoryURL = documentsDirectoryURL()?.standardizedFileURL {
+            guard sourceDocumentURL.deletingLastPathComponent().standardizedFileURL == documentsDirectoryURL else {
+                throw TemplateCreationError.destinationOutsideDocuments(sourceDocumentURL)
+            }
+        }
+
+        return try createTemplateDocument(
+            from: sourceDocumentURL,
+            expectedSourceDocumentName: expectedSourceDocumentName,
+            requestedTemplateName: requestedName,
+            description: description,
+            selectedSourceDocumentName: { selectedDocumentName },
+            maximumButtonCount: maxFunctionKeyCount,
+            effectiveButtonLineCount: { contents in
+                normalizedSlotLines(from: contents).count
+            }
+        )
+    }
+
+    @discardableResult
     private func applyTemplateToSelectedDocument(
         _ templateURL: URL,
         expectedTargetDocumentName: String
@@ -2868,6 +2905,7 @@ struct ContentView: View {
             refreshDocumentFiles: refreshDocumentFiles,
             refreshDocumentFilesAfterDeletingAllData: refreshDocumentFilesAfterDeletingAllData,
             loadFunctionKeys: selectDocument,
+            createTemplate: createTemplateFromSelectedDocument,
             applyTemplate: applyTemplateToSelectedDocument,
             saveSelectedDocumentAndReload: saveSelectedDocumentAndReload,
             renameDocument: renameSelectedDocument,
