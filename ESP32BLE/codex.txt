@@ -1,109 +1,87 @@
 1. Files modified
 
-• ESP32BLE/ESP32BLE/Scrns/TemplateDocument.swift
 • ESP32BLE/ESP32BLE/Scrns/ContentView.swift
+• ESP32BLE/ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
+• ESP32BLE/ESP32BLE/Scrns/Set_Screen/Table_Img/Set_Table.swift
 
-No UI, project, document, .txt, log, Mac Helper, or Test Area files were modified.
+No project, document, .txt, log, dropdown, editor-layout, Mac Helper, or Test Area files were modified.
 
-2. New functions and responsibilities
+2. Plates row interaction
 
-TemplateDocument.swift:
+• Template rows are now plain-style Buttons.
+• A single tap preserves existing click feedback and row appearance.
+• The row sends only the template URL through a dedicated selectTemplate callback.
+• It does not use the ordinary clipboard/file-selection handler.
+• No double-tap, clipboard, swipe, preview, or immediate application behavior was added.
+• Existing Screens row behavior was unchanged.
 
-• TemplateApplicationResult
-Returns the applied ScreenConfig, template contents, and unchanged target URL.
+3. Confirmation state and presentation
 
-• TemplateApplicationError
-Provides distinguishable errors for validation, preparation, replacement, rollback, and critical rollback failure.
+Settings now captures:
 
-• applyTemplateDocument(...)
-Validates, prepares, replaces, verifies, and—if necessary—rolls back the target screen and configuration.
+• Template URL.
+• Complete template filename.
+• Expected target screen filename.
+• Trimmed optional description.
 
-• replacePreparedTemplateFile(...)
-Performs each prepared per-file replacement.
+A native SwiftUI alert displays:
 
-• restoreTemplateApplicationTarget(...)
-Restores the exact original screen bytes and original configuration state.
+• “Apply Template?”
+• Template filename.
+• Target filename.
+• Optional description when nonempty.
+• Replacement warning.
+• Cancel action.
+• Destructive Apply action.
 
-ContentView.swift:
+Cancel does not invoke the template engine.
 
-• applyTemplateToSelectedDocument(...)
-Reconfirms the selected screen, invokes the filesystem engine, reloads the same screen, and synchronizes legacy configuration values.
+4. Pending editor-save handling
 
-• synchronizeLegacyConfigurationValues(...)
-Updates the existing per-document font-size and grid-dimension stores, background opacity, and font refresh token.
+Before showing confirmation, Settings:
 
-3. Validation rules
+• Verifies the template is still a regular file.
+• Loads and validates its configuration.
+• Resolves and validates the selected target screen.
+• Calls the existing conflict-aware saveCurrentDocumentText().
+• Aborts for conflict, missing file, or save failure.
+• Uses the existing native save-error presentation.
 
-The engine validates:
+Unsaved editor content is therefore not silently discarded.
 
-• Source has the .template extension.
-• Source exists and is a regular file.
-• Source is readable and valid UTF-8.
-• Template configuration sidecar exists and decodes successfully.
-• Effective button count uses ContentView’s existing normalizedSlotLines parser.
-• Button count does not exceed maxFunctionKeyCount.
-• Grid rows and columns are positive.
-• Grid multiplication does not overflow.
-• Grid capacity accommodates the effective button count.
-• Grid capacity does not exceed the supported maximum.
-• Target is a .screen document.
-• Target filename matches the expected selected filename.
-• Selected screen has not changed.
-• Target exists, is regular, and contains valid UTF-8.
-• Original target screen and optional configuration bytes can be preserved.
-• Target files have not changed during replacement preparation.
+5. Application callback integration
 
-Invalid template configurations are never replaced with defaults.
+ContentView passes applyTemplateToSelectedDocument(...) into Settings.
 
-4. File replacement sequence
+Apply:
 
-• Reads and validates the template and its configuration.
-• Snapshots the exact target screen bytes.
-• Snapshots the exact target configuration bytes when present.
-• Records when the target configuration did not previously exist.
-• Encodes only TemplateConfiguration.screenConfig; template description metadata is excluded.
-• Creates two unique temporary payload files in the target directory.
-• Reads back and verifies both prepared payloads.
-• Reconfirms the selected screen immediately before replacement.
-• Confirms the target still matches its snapshots.
-• Replaces the screen file.
-• Replaces or creates the target configuration sidecar.
-• Reads back and verifies both final files.
-• Removes remaining temporary files.
+• Reconfirms the selected filename.
+• Calls the existing 001C-A engine.
+• Does not write either target file directly.
+• Does not call the history-recording screen-selection path.
+• Leaves replacement validation, verification, and rollback to the existing engine.
 
-The operation does not claim that the two replacements form a single atomic filesystem transaction.
+6. Settings editor refresh
 
-5. Rollback behaviour
+After successful application, Settings calls loadSelectedDocumentText().
 
-If replacement or final verification fails:
+This refreshes:
 
-• The exact original screen bytes are restored.
-• The exact original configuration bytes are restored when one existed.
-• A newly created configuration is removed when the target originally had no sidecar.
-• Restored bytes are verified.
+• Editor text.
+• Saved-text baseline.
+• Loaded document URL and filename.
 
-A successfully restored failure reports replacementFailedAndRolledBack. A failed or incomplete restoration reports rollbackFailed separately, including both underlying errors.
+This prevents stale pre-template editor content from overwriting the newly applied screen or causing a false external-change conflict.
 
-6. Active-screen reload handling
+7. Success and error feedback
 
-After successful replacement:
+• Success displays “Template applied” for two seconds inside the Settings table area.
+• Ordinary failures use “Template Could Not Be Applied”.
+• Template-loading failures use “Template Could Not Be Opened”.
+• Critical rollback failures use the distinct title “Critical Template Error”.
+• Success is shown only after the engine returns successfully and the editor reload begins.
 
-• The existing loadFunctionKeys(from:) path reloads the same target URL.
-• The selected filename remains unchanged.
-• No history-recording screen-selection method is called.
-• Navigation history is not modified.
-• No template application occurs automatically.
-
-7. Legacy configuration synchronization
-
-After successful replacement, ContentView synchronizes:
-
-• Per-document font size.
-• Per-document grid dimensions.
-• Main grid background opacity.
-• Font-size refresh token.
-
-Existing loadFunctionKeys behaviour continues restoring background-image compatibility state. Legacy values are not modified before the filesystem replacement succeeds.
+The SwiftUI guidance informed the use of native Button and alert controls, private view-owned state, and a separate confirmation presentation branch.
 
 8. Build result
 
@@ -111,41 +89,30 @@ ESP32BLE built successfully through Xcode.
 
 Build errors: none.
 
-Both changed Swift files also passed Xcode’s live compiler diagnostics with zero issues.
+All three modified files passed Xcode live diagnostics with zero issues.
 
 9. Tests performed
 
-Isolated tests used temporary directories outside the user’s Documents directory. They verified:
+Source and compilation verification confirmed:
 
-• Replacement when the target already has a configuration.
-• Creation when the target previously had no configuration.
-• Template description is excluded from the target ScreenConfig.
-• Source template and source configuration remain unchanged.
-• Result retains the target identity.
-• Missing template configuration is rejected.
-• Excessive button count is rejected.
-• Incompatible grid capacity is rejected.
-• Changed active-screen selection is rejected.
+• Plates rows invoke only the dedicated confirmation callback.
+• Confirmation precedes application.
+• Apply invokes the existing 001C-A engine.
+• Cancel has no replacement action.
+• Description trimming and omission are implemented.
+• Settings reload occurs only after successful application.
+• Screens table handling was not changed.
+• Dropdown labels and widths were not changed.
+• No automatic application path was introduced.
 
-No real screen or template documents were modified. No device testing was performed.
+No real screen or template files were used or modified. No persistent sample templates were created.
 
-10. Remaining risks and limitations
+Actual alert presentation and touch interaction were not device-tested in this phase.
 
-• A process termination between the two per-file replacements cannot be automatically recovered because this deliberately does not introduce a persistent transaction journal.
-• The rollback failure path is implemented and compiled, but a forced low-level filesystem rollback failure was not injected during testing.
-• Settings editor state and its save baseline are intentionally not refreshed in this phase.
-• Actual interaction and reload behaviour still require device testing after the UI connection is added.
+10. Remaining concerns
 
-11. Requirements for ESP-TEMPLATE-001C-B
+• iPhone landscape, iPad, and iPad mini presentation should still receive device verification.
+• Forced filesystem and rollback failures were not injected through the UI; those paths remain handled by the previously implemented engine.
+• The success overlay and existing refresh feedback occupy the same general table region, although they are not normally triggered simultaneously.
 
-The next phase must:
-
-• Present the native confirmation interface.
-• Capture the current selected screen filename as the expected target identity.
-• Pass the selected template URL and expected target filename into applyTemplateToSelectedDocument(...).
-• Refresh the Settings editor contents and save baseline only after successful application.
-• Present the engine’s localized error without reporting success.
-• Leave state unchanged on Cancel.
-• Avoid using the Screens double-tap navigation path.
-
-ESP-TEMPLATE-001C-A COMPLETE
+ESP-TEMPLATE-001C-B COMPLETE

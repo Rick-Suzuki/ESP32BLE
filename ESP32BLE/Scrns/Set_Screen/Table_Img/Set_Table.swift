@@ -47,6 +47,7 @@ struct SettingsDocumentTableSection: View {
     let selectPDF: (URL) -> Void
     let deletePDF: (URL) -> Void
     let deleteAllFile: (URL) -> Void
+    let selectTemplate: (URL) -> Void
     let showsOuterBorder: Bool
     @State private var showsRefreshConfirmation = false
     @State private var refreshConfirmationTask: Task<Void, Never>?
@@ -558,24 +559,30 @@ struct SettingsDocumentTableSection: View {
     }
 
     private func templateRow(for templateURL: URL) -> some View {
-        HStack {
-            Text(templateURL.lastPathComponent)
-                .font(tableRowFont)
-                .foregroundStyle(.white)
-                .multilineTextAlignment(.leading)
-                .fixedSize(horizontal: false, vertical: true)
+        Button {
+            ButtonClickFeedback.playIfEnabled()
+            selectTemplate(templateURL)
+        } label: {
+            HStack {
+                Text(templateURL.lastPathComponent)
+                    .font(tableRowFont)
+                    .foregroundStyle(.white)
+                    .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
 
-            Spacer()
+                Spacer()
+            }
+            .padding(.leading, 10)
+            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            .background(Color.black)
+            .overlay {
+                Rectangle()
+                    .fill(Color.gray.opacity(0.6))
+                    .frame(height: 1)
+                    .frame(maxHeight: .infinity, alignment: .bottom)
+            }
         }
-        .padding(.leading, 10)
-        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-        .background(Color.black)
-        .overlay {
-            Rectangle()
-                .fill(Color.gray.opacity(0.6))
-                .frame(height: 1)
-                .frame(maxHeight: .infinity, alignment: .bottom)
-        }
+        .buttonStyle(.plain)
         .id(templateURL.path)
         .listRowInsets(EdgeInsets())
         .listRowSeparator(.hidden)

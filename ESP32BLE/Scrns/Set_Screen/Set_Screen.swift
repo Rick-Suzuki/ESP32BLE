@@ -221,6 +221,13 @@ struct SettingsScreen: View {
         let height: Int
     }
 
+    private struct PendingTemplateApplication {
+        let templateURL: URL
+        let templateName: String
+        let targetName: String
+        let description: String?
+    }
+
     private let ttsControlColor = Color(red: 0.0, green: 0.2, blue: 0.45)
     private let defaultTextToSpeechRate = Double(AVSpeechUtteranceDefaultSpeechRate)
     private let minimumTextToSpeechPercentage = 40.0
@@ -250,6 +257,7 @@ struct SettingsScreen: View {
     let refreshDocumentFiles: () -> Void
     let refreshDocumentFilesAfterDeletingAllData: () -> Void
     let loadFunctionKeys: (URL) -> Void
+    let applyTemplate: (URL, String) throws -> TemplateApplicationResult
     let saveSelectedDocumentAndReload: (String) -> Void
     let renameDocument: (String) -> String?
     let deleteDocument: (URL) -> Void
@@ -317,6 +325,10 @@ struct SettingsScreen: View {
     @State private var isCancellingDocumentNameFromOutsideTap = false
     @State private var selectedTextFileName = ""
     @State private var templateURLs: [URL] = []
+    @State private var pendingTemplateApplication: PendingTemplateApplication?
+    @State private var isTemplateApplicationAlertPresented = false
+    @State private var templateFeedbackMessage: String?
+    @State private var templateFeedbackTask: Task<Void, Never>?
 
     var body: some View {
         configuredSettingsScreen
@@ -640,6 +652,9 @@ struct SettingsScreen: View {
         }
         .background {
             archiveExportPresenter
+        }
+        .onDisappear {
+            templateFeedbackTask?.cancel()
         }
     }
 
@@ -1226,9 +1241,147 @@ struct SettingsScreen: View {
             selectPDF: selectPDF,
             deletePDF: deletePDF,
             deleteAllFile: deleteAllFile,
+            selectTemplate: prepareTemplateApplication,
             showsOuterBorder: isPad
         )
         .id(importRefreshID)
+        .overlay(alignment: .top) {
+            if let templateFeedbackMessage {
+                Text(templateFeedbackMessage)
+                    .font(.subheadline)
+                    .foregroundStyle(.green)
+                    .padding(.horizontal, 15)
+                    .padding(.vertical, 6)
+                    .background(
+                        Color.black.opacity(0.9),
+                        in: .rect(cornerRadius: 10)
+                    )
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 10)
+                            .stroke(.white, lineWidth: 1)
+                    }
+                    .padding(.top, 8)
+                    .allowsHitTesting(false)
+            }
+        }
+        .alert(
+            "Apply Template?",
+            isPresented: $isTemplateApplicationAlertPresented
+        ) {
+            Button("Cancel", role: .cancel) {
+                pendingTemplateApplication = nil
+            }
+            Button("Apply", role: .destructive) {
+                applyPendingTemplate()
+            }
+        } message: {
+            Text(templateApplicationMessage)
+        }
+    }
+
+    private var templateApplicationMessage: String {
+        guard let pendingTemplateApplication else { return "" }
+
+        var lines = [
+            "Template: \(pendingTemplateApplication.templateName)",
+            "Target: \(pendingTemplateApplication.targetName)"
+        ]
+        if let description = pendingTemplateApplication.description {
+            lines.append("Description: \(description)")
+        }
+        lines.append("The current screen's contents and settings will be replaced.")
+        return lines.joined(separator: "\n\n")
+    }
+
+    private func prepareTemplateApplication(_ templateURL: URL) {
+        do {
+            let values = try templateURL.resourceValues(forKeys: [.isRegularFileKey])
+            guard values.isRegularFile == true else {
+                throw TemplateConfigurationError.templateDocumentNotFound(templateURL)
+            }
+            let configuration = try loadTemplateConfiguration(for: templateURL)
+            guard let targetURL = selectedDocumentFileURL,
+                  targetURL.lastPathComponent == selectedDocumentName,
+                  isScreenDocumentURL(targetURL),
+                  FileManager.default.fileExists(atPath: targetURL.path) else {
+                throw TemplateApplicationError.targetNotFound(
+                    selectedDocumentFileURL ?? URL(fileURLWithPath: selectedDocumentName)
+                )
+            }
+            let targetValues = try targetURL.resourceValues(forKeys: [.isRegularFileKey])
+            guard targetValues.isRegularFile == true else {
+                throw TemplateApplicationError.targetIsNotRegularFile(targetURL)
+            }
+
+            let saveResult = saveCurrentDocumentText()
+            switch saveResult {
+            case .unchanged, .saved, .reloadedFromDisk:
+                break
+            case .missing:
+                presentDocumentSaveAlert(for: .missing)
+                return
+            case .conflict, .failed:
+                return
+            }
+
+            let trimmedDescription = configuration.description?
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            pendingTemplateApplication = PendingTemplateApplication(
+                templateURL: templateURL,
+                templateName: templateURL.lastPathComponent,
+                targetName: selectedDocumentName,
+                description: trimmedDescription?.isEmpty == false ? trimmedDescription : nil
+            )
+            isTemplateApplicationAlertPresented = true
+        } catch {
+            presentDocumentSaveAlert(
+                title: "Template Could Not Be Opened",
+                message: error.localizedDescription
+            )
+        }
+    }
+
+    private func applyPendingTemplate() {
+        guard let pendingApplication = pendingTemplateApplication else { return }
+        pendingTemplateApplication = nil
+
+        guard selectedDocumentName == pendingApplication.targetName else {
+            presentDocumentSaveAlert(
+                title: "Template Could Not Be Applied",
+                message: TemplateApplicationError.targetSelectionChanged(
+                    expected: pendingApplication.targetName,
+                    actual: selectedDocumentName
+                ).localizedDescription
+            )
+            return
+        }
+
+        do {
+            _ = try applyTemplate(
+                pendingApplication.templateURL,
+                pendingApplication.targetName
+            )
+            loadSelectedDocumentText()
+            showTemplateFeedback("Template applied")
+        } catch {
+            let title: String
+            if case .rollbackFailed = error as? TemplateApplicationError {
+                title = "Critical Template Error"
+            } else {
+                title = "Template Could Not Be Applied"
+            }
+            presentDocumentSaveAlert(title: title, message: error.localizedDescription)
+        }
+    }
+
+    private func showTemplateFeedback(_ message: String) {
+        templateFeedbackTask?.cancel()
+        templateFeedbackMessage = message
+        templateFeedbackTask = Task {
+            try? await Task.sleep(nanoseconds: 2_000_000_000)
+            guard !Task.isCancelled else { return }
+            templateFeedbackMessage = nil
+        }
     }
 
     private func handleSettingsDocumentSelection(_ fileURL: URL) {

@@ -2868,6 +2868,7 @@ struct ContentView: View {
             refreshDocumentFiles: refreshDocumentFiles,
             refreshDocumentFilesAfterDeletingAllData: refreshDocumentFilesAfterDeletingAllData,
             loadFunctionKeys: selectDocument,
+            applyTemplate: applyTemplateToSelectedDocument,
             saveSelectedDocumentAndReload: saveSelectedDocumentAndReload,
             renameDocument: renameSelectedDocument,
             deleteDocument: deleteDocument,
