@@ -1,4 +1,8 @@
 
+261020 Tue 1702
+dedicated midi file
+V64.07
+
 261020 Tue 1636
 optional velocity added
 V64.06

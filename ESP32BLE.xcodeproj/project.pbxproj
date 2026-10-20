@@ -26,6 +26,7 @@
 		1D590E5D2F61206100E430E0 /* PhraseButtonsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D590E522F61206100E430E0 /* PhraseButtonsSection.swift */; };
 		1D590E5E2F61206100E430E0 /* TestArea.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D590E542F61206100E430E0 /* TestArea.swift */; };
 		1D590E5F2F61206100E430E0 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 1D590E4A2F61206100E430E0 /* Assets.xcassets */; };
+		1D77C6DD3087545A004396AF /* MIDICommandParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D77C6DC3087545A004396AF /* MIDICommandParser.swift */; };
 		1D9E1CF42FC92DC600DB3621 /* Set_BtmCtls.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D9E1CE92FC92DC600DB3621 /* Set_BtmCtls.swift */; };
 		1D9E1CF52FC92DC600DB3621 /* KB_TopToolbar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D9E1CCB2FC92DC600DB3621 /* KB_TopToolbar.swift */; };
 		1D9E1CF62FC92DC600DB3621 /* Main_BG_img.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D9E1CE12FC92DC600DB3621 /* Main_BG_img.swift */; };
@@ -91,6 +92,7 @@
 		1D590E522F61206100E430E0 /* PhraseButtonsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhraseButtonsSection.swift; sourceTree = "<group>"; };
 		1D590E532F61206100E430E0 /* console m2.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "console m2.txt"; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.swift; };
 		1D590E542F61206100E430E0 /* TestArea.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestArea.swift; sourceTree = "<group>"; };
+		1D77C6DC3087545A004396AF /* MIDICommandParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MIDICommandParser.swift; sourceTree = "<group>"; };
 		1D9A8748302D3885005B5E36 /* codex.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = codex.txt; sourceTree = "<group>"; };
 		1D9E1CC82FC92DC600DB3621 /* KB_GridView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KB_GridView.swift; sourceTree = "<group>"; };
 		1D9E1CC92FC92DC600DB3621 /* KB_InputField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KB_InputField.swift; sourceTree = "<group>"; };
@@ -167,6 +169,7 @@
 				1D16CD1230304347004E330E /* ScreenDocument.swift */,
 				1D2A22C4307DFAF0003CCFCF /* MacConnectionManager.swift */,
 				1DF165E93086EACE003DFD80 /* TemplateDocument.swift */,
+				1D77C6DB30875459004396AF /* MIDI */,
 			);
 			path = Scrns;
 			sourceTree = "<group>";
@@ -215,6 +218,14 @@
 				1D1B29CB2F63ABE7004733D7 /* btns */,
 			);
 			path = ESP32BLE;
+			sourceTree = "<group>";
+		};
+		1D77C6DB30875459004396AF /* MIDI */ = {
+			isa = PBXGroup;
+			children = (
+				1D77C6DC3087545A004396AF /* MIDICommandParser.swift */,
+			);
+			path = MIDI;
 			sourceTree = "<group>";
 		};
 		1D9E1CCC2FC92DC600DB3621 /* Top_Screen */ = {
@@ -433,6 +444,7 @@
 				1D9E1CFB2FC92DC600DB3621 /* KB_ModeRows.swift in Sources */,
 				1D9E1CFC2FC92DC600DB3621 /* KB_GridView.swift in Sources */,
 				1D9E1CFD2FC92DC600DB3621 /* Main_BtmRightTxt.swift in Sources */,
+				1D77C6DD3087545A004396AF /* MIDICommandParser.swift in Sources */,
 				1D9E1CFE2FC92DC600DB3621 /* KB_Navigation.swift in Sources */,
 				1D9E1CFF2FC92DC600DB3621 /* Set_ImgPanel.swift in Sources */,
 				1D9E1D002FC92DC600DB3621 /* Set_Table.swift in Sources */,
