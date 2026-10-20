@@ -510,16 +510,12 @@ extension MainScreen {
         _ = sendBluetoothIfNeeded()
     }
 
-    func midiCommandForGridEntry(_ entry: FunctionKeyEntry) -> (note: Int, velocity: Int)? {
+    func midiCommandForGridEntry(_ entry: FunctionKeyEntry) -> MIDICommand? {
         guard entry.sendTexts.count == 1 else {
             return nil
         }
 
-        guard let command = MIDICommandParser.parse(entry.sendTexts[0]) else {
-            return nil
-        }
-
-        return (Int(command.note), Int(command.velocity))
+        return MIDICommandParser.parse(entry.sendTexts[0])
     }
 
     private func isMIDICommandForGridEntry(_ entry: FunctionKeyEntry) -> Bool {
@@ -531,9 +527,10 @@ extension MainScreen {
         }
     }
 
-    func sendMIDINoteOnFromTouch(_ note: Int, velocity: Int) {
-        guard (0...127).contains(note),
+    func sendMIDINoteOnFromTouch(_ identity: MIDINoteIdentity, velocity: UInt8) {
+        guard identity.note <= 127,
               (1...127).contains(velocity),
+              MIDIChannelSettings.validRange.contains(Int(identity.channel)),
               !isGridEditModeEnabled,
               mainGridButtonMode.sendsBluetooth,
               outputMode == .mac,
@@ -541,16 +538,21 @@ extension MainScreen {
             return
         }
 
-        _ = macConnection.sendAuthenticatedCommand("MIDI:NOTE_ON:\(note):\(velocity):1")
+        _ = macConnection.sendAuthenticatedCommand(
+            "MIDI:NOTE_ON:\(identity.note):\(velocity):\(identity.channel)"
+        )
     }
 
-    func sendMIDINoteOffFromTouch(_ note: Int) {
-        guard (0...127).contains(note),
+    func sendMIDINoteOffFromTouch(_ identity: MIDINoteIdentity) {
+        guard identity.note <= 127,
+              MIDIChannelSettings.validRange.contains(Int(identity.channel)),
               macConnection.canSend else {
             return
         }
 
-        _ = macConnection.sendAuthenticatedCommand("MIDI:NOTE_OFF:\(note):1")
+        _ = macConnection.sendAuthenticatedCommand(
+            "MIDI:NOTE_OFF:\(identity.note):\(identity.channel)"
+        )
     }
 
     private func runDocumentNavigationCommandIfNeeded(

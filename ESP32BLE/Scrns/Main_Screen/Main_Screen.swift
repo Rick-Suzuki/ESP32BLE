@@ -129,6 +129,8 @@ struct MainScreen: View {
         }
     }
 
+    @AppStorage(MIDIChannelSettings.storageKey) private var midiDefaultChannel = MIDIChannelSettings.defaultChannel
+
     // Easy-to-find styling controls for the main button grid.
     private let mainGridButtonSpacingMaximum: CGFloat = 10
     private let mainGridButtonSpacingMinimum: CGFloat = 4
@@ -1411,6 +1413,7 @@ Tapping a row inserts the key code at the cursor.
             isInteractiveWidgetEntry: isInteractiveMainGridWidgetEntry,
             isSimpleOrdinarySoundEntry: isSimpleOrdinarySoundEntry,
             midiCommand: midiCommandForGridEntry,
+            defaultMIDIChannel: midiDefaultChannel,
             onMIDITouchDown: sendMIDINoteOnFromTouch,
             onMIDITouchUp: sendMIDINoteOffFromTouch,
             sendLine: sendMainGridEntry,

@@ -316,6 +316,7 @@ final class MacConnectionManager: ObservableObject {
                 self.restartSearch()
             }
         })
+
     }
 
     private func connect(to endpoint: NWEndpoint) {

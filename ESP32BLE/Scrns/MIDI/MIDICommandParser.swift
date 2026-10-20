@@ -4,6 +4,11 @@ struct MIDICommand {
     let channelOverride: UInt8?
 }
 
+struct MIDINoteIdentity {
+    let note: UInt8
+    let channel: UInt8
+}
+
 enum MIDIChannelSettings {
     static let storageKey = "midiDefaultChannel"
     static let defaultChannel = 1
