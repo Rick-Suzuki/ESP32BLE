@@ -711,6 +711,62 @@ struct ContentView: View {
         }
     }
 
+    @discardableResult
+    private func applyTemplateToSelectedDocument(
+        _ templateURL: URL,
+        expectedTargetDocumentName: String
+    ) throws -> TemplateApplicationResult {
+        guard selectedDocumentName == expectedTargetDocumentName else {
+            throw TemplateApplicationError.targetSelectionChanged(
+                expected: expectedTargetDocumentName,
+                actual: selectedDocumentName
+            )
+        }
+        guard let targetDocumentURL = selectedDocumentURL() else {
+            let unresolvedTargetURL = documentsDirectoryURL()?
+                .appendingPathComponent(expectedTargetDocumentName) ??
+                URL(fileURLWithPath: expectedTargetDocumentName)
+            throw TemplateApplicationError.targetNotFound(unresolvedTargetURL)
+        }
+
+        let result = try applyTemplateDocument(
+            at: templateURL,
+            to: targetDocumentURL,
+            expectedTargetDocumentName: expectedTargetDocumentName,
+            activeTargetDocumentName: { selectedDocumentName },
+            maximumButtonCount: maxFunctionKeyCount,
+            effectiveButtonLineCount: { contents in
+                normalizedSlotLines(from: contents).count
+            }
+        )
+
+        loadFunctionKeys(from: targetDocumentURL)
+        synchronizeLegacyConfigurationValues(
+            result.screenConfig,
+            for: expectedTargetDocumentName
+        )
+        return result
+    }
+
+    private func synchronizeLegacyConfigurationValues(
+        _ config: ScreenConfig,
+        for documentName: String
+    ) {
+        var fontSizes = loadDocumentFontSizes()
+        fontSizes[documentName] = config.fontSize
+        saveDocumentFontSizes(fontSizes)
+
+        var gridDimensions = loadDocumentGridDimensions()
+        gridDimensions[documentName] = StoredGridDimensions(
+            columns: config.grid.columns,
+            rows: config.grid.rows
+        )
+        saveDocumentGridDimensions(gridDimensions)
+
+        mainGridBackgroundOpacity = config.buttonsBackgroundOpacity ?? ScreenConfig.defaultButtonsBackgroundOpacity
+        documentFontSizeRefreshToken += 1
+    }
+
     private func normalizedSlotLines(from contents: String) -> [String] {
         contents
             .components(separatedBy: CharacterSet.newlines.union(.init(charactersIn: "\t")))

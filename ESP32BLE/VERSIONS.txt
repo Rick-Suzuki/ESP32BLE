@@ -1,3 +1,7 @@
+261020 Tue 1137
+table switcher changed to dropdown, prepare for template
+V63.87
+
 
 261020 Tue 0941
 ESP-TEMPLATE-001B — Plate Settings Category

@@ -13,22 +13,46 @@ struct SettingsScreen: View {
         case templates
         case all
 
-        var buttonTitle: String {
+        static let visibleMenuModes: [SettingsListMode] = [
+            .files,
+            .templates,
+            .text,
+            .images,
+            .sounds,
+            .pdfs
+        ]
+
+        var selectorTitle: String {
             switch self {
             case .files:
                 return "screens"
             case .text:
                 return "text"
             case .images:
-                return "imgs"
+                return "images"
             case .sounds:
-                return "snds"
+                return "sounds"
             case .pdfs:
-                return "pdfs"
+                return "PDFs"
             case .templates:
                 return "plates"
             case .all:
-                return "all"
+                return "all Ffles"
+            }
+        }
+
+        var selectedButtonTitle: String {
+            guard !isPad else { return selectorTitle }
+
+            switch self {
+            case .files:
+                return "scrns"
+            case .images:
+                return "imgs"
+            case .sounds:
+                return "snds"
+            default:
+                return selectorTitle
             }
         }
 
@@ -448,9 +472,7 @@ struct SettingsScreen: View {
 			//----------------------------------------
 			// show type of table
 			//
-					SettingsToolbarButton(title: listMode.buttonTitle, backgroundColor: Color.gray.opacity(0.45), minWidth: isPad ? 92 : 74, isEnabled: true) {
-					listMode.toggle(developerMode: developerMode)
-				}
+						settingsTableSelector
 			//
 			//----------------------------------------
 			// repair btn
@@ -507,6 +529,7 @@ struct SettingsScreen: View {
             }
         }
         .task {
+            normalizeVisibleListMode()
             loadSelectedDocumentText()
             refreshTemplateFiles()
         }
@@ -639,19 +662,67 @@ struct SettingsScreen: View {
     private var listMode: SettingsListMode {
         get {
             let storedListMode = SettingsListMode(rawValue: listModeRawValue) ?? .files
-            if !developerMode, storedListMode == .all {
+            if storedListMode == .all {
                 return .files
             }
 
             return storedListMode
         }
         nonmutating set {
-            if !developerMode, newValue == .all {
+            if newValue == .all {
                 listModeRawValue = SettingsListMode.files.rawValue
             } else {
                 listModeRawValue = newValue.rawValue
             }
         }
+    }
+
+    private var settingsTableSelector: some View {
+        HStack(spacing: 4) {
+ //           Text("Table")
+ //               .font(isPad ? .body : .system(size: 15))
+  //              .foregroundStyle(.white)
+
+            Menu {
+                ForEach(SettingsListMode.visibleMenuModes, id: \.rawValue) { mode in
+                    Button {
+                        ButtonClickFeedback.playIfEnabled()
+                        listMode = mode
+                    } label: {
+                        if listMode == mode {
+                            Label(mode.selectorTitle, systemImage: "checkmark")
+                        } else {
+                            Text(mode.selectorTitle)
+                        }
+                    }
+                }
+            } label: {
+                HStack(spacing: 3) {
+                    Text(listMode.selectedButtonTitle)
+                        .lineLimit(1)
+
+                    Image(systemName: "chevron.down")
+                        .font(.caption2)
+                }
+                .font(isPad ? .body : .system(size: 15))
+                .foregroundStyle(.white)
+                .padding(.horizontal, isPad ? 6 : 4)
+                .frame(width: isPad ? 92 : 74)
+                .frame(minHeight: 36)
+                .background(Color.gray.opacity(0.45))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.gray.opacity(0.5), lineWidth: 1.5)
+                }
+                .clipShape(.rect(cornerRadius: 12))
+                .contentShape(.rect)
+            }
+        }
+    }
+
+    private func normalizeVisibleListMode() {
+        guard SettingsListMode(rawValue: listModeRawValue) == .all else { return }
+        listModeRawValue = SettingsListMode.files.rawValue
     }
 
     private func nextListMode(from mode: SettingsListMode) -> SettingsListMode {

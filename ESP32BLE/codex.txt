@@ -1,131 +1,151 @@
-ESP-TEMPLATE-001B — IMPLEMENTATION REPORT
-
 1. Files modified
 
-ESP32BLE/ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
-ESP32BLE/ESP32BLE/Scrns/Set_Screen/Table_Img/Set_Table.swift
+• ESP32BLE/ESP32BLE/Scrns/TemplateDocument.swift
+• ESP32BLE/ESP32BLE/Scrns/ContentView.swift
 
-The Xcode project file was not modified in this phase.
+No UI, project, document, .txt, log, Mac Helper, or Test Area files were modified.
 
-2. Settings category integration
+2. New functions and responsibilities
 
-Added a dedicated templates list mode with the category label exactly:
+TemplateDocument.swift:
 
-Plate
+• TemplateApplicationResult
+Returns the applied ScreenConfig, template contents, and unchanged target URL.
 
-It participates in the existing category cycle after PDFs and before developer-only All Files.
+• TemplateApplicationError
+Provides distinguishable errors for validation, preparation, replacement, rollback, and critical rollback failure.
 
-Existing categories and their behavior remain unchanged.
+• applyTemplateDocument(...)
+Validates, prepares, replaces, verifies, and—if necessary—rolls back the target screen and configuration.
 
-3. iPhone layout handling
+• replacePreparedTemplateFile(...)
+Performs each prepared per-file replacement.
 
-The existing interface uses one cycling category button rather than displaying every category simultaneously.
+• restoreTemplateApplicationTarget(...)
+Restores the exact original screen bytes and original configuration state.
 
-Therefore:
+ContentView.swift:
 
-• No additional horizontal control was added.
-• No toolbar resizing was necessary.
-• Toolbar height is unchanged.
-• No clipping or overlapping controls were introduced.
-• Main Screen and Button Editor layouts were untouched.
+• applyTemplateToSelectedDocument(...)
+Reconfirms the selected screen, invokes the filesystem engine, reloads the same screen, and synchronizes legacy configuration values.
 
-4. iPad layout handling
+• synchronizeLegacyConfigurationValues(...)
+Updates the existing per-document font-size and grid-dimension stores, background opacity, and font refresh token.
 
-Plate uses the same category button, style, width, font, and interaction mechanism as existing categories.
+3. Validation rules
 
-No iPad-specific offsets or layout changes were added.
+The engine validates:
 
-5. Template discovery integration
+• Source has the .template extension.
+• Source exists and is a regular file.
+• Source is readable and valid UTF-8.
+• Template configuration sidecar exists and decodes successfully.
+• Effective button count uses ContentView’s existing normalizedSlotLines parser.
+• Button count does not exceed maxFunctionKeyCount.
+• Grid rows and columns are positive.
+• Grid multiplication does not overflow.
+• Grid capacity accommodates the effective button count.
+• Grid capacity does not exceed the supported maximum.
+• Target is a .screen document.
+• Target filename matches the expected selected filename.
+• Selected screen has not changed.
+• Target exists, is regular, and contains valid UTF-8.
+• Original target screen and optional configuration bytes can be preserved.
+• Target files have not changed during replacement preparation.
 
-Settings now maintains a read-only template URL collection.
+Invalid template configurations are never replaced with defaults.
 
-It is populated using:
+4. File replacement sequence
 
-discoverTemplateDocumentURLs(in:fileManager:)
+• Reads and validates the template and its configuration.
+• Snapshots the exact target screen bytes.
+• Snapshots the exact target configuration bytes when present.
+• Records when the target configuration did not previously exist.
+• Encodes only TemplateConfiguration.screenConfig; template description metadata is excluded.
+• Creates two unique temporary payload files in the target directory.
+• Reads back and verifies both prepared payloads.
+• Reconfirms the selected screen immediately before replacement.
+• Confirms the target still matches its snapshots.
+• Replaces the screen file.
+• Replaces or creates the target configuration sidecar.
+• Reads back and verifies both final files.
+• Removes remaining temporary files.
 
-Discovery occurs:
+The operation does not claim that the two replacements form a single atomic filesystem transaction.
 
-• When Settings appears.
-• When the shared table pull-to-refresh action runs.
+5. Rollback behaviour
 
-Discovery does not create templates, sidecars, migrations, or defaults. Template configurations are not decoded while populating the list.
+If replacement or final verification fails:
 
-6. Template table implementation
+• The exact original screen bytes are restored.
+• The exact original configuration bytes are restored when one existed.
+• A newly created configuration is removed when the target originally had no sidecar.
+• Restored bytes are verified.
 
-Added a dedicated templates mode to SettingsDocumentTableSection.
+A successfully restored failure reports replacementFailedAndRolledBack. A failed or incomplete restoration reports rollbackFailed separately, including both underlying errors.
 
-The table:
+6. Active-screen reload handling
 
-• Displays complete filenames including .template.
-• Uses stable URL path identity.
-• Uses the existing table font, row height, background, separator, spacing, scrolling, border, and item-count conventions.
-• Supports any normal number of template files.
-• Maintains an independent Plate scroll position.
+After successful replacement:
 
-Template rows are plain, noninteractive rows. They contain no:
+• The existing loadFunctionKeys(from:) path reloads the same target URL.
+• The selected filename remains unchanged.
+• No history-recording screen-selection method is called.
+• Navigation history is not modified.
+• No template application occurs automatically.
 
-• Button action
-• Tap gesture
-• Double-tap gesture
-• Clipboard operation
-• Swipe action
-• Apply operation
-• File mutation
+7. Legacy configuration synchronization
 
-7. Empty-list behavior
+After successful replacement, ContentView synchronizes:
 
-An empty template directory produces:
+• Per-document font size.
+• Per-document grid dimensions.
+• Main grid background opacity.
+• Font-size refresh token.
 
-0 items
+Existing loadFunctionKeys behaviour continues restoring background-image compatibility state. Legacy values are not modified before the filesystem replacement succeeds.
 
-The table remains valid and scrollable without errors or placeholder files.
+8. Build result
 
-No sample templates were created.
+ESP32BLE built successfully through Xcode.
 
-8. Existing behavior preserved
+Build errors: none.
 
-Screens retain:
+Both changed Swift files also passed Xcode’s live compiler diagnostics with zero issues.
 
-• Single-tap filename copying.
-• Double-tap screen changing.
-• Existing feedback messages.
-• Existing duplicate and delete actions.
+9. Tests performed
 
-Templates and template sidecars remain excluded from All Files.
+Isolated tests used temporary directories outside the user’s Documents directory. They verified:
 
-Plate does not enable screen repair, new-screen creation, title editing, or template export.
+• Replacement when the target already has a configuration.
+• Creation when the target previously had no configuration.
+• Template description is excluded from the target ScreenConfig.
+• Source template and source configuration remain unchanged.
+• Result retains the target identity.
+• Missing template configuration is rejected.
+• Excessive button count is rejected.
+• Incompatible grid capacity is rejected.
+• Changed active-screen selection is rejected.
 
-9. Build result
+No real screen or template documents were modified. No device testing was performed.
 
-ESP32BLE build:
+10. Remaining risks and limitations
 
-SUCCESS
+• A process termination between the two per-file replacements cannot be automatically recovered because this deliberately does not introduce a persistent transaction journal.
+• The rollback failure path is implemented and compiled, but a forced low-level filesystem rollback failure was not injected during testing.
+• Settings editor state and its save baseline are intentionally not refreshed in this phase.
+• Actual interaction and reload behaviour still require device testing after the UI connection is added.
 
-Build errors:
+11. Requirements for ESP-TEMPLATE-001C-B
 
-None
+The next phase must:
 
-10. Tests performed
+• Present the native confirmation interface.
+• Capture the current selected screen filename as the expected target identity.
+• Pass the selected template URL and expected target filename into applyTemplateToSelectedDocument(...).
+• Refresh the Settings editor contents and save baseline only after successful application.
+• Present the engine’s localized error without reporting success.
+• Leave state unchanged on Cancel.
+• Avoid using the Screens double-tap navigation path.
 
-Build verification:
-
-• Full ESP32BLE Xcode build completed successfully.
-• Both modified files compiled successfully.
-• Exhaustive list-mode switches compile with the new templates case.
-• Existing TemplateDocument helpers resolve correctly from Settings.
-
-Source-path verification:
-
-• Plate is reachable in normal and developer category cycles.
-• Template discovery runs on Settings appearance and pull-to-refresh.
-• Sidecars are excluded by the existing discovery helper.
-• Template rows have no interactive or modifying handlers.
-• No Main Screen or Button Editor source was changed.
-
-Actual device testing:
-
-Not performed. Visual appearance and touch behavior were verified through source inspection and compilation, not by launching on an iPhone or iPad.
-
-No persistent test templates were created.
-
-ESP-TEMPLATE-001B COMPLETE
+ESP-TEMPLATE-001C-A COMPLETE
