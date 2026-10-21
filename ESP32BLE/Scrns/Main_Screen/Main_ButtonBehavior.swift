@@ -334,9 +334,27 @@ extension MainScreen {
         let hexDigits = "0123456789abcdefABCDEF"
         return trimmedText.allSatisfy { hexDigits.contains($0) }
     }
-    func sendMainGridEntry(_ entry: FunctionKeyEntry) {
+    func sendMainGridEntry(_ entry: FunctionKeyEntry, defaultMIDIChannel: Int) {
 		
         guard mainGridButtonMode != .disabled else {
+            return
+        }
+
+        if isMIDIControlChangeCommandForGridEntry(entry) {
+            guard let command = midiControlChangeCommandForGridEntry(entry),
+                  mainGridButtonMode.sendsBluetooth,
+                  outputMode == .mac,
+                  macConnection.canSend else {
+                return
+            }
+
+            let channel = MIDIChannelSettings.resolvedChannel(
+                channelOverride: command.channelOverride,
+                defaultChannel: defaultMIDIChannel
+            )
+            _ = macConnection.sendAuthenticatedCommand(
+                "MIDI:CC:\(command.controller):\(command.value):\(channel)"
+            )
             return
         }
 
@@ -528,6 +546,25 @@ extension MainScreen {
                 .trimmingCharacters(in: .whitespacesAndNewlines)
                 .split(whereSeparator: \.isWhitespace)
                 .first == ".midi"
+        }
+    }
+
+    private func midiControlChangeCommandForGridEntry(
+        _ entry: FunctionKeyEntry
+    ) -> MIDIControlChangeCommand? {
+        guard entry.sendTexts.count == 1 else {
+            return nil
+        }
+
+        return MIDIControlChangeParser.parse(entry.sendTexts[0])
+    }
+
+    private func isMIDIControlChangeCommandForGridEntry(_ entry: FunctionKeyEntry) -> Bool {
+        entry.sendTexts.contains { sendText in
+            sendText
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+                .split(whereSeparator: \.isWhitespace)
+                .first == ".cc"
         }
     }
 

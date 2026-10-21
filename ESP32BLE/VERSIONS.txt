@@ -1,4 +1,8 @@
 
+261021 Wed 1008
+modulation working
+V64.11
+
 261021 Wed 0854
 multiple same notes - working
 V64.10

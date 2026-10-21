@@ -27,6 +27,7 @@
 		1D590E5E2F61206100E430E0 /* TestArea.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D590E542F61206100E430E0 /* TestArea.swift */; };
 		1D590E5F2F61206100E430E0 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 1D590E4A2F61206100E430E0 /* Assets.xcassets */; };
 		1D77C6DD3087545A004396AF /* MIDICommandParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D77C6DC3087545A004396AF /* MIDICommandParser.swift */; };
+		1D77C6DF308840BA004396AF /* MIDIControlChangeParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D77C6DE308840BA004396AF /* MIDIControlChangeParser.swift */; };
 		1D9E1CF42FC92DC600DB3621 /* Set_BtmCtls.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D9E1CE92FC92DC600DB3621 /* Set_BtmCtls.swift */; };
 		1D9E1CF52FC92DC600DB3621 /* KB_TopToolbar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D9E1CCB2FC92DC600DB3621 /* KB_TopToolbar.swift */; };
 		1D9E1CF62FC92DC600DB3621 /* Main_BG_img.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D9E1CE12FC92DC600DB3621 /* Main_BG_img.swift */; };
@@ -93,6 +94,7 @@
 		1D590E532F61206100E430E0 /* console m2.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "console m2.txt"; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.swift; };
 		1D590E542F61206100E430E0 /* TestArea.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestArea.swift; sourceTree = "<group>"; };
 		1D77C6DC3087545A004396AF /* MIDICommandParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MIDICommandParser.swift; sourceTree = "<group>"; };
+		1D77C6DE308840BA004396AF /* MIDIControlChangeParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MIDIControlChangeParser.swift; sourceTree = "<group>"; };
 		1D9A8748302D3885005B5E36 /* codex.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = codex.txt; sourceTree = "<group>"; };
 		1D9E1CC82FC92DC600DB3621 /* KB_GridView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KB_GridView.swift; sourceTree = "<group>"; };
 		1D9E1CC92FC92DC600DB3621 /* KB_InputField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KB_InputField.swift; sourceTree = "<group>"; };
@@ -224,6 +226,7 @@
 			isa = PBXGroup;
 			children = (
 				1D77C6DC3087545A004396AF /* MIDICommandParser.swift */,
+				1D77C6DE308840BA004396AF /* MIDIControlChangeParser.swift */,
 			);
 			path = MIDI;
 			sourceTree = "<group>";
@@ -428,6 +431,7 @@
 				1D590E5D2F61206100E430E0 /* PhraseButtonsSection.swift in Sources */,
 				1D2A22CB307E198C003CCFCF /* Main_GridActionMenuViews.swift in Sources */,
 				1D2A22C9307E0916003CCFCF /* Main_FilePreviewOverlay.swift in Sources */,
+				1D77C6DF308840BA004396AF /* MIDIControlChangeParser.swift in Sources */,
 				1DDFB8112F87C64500776ED6 /* debug.swift in Sources */,
 				1D590E5E2F61206100E430E0 /* TestArea.swift in Sources */,
 				1D9E1CF42FC92DC600DB3621 /* Set_BtmCtls.swift in Sources */,

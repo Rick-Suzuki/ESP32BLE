@@ -26,7 +26,14 @@ enum MIDIChannelSettings {
     static let validRange = 1...16
 
     static func resolvedChannel(for command: MIDICommand, defaultChannel: Int) -> UInt8 {
-        if let channelOverride = command.channelOverride {
+        resolvedChannel(
+            channelOverride: command.channelOverride,
+            defaultChannel: defaultChannel
+        )
+    }
+
+    static func resolvedChannel(channelOverride: UInt8?, defaultChannel: Int) -> UInt8 {
+        if let channelOverride {
             return channelOverride
         }
 

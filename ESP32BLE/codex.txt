@@ -1,249 +1,310 @@
-MIDI-012 IMPLEMENTATION REPORT
+MIDI-013 IMPLEMENTATION REPORT
 
-1. Exact file modified
+1. Exact files modified
+
+ESP32BLE:
+
+• ESP32BLE/Scrns/MIDI/MIDIControlChangeParser.swift — new
+• ESP32BLE/Scrns/MIDI/MIDICommandParser.swift
+• ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift
+• ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
+• ESP32BLE.xcodeproj/project.pbxproj — only to add the new parser to the app target
 
 Production ESPMacHelper:
 
-ESPMacHelper/MIDIOutputService.swift
+• ESPMacHelper/MacNetworkServer.swift
+• ESPMacHelper/MIDIOutputService.swift
 
-MacNetworkServer.swift was not modified.
+2. New CC parser
 
-ESP32BLE and the experimental Test Area Helper were not modified.
+Added MIDIControlChangeCommand containing:
 
-The existing Xcode UserInterfaceState.xcuserstate modification was already present and was not intentionally changed.
+• controller: UInt8
+• value: UInt8
+• channelOverride: UInt8?
 
+Added MIDIControlChangeParser.parse(_:).
 
-2. Old ownership representation
+Supported forms:
 
-The previous representation was:
+.cc <controller> <value>
 
-[NoteKey: Set<NoteOwner>]
+.cc <controller> <value> <channel>
 
-A Set could record that a client owned a note, but could not represent multiple simultaneous presses from that same client.
+The parser:
 
+• Uses the existing whitespace-splitting convention.
+• Accepts leading, trailing, and repeated whitespace.
+• Requires exact lowercase .cc.
+• Validates controller and value as 0...127.
+• Validates optional channel as 1...16.
+• Rejects missing, extra, negative, non-numeric, and out-of-range arguments.
+• Does not clamp values.
 
-3. New ownership representation
+Named and numeric MIDI note parsing was not changed.
 
-The new representation is:
+3. Channel resolution
+
+MIDIChannelSettings now provides a shared resolver accepting:
+
+channelOverride: UInt8?
+
+defaultChannel: Int
+
+Resolution order is:
+
+1. Valid explicit override.
+2. Valid device-local default.
+3. Fallback channel 1.
+
+The existing MIDICommand resolver delegates to this shared implementation, preserving current .midi behavior.
+
+4. Classification and malformed-command suppression
+
+Main_ButtonBehavior now includes:
+
+• A single-command CC adapter.
+• Exact .cc command classification.
+• Centralized parsing through MIDIControlChangeParser.
+• Early suppression of every .cc-classified entry.
+
+A valid .cc command is handled and returns before ordinary button processing.
+
+A malformed .cc command also returns immediately and cannot trigger:
+
+• Keyboard output.
+• BLE output.
+• Speech.
+• Navigation.
+• Widget processing.
+• File operations.
+• Network MIDI transmission.
+
+Entries containing .cc mixed with other commands are classified as CC-related but fail the exactly-one-command adapter, so the entire activation is safely suppressed.
+
+Existing .midi classification and suppression were not altered.
+
+5. Main Screen behavior
+
+CC uses the existing ordinary SwiftUI Button path.
+
+Each successful activation:
+
+• Checks that button execution is enabled.
+• Requires Mac network output mode.
+• Requires a send-capable authenticated Mac connection.
+• Resolves the effective channel.
+• Requests one authenticated CC transmission.
+• Returns without ordinary command processing.
+
+Button release does nothing.
+
+No changes were made to:
+
+• Main_GridSection.swift
+• MIDITouchCaptureView
+• MIDI touch-down or release handling
+• Touch cancellation
+• Button geometry or rendering
+
+Main_Screen passes its current AppStorage MIDI default channel through the existing sendLine closure. MainGridSection’s closure type was unchanged.
+
+6. Network message construction
+
+ESP32BLE constructs:
+
+MIDI:CC:<controller>:<value>:<channel>
+
+Examples:
+
+MIDI:CC:64:127:1
+
+MIDI:CC:64:0:1
+
+MIDI:CC:1:100:2
+
+Transmission uses the existing:
+
+MacConnectionManager.sendAuthenticatedCommand
+
+MacConnectionManager.swift was not modified.
+
+Authentication, newline framing, connection management, and transport remain unchanged.
+
+Repeated identical CC values are not deduplicated.
+
+7. Helper parsing and validation
+
+ParsedMIDICommand now includes:
+
+controlChange(
+controller: UInt8,
+
+value: UInt8,
+
+networkChannel: UInt8
+
+)
+
+MacNetworkServer accepts exactly five fields:
+
+MIDI:CC:<controller>:<value>:<channel>
+
+It independently validates:
+
+• Controller 0...127.
+• Value 0...127.
+• Network channel 1...16.
+• Exact uppercase wire tokens MIDI and CC.
+• Exact field count.
+
+Malformed MIDI-prefixed commands remain suppressed and cannot fall through into keyboard execution.
+
+Existing Note On and Note Off parsing remains unchanged.
+
+8. CoreMIDI submission
+
+MacNetworkServer performs the existing one-based to zero-based conversion:
+
+coreMIDIChannel = networkChannel - 1
+
+MIDIOutputService now provides:
+
+sendNetworkControlChange(
+controller:value:channel:
+
+)
+
+It constructs:
+
+MIDI1UPControlChange(
+0,
+
+channel,
+
+controller,
+
+value
+
+)
+
+The message is submitted through the existing private MIDIMessage_32 sendMessage path and existing virtual MIDI source.
+
+Successful submissions produce a standard diagnostic beginning with:
+
+🐞 [MIDI] CC:
+
+No new endpoint or output service was introduced.
+
+9. MIDI-012 ownership
+
+MIDI-012 ownership remains unchanged:
 
 [NoteKey: [NoteOwner: Int]]
 
-NoteKey remains:
+CC submission does not:
 
-note
-CoreMIDI channel
+• Create NoteKey values.
+• Modify activeNoteOwnerCounts.
+• Increment or decrement note counts.
+• Participate in Note Off.
+• Participate in disconnect cleanup.
+• Affect menu-test ownership.
 
-NoteOwner remains:
+Each CC is submitted once and forgotten.
 
-menuTest
-networkClient(clientID)
+10. Button content compatibility
 
-Each owner now has an independent positive active-press count.
+No rendering or editor code changed.
 
+Existing CC entries remain compatible with:
 
-4. Note On handling
+• Text.
+• SF Symbols.
+• SF Symbols with subtitles.
+• Emoji.
+• Colors.
+• Existing display modes.
 
-startNote now:
+No automatic CC labels were introduced.
 
-Submits every accepted Note On through the existing sendMessage function.
-Preserves the supplied velocity and channel.
-Increments the matching owner’s count only after successful CoreMIDI submission.
-No longer suppresses Note On because the note or owner is already active.
+11. Validation performed
 
-No preliminary Note Off is generated.
+Source-level checks covered:
 
+• Valid controller boundaries 0 and 127.
+• Valid value boundaries 0 and 127.
+• Channels 1 and 16.
+• Whitespace handling.
+• Exact lowercase recognition.
+• Invalid ranges.
+• Missing and extra fields.
+• Non-numeric and negative parameters.
+• Default-channel resolution.
+• Override precedence.
+• Invalid stored-default fallback.
+• Mixed-command suppression.
+• Mac-only routing.
+• One send request per activation.
+• No release action.
+• Correct one-based to zero-based Helper conversion.
+• CC isolation from note ownership.
 
-5. Note Off handling
+Xcode live diagnostics reported no remaining ESP32BLE errors.
 
-stopNote now:
+Both repositories passed git diff --check.
 
-Rejects unmatched ownership safely.
-Reads only the requesting owner’s count.
-Decrements the count by exactly one.
-Removes the owner when its count reaches zero.
-Sends no CoreMIDI Note Off while another count remains.
-Sends one CoreMIDI Note Off when the complete NoteKey becomes unowned.
-Removes the empty NoteKey only after successful Note Off submission.
+No dedicated automated test target was available or added.
 
-Counts cannot become negative.
+No physical iPad, Helper network, CoreMIDI destination, or Logic Pro testing was performed.
 
+12. ESP32BLE build result
 
-6. Same-client overlapping behavior
+Successful.
 
-For one client pressing the same note/channel twice:
+Xcode reported:
 
-First Note On:
+The project built successfully.
 
-Count becomes 1.
-CoreMIDI Note On is submitted.
+No build errors were reported.
 
-Second Note On:
+13. Production ESPMacHelper build result
 
-Count becomes 2.
-Another CoreMIDI Note On is submitted.
+Successful.
 
-First release:
+The final production Helper build completed with exit code 0.
 
-Count becomes 1.
-No CoreMIDI Note Off is submitted.
+A temporary command-line build override disabled Swift macro sandboxing because the execution environment initially blocked Xcode’s Observation macro plug-in. This changed no project setting or source file.
 
-Final release:
+14. Warnings and limitations
 
-Count reaches zero.
-One CoreMIDI Note Off is submitted.
-The NoteKey is removed.
+The Helper build reported one existing warning in MIDIOutputService.swift:
 
-The result is the same regardless of which physical button releases first because both presses intentionally share the same client/note/channel counter.
+Comparing the non-optional MIDIEventListAdd result to nil always returns true.
 
+That warning is in the pre-existing sendMessage implementation and was not introduced or changed by MIDI-013.
 
-7. Multi-client behavior
+The command-line Xcode process also reported environmental CoreSimulator and file-type detection warnings. They did not prevent the macOS Helper build.
 
-Different clients have separate NoteOwner keys.
+Controller state intentionally persists at the receiving synthesizer. CC64 is not automatically reset on release, disconnect, or screen changes.
 
-For two clients holding the same NoteKey:
+Clients sending CC to the same MIDI channel share the receiver’s controller state.
 
-Both Note On messages are forwarded to CoreMIDI.
-Each client receives its own count.
-One client’s Note Off changes only that client’s count.
-No final Note Off is sent while the other client still owns the note.
-The final owner’s release sends CoreMIDI Note Off.
+15. Unrelated files
 
+The following pre-existing working-tree changes were preserved and not edited:
 
-8. Multichannel compatibility
+• ESP32BLE/codex.txt
+• ESPMacHelper.xcodeproj/project.xcworkspace/xcuserdata/rick.xcuserdatad/UserInterfaceState.xcuserstate
 
-NoteKey continues to include the CoreMIDI channel.
+No text logs, VERSIONS.txt files, editors, Settings UI, widgets, BLE code, keyboard code, authentication code, or experimental Test Area Helper files were modified.
 
-The same note on channels 1 and 2 remains two independent NoteKeys.
+16. Deviations
 
-Different notes on the same channel also remain independent.
+One project-file change was necessary:
 
-Network-channel conversion remains in MacNetworkServer and was not changed.
+ESP32BLE.xcodeproj/project.pbxproj
 
+The MIDI source folder uses explicit Xcode file membership, so the new MIDIControlChangeParser.swift file was not compiled until its file reference and Sources build-phase entry were added.
 
-9. Disconnect cleanup
-
-releaseNetworkNotes(for:) now locates every NoteKey with ownership counts for the disconnecting client.
-
-releaseAllPresses removes that client’s entire count for each affected NoteKey.
-
-If other owners remain:
-
-Their counts are preserved.
-No CoreMIDI Note Off is sent.
-
-If the disconnected client was the final owner:
-
-One CoreMIDI Note Off is sent.
-The empty NoteKey is removed.
-
-No loop emits multiple Note Off events for multiple presses belonging to the same disconnected client.
-
-
-10. Menu-test compatibility
-
-menuTest remains a distinct NoteOwner.
-
-The menu-test Note On is always forwarded and receives its own count.
-
-If a network client holds the same NoteKey:
-
-Releasing the menu test removes only the menu-test ownership.
-No Note Off is sent while the network owner remains.
-
-The existing menu-test timer and controls were not changed.
-
-
-11. Server shutdown
-
-releaseAllActiveNotes continues to:
-
-Send one Note Off for every active NoteKey.
-Clear all ownership state.
-Dispose of the existing CoreMIDI endpoint through the unchanged shutdown path.
-
-No second CoreMIDI output mechanism was introduced.
-
-
-12. Submission failure consistency
-
-A Note On count is added only after sendMessage succeeds.
-
-For the final Note Off, ownership is removed only after sendMessage succeeds.
-
-If final Note Off submission fails, the original ownership remains available for later cleanup rather than being silently discarded.
-
-Nonfinal releases require no CoreMIDI submission and commit their reduced count immediately.
-
-
-13. Focused validation
-
-Source-level tracing covered:
-
-One note and one owner.
-Two overlapping presses from the same client.
-Both same-client release orders.
-Same note/channel from two clients.
-Same note on different channels.
-Different notes on the same channel.
-Disconnecting one of multiple owners.
-Disconnecting the final owner.
-Menu-test and network-client overlap.
-Unmatched Note Off.
-Rapid balanced Note On/Note Off sequences.
-Server shutdown.
-CoreMIDI submission failure ordering.
-
-Confirmed:
-
-Every successful Note On reaches sendMessage.
-No stored count is zero or negative.
-One owner cannot decrement another owner.
-One channel cannot affect another channel.
-Disconnect cleanup removes all counts for the disconnected client.
-git diff --check passed.
-
-No physical iPad, network, Logic Pro, or synthesizer testing was performed.
-
-
-14. Build result
-
-Production ESPMacHelper built successfully.
-
-Exit status: 0.
-
-One existing warning remains in MIDIOutputService.swift:
-
-The MIDIEventListAdd result is non-optional, so comparing it with nil always returns true.
-
-This warning predates MIDI-012 and was not changed.
-
-
-15. Known MIDI limitation
-
-Reference counting guarantees:
-
-Every successful press forwards Note On.
-Overlapping presses are counted.
-The first release does not prematurely send final Note Off.
-The final release sends Note Off.
-
-MIDI Note Off still contains only note and channel. It cannot identify an individual physical button or synthesized voice.
-
-Receiving instruments may retrigger, stack, replace, or release overlapping identical notes differently. This implementation does not attempt synthesizer-specific voice management.
-
-
-16. Scope confirmation
-
-Network parsing and wire format were unchanged.
-
-Authentication, pairing, Bonjour, and connection handling were unchanged.
-
-CoreMIDI endpoint creation and message encoding were unchanged.
-
-Keyboard, accessibility, menu bar, and status-window behavior were unchanged.
-
-ESP32BLE source files were not modified during this phase.
-
-No project files, text files, logs, or version notes were modified.
-
-No commits, tags, or backups were created.
+No other deviations from the agreed design were made.

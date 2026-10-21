@@ -1416,7 +1416,9 @@ Tapping a row inserts the key code at the cursor.
             defaultMIDIChannel: midiDefaultChannel,
             onMIDITouchDown: sendMIDINoteOnFromTouch,
             onMIDITouchUp: sendMIDINoteOffFromTouch,
-            sendLine: sendMainGridEntry,
+            sendLine: { entry in
+                sendMainGridEntry(entry, defaultMIDIChannel: midiDefaultChannel)
+            },
             onSimpleOrdinarySoundSingleTap: handleSimpleOrdinarySoundSingleTap,
             onSimpleOrdinarySoundDoubleTap: handleSimpleOrdinarySoundDoubleTap,
             onBeginSlotEditing: beginSlotEditing,
