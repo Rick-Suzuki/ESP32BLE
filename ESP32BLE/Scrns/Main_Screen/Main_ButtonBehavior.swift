@@ -14,6 +14,11 @@ import UIKit
 import Combine
 import PDFKit
 
+struct MainGridAutomaticMIDILabel {
+    let noteName: String
+    let channel: UInt8
+}
+
 private enum MainGridSoundPreparationError: Error {
     case preparationFailed
 }
@@ -192,9 +197,9 @@ extension MainScreen {
         ]
     }
 
-    func buttonTitle(for entry: FunctionKeyEntry) -> String {
-        let commandDefaultLabel = commandDefaultLabel(for: entry)
-        let alternateDisplayText = effectiveAlternateDisplayText(for: entry)
+    func buttonTitle(for entry: FunctionKeyEntry, defaultMIDIChannel: Int) -> String {
+        let commandDefaultLabel = commandDefaultLabel(for: entry, defaultMIDIChannel: defaultMIDIChannel)
+        let alternateDisplayText = effectiveAlternateDisplayText(for: entry, defaultMIDIChannel: defaultMIDIChannel)
 
         guard entry.displayUsesAlternateText || commandDefaultLabel != nil else {
             return displayText(from: rawLineWithoutHiddenMetadata(entry))
@@ -258,16 +263,16 @@ extension MainScreen {
         return rawRightText
     }
 
-    private func effectiveAlternateDisplayText(for entry: FunctionKeyEntry) -> String {
+    private func effectiveAlternateDisplayText(for entry: FunctionKeyEntry, defaultMIDIChannel: Int) -> String {
         let alternateDisplayText = resolvedAlternateDisplayText(for: entry)
         guard alternateDisplayText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             return alternateDisplayText
         }
 
-        return commandDefaultLabel(for: entry) ?? alternateDisplayText
+        return commandDefaultLabel(for: entry, defaultMIDIChannel: defaultMIDIChannel) ?? alternateDisplayText
     }
 
-    private func commandDefaultLabel(for entry: FunctionKeyEntry) -> String? {
+    private func commandDefaultLabel(for entry: FunctionKeyEntry, defaultMIDIChannel: Int) -> String? {
         if let navigationLabel = navigationCommandDefaultLabel(for: entry.primaryDisplayText) {
             return navigationLabel
         }
@@ -279,7 +284,11 @@ extension MainScreen {
         }
 
         if let midiCommand = MIDICommandParser.parse(sendText) {
-            return midiCommand.noteDisplayName
+            let effectiveChannel = MIDIChannelSettings.resolvedChannel(
+                for: midiCommand,
+                defaultChannel: defaultMIDIChannel
+            )
+            return "\(midiCommand.noteDisplayName)\nCh \(effectiveChannel)"
         }
 
         let displayText = String(sendText.dropFirst())
@@ -323,6 +332,29 @@ extension MainScreen {
         }
 
         return nil
+    }
+
+    private func automaticMIDILabel(
+        for entry: FunctionKeyEntry,
+        defaultMIDIChannel: Int
+    ) -> MainGridAutomaticMIDILabel? {
+        guard resolvedAlternateDisplayText(for: entry)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .isEmpty,
+              navigationCommandDefaultLabel(for: entry.primaryDisplayText) == nil,
+              entry.sendTexts.count == 1,
+              let sendText = entry.sendTexts.first,
+              let midiCommand = MIDICommandParser.parse(sendText) else {
+            return nil
+        }
+
+        return MainGridAutomaticMIDILabel(
+            noteName: midiCommand.noteDisplayName,
+            channel: MIDIChannelSettings.resolvedChannel(
+                for: midiCommand,
+                defaultChannel: defaultMIDIChannel
+            )
+        )
     }
 
     func isHexColorPrefix(_ text: String) -> Bool {
@@ -2221,11 +2253,13 @@ extension MainScreen {
         index: Int,
         buttonHeight: CGFloat,
         buttonSize: CGSize,
-        backgroundOpacity: Double
+        backgroundOpacity: Double,
+        defaultMIDIChannel: Int
     ) -> some View {
         let leftTitle = displayText(from: entry.primaryDisplayText)
-        let rightTitle = displayText(from: effectiveAlternateDisplayText(for: entry))
-        let title = buttonTitle(for: entry)
+        let rightTitle = displayText(from: effectiveAlternateDisplayText(for: entry, defaultMIDIChannel: defaultMIDIChannel))
+        let title = buttonTitle(for: entry, defaultMIDIChannel: defaultMIDIChannel)
+        let automaticMIDILabel = automaticMIDILabel(for: entry, defaultMIDIChannel: defaultMIDIChannel)
 
         return MainScreenButtonLabelView(
             entry: entry,
@@ -2239,6 +2273,7 @@ extension MainScreen {
             widgetHeaderContent: widgetHeaderContent(for: entry),
             rightSymbolDisplay: parsedSFSymbolDisplay(for: entry),
             rightEmojiDisplay: parsedEmojiDisplay(for: entry),
+            automaticMIDILabel: automaticMIDILabel,
             boxFontSize: boxFontSize,
             buttonHeight: buttonHeight,
             buttonSize: buttonSize,

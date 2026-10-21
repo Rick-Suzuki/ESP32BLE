@@ -1,310 +1,122 @@
-MIDI-013 IMPLEMENTATION REPORT
+ESP-BUTTON-001A — FINAL REPORT
 
-1. Exact files modified
+1. Exact source files modified
 
-ESP32BLE:
+ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift
 
-• ESP32BLE/Scrns/MIDI/MIDIControlChangeParser.swift — new
-• ESP32BLE/Scrns/MIDI/MIDICommandParser.swift
-• ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift
-• ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
-• ESP32BLE.xcodeproj/project.pbxproj — only to add the new parser to the app target
+ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
 
-Production ESPMacHelper:
+2. Functions changed
 
-• ESPMacHelper/MacNetworkServer.swift
-• ESPMacHelper/MIDIOutputService.swift
+Main_ButtonBehavior.swift:
 
-2. New CC parser
+buttonTitle(for:defaultMIDIChannel:)
 
-Added MIDIControlChangeCommand containing:
+effectiveAlternateDisplayText(for:defaultMIDIChannel:)
 
-• controller: UInt8
-• value: UInt8
-• channelOverride: UInt8?
+commandDefaultLabel(for:defaultMIDIChannel:)
 
-Added MIDIControlChangeParser.parse(_:).
+mainGridButtonLabel(...defaultMIDIChannel:)
 
-Supported forms:
+Main_Screen.swift:
 
-.cc <controller> <value>
+The existing mainGridButtonLabel call now passes the observed midiDefaultChannel value.
 
-.cc <controller> <value> <channel>
+3. Effective channel resolution
 
-The parser:
+The automatic label parses the existing MIDICommand and calls:
 
-• Uses the existing whitespace-splitting convention.
-• Accepts leading, trailing, and repeated whitespace.
-• Requires exact lowercase .cc.
-• Validates controller and value as 0...127.
-• Validates optional channel as 1...16.
-• Rejects missing, extra, negative, non-numeric, and out-of-range arguments.
-• Does not clamp values.
+MIDIChannelSettings.resolvedChannel(
+for: midiCommand,
 
-Named and numeric MIDI note parsing was not changed.
-
-3. Channel resolution
-
-MIDIChannelSettings now provides a shared resolver accepting:
-
-channelOverride: UInt8?
-
-defaultChannel: Int
-
-Resolution order is:
-
-1. Valid explicit override.
-2. Valid device-local default.
-3. Fallback channel 1.
-
-The existing MIDICommand resolver delegates to this shared implementation, preserving current .midi behavior.
-
-4. Classification and malformed-command suppression
-
-Main_ButtonBehavior now includes:
-
-• A single-command CC adapter.
-• Exact .cc command classification.
-• Centralized parsing through MIDIControlChangeParser.
-• Early suppression of every .cc-classified entry.
-
-A valid .cc command is handled and returns before ordinary button processing.
-
-A malformed .cc command also returns immediately and cannot trigger:
-
-• Keyboard output.
-• BLE output.
-• Speech.
-• Navigation.
-• Widget processing.
-• File operations.
-• Network MIDI transmission.
-
-Entries containing .cc mixed with other commands are classified as CC-related but fail the exactly-one-command adapter, so the entire activation is safely suppressed.
-
-Existing .midi classification and suppression were not altered.
-
-5. Main Screen behavior
-
-CC uses the existing ordinary SwiftUI Button path.
-
-Each successful activation:
-
-• Checks that button execution is enabled.
-• Requires Mac network output mode.
-• Requires a send-capable authenticated Mac connection.
-• Resolves the effective channel.
-• Requests one authenticated CC transmission.
-• Returns without ordinary command processing.
-
-Button release does nothing.
-
-No changes were made to:
-
-• Main_GridSection.swift
-• MIDITouchCaptureView
-• MIDI touch-down or release handling
-• Touch cancellation
-• Button geometry or rendering
-
-Main_Screen passes its current AppStorage MIDI default channel through the existing sendLine closure. MainGridSection’s closure type was unchanged.
-
-6. Network message construction
-
-ESP32BLE constructs:
-
-MIDI:CC:<controller>:<value>:<channel>
-
-Examples:
-
-MIDI:CC:64:127:1
-
-MIDI:CC:64:0:1
-
-MIDI:CC:1:100:2
-
-Transmission uses the existing:
-
-MacConnectionManager.sendAuthenticatedCommand
-
-MacConnectionManager.swift was not modified.
-
-Authentication, newline framing, connection management, and transport remain unchanged.
-
-Repeated identical CC values are not deduplicated.
-
-7. Helper parsing and validation
-
-ParsedMIDICommand now includes:
-
-controlChange(
-controller: UInt8,
-
-value: UInt8,
-
-networkChannel: UInt8
+defaultChannel: defaultMIDIChannel
 
 )
 
-MacNetworkServer accepts exactly five fields:
+This preserves:
 
-MIDI:CC:<controller>:<value>:<channel>
+Explicit command override first.
+Valid device default second.
+Safe channel 1 fallback last.
 
-It independently validates:
+The generated label is:
 
-• Controller 0...127.
-• Value 0...127.
-• Network channel 1...16.
-• Exact uppercase wire tokens MIDI and CC.
-• Exact field count.
+<noteDisplayName>
 
-Malformed MIDI-prefixed commands remain suppressed and cannot fall through into keyboard execution.
+Ch <effective channel>
 
-Existing Note On and Note Off parsing remains unchanged.
+4. Settings updates
 
-8. CoreMIDI submission
+MainScreen already observes MIDIChannelSettings.storageKey through @AppStorage.
 
-MacNetworkServer performs the existing one-based to zero-based conversion:
+That observed value is now passed into the label-generation path. Changing the default channel causes SwiftUI to recalculate labels that do not have explicit overrides.
 
-coreMIDIChannel = networkChannel - 1
+Explicit command channels remain unchanged by Settings changes.
 
-MIDIOutputService now provides:
+5. Label precedence
 
-sendNetworkControlChange(
-controller:value:channel:
+Existing precedence remains intact.
 
-)
+Custom right-hand text, SF Symbols, SF Symbols with subtitles, and emoji continue to suppress the automatic fallback.
 
-It constructs:
+Whitespace-only and color-only right-hand content remain eligible for the fallback.
 
-MIDI1UPControlChange(
-0,
+The existing single-command requirement remains in place.
 
-channel,
+Malformed MIDI commands and multiple-command buttons do not receive an automatic MIDI label.
 
-controller,
+6. Focused verification
 
-value
+Verified parser, note formatting, and channel resolution:
 
-)
+.midi 60, default 1 -> C3 / Ch 1
 
-The message is submitted through the existing private MIDIMessage_32 sendMessage path and existing virtual MIDI source.
+.midi 60, default 4 -> C3 / Ch 4
 
-Successful submissions produce a standard diagnostic beginning with:
+.midi 67 127 2, default 4 -> G3 / Ch 2
 
-🐞 [MIDI] CC:
+.midi Bb3, default 4 -> A#3 / Ch 4
 
-No new endpoint or output service was introduced.
+.midi 60 127 16, default 1 -> C3 / Ch 16
 
-9. MIDI-012 ownership
+Invalid .midi 128 remained rejected.
 
-MIDI-012 ownership remains unchanged:
+Source inspection confirmed that existing display-mode and custom-content fallback logic was retained.
 
-[NoteKey: [NoteOwner: Int]]
+7. Build result
 
-CC submission does not:
-
-• Create NoteKey values.
-• Modify activeNoteOwnerCounts.
-• Increment or decrement note counts.
-• Participate in Note Off.
-• Participate in disconnect cleanup.
-• Affect menu-test ownership.
-
-Each CC is submitted once and forgotten.
-
-10. Button content compatibility
-
-No rendering or editor code changed.
-
-Existing CC entries remain compatible with:
-
-• Text.
-• SF Symbols.
-• SF Symbols with subtitles.
-• Emoji.
-• Colors.
-• Existing display modes.
-
-No automatic CC labels were introduced.
-
-11. Validation performed
-
-Source-level checks covered:
-
-• Valid controller boundaries 0 and 127.
-• Valid value boundaries 0 and 127.
-• Channels 1 and 16.
-• Whitespace handling.
-• Exact lowercase recognition.
-• Invalid ranges.
-• Missing and extra fields.
-• Non-numeric and negative parameters.
-• Default-channel resolution.
-• Override precedence.
-• Invalid stored-default fallback.
-• Mixed-command suppression.
-• Mac-only routing.
-• One send request per activation.
-• No release action.
-• Correct one-based to zero-based Helper conversion.
-• CC isolation from note ownership.
-
-Xcode live diagnostics reported no remaining ESP32BLE errors.
-
-Both repositories passed git diff --check.
-
-No dedicated automated test target was available or added.
-
-No physical iPad, Helper network, CoreMIDI destination, or Logic Pro testing was performed.
-
-12. ESP32BLE build result
-
-Successful.
-
-Xcode reported:
-
-The project built successfully.
+Final ESP32BLE build: SUCCESS
 
 No build errors were reported.
 
-13. Production ESPMacHelper build result
+The first build exposed an incorrect resolver argument type. The call was corrected to use the existing MIDICommand-based resolver, and the subsequent full build succeeded.
 
-Successful.
+8. Warnings and limitations
 
-The final production Helper build completed with exit code 0.
+No warnings were reported by the successful build.
 
-A temporary command-line build override disabled Swift macro sandboxing because the execution environment initially blocked Xcode’s Observation macro plug-in. This changed no project setting or source file.
+Xcode’s quick per-file diagnostic requests timed out without returning results. The subsequent complete project build succeeded.
 
-14. Warnings and limitations
+No physical-device or simulator UI testing was performed. Visual confirmation of RIGHT, LAST TEXT, and BOTH modes remains for device testing.
 
-The Helper build reported one existing warning in MIDIOutputService.swift:
+MIDI Note On/Off behavior was not changed.
 
-Comparing the non-optional MIDIEventListAdd result to nil always returns true.
+9. Scope confirmation
 
-That warning is in the pre-existing sendMessage implementation and was not introduced or changed by MIDI-013.
+CC automatic labels were not implemented.
 
-The command-line Xcode process also reported environmental CoreSimulator and file-type detection warnings. They did not prevent the macOS Helper build.
+Default button colors were not implemented.
 
-Controller state intentionally persists at the receiving synthesizer. CC64 is not automatically reset on release, disconnect, or screen changes.
+MIDICommandParser.swift was not modified.
 
-Clients sending CC to the same MIDI channel share the receiver’s controller state.
+No editor, touch-handling, network, project-file, ESPMacHelper, Test Area, .txt, log, or version file was modified by this implementation.
 
-15. Unrelated files
+Pre-existing working-tree changes were preserved in:
 
-The following pre-existing working-tree changes were preserved and not edited:
+ESP32BLE/Scrns/Main_Screen/Main_GridSection.swift
 
-• ESP32BLE/codex.txt
-• ESPMacHelper.xcodeproj/project.xcworkspace/xcuserdata/rick.xcuserdatad/UserInterfaceState.xcuserstate
+ESP32BLE/VERSIONS.txt
 
-No text logs, VERSIONS.txt files, editors, Settings UI, widgets, BLE code, keyboard code, authentication code, or experimental Test Area Helper files were modified.
+ESP32BLE/codex.txt
 
-16. Deviations
-
-One project-file change was necessary:
-
-ESP32BLE.xcodeproj/project.pbxproj
-
-The MIDI source folder uses explicit Xcode file membership, so the new MIDIControlChangeParser.swift file was not compiled until its file reference and Sources build-phase entry were added.
-
-No other deviations from the agreed design were made.
+No commits, tags, or backups were created.

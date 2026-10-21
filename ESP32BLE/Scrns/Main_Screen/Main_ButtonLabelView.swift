@@ -30,6 +30,7 @@ struct MainScreenButtonLabelView: View {
     let widgetHeaderContent: MainGridWidgetHeaderContent
     let rightSymbolDisplay: (name: String, subtitle: String?)?
     let rightEmojiDisplay: (emoji: String, subtitle: String?)?
+    let automaticMIDILabel: MainGridAutomaticMIDILabel?
     let boxFontSize: Double
     let buttonHeight: CGFloat
     let buttonSize: CGSize
@@ -177,6 +178,18 @@ struct MainScreenButtonLabelView: View {
                 VStack(spacing: 6) {
                     textLabel(title: leftTitle)
                     emojiContent(emoji: rightEmojiDisplay.emoji, subtitle: rightEmojiDisplay.subtitle)
+                }
+            }
+        } else if let automaticMIDILabel {
+            switch displayMode {
+            case .left:
+                textLabel(title: leftTitle)
+            case .right, .last:
+                automaticMIDILabelContent(automaticMIDILabel)
+            case .both:
+                VStack(spacing: midiLabelGroupSpacing) {
+                    textLabel(title: leftTitle)
+                    automaticMIDILabelContent(automaticMIDILabel)
                 }
             }
         } else {
@@ -801,6 +814,35 @@ struct MainScreenButtonLabelView: View {
             .truncationMode(.tail)
             .allowsTightening(true)
             .foregroundStyle(buttonTextColor)
+    }
+
+    private var midiChannelFontSize: CGFloat {
+        CGFloat(boxFontSize) * 0.6
+    }
+
+    private var midiLabelLineSpacing: CGFloat {
+        max(1, CGFloat(boxFontSize) * 0.08)
+    }
+
+    private var midiLabelGroupSpacing: CGFloat {
+        max(2, CGFloat(boxFontSize) * 0.12)
+    }
+
+    private func automaticMIDILabelContent(_ label: MainGridAutomaticMIDILabel) -> some View {
+        VStack(spacing: midiLabelLineSpacing) {
+            Text(label.noteName)
+                .font(.system(size: boxFontSize, weight: .bold))
+
+            Text("Ch \(label.channel)")
+                .font(.system(size: midiChannelFontSize, weight: .semibold))
+        }
+        .id(boxFontSize)
+        .multilineTextAlignment(.center)
+        .lineLimit(1)
+        .truncationMode(.tail)
+        .allowsTightening(true)
+        .foregroundStyle(buttonTextColor)
+        .frame(maxWidth: .infinity, alignment: .center)
     }
 
     private func symbolContent(name: String, subtitle: String?) -> some View {

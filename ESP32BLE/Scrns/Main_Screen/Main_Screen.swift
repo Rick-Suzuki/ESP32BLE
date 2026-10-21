@@ -1428,7 +1428,8 @@ Tapping a row inserts the key code at the cursor.
                     index: index,
                     buttonHeight: buttonHeight,
                     buttonSize: buttonSize,
-                    backgroundOpacity: mainGridBackgroundOpacity
+                    backgroundOpacity: mainGridBackgroundOpacity,
+                    defaultMIDIChannel: midiDefaultChannel
                 )
             },
             dragGesture: { entry, index, gridDimensions in

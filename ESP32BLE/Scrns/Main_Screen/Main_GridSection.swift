@@ -432,17 +432,15 @@ struct MainScreenGridSection<ButtonLabel: View>: View {
             buttonLabel(entry, index, buttonHeight, buttonSize)
                 .contentShape(Rectangle())
         } else if !isGridEditModeEnabled, let midiCommand = midiCommand(entry) {
-            ZStack {
+            MIDINoteButton(
+                command: midiCommand,
+                defaultMIDIChannel: defaultMIDIChannel,
+                isEnabled: scenePhase == .active,
+                cornerRadius: mainGridButtonCornerRadius,
+                onDown: onMIDITouchDown,
+                onUp: onMIDITouchUp
+            ) {
                 buttonLabel(entry, index, buttonHeight, buttonSize)
-                    .allowsHitTesting(false)
-
-                MIDITouchView(
-                    command: midiCommand,
-                    defaultMIDIChannel: defaultMIDIChannel,
-                    isEnabled: scenePhase == .active,
-                    onDown: onMIDITouchDown,
-                    onUp: onMIDITouchUp
-                )
             }
         } else {
             editingGestures(
@@ -514,12 +512,71 @@ struct MainScreenGridSection<ButtonLabel: View>: View {
     }
 }
 
+private struct MIDINoteButton<Label: View>: View {
+    private let pressedAccentColor = Color(
+        red: 232.0 / 255.0,
+        green: 185.0 / 255.0,
+        blue: 59.0 / 255.0
+    )
+    private let pressedFillOpacity = 0.18
+    private let pressedBackingStrokeOpacity = 0.6
+    private let pressedBackingStrokeWidth: CGFloat = 4
+    private let pressedAccentStrokeWidth: CGFloat = 2
+
+    let command: MIDICommand
+    let defaultMIDIChannel: Int
+    let isEnabled: Bool
+    let cornerRadius: CGFloat
+    let onDown: (MIDINoteIdentity, UInt8) -> Void
+    let onUp: (MIDINoteIdentity) -> Void
+    @ViewBuilder let label: () -> Label
+
+    @State private var isPressed = false
+
+    var body: some View {
+        ZStack {
+            label()
+                .allowsHitTesting(false)
+
+            if isPressed {
+                RoundedRectangle(cornerRadius: cornerRadius)
+                    .fill(pressedAccentColor.opacity(pressedFillOpacity))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: cornerRadius)
+                            .strokeBorder(
+                                Color.black.opacity(pressedBackingStrokeOpacity),
+                                lineWidth: pressedBackingStrokeWidth
+                            )
+                    }
+                    .overlay {
+                        RoundedRectangle(cornerRadius: cornerRadius)
+                            .strokeBorder(
+                                pressedAccentColor,
+                                lineWidth: pressedAccentStrokeWidth
+                            )
+                    }
+                    .allowsHitTesting(false)
+            }
+
+            MIDITouchView(
+                command: command,
+                defaultMIDIChannel: defaultMIDIChannel,
+                isEnabled: isEnabled,
+                onDown: onDown,
+                onUp: onUp,
+                onPressedChange: { isPressed = $0 }
+            )
+        }
+    }
+}
+
 private struct MIDITouchView: UIViewRepresentable {
     let command: MIDICommand
     let defaultMIDIChannel: Int
     let isEnabled: Bool
     let onDown: (MIDINoteIdentity, UInt8) -> Void
     let onUp: (MIDINoteIdentity) -> Void
+    let onPressedChange: (Bool) -> Void
 
     func makeUIView(context: Context) -> MIDITouchCaptureView {
         MIDITouchCaptureView()
@@ -531,7 +588,8 @@ private struct MIDITouchView: UIViewRepresentable {
             defaultMIDIChannel: defaultMIDIChannel,
             isEnabled: isEnabled,
             onDown: onDown,
-            onUp: onUp
+            onUp: onUp,
+            onPressedChange: onPressedChange
         )
     }
 
@@ -545,6 +603,7 @@ private final class MIDITouchCaptureView: UIView {
     private var defaultMIDIChannel = MIDIChannelSettings.defaultChannel
     private var onDown: ((MIDINoteIdentity, UInt8) -> Void)?
     private var onUp: ((MIDINoteIdentity) -> Void)?
+    private var onPressedChange: ((Bool) -> Void)?
     private var activeTouch: UITouch?
     private var activeIdentity: MIDINoteIdentity?
 
@@ -563,7 +622,8 @@ private final class MIDITouchCaptureView: UIView {
         defaultMIDIChannel: Int,
         isEnabled: Bool,
         onDown: @escaping (MIDINoteIdentity, UInt8) -> Void,
-        onUp: @escaping (MIDINoteIdentity) -> Void
+        onUp: @escaping (MIDINoteIdentity) -> Void,
+        onPressedChange: @escaping (Bool) -> Void
     ) {
         if activeIdentity != nil && (self.command?.note != command.note || !isEnabled) {
             cancelActiveTouch()
@@ -573,6 +633,7 @@ private final class MIDITouchCaptureView: UIView {
         self.defaultMIDIChannel = defaultMIDIChannel
         self.onDown = onDown
         self.onUp = onUp
+        self.onPressedChange = onPressedChange
         isUserInteractionEnabled = isEnabled
     }
 
@@ -594,6 +655,7 @@ private final class MIDITouchCaptureView: UIView {
         activeIdentity = identity
         print("🐞 [MIDI-TOUCH] DOWN note=\(identity.note) channel=\(identity.channel)")
         onDown?(identity, command.velocity)
+        onPressedChange?(true)
     }
 
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -622,6 +684,7 @@ private final class MIDITouchCaptureView: UIView {
         onUp?(activeIdentity)
         self.activeTouch = nil
         self.activeIdentity = nil
+        onPressedChange?(false)
     }
 
     override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -642,6 +705,7 @@ private final class MIDITouchCaptureView: UIView {
         onUp?(activeIdentity)
         activeTouch = nil
         self.activeIdentity = nil
+        onPressedChange?(false)
     }
 }
 
