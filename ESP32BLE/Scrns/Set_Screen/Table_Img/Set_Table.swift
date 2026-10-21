@@ -390,6 +390,7 @@ struct SettingsDocumentTableSection: View {
             handleFileSelection(textURL) {
                 loadTextFile(textURL)
             }
+            showTableFeedback("Copied name")
         } label: {
             HStack {
                 Text(textURL.lastPathComponent)
@@ -434,6 +435,7 @@ struct SettingsDocumentTableSection: View {
             handleFileSelection(imageURL) {
                 selectImage(imageURL)
             }
+            showTableFeedback("Copied name")
         } label: {
             HStack {
                 Text(imageURL.lastPathComponent)
@@ -478,6 +480,7 @@ struct SettingsDocumentTableSection: View {
             handleFileSelection(soundURL) {
                 selectSound(soundURL)
             }
+            showTableFeedback("Copied name")
         } label: {
             HStack {
                 Text(soundURL.lastPathComponent)
@@ -522,6 +525,7 @@ struct SettingsDocumentTableSection: View {
             handleFileSelection(pdfURL) {
                 selectPDF(pdfURL)
             }
+            showTableFeedback("Copied name")
         } label: {
             HStack {
                 Text(pdfURL.lastPathComponent)

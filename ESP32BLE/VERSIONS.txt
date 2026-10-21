@@ -1,4 +1,7 @@
 
+261022 Thu 0851
+table copy, midi ch number
+V64.14
 
 261021 Wed 2019
 most midi btns - working
