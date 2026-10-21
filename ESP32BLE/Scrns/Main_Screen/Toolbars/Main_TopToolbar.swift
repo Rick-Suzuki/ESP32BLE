@@ -333,8 +333,7 @@ struct MainScreenToolbarContent: View {
 		}   // END HS
 		.frame(maxWidth: .infinity)
 
-	}
-	//
+	}//
 	//-----------------------------------------------------------------------------------------------
 	//
     private var editModeButtonBackgroundColor: Color {

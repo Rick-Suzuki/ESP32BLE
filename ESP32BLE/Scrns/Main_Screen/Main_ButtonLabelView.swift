@@ -830,18 +830,30 @@ struct MainScreenButtonLabelView: View {
 
     private func automaticMIDILabelContent(_ label: MainGridAutomaticMIDILabel) -> some View {
         VStack(spacing: midiLabelLineSpacing) {
-            Text(label.noteName)
+            Text(label.title)
                 .font(.system(size: boxFontSize, weight: .bold))
 
-            Text("Ch \(label.channel)")
-                .font(.system(size: midiChannelFontSize, weight: .semibold))
+            if let value = label.controlChangeValue {
+                Text(value)
+                    .font(.system(size: boxFontSize, weight: .semibold))
+            }
+
+            Text(label.detailText)
+                .font(.system(size: midiChannelFontSize, weight: label.controlChangeValue == nil ? .semibold : .medium))
+                .minimumScaleFactor(label.controlChangeValue == nil ? 0.5 : 1)
+
+            if let modeText = label.modeText {
+                Text(modeText)
+                    .font(.system(size: midiChannelFontSize, weight: .medium))
+                    .minimumScaleFactor(0.5)
+            }
         }
         .id(boxFontSize)
         .multilineTextAlignment(.center)
         .lineLimit(1)
         .truncationMode(.tail)
         .allowsTightening(true)
-        .foregroundStyle(buttonTextColor)
+        .foregroundStyle(label.controlChangeValue == nil ? buttonTextColor : Color.yellow)
         .frame(maxWidth: .infinity, alignment: .center)
     }
 

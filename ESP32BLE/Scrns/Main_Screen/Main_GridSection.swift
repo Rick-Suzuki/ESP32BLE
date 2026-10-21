@@ -115,10 +115,12 @@ struct MainScreenGridSection<ButtonLabel: View>: View {
     let isEmptyEntry: (FunctionKeyEntry) -> Bool
     let isInteractiveWidgetEntry: (FunctionKeyEntry) -> Bool
     let isSimpleOrdinarySoundEntry: (FunctionKeyEntry) -> Bool
-    let midiCommand: (FunctionKeyEntry) -> MIDICommand?
-    let defaultMIDIChannel: Int
-    let onMIDITouchDown: (MIDINoteIdentity, UInt8) -> Void
-    let onMIDITouchUp: (MIDINoteIdentity) -> Void
+    let midiContext: (FunctionKeyEntry, Int) -> MainMIDITouchContext?
+    let midiActivations: MainMIDIActivationRegistry
+    let midiInputEnabled: Bool
+    let onMIDITouchDown: (MainMIDITouchContext) -> UUID?
+    let onMIDITouchUp: (UUID) -> Void
+    let onMIDITogglePress: (MainMIDITouchContext, UUID?) -> Void
     let sendLine: (FunctionKeyEntry) -> Void
     let onSimpleOrdinarySoundSingleTap: (FunctionKeyEntry, Int) -> Void
     let onSimpleOrdinarySoundDoubleTap: (FunctionKeyEntry, Int) -> Void
@@ -431,14 +433,15 @@ struct MainScreenGridSection<ButtonLabel: View>: View {
         } else if !isGridEditModeEnabled && isInteractiveWidgetEntry(entry) {
             buttonLabel(entry, index, buttonHeight, buttonSize)
                 .contentShape(Rectangle())
-        } else if !isGridEditModeEnabled, let midiCommand = midiCommand(entry) {
+        } else if !isGridEditModeEnabled, let context = midiContext(entry, index) {
             MIDINoteButton(
-                command: midiCommand,
-                defaultMIDIChannel: defaultMIDIChannel,
-                isEnabled: scenePhase == .active,
+                context: context,
+                activeToken: midiActivations.activeToken(for: context),
+                isEnabled: midiInputEnabled && scenePhase == .active,
                 cornerRadius: mainGridButtonCornerRadius,
                 onDown: onMIDITouchDown,
-                onUp: onMIDITouchUp
+                onUp: onMIDITouchUp,
+                onTogglePress: onMIDITogglePress
             ) {
                 buttonLabel(entry, index, buttonHeight, buttonSize)
             }
@@ -523,22 +526,21 @@ private struct MIDINoteButton<Label: View>: View {
     private let pressedBackingStrokeWidth: CGFloat = 4
     private let pressedAccentStrokeWidth: CGFloat = 2
 
-    let command: MIDICommand
-    let defaultMIDIChannel: Int
+    let context: MainMIDITouchContext
+    let activeToken: UUID?
     let isEnabled: Bool
     let cornerRadius: CGFloat
-    let onDown: (MIDINoteIdentity, UInt8) -> Void
-    let onUp: (MIDINoteIdentity) -> Void
+    let onDown: (MainMIDITouchContext) -> UUID?
+    let onUp: (UUID) -> Void
+    let onTogglePress: (MainMIDITouchContext, UUID?) -> Void
     @ViewBuilder let label: () -> Label
-
-    @State private var isPressed = false
 
     var body: some View {
         ZStack {
             label()
                 .allowsHitTesting(false)
 
-            if isPressed {
+            if activeToken != nil {
                 RoundedRectangle(cornerRadius: cornerRadius)
                     .fill(pressedAccentColor.opacity(pressedFillOpacity))
                     .overlay {
@@ -559,24 +561,24 @@ private struct MIDINoteButton<Label: View>: View {
             }
 
             MIDITouchView(
-                command: command,
-                defaultMIDIChannel: defaultMIDIChannel,
+                touchContext: context,
+                activeToken: activeToken,
                 isEnabled: isEnabled,
                 onDown: onDown,
                 onUp: onUp,
-                onPressedChange: { isPressed = $0 }
+                onTogglePress: onTogglePress
             )
         }
     }
 }
 
 private struct MIDITouchView: UIViewRepresentable {
-    let command: MIDICommand
-    let defaultMIDIChannel: Int
+    let touchContext: MainMIDITouchContext
+    let activeToken: UUID?
     let isEnabled: Bool
-    let onDown: (MIDINoteIdentity, UInt8) -> Void
-    let onUp: (MIDINoteIdentity) -> Void
-    let onPressedChange: (Bool) -> Void
+    let onDown: (MainMIDITouchContext) -> UUID?
+    let onUp: (UUID) -> Void
+    let onTogglePress: (MainMIDITouchContext, UUID?) -> Void
 
     func makeUIView(context: Context) -> MIDITouchCaptureView {
         MIDITouchCaptureView()
@@ -584,12 +586,12 @@ private struct MIDITouchView: UIViewRepresentable {
 
     func updateUIView(_ uiView: MIDITouchCaptureView, context: Context) {
         uiView.configure(
-            command: command,
-            defaultMIDIChannel: defaultMIDIChannel,
+            context: touchContext,
+            activeToken: activeToken,
             isEnabled: isEnabled,
             onDown: onDown,
             onUp: onUp,
-            onPressedChange: onPressedChange
+            onTogglePress: onTogglePress
         )
     }
 
@@ -599,13 +601,12 @@ private struct MIDITouchView: UIViewRepresentable {
 }
 
 private final class MIDITouchCaptureView: UIView {
-    private var command: MIDICommand?
-    private var defaultMIDIChannel = MIDIChannelSettings.defaultChannel
-    private var onDown: ((MIDINoteIdentity, UInt8) -> Void)?
-    private var onUp: ((MIDINoteIdentity) -> Void)?
-    private var onPressedChange: ((Bool) -> Void)?
+    private var context: MainMIDITouchContext?
+    private var onDown: ((MainMIDITouchContext) -> UUID?)?
+    private var onUp: ((UUID) -> Void)?
+    private var onTogglePress: ((MainMIDITouchContext, UUID?) -> Void)?
     private var activeTouch: UITouch?
-    private var activeIdentity: MIDINoteIdentity?
+    private var activationToken: UUID?
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -618,94 +619,67 @@ private final class MIDITouchCaptureView: UIView {
     }
 
     func configure(
-        command: MIDICommand,
-        defaultMIDIChannel: Int,
+        context: MainMIDITouchContext,
+        activeToken: UUID?,
         isEnabled: Bool,
-        onDown: @escaping (MIDINoteIdentity, UInt8) -> Void,
-        onUp: @escaping (MIDINoteIdentity) -> Void,
-        onPressedChange: @escaping (Bool) -> Void
+        onDown: @escaping (MainMIDITouchContext) -> UUID?,
+        onUp: @escaping (UUID) -> Void,
+        onTogglePress: @escaping (MainMIDITouchContext, UUID?) -> Void
     ) {
-        if activeIdentity != nil && (self.command?.note != command.note || !isEnabled) {
+        if activeTouch != nil &&
+            (self.context != context || !isEnabled ||
+             (context.mode == .momentary && activationToken != activeToken)) {
             cancelActiveTouch()
         }
 
-        self.command = command
-        self.defaultMIDIChannel = defaultMIDIChannel
+        self.context = context
         self.onDown = onDown
         self.onUp = onUp
-        self.onPressedChange = onPressedChange
+        self.onTogglePress = onTogglePress
         isUserInteractionEnabled = isEnabled
     }
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-        guard activeTouch == nil,
+        guard isUserInteractionEnabled,
+              activeTouch == nil,
               let touch = touches.first,
-              let command else {
-            return
-        }
+              let context else { return }
 
-        let identity = MIDINoteIdentity(
-            note: command.note,
-            channel: MIDIChannelSettings.resolvedChannel(
-                for: command,
-                defaultChannel: defaultMIDIChannel
-            )
-        )
         activeTouch = touch
-        activeIdentity = identity
-        print("🐞 [MIDI-TOUCH] DOWN note=\(identity.note) channel=\(identity.channel)")
-        onDown?(identity, command.velocity)
-        onPressedChange?(true)
+        activationToken = onDown?(context)
+        if context.mode == .toggle {
+            onTogglePress?(context, activationToken)
+        }
     }
 
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard let activeTouch,
               touches.contains(where: { $0 === activeTouch }),
-              !bounds.contains(activeTouch.location(in: self)) else {
-            return
-        }
-
+              !bounds.contains(activeTouch.location(in: self)) else { return }
         cancelActiveTouch()
     }
 
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard let activeTouch,
-              touches.contains(where: { $0 === activeTouch }),
-              let activeIdentity else {
-            return
-        }
-
-        let endedInside = bounds.contains(activeTouch.location(in: self))
-        if endedInside {
-            print("🐞 [MIDI-TOUCH] UP note=\(activeIdentity.note) channel=\(activeIdentity.channel)")
-        } else {
-            print("🐞 [MIDI-TOUCH] CANCEL note=\(activeIdentity.note) channel=\(activeIdentity.channel)")
-        }
-        onUp?(activeIdentity)
-        self.activeTouch = nil
-        self.activeIdentity = nil
-        onPressedChange?(false)
-    }
-
-    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
-        guard let activeTouch,
-              touches.contains(where: { $0 === activeTouch }) else {
-            return
-        }
+              touches.contains(where: { $0 === activeTouch }) else { return }
 
         cancelActiveTouch()
     }
 
-    func cancelActiveTouch() {
-        guard let activeIdentity else {
-            return
-        }
+    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
+        guard let activeTouch,
+              touches.contains(where: { $0 === activeTouch }) else { return }
+        cancelActiveTouch()
+    }
 
-        print("🐞 [MIDI-TOUCH] CANCEL note=\(activeIdentity.note) channel=\(activeIdentity.channel)")
-        onUp?(activeIdentity)
+    // MARK: - BM:🅱️ Rejected presses have no token; stale releases cannot consume a newer activation.
+    func cancelActiveTouch() {
+        let token = activationToken
         activeTouch = nil
-        self.activeIdentity = nil
-        onPressedChange?(false)
+        activationToken = nil
+        if context?.mode == .momentary, let token {
+            onUp?(token)
+        }
     }
 }
 

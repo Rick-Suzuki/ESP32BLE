@@ -75,7 +75,7 @@ struct MainScreenSlotEditorOverlay: View {
     private let colorKeyCodes: [(code: String?, label: String?, color: Color)] = [
 
 			(nil,"clr\ncolor",  Color(white: 0.22)),
-			("FF0000", "y",   	Color(hex: "FF0000")),
+			("FF0000", "",   	Color(hex: "FF0000")),
 			("910000", "",     	Color(hex: "910000")),
 			("C97827", "",   	Color(hex: "C97827")),
 			("5E3812", "",     	Color(hex: "5E3812")),

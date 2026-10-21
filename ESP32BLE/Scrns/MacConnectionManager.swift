@@ -179,7 +179,21 @@ final class MacConnectionManager: ObservableObject {
     static let serviceType = "_esp-network-test._tcp"
 
     @Published private(set) var status: ConnectionStatus = .searching
-    @Published private(set) var isAuthenticated = false
+    @Published private(set) var isAuthenticated = false {
+        willSet {
+            if isAuthenticated && !newValue {
+                invalidateMIDISession(canTransmit: false)
+            }
+        }
+    }
+    @Published private(set) var midiSessionID = UUID()
+    var midiSessionWillEnd: (ownerID: UUID, action: (Bool) -> Void)?
+
+    // MARK: - BM:🅱️ Drain MIDI ownership before intentional shutdown; never carry releases into a new connection.
+    private func invalidateMIDISession(canTransmit: Bool) {
+        midiSessionWillEnd?.action(canTransmit)
+        midiSessionID = UUID()
+    }
     @Published private(set) var pairingStatusText = "Not Paired"
 
     private let queue = DispatchQueue(label: "MacConnectionManager")
@@ -238,6 +252,7 @@ final class MacConnectionManager: ObservableObject {
     }
 
     func stop() {
+        invalidateMIDISession(canTransmit: true)
         isDeliberatelyStopped = true
         browser?.cancel()
         browser = nil
@@ -251,6 +266,7 @@ final class MacConnectionManager: ObservableObject {
     }
 
     func requestPairing() {
+        invalidateMIDISession(canTransmit: true)
         isPairingRequested = true
         isAuthenticated = false
         pairingStatusText = "Pairing..."
@@ -258,6 +274,7 @@ final class MacConnectionManager: ObservableObject {
     }
 
     func forgetPairedMacHelper() {
+        invalidateMIDISession(canTransmit: true)
         securityStore.deletePairing()
         isPairingRequested = false
         isAuthenticated = false
@@ -287,8 +304,7 @@ final class MacConnectionManager: ObservableObject {
             return false
         }
 
-        send(command)
-        return true
+        return sendFramedMessage(command, requiresAuthentication: true)
     }
 
     private func send(_ message: String) {
@@ -299,12 +315,13 @@ final class MacConnectionManager: ObservableObject {
         sendFramedMessage(message, requiresAuthentication: false)
     }
 
-    private func sendFramedMessage(_ message: String, requiresAuthentication: Bool) {
+    @discardableResult
+    private func sendFramedMessage(_ message: String, requiresAuthentication: Bool) -> Bool {
         let framedMessage = message + "\n"
         guard let connection,
               status == .connected,
               (!requiresAuthentication || isAuthenticated),
-              let data = framedMessage.data(using: .utf8) else { return }
+              let data = framedMessage.data(using: .utf8) else { return false }
 
         ESPMacTransportProbe.printPayload(data)
 
@@ -312,11 +329,11 @@ final class MacConnectionManager: ObservableObject {
             guard let self, error != nil else { return }
 
             Task { @MainActor in
-                guard !self.isDeliberatelyStopped else { return }
+                guard !self.isDeliberatelyStopped, self.connection === connection else { return }
                 self.restartSearch()
             }
         })
-
+        return true
     }
 
     private func connect(to endpoint: NWEndpoint) {
@@ -329,13 +346,15 @@ final class MacConnectionManager: ObservableObject {
         let parameters = NWParameters.tcp
         parameters.includePeerToPeer = true
 
+        invalidateMIDISession(canTransmit: false)
         let connection = NWConnection(to: endpoint, using: parameters)
         self.connection = connection
 
-        connection.stateUpdateHandler = { [weak self] state in
-            guard let self else { return }
+        connection.stateUpdateHandler = { [weak self, weak connection] state in
+            guard let self, let connection else { return }
 
             Task { @MainActor in
+                guard self.connection === connection else { return }
                 self.handleConnectionState(state)
             }
         }
@@ -360,6 +379,7 @@ final class MacConnectionManager: ObservableObject {
     }
 
     private func restartSearch() {
+        invalidateMIDISession(canTransmit: false)
         connection?.cancel()
         connection = nil
         browser?.cancel()
@@ -380,21 +400,23 @@ final class MacConnectionManager: ObservableObject {
 
             if let data, !data.isEmpty {
                 Task { @MainActor in
+                    guard self.connection === connection else { return }
                     self.processReceivedData(data)
                 }
             }
 
             if isComplete || error != nil {
                 Task { @MainActor in
-                    guard !self.isDeliberatelyStopped else { return }
+                    guard !self.isDeliberatelyStopped, self.connection === connection else { return }
                     self.restartSearch()
                 }
                 return
             }
 
-			Task { @MainActor in
-				self.receive(on: connection)
-			}
+            Task { @MainActor in
+                guard self.connection === connection else { return }
+                self.receive(on: connection)
+            }
 		}
     }
 

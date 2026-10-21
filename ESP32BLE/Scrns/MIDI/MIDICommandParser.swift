@@ -1,7 +1,13 @@
+enum MIDINoteMode: String {
+    case momentary
+    case toggle
+}
+
 struct MIDICommand {
     let note: UInt8
     let velocity: UInt8
     let channelOverride: UInt8?
+    let mode: MIDINoteMode
 
     var noteDisplayName: String {
         let pitchClasses = [
@@ -46,7 +52,14 @@ enum MIDIChannelSettings {
 
 enum MIDICommandParser {
     static func parse(_ text: String) -> MIDICommand? {
-        let components = text.split(whereSeparator: \.isWhitespace)
+        var components = text.split(whereSeparator: \.isWhitespace)
+        let mode: MIDINoteMode
+        if components.last?.lowercased() == "toggle" {
+            mode = .toggle
+            components.removeLast()
+        } else {
+            mode = .momentary
+        }
 
         guard (2...4).contains(components.count),
               components[0] == ".midi",
@@ -79,7 +92,8 @@ enum MIDICommandParser {
         return MIDICommand(
             note: note,
             velocity: velocity,
-            channelOverride: channelOverride
+            channelOverride: channelOverride,
+            mode: mode
         )
     }
 

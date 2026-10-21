@@ -130,6 +130,8 @@ struct MainScreen: View {
     }
 
     @AppStorage(MIDIChannelSettings.storageKey) private var midiDefaultChannel = MIDIChannelSettings.defaultChannel
+    @Environment(\.scenePhase) private var midiScenePhase
+    @State private var midiActivations = MainMIDIActivationRegistry()
 
     // Easy-to-find styling controls for the main button grid.
     private let mainGridButtonSpacingMaximum: CGFloat = 10
@@ -301,22 +303,23 @@ struct MainScreen: View {
 	// MARK: - BM:🟥 btn colors
 private let smartButtonSwatchHexColors = [
     "000000",	// black
-	
+				// white
+	"003366",	// music blue
 	"FF0000",	// red
 	"00A600",	// green
+	
 	"0000FF",	// blue
     "FFFF00",	// yellow
 	"00FFFF",	// cyan
-	
 	"FF00FF",	// purple
 	"FF8000",	// orange
-    "8000FF",	// dark purple
-	"0080FF",	// light blue
+    
+	"8000FF",	// dark purple
 	"FFCC99",	// light orange
-	
 	"FF0080",	// pink
     "800000",	// red/brown
 	"005C5C",	// off green
+	
 	"666600",	// dark yellow
 	"808080",	// gray
 	
@@ -1000,6 +1003,8 @@ Tapping a row inserts the key code at the cursor.
     @FocusState var isSlotEditorFocused: Bool
     @FocusState private var isMainScreenKeyboardFocused: Bool
     let functionKeys: [FunctionKeyEntry]
+    let midiDocumentSession: UUID
+    let isMainScreenVisible: Bool
     let documentFiles: [URL]
     let selectedDocumentName: String
     let selectedDocumentDisplayName: String
@@ -1049,6 +1054,7 @@ Tapping a row inserts the key code at the cursor.
                 isDocumentNameFieldFocused = true
             }
             .onAppear {
+                installMIDISessionCleanup()
                 restorePersistedMainScreenModes()
                 reloadSelectedDocumentIfAvailable()
                 refreshMainScreenKeyboardFocus()
@@ -1056,7 +1062,23 @@ Tapping a row inserts the key code at the cursor.
             .onChange(of: selectedDocumentDisplayName) {
                 handleSelectedDocumentDisplayNameChange()
             }
+            .onChange(of: midiDocumentSession) {
+                resetMIDIActivations()
+            }
+            .onChange(of: functionKeys.map(\.rawLine)) {
+                resetMIDIActivations()
+            }
+            .onChange(of: midiDefaultChannel) {
+                resetMIDIActivations()
+            }
+            .onChange(of: mainGridButtonMode) {
+                resetMIDIActivations()
+            }
+            .onChange(of: midiInputEnabled) {
+                if !midiInputEnabled { resetMIDIActivations() }
+            }
             .onChange(of: selectedDocumentName) {
+                resetMIDIActivations()
                 cancelPendingPopupRestore()
                 cancelPendingMovePopupRefresh()
                 cancelPendingActionMenuFrameRefresh()
@@ -1105,6 +1127,10 @@ Tapping a row inserts the key code at the cursor.
                 refreshMainScreenKeyboardFocus()
             }
             .onDisappear {
+                resetMIDIActivations()
+                if macConnection.midiSessionWillEnd?.ownerID == midiActivations.ownerID {
+                    macConnection.midiSessionWillEnd = nil
+                }
                 handleMainScreenDisappear()
                 mainGridAmbientSoundState.stopPlayback()
                 popupDismissTask?.cancel()
@@ -1391,6 +1417,129 @@ Tapping a row inserts the key code at the cursor.
         }
     }
 
+    // MARK: - BM:🅱️ MIDI ownership outlives individual touch views; every release consumes a unique token.
+    private var midiInputEnabled: Bool {
+        isMainScreenVisible && midiScenePhase == .active &&
+        !isGridEditModeEnabled && editingSlotIndex == nil && presentedPreviewFile == nil &&
+        mainGridButtonMode.sendsBluetooth && outputMode == .mac && macConnection.canSend
+    }
+
+    private func midiTouchContext(_ entry: FunctionKeyEntry, index: Int) -> MainMIDITouchContext? {
+        let message: MainMIDITouchContext.Message
+        let channel: UInt8
+        if let command = midiCommandForGridEntry(entry) {
+            message = .note(number: command.note, velocity: command.velocity, mode: command.mode)
+            channel = MIDIChannelSettings.resolvedChannel(for: command, defaultChannel: midiDefaultChannel)
+        } else if let command = midiControlChangeCommandForGridEntry(entry), command.mode != .oneShot {
+            message = command.mode == .hold
+                ? .controlChangeHold(controller: command.controller, value: command.value)
+                : .controlChangeToggle(controller: command.controller, value: command.value)
+            channel = MIDIChannelSettings.resolvedChannel(
+                channelOverride: command.channelOverride, defaultChannel: midiDefaultChannel
+            )
+        } else {
+            return nil
+        }
+        return MainMIDITouchContext(
+            documentSession: midiDocumentSession,
+            documentName: selectedDocumentName,
+            slot: index,
+            commandText: entry.rawLine,
+            generation: midiActivations.generation,
+            connectionSession: macConnection.midiSessionID,
+            message: message,
+            channel: channel
+        )
+    }
+
+    private func sendMIDIActivationOn(_ context: MainMIDITouchContext) -> Bool {
+        switch context.message {
+        case .note(let note, let velocity, _):
+            return sendMIDINoteOnFromTouch(
+                MIDINoteIdentity(note: note, channel: context.channel), velocity: velocity
+            )
+        case .controlChangeHold(let controller, let value), .controlChangeToggle(let controller, let value):
+            guard midiInputEnabled, context.connectionSession == macConnection.midiSessionID else { return false }
+            return macConnection.sendAuthenticatedCommand("MIDI:CC:\(controller):\(value):\(context.channel)")
+        }
+    }
+
+    private func sendMIDIActivationOff(_ context: MainMIDITouchContext) {
+        guard context.connectionSession == macConnection.midiSessionID else { return }
+        switch context.message {
+        case .note(let note, _, _):
+            sendMIDINoteOffFromTouch(MIDINoteIdentity(note: note, channel: context.channel))
+        case .controlChangeHold, .controlChangeToggle:
+            guard macConnection.canSend else { return }
+            _ = macConnection.sendAuthenticatedCommand(context.releaseCommand)
+        }
+    }
+
+    private func beginMIDIActivation(_ context: MainMIDITouchContext) -> UUID? {
+        guard midiInputEnabled,
+              context.documentSession == midiDocumentSession,
+              context.documentName == selectedDocumentName,
+              context.connectionSession == macConnection.midiSessionID,
+              functionKeys.indices.contains(context.slot),
+              functionKeys[context.slot].rawLine == context.commandText else { return nil }
+        if context.mode == .toggle {
+            return midiActivations.activeToken(for: context)
+        }
+        return midiActivations.begin(context) {
+            sendMIDIActivationOn(context)
+        }
+    }
+
+    private func toggleMIDIActivation(_ context: MainMIDITouchContext, expectedToken: UUID?) {
+        guard midiInputEnabled,
+              context.documentSession == midiDocumentSession,
+              context.documentName == selectedDocumentName,
+              context.connectionSession == macConnection.midiSessionID,
+              functionKeys.indices.contains(context.slot),
+              functionKeys[context.slot].rawLine == context.commandText else { return }
+        midiActivations.toggle(
+            context,
+            expectedToken: expectedToken,
+            connectionSession: macConnection.midiSessionID,
+            sendOn: {
+                sendMIDIActivationOn(context)
+            },
+            sendControlChangeOff: { activation in
+                guard activation.connectionSession == macConnection.midiSessionID,
+                      macConnection.canSend else { return false }
+                return macConnection.sendAuthenticatedCommand(activation.releaseCommand)
+            },
+            sendOff: sendMIDIActivationOff
+        )
+    }
+
+    private func endMIDIActivation(_ token: UUID) {
+        midiActivations.release(
+            token,
+            connectionSession: macConnection.midiSessionID,
+            sendOff: sendMIDIActivationOff
+        )
+    }
+
+    private func resetMIDIActivations() {
+        midiActivations.reset(
+            connectionSession: macConnection.midiSessionID,
+            sendOff: sendMIDIActivationOff
+        )
+    }
+
+    private func installMIDISessionCleanup() {
+        macConnection.midiSessionWillEnd = (midiActivations.ownerID, { [weak midiActivations, weak macConnection] canTransmit in
+            guard let midiActivations, let macConnection else { return }
+            midiActivations.reset(connectionSession: macConnection.midiSessionID) { activation in
+                guard canTransmit, macConnection.canSend else { return }
+                _ = macConnection.sendAuthenticatedCommand(
+                    activation.releaseCommand
+                )
+            }
+        })
+    }
+
     private func mainGridSection(availableWidth: CGFloat, reservedBottomInset: CGFloat = 0) -> some View {
 
         MainScreenGridSection(
@@ -1412,10 +1561,12 @@ Tapping a row inserts the key code at the cursor.
             isEmptyEntry: isEmptyButtonEntry,
             isInteractiveWidgetEntry: isInteractiveMainGridWidgetEntry,
             isSimpleOrdinarySoundEntry: isSimpleOrdinarySoundEntry,
-            midiCommand: midiCommandForGridEntry,
-            defaultMIDIChannel: midiDefaultChannel,
-            onMIDITouchDown: sendMIDINoteOnFromTouch,
-            onMIDITouchUp: sendMIDINoteOffFromTouch,
+            midiContext: midiTouchContext,
+            midiActivations: midiActivations,
+            midiInputEnabled: midiInputEnabled,
+            onMIDITouchDown: beginMIDIActivation,
+            onMIDITouchUp: endMIDIActivation,
+            onMIDITogglePress: toggleMIDIActivation,
             sendLine: { entry in
                 sendMainGridEntry(entry, defaultMIDIChannel: midiDefaultChannel)
             },

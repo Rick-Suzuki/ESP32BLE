@@ -192,6 +192,7 @@ struct ContentView: View {
     @AppStorage("keepScreenAwake") private var keepScreenAwake = false
     @StateObject private var ble = BLEKeyboardManager()
     @StateObject private var macConnection = MacConnectionManager()
+    @State private var midiDocumentSession = UUID()
     @State private var functionKeys = ContentView.makeDefaultFunctionKeys()
     @State private var functionKeySlotLines = ContentView.defaultFunctionKeyTitles()
     @State private var loadedFunctionKeySlotCount = defaultNamedFunctionKeyCount
@@ -248,6 +249,8 @@ struct ContentView: View {
                         macConnection: macConnection,
                         outputMode: OutputMode(persistedValue: outputModeRawValue),
                         functionKeys: functionKeys,
+                        midiDocumentSession: midiDocumentSession,
+                        isMainScreenVisible: !isKeyboardScreenPresented && !isSettingsScreenPresented,
                         documentFiles: documentFiles,
                         selectedDocumentName: selectedDocumentName,
                         selectedDocumentDisplayName: displayName(for: selectedDocumentName),
@@ -689,6 +692,7 @@ struct ContentView: View {
     }
 
     private func loadFunctionKeys(from fileURL: URL) {
+        midiDocumentSession = UUID()
         do {
             let contents = try String(contentsOf: fileURL, encoding: .utf8)
             let loadedTitles = normalizedSlotLines(from: contents)

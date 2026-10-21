@@ -13,10 +13,155 @@ import AVFoundation
 import UIKit
 import Combine
 import PDFKit
+import Observation
+
+// MARK: - BM:🅱️ Runtime-only MIDI activations. Entries exist only after transport accepts the press message.
+struct MainMIDITouchContext: Equatable {
+    let documentSession: UUID
+    let documentName: String
+    let slot: Int
+    let commandText: String
+    let generation: UUID
+    let connectionSession: UUID
+    enum Message: Equatable {
+        case note(number: UInt8, velocity: UInt8, mode: MIDINoteMode)
+        case controlChangeHold(controller: UInt8, value: UInt8)
+        case controlChangeToggle(controller: UInt8, value: UInt8)
+    }
+
+    let message: Message
+    let channel: UInt8
+
+    var mode: MIDINoteMode {
+        if case .note(_, _, let mode) = message { return mode }
+        if case .controlChangeToggle = message { return .toggle }
+        return .momentary
+    }
+
+    var releaseCommand: String {
+        switch message {
+        case .note(let note, _, _):
+            return "MIDI:NOTE_OFF:\(note):\(channel)"
+        case .controlChangeHold(let controller, _), .controlChangeToggle(let controller, _):
+            return "MIDI:CC:\(controller):0:\(channel)"
+        }
+    }
+}
+
+@MainActor
+@Observable
+final class MainMIDIActivationRegistry {
+    let ownerID = UUID()
+    private(set) var generation = UUID()
+    private var activations: [UUID: MainMIDITouchContext] = [:]
+
+    func activeToken(for context: MainMIDITouchContext) -> UUID? {
+        activations.first { $0.value == context }?.key
+    }
+
+    func begin(_ context: MainMIDITouchContext, sendOn: () -> Bool) -> UUID? {
+        guard context.generation == generation,
+              !activations.values.contains(where: {
+                  $0.documentSession == context.documentSession &&
+                  $0.documentName == context.documentName &&
+                  $0.slot == context.slot
+              }),
+              sendOn() else { return nil }
+
+        let token = UUID()
+        activations[token] = context
+        return token
+    }
+
+    // MARK: - BM:🅱️ A toggle press may change only the activation observed at touch-down.
+    func toggle(
+        _ context: MainMIDITouchContext,
+        expectedToken: UUID?,
+        connectionSession: UUID,
+        sendOn: () -> Bool,
+        sendControlChangeOff: (MainMIDITouchContext) -> Bool,
+        sendOff: (MainMIDITouchContext) -> Void
+    ) {
+        guard context.mode == .toggle,
+              context.generation == generation,
+              context.connectionSession == connectionSession,
+              activeToken(for: context) == expectedToken else { return }
+
+        if let expectedToken {
+            if case .controlChangeToggle = context.message {
+                // MARK: - BM:🅱️ Keep CC Toggle active after a rejected OFF; lifecycle cleanup still clears invalid sessions.
+                guard sendControlChangeOff(context) else { return }
+                activations.removeValue(forKey: expectedToken)
+            } else {
+                release(expectedToken, connectionSession: connectionSession, sendOff: sendOff)
+            }
+        } else {
+            _ = begin(context, sendOn: sendOn)
+        }
+    }
+
+    func release(_ token: UUID, connectionSession: UUID, sendOff: (MainMIDITouchContext) -> Void) {
+        guard let activation = activations[token] else { return }
+        activations.removeValue(forKey: token)
+        guard activation.connectionSession == connectionSession else { return }
+        sendOff(activation)
+    }
+
+    func reset(connectionSession: UUID, sendOff: (MainMIDITouchContext) -> Void) {
+        let released = activations
+        activations.removeAll()
+        generation = UUID()
+        for activation in released.values where activation.connectionSession == connectionSession {
+            sendOff(activation)
+        }
+    }
+}
 
 struct MainGridAutomaticMIDILabel {
-    let noteName: String
+    enum Content {
+        case note(name: String, velocity: UInt8, mode: MIDINoteMode)
+        case controlChange(name: String, value: String, mode: MIDIControlChangeMode)
+    }
+
+    let content: Content
     let channel: UInt8
+
+    var title: String {
+        switch content {
+        case .note(let name, _, _), .controlChange(let name, _, _):
+            return name
+        }
+    }
+
+    var controlChangeValue: String? {
+        guard case .controlChange(_, let value, _) = content else { return nil }
+        return value
+    }
+
+    var detailText: String {
+        if case .note(_, let velocity, _) = content {
+            return "\(velocity) · ch \(channel)"
+        }
+        if case .controlChange(_, _, let mode) = content {
+            switch mode {
+            case .hold: return "ch \(channel) · hold"
+            case .toggle: return "ch \(channel) · toggle"
+            case .oneShot: break
+            }
+        }
+        return "ch \(channel)"
+    }
+
+    var modeText: String? {
+        switch content {
+        case .note(_, _, .toggle): return "toggle"
+        default: return nil
+        }
+    }
+
+    var text: String {
+        [title, controlChangeValue, detailText, modeText].compactMap { $0 }.joined(separator: "\n")
+    }
 }
 
 private enum MainGridSoundPreparationError: Error {
@@ -288,7 +433,14 @@ extension MainScreen {
                 for: midiCommand,
                 defaultChannel: defaultMIDIChannel
             )
-            return "\(midiCommand.noteDisplayName)\nCh \(effectiveChannel)"
+            return MainGridAutomaticMIDILabel(
+                content: .note(name: midiCommand.noteDisplayName, velocity: midiCommand.velocity, mode: midiCommand.mode),
+                channel: effectiveChannel
+            ).text
+        }
+
+        if MIDIControlChangeParser.parse(sendText) != nil {
+            return automaticMIDILabel(for: entry, defaultMIDIChannel: defaultMIDIChannel)?.text
         }
 
         let displayText = String(sendText.dropFirst())
@@ -343,13 +495,23 @@ extension MainScreen {
             .isEmpty,
               navigationCommandDefaultLabel(for: entry.primaryDisplayText) == nil,
               entry.sendTexts.count == 1,
-              let sendText = entry.sendTexts.first,
-              let midiCommand = MIDICommandParser.parse(sendText) else {
+              let sendText = entry.sendTexts.first else {
             return nil
         }
 
+        if let command = MIDIControlChangeParser.parse(sendText) {
+            return MainGridAutomaticMIDILabel(
+                content: .controlChange(name: command.controllerDisplayName, value: command.valueDisplayText, mode: command.mode),
+                channel: MIDIChannelSettings.resolvedChannel(
+                    channelOverride: command.channelOverride,
+                    defaultChannel: defaultMIDIChannel
+                )
+            )
+        }
+
+        guard let midiCommand = MIDICommandParser.parse(sendText) else { return nil }
         return MainGridAutomaticMIDILabel(
-            noteName: midiCommand.noteDisplayName,
+            content: .note(name: midiCommand.noteDisplayName, velocity: midiCommand.velocity, mode: midiCommand.mode),
             channel: MIDIChannelSettings.resolvedChannel(
                 for: midiCommand,
                 defaultChannel: defaultMIDIChannel
@@ -374,6 +536,7 @@ extension MainScreen {
 
         if isMIDIControlChangeCommandForGridEntry(entry) {
             guard let command = midiControlChangeCommandForGridEntry(entry),
+                  command.mode == .oneShot,
                   mainGridButtonMode.sendsBluetooth,
                   outputMode == .mac,
                   macConnection.canSend else {
@@ -581,7 +744,7 @@ extension MainScreen {
         }
     }
 
-    private func midiControlChangeCommandForGridEntry(
+    func midiControlChangeCommandForGridEntry(
         _ entry: FunctionKeyEntry
     ) -> MIDIControlChangeCommand? {
         guard entry.sendTexts.count == 1 else {
@@ -600,7 +763,7 @@ extension MainScreen {
         }
     }
 
-    func sendMIDINoteOnFromTouch(_ identity: MIDINoteIdentity, velocity: UInt8) {
+    func sendMIDINoteOnFromTouch(_ identity: MIDINoteIdentity, velocity: UInt8) -> Bool {
         guard identity.note <= 127,
               (1...127).contains(velocity),
               MIDIChannelSettings.validRange.contains(Int(identity.channel)),
@@ -608,10 +771,10 @@ extension MainScreen {
               mainGridButtonMode.sendsBluetooth,
               outputMode == .mac,
               macConnection.canSend else {
-            return
+            return false
         }
 
-        _ = macConnection.sendAuthenticatedCommand(
+        return macConnection.sendAuthenticatedCommand(
             "MIDI:NOTE_ON:\(identity.note):\(velocity):\(identity.channel)"
         )
     }

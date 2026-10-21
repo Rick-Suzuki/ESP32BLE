@@ -1,122 +1,33 @@
-ESP-BUTTON-001A — FINAL REPORT
+Stage 4C complete.
 
-1. Exact source files modified
+Files actually modified:
+• Scrns/Main_Screen/Main_ButtonBehavior.swift
+• Scrns/Main_Screen/Main_Screen.swift
 
-ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift
+Main_GridSection.swift and Main_ButtonLabelView.swift required no changes.
 
-ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
+CC Toggle now reuses the existing finger-down toggle path. Successive presses alternate the configured value and zero. Finger-up, drag-out and cancellation do not reverse the transition.
 
-2. Functions changed
+Accepted ON establishes registry state and highlighting. Accepted OFF clears both. Rejected ON stays inactive; rejected OFF retains active state for a later retry. Transport acceptance is not remote acknowledgement.
 
-Main_ButtonBehavior.swift:
+Existing touch identity, activation tokens and connection generations prevent duplicate transitions and stale releases. Buttons remain independently tracked, with latest transmitted CC value winning.
 
-buttonTitle(for:defaultMIDIChannel:)
+Existing lifecycle cleanup attempts captured controller/channel releases, clears invalid state and never restores it after reconnection. Remote OFF delivery cannot be guaranteed during connection failure or termination.
 
-effectiveAlternateDisplayText(for:defaultMIDIChannel:)
+Preserved:
+• One-shot CC timing and execution.
+• CC Hold and MIDI Note behaviour.
+• Three-line yellow, abbreviated CC labels.
+• All font calculations, controls, spacing and geometry.
+• Parser and MIDI Settings behaviour.
 
-commandDefaultLabel(for:defaultMIDIChannel:)
+Verification:
+• iPhone 17 Simulator build succeeded.
+• Temporary synthetic-touch/registry assertions passed for ON/OFF/ON, held-touch suppression, cancellation, rejected sends, overlapping buttons, stale tokens, cleanup, channel resolution and labels.
+• CC Hold and MIDI Note regression assertions passed.
+• No physical-device or actual MIDI delivery tests were performed.
+• Original Xcode destination restored.
 
-mainGridButtonLabel(...defaultMIDIChannel:)
+Existing warnings remain for an unused variable, deprecated contentEdgeInsets and skipped App Intents metadata.
 
-Main_Screen.swift:
-
-The existing mainGridButtonLabel call now passes the observed midiDefaultChannel value.
-
-3. Effective channel resolution
-
-The automatic label parses the existing MIDICommand and calls:
-
-MIDIChannelSettings.resolvedChannel(
-for: midiCommand,
-
-defaultChannel: defaultMIDIChannel
-
-)
-
-This preserves:
-
-Explicit command override first.
-Valid device default second.
-Safe channel 1 fallback last.
-
-The generated label is:
-
-<noteDisplayName>
-
-Ch <effective channel>
-
-4. Settings updates
-
-MainScreen already observes MIDIChannelSettings.storageKey through @AppStorage.
-
-That observed value is now passed into the label-generation path. Changing the default channel causes SwiftUI to recalculate labels that do not have explicit overrides.
-
-Explicit command channels remain unchanged by Settings changes.
-
-5. Label precedence
-
-Existing precedence remains intact.
-
-Custom right-hand text, SF Symbols, SF Symbols with subtitles, and emoji continue to suppress the automatic fallback.
-
-Whitespace-only and color-only right-hand content remain eligible for the fallback.
-
-The existing single-command requirement remains in place.
-
-Malformed MIDI commands and multiple-command buttons do not receive an automatic MIDI label.
-
-6. Focused verification
-
-Verified parser, note formatting, and channel resolution:
-
-.midi 60, default 1 -> C3 / Ch 1
-
-.midi 60, default 4 -> C3 / Ch 4
-
-.midi 67 127 2, default 4 -> G3 / Ch 2
-
-.midi Bb3, default 4 -> A#3 / Ch 4
-
-.midi 60 127 16, default 1 -> C3 / Ch 16
-
-Invalid .midi 128 remained rejected.
-
-Source inspection confirmed that existing display-mode and custom-content fallback logic was retained.
-
-7. Build result
-
-Final ESP32BLE build: SUCCESS
-
-No build errors were reported.
-
-The first build exposed an incorrect resolver argument type. The call was corrected to use the existing MIDICommand-based resolver, and the subsequent full build succeeded.
-
-8. Warnings and limitations
-
-No warnings were reported by the successful build.
-
-Xcode’s quick per-file diagnostic requests timed out without returning results. The subsequent complete project build succeeded.
-
-No physical-device or simulator UI testing was performed. Visual confirmation of RIGHT, LAST TEXT, and BOTH modes remains for device testing.
-
-MIDI Note On/Off behavior was not changed.
-
-9. Scope confirmation
-
-CC automatic labels were not implemented.
-
-Default button colors were not implemented.
-
-MIDICommandParser.swift was not modified.
-
-No editor, touch-handling, network, project-file, ESPMacHelper, Test Area, .txt, log, or version file was modified by this implementation.
-
-Pre-existing working-tree changes were preserved in:
-
-ESP32BLE/Scrns/Main_Screen/Main_GridSection.swift
-
-ESP32BLE/VERSIONS.txt
-
-ESP32BLE/codex.txt
-
-No commits, tags, or backups were created.
+Both Helpers, project files and text/report files were untouched. Existing working-tree changes were preserved. No commits, tags or backups were created. Stopped after Stage 4C.
