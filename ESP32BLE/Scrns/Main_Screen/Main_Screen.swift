@@ -430,7 +430,7 @@ Optionally specify a city:
 
 Optionally specify a city:
  
-**Display:**	10
+**Display:**	October
 
 **Display with btn text:**	
  hello
@@ -493,11 +493,11 @@ dow Tokyo
 
 **Syntax:** .hour
 
-**Display:**	12
+**Display:**	23
 
 **Display with btn text:**	
   hello
-12
+23
 
 Optionally specify a city:
  

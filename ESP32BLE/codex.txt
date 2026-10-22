@@ -1,84 +1,67 @@
-The smallest safe approach is to extend the existing UIKit MIDI touch capture with a shared, grid-scoped slide coordinator. No layout or MIDI transport rewrite is needed.
+Cause confirmed: the one-slide-touch limit currently blocks all other momentary note presses, not just additional sliding.
 
-Current behaviour
+Exact rejection points
 
 Main_GridSection.swift:
-• gridButtonView selects MIDINoteButton for MIDI notes and supported CC hold/toggle commands.
-• MIDITouchCaptureView.touchesBegan starts an activation.
-• touchesMoved releases a momentary activation and clears tracking when the finger leaves that button’s bounds.
-• touchesEnded, touchesCancelled and dismantleUIView also release it.
-• Staying inside the button does not retrigger.
+• MIDISlideCoordinator.begin, line 627: rejects any touch while its single stored touch exists.
+• MIDITouchCaptureView.touchesBegan, lines 761–766: every momentary note must enter that coordinator. Rejected fingers return immediately without calling onDown.
+• Each capture view also stores only one activeTouch and sets isMultipleTouchEnabled = false, preventing two direct fingers on the same button.
 
-A touch remains associated with its original UIKit view when it moves. Neighbouring buttons therefore receive no new touch-down. The current implementation cannot slide between notes or resume after leaving the original button.
+The second finger normally does not release the first note; it is simply ignored.
 
-isMultipleTouchEnabled = false applies per button, not across the grid. Different buttons can currently accept different fingers.
+Release points
 
-Existing MIDI paths
+MIDISlideCoordinator.transition, lines 658–670, releases its previous token before starting the destination note.
 
-Main_Screen.swift:
-• midiTouchContext resolves the note, velocity, channel, mode and session.
-• beginMIDIActivation → sendMIDIActivationOn starts playback.
-• endMIDIActivation → registry.release → sendMIDIActivationOff releases it.
-• midiInputEnabled disables playback while Settings/Keyboard is visible, the app is inactive, editing or previewing, or transport is unavailable.
+cancel/end, capture-view removal, configure changes, and grid lifecycle observers also release that activation. These safeguards should remain, but operate on individual touch records or explicitly cancel all records during a reset.
+
+Additional collision issue
 
 Main_ButtonBehavior.swift:
-• MainMIDIActivationRegistry owns unique activation tokens and rejects stale releases.
-• sendMIDINoteOnFromTouch and sendMIDINoteOffFromTouch send authenticated MIDI commands to the Mac connection.
-• midiCommandForGridEntry accepts a single parsed MIDI command, avoiding mixed command sequences.
+• MainMIDIActivationRegistry.begin, lines 62–69, permits only one activation per slot.
+• release, lines 103–107, immediately sends note-off for the consumed token.
 
-Geometry
+Distinct buttons with the same note/channel can receive separate tokens, but NOTE_OFF contains only note/channel—not a finger identifier. Releasing one can therefore silence the note another finger still holds.
 
-MainScreenGridSection already calculates each button’s origin and resolved width/height, including spacing and merged buttons. Equal-sized grids use the same calculations with a one-cell span.
+Simply allowing a second press through touchesBegan would restore ordinary chords, but would not fully solve these collisions.
 
-buttonOrigin, resolvedWidth, resolvedHeight and buttonShape provide sufficient hit regions. Existing onRenderedButtonFrame callbacks also expose grid-local rectangles.
+Smallest complete approach
 
-Use these existing rectangles with touch positions converted into the same coordinate space. No changes to font sizing, scaling, iPhone landscape layout or iPad editor geometry are required.
+1. Track momentary-note touches individually.
+Each touch needs its originating view, current target, and unique ownership token. Enable multiple-touch delivery for eligible note views and process every touch instead of touches.first.
 
-Recommended implementation
+2. Separate sliding ownership from note ownership.
+Play every eligible touch-down immediately. Recommend selecting the first finger that leaves its starting button as the sliding finger. Other fingers remain ordinary held-note presses; they do not compete for sliding while that finger owns it.
 
-Keep the existing per-button UIKit capture views, sharing one coordinator for the grid.
+When the slider ends, do not automatically move another held finger’s note. A subsequent qualifying movement may claim sliding.
 
-The coordinator should:
-• Accept one originating finger and ignore additional slide touches.
-• Retain that finger until lift/cancellation, even after leaving its starting button.
-• Resolve movement against eligible momentary-note button regions.
-• Track the current slot/context and activation token.
-• Do nothing while the target remains unchanged.
-• Release the previous token before starting a different target.
-• Release on gaps, non-MIDI buttons or outside-grid positions, while retaining tracking for possible re-entry.
-• Never call sendLine or ordinary button actions.
+3. Release only that finger’s ownership.
+A slide transition releases the moving finger’s previous ownership before acquiring its destination. Other held notes remain untouched.
 
-The current configure check compares the originating button’s token with its activation. That must be adapted: after sliding, the active token belongs to the destination button.
+4. Share sounding notes safely.
+For momentary notes, maintain ownership counts keyed by connection/session, MIDI channel and note:
+• First owner sends note-on.
+• Additional owners join without retriggering.
+• Each lift removes only its own ownership.
+• Last owner sends note-off.
 
-Release and conflict handling
+Track slot ownership separately for button highlighting. This handles two fingers on the same button and different buttons producing the same note. Preserve unique tokens and stale-token/session checks; do not give multiple fingers the same releasable token.
 
-Existing resetMIDIActivations already covers screen/session changes, command changes, channel changes, input disabling and disappearance. Connection-session cleanup also exists. The new coordinator must clear its tracking when these invalidate the gesture, preventing playback from restarting until a fresh touch.
+5. Preserve reset behaviour.
+Lift/cancellation removes the affected touch. Existing global resets, input disabling, screen/session changes, layout changes and disappearance release all momentary owners and clear sliding ownership. Old movement events must not restart playback after reset.
 
-The grid itself is not a ScrollView. Reordering drags and editing long presses are confined to edit mode; sliding should remain disabled there. Keep ordinary buttons, sound double taps and interactive widgets on their existing paths.
+Toggle and CC handling should retain their existing direct paths and token semantics. They should not claim sliding ownership. A momentary note sharing a pitch/channel with a latched note toggle needs explicit coexistence handling so its release cannot silence the toggle.
 
-A grid-wide transparent touch overlay would require careful pass-through handling. Extending the existing capture views avoids intercepting unrelated controls.
+Likely files
 
-Transport loss remains an existing limitation: note-off cannot be delivered after connectivity is lost.
+• Main_GridSection.swift: per-touch capture and slider selection.
+• Main_ButtonBehavior.swift: momentary ownership counting and token-safe release.
+• Main_Screen.swift: activation/highlight integration only where needed.
 
-Toggle exclusion
+This requires no layout, geometry, font, scaling or transport-format changes.
 
-Yes—exclude note toggles and CC toggles from the initial sliding implementation. They intentionally remain active after lift, which conflicts with release-on-exit/lift semantics. Preserve their existing direct-tap behaviour.
+Remaining behaviour choice
 
-Also exclude CC hold/one-shot commands initially; filtering only for “momentary” would accidentally include CC hold.
+Recommend no retrigger when entering a note already held by another finger. Its existing velocity remains until all owners release. Retriggering that shared note would affect the holding finger too.
 
-Likely files requiring changes
-
-Main_GridSection.swift should contain the main change and may be sufficient, using its existing contexts, registry and callbacks.
-
-Main_Screen.swift may need a small explicit cancellation/reset connection if existing generation and enabled-state updates are insufficient. Main_ButtonBehavior.swift and MIDI transport/parser files should not require changes.
-
-Unresolved behaviour choices
-
-Recommended defaults:
-• Gaps/non-MIDI regions silence the note; re-entering an eligible button resumes playback.
-• Touches starting outside eligible note buttons do not start sliding.
-• Crossing distinct buttons with the same note/channel releases and retriggers.
-• Layout changes cancel the gesture.
-• Clarify whether “one finger only” limits sliding alone or must also block simultaneous direct toggle/CC presses.
-
-No files were modified. No builds, commits, tags or backups were performed. All ESPMacHelper and Test Area projects were untouched.
+Actual modifications: none. No builds, commits, tags or backups were performed. All other projects and protected files were untouched.

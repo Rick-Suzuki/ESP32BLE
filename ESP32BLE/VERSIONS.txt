@@ -1,3 +1,6 @@
+261023 Fri 0835
+midi chords/midi slides - both work
+V64.8
 
 261022 Thu 1951
 midi slides to play notes, momentary notes only

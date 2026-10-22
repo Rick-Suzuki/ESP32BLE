@@ -602,71 +602,100 @@ private struct MIDITouchView: UIViewRepresentable {
     }
 }
 
-// MARK: - BM:🅱️ One grid-owned touch routes momentary notes; cancellation prevents old move events from restarting playback.
+// MARK: - BM:🅱️ Every note touch owns an activation; the first finger leaving its button becomes the sole slider.
 @MainActor
 private final class MIDISlideCoordinator {
+    private final class TouchOwner {
+        let touch: UITouch
+        weak var source: MIDITouchCaptureView?
+        var targetContext: MainMIDITouchContext?
+        var token: UUID?
+        var release: ((UUID) -> Void)?
+
+        init(touch: UITouch, source: MIDITouchCaptureView) {
+            self.touch = touch
+            self.source = source
+        }
+    }
+
     private let targets = NSHashTable<MIDITouchCaptureView>.weakObjects()
-    private var touch: UITouch?
-    private weak var source: MIDITouchCaptureView?
-    private var targetContext: MainMIDITouchContext?
-    private var token: UUID?
-    private var release: ((UUID) -> Void)?
+    private var owners: [ObjectIdentifier: TouchOwner] = [:]
+    private var sliderID: ObjectIdentifier?
 
     func register(_ view: MIDITouchCaptureView) {
         targets.add(view)
     }
 
     func unregister(_ view: MIDITouchCaptureView) {
-        if source === view || targetContext == view.context {
-            cancel()
+        let affected = owners.values.filter {
+            $0.source === view || $0.targetContext == view.context
         }
+        for owner in affected { end(owner.touch) }
         targets.remove(view)
     }
 
-    func begin(_ touch: UITouch, from view: MIDITouchCaptureView) -> Bool {
-        guard self.touch == nil, view.slideEligible else { return false }
-        self.touch = touch
-        source = view
-        transition(to: view)
-        return true
+    func begin(_ touch: UITouch, from view: MIDITouchCaptureView) {
+        let id = ObjectIdentifier(touch)
+        guard owners[id] == nil, view.slideEligible else { return }
+        let owner = TouchOwner(touch: touch, source: view)
+        owners[id] = owner
+        transition(owner, to: view)
     }
 
     func move(_ touch: UITouch) {
-        guard self.touch === touch else { return }
-        guard let source, let window = source.window else {
-            cancel()
+        let id = ObjectIdentifier(touch)
+        guard let owner = owners[id] else { return }
+        guard let source = owner.source, let window = source.window else {
+            end(touch)
             return
         }
+        if sliderID != id {
+            guard !source.bounds.contains(touch.location(in: source)) else { return }
+            guard sliderID == nil else {
+                end(touch)
+                return
+            }
+            sliderID = id
+        }
+
         let target = targets.allObjects.first { view in
             view.window === window && view.isUserInteractionEnabled &&
                 view.slideEligible && view.bounds.contains(touch.location(in: view))
         }
-        transition(to: target)
+        transition(owner, to: target)
     }
 
     func end(_ touch: UITouch) {
-        guard self.touch === touch else { return }
-        cancel()
+        let id = ObjectIdentifier(touch)
+        guard let owner = owners.removeValue(forKey: id) else { return }
+        if sliderID == id { sliderID = nil }
+        transition(owner, to: nil)
+    }
+
+    func cancelTouches(from view: MIDITouchCaptureView) {
+        let affected = owners.values.filter { $0.source === view }
+        for owner in affected { end(owner.touch) }
     }
 
     func cancel() {
-        touch = nil
-        source = nil
-        transition(to: nil)
+        let cancelled = Array(owners.values)
+        owners.removeAll()
+        sliderID = nil
+        for owner in cancelled { transition(owner, to: nil) }
     }
 
-    private func transition(to view: MIDITouchCaptureView?) {
+    private func transition(_ owner: TouchOwner, to view: MIDITouchCaptureView?) {
         let context = view?.context
-        guard context != targetContext else { return }
-        let oldToken = token
-        let oldRelease = release
-        token = nil
-        release = nil
-        targetContext = context
+        guard context != owner.targetContext else { return }
+        let oldToken = owner.token
+        let oldRelease = owner.release
+        owner.token = nil
+        owner.release = nil
+        owner.targetContext = context
         if let oldToken { oldRelease?(oldToken) }
         if let view {
-            release = view.slideReleaseHandler
-            token = view.beginSlideNote()
+            owner.release = view.slideReleaseHandler
+            owner.token = view.beginSlideNote()
         }
     }
 }
@@ -675,7 +704,6 @@ private final class MIDITouchCaptureView: UIView {
     fileprivate var context: MainMIDITouchContext?
     private var slideCoordinator: MIDISlideCoordinator?
     private var buttonFrame: CGRect?
-    private var isSlideTouch = false
 
     fileprivate var slideEligible: Bool {
         guard let context else { return false }
@@ -735,7 +763,7 @@ private final class MIDITouchCaptureView: UIView {
         }
         if activeTouch != nil &&
             (self.context != context || !isEnabled ||
-             (!isSlideTouch && context.mode == .momentary && activationToken != activeToken)) {
+             (context.mode == .momentary && activationToken != activeToken)) {
             cancelActiveTouch()
         }
 
@@ -749,23 +777,20 @@ private final class MIDITouchCaptureView: UIView {
         self.onUp = onUp
         self.onTogglePress = onTogglePress
         isUserInteractionEnabled = isEnabled
+        isMultipleTouchEnabled = slideEligible
         slideCoordinator.register(self)
     }
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-        guard isUserInteractionEnabled,
-              activeTouch == nil,
-              let touch = touches.first,
-              let context else { return }
-
+        guard isUserInteractionEnabled, let context else { return }
         if slideEligible {
-            guard touch.type == .direct,
-                  slideCoordinator?.begin(touch, from: self) == true else { return }
-            activeTouch = touch
-            isSlideTouch = true
+            for touch in touches where touch.type == .direct {
+                slideCoordinator?.begin(touch, from: self)
+            }
             return
         }
 
+        guard activeTouch == nil, let touch = touches.first else { return }
         activeTouch = touch
         activationToken = onDown?(context)
         if context.mode == .toggle {
@@ -774,23 +799,22 @@ private final class MIDITouchCaptureView: UIView {
     }
 
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
+        for touch in touches { slideCoordinator?.move(touch) }
         guard let activeTouch,
-              touches.contains(where: { $0 === activeTouch }) else { return }
-        if isSlideTouch {
-            slideCoordinator?.move(activeTouch)
-        } else if !bounds.contains(activeTouch.location(in: self)) {
-            cancelActiveTouch()
-        }
+              touches.contains(where: { $0 === activeTouch }),
+              !bounds.contains(activeTouch.location(in: self)) else { return }
+        cancelActiveTouch()
     }
 
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+        for touch in touches { slideCoordinator?.end(touch) }
         guard let activeTouch,
               touches.contains(where: { $0 === activeTouch }) else { return }
-
         cancelActiveTouch()
     }
 
     override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
+        for touch in touches { slideCoordinator?.end(touch) }
         guard let activeTouch,
               touches.contains(where: { $0 === activeTouch }) else { return }
         cancelActiveTouch()
@@ -798,10 +822,7 @@ private final class MIDITouchCaptureView: UIView {
 
     // MARK: - BM:🅱️ Rejected presses have no token; stale releases cannot consume a newer activation.
     func cancelActiveTouch() {
-        if isSlideTouch, let activeTouch {
-            slideCoordinator?.end(activeTouch)
-        }
-        isSlideTouch = false
+        slideCoordinator?.cancelTouches(from: self)
         let token = activationToken
         activeTouch = nil
         activationToken = nil

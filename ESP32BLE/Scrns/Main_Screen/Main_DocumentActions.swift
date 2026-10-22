@@ -1162,7 +1162,10 @@ extension MainScreen {
                 continue
             }
 
-            if pasteDestinationResult(startingAt: candidateIndex, span: span, gridDimensions: gridDimensions) == .available {
+            let sourceFootprint = Set(indexes(startingAt: sourceIndex, shape: shape, gridDimensions: gridDimensions))
+            let destinationFootprint = Set(indexes(startingAt: candidateIndex, shape: shape, gridDimensions: gridDimensions))
+            if sourceFootprint.isDisjoint(with: destinationFootprint),
+               pasteDestinationResult(startingAt: candidateIndex, span: span, gridDimensions: gridDimensions) == .available {
                 return candidateIndex
             }
         }
@@ -1595,7 +1598,8 @@ extension MainScreen {
             }
 
             let entry = functionKeys[slotIndex]
-            guard entry.isBlankPlaceholder || isEmptyButtonEntry(entry) else {
+            guard !isButtonContinuationEntry(entry),
+                  entry.isBlankPlaceholder || isEmptyButtonEntry(entry) else {
                 return .occupied
             }
         }

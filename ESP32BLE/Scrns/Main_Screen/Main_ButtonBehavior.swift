@@ -59,14 +59,38 @@ final class MainMIDIActivationRegistry {
         activations.first { $0.value == context }?.key
     }
 
+    private struct SoundingNote: Hashable {
+        let connectionSession: UUID
+        let channel: UInt8
+        let note: UInt8
+
+        init?(_ context: MainMIDITouchContext) {
+            guard case .note(let note, _, _) = context.message else { return nil }
+            connectionSession = context.connectionSession
+            channel = context.channel
+            self.note = note
+        }
+    }
+
+    // MARK: - BM:🅱️ Each finger owns a token; notes and note toggles share one sounding pitch until the last owner releases.
     func begin(_ context: MainMIDITouchContext, sendOn: () -> Bool) -> UUID? {
-        guard context.generation == generation,
-              !activations.values.contains(where: {
-                  $0.documentSession == context.documentSession &&
-                  $0.documentName == context.documentName &&
-                  $0.slot == context.slot
-              }),
-              sendOn() else { return nil }
+        guard context.generation == generation else { return nil }
+        let isMomentaryNote: Bool
+        if case .note(_, _, .momentary) = context.message {
+            isMomentaryNote = true
+        } else {
+            isMomentaryNote = false
+        }
+        guard isMomentaryNote || !activations.values.contains(where: {
+            $0.documentSession == context.documentSession &&
+            $0.documentName == context.documentName && $0.slot == context.slot
+        }) else { return nil }
+
+        let note = SoundingNote(context)
+        let alreadySounding = note.map { key in
+            activations.values.contains { SoundingNote($0) == key }
+        } ?? false
+        guard alreadySounding || sendOn() else { return nil }
 
         let token = UUID()
         activations[token] = context
@@ -104,6 +128,10 @@ final class MainMIDIActivationRegistry {
         guard let activation = activations[token] else { return }
         activations.removeValue(forKey: token)
         guard activation.connectionSession == connectionSession else { return }
+        if let note = SoundingNote(activation),
+           activations.values.contains(where: { SoundingNote($0) == note }) {
+            return
+        }
         sendOff(activation)
     }
 
@@ -111,7 +139,12 @@ final class MainMIDIActivationRegistry {
         let released = activations
         activations.removeAll()
         generation = UUID()
+        var releasedNotes = Set<SoundingNote>()
         for activation in released.values where activation.connectionSession == connectionSession {
+            if let note = SoundingNote(activation),
+               !releasedNotes.insert(note).inserted {
+                continue
+            }
             sendOff(activation)
         }
     }
