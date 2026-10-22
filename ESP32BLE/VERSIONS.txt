@@ -1,4 +1,8 @@
 
+261022 Thu 1356
+cut/copy/paste working for command and btn
+V64.5
+
 261022 Thu 0851
 table copy, midi ch number
 V64.14

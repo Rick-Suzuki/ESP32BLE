@@ -1,10 +1,28 @@
 import SwiftUI
 import UIKit
 
+@MainActor
+@Observable
+final class SmartEditorPasteTarget {
+    enum Editor {
+        case command
+        case button
+    }
+
+    private(set) var editor: Editor = .command
+    private(set) weak var textView: UITextView?
+
+    func activate(_ editor: Editor, textView: UITextView) {
+        self.editor = editor
+        self.textView = textView
+    }
+}
+
 struct SmartScriptTextEditor: UIViewRepresentable {
     @Binding var text: String
     @Binding var selectedRange: NSRange
     let fontSize: CGFloat
+    var onBeginEditing: ((UITextView) -> Void)? = nil
 
     func makeCoordinator() -> Coordinator {
         Coordinator(self)
@@ -106,6 +124,7 @@ struct SmartScriptTextEditor: UIViewRepresentable {
         }
 
         func textViewDidBeginEditing(_ textView: UITextView) {
+            parent.onBeginEditing?(textView)
         }
 
         func textViewDidEndEditing(_ textView: UITextView) {
@@ -158,6 +177,7 @@ struct SmartPreviewTextView: UIViewRepresentable {
     let fontSize: CGFloat
     let maximumVisibleLines: Int
     let disablesAutomaticPeriodShortcut: Bool
+    var onBeginEditing: ((UITextView) -> Void)? = nil
     private static let maximumManualLogicalLineCount = 4
     private static let minimumVerticalInset: CGFloat = 1
 
@@ -265,6 +285,7 @@ struct SmartPreviewTextView: UIViewRepresentable {
         }
 
         func textViewDidBeginEditing(_ textView: UITextView) {
+            parent.onBeginEditing?(textView)
             updateDisplayTruncation(for: textView)
             updateFittedFont(for: textView)
             updateVerticalTextInsets(for: textView)

@@ -140,7 +140,7 @@ struct IPadSmartCommandKeypad<
             .frame(height: 44)
 
             HStack(spacing: 0) {
-                placeholderButton("delete.backward.fill")
+                placeholderButton("delete.right.fill")
                     .frame(width: keyCellWidth)
                 escapeCodeToggleButton()
                     .frame(width: keyCellWidth)

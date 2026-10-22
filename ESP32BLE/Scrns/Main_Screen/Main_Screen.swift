@@ -170,10 +170,10 @@ struct MainScreen: View {
         "xmark", "arrow.left", "arrow.right", "arrow.uturn.backward",
 		
 		// row 1
-        "delete.right.fill", "", "doc.on.clipboard", "arrow.uturn.forward",
+        "doc.on.doc", "scissors", "doc.on.clipboard", "arrow.uturn.forward",
 		
 		// row 2
-        "delete.backward.fill", "", ""	// mode btn here
+        "delete.right.fill", "", ""	// mode btn here
 		
 		// row 4
 		// modifiers
@@ -974,6 +974,7 @@ Tapping a row inserts the key code at the cursor.
 	//
 	@State private var isSmartEscapeCodeTableVisible = false
     @State private var smartScriptEditingModel = SmartScriptEditingModel()
+    @State private var smartPasteTarget = SmartEditorPasteTarget()
     @State private var smartButtonBrightness = 0.5
     @State private var smartButtonBrightnessBaseHex: String?
     @State private var smartButtonPreviewFontSize = 34.0
@@ -3556,7 +3557,7 @@ Tapping a row inserts the key code at the cursor.
                     .frame(height: 44)
 
                     HStack(spacing: 0) {
-                        smartPlaceholderButton(systemName: "delete.backward.fill")
+                        smartPlaceholderButton(systemName: "delete.right.fill")
                             .frame(width: keyCellWidth)
                         smartEscapeCodeToggleButton
                             .frame(width: keyCellWidth)
@@ -3907,7 +3908,10 @@ Tapping a row inserts the key code at the cursor.
             SmartScriptTextEditor(
                 text: smartScriptEditorTextBinding,
                 selectedRange: smartScriptSelectionRangeBinding,
-                fontSize: 20
+                fontSize: 20,
+                onBeginEditing: { textView in
+                    smartPasteTarget.activate(.command, textView: textView)
+                }
             )
                 .font(.system(size: 20, weight: .regular))
                 .foregroundStyle(.white)
@@ -4362,7 +4366,10 @@ Tapping a row inserts the key code at the cursor.
                             selectedRange: $smartButtonPreviewSelectionRange,
                             fontSize: fittedSubtitleFontSize,
                             maximumVisibleLines: subtitleVisibleLineCount,
-                            disablesAutomaticPeriodShortcut: true
+                            disablesAutomaticPeriodShortcut: true,
+                            onBeginEditing: { textView in
+                                smartPasteTarget.activate(.button, textView: textView)
+                            }
                         )
                             .frame(height: subtitleTextFieldHeight)
                             .padding(.horizontal, 8)
@@ -4381,7 +4388,10 @@ Tapping a row inserts the key code at the cursor.
                         selectedRange: $smartButtonPreviewSelectionRange,
                         fontSize: ordinaryPreviewFontSize,
                         maximumVisibleLines: ordinaryVisibleLineCount,
-                        disablesAutomaticPeriodShortcut: true
+                        disablesAutomaticPeriodShortcut: true,
+                        onBeginEditing: { textView in
+                            smartPasteTarget.activate(.button, textView: textView)
+                        }
                     )
                         .frame(height: min(previewHeight, SmartPreviewTextView.preferredHeight(
                             fontSize: ordinaryPreviewFontSize,
@@ -4921,6 +4931,8 @@ Tapping a row inserts the key code at the cursor.
             } else if systemName == "arrow.down" {
                 ButtonClickFeedback.playIfEnabled()
                 smartScriptEditingModel.moveCaretDown()
+            } else if systemName == "doc.on.doc" || systemName == "scissors" {
+                copyOrCutSmartEditorSelection(isCut: systemName == "scissors")
             } else if systemName == "doc.on.clipboard" {
                 pasteSmartActionTextFromSystemClipboard()
             } else if systemName == "delete.right.fill" {
@@ -4948,6 +4960,10 @@ Tapping a row inserts the key code at the cursor.
     }
 
     private func smartPlaceholderButtonIsDisabled(_ systemName: String) -> Bool {
+        if systemName == "doc.on.doc" || systemName == "scissors" {
+            return smartClipboardSelection == nil
+        }
+
         if systemName == "arrow.left" {
             return !smartScriptEditingModel.canMoveCaretLeft
         }
@@ -5097,14 +5113,77 @@ Tapping a row inserts the key code at the cursor.
         smartActionTextBinding.wrappedValue = smartScriptEditingModel.scriptText
     }
 
+    private var smartClipboardSelection: (text: String, range: NSRange)? {
+        let text: String
+        let storedRange: NSRange
+        switch smartPasteTarget.editor {
+        case .command:
+            text = smartScriptEditingModel.scriptText
+            storedRange = smartScriptEditingModel.selectionRange
+        case .button:
+            text = smartButtonEditablePreviewTextBinding.wrappedValue
+            storedRange = smartButtonPreviewSelectionRange
+        }
+        let range = smartPasteTarget.textView.flatMap { view in
+            view.text == text ? view.selectedRange : nil
+        } ?? storedRange
+        let nsText = text as NSString
+        guard range.location != NSNotFound,
+              range.location >= 0,
+              range.length > 0,
+              range.location <= nsText.length,
+              range.length <= nsText.length - range.location,
+              nsText.rangeOfComposedCharacterSequences(for: range) == range,
+              let stringRange = Range(range, in: text) else {
+            return nil
+        }
+        return (String(text[stringRange]), range)
+    }
+
+    private func copyOrCutSmartEditorSelection(isCut: Bool) {
+        guard let selection = smartClipboardSelection else { return }
+        if isCut {
+            switch smartPasteTarget.editor {
+            case .command:
+                UIPasteboard.general.string = selection.text
+                smartScriptEditingModel.setSelectionRange(selection.range)
+                smartScriptEditingModel.replaceSelection(with: "")
+                smartActionTextBinding.wrappedValue = smartScriptEditingModel.scriptText
+            case .button:
+                guard let textView = smartPasteTarget.textView,
+                      textView.window != nil,
+                      textView.text == smartButtonEditablePreviewTextBinding.wrappedValue,
+                      textView.undoManager != nil else { return }
+                textView.selectedRange = selection.range
+                textView.cut(nil)
+            }
+        } else {
+            UIPasteboard.general.string = selection.text
+        }
+        ButtonClickFeedback.playIfEnabled()
+    }
+
     private func pasteSmartActionTextFromSystemClipboard() {
         guard let clipboardText = UIPasteboard.general.string, !clipboardText.isEmpty else {
             return
         }
 
         ButtonClickFeedback.playIfEnabled()
-        smartScriptEditingModel.replaceSelection(with: clipboardText)
-        smartActionTextBinding.wrappedValue = smartScriptEditingModel.scriptText
+        switch smartPasteTarget.editor {
+        case .command:
+            if let textView = smartPasteTarget.textView,
+               textView.text == smartScriptEditingModel.scriptText {
+                smartScriptEditingModel.setSelectionRange(textView.selectedRange)
+            }
+            smartScriptEditingModel.replaceSelection(with: clipboardText)
+            smartActionTextBinding.wrappedValue = smartScriptEditingModel.scriptText
+        case .button:
+            if let textView = smartPasteTarget.textView,
+               textView.text == smartButtonEditablePreviewTextBinding.wrappedValue {
+                smartButtonPreviewSelectionRange = textView.selectedRange
+            }
+            insertSmartPreviewTextAtSelection(clipboardText)
+        }
     }
 
     private func toggleSmartModifierPrefix(_ prefix: String) {

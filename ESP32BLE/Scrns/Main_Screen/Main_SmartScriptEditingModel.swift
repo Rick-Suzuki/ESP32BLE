@@ -90,6 +90,21 @@ struct SmartScriptEditingModel {
         selectionRange = clampedRange(NSRange(location: insertionLocation, length: 0))
     }
 
+    var selectedText: String? {
+        let range = selectionRange
+        let text = scriptText as NSString
+        guard range.location != NSNotFound,
+              range.location >= 0,
+              range.length > 0,
+              range.location <= text.length,
+              range.length <= text.length - range.location,
+              text.rangeOfComposedCharacterSequences(for: range) == range,
+              let stringRange = Range(range, in: scriptText) else {
+            return nil
+        }
+        return String(scriptText[stringRange])
+    }
+
     var canUndo: Bool {
         !undoStack.isEmpty
     }
