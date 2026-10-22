@@ -1,31 +1,84 @@
-Relevant code:
+The smallest safe approach is to extend the existing UIKit MIDI touch capture with a shared, grid-scoped slide coordinator. No layout or MIDI transport rewrite is needed.
 
-• Main_ButtonBehavior.swift:2414 — mainGridButtonLabel passes Button text, parsed SF Symbol/subtitle, button size, corner radius and background opacity to the live renderer.
-• Main_ButtonLabelView.swift:72–139 — body and buttonVisualShell render the background, border and padded foreground.
-• Main_ButtonLabelView.swift:148 — buttonContent chooses widgets, symbols, emoji or text.
-• Main_ButtonBehavior.swift:1770–1808 — resolvedPreviewFileURL and matchedRegularFileURL search Documents first, then bundled resources, with case-insensitive fallback.
-• ContentView.swift:149 — downsampledUIImage provides reusable image decoding. Lines 574–593 list supported image extensions.
+Current behaviour
 
-Smallest recommended implementation:
+Main_GridSection.swift:
+• gridButtonView selects MIDINoteButton for MIDI notes and supported CC hold/toggle commands.
+• MIDITouchCaptureView.touchesBegan starts an activation.
+• touchesMoved releases a momentary activation and clears tracking when the finger leaves that button’s bounds.
+• touchesEnded, touchesCancelled and dismantleUIView also release it.
+• Staying inside the button does not retrigger.
 
-1. Resolve the complete Button filename after removing existing colour metadata. Require successful image decoding; otherwise retain the existing text rendering.
-2. Pass the resolved image URL into the live label renderer. Leave Soft Editor rendering and stored text unchanged.
-3. Add an unpadded image branch using original rendering, resizable aspect-fill, the existing buttonSize, and clipping to RoundedRectangle with the existing cornerRadius.
-4. Keep the existing background beneath it and border above it. Skip text/SF Symbol rendering only while the image loads successfully.
-5. Apply no opacity slider to this image layer. Preserve its alpha channel; transparent PNG areas reveal the existing background.
+A touch remains associated with its original UIKit view when it moves. Neighbouring buttons therefore receive no new touch-down. The current implementation cannot slide between notes or resume after leaving the original button.
 
-Reuse the file resolver, not openPreviewFile(), which presents a preview and changes UI state. Existing filename commands can remain untouched.
+isMultipleTouchEnabled = false applies per button, not across the grid. Different buttons can currently accept different fingers.
 
-Refresh considerations:
+Existing MIDI paths
 
-No live-button image cache or file-change refresh mechanism was found in the inspected rendering path. A cached image needs invalidation for replacement/deletion; failed lookups also need retry after files are added. Use URL plus modification date/file size and an explicit refresh trigger on returning to Main Screen or app activation. A filename-only cache would become stale.
+Main_Screen.swift:
+• midiTouchContext resolves the note, velocity, channel, mode and session.
+• beginMIDIActivation → sendMIDIActivationOn starts playback.
+• endMIDIActivation → registry.release → sendMIDIActivationOff releases it.
+• midiInputEnabled disables playback while Settings/Keyboard is visible, the app is inactive, editing or previewing, or transport is unavailable.
 
-Important decisions/risks:
+Main_ButtonBehavior.swift:
+• MainMIDIActivationRegistry owns unique activation tokens and rejects stale releases.
+• sendMIDINoteOnFromTouch and sendMIDINoteOffFromTouch send authenticated MIDI commands to the Mac connection.
+• midiCommandForGridEntry accepts a single parsed MIDI command, avoiding mixed command sequences.
 
-• “Contains a filename” should preferably mean the entire editable Button text, not a filename embedded in a sentence.
-• If preserving an SF Symbol with a filename subtitle is required, resolve the subtitle while retaining the stored symbol.
-• Existing Command-only/Both display modes and widgets need an explicit image-priority rule.
-• Aspect-fill removes fitting bars by cropping. Transparent edges already present in the image must remain transparent.
-• Avoid decoding full-resolution images repeatedly during SwiftUI rendering; reuse the downsampling helper with dimensions suitable for aspect-fill.
+Geometry
 
-No files were modified. No builds, commits, tags or backups were made.
+MainScreenGridSection already calculates each button’s origin and resolved width/height, including spacing and merged buttons. Equal-sized grids use the same calculations with a one-cell span.
+
+buttonOrigin, resolvedWidth, resolvedHeight and buttonShape provide sufficient hit regions. Existing onRenderedButtonFrame callbacks also expose grid-local rectangles.
+
+Use these existing rectangles with touch positions converted into the same coordinate space. No changes to font sizing, scaling, iPhone landscape layout or iPad editor geometry are required.
+
+Recommended implementation
+
+Keep the existing per-button UIKit capture views, sharing one coordinator for the grid.
+
+The coordinator should:
+• Accept one originating finger and ignore additional slide touches.
+• Retain that finger until lift/cancellation, even after leaving its starting button.
+• Resolve movement against eligible momentary-note button regions.
+• Track the current slot/context and activation token.
+• Do nothing while the target remains unchanged.
+• Release the previous token before starting a different target.
+• Release on gaps, non-MIDI buttons or outside-grid positions, while retaining tracking for possible re-entry.
+• Never call sendLine or ordinary button actions.
+
+The current configure check compares the originating button’s token with its activation. That must be adapted: after sliding, the active token belongs to the destination button.
+
+Release and conflict handling
+
+Existing resetMIDIActivations already covers screen/session changes, command changes, channel changes, input disabling and disappearance. Connection-session cleanup also exists. The new coordinator must clear its tracking when these invalidate the gesture, preventing playback from restarting until a fresh touch.
+
+The grid itself is not a ScrollView. Reordering drags and editing long presses are confined to edit mode; sliding should remain disabled there. Keep ordinary buttons, sound double taps and interactive widgets on their existing paths.
+
+A grid-wide transparent touch overlay would require careful pass-through handling. Extending the existing capture views avoids intercepting unrelated controls.
+
+Transport loss remains an existing limitation: note-off cannot be delivered after connectivity is lost.
+
+Toggle exclusion
+
+Yes—exclude note toggles and CC toggles from the initial sliding implementation. They intentionally remain active after lift, which conflicts with release-on-exit/lift semantics. Preserve their existing direct-tap behaviour.
+
+Also exclude CC hold/one-shot commands initially; filtering only for “momentary” would accidentally include CC hold.
+
+Likely files requiring changes
+
+Main_GridSection.swift should contain the main change and may be sufficient, using its existing contexts, registry and callbacks.
+
+Main_Screen.swift may need a small explicit cancellation/reset connection if existing generation and enabled-state updates are insufficient. Main_ButtonBehavior.swift and MIDI transport/parser files should not require changes.
+
+Unresolved behaviour choices
+
+Recommended defaults:
+• Gaps/non-MIDI regions silence the note; re-entering an eligible button resumes playback.
+• Touches starting outside eligible note buttons do not start sliding.
+• Crossing distinct buttons with the same note/channel releases and retriggers.
+• Layout changes cancel the gesture.
+• Clarify whether “one finger only” limits sliding alone or must also block simultaneous direct toggle/CC presses.
+
+No files were modified. No builds, commits, tags or backups were performed. All ESPMacHelper and Test Area projects were untouched.

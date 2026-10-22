@@ -483,7 +483,8 @@ struct SettingsDocumentTableSection: View {
             }
         }
     }
-
+	
+	// MARK: - BM: Table: image taps
     private func handleImagePreviewSelection(_ imageURL: URL) {
         ButtonClickFeedback.playIfEnabled()
         handleFileSelection(imageURL) {

@@ -134,6 +134,7 @@ struct MainScreenGridSection<ButtonLabel: View>: View {
     let onResetSlotSize: (FunctionKeyEntry, Int, GridDimensions) -> Void
     let onDeleteSlot: (FunctionKeyEntry, Int) -> Void
     @State private var longPressedEditIndex: Int?
+    @State private var slideCoordinator = MIDISlideCoordinator()
 
     var body: some View {
         GeometryReader { geometry in
@@ -231,6 +232,9 @@ struct MainScreenGridSection<ButtonLabel: View>: View {
                 }
             }
             .frame(width: safeAvailableWidth, height: geometry.size.height, alignment: .topLeading)
+            .onChange(of: geometry.frame(in: .global)) {
+                slideCoordinator.cancel()
+            }
             .task(id: renderedGridFrameTaskID(
                 width: safeAvailableWidth,
                 height: visualGridHeight
@@ -246,7 +250,12 @@ struct MainScreenGridSection<ButtonLabel: View>: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onDisappear {
             longPressedEditIndex = nil
+            slideCoordinator.cancel()
         }
+        .onChange(of: midiActivations.generation) { slideCoordinator.cancel() }
+        .onChange(of: midiInputEnabled) { slideCoordinator.cancel() }
+        .onChange(of: scenePhase) { slideCoordinator.cancel() }
+        .onChange(of: isGridEditModeEnabled) { slideCoordinator.cancel() }
     }
 
     private func isWideButtonContinuationEntry(_ entry: FunctionKeyEntry) -> Bool {
@@ -436,6 +445,8 @@ struct MainScreenGridSection<ButtonLabel: View>: View {
         } else if !isGridEditModeEnabled, let context = midiContext(entry, index) {
             MIDINoteButton(
                 context: context,
+                slideCoordinator: slideCoordinator,
+                buttonFrame: buttonFrame,
                 activeToken: midiActivations.activeToken(for: context),
                 isEnabled: midiInputEnabled && scenePhase == .active,
                 cornerRadius: mainGridButtonCornerRadius,
@@ -520,6 +531,8 @@ private struct MIDINoteButton<Label: View>: View {
     private let pressedAccentStrokeWidth: CGFloat = 3
 
     let context: MainMIDITouchContext
+    let slideCoordinator: MIDISlideCoordinator
+    let buttonFrame: CGRect
     let activeToken: UUID?
     let isEnabled: Bool
     let cornerRadius: CGFloat
@@ -544,6 +557,8 @@ private struct MIDINoteButton<Label: View>: View {
 
             MIDITouchView(
                 touchContext: context,
+                slideCoordinator: slideCoordinator,
+                buttonFrame: buttonFrame,
                 activeToken: activeToken,
                 isEnabled: isEnabled,
                 onDown: onDown,
@@ -556,6 +571,8 @@ private struct MIDINoteButton<Label: View>: View {
 
 private struct MIDITouchView: UIViewRepresentable {
     let touchContext: MainMIDITouchContext
+    let slideCoordinator: MIDISlideCoordinator
+    let buttonFrame: CGRect
     let activeToken: UUID?
     let isEnabled: Bool
     let onDown: (MainMIDITouchContext) -> UUID?
@@ -569,6 +586,8 @@ private struct MIDITouchView: UIViewRepresentable {
     func updateUIView(_ uiView: MIDITouchCaptureView, context: Context) {
         uiView.configure(
             context: touchContext,
+            slideCoordinator: slideCoordinator,
+            buttonFrame: buttonFrame,
             activeToken: activeToken,
             isEnabled: isEnabled,
             onDown: onDown,
@@ -579,11 +598,101 @@ private struct MIDITouchView: UIViewRepresentable {
 
     static func dismantleUIView(_ uiView: MIDITouchCaptureView, coordinator: ()) {
         uiView.cancelActiveTouch()
+        uiView.unregisterSlideTarget()
+    }
+}
+
+// MARK: - BM:🅱️ One grid-owned touch routes momentary notes; cancellation prevents old move events from restarting playback.
+@MainActor
+private final class MIDISlideCoordinator {
+    private let targets = NSHashTable<MIDITouchCaptureView>.weakObjects()
+    private var touch: UITouch?
+    private weak var source: MIDITouchCaptureView?
+    private var targetContext: MainMIDITouchContext?
+    private var token: UUID?
+    private var release: ((UUID) -> Void)?
+
+    func register(_ view: MIDITouchCaptureView) {
+        targets.add(view)
+    }
+
+    func unregister(_ view: MIDITouchCaptureView) {
+        if source === view || targetContext == view.context {
+            cancel()
+        }
+        targets.remove(view)
+    }
+
+    func begin(_ touch: UITouch, from view: MIDITouchCaptureView) -> Bool {
+        guard self.touch == nil, view.slideEligible else { return false }
+        self.touch = touch
+        source = view
+        transition(to: view)
+        return true
+    }
+
+    func move(_ touch: UITouch) {
+        guard self.touch === touch else { return }
+        guard let source, let window = source.window else {
+            cancel()
+            return
+        }
+        let target = targets.allObjects.first { view in
+            view.window === window && view.isUserInteractionEnabled &&
+                view.slideEligible && view.bounds.contains(touch.location(in: view))
+        }
+        transition(to: target)
+    }
+
+    func end(_ touch: UITouch) {
+        guard self.touch === touch else { return }
+        cancel()
+    }
+
+    func cancel() {
+        touch = nil
+        source = nil
+        transition(to: nil)
+    }
+
+    private func transition(to view: MIDITouchCaptureView?) {
+        let context = view?.context
+        guard context != targetContext else { return }
+        let oldToken = token
+        let oldRelease = release
+        token = nil
+        release = nil
+        targetContext = context
+        if let oldToken { oldRelease?(oldToken) }
+        if let view {
+            release = view.slideReleaseHandler
+            token = view.beginSlideNote()
+        }
     }
 }
 
 private final class MIDITouchCaptureView: UIView {
-    private var context: MainMIDITouchContext?
+    fileprivate var context: MainMIDITouchContext?
+    private var slideCoordinator: MIDISlideCoordinator?
+    private var buttonFrame: CGRect?
+    private var isSlideTouch = false
+
+    fileprivate var slideEligible: Bool {
+        guard let context else { return false }
+        if case .note(_, _, .momentary) = context.message { return true }
+        return false
+    }
+
+    fileprivate func beginSlideNote() -> UUID? {
+        guard isUserInteractionEnabled, let context else { return nil }
+        return onDown?(context)
+    }
+
+    fileprivate var slideReleaseHandler: ((UUID) -> Void)? { onUp }
+
+    func unregisterSlideTarget() {
+        slideCoordinator?.unregister(self)
+    }
     private var onDown: ((MainMIDITouchContext) -> UUID?)?
     private var onUp: ((UUID) -> Void)?
     private var onTogglePress: ((MainMIDITouchContext, UUID?) -> Void)?
@@ -596,29 +705,51 @@ private final class MIDITouchCaptureView: UIView {
         isMultipleTouchEnabled = false
     }
 
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        if window == nil {
+            cancelActiveTouch()
+            unregisterSlideTarget()
+        } else {
+            slideCoordinator?.register(self)
+        }
+    }
+
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
 
     func configure(
         context: MainMIDITouchContext,
+        slideCoordinator: MIDISlideCoordinator,
+        buttonFrame: CGRect,
         activeToken: UUID?,
         isEnabled: Bool,
         onDown: @escaping (MainMIDITouchContext) -> UUID?,
         onUp: @escaping (UUID) -> Void,
         onTogglePress: @escaping (MainMIDITouchContext, UUID?) -> Void
     ) {
+        if self.context != context || self.buttonFrame != buttonFrame ||
+            self.slideCoordinator !== slideCoordinator || !isEnabled {
+            self.slideCoordinator?.cancel()
+        }
         if activeTouch != nil &&
             (self.context != context || !isEnabled ||
-             (context.mode == .momentary && activationToken != activeToken)) {
+             (!isSlideTouch && context.mode == .momentary && activationToken != activeToken)) {
             cancelActiveTouch()
         }
 
+        if self.slideCoordinator !== slideCoordinator {
+            unregisterSlideTarget()
+        }
+        self.slideCoordinator = slideCoordinator
+        self.buttonFrame = buttonFrame
         self.context = context
         self.onDown = onDown
         self.onUp = onUp
         self.onTogglePress = onTogglePress
         isUserInteractionEnabled = isEnabled
+        slideCoordinator.register(self)
     }
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -626,6 +757,14 @@ private final class MIDITouchCaptureView: UIView {
               activeTouch == nil,
               let touch = touches.first,
               let context else { return }
+
+        if slideEligible {
+            guard touch.type == .direct,
+                  slideCoordinator?.begin(touch, from: self) == true else { return }
+            activeTouch = touch
+            isSlideTouch = true
+            return
+        }
 
         activeTouch = touch
         activationToken = onDown?(context)
@@ -636,9 +775,12 @@ private final class MIDITouchCaptureView: UIView {
 
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard let activeTouch,
-              touches.contains(where: { $0 === activeTouch }),
-              !bounds.contains(activeTouch.location(in: self)) else { return }
-        cancelActiveTouch()
+              touches.contains(where: { $0 === activeTouch }) else { return }
+        if isSlideTouch {
+            slideCoordinator?.move(activeTouch)
+        } else if !bounds.contains(activeTouch.location(in: self)) {
+            cancelActiveTouch()
+        }
     }
 
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -656,6 +798,10 @@ private final class MIDITouchCaptureView: UIView {
 
     // MARK: - BM:🅱️ Rejected presses have no token; stale releases cannot consume a newer activation.
     func cancelActiveTouch() {
+        if isSlideTouch, let activeTouch {
+            slideCoordinator?.end(activeTouch)
+        }
+        isSlideTouch = false
         let token = activationToken
         activeTouch = nil
         activationToken = nil
