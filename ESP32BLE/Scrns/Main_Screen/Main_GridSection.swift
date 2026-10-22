@@ -514,17 +514,10 @@ struct MainScreenGridSection<ButtonLabel: View>: View {
             }
     }
 }
-
+// MARK: - BM:🔠🔢 MIDI NOTE BTN
 private struct MIDINoteButton<Label: View>: View {
-    private let pressedAccentColor = Color(
-        red: 232.0 / 255.0,
-        green: 185.0 / 255.0,
-        blue: 59.0 / 255.0
-    )
-    private let pressedFillOpacity = 0.18
-    private let pressedBackingStrokeOpacity = 0.6
-    private let pressedBackingStrokeWidth: CGFloat = 4
-    private let pressedAccentStrokeWidth: CGFloat = 2
+    private let pressedAccentColor = Color(red: 0, green: 1, blue: 0)
+    private let pressedAccentStrokeWidth: CGFloat = 3
 
     let context: MainMIDITouchContext
     let activeToken: UUID?
@@ -542,21 +535,10 @@ private struct MIDINoteButton<Label: View>: View {
 
             if activeToken != nil {
                 RoundedRectangle(cornerRadius: cornerRadius)
-                    .fill(pressedAccentColor.opacity(pressedFillOpacity))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: cornerRadius)
-                            .strokeBorder(
-                                Color.black.opacity(pressedBackingStrokeOpacity),
-                                lineWidth: pressedBackingStrokeWidth
-                            )
-                    }
-                    .overlay {
-                        RoundedRectangle(cornerRadius: cornerRadius)
-                            .strokeBorder(
-                                pressedAccentColor,
-                                lineWidth: pressedAccentStrokeWidth
-                            )
-                    }
+                    .strokeBorder(
+                        pressedAccentColor,
+                        lineWidth: pressedAccentStrokeWidth
+                    )
                     .allowsHitTesting(false)
             }
 

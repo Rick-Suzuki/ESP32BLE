@@ -526,6 +526,9 @@ struct ContentView: View {
     }
 
     private func refreshDocumentFiles() {
+        defer {
+            NotificationCenter.default.post(name: .mainButtonImageFilesDidRefresh, object: nil)
+        }
         guard let documentsDirectoryURL = documentsDirectoryURL() else {
             documentFiles = []
             documentDirectorySnapshot = []

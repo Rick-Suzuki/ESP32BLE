@@ -2,6 +2,25 @@ import SwiftUI
 import UIKit
 import AVFoundation
 import Combine
+import ImageIO
+
+extension Notification.Name {
+    static let mainButtonImageFilesDidRefresh = Notification.Name("mainButtonImageFilesDidRefresh")
+}
+
+private nonisolated func mainButtonImage(at url: URL, pixelSize: CGSize) -> UIImage? {
+    guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
+          let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
+          let width = properties[kCGImagePropertyPixelWidth] as? NSNumber,
+          let height = properties[kCGImagePropertyPixelHeight] as? NSNumber else { return nil }
+    let orientation = (properties[kCGImagePropertyOrientation] as? NSNumber)?.intValue ?? 1
+    let swapsAxes = (5...8).contains(orientation)
+    let sourceWidth = CGFloat(swapsAxes ? height.doubleValue : width.doubleValue)
+    let sourceHeight = CGFloat(swapsAxes ? width.doubleValue : height.doubleValue)
+    guard sourceWidth > 0, sourceHeight > 0 else { return nil }
+    let scale = min(1, max(pixelSize.width / sourceWidth, pixelSize.height / sourceHeight))
+    return downsampledUIImage(at: url, maxPixelDimension: max(sourceWidth, sourceHeight) * scale)
+}
 
 enum MainGridWidgetHeaderContent {
     case symbol(name: String, subtitle: String?)
@@ -25,6 +44,22 @@ struct MainScreenButtonLabelView: View {
     let title: String
     let leftTitle: String
     let rightTitle: String
+    let imageFilename: String
+    let resolveImageURL: (String) -> URL?
+    let isMainScreenVisible: Bool
+    @Environment(\.displayScale) private var displayScale
+    @Environment(\.scenePhase) private var scenePhase
+    @State private var buttonImage: UIImage?
+    @State private var loadedImageRequest = ""
+    @State private var imageRefreshRevision = 0
+
+    private var imageRequest: String {
+        "\(imageFilename)|\(buttonSize.width)|\(buttonSize.height)|\(displayScale)|\(imageRefreshRevision)|\(isMainScreenVisible)|\(scenePhase)|\(displayMode)|\(widgetDescriptor != nil)"
+    }
+
+    private var displayedImage: UIImage? {
+        loadedImageRequest == imageRequest ? buttonImage : nil
+    }
     let displayMode: FunctionKeyDisplayMode
     let widgetDescriptor: MainGridWidgetDescriptor?
     let widgetHeaderContent: MainGridWidgetHeaderContent
@@ -102,12 +137,48 @@ struct MainScreenButtonLabelView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
+        .task(id: imageRequest) {
+            let request = imageRequest
+            buttonImage = nil
+            loadedImageRequest = ""
+            let supportedExtensions = Set(["png", "jpg", "jpeg", "heic", "heif", "gif", "bmp", "tif", "tiff", "webp"])
+            guard isMainScreenVisible, scenePhase == .active,
+                  widgetDescriptor == nil, displayMode != .left,
+                  !imageFilename.contains("/"),
+                  !imageFilename.contains("\\"),
+                  imageFilename.rangeOfCharacter(from: .newlines) == nil,
+                  supportedExtensions.contains((imageFilename as NSString).pathExtension.lowercased()),
+                  let url = resolveImageURL(imageFilename),
+                  (try? url.resourceValues(forKeys: [.isRegularFileKey]))?.isRegularFile == true else { return }
+            let pixelSize = CGSize(width: buttonSize.width * displayScale, height: buttonSize.height * displayScale)
+            let image = await Task.detached(priority: .utility) {
+                mainButtonImage(at: url, pixelSize: pixelSize)
+            }.value
+            guard !Task.isCancelled, request == imageRequest else { return }
+            buttonImage = image
+            loadedImageRequest = request
+        }
+        .task {
+            for await _ in NotificationCenter.default.notifications(named: .mainButtonImageFilesDidRefresh) {
+                guard !Task.isCancelled else { return }
+                imageRefreshRevision &+= 1
+            }
+        }
     }
 
     private var buttonVisualShell: some View {
         ZStack {
             RoundedRectangle(cornerRadius: cornerRadius)
                 .fill(buttonBackgroundColor)
+
+            if let image = displayedImage {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: buttonSize.width, height: buttonSize.height)
+                    .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+                    .allowsHitTesting(false)
+            }
 
             if usesInsetBorder {
                 normalButtonBorder
@@ -151,6 +222,10 @@ struct MainScreenButtonLabelView: View {
                 textLabel(title: leftTitle)
             } else {
                 widgetContent(descriptor: widgetDescriptor)
+            }
+        } else if displayedImage != nil {
+            if displayMode == .both {
+                textLabel(title: leftTitle)
             }
         } else if let rightSymbolDisplay {
             switch displayMode {

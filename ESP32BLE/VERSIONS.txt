@@ -1,4 +1,8 @@
 
+261022 Thu 1501
+midi green border, settings table: taps changed
+V64.6
+
 261022 Thu 1356
 cut/copy/paste working for command and btn
 V64.5

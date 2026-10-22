@@ -2431,6 +2431,11 @@ extension MainScreen {
             title: title,
             leftTitle: leftTitle,
             rightTitle: rightTitle,
+            imageFilename: (parsedSFSymbolDisplay(for: entry)?.subtitle
+                ?? displayText(from: resolvedAlternateDisplayText(for: entry)))
+                .trimmingCharacters(in: .whitespacesAndNewlines),
+            resolveImageURL: { resolvedPreviewFileURL(named: $0) },
+            isMainScreenVisible: isMainScreenVisible,
             displayMode: displayMode,
             widgetDescriptor: targetWidgetDescriptorForGridEntry(entry),
             widgetHeaderContent: widgetHeaderContent(for: entry),

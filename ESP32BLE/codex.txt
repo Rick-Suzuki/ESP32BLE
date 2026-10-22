@@ -1,17 +1,31 @@
-Root cause: not confirmed from source alone.
+Relevant code:
 
-The strongest Button-specific suspect is repeated layout reconfiguration during interaction:
-Main_SmartEditorTextInputs.swift — PreviewTextView.layoutSubviews() at line 239 and Coordinator.updateDisplayTruncation(for:) at line 421. Button repeatedly assigns scrolling and text-container settings during layout; Command does not. This could disturb UIKit’s selection/menu interaction, but requires device evidence.
+• Main_ButtonBehavior.swift:2414 — mainGridButtonLabel passes Button text, parsed SF Symbol/subtitle, button size, corner radius and background opacity to the live renderer.
+• Main_ButtonLabelView.swift:72–139 — body and buttonVisualShell render the background, border and padded foreground.
+• Main_ButtonLabelView.swift:148 — buttonContent chooses widgets, symbols, emoji or text.
+• Main_ButtonBehavior.swift:1770–1808 — resolvedPreviewFileURL and matchedRegularFileURL search Documents first, then bundled resources, with case-insensitive fallback.
+• ContentView.swift:149 — downsampledUIImage provides reusable image decoding. Lines 574–593 list supported image extensions.
 
-Other comparisons:
-• Both editors asynchronously synchronize and reapply selection. This alone does not explain the difference.
-• Neither wrapper explicitly blocks native menus or installs a custom long-press gesture.
-• Button’s paste override calls super.paste.
-• Both editors have decorative borders, so a border alone is not a confirmed explanation.
-• Button additionally has a smaller editable area and an overlapping Clear hit target: Main_Screen.swift, lines 4360–4426.
+Smallest recommended implementation:
 
-Recommended minimal correction, if verified: make Button’s updateDisplayTruncation assignments conditional on the values actually changing. Preserve all existing values, fitting calculations and geometry. Do not apply this merely on suspicion.
+1. Resolve the complete Button filename after removing existing colour metadata. Require successful image decoding; otherwise retain the existing text rendering.
+2. Pass the resolved image URL into the live label renderer. Leave Soft Editor rendering and stored text unchanged.
+3. Add an unpadded image branch using original rendering, resizable aspect-fill, the existing buttonSize, and clipping to RoundedRectangle with the existing cornerRadius.
+4. Keep the existing background beneath it and border above it. Skip text/SF Symbol rendering only while the image loads successfully.
+5. Apply no opacity slider to this image layer. Preserve its alpha channel; transparent PNG areas reveal the existing background.
 
-Device verification needed: tap directly on Button text outside Clear’s area; confirm first-responder status and stable selection, then determine whether layout updates coincide with menu cancellation. If the text view never receives the tap, investigate the hit target instead.
+Reuse the file resolver, not openPreviewFile(), which presents a preview and changes UI state. Existing filename commands can remain untouched.
 
-No files changed. No builds, commits, tags or backups. Existing work preserved.
+Refresh considerations:
+
+No live-button image cache or file-change refresh mechanism was found in the inspected rendering path. A cached image needs invalidation for replacement/deletion; failed lookups also need retry after files are added. Use URL plus modification date/file size and an explicit refresh trigger on returning to Main Screen or app activation. A filename-only cache would become stale.
+
+Important decisions/risks:
+
+• “Contains a filename” should preferably mean the entire editable Button text, not a filename embedded in a sentence.
+• If preserving an SF Symbol with a filename subtitle is required, resolve the subtitle while retaining the stored symbol.
+• Existing Command-only/Both display modes and widgets need an explicit image-priority rule.
+• Aspect-fill removes fitting bars by cropping. Transparent edges already present in the image must remain transparent.
+• Avoid decoding full-resolution images repeatedly during SwiftUI rendering; reuse the downsampling helper with dimensions suitable for aspect-fill.
+
+No files were modified. No builds, commits, tags or backups were made.

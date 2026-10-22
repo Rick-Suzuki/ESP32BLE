@@ -42,6 +42,7 @@ struct SettingsDocumentTableSection: View {
     let deleteDocument: (URL) -> Void
     let duplicateDocument: (URL) -> Void
     let deleteTextFile: (URL) -> Void
+    let previewImage: (URL) -> Void
     let selectImage: (URL) -> Void
     let deleteImage: (URL) -> Void
     let selectSound: (URL) -> Void
@@ -329,7 +330,7 @@ struct SettingsDocumentTableSection: View {
         return Button {
             ButtonClickFeedback.playIfEnabled()
             handleFileSelection(fileURL)
-            showTableFeedback("Copied name")
+            showTableFeedback("copied name")
         } label: {
             HStack {
                 Text(fileURL.lastPathComponent)
@@ -390,7 +391,7 @@ struct SettingsDocumentTableSection: View {
             handleFileSelection(textURL) {
                 loadTextFile(textURL)
             }
-            showTableFeedback("Copied name")
+            showTableFeedback("copied name")
         } label: {
             HStack {
                 Text(textURL.lastPathComponent)
@@ -430,35 +431,46 @@ struct SettingsDocumentTableSection: View {
     private func imageRow(for imageURL: URL) -> some View {
         let isSelected = selectedImageURL?.lastPathComponent == imageURL.lastPathComponent
 
-        return Button {
-            ButtonClickFeedback.playIfEnabled()
-            handleFileSelection(imageURL) {
-                selectImage(imageURL)
-            }
-            showTableFeedback("Copied name")
-        } label: {
-            HStack {
-                Text(imageURL.lastPathComponent)
-                    .font(tableRowFont)
-                    .fontWeight(isSelected ? .bold : .regular)
-                    .foregroundStyle(isSelected ? Color.green : .white)
-                    .multilineTextAlignment(.leading)
-                    .fixedSize(horizontal: false, vertical: true)
+        return HStack {
+            Text(imageURL.lastPathComponent)
+                .font(tableRowFont)
+                .fontWeight(isSelected ? .bold : .regular)
+                .foregroundStyle(isSelected ? Color.green : .white)
+                .multilineTextAlignment(.leading)
+                .fixedSize(horizontal: false, vertical: true)
 
-                Spacer()
-            }
-            .padding(.leading, 10)
-            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-            .background(Color.black)
-            .overlay {
-                Rectangle()
-                    .fill(Color.gray.opacity(0.6))
-                    .frame(height: 1)
-                    .frame(maxHeight: .infinity, alignment: .bottom)
-            }
-            .contentShape(.rect)
+            Spacer()
         }
-        .buttonStyle(.plain)
+        .padding(.leading, 10)
+        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+        .background(Color.black)
+        .overlay {
+            Rectangle()
+                .fill(Color.gray.opacity(0.6))
+                .frame(height: 1)
+                .frame(maxHeight: .infinity, alignment: .bottom)
+        }
+        .contentShape(.rect)
+        .gesture(
+            TapGesture(count: 2)
+                .exclusively(before: TapGesture(count: 1))
+                .onEnded { gesture in
+                    switch gesture {
+                    case .first:
+                        handleImageBackgroundSelection(imageURL)
+                    case .second:
+                        handleImagePreviewSelection(imageURL)
+                    }
+                }
+        )
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityAction {
+            handleImagePreviewSelection(imageURL)
+        }
+        .accessibilityAction(named: Text("Set as Main Screen background")) {
+            handleImageBackgroundSelection(imageURL)
+        }
         .id(imageURL.path)
         .listRowInsets(EdgeInsets())
         .listRowSeparator(.hidden)
@@ -472,6 +484,21 @@ struct SettingsDocumentTableSection: View {
         }
     }
 
+    private func handleImagePreviewSelection(_ imageURL: URL) {
+        ButtonClickFeedback.playIfEnabled()
+        handleFileSelection(imageURL) {
+            previewImage(imageURL)
+        }
+        showTableFeedback("copied name")
+    }
+
+    private func handleImageBackgroundSelection(_ imageURL: URL) {
+        ButtonClickFeedback.playIfEnabled()
+        selectImage(imageURL)
+		previewImage(imageURL)
+		showTableFeedback("changed BG")
+    }
+
     private func soundRow(for soundURL: URL) -> some View {
         let isSelected = selectedSoundURL?.lastPathComponent == soundURL.lastPathComponent
 
@@ -480,7 +507,7 @@ struct SettingsDocumentTableSection: View {
             handleFileSelection(soundURL) {
                 selectSound(soundURL)
             }
-            showTableFeedback("Copied name")
+            showTableFeedback("copied name")
         } label: {
             HStack {
                 Text(soundURL.lastPathComponent)
@@ -525,7 +552,7 @@ struct SettingsDocumentTableSection: View {
             handleFileSelection(pdfURL) {
                 selectPDF(pdfURL)
             }
-            showTableFeedback("Copied name")
+            showTableFeedback("copied name")
         } label: {
             HStack {
                 Text(pdfURL.lastPathComponent)
@@ -674,7 +701,7 @@ struct SettingsDocumentTableSection: View {
 
         Task { @MainActor in
             await Task.yield()
-            showTableFeedback("Changed screen")
+            showTableFeedback("changed screen")
         }
     }
 }

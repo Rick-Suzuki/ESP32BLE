@@ -368,6 +368,7 @@ struct SettingsScreen: View {
     @FocusState var focusedField: SettingsFocusField?
     @FocusState private var isDocumentNameFieldFocused: Bool
     @State private var isCancellingDocumentNameFromOutsideTap = false
+    @State private var previewImageURL: URL?
     @State private var selectedTextFileName = ""
     @State private var templateURLs: [URL] = []
     @State private var selectedTemplateURL: URL?
@@ -383,6 +384,15 @@ struct SettingsScreen: View {
 
     var body: some View {
         configuredSettingsScreen
+            .onChange(of: selectedDocumentName) {
+                previewImageURL = nil
+            }
+            .onChange(of: documentDirectorySnapshot) {
+                if let previewImageURL,
+                   !availableImageURLs.contains(previewImageURL) {
+                    self.previewImageURL = nil
+                }
+            }
     }
 
 	// MARK: - BM:⬇️⬆️ SETTINGS - Top Toolbar
@@ -1179,7 +1189,7 @@ struct SettingsScreen: View {
 
     private var imagePreviewSection: some View {
         SettingsImagePreviewPanel(
-            imageURL: selectedImageURL,
+            imageURL: previewImageURL,
             opacitySliderValue: opacitySliderValue
         )
     }
@@ -1300,7 +1310,7 @@ struct SettingsScreen: View {
             textURLs: availableTextURLs,
             selectedTextFileName: selectedTextFileName,
             imageURLs: availableImageURLs,
-            selectedImageURL: selectedImageURL,
+            selectedImageURL: previewImageURL,
             soundURLs: availableSoundURLs,
             selectedSoundURL: selectedSoundURL,
             pdfURLs: availablePDFURLs,
@@ -1324,6 +1334,7 @@ struct SettingsScreen: View {
             deleteDocument: deleteDocument,
             duplicateDocument: duplicateDocument,
             deleteTextFile: deleteTextFile,
+            previewImage: { previewImageURL = $0 },
             selectImage: selectImage,
             deleteImage: deleteImage,
             selectSound: selectSound,
