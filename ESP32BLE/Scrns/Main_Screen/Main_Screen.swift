@@ -1003,6 +1003,8 @@ Tapping a row inserts the key code at the cursor.
 	@State private var isSmartEscapeCodeTableVisible = false
     @State private var smartScriptEditingModel = SmartScriptEditingModel()
     @State private var smartPasteTarget = SmartEditorPasteTarget()
+    @State private var softEditorAccessorySessionID = UUID()
+    @State private var isSoftEditorAccessoryPaletteVisible = false
     @State private var smartButtonBrightness = 0.5
     @State private var smartButtonBrightnessBaseHex: String?
     @State private var smartButtonPreviewFontSize = 34.0
@@ -1361,6 +1363,12 @@ Tapping a row inserts the key code at the cursor.
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .coordinateSpace(name: mainScreenPopupCoordinateSpaceName)
+            .overlayPreferenceValue(SoftEditorAccessoryBounds.self) { anchors in
+                softEditorAccessoryOverlay(anchors: anchors)
+            }
+            .onChange(of: editingSlotIndex) { invalidateSoftEditorAccessorySession() }
+            .onChange(of: selectedDocumentName) { invalidateSoftEditorAccessorySession() }
+            .onDisappear { invalidateSoftEditorAccessorySession() }
             .onPreferenceChange(IPadBottomToolbarFramePreferenceKey.self) { frame in
                 let toolbarTopY = frame?.minY
                 if iPadBottomToolbarTopY != toolbarTopY {
@@ -3661,6 +3669,9 @@ Tapping a row inserts the key code at the cursor.
             smartPanelBorder(edges: .all)
         }
         .clipped()
+        .anchorPreference(key: SoftEditorAccessoryBounds.self, value: .bounds) {
+            [.keypad: $0]
+        }
     }
 
     private var smartScriptEditorTextBinding: Binding<String> {
@@ -3859,6 +3870,7 @@ Tapping a row inserts the key code at the cursor.
     }
 
     func resetSmartScriptEditingModel() {
+        invalidateSoftEditorAccessorySession()
         smartScriptEditingModel.setText(canonicalSmartScriptText(editorSmartScriptText(fromStoredText: displayActionTextReplacingModifierCodes(smartEditingTextParts.action))))
     }
 
@@ -3937,6 +3949,7 @@ Tapping a row inserts the key code at the cursor.
                 selectedRange: smartScriptSelectionRangeBinding,
                 fontSize: 20,
                 onBeginEditing: { textView in
+                    invalidateSoftEditorAccessorySession()
                     smartPasteTarget.activate(.command, textView: textView)
                 }
             )
@@ -3971,6 +3984,9 @@ Tapping a row inserts the key code at the cursor.
                     .scaleEffect(y: isPad ? 1 : smartIPhoneCommandLowerHeightScale, anchor: .top)
             }
             .editorGeometryProbe(.commandDescription, isEnabled: debugEditorGeometry)
+            .anchorPreference(key: SoftEditorAccessoryBounds.self, value: .bounds) {
+                [.description: $0]
+            }
 
             if !isPad {
                 smartIPhoneCommandActionControls
@@ -4395,6 +4411,7 @@ Tapping a row inserts the key code at the cursor.
                             maximumVisibleLines: subtitleVisibleLineCount,
                             disablesAutomaticPeriodShortcut: true,
                             onBeginEditing: { textView in
+                                invalidateSoftEditorAccessorySession()
                                 smartPasteTarget.activate(.button, textView: textView)
                             }
                         )
@@ -4417,6 +4434,7 @@ Tapping a row inserts the key code at the cursor.
                         maximumVisibleLines: ordinaryVisibleLineCount,
                         disablesAutomaticPeriodShortcut: true,
                         onBeginEditing: { textView in
+                            invalidateSoftEditorAccessorySession()
                             smartPasteTarget.activate(.button, textView: textView)
                         }
                     )
@@ -5134,6 +5152,190 @@ Tapping a row inserts the key code at the cursor.
         .buttonStyle(.plain)
         .editorGeometryProbe(.commandTableRow, isEnabled: debugEditorGeometry)
     }
+
+
+    // MARK: - BM:🅱️ Resolve overlay anchors without adding columns or changing editor proposals.
+    private func softEditorAccessoryOverlay(
+        anchors: [SoftEditorAccessoryRegion: Anchor<CGRect>]
+    ) -> some View {
+        GeometryReader { geometry in
+            if editingSlotIndex != nil,
+               let descriptionAnchor = anchors[.description],
+               let keypadAnchor = anchors[.keypad] {
+                let description = geometry[descriptionAnchor]
+                let keypad = geometry[keypadAnchor]
+                let keyboardTop = keyboardMinY - geometry.frame(in: .global).minY
+                let visibleBottom = min(geometry.size.height, keyboardTop)
+                let descriptionHasRoom = min(description.maxY, visibleBottom) - description.minY >= 52
+                let usesLeftGutter = !descriptionHasRoom && keypad.minX >= 52
+                // MARK: - BM:🅱️ add your comments here
+                // Temporary shared compact Files path: iPhone and iPad use this same
+                // SoftEditorAccessoryBar view and the same beginSoftEditorFilesMenu action.
+                // The expanded iPad row is intentionally omitted for this validation pass.
+                let expanded = false
+                let showBar = expanded || smartPasteTarget.editor == .command
+                let pickerHeight = max(0, min(keypad.maxY, visibleBottom) - max(0, keypad.minY))
+                let pickerWidth = max(0, min(keypad.maxX, geometry.size.width) - max(0, keypad.minX))
+
+                if showBar {
+                    SoftEditorAccessoryBar(
+                        expanded: expanded,
+                        showsCompact: smartPasteTarget.editor == .command,
+                        onAction: performSoftEditorAccessoryAction,
+                        onFiles: beginSoftEditorFilesMenu,
+                        onFileNameSelected: insertSoftEditorFileName,
+                        onOpen: { isSoftEditorAccessoryPaletteVisible.toggle() }
+                    )
+                    .frame(width: usesLeftGutter ? 44 : max(0, description.width - 8), alignment: .leading)
+                    .position(
+                        x: usesLeftGutter ? keypad.minX - 26 : description.midX,
+                        y: usesLeftGutter ? max(0, keypad.minY) + 26 : description.minY + 26
+                    )
+                    // MARK: - BM:🅱️  Keep accessory controls above command-help hit testing.
+                    .zIndex(100)
+                }
+
+                if isSoftEditorAccessoryPaletteVisible && showBar {
+                    SoftEditorAccessoryPalette(
+                        onAction: performSoftEditorAccessoryAction,
+                        onFiles: beginSoftEditorFilesMenu,
+                        onFileNameSelected: insertSoftEditorFileName,
+                        onClose: { isSoftEditorAccessoryPaletteVisible = false }
+                    )
+                    .frame(width: pickerWidth, height: pickerHeight)
+                    .clipped()
+                    .position(x: max(0, keypad.minX) + pickerWidth / 2,
+                              y: max(0, keypad.minY) + pickerHeight / 2)
+                    .zIndex(101)
+                }
+            } else if editingSlotIndex != nil,
+                      isPad,
+                      smartPasteTarget.editor == .command {
+                // MARK: - BM:🅱️ Keep a visible Command-tools fallback when iPad diagnostic anchors are unavailable.
+                SoftEditorAccessoryBar(
+                    expanded: false,
+                    showsCompact: true,
+                    onAction: performSoftEditorAccessoryAction,
+                    onFiles: beginSoftEditorFilesMenu,
+                    onFileNameSelected: insertSoftEditorFileName,
+                    onOpen: { isSoftEditorAccessoryPaletteVisible.toggle() }
+                )
+                .frame(width: 52, height: 52)
+                .position(x: 30, y: 30)
+                .zIndex(100)
+            }
+        }
+    }
+
+    private func performSoftEditorAccessoryAction(_ action: SoftEditorAccessoryAction) {
+        isSoftEditorAccessoryPaletteVisible = false
+        guard let behavior = SoftEditorAccessoryConfiguration.behavior(for: action) else {
+            return
+        }
+
+        switch behavior {
+        case let .insertText(text):
+            // Integration point: this helper reads the active editor's live selection and uses
+            // the existing replacement/undo paths for command text or button-preview text.
+            insertSoftEditorAccessoryText(text)
+        case .openPicker:
+            // Files are opened by the accessory-bar-owned menu; this branch remains a safe
+            // compatibility route for any future action configuration that uses the picker behavior.
+            _ = beginSoftEditorFilesMenu()
+        case let .revealTable(table):
+            // Integration point: these routes deliberately use the existing editor tables rather
+            // than introducing a second command source or changing the editor geometry.
+            revealSoftEditorAccessoryTable(table)
+        }
+    }
+
+    private func revealSoftEditorAccessoryTable(_ table: SoftEditorAccessoryTable) {
+        switch table {
+        case .timeDateCommands:
+            isSmartEscapeCodeTableVisible = false
+            smartCommandDescription = "**time/date command table**\n\nSelect a row to insert the syntax defined in the existing command table."
+        case .widgets:
+            isSmartEscapeCodeTableVisible = false
+            smartCommandDescription = smartHelpCommandSwitchWidgets
+        }
+    }
+
+    // MARK: - BM:🅱️ Capture the active editor before the local Files menu opens.
+    private func beginSoftEditorFilesMenu() -> SoftEditorAccessoryInsertionContext? {
+        guard let slot = editingSlotIndex,
+              let textView = smartPasteTarget.textView,
+              textView.window != nil else {
+            return nil
+        }
+
+        return SoftEditorAccessoryInsertionContext(
+            sessionID: softEditorAccessorySessionID,
+            slot: slot,
+            document: selectedDocumentName,
+            editor: smartPasteTarget.editor,
+            textView: textView
+        )
+    }
+
+    // MARK: - BM:🅱️ Validate the local Files selection, restore the editor, and insert only its filename.
+    private func insertSoftEditorFileName(
+        _ filename: String,
+        context: SoftEditorAccessoryInsertionContext
+    ) {
+        guard context.sessionID == softEditorAccessorySessionID,
+              context.slot == editingSlotIndex,
+              context.document == selectedDocumentName,
+              context.editor == smartPasteTarget.editor,
+              let textView = context.textView,
+              textView === smartPasteTarget.textView,
+              textView.window != nil,
+              textView.text == context.text else {
+            return
+        }
+
+        if context.wasFirstResponder && !textView.isFirstResponder {
+            textView.becomeFirstResponder()
+        }
+        smartPasteTarget.activate(context.editor, textView: textView)
+        textView.selectedRange = context.selection
+        switch context.editor {
+        case .command:
+            smartScriptEditingModel.setSelectionRange(context.selection)
+        case .button:
+            smartButtonPreviewSelectionRange = context.selection
+        }
+        insertSoftEditorAccessoryText(filename)
+    }
+
+    private var softEditorAccessoryTargetText: String {
+        switch smartPasteTarget.editor {
+        case .command: smartScriptEditingModel.scriptText
+        case .button: smartButtonEditablePreviewTextBinding.wrappedValue
+        }
+    }
+
+    // MARK: - BM:🅱️ Read the live UTF-16 selection before using the existing model replacement paths.
+    private func insertSoftEditorAccessoryText(_ text: String) {
+        guard editingSlotIndex != nil,
+              let textView = smartPasteTarget.textView,
+              textView.window != nil,
+              textView.text == softEditorAccessoryTargetText else { return }
+
+        switch smartPasteTarget.editor {
+        case .command:
+            smartScriptEditingModel.setSelectionRange(textView.selectedRange)
+            insertSmartActionTextAtSelection(text)
+        case .button:
+            smartButtonPreviewSelectionRange = textView.selectedRange
+            insertSmartPreviewTextAtSelection(text)
+        }
+    }
+
+    private func invalidateSoftEditorAccessorySession() {
+        softEditorAccessorySessionID = UUID()
+        isSoftEditorAccessoryPaletteVisible = false
+    }
+
 
     private func insertSmartActionTextAtSelection(_ insertedText: String) {
         smartScriptEditingModel.replaceSelection(with: editorSmartScriptText(fromStoredText: insertedText))
@@ -5930,6 +6132,438 @@ Tapping a row inserts the key code at the cursor.
                 gridDimensions: preservedActionMenuTarget.gridDimensions
             )
             beginPendingMovePopupRefresh(to: finalAnchorIndex)
+        }
+    }
+}
+
+// MARK: - BM:🅱️  ACCESSORY BAR CUSTOMISATION
+// Keep all user-editable accessory-bar choices in this section. The view and action handler below
+// should only consume these values; keeping the data here makes maintenance safe and predictable.
+//
+// permanentOrder controls the left-to-right order in both the expanded bar and More palette.
+// labels and symbols control only the accessory-bar presentation and may be changed safely.
+// compactVisible and expandedVisible control which actions appear in each existing layout.
+// insertText values are inserted exactly as written; command syntax must match the ESP32 parser.
+// behavior states whether the action inserts text, opens a picker, or reveals an existing table.
+//
+// To add another accessory-bar action: add one case to SoftEditorAccessoryAction, add its label and
+// symbol here, add its behavior here, then add only its small routing branch in the handler below.
+// To add a file category or extension: add one SoftEditorAccessoryFileCategory entry here. The file
+// picker automatically filters regular Documents files and inserts only the filename with extension.
+//
+// MARK: - BM:🅱️  add your comments here
+private enum SoftEditorAccessoryConfiguration {
+    static let permanentOrder: [SoftEditorAccessoryAction] = [.midi, .time, .files, .wait, .more]
+
+    static let labels: [SoftEditorAccessoryAction: String] = [
+        .midi: "MIDI", .time: "Time", .files: "Files", .wait: "Wait", .more: "More"
+    ]
+
+    static let symbols: [SoftEditorAccessoryAction: String] = [
+        .midi: "pianokeys", .time: "clock", .files: "folder", .wait: "hourglass", .more: "list.bullet"
+    ]
+
+    static let compactVisible: Set<SoftEditorAccessoryAction> = [.midi, .time, .files, .wait, .more]
+    static let expandedVisible: Set<SoftEditorAccessoryAction> = [.midi, .time, .files, .wait, .more]
+
+    static let insertionTemplates: [SoftEditorAccessoryAction: String] = [
+        .midi: ".midi 60 120 1 toggle",
+        .wait: ".wait 5"
+    ]
+
+    // Time/Date uses the existing smartCommandRows table as the syntax source of truth.
+    static let timeDateTableRoute: SoftEditorAccessoryTable = .timeDateCommands
+    // More uses the existing widgets description/table route.
+    static let moreTableRoute: SoftEditorAccessoryTable = .widgets
+
+    static func behavior(for action: SoftEditorAccessoryAction) -> SoftEditorAccessoryBehavior? {
+        switch action {
+        case .midi, .wait:
+            guard let text = insertionTemplates[action] else { return nil }
+            return .insertText(text)
+        case .time:
+            return .revealTable(timeDateTableRoute)
+        case .files:
+            return .openPicker(.files)
+        case .more:
+            return .revealTable(moreTableRoute)
+        }
+    }
+}
+
+// MARK: - BM:🅱️ ACCESSORY BAR FILES MENU
+// These are the user-editable local Files menu categories and supported extensions.
+// Add another category here; the local menu and Documents-first file catalog use it automatically.
+private enum SoftEditorAccessoryFilesMenuConfiguration {
+    // MARK: - BM:🅱️  add your comments here
+    // Change titles and extensions safely when they match the files supplied by the app.
+    static let categories: [SoftEditorAccessoryFileCategory] = [
+        SoftEditorAccessoryFileCategory(id: "audio", title: "Audio", allowedExtensions: ["mp3", "wav", "m4a", "aiff", "aac", "caf"]),
+        SoftEditorAccessoryFileCategory(id: "images", title: "Images", allowedExtensions: ["png", "jpg", "jpeg", "heic", "heif", "gif", "bmp", "tiff", "webp"]),
+        SoftEditorAccessoryFileCategory(id: "pdfs", title: "PDFs", allowedExtensions: ["pdf"]),
+        SoftEditorAccessoryFileCategory(id: "markdown", title: "Markdown", allowedExtensions: ["md", "markdown"])
+    ]
+}
+
+private final class SoftEditorAccessoryInsertionContext {
+    let sessionID: UUID
+    let slot: Int
+    let document: String
+    let editor: SmartEditorPasteTarget.Editor
+    weak var textView: UITextView?
+    let text: String
+    let selection: NSRange
+    let wasFirstResponder: Bool
+
+    init(sessionID: UUID, slot: Int, document: String,
+         editor: SmartEditorPasteTarget.Editor, textView: UITextView) {
+        self.sessionID = sessionID
+        self.slot = slot
+        self.document = document
+        self.editor = editor
+        self.textView = textView
+        self.text = textView.text ?? ""
+        self.selection = textView.selectedRange
+        self.wasFirstResponder = textView.isFirstResponder
+    }
+}
+
+private struct SoftEditorAccessoryFileCategory: Identifiable {
+    let id: String
+    let title: String
+    let allowedExtensions: Set<String>
+}
+
+private enum SoftEditorAccessoryBehavior {
+    case insertText(String)
+    case openPicker(SoftEditorAccessoryPickerRoute)
+    case revealTable(SoftEditorAccessoryTable)
+}
+
+private enum SoftEditorAccessoryPickerRoute {
+    case files
+}
+
+private enum SoftEditorAccessoryTable {
+    case timeDateCommands
+    case widgets
+}
+
+// MARK: - BM:🅱️ Accessory overlays report bounds without changing the editor's layout proposal.
+private enum SoftEditorAccessoryRegion: Hashable {
+    case description
+    case keypad
+}
+
+private struct SoftEditorAccessoryBounds: PreferenceKey {
+    static var defaultValue: [SoftEditorAccessoryRegion: Anchor<CGRect>] = [:]
+
+    static func reduce(
+        value: inout [SoftEditorAccessoryRegion: Anchor<CGRect>],
+        nextValue: () -> [SoftEditorAccessoryRegion: Anchor<CGRect>]
+    ) {
+        value.merge(nextValue(), uniquingKeysWith: { _, new in new })
+    }
+}
+
+private enum SoftEditorAccessoryAction: String, CaseIterable, Identifiable {
+    case midi, time, files, wait, more
+    var id: String { rawValue }
+
+    var title: String {
+        SoftEditorAccessoryConfiguration.labels[self] ?? rawValue.capitalized
+    }
+
+    var symbol: String {
+        SoftEditorAccessoryConfiguration.symbols[self] ?? "questionmark"
+    }
+}
+
+private struct SoftEditorAccessoryBar: View {
+    let expanded: Bool
+    let showsCompact: Bool
+    let onAction: (SoftEditorAccessoryAction) -> Void
+    let onFiles: () -> SoftEditorAccessoryInsertionContext?
+    let onFileNameSelected: (String, SoftEditorAccessoryInsertionContext) -> Void
+    let onOpen: () -> Void
+    @State private var filesContext: SoftEditorAccessoryInsertionContext?
+
+    var body: some View {
+        ZStack {
+            if expanded {
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 0) {
+                        ForEach(SoftEditorAccessoryConfiguration.permanentOrder.filter {
+                            SoftEditorAccessoryConfiguration.expandedVisible.contains($0)
+                        }) { action in
+                            Button {
+                                if action == .files {
+                                    filesContext = onFiles()
+                                } else {
+                                    onAction(action)
+                                }
+                            } label: {
+                                VStack(spacing: 2) {
+                                    Image(systemName: action.symbol)
+                                    Text(action.title)
+                                }
+                                .font(.caption)
+                                .fixedSize()
+                                .padding(.horizontal, 8)
+                                .frame(minHeight: 44)
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    if showsCompact {
+                        launcher
+                    } else {
+                        Color.clear.frame(width: 0, height: 0)
+                    }
+                }
+                .foregroundStyle(.white)
+                .background(Color(white: 0.16), in: .rect(cornerRadius: 8))
+            } else if showsCompact {
+                launcher
+                    .foregroundStyle(.white)
+                    .background(Color(white: 0.16), in: .rect(cornerRadius: 8))
+            }
+
+            if let filesContext {
+                SoftEditorAccessoryFilesMenu(
+                    context: filesContext,
+                    onFileNameSelected: onFileNameSelected,
+                    onClose: { self.filesContext = nil }
+                )
+                .frame(width: 320, height: 360)
+                .offset(y: expanded ? 52 : 52)
+                .zIndex(200)
+            }
+        }
+    }
+
+    private var launcher: some View {
+        Button(action: onOpen) {
+            VStack(spacing: 2) {
+                Image(systemName: "slider.horizontal.3")
+                Text("Tools").font(.caption2)
+            }
+            .frame(width: 44, height: 44)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Command tools: MIDI, Time, Files, Wait, More")
+    }
+}
+
+private struct SoftEditorAccessoryPalette: View {
+    let onAction: (SoftEditorAccessoryAction) -> Void
+    let onFiles: () -> SoftEditorAccessoryInsertionContext?
+    let onFileNameSelected: (String, SoftEditorAccessoryInsertionContext) -> Void
+    let onClose: () -> Void
+    @State private var filesContext: SoftEditorAccessoryInsertionContext?
+
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            VStack(spacing: 0) {
+                HStack {
+                    Text("Tools").font(.caption.bold())
+                    Spacer(minLength: 0)
+                    Button(action: onClose) {
+                        Image(systemName: "xmark").frame(width: 44, height: 44)
+                    }
+                    .accessibilityLabel("Close tools")
+                }
+                ScrollView {
+                    VStack(spacing: 0) {
+                        ForEach(SoftEditorAccessoryConfiguration.permanentOrder.filter {
+                            SoftEditorAccessoryConfiguration.compactVisible.contains($0)
+                        }) { action in
+                            Button {
+                                if action == .files {
+                                    filesContext = onFiles()
+                                } else {
+                                    onAction(action)
+                                }
+                            } label: {
+                                Label {
+                                    Text(action.title)
+                                } icon: {
+                                    Image(systemName: action.symbol)
+                                }
+                                .font(.callout)
+                                .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                                .contentShape(Rectangle())
+                            }
+                        }
+                    }
+                }
+            }
+            if let filesContext {
+                SoftEditorAccessoryFilesMenu(
+                    context: filesContext,
+                    onFileNameSelected: onFileNameSelected,
+                    onClose: { self.filesContext = nil }
+                )
+                .frame(width: 320, height: 360)
+                .offset(y: 48)
+                .zIndex(200)
+            }
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, 8)
+        .foregroundStyle(.white)
+        .background(Color(white: 0.12))
+        .overlay { Rectangle().stroke(.gray, lineWidth: 1) }
+    }
+}
+
+// MARK: - BM:🅱️ ACCESSORY BAR FILES MENU
+// This menu owns the category-to-file-list route locally beside the visible Files control.
+// It never presents a sheet or writes MainScreen request state. File selection calls the
+// existing active-editor insertion callback with only the resolved filename.
+private struct SoftEditorAccessoryFilesMenu: View {
+    let context: SoftEditorAccessoryInsertionContext
+    let onFileNameSelected: (String, SoftEditorAccessoryInsertionContext) -> Void
+    let onClose: () -> Void
+    @State private var selectedCategory: SoftEditorAccessoryFileCategory?
+    @State private var fileChoices: [SoftEditorAccessoryChoice] = []
+    @State private var fileError: String?
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Text(selectedCategory?.title ?? "Files")
+                    .font(.caption.bold())
+                Spacer(minLength: 0)
+                if selectedCategory != nil {
+                    Button {
+                        selectedCategory = nil
+                        fileChoices = []
+                        fileError = nil
+                    } label: {
+                        Image(systemName: "chevron.left")
+                            .frame(width: 44, height: 44)
+                    }
+                    .accessibilityLabel("Back to file categories")
+                }
+                Button(action: onClose) {
+                    Image(systemName: "xmark")
+                        .frame(width: 44, height: 44)
+                }
+                .accessibilityLabel("Close Files menu")
+            }
+
+            if selectedCategory == nil {
+                ScrollView {
+                    VStack(spacing: 0) {
+                        ForEach(SoftEditorAccessoryFilesMenuConfiguration.categories) { category in
+                            Button {
+                                loadFiles(for: category)
+                            } label: {
+                                Text(category.title)
+                                    .frame(maxWidth: .infinity, minHeight: 48, alignment: .leading)
+                                    .contentShape(Rectangle())
+                            }
+                        }
+                    }
+                }
+            } else {
+                ScrollView {
+                    LazyVStack(spacing: 0) {
+                        ForEach(fileChoices) { choice in
+                            Button {
+                                onFileNameSelected(choice.insertion, context)
+                                onClose()
+                            } label: {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(choice.title).font(.callout)
+                                    if !choice.detail.isEmpty {
+                                        Text(choice.detail)
+                                            .font(.caption)
+                                            .foregroundStyle(.gray)
+                                    }
+                                }
+                                .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                                .contentShape(Rectangle())
+                            }
+                        }
+                        if let fileError {
+                            Text(fileError)
+                                .font(.caption)
+                                .padding(.vertical, 8)
+                        } else if fileChoices.isEmpty {
+                            Text("No matching files")
+                                .font(.caption)
+                                .padding(.vertical, 8)
+                        }
+                    }
+                }
+            }
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, 8)
+        .foregroundStyle(.white)
+        .background(Color(white: 0.12))
+        .overlay { Rectangle().stroke(.gray, lineWidth: 1) }
+    }
+
+    // MARK: - BM:🅱️ Route a selected category through the existing Documents-first catalog.
+    private func loadFiles(for category: SoftEditorAccessoryFileCategory) {
+        selectedCategory = category
+        do {
+            fileChoices = try SoftEditorAccessoryCatalog.fileChoices(for: category)
+            fileError = nil
+        } catch {
+            fileChoices = []
+            fileError = "Unable to read files: \(error.localizedDescription)"
+        }
+    }
+}
+
+private struct SoftEditorAccessoryChoice: Identifiable {
+    let id: String
+    let title: String
+    let detail: String
+    let insertion: String
+}
+
+private enum SoftEditorAccessoryCatalog {
+    // MARK: - BM:🅱️  File picker integration reads Documents first, then bundle files, and preserves extensions.
+    nonisolated static func fileChoices(for category: SoftEditorAccessoryFileCategory) throws -> [SoftEditorAccessoryChoice] {
+        let documentURLs: [URL]
+        if let documentsDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
+            documentURLs = try regularFiles(in: documentsDirectory)
+        } else {
+            documentURLs = []
+        }
+
+        let bundleURLs = try Bundle.main.resourceURL.map(regularFiles(in:)) ?? []
+        var seenNames = Set<String>()
+
+        return (documentURLs + bundleURLs)
+            .filter { category.allowedExtensions.contains($0.pathExtension.lowercased()) }
+            .filter { seenNames.insert($0.lastPathComponent.lowercased()).inserted }
+            .sorted {
+            $0.lastPathComponent.localizedCaseInsensitiveCompare($1.lastPathComponent) == .orderedAscending
+            }
+            .map { url in
+            SoftEditorAccessoryChoice(
+                id: url.path, title: url.lastPathComponent, detail: category.title,
+                insertion: url.lastPathComponent
+            )
+            }
+    }
+
+    private nonisolated static func regularFiles(in directory: URL) throws -> [URL] {
+        try FileManager.default.contentsOfDirectory(
+            at: directory,
+            includingPropertiesForKeys: [.isRegularFileKey],
+            options: [.skipsHiddenFiles]
+        ).filter { url in
+            let values = try? url.resourceValues(forKeys: [.isRegularFileKey])
+            return values?.isRegularFile == true
         }
     }
 }

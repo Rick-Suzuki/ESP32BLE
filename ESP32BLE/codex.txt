@@ -1,215 +1,35 @@
-Actual modifications: none. This was a source-only inspection; no builds, app runs, file writes, commits, tags or backups were performed. All excluded files and projects were left untouched.
+Implemented the shared compact Files path.
 
-The smallest safe prototype can reuse the active editor’s target and selection machinery. Two requirements need a design decision before implementation: there is no reserved gutter beside Command, and typing into a conventional searchable city picker necessarily transfers keyboard focus.
+Actual file modified:
+ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
 
-1. Active Soft Editor and layouts
+Exact branch changed:
+softEditorAccessoryOverlay(_:), where the previous expanded calculation was replaced with:
 
-The displayed editor is primarily in Main_Screen.swift, with supporting views in Main_EditorShellViews.swift and Main_SmartEditorTextInputs.swift.
+let expanded = false
 
-Soft_Editor_Overlay.swift and Soft_Editor_TextField.swift implement the older paired UITextField editor. Main_Screen.swift still contains a slotEditorSection wrapper for it, but the inspected presentation branch uses the smart editor.
+This preserves the existing iPhone compact behavior and forces iPad Air and iPad Pro through the same compact SoftEditorAccessoryBar view path.
 
-iPhone:
-• The selected structure is currently .experimental.
-• ESP001ExperimentalIPhoneEditorShell displays three columns: keypad/table, Command editor, Button editor.
-• It uses the presentation GeometryReader’s width and height and ignores keyboard and container safe areas.
-• SF symbols share the lower Button column rather than occupying a fourth column.
+Shared path:
+SoftEditorAccessoryBar
+→ onOpen
+→ SoftEditorAccessoryPalette
+→ beginSoftEditorFilesMenu
+→ SoftEditorAccessoryFilesMenu
+→ insertSoftEditorFileName
 
-iPad mini:
-• Mini 5 has an explicit hardware-specific diagnostic route.
-• Its current setting is .allPanels.
-• It displays four fixed-width columns, using the same dimensions as regular iPad.
-• Other mini models follow the general iPad route unless separately matched.
+The expanded iPad Files row is no longer selected. The iPad fallback also uses the same compact SoftEditorAccessoryBar, Files callback, local menu, and insertion callback.
 
-Regular iPad:
-• Four columns: keypad/table, Command, Button, SF symbols.
-• Air M2 and one specified Pro identifier also use the diagnostic shell.
-• Both iPad shells currently use the same fixed column dimensions.
+MIDI, Time, Wait and More were unchanged.
 
-These existing diagnostic selections should remain unchanged.
+Build:
+Successful.
+Main_Screen.swift warnings: none reported.
+Errors: none.
 
-2. Exact containers and geometry
+Device testing:
+iPhone: not available in this session.
+iPad Air: not available in this session.
+iPad Pro: not available in this session.
 
-Main_Screen.swift:1205 calculates contentWidth from the outer GeometryReader. Horizontal content inset is currently zero.
-
-iPad dimensions:
-• Overall declared size: up to 1024 points wide, 338 high.
-• Keypad/table: 205 wide.
-• Command: 343 wide.
-• Button: 238 wide.
-• SF: 238 wide.
-• Column widths total 1024.
-
-The outer width is min(1024, availableWidth), but the child column widths are not proportionally reduced. A narrower outer frame therefore does not establish a safe spare gutter.
-
-iPhone calculations, Main_Screen.swift:3390:
-• Reference width R = availableWidth / 3.
-• Cell count N = max(1, round(R / 46)).
-• Cell width C = R / N.
-• Keypad/table width = 4C.
-• Command width = R.
-• Button width = 5C.
-• The resulting group is horizontally centered in the available width.
-• Panel height comes directly from the inner GeometryReader.
-
-Command container:
-• Despite its name, smartColorPanel contains the Command editor.
-• SmartScriptTextEditor occupies its upper 176 points.
-• The command description fills the lower area.
-• iPhone adds action controls below the description.
-• The container is clipped.
-
-Button container:
-• smartButtonPanel contains the editable preview, brightness controls and lower color/SF controls.
-• The actual text editor is SmartPreviewTextView inside smartButtonPreview.
-• iPad preview height is currently 110 points; its surrounding shell has separate 121-point slider geometry.
-• iPhone preview enclosure height is 176; preview height is 176 × 38/44 = 152.
-• iPhone preview width is calculated after proportional slider width, spacing and margins are deducted.
-
-Adding a bar inside either editor’s HStack would change available width. Adding it inside the existing clipped Command container could clip or cover it.
-
-3. Last-tapped editor tracking
-
-SmartEditorPasteTarget, Main_SmartEditorTextInputs.swift:6, already provides:
-• editor: .command or .button, initially .command.
-• A weak reference to the corresponding UITextView.
-• activate(_:textView:).
-
-Both editor wrappers call activate from their begin-editing callbacks.
-
-This is effectively the last editor that began editing, not a separate tap recognizer. It persists after editing ends. The compact visibility rule can use this existing observable state: show for .command, hide for .button.
-
-Do not introduce a competing focus state.
-
-4. Cursor, selection and insertion
-
-Command:
-• SmartScriptEditingModel stores scriptText and an NSRange selectionRange.
-• SmartScriptTextEditor binds both values to UITextView.
-• replaceSelection(with:) replaces the selection, advances the caret and records undo state.
-• insertSmartActionTextAtSelection performs the existing command-text conversion and updates the combined slot text.
-
-Button:
-• smartButtonPreviewSelectionRange stores its selection.
-• insertSmartPreviewTextAtSelection replaces that range and advances the caret.
-• Its binding preserves the surrounding button-text representation.
-
-The clipboard paste implementation at Main_Screen.swift:5193 is the best routing example. It selects the active editor and reads the live UITextView selection when its text matches the model.
-
-Recommended insertion adapter:
-• Accept a string rather than using the clipboard.
-• Reuse that active-target routing.
-• Synchronize the live selection before replacement.
-• Retain the existing Command conversion and undo path.
-• Never call becomeFirstResponder, resignFirstResponder, commit or close.
-
-Selection callbacks update asynchronously, so using the live selection avoids relying solely on a potentially delayed stored range.
-
-Replacing a selection should retain normal editing semantics: replace the selected text and place the caret after the insertion.
-
-5. Keyboard and keypad
-
-The keypad is ordinary in-layout SwiftUI content, not a UITextView inputAccessoryView.
-
-It includes cursor movement, deletion, clipboard actions, modifiers, table switching and explicit keyboard dismissal. The dismissal button sends resignFirstResponder; accessory actions must not reuse that action.
-
-The editor ignores keyboard safe-area resizing. keyboardMinY is observed separately and used for surrounding mask geometry. Floating keyboards are deliberately excluded from that docked-keyboard calculation.
-
-An inputAccessoryView would introduce new keyboard geometry and would not satisfy the requested side placement. Keep the prototype within the existing editor presentation hierarchy.
-
-6. Existing table and More
-
-The command/widget table already appears below the keypad in smartCommandPanel, Main_Screen.swift:3613.
-
-It contains:
-• A separate F1–F20 list.
-• Widget/command rows.
-• An alternate escape-code list controlled by isSmartEscapeCodeTableVisible.
-
-The existing table toggle changes state and help text without explicitly changing focus. Its row actions insert into Command, regardless of the active paste target.
-
-Safest More route:
-• Reveal/select the existing widget table in place.
-• If a separate presentation is needed, extract its list into a reusable view and display it as an in-editor overlay.
-• Keep the text editor mounted and avoid a sheet or navigation transition.
-
-SettingsDocumentTableSection in Set_Table.swift is a different table: it manages files, sounds, images and other resources. Opening Settings is not the minimal focus-preserving route.
-
-7. Audio selection
-
-Existing support is in Set_Screen.swift:
-• availableSoundURLs at line 2402 filters regular files in the Documents snapshot and sorts by filename.
-• SettingsDocumentTableSection has sound rows and selection callbacks.
-• selectSound persists the selection and starts preview playback.
-• A fileImporter exists, but it serves broader import workflows rather than a dedicated accessory audio picker.
-
-Playback resolution in Main_ButtonBehavior.swift:2296 searches Documents first, then bundle resources. Supported playback extensions are mp3, wav, m4a, aiff, aac and caf.
-
-For the prototype, use a lightweight list of existing playable files that returns lastPathComponent. Avoid reusing Settings selection directly because it also changes persisted selection and plays audio.
-
-Unresolved: whether “available” includes bundled sounds as well as Documents. Filename collisions should follow the playback resolver’s Documents-first behavior.
-
-8. DOW city data
-
-No existing searchable city picker was found.
-
-Main_ButtonLabelView.swift:833 already resolves locations using:
-• Full TimeZone identifiers.
-• Normalized city components.
-• Case-insensitive matching with underscores treated as spaces.
-
-TimeZone.knownTimeZoneIdentifiers is a suitable initial data source. Display readable city/region labels, retaining the full identifier as the stable selection value. This is a time-zone location list, not a comprehensive city database.
-
-A normal search field takes first-responder status from Command. Therefore, these requirements cannot both hold literally during typed search:
-• Search using the system keyboard.
-• Never change editor focus.
-
-The minimal conventional solution is to save the originating editor and selection, allow temporary search focus, then restore the editor before insertion. That requires relaxing the strict focus requirement. Keeping focus continuously would require a custom search-input mechanism and is substantially larger.
-
-9. Compact versus expanded breakpoint
-
-There is no reliable width-only breakpoint that identifies every iPhone/iPad mini versus every regular iPad. Window widths overlap, and all current iPad editor columns use the same sizes.
-
-Use the actual host width before the 1024-point cap, plus measured space beside Command. Do not classify using Command width alone.
-
-A conservative provisional rule is compact at host widths of 1133 points or less, expanded above that only when the measured accessory area fits. This favors compact presentation, but also makes some regular iPads compact.
-
-If regular iPad must always be expanded while every mini remains compact, width alone cannot meet the requirement. Device-family policy or an explicit presentation override is needed.
-
-This threshold is a prototype proposal, not a validated fit measurement.
-
-10. Minimal architecture and likely files
-
-Recommended structure:
-• A small accessory view receiving compact/expanded mode and action closures.
-• Main_Screen owns picker visibility and insertion routing.
-• Existing SmartEditorPasteTarget remains the target authority.
-• Keep editor instances and their layout structure stable when accessory visibility changes.
-• Use lightweight in-editor selection overlays for audio and More.
-• For delayed picker results, retain the originating slot/editor and reject stale results if that editing session changes.
-
-Actions:
-• MIDI: insert .midi 60 120 1 toggle
-• DOW: select location, insert .dow <city>
-• Audio: select existing file, insert .amb <filename>
-• Wait: insert .wait 5, matching the existing simple template.
-• More: reveal the existing command table.
-
-Likely implementation files:
-• Main_Screen.swift: integration, visibility and insertion adapter.
-• New Main_SoftEditorAccessoryBar.swift: compact/expanded controls.
-• New Main_SoftEditorAccessoryPickers.swift: city/audio selection.
-• Optionally Main_EditorShellViews.swift: an overlay host shared by presentation paths.
-• Optionally a small shared audio catalog helper.
-
-Main_SmartEditorTextInputs.swift and Main_SmartScriptEditingModel.swift should initially remain unchanged; they already expose the essential mechanisms. The old Soft_Editor files are not the primary integration point.
-
-Placement remains unresolved:
-• There is no guaranteed unused space immediately beside Command.
-• A new column would alter geometry.
-• An overlay preserves frames but may cover existing controls.
-• Five vertically stacked 44-point actions require at least 220 points before spacing, exceeding Command’s 176-point text area.
-• On narrow layouts, collapsing to one accessory launcher is safer than squeezing the editor, but changes the five-action presentation.
-
-My recommendation is to settle the permitted placement footprint and the city-search focus exception first. Those are the only substantial obstacles to a small prototype that preserves the existing editor machinery.
-
-Actual modifications were none.
+The shared compact path is confirmed by source and build, but visible device success is not claimed.
