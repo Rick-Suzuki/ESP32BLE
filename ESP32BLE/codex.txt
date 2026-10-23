@@ -1,55 +1,68 @@
-Actual modifications:
-None.
+No files modified.
 
-Visibility state:
-• Single state found: isSoftEditorAccessoryPaletteVisible.
-• Owner: MainScreen.
-• No second Quick/Tools visibility state exists.
-• No binding is passed into the accessory views. The views receive closures.
-• State is shared by iPhone and iPad because both paths are rendered by MainScreen.
+Failure point:
 
-Explicit writes:
-• Initial default: false.
-• Quick launcher: .toggle().
-• Palette close closure: sets false.
-• Successful file insertion calls that same close closure.
-• No current assignment to false exists in performSoftEditorAccessoryAction().
-• No current assignment to false exists in invalidateSoftEditorAccessorySession().
+1. Files opens in Command and captures:
+   • sessionID: current softEditorAccessorySessionID
+   • slot: editingSlotIndex
+   • document: selectedDocumentName
+   • editor: .command
+   • first-responder state
+   • current smartPasteTarget.textView is only used to confirm a target exists
 
-First Command-tap failure:
-• softEditorAccessoryOverlay() requires all of these:
-   • editingSlotIndex != nil
-   • .commandEditor anchor
-   • .keypad anchor
-• If either anchor is temporarily unavailable during focus/keyboard layout changes, the entire overlay returns no accessory UI.
-• This removes the rendered palette even though isSoftEditorAccessoryPaletteVisible was not set false.
-• Command focus calls invalidateSoftEditorAccessorySession() and then activates the Command editor. That invalidates the Files session but does not change Tools visibility.
-• The likely first-tap failure is conditional overlay removal during anchor/layout recomputation, not an explicit Boolean reset.
+2. Command insertion succeeds through:
+   • insertSoftEditorFileName
+   • live smartPasteTarget.textView reacquisition
+   • insertSoftEditorAccessoryText
+   • insertSmartActionTextAtSelection
 
-Button/colour-area failure:
-• Button text editing calls smartPasteTarget.activate(.button, textView:).
-• The overlay then computes:
-showBar = expanded || smartPasteTarget.editor == .command
-• expanded is always false.
-• Therefore showBar becomes false for the Button editor.
-• Both the Quick launcher and Tools palette are conditionally omitted.
-• On iPad fallback, the fallback also requires smartPasteTarget.editor == .command, so it is omitted after Button activation.
-• Colour controls do not directly write the visibility Boolean; after the Button editor becomes active, the same showBar condition hides the UI.
+3. Switching to Button runs the Button editor onBeginEditing callback:
+   • invalidateSoftEditorAccessorySession()
+   • smartPasteTarget.activate(.button, textView: textView)
 
-Relevant functions:
-• softEditorAccessoryOverlay()
-• smartColorPanel
-• smartButtonLowerEditingArea
-• smartIPhoneButton...
-• SmartScriptTextEditor.onBeginEditing
-• SmartPreviewTextView.onBeginEditing
-• invalidateSoftEditorAccessorySession()
+4. The session ID changes when Button begins editing.
 
-Smallest recommended fix:
-• Keep isSoftEditorAccessoryPaletteVisible unchanged.
-• Decouple accessory-bar rendering from smartPasteTarget.editor == .command.
-• Render the Quick launcher and palette whenever an active editor session has valid geometry, regardless of whether the active editor is Command or Button.
-• Preserve the existing explicit Quick toggle and successful-file-insertion close path.
-• Preserve anchor fallback rendering when anchors are temporarily unavailable.
+5. Button insertion still uses the old filesInsertionContext captured in Command.
 
-No build or device testing was performed because this was a read-only probe.
+6. The first failing guard is:
+context.sessionID == softEditorAccessorySessionID
+
+The retained Command session ID no longer matches the new Button session ID.
+
+7. Returning to Command runs:
+   • invalidateSoftEditorAccessorySession()
+   • smartPasteTarget.activate(.command, textView: textView)
+
+This creates another new session ID, while the Files menu still retains the original Command context. The next Command insertion fails the same session check.
+
+Relevant paths:
+
+• Command activation: Main_Screen.swift:3955-3957
+• Button activation: Main_Screen.swift:4420-4422 and 4443-4445
+• Session invalidation: Main_Screen.swift:1373-1375, 3877, 3956, 4421 and 4444
+• Files context capture: beginSoftEditorFilesMenu()
+• Files insertion validation: insertSoftEditorFileName()
+• Retained menu context: SoftEditorAccessoryPalette.filesInsertionContext and SoftEditorAccessoryBar.filesInsertionContext
+
+The live UITextView reacquisition fix is active, but it is reached only after the session and editor guards pass. It cannot correct this failure because the stale session is rejected first.
+
+The retained context is not cleared or replaced when switching editors. The Files menu calls onFiles() only when Files is initially opened. Each later file selection reuses the original context.
+
+Additional cross-editor failure:
+
+Even if the session check were bypassed, this guard would reject a Command context while Button is active:
+
+context.editor == smartPasteTarget.editor
+
+Recommended smallest safe design:
+
+• Preserve the original Files context’s slot and document identity.
+• At each file selection, reacquire the current smartPasteTarget editor, current UITextView, current session ID and live selection.
+• Validate the original slot/document against the current slot/document.
+• Treat the current active editor and current session as authoritative for that selection.
+• Retain window and selection-bounds validation.
+• Then insert through the existing Command/Button helper.
+
+This allows intentional Command/Button switching while still rejecting insertion into a changed slot or document.
+
+No device runtime logging or source changes were made during this read-only probe.

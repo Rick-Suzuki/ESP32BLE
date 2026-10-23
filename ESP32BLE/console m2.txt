@@ -1,123 +1,205 @@
-Update the Info.plist: Support for all orientations will soon be required.
-									[BLE-CONNECT-PROBE] 🐞 t=0.000s scan stop requested reason=stop() activePeripheralUUID=nil discoveredDeviceCount=0
-									API MISUSE: <CBCentralManager: 0x10e590a00> can only accept this command while in the powered on state
-									[BLE-CONNECT-PROBE] 🐞 t=0.000s scanning stopped
-									[BLE-CONNECT-PROBE] 🐞 t=0.000s state isConnected previous=false new=false activePeripheralUUID=nil attempt=0
-									[BLE-CONNECT-PROBE] 🐞 t=0.171s scan stop requested reason=stop() activePeripheralUUID=nil discoveredDeviceCount=0
-									API MISUSE: <CBCentralManager: 0x10e590a00> can only accept this command while in the powered on state
-									[BLE-CONNECT-PROBE] 🐞 t=0.171s scanning stopped
-									[BLE-CONNECT-PROBE] 🐞 t=0.171s state isConnected previous=false new=false activePeripheralUUID=nil attempt=0
-									non-launching port is incompatible with service identifier "com.apple.PointerUI.pointeruid.default-service"
-									AX Safe category class 'SFBarButtonGroupContainerAccessibility' was not found!
-									[BLE-CONNECT-PROBE] 🐞 t=10.035s scan start requested bluetoothState=poweredOn deliberatelyStopped=true isConnected=false connectionText="Not connected" selectedPeripheralID=nil activePeripheralUUID=nil discoveredDeviceCount=0
-									[BLE-CONNECT-PROBE] 🐞 t=10.035s state connectionText previous="Not connected" new="Scanning..." peripheralUUID=nil attempt=0
-									[BLE-CONNECT-PROBE] 🐞 t=10.035s scan started bluetoothState=poweredOn deliberatelyStopped=false isConnected=false connectionText="Scanning..." selectedPeripheralID=nil activePeripheralUUID=nil discoveredDeviceCount=0
-									[BLE-CONNECT-PROBE] 🐞 t=10.388s new peripheral discovered uuid=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 name="2" RSSI=127 selected=false active=false temporaryProbeRequested=true
-									[BLE-CONNECT-PROBE] 🐞 t=10.388s centralManager.connect requested kind=temporaryProbe peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 selected=false active=false
-									[BLE-CONNECT-PROBE] 🐞 t=10.890s didConnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=none classifiedAsProbe=true matchesSelectedPeripheralID=false matchesEsp32Peripheral=false probePeripheralIDs=[B2D020B6-17A6-E4F9-84F9-CE3D30A7A795] isConnectedBefore=false connectionTextBefore="Scanning..." discoverServicesRequested=true
-									[BLE-CONNECT-PROBE] 🐞 t=10.890s discoverServices requested peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=none classifiedAsProbe=true
-									[BLE-CONNECT-PROBE] 🐞 t=11.246s didDiscoverServices peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 error=nil serviceCount=1 serviceUUIDs=[6E400001-B5A3-F393-E0A9-E50E24DCCA9E] active=false classifiedAsProbe=true
-									[BLE-CONNECT-PROBE] 🐞 t=11.246s discoverCharacteristics requested peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 serviceUUID=6E400001-B5A3-F393-E0A9-E50E24DCCA9E characteristicUUIDs=[6E400002-B5A3-F393-E0A9-E50E24DCCA9E,6E400003-B5A3-F393-E0A9-E50E24DCCA9E,6E400004-B5A3-F393-E0A9-E50E24DCCA9E]
-									[BLE-CONNECT-PROBE] 🐞 t=11.366s didDiscoverCharacteristics peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 serviceUUID=6E400001-B5A3-F393-E0A9-E50E24DCCA9E error=nil characteristicUUIDs=[6E400003-B5A3-F393-E0A9-E50E24DCCA9E,6E400002-B5A3-F393-E0A9-E50E24DCCA9E,6E400004-B5A3-F393-E0A9-E50E24DCCA9E] rxFound=true txFound=true deviceIDFound=true txNotificationsRequested=false deviceIDReadRequested=true
-									[BLE-CONNECT-PROBE] 🐞 t=11.366s DEVICE_ID read request peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 serviceUUID=6E400001-B5A3-F393-E0A9-E50E24DCCA9E characteristicUUID=6E400004-B5A3-F393-E0A9-E50E24DCCA9E active=false classifiedAsProbe=true
-									[BLE-CONNECT-PROBE] 🐞 t=11.425s DEVICE_ID response peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 error=nil classifiedAsProbe=true selected=false active=false disconnectRequested=true
-									[BLE-CONNECT-PROBE] 🐞 t=11.425s PENDING PROBE DISCONNECT RECORDED peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 CBPeripheral.state=connected attempt=none pendingDisconnectMembership=true
-									[BLE-CONNECT-PROBE] 🐞 t=11.425s disconnect requested reason=temporaryProbeDeviceIDRead peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 selected=false active=false
-									[BLE-CONNECT-PROBE] 🐞 t=11.513s didDisconnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 error=nil active=false probe=false isConnectedBefore=false connectionTextBefore="Scanning..." scanningWillRestart=false activePeripheralWillBeCleared=false
-									[BLE-CONNECT-PROBE] 🐞 t=11.513s PENDING RECONNECT IGNORED peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 reason=selectedPeripheralChanged selectedPeripheralUUID=nil activePeripheralUUID=nil deliberatelyStopped=false
-									[BLE-CONNECT-PROBE] 🐞 t=12.673s scan stop requested reason=stop() activePeripheralUUID=nil discoveredDeviceCount=1
-									[BLE-CONNECT-PROBE] 🐞 t=12.673s scanning stopped
-									[BLE-CONNECT-PROBE] 🐞 t=12.673s state isConnected previous=false new=false activePeripheralUUID=nil attempt=0
-									[BLE-CONNECT-PROBE] 🐞 t=12.864s scan start requested bluetoothState=poweredOn deliberatelyStopped=true isConnected=false connectionText="Not connected" selectedPeripheralID=nil activePeripheralUUID=nil discoveredDeviceCount=1
-									[BLE-CONNECT-PROBE] 🐞 t=12.864s state connectionText previous="Not connected" new="Scanning..." peripheralUUID=nil attempt=0
-									[BLE-CONNECT-PROBE] 🐞 t=12.864s scan started bluetoothState=poweredOn deliberatelyStopped=false isConnected=false connectionText="Scanning..." selectedPeripheralID=nil activePeripheralUUID=nil discoveredDeviceCount=0
-									[BLE-CONNECT-PROBE] 🐞 t=12.909s new peripheral discovered uuid=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 name="2" RSSI=127 selected=false active=false temporaryProbeRequested=true
-									[BLE-CONNECT-PROBE] 🐞 t=12.909s centralManager.connect requested kind=temporaryProbe peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 selected=false active=false
-									[BLE-CONNECT-PROBE] 🐞 t=13.061s scan stop requested reason=stop() activePeripheralUUID=nil discoveredDeviceCount=1
-									[BLE-CONNECT-PROBE] 🐞 t=13.061s scanning stopped
-									[BLE-CONNECT-PROBE] 🐞 t=13.061s state isConnected previous=false new=false activePeripheralUUID=nil attempt=0
-									[BLE-CONNECT-PROBE] 🐞 t=13.105s didDisconnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 error=nil active=false probe=false isConnectedBefore=false connectionTextBefore="Not connected" scanningWillRestart=false activePeripheralWillBeCleared=false
-									[BLE-CONNECT-PROBE] 🐞 t=13.246s scan start requested bluetoothState=poweredOn deliberatelyStopped=true isConnected=false connectionText="Not connected" selectedPeripheralID=nil activePeripheralUUID=nil discoveredDeviceCount=1
-									[BLE-CONNECT-PROBE] 🐞 t=13.246s state connectionText previous="Not connected" new="Scanning..." peripheralUUID=nil attempt=0
-									[BLE-CONNECT-PROBE] 🐞 t=13.246s scan started bluetoothState=poweredOn deliberatelyStopped=false isConnected=false connectionText="Scanning..." selectedPeripheralID=nil activePeripheralUUID=nil discoveredDeviceCount=0
-									[BLE-CONNECT-PROBE] 🐞 t=13.291s new peripheral discovered uuid=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 name="2" RSSI=127 selected=false active=false temporaryProbeRequested=true
-									[BLE-CONNECT-PROBE] 🐞 t=13.291s centralManager.connect requested kind=temporaryProbe peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 selected=false active=false
-									[BLE-CONNECT-PROBE] 🐞 t=13.449s scan stop requested reason=stop() activePeripheralUUID=nil discoveredDeviceCount=1
-									[BLE-CONNECT-PROBE] 🐞 t=13.449s scanning stopped
-									[BLE-CONNECT-PROBE] 🐞 t=13.449s state isConnected previous=false new=false activePeripheralUUID=nil attempt=0
-									[BLE-CONNECT-PROBE] 🐞 t=13.494s didDisconnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 error=nil active=false probe=false isConnectedBefore=false connectionTextBefore="Not connected" scanningWillRestart=false activePeripheralWillBeCleared=false
-									[BLE-CONNECT-PROBE] 🐞 t=13.610s scan start requested bluetoothState=poweredOn deliberatelyStopped=true isConnected=false connectionText="Not connected" selectedPeripheralID=nil activePeripheralUUID=nil discoveredDeviceCount=1
-									[BLE-CONNECT-PROBE] 🐞 t=13.610s state connectionText previous="Not connected" new="Scanning..." peripheralUUID=nil attempt=0
-									[BLE-CONNECT-PROBE] 🐞 t=13.610s scan started bluetoothState=poweredOn deliberatelyStopped=false isConnected=false connectionText="Scanning..." selectedPeripheralID=nil activePeripheralUUID=nil discoveredDeviceCount=0
-									[BLE-CONNECT-PROBE] 🐞 t=13.675s new peripheral discovered uuid=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 name="2" RSSI=127 selected=false active=false temporaryProbeRequested=true
-									[BLE-CONNECT-PROBE] 🐞 t=13.675s centralManager.connect requested kind=temporaryProbe peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 selected=false active=false
-									[BLE-CONNECT-PROBE] 🐞 t=13.827s scan stop requested reason=stop() activePeripheralUUID=nil discoveredDeviceCount=1
-									[BLE-CONNECT-PROBE] 🐞 t=13.827s scanning stopped
-									[BLE-CONNECT-PROBE] 🐞 t=13.827s state isConnected previous=false new=false activePeripheralUUID=nil attempt=0
-									[BLE-CONNECT-PROBE] 🐞 t=13.872s didDisconnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 error=nil active=false probe=false isConnectedBefore=false connectionTextBefore="Not connected" scanningWillRestart=false activePeripheralWillBeCleared=false
-									[BLE-CONNECT-PROBE] 🐞 t=13.994s scan start requested bluetoothState=poweredOn deliberatelyStopped=true isConnected=false connectionText="Not connected" selectedPeripheralID=nil activePeripheralUUID=nil discoveredDeviceCount=1
-									[BLE-CONNECT-PROBE] 🐞 t=13.994s state connectionText previous="Not connected" new="Scanning..." peripheralUUID=nil attempt=0
-									[BLE-CONNECT-PROBE] 🐞 t=13.994s scan started bluetoothState=poweredOn deliberatelyStopped=false isConnected=false connectionText="Scanning..." selectedPeripheralID=nil activePeripheralUUID=nil discoveredDeviceCount=0
-									[BLE-CONNECT-PROBE] 🐞 t=14.087s new peripheral discovered uuid=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 name="2" RSSI=127 selected=false active=false temporaryProbeRequested=true
-									[BLE-CONNECT-PROBE] 🐞 t=14.087s centralManager.connect requested kind=temporaryProbe peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 selected=false active=false
-									[BLE-CONNECT-PROBE] 🐞 t=14.183s scan stop requested reason=stop() activePeripheralUUID=nil discoveredDeviceCount=1
-									[BLE-CONNECT-PROBE] 🐞 t=14.183s scanning stopped
-									[BLE-CONNECT-PROBE] 🐞 t=14.183s state isConnected previous=false new=false activePeripheralUUID=nil attempt=0
-									[BLE-CONNECT-PROBE] 🐞 t=14.227s didDisconnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 error=nil active=false probe=false isConnectedBefore=false connectionTextBefore="Not connected" scanningWillRestart=false activePeripheralWillBeCleared=false
-									[BLE-CONNECT-PROBE] 🐞 t=14.401s scan start requested bluetoothState=poweredOn deliberatelyStopped=true isConnected=false connectionText="Not connected" selectedPeripheralID=nil activePeripheralUUID=nil discoveredDeviceCount=1
-									[BLE-CONNECT-PROBE] 🐞 t=14.401s state connectionText previous="Not connected" new="Scanning..." peripheralUUID=nil attempt=0
-									[BLE-CONNECT-PROBE] 🐞 t=14.401s scan started bluetoothState=poweredOn deliberatelyStopped=false isConnected=false connectionText="Scanning..." selectedPeripheralID=nil activePeripheralUUID=nil discoveredDeviceCount=0
-									[BLE-CONNECT-PROBE] 🐞 t=14.458s new peripheral discovered uuid=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 name="2" RSSI=127 selected=false active=false temporaryProbeRequested=true
-									[BLE-CONNECT-PROBE] 🐞 t=14.458s centralManager.connect requested kind=temporaryProbe peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 selected=false active=false
-									[BLE-CONNECT-PROBE] 🐞 t=14.615s scan stop requested reason=stop() activePeripheralUUID=nil discoveredDeviceCount=1
-									[BLE-CONNECT-PROBE] 🐞 t=14.615s scanning stopped
-									[BLE-CONNECT-PROBE] 🐞 t=14.615s state isConnected previous=false new=false activePeripheralUUID=nil attempt=0
-									[BLE-CONNECT-PROBE] 🐞 t=14.659s didDisconnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 error=nil active=false probe=false isConnectedBefore=false connectionTextBefore="Not connected" scanningWillRestart=false activePeripheralWillBeCleared=false
-									[BLE-CONNECT-PROBE] 🐞 t=14.758s scan start requested bluetoothState=poweredOn deliberatelyStopped=true isConnected=false connectionText="Not connected" selectedPeripheralID=nil activePeripheralUUID=nil discoveredDeviceCount=1
-									[BLE-CONNECT-PROBE] 🐞 t=14.758s state connectionText previous="Not connected" new="Scanning..." peripheralUUID=nil attempt=0
-									[BLE-CONNECT-PROBE] 🐞 t=14.758s scan started bluetoothState=poweredOn deliberatelyStopped=false isConnected=false connectionText="Scanning..." selectedPeripheralID=nil activePeripheralUUID=nil discoveredDeviceCount=0
-									[BLE-CONNECT-PROBE] 🐞 t=14.851s new peripheral discovered uuid=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 name="2" RSSI=127 selected=false active=false temporaryProbeRequested=true
-									[BLE-CONNECT-PROBE] 🐞 t=14.851s centralManager.connect requested kind=temporaryProbe peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 selected=false active=false
-									[BLE-CONNECT-PROBE] 🐞 t=14.948s scan stop requested reason=stop() activePeripheralUUID=nil discoveredDeviceCount=1
-									[BLE-CONNECT-PROBE] 🐞 t=14.948s scanning stopped
-									[BLE-CONNECT-PROBE] 🐞 t=14.948s state isConnected previous=false new=false activePeripheralUUID=nil attempt=0
-									[BLE-CONNECT-PROBE] 🐞 t=14.992s didDisconnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 error=nil active=false probe=false isConnectedBefore=false connectionTextBefore="Not connected" scanningWillRestart=false activePeripheralWillBeCleared=false
-									[BLE-CONNECT-PROBE] 🐞 t=15.129s scan start requested bluetoothState=poweredOn deliberatelyStopped=true isConnected=false connectionText="Not connected" selectedPeripheralID=nil activePeripheralUUID=nil discoveredDeviceCount=1
-									[BLE-CONNECT-PROBE] 🐞 t=15.129s state connectionText previous="Not connected" new="Scanning..." peripheralUUID=nil attempt=0
-									[BLE-CONNECT-PROBE] 🐞 t=15.129s scan started bluetoothState=poweredOn deliberatelyStopped=false isConnected=false connectionText="Scanning..." selectedPeripheralID=nil activePeripheralUUID=nil discoveredDeviceCount=0
-									[BLE-CONNECT-PROBE] 🐞 t=15.285s new peripheral discovered uuid=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 name="2" RSSI=127 selected=false active=false temporaryProbeRequested=true
-									[BLE-CONNECT-PROBE] 🐞 t=15.285s centralManager.connect requested kind=temporaryProbe peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 selected=false active=false
-									[BLE-CONNECT-PROBE] 🐞 t=15.390s scan stop requested reason=stop() activePeripheralUUID=nil discoveredDeviceCount=1
-									[BLE-CONNECT-PROBE] 🐞 t=15.390s scanning stopped
-									[BLE-CONNECT-PROBE] 🐞 t=15.390s state isConnected previous=false new=false activePeripheralUUID=nil attempt=0
-									[BLE-CONNECT-PROBE] 🐞 t=15.435s didDisconnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 error=nil active=false probe=false isConnectedBefore=false connectionTextBefore="Not connected" scanningWillRestart=false activePeripheralWillBeCleared=false
-									[BLE-CONNECT-PROBE] 🐞 t=15.832s scan start requested bluetoothState=poweredOn deliberatelyStopped=true isConnected=false connectionText="Not connected" selectedPeripheralID=nil activePeripheralUUID=nil discoveredDeviceCount=1
-									[BLE-CONNECT-PROBE] 🐞 t=15.832s state connectionText previous="Not connected" new="Scanning..." peripheralUUID=nil attempt=0
-									[BLE-CONNECT-PROBE] 🐞 t=15.832s scan started bluetoothState=poweredOn deliberatelyStopped=false isConnected=false connectionText="Scanning..." selectedPeripheralID=nil activePeripheralUUID=nil discoveredDeviceCount=0
-									[BLE-CONNECT-PROBE] 🐞 t=15.889s new peripheral discovered uuid=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 name="2" RSSI=127 selected=false active=false temporaryProbeRequested=true
-									[BLE-CONNECT-PROBE] 🐞 t=15.889s centralManager.connect requested kind=temporaryProbe peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 selected=false active=false
-									[BLE-CONNECT-PROBE] 🐞 t=16.351s didConnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=none classifiedAsProbe=true matchesSelectedPeripheralID=false matchesEsp32Peripheral=false probePeripheralIDs=[B2D020B6-17A6-E4F9-84F9-CE3D30A7A795] isConnectedBefore=false connectionTextBefore="Scanning..." discoverServicesRequested=true
-									[BLE-CONNECT-PROBE] 🐞 t=16.351s discoverServices requested peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=none classifiedAsProbe=true
-									[BLE-CONNECT-PROBE] 🐞 t=16.526s selected connect attempt=1 selectedPeripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 name="2" previousActivePeripheralUUID=nil previousPeripheralState=connected previousIsConnected=false connectionText="Scanning..." alreadyProbe=true CBPeripheral.state=connected
-									[BLE-CONNECT-PROBE] 🐞 t=16.526s state connectionText previous="Scanning..." new="Connecting to 2..." peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=1
-									[BLE-CONNECT-PROBE] 🐞 t=16.526s state esp32Peripheral previous=nil new=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=1
-									[BLE-CONNECT-PROBE] 🐞 t=16.526s scan stop requested reason=selectedConnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=1
-									[BLE-CONNECT-PROBE] 🐞 t=16.526s scanning stopped reason=selectedConnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=1
-									[BLE-CONNECT-PROBE] 🐞 t=16.526s centralManager.connect requested kind=selected peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=1 alreadyProbe=true
-									[BLE-CONNECT-PROBE] 🐞 t=16.608s PROMOTED PROBE TO SELECTED peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=1 previousProbeMembership=true resultingProbeMembership=false
-									[BLE-CONNECT-PROBE] 🐞 t=16.608s didConnect peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=1 classifiedAsProbe=false matchesSelectedPeripheralID=true matchesEsp32Peripheral=true probePeripheralIDs=[] isConnectedBefore=false connectionTextBefore="Connecting to 2..." discoverServicesRequested=true
-									[BLE-CONNECT-PROBE] 🐞 t=16.608s state connectionText previous="Connecting to 2..." new="Connected, discovering services..." peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=1
-									[BLE-CONNECT-PROBE] 🐞 t=16.608s state isConnected previous=false new=true peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=1
-									[BLE-CONNECT-PROBE] 🐞 t=16.608s state esp32Peripheral previous=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 new=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=1
-									[BLE-CONNECT-PROBE] 🐞 t=16.608s SKIPPED DUPLICATE SERVICE DISCOVERY peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=1 reason=serviceDiscoveryAlreadyRequested
-									[BLE-CONNECT-PROBE] 🐞 t=16.706s didDiscoverServices peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 error=nil serviceCount=1 serviceUUIDs=[6E400001-B5A3-F393-E0A9-E50E24DCCA9E] active=true classifiedAsProbe=false
-									[BLE-CONNECT-PROBE] 🐞 t=16.707s discoverCharacteristics requested peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 serviceUUID=6E400001-B5A3-F393-E0A9-E50E24DCCA9E characteristicUUIDs=[6E400002-B5A3-F393-E0A9-E50E24DCCA9E,6E400003-B5A3-F393-E0A9-E50E24DCCA9E,6E400004-B5A3-F393-E0A9-E50E24DCCA9E]
-									[BLE-CONNECT-PROBE] 🐞 t=16.825s didDiscoverCharacteristics peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 serviceUUID=6E400001-B5A3-F393-E0A9-E50E24DCCA9E error=nil characteristicUUIDs=[6E400003-B5A3-F393-E0A9-E50E24DCCA9E,6E400002-B5A3-F393-E0A9-E50E24DCCA9E,6E400004-B5A3-F393-E0A9-E50E24DCCA9E] rxFound=true txFound=true deviceIDFound=true txNotificationsRequested=true deviceIDReadRequested=true
-									[BLE-CONNECT-PROBE] 🐞 t=16.825s TX notification request peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 serviceUUID=6E400001-B5A3-F393-E0A9-E50E24DCCA9E characteristicUUID=6E400003-B5A3-F393-E0A9-E50E24DCCA9E
-									[BLE-CONNECT-PROBE] 🐞 t=16.825s DEVICE_ID read request peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 serviceUUID=6E400001-B5A3-F393-E0A9-E50E24DCCA9E characteristicUUID=6E400004-B5A3-F393-E0A9-E50E24DCCA9E active=true classifiedAsProbe=false
-									[BLE-CONNECT-PROBE] 🐞 t=16.825s active characteristic discovery completion peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 connectionTextBefore="Connected, discovering services..." willSetConnected=true storedTimingWillBeSent=true
-									[BLE-CONNECT-PROBE] 🐞 t=16.825s state connectionText previous="Connected, discovering services..." new="Connected" peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=1 connectedActuallySet=true
-									[BLE-CONNECT-PROBE] 🐞 t=16.825s stored timing send requested peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=1
-									[BLE-CONNECT-PROBE] 🐞 t=17.004s DEVICE_ID response peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 error=nil classifiedAsProbe=false selected=true active=true disconnectRequested=false
-									[BLE-CONNECT-PROBE] 🐞 t=17.004s state connectedDeviceID previous="Unknown" new="2" peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=1
-									[BLE-CONNECT-PROBE] 🐞 t=17.004s state connectionText previous="Connected" new="Connected to device 2" peripheralUUID=B2D020B6-17A6-E4F9-84F9-CE3D30A7A795 attempt=1
+Unable to simultaneously satisfy constraints.
+Probably at least one of the constraints in the following list is one you don't want.
+Try this:
+(1) look at each constraint and try to figure out which you don't expect;
+(2) find the code that added the unwanted constraint or constraints and fix it.
+(Note: If you're seeing NSAutoresizingMaskLayoutConstraints that you don't understand, refer to the documentation for the UIView property translatesAutoresizingMaskIntoConstraints)
+(
+	"<NSAutoresizingMaskLayoutConstraint:0x11462a1c0 h=--& v=--& TUIPredictionViewCell:0x119aae700.width == 0   (active)>",
+	"<NSLayoutConstraint:0x11462aa80 H:|-(6)-[TUICandidateGradientContentLabel:0x11acf7200]   (active, names: '|':TUIPredictionViewCell:0x119aae700 )>",
+	"<NSLayoutConstraint:0x11462a670 TUICandidateGradientContentLabel:0x11acf7200.trailing == TUIPredictionViewCell:0x119aae700.trailing - 6   (active)>",
+	"<NSLayoutConstraint:0x114629f40 'UIScrollView-frameLayoutGuide-width' UILayoutGuide:0x1199c5dc0'UIScrollView-frameLayoutGuide'.width == TUICandidateGradientContentLabel:0x11acf7200.width   (active)>"
+)
+
+Will attempt to recover by breaking constraint
+<NSLayoutConstraint:0x114629f40 'UIScrollView-frameLayoutGuide-width' UILayoutGuide:0x1199c5dc0'UIScrollView-frameLayoutGuide'.width == TUICandidateGradientContentLabel:0x11acf7200.width   (active)>
+
+Make a symbolic breakpoint at UIViewAlertForUnsatisfiableConstraints to catch this in the debugger.
+																				The methods in the UIConstraintBasedLayoutDebugging category on UIView listed in <UIKitCore/UIView.h> may also be helpful.
+																				Unable to simultaneously satisfy constraints.
+																				Probably at least one of the constraints in the following list is one you don't want.
+																				Try this:
+																					(1) look at each constraint and try to figure out which you don't expect;
+(2) find the code that added the unwanted constraint or constraints and fix it.
+(Note: If you're seeing NSAutoresizingMaskLayoutConstraints that you don't understand, refer to the documentation for the UIView property translatesAutoresizingMaskIntoConstraints)
+(
+	"<NSAutoresizingMaskLayoutConstraint:0x11462a1c0 h=--& v=--& TUIPredictionViewCell:0x119aae700.width == 0   (active)>",
+	"<NSLayoutConstraint:0x11462aa80 H:|-(6)-[TUICandidateGradientContentLabel:0x11acf7200]   (active, names: '|':TUIPredictionViewCell:0x119aae700 )>",
+	"<NSLayoutConstraint:0x11462a670 TUICandidateGradientContentLabel:0x11acf7200.trailing == TUIPredictionViewCell:0x119aae700.trailing - 6   (active)>"
+)
+
+Will attempt to recover by breaking constraint
+<NSLayoutConstraint:0x11462a670 TUICandidateGradientContentLabel:0x11acf7200.trailing == TUIPredictionViewCell:0x119aae700.trailing - 6   (active)>
+
+Make a symbolic breakpoint at UIViewAlertForUnsatisfiableConstraints to catch this in the debugger.
+																				The methods in the UIConstraintBasedLayoutDebugging category on UIView listed in <UIKitCore/UIView.h> may also be helpful.
+																				isKeyboardMinorEdgeWidth may only be set for UIKBDynamicRenderFactory, changes not saved
+																				keyboardVerticalSizeClass may only be set for UIKBDynamicRenderFactory, changes not saved
+																				keyboardHorizontalSizeClass may only be set for UIKBDynamicRenderFactory, changes not saved
+																				currentHandBias may only be set for UIKBDynamicRenderFactory, changes not saved
+																				currentHeight may only be set for UIKBDynamicRenderFactory, changes not saved
+																				isKeyboardMinorEdgeWidth may only be set for UIKBDynamicRenderFactory, changes not saved
+																				keyboardVerticalSizeClass may only be set for UIKBDynamicRenderFactory, changes not saved
+																				keyboardHorizontalSizeClass may only be set for UIKBDynamicRenderFactory, changes not saved
+																				currentHandBias may only be set for UIKBDynamicRenderFactory, changes not saved
+																				currentHeight may only be set for UIKBDynamicRenderFactory, changes not saved
+																				Unable to simultaneously satisfy constraints.
+																				Probably at least one of the constraints in the following list is one you don't want.
+																				Try this:
+																					(1) look at each constraint and try to figure out which you don't expect;
+(2) find the code that added the unwanted constraint or constraints and fix it.
+(Note: If you're seeing NSAutoresizingMaskLayoutConstraints that you don't understand, refer to the documentation for the UIView property translatesAutoresizingMaskIntoConstraints)
+(
+	"<NSAutoresizingMaskLayoutConstraint:0x117216da0 h=--& v=--& TUIPredictionViewCell:0x119aaf900.width == 0   (active)>",
+	"<NSLayoutConstraint:0x117216940 H:|-(6)-[TUICandidateGradientContentLabel:0x11acf7200]   (active, names: '|':TUIPredictionViewCell:0x119aaf900 )>",
+	"<NSLayoutConstraint:0x117216c10 TUICandidateGradientContentLabel:0x11acf7200.trailing == TUIPredictionViewCell:0x119aaf900.trailing - 6   (active)>",
+	"<NSLayoutConstraint:0x1172149b0 'UIScrollView-frameLayoutGuide-width' UILayoutGuide:0x1199c55e0'UIScrollView-frameLayoutGuide'.width == TUICandidateGradientContentLabel:0x11acf7200.width   (active)>"
+)
+
+Will attempt to recover by breaking constraint
+<NSLayoutConstraint:0x1172149b0 'UIScrollView-frameLayoutGuide-width' UILayoutGuide:0x1199c55e0'UIScrollView-frameLayoutGuide'.width == TUICandidateGradientContentLabel:0x11acf7200.width   (active)>
+
+Make a symbolic breakpoint at UIViewAlertForUnsatisfiableConstraints to catch this in the debugger.
+																				The methods in the UIConstraintBasedLayoutDebugging category on UIView listed in <UIKitCore/UIView.h> may also be helpful.
+																				Unable to simultaneously satisfy constraints.
+																				Probably at least one of the constraints in the following list is one you don't want.
+																				Try this:
+																					(1) look at each constraint and try to figure out which you don't expect;
+(2) find the code that added the unwanted constraint or constraints and fix it.
+(Note: If you're seeing NSAutoresizingMaskLayoutConstraints that you don't understand, refer to the documentation for the UIView property translatesAutoresizingMaskIntoConstraints)
+(
+	"<NSAutoresizingMaskLayoutConstraint:0x117216da0 h=--& v=--& TUIPredictionViewCell:0x119aaf900.width == 0   (active)>",
+	"<NSLayoutConstraint:0x117216940 H:|-(6)-[TUICandidateGradientContentLabel:0x11acf7200]   (active, names: '|':TUIPredictionViewCell:0x119aaf900 )>",
+	"<NSLayoutConstraint:0x117216c10 TUICandidateGradientContentLabel:0x11acf7200.trailing == TUIPredictionViewCell:0x119aaf900.trailing - 6   (active)>"
+)
+
+Will attempt to recover by breaking constraint
+<NSLayoutConstraint:0x117216c10 TUICandidateGradientContentLabel:0x11acf7200.trailing == TUIPredictionViewCell:0x119aaf900.trailing - 6   (active)>
+
+Make a symbolic breakpoint at UIViewAlertForUnsatisfiableConstraints to catch this in the debugger.
+																				The methods in the UIConstraintBasedLayoutDebugging category on UIView listed in <UIKitCore/UIView.h> may also be helpful.
+																				isKeyboardMinorEdgeWidth may only be set for UIKBDynamicRenderFactory, changes not saved
+																				keyboardVerticalSizeClass may only be set for UIKBDynamicRenderFactory, changes not saved
+																				keyboardHorizontalSizeClass may only be set for UIKBDynamicRenderFactory, changes not saved
+																				currentHandBias may only be set for UIKBDynamicRenderFactory, changes not saved
+																				currentHeight may only be set for UIKBDynamicRenderFactory, changes not saved
+																				isKeyboardMinorEdgeWidth may only be set for UIKBDynamicRenderFactory, changes not saved
+																				keyboardVerticalSizeClass may only be set for UIKBDynamicRenderFactory, changes not saved
+																				keyboardHorizontalSizeClass may only be set for UIKBDynamicRenderFactory, changes not saved
+																				currentHandBias may only be set for UIKBDynamicRenderFactory, changes not saved
+																				currentHeight may only be set for UIKBDynamicRenderFactory, changes not saved
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Current boot UUID is empty when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Treating empty boot UUID as current when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Current boot UUID is empty when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Treating empty boot UUID as current when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Current boot UUID is empty when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Treating empty boot UUID as current when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Current boot UUID is empty when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Treating empty boot UUID as current when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Current boot UUID is empty when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Treating empty boot UUID as current when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Current boot UUID is empty when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Treating empty boot UUID as current when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Current boot UUID is empty when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Treating empty boot UUID as current when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Current boot UUID is empty when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Treating empty boot UUID as current when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Current boot UUID is empty when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Treating empty boot UUID as current when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Current boot UUID is empty when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Treating empty boot UUID as current when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Current boot UUID is empty when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Treating empty boot UUID as current when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Current boot UUID is empty when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Treating empty boot UUID as current when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Current boot UUID is empty when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Treating empty boot UUID as current when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Current boot UUID is empty when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Treating empty boot UUID as current when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Current boot UUID is empty when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Treating empty boot UUID as current when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Current boot UUID is empty when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Treating empty boot UUID as current when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Current boot UUID is empty when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Treating empty boot UUID as current when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Current boot UUID is empty when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Treating empty boot UUID as current when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Current boot UUID is empty when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Treating empty boot UUID as current when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Current boot UUID is empty when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Treating empty boot UUID as current when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Current boot UUID is empty when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Treating empty boot UUID as current when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Current boot UUID is empty when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Treating empty boot UUID as current when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Current boot UUID is empty when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Treating empty boot UUID as current when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Current boot UUID is empty when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Treating empty boot UUID as current when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Current boot UUID is empty when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Treating empty boot UUID as current when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Current boot UUID is empty when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Treating empty boot UUID as current when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Current boot UUID is empty when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Treating empty boot UUID as current when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Current boot UUID is empty when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Treating empty boot UUID as current when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Current boot UUID is empty when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Treating empty boot UUID as current when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Current boot UUID is empty when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Treating empty boot UUID as current when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Current boot UUID is empty when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Treating empty boot UUID as current when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Current boot UUID is empty when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Treating empty boot UUID as current when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Current boot UUID is empty when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Treating empty boot UUID as current when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Current boot UUID is empty when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Treating empty boot UUID as current when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Current boot UUID is empty when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Treating empty boot UUID as current when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Current boot UUID is empty when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Treating empty boot UUID as current when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Current boot UUID is empty when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Treating empty boot UUID as current when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Current boot UUID is empty when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Treating empty boot UUID as current when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Current boot UUID is empty when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Treating empty boot UUID as current when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Current boot UUID is empty when creating consistency token for asset set com.apple.linguisticdata
+																				-[UAFAssetSetConsistencyToken initWithUUID:assetSetName:atomicInstance:experiment:preinstalledAssetsSummary:rootsV2InstanceId:bootUUID:experimentActivated:] Treating empty boot UUID as current when creating consistency token for asset set com.apple.linguisticdata
+																				Unable to simultaneously satisfy constraints.
+																				Probably at least one of the constraints in the following list is one you don't want.
+																				Try this:
+																					(1) look at each constraint and try to figure out which you don't expect;
+(2) find the code that added the unwanted constraint or constraints and fix it.
+(Note: If you're seeing NSAutoresizingMaskLayoutConstraints that you don't understand, refer to the documentation for the UIView property translatesAutoresizingMaskIntoConstraints)
+(
+	"<NSAutoresizingMaskLayoutConstraint:0x11725b930 h=--& v=--& TUIPredictionViewCell:0x119aadb00.width == 0   (active)>",
+	"<NSLayoutConstraint:0x1165bbe80 H:|-(6)-[TUICandidateGradientContentLabel:0x11acf7200]   (active, names: '|':TUIPredictionViewCell:0x119aadb00 )>",
+	"<NSLayoutConstraint:0x117258a50 TUICandidateGradientContentLabel:0x11acf7200.trailing == TUIPredictionViewCell:0x119aadb00.trailing - 6   (active)>",
+	"<NSLayoutConstraint:0x114629a90 'UIScrollView-frameLayoutGuide-width' UILayoutGuide:0x1199c4620'UIScrollView-frameLayoutGuide'.width == TUICandidateGradientContentLabel:0x11acf7200.width   (active)>"
+)
+
+Will attempt to recover by breaking constraint
+<NSLayoutConstraint:0x114629a90 'UIScrollView-frameLayoutGuide-width' UILayoutGuide:0x1199c4620'UIScrollView-frameLayoutGuide'.width == TUICandidateGradientContentLabel:0x11acf7200.width   (active)>
+
+Make a symbolic breakpoint at UIViewAlertForUnsatisfiableConstraints to catch this in the debugger.
+																				The methods in the UIConstraintBasedLayoutDebugging category on UIView listed in <UIKitCore/UIView.h> may also be helpful.
+																				Unable to simultaneously satisfy constraints.
+																				Probably at least one of the constraints in the following list is one you don't want.
+																				Try this:
+																					(1) look at each constraint and try to figure out which you don't expect;
+(2) find the code that added the unwanted constraint or constraints and fix it.
+(Note: If you're seeing NSAutoresizingMaskLayoutConstraints that you don't understand, refer to the documentation for the UIView property translatesAutoresizingMaskIntoConstraints)
+(
+	"<NSAutoresizingMaskLayoutConstraint:0x11725b930 h=--& v=--& TUIPredictionViewCell:0x119aadb00.width == 0   (active)>",
+	"<NSLayoutConstraint:0x1165bbe80 H:|-(6)-[TUICandidateGradientContentLabel:0x11acf7200]   (active, names: '|':TUIPredictionViewCell:0x119aadb00 )>",
+	"<NSLayoutConstraint:0x117258a50 TUICandidateGradientContentLabel:0x11acf7200.trailing == TUIPredictionViewCell:0x119aadb00.trailing - 6   (active)>"
+)
+
+Will attempt to recover by breaking constraint
+<NSLayoutConstraint:0x117258a50 TUICandidateGradientContentLabel:0x11acf7200.trailing == TUIPredictionViewCell:0x119aadb00.trailing - 6   (active)>
+
+Make a symbolic breakpoint at UIViewAlertForUnsatisfiableConstraints to catch this in the debugger.
+																				The methods in the UIConstraintBasedLayoutDebugging category on UIView listed in <UIKitCore/UIView.h> may also be helpful.

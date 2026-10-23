@@ -5319,7 +5319,7 @@ Tapping a row inserts the key code at the cursor.
             slot: slot,
             document: selectedDocumentName,
             editor: smartPasteTarget.editor,
-            textView: textView
+            wasFirstResponder: textView.isFirstResponder
         )
     }
 
@@ -5328,28 +5328,42 @@ Tapping a row inserts the key code at the cursor.
         _ filename: String,
         context: SoftEditorAccessoryInsertionContext
     ) -> Bool {
-        guard context.sessionID == softEditorAccessorySessionID,
-              context.slot == editingSlotIndex,
+        guard context.slot == editingSlotIndex,
               context.document == selectedDocumentName,
+              context.sessionID == softEditorAccessorySessionID,
               context.editor == smartPasteTarget.editor,
-              let textView = context.textView,
-              textView === smartPasteTarget.textView,
-              textView.window != nil,
-              textView.text == context.text,
-              textView.selectedRange == context.selection else {
+              let textView = smartPasteTarget.textView,
+              textView.window != nil else {
+            return false
+        }
+
+        // MARK: - BM:🅱️ add your comments here
+        // Reacquire the current live UITextView for every file selection because SwiftUI may
+        // recreate the editor view after focus, keyboard or layout changes. The retained context
+        // validates the original slot/document only; the callback supplies a freshly captured
+        // context for the current selection. The current editor and session therefore change
+        // safely with intentional Command/Button switching while Files remains open.
+        let liveText = textView.text ?? ""
+        let liveSelection = textView.selectedRange
+        let textLength = liveText.utf16.count
+        guard liveSelection.location != NSNotFound,
+              liveSelection.location >= 0,
+              liveSelection.length >= 0,
+              liveSelection.location <= textLength,
+              liveSelection.length <= textLength - liveSelection.location else {
             return false
         }
 
         if context.wasFirstResponder && !textView.isFirstResponder {
             textView.becomeFirstResponder()
         }
-        smartPasteTarget.activate(context.editor, textView: textView)
-        textView.selectedRange = context.selection
-        switch context.editor {
+        let currentEditor = smartPasteTarget.editor
+        smartPasteTarget.activate(currentEditor, textView: textView)
+        switch currentEditor {
         case .command:
-            smartScriptEditingModel.setSelectionRange(context.selection)
+            smartScriptEditingModel.setSelectionRange(liveSelection)
         case .button:
-            smartButtonPreviewSelectionRange = context.selection
+            smartButtonPreviewSelectionRange = liveSelection
         }
         return insertSoftEditorAccessoryText(filename)
     }
@@ -6280,21 +6294,15 @@ private final class SoftEditorAccessoryInsertionContext {
     let slot: Int
     let document: String
     let editor: SmartEditorPasteTarget.Editor
-    weak var textView: UITextView?
-    let text: String
-    let selection: NSRange
     let wasFirstResponder: Bool
 
     init(sessionID: UUID, slot: Int, document: String,
-         editor: SmartEditorPasteTarget.Editor, textView: UITextView) {
+         editor: SmartEditorPasteTarget.Editor, wasFirstResponder: Bool) {
         self.sessionID = sessionID
         self.slot = slot
         self.document = document
         self.editor = editor
-        self.textView = textView
-        self.text = textView.text ?? ""
-        self.selection = textView.selectedRange
-        self.wasFirstResponder = textView.isFirstResponder
+        self.wasFirstResponder = wasFirstResponder
     }
 }
 
@@ -6410,11 +6418,15 @@ private struct SoftEditorAccessoryBar: View {
             if showFilesMenu {
                 SoftEditorAccessoryFilesMenu(
                     onFileNameSelected: { filename in
-                        if let context = filesInsertionContext {
-                            _ = onFileNameSelected(filename, context)
+                        if let originalContext = filesInsertionContext,
+                           let currentContext = onFiles(),
+                           currentContext.slot == originalContext.slot,
+                           currentContext.document == originalContext.document {
+                            _ = onFileNameSelected(filename, currentContext)
                         }
-                        filesInsertionContext = nil
-                        showFilesMenu = false
+                        // MARK: - BM:🅱️ add your comments here
+                        // Successful insertion keeps the local file list, category, Files menu
+                        // and Tools panel open so the current live editor can accept another file.
                     },
                     onClose: {
                         filesInsertionContext = nil
@@ -6492,6 +6504,7 @@ private struct SoftEditorAccessoryPalette: View {
                                     Text(action.title)
                                 } icon: {
                                     Image(systemName: action.symbol)
+										.foregroundStyle(.cyan)
                                 }
                                 .font(.callout)
                                 .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
@@ -6504,20 +6517,16 @@ private struct SoftEditorAccessoryPalette: View {
             if showFilesMenu {
                 SoftEditorAccessoryFilesMenu(
                     onFileNameSelected: { filename in
-                        let didInsert: Bool
-                        if let context = filesInsertionContext {
-                            didInsert = onFileNameSelected(filename, context)
-                        } else {
-                            didInsert = false
+                        if let originalContext = filesInsertionContext,
+                           let currentContext = onFiles(),
+                           currentContext.slot == originalContext.slot,
+                           currentContext.document == originalContext.document {
+                            _ = onFileNameSelected(filename, currentContext)
                         }
-                        filesInsertionContext = nil
-                        showFilesMenu = false
                         // MARK: - BM:🅱️ add your comments here
-                        // Dismiss Tools only after the existing filename insertion succeeds;
-                        // stale, cancelled or invalid selections leave Tools mode visible.
-                        if didInsert {
-                            onClose()
-                        }
+                        // Successful file insertion intentionally leaves the file list, category,
+                        // Files menu and Tools panel visible. The explicit Quick button remains
+                        // the normal Tools dismissal control.
                     },
                     onClose: {
                         filesInsertionContext = nil
@@ -6548,15 +6557,7 @@ private struct SoftEditorAccessoryPalette: View {
     }
 }
 
-// MARK: - BM:🅱️ ACCESSORY BAR FILES MENU
-// This menu owns the category-to-file-list route locally beside the visible Files control.
-// It never presents a sheet or writes MainScreen request state. File selection calls the
-// existing active-editor insertion callback with only the resolved filename.
-// MARK: - BM:🅱️ add your comments here
-// Files inserts into either the Command editor or Button editor. Active-editor routing occurs
-// in beginSoftEditorFilesMenu, which captures the live UITextView and selection, and in
-// insertSoftEditorFileName, which restores that target before insertion. Add another category
-// or extension in SoftEditorAccessoryFilesMenuConfiguration.categories.
+// MARK: - BM:🅱️ SoftEditor Accessory Files Menu
 private struct SoftEditorAccessoryFilesMenu: View {
     let onFileNameSelected: (String) -> Void
     let onClose: () -> Void
@@ -6566,35 +6567,46 @@ private struct SoftEditorAccessoryFilesMenu: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // MARK: - BM:🅱️ add your comments here
             // The category menu has only Home because it is the Files-workflow entry point.
             // The file list has Back to return to categories and Home to exit to normal Tools.
             HStack {
-                if selectedCategory == nil {
-                    Spacer(minLength: 0)
-                    // MARK: - BM:🅱️ add your comments here
-                    // Top-level Files-menu Home remains the sole navigation control and is right-aligned.
-                    Button(action: onClose) {
-                        Image(systemName: "house")
-                            .frame(width: 44, height: 44)
-                    }
-                    .accessibilityLabel("Exit Files")
+
+				if selectedCategory == nil {
+					Button(action: onClose) {
+						Image(systemName: "house")
+							.frame(width: 44, height: 44)
+							.foregroundStyle(.cyan)
+
+					}
+					.accessibilityLabel("Exit Files")
+
+					Spacer(minLength: 0)
+					Text("Files")
+						.foregroundStyle(.cyan)
+
+					Spacer(minLength: 0)
+                    // Top-level Files-menu Home remains the sole navigation control and is left-aligned.
                 } else {
-                    Button {
+					Button(action: onClose) {
+						Image(systemName: "house")
+							.frame(width: 44, height: 44)
+							.foregroundStyle(.cyan)
+
+					}
+					.accessibilityLabel("Exit Files")
+
+					Spacer(minLength: 0)
+
+					Button {
                         selectedCategory = nil
                         fileChoices = []
                         fileError = nil
                     } label: {
                         Image(systemName: "arrowshape.backward")
                             .frame(width: 44, height: 44)
+							.foregroundStyle(.cyan)
                     }
                     .accessibilityLabel("Back to file categories")
-                    Spacer(minLength: 0)
-                    Button(action: onClose) {
-                        Image(systemName: "house")
-                            .frame(width: 44, height: 44)
-                    }
-                    .accessibilityLabel("Exit Files")
                 }
             }
 
@@ -6618,7 +6630,6 @@ private struct SoftEditorAccessoryFilesMenu: View {
                         ForEach(fileChoices) { choice in
                             Button {
                                 onFileNameSelected(choice.insertion)
-                                onClose()
                             } label: {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(choice.title).font(.callout)
@@ -6646,7 +6657,6 @@ private struct SoftEditorAccessoryFilesMenu: View {
             }
         }
         .buttonStyle(.plain)
-        // MARK: - BM:🅱️ add your comments here
         // Files uses the same dark Tools-panel background and white border. The width comes
         // from the owning Tools panel; these values keep every label inside the panel edge.
         .padding(.horizontal, SoftEditorAccessoryConfiguration.filesMenuContentPadding)
