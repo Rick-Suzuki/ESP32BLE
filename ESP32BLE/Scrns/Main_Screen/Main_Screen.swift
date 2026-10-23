@@ -5188,6 +5188,7 @@ Tapping a row inserts the key code at the cursor.
                     SoftEditorAccessoryBar(
                         expanded: expanded,
                         showsCompact: smartPasteTarget.editor == .command,
+                        filesPanelWidth: pickerWidth,
                         onAction: performSoftEditorAccessoryAction,
                         onFiles: beginSoftEditorFilesMenu,
                         onFileNameSelected: insertSoftEditorFileName,
@@ -5210,6 +5211,7 @@ Tapping a row inserts the key code at the cursor.
 
                 if isSoftEditorAccessoryPaletteVisible && showBar {
                     SoftEditorAccessoryPalette(
+                        filesPanelWidth: pickerWidth,
                         onAction: performSoftEditorAccessoryAction,
                         onFiles: beginSoftEditorFilesMenu,
                         onFileNameSelected: insertSoftEditorFileName,
@@ -5232,6 +5234,7 @@ Tapping a row inserts the key code at the cursor.
                 SoftEditorAccessoryBar(
                     expanded: false,
                     showsCompact: true,
+                    filesPanelWidth: SoftEditorAccessoryConfiguration.compactLauncherDimension,
                     onAction: performSoftEditorAccessoryAction,
                     onFiles: beginSoftEditorFilesMenu,
                     onFileNameSelected: insertSoftEditorFileName,
@@ -5282,9 +5285,11 @@ Tapping a row inserts the key code at the cursor.
 
     // MARK: - BM:🅱️ Capture the active editor before the local Files menu opens.
     private func beginSoftEditorFilesMenu() -> SoftEditorAccessoryInsertionContext? {
+        // MARK: - BM:🅱️ add your comments here
+        // textView.window is intentionally not required to open the local menu; final validation
+        // in insertSoftEditorFileName verifies the window and captured target before insertion.
         guard let slot = editingSlotIndex,
-              let textView = smartPasteTarget.textView,
-              textView.window != nil else {
+              let textView = smartPasteTarget.textView else {
             return nil
         }
 
@@ -5309,7 +5314,8 @@ Tapping a row inserts the key code at the cursor.
               let textView = context.textView,
               textView === smartPasteTarget.textView,
               textView.window != nil,
-              textView.text == context.text else {
+              textView.text == context.text,
+              textView.selectedRange == context.selection else {
             return
         }
 
@@ -6203,6 +6209,12 @@ private enum SoftEditorAccessoryConfiguration {
     // Increase or decrease this value in points if the device leaves a visible seam.
     static let iPhoneToolsBottomGapAdjustment: CGFloat = 4
 
+    // MARK: - BM:🅱️ add your comments here
+    // Files-menu height and internal padding are user-adjustable. Its width is supplied by
+    // the owning compact Tools panel so the Files panel stays aligned and fully on-screen.
+    static let filesMenuHeight: CGFloat = 340
+    static let filesMenuContentPadding: CGFloat = 12
+
     static let insertionTemplates: [SoftEditorAccessoryAction: String] = [
         .midi: ".midi 60 120 1 toggle",
         .wait: ".wait 5"
@@ -6320,11 +6332,16 @@ private enum SoftEditorAccessoryAction: String, CaseIterable, Identifiable {
 private struct SoftEditorAccessoryBar: View {
     let expanded: Bool
     let showsCompact: Bool
+    let filesPanelWidth: CGFloat
     let onAction: (SoftEditorAccessoryAction) -> Void
     let onFiles: () -> SoftEditorAccessoryInsertionContext?
     let onFileNameSelected: (String, SoftEditorAccessoryInsertionContext) -> Void
     let onOpen: () -> Void
-    @State private var filesContext: SoftEditorAccessoryInsertionContext?
+    @State private var filesInsertionContext: SoftEditorAccessoryInsertionContext?
+    // MARK: - BM:🅱️ add your comments here
+    // Files presentation is intentionally local to this accessory-bar view; this Boolean
+    // controls the real category and file-list panel without MainScreen presentation state.
+    @State private var showFilesMenu = false
 
     var body: some View {
         ZStack {
@@ -6336,7 +6353,8 @@ private struct SoftEditorAccessoryBar: View {
                         }) { action in
                             Button {
                                 if action == .files {
-                                    filesContext = onFiles()
+                                    filesInsertionContext = onFiles()
+                                    showFilesMenu = true
                                 } else {
                                     onAction(action)
                                 }
@@ -6368,15 +6386,27 @@ private struct SoftEditorAccessoryBar: View {
                     .background(Color(white: 0.16), in: .rect(cornerRadius: 8))
             }
 
-            if let filesContext {
+            if showFilesMenu {
                 SoftEditorAccessoryFilesMenu(
-                    context: filesContext,
-                    onFileNameSelected: onFileNameSelected,
-                    onClose: { self.filesContext = nil }
+                    onFileNameSelected: { filename in
+                        if let context = filesInsertionContext {
+                            onFileNameSelected(filename, context)
+                        }
+                        filesInsertionContext = nil
+                        showFilesMenu = false
+                    },
+                    onClose: {
+                        filesInsertionContext = nil
+                        showFilesMenu = false
+                    }
                 )
-                .frame(width: 320, height: 360)
-                .offset(y: expanded ? 52 : 52)
-                .zIndex(200)
+                .frame(
+                    width: filesPanelWidth,
+                    height: SoftEditorAccessoryConfiguration.filesMenuHeight
+                )
+                .contentShape(Rectangle())
+                .allowsHitTesting(true)
+                .zIndex(500)
             }
         }
     }
@@ -6409,12 +6439,17 @@ private struct SoftEditorAccessoryBar: View {
 }
 
 private struct SoftEditorAccessoryPalette: View {
+    let filesPanelWidth: CGFloat
     let onAction: (SoftEditorAccessoryAction) -> Void
     let onFiles: () -> SoftEditorAccessoryInsertionContext?
     let onFileNameSelected: (String, SoftEditorAccessoryInsertionContext) -> Void
     let onClose: () -> Void
     let bottomHeightAdjustment: CGFloat
-    @State private var filesContext: SoftEditorAccessoryInsertionContext?
+    // MARK: - BM:🅱️ add your comments here
+    // Files presentation is intentionally local to this accessory-bar view; the Boolean below
+    // controls both category and file-list rendering without MainScreen presentation state.
+    @State private var showFilesMenu = false
+    @State private var filesInsertionContext: SoftEditorAccessoryInsertionContext?
 
     var body: some View {
         ZStack(alignment: .topLeading) {
@@ -6434,7 +6469,8 @@ private struct SoftEditorAccessoryPalette: View {
                         }) { action in
                             Button {
                                 if action == .files {
-                                    filesContext = onFiles()
+                                    filesInsertionContext = onFiles()
+                                    showFilesMenu = true
                                 } else {
                                     onAction(action)
                                 }
@@ -6452,15 +6488,27 @@ private struct SoftEditorAccessoryPalette: View {
                     }
                 }
             }
-            if let filesContext {
+            if showFilesMenu {
                 SoftEditorAccessoryFilesMenu(
-                    context: filesContext,
-                    onFileNameSelected: onFileNameSelected,
-                    onClose: { self.filesContext = nil }
+                    onFileNameSelected: { filename in
+                        if let context = filesInsertionContext {
+                            onFileNameSelected(filename, context)
+                        }
+                        filesInsertionContext = nil
+                        showFilesMenu = false
+                    },
+                    onClose: {
+                        filesInsertionContext = nil
+                        showFilesMenu = false
+                    }
                 )
-                .frame(width: 320, height: 360)
-                .offset(y: 48)
-                .zIndex(200)
+                .frame(
+                    width: filesPanelWidth,
+                    height: SoftEditorAccessoryConfiguration.filesMenuHeight
+                )
+                .contentShape(Rectangle())
+                .allowsHitTesting(true)
+                .zIndex(500)
             }
         }
         .buttonStyle(.plain)
@@ -6482,9 +6530,13 @@ private struct SoftEditorAccessoryPalette: View {
 // This menu owns the category-to-file-list route locally beside the visible Files control.
 // It never presents a sheet or writes MainScreen request state. File selection calls the
 // existing active-editor insertion callback with only the resolved filename.
+// MARK: - BM:🅱️ add your comments here
+// Files inserts into either the Command editor or Button editor. Active-editor routing occurs
+// in beginSoftEditorFilesMenu, which captures the live UITextView and selection, and in
+// insertSoftEditorFileName, which restores that target before insertion. Add another category
+// or extension in SoftEditorAccessoryFilesMenuConfiguration.categories.
 private struct SoftEditorAccessoryFilesMenu: View {
-    let context: SoftEditorAccessoryInsertionContext
-    let onFileNameSelected: (String, SoftEditorAccessoryInsertionContext) -> Void
+    let onFileNameSelected: (String) -> Void
     let onClose: () -> Void
     @State private var selectedCategory: SoftEditorAccessoryFileCategory?
     @State private var fileChoices: [SoftEditorAccessoryChoice] = []
@@ -6533,7 +6585,7 @@ private struct SoftEditorAccessoryFilesMenu: View {
                     LazyVStack(spacing: 0) {
                         ForEach(fileChoices) { choice in
                             Button {
-                                onFileNameSelected(choice.insertion, context)
+                                onFileNameSelected(choice.insertion)
                                 onClose()
                             } label: {
                                 VStack(alignment: .leading, spacing: 2) {
@@ -6562,10 +6614,20 @@ private struct SoftEditorAccessoryFilesMenu: View {
             }
         }
         .buttonStyle(.plain)
-        .padding(.horizontal, 8)
+        // MARK: - BM:🅱️ add your comments here
+        // Files uses the same dark Tools-panel background and white border. The width comes
+        // from the owning Tools panel; these values keep every label inside the panel edge.
+        .padding(.horizontal, SoftEditorAccessoryConfiguration.filesMenuContentPadding)
         .foregroundStyle(.white)
         .background(Color(white: 0.12))
-        .overlay { Rectangle().stroke(.gray, lineWidth: 1) }
+        .overlay {
+            Rectangle().stroke(
+                SoftEditorAccessoryConfiguration.compactLauncherBorderColor,
+                lineWidth: SoftEditorAccessoryConfiguration.toolsHelperBorderWidth
+            )
+        }
+        .contentShape(Rectangle())
+        .allowsHitTesting(true)
     }
 
     // MARK: - BM:🅱️ Route a selected category through the existing Documents-first catalog.

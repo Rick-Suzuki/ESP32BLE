@@ -1,26 +1,39 @@
-Implemented the shared compact Files path.
+Added the temporary local Files presentation diagnostic.
 
 Actual file modified:
 ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
 
-Exact branch changed:
-softEditorAccessoryOverlay(_:), where the previous expanded calculation was replaced with:
+Boolean owner:
+SoftEditorAccessoryPalette
 
-let expanded = false
+Files action:
+The Files row now directly sets:
 
-This preserves the existing iPhone compact behavior and forces iPad Air and iPad Pro through the same compact SoftEditorAccessoryBar view path.
+showFilesPresentationDiagnostic = true
 
-Shared path:
-SoftEditorAccessoryBar
-→ onOpen
-→ SoftEditorAccessoryPalette
-→ beginSoftEditorFilesMenu
-→ SoftEditorAccessoryFilesMenu
-→ insertSoftEditorFileName
+It does not call onFiles, filesContext, MainScreen state, sheets or anchor presentation.
 
-The expanded iPad Files row is no longer selected. The iPad fallback also uses the same compact SoftEditorAccessoryBar, Files callback, local menu, and insertion callback.
+Diagnostic panel:
+Rendered directly in the same SoftEditorAccessoryPalette ZStack when the Boolean is true.
 
-MIDI, Time, Wait and More were unchanged.
+Panel contents:
+FILES TEST
+Audio
+Images
+PDFs
+Markdown
+
+Panel configuration:
+• 280 x 300 points.
+• Black background.
+• 2-point white border.
+• Explicit contentShape(Rectangle()).
+• Hit testing enabled.
+• zIndex 500.
+
+The existing Files menu and insertion code remain in place but are bypassed for this diagnostic.
+
+The panel is expected to appear on iPhone, iPad Air and iPad Pro wherever the compact Tools palette is rendered.
 
 Build:
 Successful.
@@ -28,8 +41,4 @@ Main_Screen.swift warnings: none reported.
 Errors: none.
 
 Device testing:
-iPhone: not available in this session.
-iPad Air: not available in this session.
-iPad Pro: not available in this session.
-
-The shared compact path is confirmed by source and build, but visible device success is not claimed.
+Not available. Visible device confirmation remains required.

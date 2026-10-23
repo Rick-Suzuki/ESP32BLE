@@ -1,3 +1,7 @@
+261023 Fri 1656
+files nearly working
+V65.03
+
 
 261023 Fri 1556
 picker panel in place
