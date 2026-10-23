@@ -1,3 +1,8 @@
+
+261023 Fri 0924
+editor, [sp] removed from FN keys, Smart Keys (ESC etc), improved text
+V64.9
+
 261023 Fri 0835
 midi chords/midi slides - both work
 V64.8
@@ -25,7 +30,6 @@ V64.13
 261021 Wed 1327
 ESP-BUTTON-001A2: MIDI NOTE LABEL VISUAL REFINEMENT
 V64.12
-
 
 261021 Wed 1008
 modulation working

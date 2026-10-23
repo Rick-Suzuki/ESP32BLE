@@ -331,25 +331,25 @@ private let smartButtonSwatchHexColors = [
 ]
 	// MARK: - BM:🟥 smart keycodes
     private let smartEscapeCodeRows: [(english: String, command: String, description: String)] = [
-		("escape key", "ESC:", "sends the escape key"),
-		("send return", "RET:", "sends the return key"),
-		("backspace key", "BS:", "sends a backspace key"),
-		("space key", "SP:", "sends the space character."),
-		("tab key", "TAB:", "sends the tab key"),
-		("new line", "NL:", "sends a newline character."),
-		("colon", ":", "a colon is used to separate keyboard presses"),
-		("up key", "UP:", "sends up arrow"),
-		("down key", "DOWN:", "sends down arrow"),
-		("left key", "LEFT:", "sends left arrow"),
-		("right key", "RIGHT:", "sends right arrow"),
-		("select all (ctl-a)", "CA:", "sends control-a"),
-		("copy (ctl-c)", "CC:", "sends control-c"),
-		("paste (ctl-v)", "CV:", "sends control-v"),
-		("cut (ctl-x)", "CX:", "sends control-x"),
-		("select all (cmd-a)", "MA:", "sends command-a"),
-		("copy (cmd-c)", "MC:", "sends command-c"),
-		("paste (cmd-v)", "MV:", "sends command-v"),
-		("cut (cmd-x)", "MX:", "sends command-x")
+		("escape key", 			"ESC", 		"sends the escape key"),
+		("send return", 		"RET", 		"sends the return key"),
+		("backspace key", 		"BS", 		"sends a backspace key"),
+		("space key", 			"SP", 		"sends the space character."),
+		("tab key", 			"TAB", 		"sends the tab key"),
+		("new line", 			"NL", 		"sends a newline character."),
+		("colon", 				":", 		"a colon is used to separate keyboard presses"),
+		("up key", 				"UP", 		"sends up arrow"),
+		("down key", 			"DOWN", 	"sends down arrow"),
+		("left key", 			"LEFT", 	"sends left arrow"),
+		("right key", 			"RIGHT",	"sends right arrow"),
+		("select all (ctl-a)", 	"CA", 		"sends control-a"),
+		("copy (ctl-c)", 		"CC", 		"sends control-c"),
+		("paste (ctl-v)", 		"CV", 		"sends control-v"),
+		("cut (ctl-x)", 		"CX", 		"sends control-x"),
+		("select all (cmd-a)", 	"MA", 		"sends command-a"),
+		("copy (cmd-c)", 		"MC", 		"sends command-c"),
+		("paste (cmd-v)", 		"MV", 		"sends command-v"),
+		("cut (cmd-x)", 		"MX", 		"sends command-x")
 	]
 	//
 	//-----------------------------------------------------------------------------------------------
@@ -960,13 +960,16 @@ This only sends keys to the ESP32 via bluetooth.
 """
 	
 	private let smartHelpCommandSwitchWidgets = """
-Shows the widget command table.
+**widget command table**
+
 Widgets are small commands: for example, displaying a clock, tap counters, stopwatches, etc.
-Tapping a row replaces the left command text.
+
+Tapping a row inserts the command at the cursor.
 """
 	
 	private let smartHelpCommandSwitchSpecialKeys = """
-Shows the special-key table.
+**special-key table**
+
 Tapping a row inserts the key code at the cursor.
 """
 	//
@@ -3505,9 +3508,8 @@ Tapping a row inserts the key code at the cursor.
     }
 	//
 	//----------------------------------------
-	// MARK: - BM: EDITOR 4*4 btns
+	// MARK: - BM: CMD EDITOR 4*4 btns
 	//
-
     private func smartCommandPanel(columnWidth: CGFloat = 0) -> some View {
         let keyCellWidth: CGFloat? = isPad || columnWidth <= 0 ? nil : columnWidth / 4
         let functionKeyColumnWidth = keyCellWidth ?? smartFunctionKeyColumnWidth
@@ -3588,7 +3590,7 @@ Tapping a row inserts the key code at the cursor.
                     LazyVStack(spacing: 0) {
                         ForEach(1...20, id: \.self) { functionKeyNumber in
                             smartCommandTableButton("F\(functionKeyNumber)", foreground: .yellow) {
-                                insertSmartActionTextAtSelection("F\(functionKeyNumber) ")
+                                insertSmartActionTextAtSelection("F\(functionKeyNumber)")
                             }
                         }
                     }
