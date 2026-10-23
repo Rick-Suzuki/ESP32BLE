@@ -643,8 +643,15 @@ anything you want
 		//
 		//----------------------------------------
 		//
-		("play sound", "snd snd.mp3", """
-Plays a sound file.
+		("play sound", "snd.mp3", """
+**Plays a sound file**
+
+**Syntax:** [sound filename]
+
+**Display:** filename
+ 
+**Display with btn text:**	
+anything you want
 
 **Note:** This command works without an ESP32 or Mac Helper connection.
 """),
@@ -662,6 +669,24 @@ Plays a sound file.
 anything you want
 
 **Note:** This command works without an ESP32 or Mac Helper connection.
+"""),
+		//
+		//----------------------------------------
+		//
+		("preview media file", "hello.pdf", """
+**Previews a Media File**
+
+**Syntax:** [filename]
+
+**Display:** [filename]
+ 
+**Display with btn text:**	
+anything you want
+
+**Notes:**
+1. Opens a preview panel with the selected file. Supported formats: text, markdown, image and PDF (Single page only)
+
+2. This command works without an ESP32 or Mac Helper connection.
 """),
 		//
 		//----------------------------------------

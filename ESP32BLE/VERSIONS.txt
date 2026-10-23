@@ -1,4 +1,9 @@
 
+
+261023 Fri 1141
+general backup
+v65.00
+
 261023 Fri 0924
 editor, [sp] removed from FN keys, Smart Keys (ESC etc), improved text
 V64.9
