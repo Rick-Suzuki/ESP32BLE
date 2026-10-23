@@ -1,3 +1,8 @@
+
+261023 Fri 1831
+file menu complete
+V65.04
+
 261023 Fri 1656
 files nearly working
 V65.03

@@ -1004,6 +1004,10 @@ Tapping a row inserts the key code at the cursor.
     @State private var smartScriptEditingModel = SmartScriptEditingModel()
     @State private var smartPasteTarget = SmartEditorPasteTarget()
     @State private var softEditorAccessorySessionID = UUID()
+    // MARK: - BM:🅱️ add your comments here
+    // Tools visibility changes only from the explicit Quick toggle or after successful
+    // filename insertion. Editor focus, color/keypad/table actions and session invalidation
+    // must not dismiss the Tools panel.
     @State private var isSoftEditorAccessoryPaletteVisible = false
     @State private var smartButtonBrightness = 0.5
     @State private var smartButtonBrightnessBaseHex: String?
@@ -5174,7 +5178,10 @@ Tapping a row inserts the key code at the cursor.
                 // SoftEditorAccessoryBar view and the same beginSoftEditorFilesMenu action.
                 // The expanded iPad row is intentionally omitted for this validation pass.
                 let expanded = false
-                let showBar = expanded || smartPasteTarget.editor == .command
+                // MARK: - BM:🅱️ add your comments here
+                // Quick/Tools visibility is independent of the active editor. It must survive
+                // Command/Button focus, colour-area interaction and anchor recomputation.
+                let showBar = true
                 let pickerHeight = max(0, min(keypad.maxY, visibleBottom) - max(0, keypad.minY))
                 let pickerWidth = max(0, min(keypad.maxX, geometry.size.width) - max(0, keypad.minX))
                 // MARK: - BM:🅱️ add your comments here
@@ -5187,7 +5194,7 @@ Tapping a row inserts the key code at the cursor.
                 if showBar {
                     SoftEditorAccessoryBar(
                         expanded: expanded,
-                        showsCompact: smartPasteTarget.editor == .command,
+                        showsCompact: true,
                         filesPanelWidth: pickerWidth,
                         onAction: performSoftEditorAccessoryAction,
                         onFiles: beginSoftEditorFilesMenu,
@@ -5227,14 +5234,15 @@ Tapping a row inserts the key code at the cursor.
                               y: max(0, keypad.minY) + toolsHelperHeight / 2)
                     .zIndex(101)
                 }
-            } else if editingSlotIndex != nil,
-                      isPad,
-                      smartPasteTarget.editor == .command {
-                // MARK: - BM:🅱️ Keep a visible Command-tools fallback when iPad diagnostic anchors are unavailable.
+            } else if editingSlotIndex != nil {
+                // MARK: - BM:🅱️ Keep Quick/Tools visible while editor anchors are transiently unavailable.
+                // This stable editor-region fallback is independent of the active Command/Button editor.
+                let fallbackWidth = min(max(geometry.size.width - 16, 44), 420)
+                let fallbackHeight = min(max(geometry.size.height - 16, 300), 520)
                 SoftEditorAccessoryBar(
                     expanded: false,
                     showsCompact: true,
-                    filesPanelWidth: SoftEditorAccessoryConfiguration.compactLauncherDimension,
+                    filesPanelWidth: fallbackWidth,
                     onAction: performSoftEditorAccessoryAction,
                     onFiles: beginSoftEditorFilesMenu,
                     onFileNameSelected: insertSoftEditorFileName,
@@ -5246,12 +5254,25 @@ Tapping a row inserts the key code at the cursor.
                 )
                 .position(x: 30, y: 30)
                 .zIndex(100)
+
+                if isSoftEditorAccessoryPaletteVisible {
+                    SoftEditorAccessoryPalette(
+                        filesPanelWidth: fallbackWidth,
+                        onAction: performSoftEditorAccessoryAction,
+                        onFiles: beginSoftEditorFilesMenu,
+                        onFileNameSelected: insertSoftEditorFileName,
+                        onClose: { isSoftEditorAccessoryPaletteVisible = false },
+                        bottomHeightAdjustment: isPad ? 0 : SoftEditorAccessoryConfiguration.iPhoneToolsHelperBottomHeightAdjustment
+                    )
+                    .frame(width: fallbackWidth, height: fallbackHeight)
+                    .position(x: fallbackWidth / 2 + 8, y: fallbackHeight / 2 + 8)
+                    .zIndex(101)
+                }
             }
         }
     }
 
     private func performSoftEditorAccessoryAction(_ action: SoftEditorAccessoryAction) {
-        isSoftEditorAccessoryPaletteVisible = false
         guard let behavior = SoftEditorAccessoryConfiguration.behavior(for: action) else {
             return
         }
@@ -5260,7 +5281,7 @@ Tapping a row inserts the key code at the cursor.
         case let .insertText(text):
             // Integration point: this helper reads the active editor's live selection and uses
             // the existing replacement/undo paths for command text or button-preview text.
-            insertSoftEditorAccessoryText(text)
+            _ = insertSoftEditorAccessoryText(text)
         case .openPicker:
             // Files are opened by the accessory-bar-owned menu; this branch remains a safe
             // compatibility route for any future action configuration that uses the picker behavior.
@@ -5306,7 +5327,7 @@ Tapping a row inserts the key code at the cursor.
     private func insertSoftEditorFileName(
         _ filename: String,
         context: SoftEditorAccessoryInsertionContext
-    ) {
+    ) -> Bool {
         guard context.sessionID == softEditorAccessorySessionID,
               context.slot == editingSlotIndex,
               context.document == selectedDocumentName,
@@ -5316,7 +5337,7 @@ Tapping a row inserts the key code at the cursor.
               textView.window != nil,
               textView.text == context.text,
               textView.selectedRange == context.selection else {
-            return
+            return false
         }
 
         if context.wasFirstResponder && !textView.isFirstResponder {
@@ -5330,7 +5351,7 @@ Tapping a row inserts the key code at the cursor.
         case .button:
             smartButtonPreviewSelectionRange = context.selection
         }
-        insertSoftEditorAccessoryText(filename)
+        return insertSoftEditorAccessoryText(filename)
     }
 
     private var softEditorAccessoryTargetText: String {
@@ -5341,11 +5362,11 @@ Tapping a row inserts the key code at the cursor.
     }
 
     // MARK: - BM:🅱️ Read the live UTF-16 selection before using the existing model replacement paths.
-    private func insertSoftEditorAccessoryText(_ text: String) {
+    private func insertSoftEditorAccessoryText(_ text: String) -> Bool {
         guard editingSlotIndex != nil,
               let textView = smartPasteTarget.textView,
               textView.window != nil,
-              textView.text == softEditorAccessoryTargetText else { return }
+              textView.text == softEditorAccessoryTargetText else { return false }
 
         switch smartPasteTarget.editor {
         case .command:
@@ -5355,11 +5376,11 @@ Tapping a row inserts the key code at the cursor.
             smartButtonPreviewSelectionRange = textView.selectedRange
             insertSmartPreviewTextAtSelection(text)
         }
+        return true
     }
 
     private func invalidateSoftEditorAccessorySession() {
         softEditorAccessorySessionID = UUID()
-        isSoftEditorAccessoryPaletteVisible = false
     }
 
 
@@ -6335,7 +6356,7 @@ private struct SoftEditorAccessoryBar: View {
     let filesPanelWidth: CGFloat
     let onAction: (SoftEditorAccessoryAction) -> Void
     let onFiles: () -> SoftEditorAccessoryInsertionContext?
-    let onFileNameSelected: (String, SoftEditorAccessoryInsertionContext) -> Void
+    let onFileNameSelected: (String, SoftEditorAccessoryInsertionContext) -> Bool
     let onOpen: () -> Void
     @State private var filesInsertionContext: SoftEditorAccessoryInsertionContext?
     // MARK: - BM:🅱️ add your comments here
@@ -6390,7 +6411,7 @@ private struct SoftEditorAccessoryBar: View {
                 SoftEditorAccessoryFilesMenu(
                     onFileNameSelected: { filename in
                         if let context = filesInsertionContext {
-                            onFileNameSelected(filename, context)
+                            _ = onFileNameSelected(filename, context)
                         }
                         filesInsertionContext = nil
                         showFilesMenu = false
@@ -6442,7 +6463,7 @@ private struct SoftEditorAccessoryPalette: View {
     let filesPanelWidth: CGFloat
     let onAction: (SoftEditorAccessoryAction) -> Void
     let onFiles: () -> SoftEditorAccessoryInsertionContext?
-    let onFileNameSelected: (String, SoftEditorAccessoryInsertionContext) -> Void
+    let onFileNameSelected: (String, SoftEditorAccessoryInsertionContext) -> Bool
     let onClose: () -> Void
     let bottomHeightAdjustment: CGFloat
     // MARK: - BM:🅱️ add your comments here
@@ -6454,14 +6475,6 @@ private struct SoftEditorAccessoryPalette: View {
     var body: some View {
         ZStack(alignment: .topLeading) {
             VStack(spacing: 0) {
-                HStack {
-                    Text("Tools").font(.caption.bold())
-                    Spacer(minLength: 0)
-                    Button(action: onClose) {
-                        Image(systemName: "xmark").frame(width: 44, height: 44)
-                    }
-                    .accessibilityLabel("Close tools")
-                }
                 ScrollView {
                     VStack(spacing: 0) {
                         ForEach(SoftEditorAccessoryConfiguration.permanentOrder.filter {
@@ -6491,11 +6504,20 @@ private struct SoftEditorAccessoryPalette: View {
             if showFilesMenu {
                 SoftEditorAccessoryFilesMenu(
                     onFileNameSelected: { filename in
+                        let didInsert: Bool
                         if let context = filesInsertionContext {
-                            onFileNameSelected(filename, context)
+                            didInsert = onFileNameSelected(filename, context)
+                        } else {
+                            didInsert = false
                         }
                         filesInsertionContext = nil
                         showFilesMenu = false
+                        // MARK: - BM:🅱️ add your comments here
+                        // Dismiss Tools only after the existing filename insertion succeeds;
+                        // stale, cancelled or invalid selections leave Tools mode visible.
+                        if didInsert {
+                            onClose()
+                        }
                     },
                     onClose: {
                         filesInsertionContext = nil
@@ -6544,26 +6566,36 @@ private struct SoftEditorAccessoryFilesMenu: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            // MARK: - BM:🅱️ add your comments here
+            // The category menu has only Home because it is the Files-workflow entry point.
+            // The file list has Back to return to categories and Home to exit to normal Tools.
             HStack {
-                Text(selectedCategory?.title ?? "Files")
-                    .font(.caption.bold())
-                Spacer(minLength: 0)
-                if selectedCategory != nil {
+                if selectedCategory == nil {
+                    Spacer(minLength: 0)
+                    // MARK: - BM:🅱️ add your comments here
+                    // Top-level Files-menu Home remains the sole navigation control and is right-aligned.
+                    Button(action: onClose) {
+                        Image(systemName: "house")
+                            .frame(width: 44, height: 44)
+                    }
+                    .accessibilityLabel("Exit Files")
+                } else {
                     Button {
                         selectedCategory = nil
                         fileChoices = []
                         fileError = nil
                     } label: {
-                        Image(systemName: "chevron.left")
+                        Image(systemName: "arrowshape.backward")
                             .frame(width: 44, height: 44)
                     }
                     .accessibilityLabel("Back to file categories")
+                    Spacer(minLength: 0)
+                    Button(action: onClose) {
+                        Image(systemName: "house")
+                            .frame(width: 44, height: 44)
+                    }
+                    .accessibilityLabel("Exit Files")
                 }
-                Button(action: onClose) {
-                    Image(systemName: "xmark")
-                        .frame(width: 44, height: 44)
-                }
-                .accessibilityLabel("Close Files menu")
             }
 
             if selectedCategory == nil {

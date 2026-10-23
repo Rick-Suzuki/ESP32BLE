@@ -1,44 +1,55 @@
-Added the temporary local Files presentation diagnostic.
+Actual modifications:
+None.
 
-Actual file modified:
-ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
+Visibility state:
+• Single state found: isSoftEditorAccessoryPaletteVisible.
+• Owner: MainScreen.
+• No second Quick/Tools visibility state exists.
+• No binding is passed into the accessory views. The views receive closures.
+• State is shared by iPhone and iPad because both paths are rendered by MainScreen.
 
-Boolean owner:
-SoftEditorAccessoryPalette
+Explicit writes:
+• Initial default: false.
+• Quick launcher: .toggle().
+• Palette close closure: sets false.
+• Successful file insertion calls that same close closure.
+• No current assignment to false exists in performSoftEditorAccessoryAction().
+• No current assignment to false exists in invalidateSoftEditorAccessorySession().
 
-Files action:
-The Files row now directly sets:
+First Command-tap failure:
+• softEditorAccessoryOverlay() requires all of these:
+   • editingSlotIndex != nil
+   • .commandEditor anchor
+   • .keypad anchor
+• If either anchor is temporarily unavailable during focus/keyboard layout changes, the entire overlay returns no accessory UI.
+• This removes the rendered palette even though isSoftEditorAccessoryPaletteVisible was not set false.
+• Command focus calls invalidateSoftEditorAccessorySession() and then activates the Command editor. That invalidates the Files session but does not change Tools visibility.
+• The likely first-tap failure is conditional overlay removal during anchor/layout recomputation, not an explicit Boolean reset.
 
-showFilesPresentationDiagnostic = true
+Button/colour-area failure:
+• Button text editing calls smartPasteTarget.activate(.button, textView:).
+• The overlay then computes:
+showBar = expanded || smartPasteTarget.editor == .command
+• expanded is always false.
+• Therefore showBar becomes false for the Button editor.
+• Both the Quick launcher and Tools palette are conditionally omitted.
+• On iPad fallback, the fallback also requires smartPasteTarget.editor == .command, so it is omitted after Button activation.
+• Colour controls do not directly write the visibility Boolean; after the Button editor becomes active, the same showBar condition hides the UI.
 
-It does not call onFiles, filesContext, MainScreen state, sheets or anchor presentation.
+Relevant functions:
+• softEditorAccessoryOverlay()
+• smartColorPanel
+• smartButtonLowerEditingArea
+• smartIPhoneButton...
+• SmartScriptTextEditor.onBeginEditing
+• SmartPreviewTextView.onBeginEditing
+• invalidateSoftEditorAccessorySession()
 
-Diagnostic panel:
-Rendered directly in the same SoftEditorAccessoryPalette ZStack when the Boolean is true.
+Smallest recommended fix:
+• Keep isSoftEditorAccessoryPaletteVisible unchanged.
+• Decouple accessory-bar rendering from smartPasteTarget.editor == .command.
+• Render the Quick launcher and palette whenever an active editor session has valid geometry, regardless of whether the active editor is Command or Button.
+• Preserve the existing explicit Quick toggle and successful-file-insertion close path.
+• Preserve anchor fallback rendering when anchors are temporarily unavailable.
 
-Panel contents:
-FILES TEST
-Audio
-Images
-PDFs
-Markdown
-
-Panel configuration:
-• 280 x 300 points.
-• Black background.
-• 2-point white border.
-• Explicit contentShape(Rectangle()).
-• Hit testing enabled.
-• zIndex 500.
-
-The existing Files menu and insertion code remain in place but are bypassed for this diagnostic.
-
-The panel is expected to appear on iPhone, iPad Air and iPad Pro wherever the compact Tools palette is rendered.
-
-Build:
-Successful.
-Main_Screen.swift warnings: none reported.
-Errors: none.
-
-Device testing:
-Not available. Visible device confirmation remains required.
+No build or device testing was performed because this was a read-only probe.
