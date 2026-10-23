@@ -3965,6 +3965,9 @@ Tapping a row inserts the key code at the cursor.
                     Rectangle()
                         .stroke(Color.white, lineWidth: 1)
                 }
+                .anchorPreference(key: SoftEditorAccessoryBounds.self, value: .bounds) {
+                    [.commandEditor: $0]
+                }
 
             ScrollView(.vertical) {
                 Text(.init(smartCommandDescription))
@@ -5160,14 +5163,12 @@ Tapping a row inserts the key code at the cursor.
     ) -> some View {
         GeometryReader { geometry in
             if editingSlotIndex != nil,
-               let descriptionAnchor = anchors[.description],
+               let commandEditorAnchor = anchors[.commandEditor],
                let keypadAnchor = anchors[.keypad] {
-                let description = geometry[descriptionAnchor]
+                let commandEditor = geometry[commandEditorAnchor]
                 let keypad = geometry[keypadAnchor]
                 let keyboardTop = keyboardMinY - geometry.frame(in: .global).minY
                 let visibleBottom = min(geometry.size.height, keyboardTop)
-                let descriptionHasRoom = min(description.maxY, visibleBottom) - description.minY >= 52
-                let usesLeftGutter = !descriptionHasRoom && keypad.minX >= 52
                 // MARK: - BM:🅱️ add your comments here
                 // Temporary shared compact Files path: iPhone and iPad use this same
                 // SoftEditorAccessoryBar view and the same beginSoftEditorFilesMenu action.
@@ -5176,6 +5177,12 @@ Tapping a row inserts the key code at the cursor.
                 let showBar = expanded || smartPasteTarget.editor == .command
                 let pickerHeight = max(0, min(keypad.maxY, visibleBottom) - max(0, keypad.minY))
                 let pickerWidth = max(0, min(keypad.maxX, geometry.size.width) - max(0, keypad.minX))
+                // MARK: - BM:🅱️ add your comments here
+                // iPhone keeps the helper top position and bottom-anchors the added height
+                // into the replacement area; iPad receives no height adjustment.
+                let toolsHelperHeight = pickerHeight + (isPad ? 0 :
+                    SoftEditorAccessoryConfiguration.iPhoneToolsHelperBottomHeightAdjustment +
+                    SoftEditorAccessoryConfiguration.iPhoneToolsBottomGapAdjustment)
 
                 if showBar {
                     SoftEditorAccessoryBar(
@@ -5186,10 +5193,16 @@ Tapping a row inserts the key code at the cursor.
                         onFileNameSelected: insertSoftEditorFileName,
                         onOpen: { isSoftEditorAccessoryPaletteVisible.toggle() }
                     )
-                    .frame(width: usesLeftGutter ? 44 : max(0, description.width - 8), alignment: .leading)
+                    .frame(
+                        width: SoftEditorAccessoryConfiguration.compactLauncherDimension,
+                        height: SoftEditorAccessoryConfiguration.compactLauncherDimension,
+                        alignment: .leading
+                    )
                     .position(
-                        x: usesLeftGutter ? keypad.minX - 26 : description.midX,
-                        y: usesLeftGutter ? max(0, keypad.minY) + 26 : description.minY + 26
+                        // MARK: - BM:🅱️ add your comments here
+                        // The .commandEditor anchor keeps the button intentionally inside the Command panel at bottom-left.
+                        x: commandEditor.minX + 22,
+                        y: commandEditor.maxY - 22
                     )
                     // MARK: - BM:🅱️  Keep accessory controls above command-help hit testing.
                     .zIndex(100)
@@ -5200,12 +5213,16 @@ Tapping a row inserts the key code at the cursor.
                         onAction: performSoftEditorAccessoryAction,
                         onFiles: beginSoftEditorFilesMenu,
                         onFileNameSelected: insertSoftEditorFileName,
-                        onClose: { isSoftEditorAccessoryPaletteVisible = false }
+                        onClose: { isSoftEditorAccessoryPaletteVisible = false },
+                        bottomHeightAdjustment: isPad ? 0 : SoftEditorAccessoryConfiguration.iPhoneToolsHelperBottomHeightAdjustment
                     )
-                    .frame(width: pickerWidth, height: pickerHeight)
+                    .frame(
+                        width: pickerWidth,
+                        height: toolsHelperHeight
+                    )
                     .clipped()
                     .position(x: max(0, keypad.minX) + pickerWidth / 2,
-                              y: max(0, keypad.minY) + pickerHeight / 2)
+                              y: max(0, keypad.minY) + toolsHelperHeight / 2)
                     .zIndex(101)
                 }
             } else if editingSlotIndex != nil,
@@ -5220,7 +5237,10 @@ Tapping a row inserts the key code at the cursor.
                     onFileNameSelected: insertSoftEditorFileName,
                     onOpen: { isSoftEditorAccessoryPaletteVisible.toggle() }
                 )
-                .frame(width: 52, height: 52)
+                .frame(
+                    width: SoftEditorAccessoryConfiguration.compactLauncherDimension,
+                    height: SoftEditorAccessoryConfiguration.compactLauncherDimension
+                )
                 .position(x: 30, y: 30)
                 .zIndex(100)
             }
@@ -6166,6 +6186,23 @@ private enum SoftEditorAccessoryConfiguration {
     static let compactVisible: Set<SoftEditorAccessoryAction> = [.midi, .time, .files, .wait, .more]
     static let expandedVisible: Set<SoftEditorAccessoryAction> = [.midi, .time, .files, .wait, .more]
 
+    // MARK: - BM:🅱️ add your comments here
+    // Compact launcher styling only: 44 points matches the existing accessory/keypad buttons.
+    static let compactLauncherDimension: CGFloat = 44
+    static let compactLauncherColor: Color = .cyan
+    static let compactLauncherBorderColor: Color = .white
+
+    // MARK: - BM:🅱️ add your comments here
+    // The Tools helper uses a solid white outer border. Only iPhone receives this
+    // 16-point bottom adjustment so the panel fills the area it replaces; rows remain unchanged.
+    static let toolsHelperBorderWidth: CGFloat = 1
+    static let iPhoneToolsHelperBottomHeightAdjustment: CGFloat = 16
+
+    // MARK: - BM:🅱️ add your comments here
+    // USER-ADJUSTABLE: Extra iPhone Tools-helper height used to close the small bottom gap.
+    // Increase or decrease this value in points if the device leaves a visible seam.
+    static let iPhoneToolsBottomGapAdjustment: CGFloat = 4
+
     static let insertionTemplates: [SoftEditorAccessoryAction: String] = [
         .midi: ".midi 60 120 1 toggle",
         .wait: ".wait 5"
@@ -6251,6 +6288,7 @@ private enum SoftEditorAccessoryTable {
 
 // MARK: - BM:🅱️ Accessory overlays report bounds without changing the editor's layout proposal.
 private enum SoftEditorAccessoryRegion: Hashable {
+    case commandEditor
     case description
     case keypad
 }
@@ -6347,10 +6385,23 @@ private struct SoftEditorAccessoryBar: View {
         Button(action: onOpen) {
             VStack(spacing: 2) {
                 Image(systemName: "slider.horizontal.3")
-                Text("Tools").font(.caption2)
+                    .foregroundStyle(SoftEditorAccessoryConfiguration.compactLauncherColor)
+                Text("quick")
+                    .font(.caption2)
+                    .foregroundStyle(SoftEditorAccessoryConfiguration.compactLauncherColor)
             }
-            .frame(width: 44, height: 44)
+            .frame(
+                width: SoftEditorAccessoryConfiguration.compactLauncherDimension,
+                height: SoftEditorAccessoryConfiguration.compactLauncherDimension
+            )
             .contentShape(Rectangle())
+            .overlay {
+                Rectangle()
+                    .stroke(
+                        SoftEditorAccessoryConfiguration.compactLauncherBorderColor,
+                        lineWidth: 1
+                    )
+            }
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Command tools: MIDI, Time, Files, Wait, More")
@@ -6362,6 +6413,7 @@ private struct SoftEditorAccessoryPalette: View {
     let onFiles: () -> SoftEditorAccessoryInsertionContext?
     let onFileNameSelected: (String, SoftEditorAccessoryInsertionContext) -> Void
     let onClose: () -> Void
+    let bottomHeightAdjustment: CGFloat
     @State private var filesContext: SoftEditorAccessoryInsertionContext?
 
     var body: some View {
@@ -6412,10 +6464,17 @@ private struct SoftEditorAccessoryPalette: View {
             }
         }
         .buttonStyle(.plain)
+        .frame(minHeight: bottomHeightAdjustment, maxHeight: .infinity, alignment: .top)
         .padding(.horizontal, 8)
         .foregroundStyle(.white)
         .background(Color(white: 0.12))
-        .overlay { Rectangle().stroke(.gray, lineWidth: 1) }
+        .overlay {
+            Rectangle()
+                .stroke(
+                    SoftEditorAccessoryConfiguration.compactLauncherBorderColor,
+                    lineWidth: SoftEditorAccessoryConfiguration.toolsHelperBorderWidth
+                )
+        }
     }
 }
 
