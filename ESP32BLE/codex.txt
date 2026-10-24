@@ -1,149 +1,30 @@
-Callback chain
+Stage 3E complete.
 
-Quick entry point, which is the active production path because the accessory bar is configured with expanded = false:
+Build result: succeeded. No build errors.
 
-1. SoftEditorAccessoryPalette Time row
-   • Main_Screen.swift:6543–6545
-   • Captures timeInsertionContext = onFiles(), then sets showTimeMenu = true.
+Files modified:
+• ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
 
-2. SoftEditorAccessoryTimeMenu Time row
-   • 6640–6648
-   • Selecting clock sets selectedCommand = .clock.
+Modified Quick palette callbacks:
+• Files selection callback: SoftEditorAccessoryPalette, around lines 6580-6587.
+• Time City selection callback: SoftEditorAccessoryPalette, around lines 6607-6614.
 
-3. SoftEditorAccessoryTimeMenu City row
-   • 6650–6660
-   • Tapping Tokyo calls:
- onTimeCommandSelected(selectedCommand.insertionText(for: .tokyo))
+Change made:
+• Each Quick palette callback now obtains a fresh context with onFiles() at selection time.
+• If no context is available, it safely does nothing.
+• If valid, it updates filesInsertionContext or timeInsertionContext and uses that fresh context with the existing insertion callback.
+• Removed only the stale palette-level requirement that an earlier context must exist and match the current slot/document.
 
+Preserved:
+• Quick remains open.
+• Files/Time submenu, selected Time command, Files category, loaded choices, navigation, and scroll state remain intact.
+• No palette recreation or identity change.
+• Files/Time layouts and command construction are unchanged.
+• Stage 3 active-editor refresh remains unchanged.
+• Shared insertion validation remains unchanged: slot, document, session, editor type, attached text view, selection validity, and text/model consistency.
 
-4. Command construction
-   • SoftEditorAccessoryTimeCommand.insertionText(for:), 6739–6744
-   • .clock plus Tokyo’s timeZoneIdentifier produces exactly:
- .clock Asia/Tokyo
+Device testing required:
+• Files and Time insertion across repeated Next/Previous transitions while Quick and submenus remain open.
+• Opening Quick before a cursor, then activating Command or Button and inserting without reopening Quick.
+• Command and Button cursor/selection replacement behavior.
 
-
-5. Quick palette callback
-   • 6593–6599
-   • Requires:
-      • timeInsertionContext is non-nil
-      • a fresh onFiles() context is non-nil
-      • fresh slot equals original slot
-      • fresh document equals original document
-   • Only then calls MainScreen’s insertSoftEditorTimeCommand(_:context:).
-
-6. MainScreen Time wrapper
-   • insertSoftEditorTimeCommand(_:context:), 5376–5381
-   • Directly calls insertSoftEditorFileName(_:context:).
-
-7. Shared Files insertion
-   • insertSoftEditorFileName(_:context:), 5331–5372
-   • Restores selection/focus and calls insertSoftEditorAccessoryText(_:).
-
-8. Active-editor insertion
-   • insertSoftEditorAccessoryText(_:), 5391–5405
-   • Command: updates SmartScriptEditingModel at the live UITextView selection.
-   • Button: updates smartButtonPreviewSelectionRange and inserts into Button preview text.
-
-The expanded accessory-bar Time route has identical context behavior at 6403–6405 and 6466–6472, but it is currently inactive because MainScreen sets expanded = false at line 5180.
-
-Command construction
-
-Confirmed correct.
-
-• clock + Tokyo becomes .clock Asia/Tokyo.
-• local becomes the bare command, for example .clock.
-• No extra whitespace, display city name, or parameters are added.
-
-Insertion blockers
-
-Time-specific outer callback blockers:
-
-• timeInsertionContext is nil.
-   • It is set only by onFiles() at 6544 / 6404.
-• Fresh onFiles() is nil at City selection.
-   • beginSoftEditorFilesMenu() returns nil if either editingSlotIndex or smartPasteTarget.textView is nil, lines 5316–5318.
-• Fresh slot differs from the original captured slot.
-• Fresh document differs from the original captured document.
-
-Shared insertion blockers in insertSoftEditorFileName(_:context:), lines 5335–5341:
-
-• Context slot differs from editingSlotIndex.
-• Context document differs from selectedDocumentName.
-• Context session differs from softEditorAccessorySessionID.
-• Context editor differs from smartPasteTarget.editor.
-• smartPasteTarget.textView is nil.
-• UITextView is no longer in a window.
-
-Shared selection blockers, lines 5353–5358:
-
-• UITextView selection location is NSNotFound.
-• Selection range is outside the live UTF-16 text range.
-
-Final insertion blocker, lines 5392–5395:
-
-• editingSlotIndex is nil.
-• UITextView is nil or detached.
-• UITextView text differs from the current Command model text or Button preview binding.
-
-Files comparison
-
-The relevant Files and Time callbacks are materially identical.
-
-Files in Quick:
-• Captures filesInsertionContext at 6541.
-• Reacquires a fresh context at 6568.
-• Compares original and fresh slot/document at 6567–6571.
-• Calls onFileNameSelected only when those conditions pass.
-
-Time in Quick:
-• Captures timeInsertionContext at 6544.
-• Reacquires a fresh context at 6595.
-• Compares original and fresh slot/document at 6594–6598.
-• Calls onTimeCommandSelected only when those conditions pass.
-
-After that point, Time delegates exactly to insertSoftEditorFileName(_:context:), so focus restoration, selection handling, session validation, Command/Button routing, and final text replacement are the Files implementation.
-
-There is no source-visible closure disconnect. The City row callback is connected, and the Time wrapper is passed from MainScreen into both SoftEditorAccessoryBar and SoftEditorAccessoryPalette.
-
-Most likely root cause
-
-The source shows that the City tap can silently do nothing before the shared insertion function is reached.
-
-The most likely immediate failure point is the Time outer callback at Main_Screen.swift:6594–6599 for Quick, or 6467–6472 for the expanded bar. If either captured/fresh context is nil, or the slot/document comparison fails, the closure has no else branch and no insertion attempt occurs.
-
-However, static inspection cannot prove which condition is false on device. Importantly, this is not demonstrated to be a Time-only logic defect: Files uses the same context pattern and succeeds. The source therefore does not support claiming that session validation, responder status, or the Time command string is definitively the cause.
-
-Opening Time/City does not itself invalidate the accessory session in source. Session invalidation occurs when editing slot/document changes, the screen disappears, the editor resets, or Command/Button editing begins:
-• 1373–1375
-• 3877
-• 3956–3957
-• 4421–4422
-• 4444–4445
-
-The fresh Time context uses the current session, so a session change before City selection would not by itself prevent insertion unless it also leaves the original slot/document incompatible or no live text view available.
-
-Smallest recommended correction
-
-Do not change Files or duplicate its insertion code.
-
-The smallest Time-specific correction point, if a behavioral change is approved, is the Time callback duplicated in:
-• SoftEditorAccessoryPalette, lines 6593–6599
-• SoftEditorAccessoryBar, lines 6466–6472
-
-That is the only Time-only gate before the shared insertion path. Any correction should preserve the existing Files validation semantics and target only how Time retains or reacquires its insertion context.
-
-Uncertainties and the specific runtime observation needed
-
-Static inspection cannot determine whether City selection reaches the Time callback or which silent guard fails.
-
-A debugger breakpoint, without source modification, would resolve this:
-
-• Break at 6653 to confirm the City row invokes its closure with .clock Asia/Tokyo.
-• Break at 6593 and inspect timeInsertionContext.
-• Step through 6594–6598 to identify whether the initial context, fresh context, slot, or document comparison fails.
-• If it reaches 5376, step through guards at 5335–5358 and 5392–5395.
-• Inspect smartPasteTarget.textView, textView.window, textView.isFirstResponder, selectedRange, smartPasteTarget.editor, and softEditorAccessorySessionID.
-
-The same mechanism would affect Button text if its active smartPasteTarget context becomes nil or fails the same slot/document/live-view guards. If the callback reaches insertSoftEditorAccessoryText(_:), Button routing is present and source-visible.
-
-Files modified: None.

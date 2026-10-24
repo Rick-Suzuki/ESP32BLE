@@ -23,6 +23,8 @@ struct SmartScriptTextEditor: UIViewRepresentable {
     @Binding var selectedRange: NSRange
     let fontSize: CGFloat
     var onBeginEditing: ((UITextView) -> Void)? = nil
+    var insertionTargetRefreshID: UUID? = nil
+    var onInsertionTargetRefresh: ((UITextView) -> Void)? = nil
 
     func makeCoordinator() -> Coordinator {
         Coordinator(self)
@@ -55,6 +57,7 @@ struct SmartScriptTextEditor: UIViewRepresentable {
         }
 
         context.coordinator.applySelectedRange(to: uiView)
+        context.coordinator.refreshInsertionTargetIfNeeded(for: uiView)
     }
 
     func sizeThatFits(_ proposal: ProposedViewSize, uiView: UITextView, context: Context) -> CGSize? {
@@ -117,6 +120,7 @@ struct SmartScriptTextEditor: UIViewRepresentable {
         var parent: SmartScriptTextEditor
         var isUpdatingView = false
         private var isApplyingSelectedRange = false
+        private var handledInsertionTargetRefreshID: UUID?
 
         init(_ parent: SmartScriptTextEditor) {
             self.parent = parent
@@ -128,6 +132,19 @@ struct SmartScriptTextEditor: UIViewRepresentable {
         }
 
         func textViewDidEndEditing(_ textView: UITextView) {
+        }
+
+        // MARK: - BM:🅱️ Refresh only the editor that remains active after a slot transition.
+        func refreshInsertionTargetIfNeeded(for textView: UITextView) {
+            guard let refreshID = parent.insertionTargetRefreshID,
+                  refreshID != handledInsertionTargetRefreshID,
+                  textView.window != nil,
+                  textView.isFirstResponder else {
+                return
+            }
+
+            handledInsertionTargetRefreshID = refreshID
+            parent.onInsertionTargetRefresh?(textView)
         }
 
         func textViewDidChange(_ textView: UITextView) {
@@ -178,6 +195,8 @@ struct SmartPreviewTextView: UIViewRepresentable {
     let maximumVisibleLines: Int
     let disablesAutomaticPeriodShortcut: Bool
     var onBeginEditing: ((UITextView) -> Void)? = nil
+    var insertionTargetRefreshID: UUID? = nil
+    var onInsertionTargetRefresh: ((UITextView) -> Void)? = nil
     private static let maximumManualLogicalLineCount = 4
     private static let minimumVerticalInset: CGFloat = 1
 
@@ -238,6 +257,7 @@ struct SmartPreviewTextView: UIViewRepresentable {
         context.coordinator.updateFittedFont(for: uiView)
         context.coordinator.applySelectedRange(to: uiView)
         context.coordinator.updateVerticalTextInsets(for: uiView)
+        context.coordinator.refreshInsertionTargetIfNeeded(for: uiView)
     }
 
     func sizeThatFits(_ proposal: ProposedViewSize, uiView: UITextView, context: Context) -> CGSize? {
@@ -272,6 +292,7 @@ struct SmartPreviewTextView: UIViewRepresentable {
         var parent: SmartPreviewTextView
         var isUpdatingView = false
         private var isApplyingSelectedRange = false
+        private var handledInsertionTargetRefreshID: UUID?
 
         init(_ parent: SmartPreviewTextView) {
             self.parent = parent
@@ -295,6 +316,19 @@ struct SmartPreviewTextView: UIViewRepresentable {
             updateDisplayTruncation(for: textView)
             updateFittedFont(for: textView)
             updateVerticalTextInsets(for: textView)
+        }
+
+        // MARK: - BM:🅱️ Refresh only the editor that remains active after a slot transition.
+        func refreshInsertionTargetIfNeeded(for textView: UITextView) {
+            guard let refreshID = parent.insertionTargetRefreshID,
+                  refreshID != handledInsertionTargetRefreshID,
+                  textView.window != nil,
+                  textView.isFirstResponder else {
+                return
+            }
+
+            handledInsertionTargetRefreshID = refreshID
+            parent.onInsertionTargetRefresh?(textView)
         }
 
         func textViewDidChangeSelection(_ textView: UITextView) {

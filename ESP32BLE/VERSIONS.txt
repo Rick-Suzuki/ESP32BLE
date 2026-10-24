@@ -1,4 +1,8 @@
 
+261024 Sat 1317
+quick menu improved, works better
+V65.07
+
 261024 Sat 1209
 time menu complete
 V65.06

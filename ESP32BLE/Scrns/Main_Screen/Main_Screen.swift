@@ -1004,6 +1004,7 @@ Tapping a row inserts the key code at the cursor.
     @State private var smartScriptEditingModel = SmartScriptEditingModel()
     @State private var smartPasteTarget = SmartEditorPasteTarget()
     @State private var softEditorAccessorySessionID = UUID()
+    @State private var softEditorInsertionTargetRefreshID: UUID?
     // MARK: - BM:🅱️ add your comments here
     // Tools visibility changes only from the explicit Quick toggle or after successful
     // filename insertion. Editor focus, color/keypad/table actions and session invalidation
@@ -1370,7 +1371,10 @@ Tapping a row inserts the key code at the cursor.
             .overlayPreferenceValue(SoftEditorAccessoryBounds.self) { anchors in
                 softEditorAccessoryOverlay(anchors: anchors)
             }
-            .onChange(of: editingSlotIndex) { invalidateSoftEditorAccessorySession() }
+            .onChange(of: editingSlotIndex) {
+                invalidateSoftEditorAccessorySession()
+                softEditorInsertionTargetRefreshID = UUID()
+            }
             .onChange(of: selectedDocumentName) { invalidateSoftEditorAccessorySession() }
             .onDisappear { invalidateSoftEditorAccessorySession() }
             .onPreferenceChange(IPadBottomToolbarFramePreferenceKey.self) { frame in
@@ -3955,6 +3959,10 @@ Tapping a row inserts the key code at the cursor.
                 onBeginEditing: { textView in
                     invalidateSoftEditorAccessorySession()
                     smartPasteTarget.activate(.command, textView: textView)
+                },
+                insertionTargetRefreshID: softEditorInsertionTargetRefreshID,
+                onInsertionTargetRefresh: { textView in
+                    smartPasteTarget.activate(.command, textView: textView)
                 }
             )
                 .font(.system(size: 20, weight: .regular))
@@ -4420,6 +4428,10 @@ Tapping a row inserts the key code at the cursor.
                             onBeginEditing: { textView in
                                 invalidateSoftEditorAccessorySession()
                                 smartPasteTarget.activate(.button, textView: textView)
+                            },
+                            insertionTargetRefreshID: softEditorInsertionTargetRefreshID,
+                            onInsertionTargetRefresh: { textView in
+                                smartPasteTarget.activate(.button, textView: textView)
                             }
                         )
                             .frame(height: subtitleTextFieldHeight)
@@ -4442,6 +4454,10 @@ Tapping a row inserts the key code at the cursor.
                         disablesAutomaticPeriodShortcut: true,
                         onBeginEditing: { textView in
                             invalidateSoftEditorAccessorySession()
+                            smartPasteTarget.activate(.button, textView: textView)
+                        },
+                        insertionTargetRefreshID: softEditorInsertionTargetRefreshID,
+                        onInsertionTargetRefresh: { textView in
                             smartPasteTarget.activate(.button, textView: textView)
                         }
                     )
@@ -6437,10 +6453,9 @@ private struct SoftEditorAccessoryBar: View {
             if showFilesMenu {
                 SoftEditorAccessoryFilesMenu(
                     onFileNameSelected: { filename in
-                        if let originalContext = filesInsertionContext,
-                           let currentContext = onFiles(),
-                           currentContext.slot == originalContext.slot,
-                           currentContext.document == originalContext.document {
+                        if let currentContext = onFiles() {
+                            // MARK: - BM:🅱️ Keep the open Files workflow while refreshing its target for the current slot.
+                            filesInsertionContext = currentContext
                             _ = onFileNameSelected(filename, currentContext)
                         }
                         // MARK: - BM:🅱️ add your comments here
@@ -6464,10 +6479,9 @@ private struct SoftEditorAccessoryBar: View {
             if showTimeMenu {
                 SoftEditorAccessoryTimeMenu(
                     onTimeCommandSelected: { command in
-                        if let originalContext = timeInsertionContext,
-                           let currentContext = onFiles(),
-                           currentContext.slot == originalContext.slot,
-                           currentContext.document == originalContext.document {
+                        if let currentContext = onFiles() {
+                            // MARK: - BM:🅱️ Keep the open Time workflow while refreshing its target for the current slot.
+                            timeInsertionContext = currentContext
                             _ = onTimeCommandSelected(command, currentContext)
                         }
                     },
@@ -6564,10 +6578,9 @@ private struct SoftEditorAccessoryPalette: View {
             if showFilesMenu {
                 SoftEditorAccessoryFilesMenu(
                     onFileNameSelected: { filename in
-                        if let originalContext = filesInsertionContext,
-                           let currentContext = onFiles(),
-                           currentContext.slot == originalContext.slot,
-                           currentContext.document == originalContext.document {
+                        if let currentContext = onFiles() {
+                            // MARK: - BM:🅱️ Refresh only the insertion target; retain the open Files workflow.
+                            filesInsertionContext = currentContext
                             _ = onFileNameSelected(filename, currentContext)
                         }
                         // MARK: - BM:🅱️ add your comments here
@@ -6591,10 +6604,9 @@ private struct SoftEditorAccessoryPalette: View {
             if showTimeMenu {
                 SoftEditorAccessoryTimeMenu(
                     onTimeCommandSelected: { command in
-                        if let originalContext = timeInsertionContext,
-                           let currentContext = onFiles(),
-                           currentContext.slot == originalContext.slot,
-                           currentContext.document == originalContext.document {
+                        if let currentContext = onFiles() {
+                            // MARK: - BM:🅱️ Refresh only the insertion target; retain the open Time workflow.
+                            timeInsertionContext = currentContext
                             _ = onTimeCommandSelected(command, currentContext)
                         }
                     },
