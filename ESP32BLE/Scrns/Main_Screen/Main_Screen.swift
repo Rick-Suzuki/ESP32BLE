@@ -5049,6 +5049,10 @@ Tapping a row inserts the key code at the cursor.
     }
 
     private func smartPlaceholderButtonIsDisabled(_ systemName: String) -> Bool {
+        if systemName == "delete.left.fill" {
+            return !canDeleteSmartEditorBackward
+        }
+
         if systemName == "doc.on.doc" || systemName == "scissors" {
             return smartClipboardSelection == nil
         }
@@ -5088,12 +5092,42 @@ Tapping a row inserts the key code at the cursor.
         return false
     }
 
+    private var canDeleteSmartEditorBackward: Bool {
+        guard editingSlotIndex != nil,
+              let textView = smartPasteTarget.textView,
+              textView.window != nil else {
+            return false
+        }
+
+        let text: String
+        let selection: NSRange
+        switch smartPasteTarget.editor {
+        case .command:
+            text = smartScriptEditingModel.scriptText
+            selection = smartScriptEditingModel.selectionRange
+        case .button:
+            text = smartButtonEditablePreviewTextBinding.wrappedValue
+            selection = smartButtonPreviewSelectionRange
+        }
+
+        let textLength = text.utf16.count
+        guard selection.location != NSNotFound,
+              selection.location >= 0,
+              selection.length >= 0,
+              selection.location <= textLength,
+              selection.length <= textLength - selection.location else {
+            return false
+        }
+
+        return selection.length > 0 || selection.location > 0
+    }
+
     private func smartPlaceholderButtonForegroundColor(for systemName: String) -> Color {
         if smartPlaceholderButtonIsDisabled(systemName) {
             return .gray
         }
 
-        if systemName == "xmark" || systemName == "delete.right.fill" || systemName == "delete.backward.fill" {
+        if systemName == "xmark" || systemName == "delete.left.fill" || systemName == "delete.right.fill" || systemName == "delete.backward.fill" {
             return .red
         }
 

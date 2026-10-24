@@ -1,4 +1,9 @@
 
+261024 Sat 1421
+backspace key working properly
+V65.09
+
+
 261024 Sat 1358
 backspace key working - just white
 v65.08
