@@ -1,3 +1,7 @@
+261024 Sat 1512
+before quick midi
+V65.10
+
 
 261024 Sat 1421
 backspace key working properly
