@@ -16,8 +16,8 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "6654"
             endingLineNumber = "6654"
-            landmarkName = "body"
-            landmarkType = "24">
+            landmarkName = "selectorContent(dimensions:)"
+            landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -32,7 +32,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "6694"
             endingLineNumber = "6694"
-            landmarkName = "disabledActionButtons(testTitle:)"
+            landmarkName = "selectorContent(dimensions:)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>

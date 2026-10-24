@@ -1,78 +1,185 @@
-Source file modified:
+The double-line ownership is source-grounded: the Quick palette has its own one-point white outer overlay, while the newly fitting MIDI panel has a separate one-point white overlay inset by the palette’s 8-point horizontal padding. The responsive correction exposed both instead of letting the MIDI overlay be clipped.A. Current source locations
+
+File inspected:
 ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
 
-Shared MIDI Menu presentation:
-• Added one MIDI-only shared Menu label containing selection text plus chevron.
-• Note, Octave, Channel, CC Type, Volume, Start, and End now use that same label structure.
-• All selector labels use .foregroundStyle(.tint), giving consistent blue text and chevrons.
-• Native Pickers remain only for the CC Toggle/Hold segmented control.
+• Responsive MIDI layout constants/calculation: lines 6469–6482
+• Shared labelled-control helper: lines 6484–6510
+• Shared Menu label: lines 6512–6526
+• Numeric selector: lines 6528–6591
+• MIDI Note GeometryReader/root/border/buttons: lines 6593–6749
+• MIDI CC GeometryReader/root/Mode/border/buttons: lines 6752–6932
+• Quick palette root/background/border/padding: lines 7129–7243
+• MIDI presentation routing: lines 7245–7275
+• Primary palette frame/clipping: lines 5293–5311
+• Files panel: lines 7433 onward
+• Time panel: lines 7277 onward
 
-Alignment:
-• All seven dropdowns now render their visible text in the same 140-point, leading-aligned label structure.
-• This removes the native Picker versus custom Menu internal-spacing difference.
-• Note, Octave, Volume, Channel, CC Type, Start, and End preserve their existing bindings, values, options, defaults, ranges, and validation.
+B. Ownership of the two visible left borders
 
-Root padding and Home position:
-• Moved the 12-point horizontal inset to each MIDI selector root, matching the Files/Time modifier relationship.
-• Removed header-only horizontal padding.
-• Changed MIDI ScrollView content padding to vertical-only, preventing double horizontal padding.
-• Home buttons retain their existing 44 × 44 point hit targets and actions.
+VERIFIED FROM SOURCE
 
-Border:
-• Existing MIDI border overlays were untouched.
-• Quick palette clipping, width, and shared infrastructure were untouched.
-• The left-border visibility remains for device inspection.
+The outer Quick palette owns one border:
+• Palette horizontal padding: line 7233, 8 points per side.
+• Palette background: line 7235.
+• Palette white one-point overlay: lines 7236–7242.
 
-Build result:
-• Main_Screen.swift passed a Swift syntax parse.
-• Xcode BuildProject could not start because of IDEKit.IDEStatefulActionError.
-• Fallback project build reached compilation but failed because the Xcode SwiftUI macro plugin returned malformed responses for existing @State declarations in unrelated ContentView.swift and KB_Screen.swift.
-• No Main_Screen.swift diagnostic was reported.
-• The build therefore did not succeed due to the environment/toolchain macro-service failure.
+Each MIDI panel owns a second border:
+• MIDI Note root padding/background/white one-point overlay: lines 6703–6712.
+• MIDI CC root padding/background/white one-point overlay: lines 6868–6877.
 
-Remaining limitations:
-• Device testing is required to confirm visible text alignment, Home position, and the unresolved left border.
-• Test and Insert remain disabled as required for Stage 1.
+The MIDI selector is a child of the palette’s ZStack and is now constrained to the palette’s padded content width:
+• MIDI presentation: lines 7248–7269.
+• The palette’s 8-point padding places the MIDI panel border inside the palette border.
 
-Manual device-test checklist:
+This produces:
+• Outer palette border at the visible palette edge.
+• MIDI panel border approximately 8 points inward.
 
-MIDI Note
-• Note, Octave, Volume, and Channel values share one leading edge.
-• All dropdown values and chevrons use blue tint.
-• Note selection works.
-• Octave selection works.
-• Volume presets and edit entry work.
-• Channel order remains numeric.
-• default (N) remains on one line.
-• Toggle checkbox works.
-• Home aligns with Files/Time and remains functional.
-• Next/Previous preserves state.
-• Test and Insert remain disabled.
-• Inspect the left panel border.
+That is the source-backed explanation for the two vertical white lines.
 
-MIDI CC
-• CC Type, Start, End, and Channel values share one leading edge.
-• All dropdown values and chevrons use blue tint.
-• CC Type numbers and display names work.
-• Start/End presets and edit entry work.
-• Channel selection works.
-• Toggle/Hold works.
-• Mode remains hidden for CC 120, 121, and 123.
-• Home aligns with Files/Time and remains functional.
-• Next/Previous preserves state.
-• Test and Insert remain disabled.
-• Inspect the left panel border.
+C. Current responsive-width calculation
 
-Quick regression
-• Quick root navigation.
-• Files and submenus.
-• Filename and image-name insertion.
-• Time, City, and time-zone menus.
-• Command/Button cursor insertion and selection replacement.
-• Next/Previous persistence.
-• Clear.
-• Back Delete and red/gray state.
-• Wait and More.
-• Existing navigation styling and layout.
+VERIFIED FROM SOURCE
 
-Protected files, MIDI parsers, MIDI transmission, ESP32BLE.xcodeproj, and ESPMacHelper areas were untouched. The pre-existing modified codex.txt and breakpoint file were left unchanged. No commit, tag, or backup was created.
+The GeometryReader is at:
+• Note: lines 6621–6625.
+• CC: lines 6782–6786.
+
+It supplies proxy.size.width to:
+
+panel width
+minus 24 points of MIDI root padding
+minus 68-point label column
+minus 8-point label/control gap
+capped at 140 points.
+
+Source:
+• Formula: lines 6475–6480.
+• Root padding: Note line 6703; CC line 6868.
+• Palette padding: line 7233.
+
+The MIDI GeometryReader receives the width offered by the selector presentation frame, which is inside the palette’s 8-point horizontal padding. Root padding is subtracted once in the calculation and then applied once by the selector root.
+
+There is no source evidence that the 24-point root padding is double-counted.
+
+D. Horizontal allocation and recoverable width
+
+VERIFIED FROM SOURCE
+
+Current allocation before the control column:
+• Root left/right padding: 24 points.
+• Label column: 68 points.
+• Gap: 8 points.
+• Total reserved: 100 points.
+
+Control width:
+panel width minus 100, capped at 140.
+
+At any offered panel width below 220 points, the current layout gives the control column less than 120 points.
+
+The Mode control is:
+min(120, controlWidth)
+at lines 6851–6857.
+
+Therefore, when the offered width is below 220 points, Toggle/Hold must receive less than its previously approved 120 points.
+
+Recoverable width:
+• Reducing the 8-point gap can recover at most 4 points without materially changing the compact layout.
+• The 68-point label column is the largest recoverable reservation.
+• The longest current white labels are “cc type” and “toggle”; source does not specify a font size or text metrics, so their exact safe minimum width cannot be proven from source alone.
+• There is no fixed width in the numeric controls beyond the shared responsive Menu label.
+
+E. Channel truncation
+
+VERIFIED FROM SOURCE
+
+Channel values use:
+• a shared Menu label with a fixed responsive frame: lines 6512–6524.
+• a one-line Text plus a chevron and 4-point internal gap: lines 6517–6521.
+• the current calculated control width: Note line 6679; CC line 6835.
+
+The channel Text itself uses lineLimit(1), so when its available area is too narrow after the chevron and Menu rendering, SwiftUI truncates it to default....
+
+LIKELY BUT UNCONFIRMED
+
+The actual device control width is below the practical width needed for default (16) plus the chevron. Source cannot quantify native Menu label insets or rendered text width.
+
+F. Toggle/Hold truncation
+
+VERIFIED FROM SOURCE
+
+The native segmented Picker is capped at 120 points but shrinks below that when controlWidth is below 120:
+lines 6851–6857.
+
+Therefore Tog... directly indicates that the responsive control width is below the practical native segmented-control width.
+
+G. Bottom-button wrapping
+
+VERIFIED FROM SOURCE
+
+Both action rows use:
+• Button minimum widths of 84 and 64.
+• 12-point inter-button gap.
+• 8-point row padding on each side.
+• Native bordered button styling, which adds internal label padding.
+
+Note: lines 6731–6744.
+CC: lines 6900–6913.
+
+The source-only minimum before native button insets is 176 points:
+84 + 12 + 64 + 16.
+
+When the selector’s inner content width is below the native buttons’ combined preferred width, SwiftUI can wrap button labels despite the minimum frame values. test note is especially susceptible because its text is longer than the nominal 84-point button frame after native button insets.
+
+H. Files and Time comparison
+
+VERIFIED FROM SOURCE
+
+Files and Time have their own panel border overlays, but their presentation frames are explicitly forced to filesPanelWidth:
+• Files: lines 7200–7207.
+• Time: lines 7220–7227.
+
+That lets their panel borders meet or overflow the palette’s padded area, visually merging with or hiding behind the palette border.
+
+MIDI now deliberately accepts the padded available width:
+• Note: lines 7252–7258.
+• CC: lines 7263–7269.
+
+The MIDI panel border is therefore visibly inset from the palette border. This explains why Files/Time show one apparent edge while MIDI now shows two.
+
+I. Recommended smallest coordinated correction
+
+RECOMMENDED
+
+1. Remove only the two MIDI selector panel border overlays.
+   • Keep the existing shared Quick palette border.
+   • The palette border is the outer, visible panel boundary.
+   • This removes the known duplicate inner line without touching shared Quick geometry.
+   • Do not change Files or Time.
+
+2. Reallocate responsive width with priority for the control column.
+   • Keep the 12-point root padding.
+   • Reduce the label/control gap from 8 to 4 only in the MIDI helper.
+   • Make the label column responsive: use up to 68 points when space permits, but allow it to contract before the control column falls below the preferred 120 points.
+   • Use the resulting same control width for every shared Menu label, numeric selector, and Mode row.
+
+3. Preserve the 120-point Mode width whenever the offered panel width allows it.
+   • The responsive label column should yield width to the control column first.
+   • If the panel is genuinely narrower than the combined requirements, the control must shrink rather than overflow.
+
+4. Make action buttons resist wrapping without changing vertical position.
+   • Keep the existing row and bottom placement.
+   • Use one-line labels for only the two disabled MIDI action buttons.
+   • Reduce row-only horizontal padding and/or the 12-point inter-button gap before changing font size or outer panel geometry.
+
+LIKELY SUFFICIENT FOR THE TESTED DEVICE
+
+Reducing the gap by 4 points and allowing the label column to contract by approximately 10–12 points should restore at least 120 points to the control column while preserving labels such as “cc type” and “toggle” at ordinary text size. Exact text-metric safety is not provable from source.
+
+J. Remaining uncertainty
+
+A new device geometry probe is only needed if the current offered selector width remains below approximately 204 points after the duplicate-border correction. That would leave insufficient space for:
+24 root padding + approximately 56 label width + 4 gap + 120 Mode width.
+
+No files were modified. No build was run.

@@ -1,3 +1,8 @@
+261024 Sat 1931
+stage 1: midi panels very close
+V65.13
+
+
 261024 Sat 1739
 stage 1: midi panels closer
 V65.12
