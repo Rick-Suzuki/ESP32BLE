@@ -1,3 +1,8 @@
+
+261025 Sun 0857
+Stage 1 complete
+V65.14
+
 261024 Sat 1931
 stage 1: midi panels very close
 V65.13

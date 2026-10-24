@@ -6473,7 +6473,7 @@ private enum SoftEditorMIDIControlLayout {
     }
 
     static let preferredLabelWidth: CGFloat = 68
-    static let minimumLabelWidth: CGFloat = 56
+    static let minimumLabelWidth: CGFloat = 60
     static let labelControlSpacing: CGFloat = 4
     static let preferredControlWidth: CGFloat = 140
     static let preferredModeWidth: CGFloat = 120
@@ -6613,7 +6613,7 @@ private struct SoftEditorMIDINumericSelector: View {
         value = newValue
     }
 }
-
+// MARK: - BM:🟥 Soft Editor MIDI NOTE VIEW
 private struct SoftEditorMIDINoteMenu: View {
     private static let notes = [
         "C", "C#", "D", "D#", "E", "F",
@@ -6653,7 +6653,7 @@ private struct SoftEditorMIDINoteMenu: View {
         dimensions: SoftEditorMIDIControlLayout.Dimensions
     ) -> some View {
         VStack(spacing: 0) {
-            header(title: "MIDI Note")
+            header(title: "Note")
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
@@ -6749,13 +6749,23 @@ private struct SoftEditorMIDINoteMenu: View {
     }
 
     private func disabledActionButtons(testTitle: String) -> some View {
-        HStack(spacing: 12) {
-            Button(testTitle) {}
-                .frame(minWidth: 84)
+        HStack(spacing: 8) {
+            Button {} label: {
+                Text(testTitle)
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
+                    .frame(maxWidth: .infinity)
+            }
                 .disabled(true)
-            Button("insert") {}
-                .frame(minWidth: 64)
+                .frame(maxWidth: .infinity)
+            Button {} label: {
+                Text("insert")
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
+                    .frame(maxWidth: .infinity)
+            }
                 .disabled(true)
+                .frame(maxWidth: .infinity)
         }
         .frame(maxWidth: .infinity, alignment: .center)
         .padding(.horizontal, 8)
@@ -6765,14 +6775,14 @@ private struct SoftEditorMIDINoteMenu: View {
     }
 
     private func channelTitle(for item: Int) -> String {
-        item == defaultChannel ? "default (\(item))" : "ch \(item)"
+        item == defaultChannel ? "(\(item))" : "\(item)"
     }
 }
 
 private struct SoftEditorMIDIControlChangeMenu: View {
     private enum Mode: String, CaseIterable, Identifiable {
-        case toggle = "Toggle"
-        case hold = "Hold"
+        case toggle = "tog"
+        case hold = "hold"
 
         var id: String { rawValue }
     }
@@ -6909,7 +6919,7 @@ private struct SoftEditorMIDIControlChangeMenu: View {
             .accessibilityLabel("Exit MIDI CC")
 
             Spacer(minLength: 0)
-            Text("MIDI CC").foregroundStyle(.cyan)
+            Text("CC").foregroundStyle(.cyan)
             Spacer(minLength: 0)
             Color.clear.frame(width: 44, height: 44)
         }
@@ -6920,13 +6930,23 @@ private struct SoftEditorMIDIControlChangeMenu: View {
     }
 
     private var disabledActionButtons: some View {
-        HStack(spacing: 12) {
-            Button("test") {}
-                .frame(minWidth: 84)
+        HStack(spacing: 8) {
+            Button {} label: {
+                Text("test")
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
+                    .frame(maxWidth: .infinity)
+            }
                 .disabled(true)
-            Button("insert") {}
-                .frame(minWidth: 64)
+                .frame(maxWidth: .infinity)
+            Button {} label: {
+                Text("insert")
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
+                    .frame(maxWidth: .infinity)
+            }
                 .disabled(true)
+                .frame(maxWidth: .infinity)
         }
         .frame(maxWidth: .infinity, alignment: .center)
         .padding(.horizontal, 8)
@@ -6949,7 +6969,7 @@ private struct SoftEditorMIDIControlChangeMenu: View {
     }
 
     private func channelTitle(for item: Int) -> String {
-        item == defaultChannel ? "default (\(item))" : "ch \(item)"
+        item == defaultChannel ? "(\(item))" : "\(item)"
     }
 }
 
