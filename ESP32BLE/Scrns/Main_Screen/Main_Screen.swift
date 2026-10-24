@@ -6477,10 +6477,24 @@ private struct SoftEditorMIDILabelledControl<Control: View>: View {
                 .frame(width: 68, alignment: .trailing)
 
             control()
-                .fixedSize(horizontal: true, vertical: false)
-                .frame(minWidth: 130, alignment: .leading)
+                .frame(width: 140, alignment: .leading)
         }
         .frame(maxWidth: .infinity, alignment: .center)
+    }
+}
+
+private struct SoftEditorMIDIMenuLabel: View {
+    let value: String
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Text(value)
+                .lineLimit(1)
+            Image(systemName: "chevron.up.chevron.down")
+                .font(.caption)
+        }
+        .frame(width: 140, alignment: .leading)
+        .foregroundStyle(.tint)
     }
 }
 
@@ -6513,12 +6527,7 @@ private struct SoftEditorMIDINumericSelector: View {
                 isEditing = true
             }
         } label: {
-            HStack(spacing: 4) {
-                Text("\(value)")
-                Image(systemName: "chevron.up.chevron.down")
-                    .font(.caption)
-            }
-            .frame(minWidth: 130, alignment: .leading)
+            SoftEditorMIDIMenuLabel(value: "\(value)")
         }
         .accessibilityLabel("Value")
         .accessibilityValue("\(value)")
@@ -6581,25 +6590,31 @@ private struct SoftEditorMIDINoteMenu: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
                     SoftEditorMIDILabelledControl(label: "note") {
-                        Picker("note", selection: $selectedNote) {
+                        Menu {
                             ForEach(Self.notes, id: \.self) { note in
-                                Text(note).tag(note)
+                                Button(note) {
+                                    selectedNote = note
+                                }
                             }
+                        } label: {
+                            SoftEditorMIDIMenuLabel(value: selectedNote)
                         }
-                        .labelsHidden()
-                        .pickerStyle(.menu)
-                        .lineLimit(1)
+                        .accessibilityLabel("note")
+                        .accessibilityValue(selectedNote)
                     }
 
                     SoftEditorMIDILabelledControl(label: "oct") {
-                        Picker("oct", selection: $selectedOctave) {
+                        Menu {
                             ForEach(0...8, id: \.self) { octave in
-                                Text("\(octave)").tag(octave)
+                                Button("\(octave)") {
+                                    selectedOctave = octave
+                                }
                             }
+                        } label: {
+                            SoftEditorMIDIMenuLabel(value: "\(selectedOctave)")
                         }
-                        .labelsHidden()
-                        .pickerStyle(.menu)
-                        .lineLimit(1)
+                        .accessibilityLabel("oct")
+                        .accessibilityValue("\(selectedOctave)")
                     }
 
                     SoftEditorMIDILabelledControl(label: "vol") {
@@ -6611,15 +6626,17 @@ private struct SoftEditorMIDINoteMenu: View {
                     }
 
                     SoftEditorMIDILabelledControl(label: "ch") {
-                        Picker("ch", selection: $channel) {
+                        Menu {
                             ForEach(MIDIChannelSettings.validRange, id: \.self) { item in
-                                Text(item == defaultChannel ? "default (\(item))" : "ch \(item)")
-                                    .tag(item)
+                                Button(channelTitle(for: item)) {
+                                    channel = item
+                                }
                             }
+                        } label: {
+                            SoftEditorMIDIMenuLabel(value: channelTitle(for: channel))
                         }
-                        .labelsHidden()
-                        .pickerStyle(.menu)
-                        .lineLimit(1)
+                        .accessibilityLabel("ch")
+                        .accessibilityValue(channelTitle(for: channel))
                     }
 
                     SoftEditorMIDILabelledControl(label: "toggle") {
@@ -6635,9 +6652,10 @@ private struct SoftEditorMIDINoteMenu: View {
 
                     disabledActionButtons(testTitle: "test note")
                 }
-                .padding(SoftEditorAccessoryConfiguration.filesMenuContentPadding)
+                .padding(.vertical, SoftEditorAccessoryConfiguration.filesMenuContentPadding)
             }
         }
+        .padding(.horizontal, SoftEditorAccessoryConfiguration.filesMenuContentPadding)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .foregroundStyle(.white)
         .background(Color(white: 0.12))
@@ -6681,6 +6699,10 @@ private struct SoftEditorMIDINoteMenu: View {
         .buttonBorderShape(.roundedRectangle(radius: 6))
         .tint(.gray)
     }
+
+    private func channelTitle(for item: Int) -> String {
+        item == defaultChannel ? "default (\(item))" : "ch \(item)"
+    }
 }
 
 private struct SoftEditorMIDIControlChangeMenu: View {
@@ -6719,14 +6741,17 @@ private struct SoftEditorMIDIControlChangeMenu: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
                     SoftEditorMIDILabelledControl(label: "cc type") {
-                        Picker("cc type", selection: $controller) {
+                        Menu {
                             ForEach(0...127, id: \.self) { number in
-                                Text("\(number) \(controllerName(for: number))").tag(number)
+                                Button(controllerTitle(for: number)) {
+                                    controller = number
+                                }
                             }
+                        } label: {
+                            SoftEditorMIDIMenuLabel(value: controllerTitle(for: controller))
                         }
-                        .labelsHidden()
-                        .pickerStyle(.menu)
-                        .lineLimit(1)
+                        .accessibilityLabel("cc type")
+                        .accessibilityValue(controllerTitle(for: controller))
                     }
 
                     SoftEditorMIDILabelledControl(label: "start") {
@@ -6746,15 +6771,17 @@ private struct SoftEditorMIDIControlChangeMenu: View {
                     }
 
                     SoftEditorMIDILabelledControl(label: "ch") {
-                        Picker("ch", selection: $channel) {
+                        Menu {
                             ForEach(MIDIChannelSettings.validRange, id: \.self) { item in
-                                Text(item == defaultChannel ? "default (\(item))" : "ch \(item)")
-                                    .tag(item)
+                                Button(channelTitle(for: item)) {
+                                    channel = item
+                                }
                             }
+                        } label: {
+                            SoftEditorMIDIMenuLabel(value: channelTitle(for: channel))
                         }
-                        .labelsHidden()
-                        .pickerStyle(.menu)
-                        .lineLimit(1)
+                        .accessibilityLabel("ch")
+                        .accessibilityValue(channelTitle(for: channel))
                     }
 
                     if !isOneShotController {
@@ -6785,9 +6812,10 @@ private struct SoftEditorMIDIControlChangeMenu: View {
                     .buttonBorderShape(.roundedRectangle(radius: 6))
                     .tint(.gray)
                 }
-                .padding(SoftEditorAccessoryConfiguration.filesMenuContentPadding)
+                .padding(.vertical, SoftEditorAccessoryConfiguration.filesMenuContentPadding)
             }
         }
+        .padding(.horizontal, SoftEditorAccessoryConfiguration.filesMenuContentPadding)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .foregroundStyle(.white)
         .background(Color(white: 0.12))
@@ -6826,6 +6854,14 @@ private struct SoftEditorMIDIControlChangeMenu: View {
             channelOverride: nil,
             mode: .oneShot
         ).controllerDisplayName
+    }
+
+    private func controllerTitle(for number: Int) -> String {
+        "\(number) \(controllerName(for: number))"
+    }
+
+    private func channelTitle(for item: Int) -> String {
+        item == defaultChannel ? "default (\(item))" : "ch \(item)"
     }
 }
 

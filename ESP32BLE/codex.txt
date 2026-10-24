@@ -1,176 +1,78 @@
+Source file modified:
+ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
 
-ESP32BLE — MIDI SOFT EDITOR
-READ-ONLY LAYOUT AND COLOUR PROBE
+Shared MIDI Menu presentation:
+• Added one MIDI-only shared Menu label containing selection text plus chevron.
+• Note, Octave, Channel, CC Type, Volume, Start, and End now use that same label structure.
+• All selector labels use .foregroundStyle(.tint), giving consistent blue text and chevrons.
+• Native Pickers remain only for the CC Toggle/Hold segmented control.
 
-OBJECTIVE
+Alignment:
+• All seven dropdowns now render their visible text in the same 140-point, leading-aligned label structure.
+• This removes the native Picker versus custom Menu internal-spacing difference.
+• Note, Octave, Volume, Channel, CC Type, Start, and End preserve their existing bindings, values, options, defaults, ranges, and validation.
 
-Investigate four persistent visual problems in the
-MIDI Note and MIDI CC accessory screens.
+Root padding and Home position:
+• Moved the 12-point horizontal inset to each MIDI selector root, matching the Files/Time modifier relationship.
+• Removed header-only horizontal padding.
+• Changed MIDI ScrollView content padding to vertical-only, preventing double horizontal padding.
+• Home buttons retain their existing 44 × 44 point hit targets and actions.
 
-DO NOT MODIFY ANY FILES.
-DO NOT IMPLEMENT FIXES.
+Border:
+• Existing MIDI border overlays were untouched.
+• Quick palette clipping, width, and shared infrastructure were untouched.
+• The left-border visibility remains for device inspection.
 
-The user has supplied annotated screenshots showing
-the problems.
+Build result:
+• Main_Screen.swift passed a Swift syntax parse.
+• Xcode BuildProject could not start because of IDEKit.IDEStatefulActionError.
+• Fallback project build reached compilation but failed because the Xcode SwiftUI macro plugin returned malformed responses for existing @State declarations in unrelated ContentView.swift and KB_Screen.swift.
+• No Main_Screen.swift diagnostic was reported.
+• The build therefore did not succeed due to the environment/toolchain macro-service failure.
 
-==================================================
-1. HOME ICON POSITION
-==================================================
+Remaining limitations:
+• Device testing is required to confirm visible text alignment, Home position, and the unresolved left border.
+• Test and Insert remain disabled as required for Stage 1.
 
-On both MIDI screens, the Home icon is positioned
-too far left.
+Manual device-test checklist:
 
-Investigate:
+MIDI Note
+• Note, Octave, Volume, and Channel values share one leading edge.
+• All dropdown values and chevrons use blue tint.
+• Note selection works.
+• Octave selection works.
+• Volume presets and edit entry work.
+• Channel order remains numeric.
+• default (N) remains on one line.
+• Toggle checkbox works.
+• Home aligns with Files/Time and remains functional.
+• Next/Previous preserves state.
+• Test and Insert remain disabled.
+• Inspect the left panel border.
 
-- The header container.
-- Horizontal padding.
-- Any negative offsets.
-- HStack alignment.
-- Frame widths.
-- Shared layout modifiers.
-- Whether the icon extends outside the panel.
+MIDI CC
+• CC Type, Start, End, and Channel values share one leading edge.
+• All dropdown values and chevrons use blue tint.
+• CC Type numbers and display names work.
+• Start/End presets and edit entry work.
+• Channel selection works.
+• Toggle/Hold works.
+• Mode remains hidden for CC 120, 121, and 123.
+• Home aligns with Files/Time and remains functional.
+• Next/Previous preserves state.
+• Test and Insert remain disabled.
+• Inspect the left panel border.
 
-Compare with the working Files and Time headers.
+Quick regression
+• Quick root navigation.
+• Files and submenus.
+• Filename and image-name insertion.
+• Time, City, and time-zone menus.
+• Command/Button cursor insertion and selection replacement.
+• Next/Previous persistence.
+• Clear.
+• Back Delete and red/gray state.
+• Wait and More.
+• Existing navigation styling and layout.
 
-Identify the exact cause and source location.
-
-==================================================
-2. MISSING LEFT BORDER
-==================================================
-
-Both MIDI screens appear to have lost their visible
-left panel border.
-
-Investigate:
-
-- Where the accessory panel border is drawn.
-- Whether the MIDI content extends outside it.
-- Whether clipping or overlay ordering hides it.
-- Whether fixed widths or offsets are involved.
-- Whether the Home icon and missing border share
-  the same underlying layout problem.
-
-Compare the MIDI screens with Files and Time.
-
-Do not suggest drawing a duplicate border unless
-the existing border is genuinely absent.
-
-==================================================
-3. DROPDOWN HORIZONTAL ALIGNMENT
-==================================================
-
-MIDI Note:
-
-note
-oct
-vol
-ch
-
-MIDI CC:
-
-cc type
-start
-end
-ch
-
-All adjustable controls should have the same
-leading horizontal position within their screen.
-
-Currently they do not.
-
-Investigate:
-
-- Existing label column widths.
-- Control column widths.
-- Picker intrinsic sizes.
-- HStack spacing.
-- Frame alignment.
-- Padding and offsets.
-- Whether the labels or controls are determining
-  each row's horizontal positioning.
-
-Identify why the numeric dropdowns are not aligned
-with the other dropdowns.
-
-Recommend the smallest shared MIDI-only layout
-correction.
-
-==================================================
-4. NUMERIC DROPDOWN COLOURS
-==================================================
-
-MIDI Note:
-- vol value is white instead of blue.
-
-MIDI CC:
-- start value is white instead of blue.
-- end value is white instead of blue.
-
-Other Picker values already display the correct blue.
-
-Investigate:
-
-- Which SwiftUI controls are used for each dropdown.
-- Their foreground styles.
-- Native Picker/Menu styling differences.
-- Whether the visible numeric values are rendered
-  by a separate Text view.
-- Whether foregroundStyle or tint is overridden
-  by the surrounding control.
-
-Identify the exact styling difference and recommend
-a specific correction.
-
-Do not introduce a new colour constant if an
-existing blue style can be reused.
-
-==================================================
-5. SCOPE
-==================================================
-
-Inspect only code relevant to:
-
-- MIDI Note accessory screen.
-- MIDI CC accessory screen.
-- Their shared layout components.
-- Existing Files/Time header and panel styling,
-  for comparison only.
-
-Do not modify Files or Time.
-
-Do not investigate unrelated MIDI parser or
-transmission behaviour.
-
-==================================================
-6. REPORT
-==================================================
-
-For each of the four problems, report:
-
-A. Exact source file and line numbers.
-B. Existing layout or styling implementation.
-C. Verified cause, or explicitly state if uncertain.
-D. Smallest recommended correction.
-E. Any risks to existing Quick functionality.
-
-Distinguish verified source findings from hypotheses.
-
-Do not implement corrections.
-
-No build required.
-
-==================================================
-7. RESTRICTIONS
-==================================================
-
-Strictly read-only.
-
-Do not modify source files.
-Do not create reports or logs.
-Do not modify protected .txt files.
-Do not modify notes.txt or VERSIONS.txt.
-Do not modify ESP32BLE.xcodeproj.
-Leave ESPMacHelper and Test Areas untouched.
-No commits, tags, or backups.
-
-Confirm that no files were modified.
+Protected files, MIDI parsers, MIDI transmission, ESP32BLE.xcodeproj, and ESPMacHelper areas were untouched. The pre-existing modified codex.txt and breakpoint file were left unchanged. No commit, tag, or backup was created.
