@@ -1,3 +1,7 @@
+261024 Sat 1702
+stage 1: midi panels near
+V65.11
+
 261024 Sat 1512
 before quick midi
 V65.10

@@ -5267,6 +5267,7 @@ Tapping a row inserts the key code at the cursor.
                         expanded: expanded,
                         showsCompact: true,
                         filesPanelWidth: pickerWidth,
+                        defaultMIDIChannel: midiDefaultChannel,
                         onAction: performSoftEditorAccessoryAction,
                         onFiles: beginSoftEditorFilesMenu,
                         onFileNameSelected: insertSoftEditorFileName,
@@ -5292,6 +5293,7 @@ Tapping a row inserts the key code at the cursor.
                 if isSoftEditorAccessoryPaletteVisible && showBar {
                     SoftEditorAccessoryPalette(
                         filesPanelWidth: pickerWidth,
+                        defaultMIDIChannel: midiDefaultChannel,
                         onAction: performSoftEditorAccessoryAction,
                         onFiles: beginSoftEditorFilesMenu,
                         onFileNameSelected: insertSoftEditorFileName,
@@ -5317,6 +5319,7 @@ Tapping a row inserts the key code at the cursor.
                     expanded: false,
                     showsCompact: true,
                     filesPanelWidth: fallbackWidth,
+                    defaultMIDIChannel: midiDefaultChannel,
                     onAction: performSoftEditorAccessoryAction,
                     onFiles: beginSoftEditorFilesMenu,
                     onFileNameSelected: insertSoftEditorFileName,
@@ -5334,6 +5337,7 @@ Tapping a row inserts the key code at the cursor.
                 if isSoftEditorAccessoryPaletteVisible {
                     SoftEditorAccessoryPalette(
                         filesPanelWidth: fallbackWidth,
+                        defaultMIDIChannel: midiDefaultChannel,
                         onAction: performSoftEditorAccessoryAction,
                         onFiles: beginSoftEditorFilesMenu,
                         onFileNameSelected: insertSoftEditorFileName,
@@ -6299,18 +6303,20 @@ Tapping a row inserts the key code at the cursor.
 //
 // MARK: - BM:🅱️  add your comments here
 private enum SoftEditorAccessoryConfiguration {
-    static let permanentOrder: [SoftEditorAccessoryAction] = [.midi, .time, .files, .wait, .more]
+    static let permanentOrder: [SoftEditorAccessoryAction] = [.midiNote, .midiCC, .time, .files, .wait, .more]
 
     static let labels: [SoftEditorAccessoryAction: String] = [
-        .midi: "MIDI", .time: "Time", .files: "Files", .wait: "Wait", .more: "More"
+        .midiNote: "MIDI Note", .midiCC: "MIDI CC", .time: "Time",
+        .files: "Files", .wait: "Wait", .more: "More"
     ]
 
     static let symbols: [SoftEditorAccessoryAction: String] = [
-        .midi: "pianokeys", .time: "clock", .files: "folder", .wait: "hourglass", .more: "list.bullet"
+        .midiNote: "music.note", .midiCC: "slider.horizontal.3",
+        .time: "clock", .files: "folder", .wait: "hourglass", .more: "list.bullet"
     ]
 
-    static let compactVisible: Set<SoftEditorAccessoryAction> = [.midi, .time, .files, .wait, .more]
-    static let expandedVisible: Set<SoftEditorAccessoryAction> = [.midi, .time, .files, .wait, .more]
+    static let compactVisible: Set<SoftEditorAccessoryAction> = [.midiNote, .midiCC, .time, .files, .wait, .more]
+    static let expandedVisible: Set<SoftEditorAccessoryAction> = [.midiNote, .midiCC, .time, .files, .wait, .more]
 
     // MARK: - BM:🅱️ add your comments here
     // Compact launcher styling only: 44 points matches the existing accessory/keypad buttons.
@@ -6336,7 +6342,6 @@ private enum SoftEditorAccessoryConfiguration {
     static let filesMenuContentPadding: CGFloat = 12
 
     static let insertionTemplates: [SoftEditorAccessoryAction: String] = [
-        .midi: ".midi 60 120 1 toggle",
         .wait: ".wait 5"
     ]
 
@@ -6347,9 +6352,11 @@ private enum SoftEditorAccessoryConfiguration {
 
     static func behavior(for action: SoftEditorAccessoryAction) -> SoftEditorAccessoryBehavior? {
         switch action {
-        case .midi, .wait:
+        case .wait:
             guard let text = insertionTemplates[action] else { return nil }
             return .insertText(text)
+        case .midiNote, .midiCC:
+            return nil
         case .time:
             return .revealTable(timeDateTableRoute)
         case .files:
@@ -6431,7 +6438,7 @@ private struct SoftEditorAccessoryBounds: PreferenceKey {
 }
 
 private enum SoftEditorAccessoryAction: String, CaseIterable, Identifiable {
-    case midi, time, files, wait, more
+    case midiNote, midiCC, time, files, wait, more
     var id: String { rawValue }
 
     var title: String {
@@ -6443,10 +6450,390 @@ private enum SoftEditorAccessoryAction: String, CaseIterable, Identifiable {
     }
 }
 
+private enum SoftEditorMIDISelector {
+    case note
+    case controlChange
+
+    init?(action: SoftEditorAccessoryAction) {
+        switch action {
+        case .midiNote:
+            self = .note
+        case .midiCC:
+            self = .controlChange
+        case .time, .files, .wait, .more:
+            return nil
+        }
+    }
+}
+
+private struct SoftEditorMIDILabelledControl<Control: View>: View {
+    let label: String
+    @ViewBuilder let control: () -> Control
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 8) {
+            Text(label)
+                .lineLimit(1)
+                .frame(width: 68, alignment: .trailing)
+
+            control()
+                .fixedSize(horizontal: true, vertical: false)
+                .frame(minWidth: 130, alignment: .leading)
+        }
+        .frame(maxWidth: .infinity, alignment: .center)
+    }
+}
+
+private struct SoftEditorMIDINumericSelector: View {
+    @Binding private var value: Int
+    private let presets: [Int]
+    private let validRange: ClosedRange<Int>
+    @State private var draftValue = ""
+    @State private var isEditing = false
+    @State private var showsInvalidValue = false
+
+    init(value: Binding<Int>, presets: [Int], validRange: ClosedRange<Int>) {
+        _value = value
+        self.presets = presets
+        self.validRange = validRange
+    }
+
+    var body: some View {
+        Menu {
+            ForEach(presets, id: \.self) { preset in
+                Button("\(preset)") {
+                    value = preset
+                }
+            }
+
+            Divider()
+
+            Button("edit…") {
+                draftValue = String(value)
+                isEditing = true
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Text("\(value)")
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.caption)
+            }
+            .frame(minWidth: 130, alignment: .leading)
+        }
+        .accessibilityLabel("Value")
+        .accessibilityValue("\(value)")
+        .alert("Edit value", isPresented: $isEditing) {
+            TextField("Value", text: $draftValue)
+                .keyboardType(.numberPad)
+            Button("Cancel", role: .cancel) {}
+            Button("Apply", action: applyDraftValue)
+        } message: {
+            Text("Enter a whole number from \(validRange.lowerBound) to \(validRange.upperBound).")
+        }
+        .alert("Invalid value", isPresented: $showsInvalidValue) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Enter a whole number from \(validRange.lowerBound) to \(validRange.upperBound). The previous value was kept.")
+        }
+    }
+
+    private func applyDraftValue() {
+        let trimmedValue = draftValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let newValue = Int(trimmedValue), validRange.contains(newValue) else {
+            showsInvalidValue = true
+            return
+        }
+        value = newValue
+    }
+}
+
+private struct SoftEditorMIDINoteMenu: View {
+    private static let notes = [
+        "C", "C#", "D", "D#", "E", "F",
+        "F#", "G", "G#", "A", "A#", "B"
+    ]
+
+    let defaultChannel: Int
+    let onClose: () -> Void
+    @State private var selectedNote: String
+    @State private var selectedOctave: Int
+    @State private var velocity: Int
+    @State private var channel: Int
+    @State private var isToggleEnabled: Bool
+
+    init(defaultChannel: Int, onClose: @escaping () -> Void) {
+        let resolvedChannel = MIDIChannelSettings.validRange.contains(defaultChannel)
+            ? defaultChannel
+            : MIDIChannelSettings.defaultChannel
+        self.defaultChannel = resolvedChannel
+        self.onClose = onClose
+        _selectedNote = State(initialValue: "C")
+        _selectedOctave = State(initialValue: 3)
+        _velocity = State(initialValue: 127)
+        _channel = State(initialValue: resolvedChannel)
+        _isToggleEnabled = State(initialValue: true)
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            header(title: "MIDI Note")
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 12) {
+                    SoftEditorMIDILabelledControl(label: "note") {
+                        Picker("note", selection: $selectedNote) {
+                            ForEach(Self.notes, id: \.self) { note in
+                                Text(note).tag(note)
+                            }
+                        }
+                        .labelsHidden()
+                        .pickerStyle(.menu)
+                        .lineLimit(1)
+                    }
+
+                    SoftEditorMIDILabelledControl(label: "oct") {
+                        Picker("oct", selection: $selectedOctave) {
+                            ForEach(0...8, id: \.self) { octave in
+                                Text("\(octave)").tag(octave)
+                            }
+                        }
+                        .labelsHidden()
+                        .pickerStyle(.menu)
+                        .lineLimit(1)
+                    }
+
+                    SoftEditorMIDILabelledControl(label: "vol") {
+                        SoftEditorMIDINumericSelector(
+                            value: $velocity,
+                            presets: [16, 32, 48, 64, 80, 96, 112, 127],
+                            validRange: 1...127
+                        )
+                    }
+
+                    SoftEditorMIDILabelledControl(label: "ch") {
+                        Picker("ch", selection: $channel) {
+                            ForEach(MIDIChannelSettings.validRange, id: \.self) { item in
+                                Text(item == defaultChannel ? "default (\(item))" : "ch \(item)")
+                                    .tag(item)
+                            }
+                        }
+                        .labelsHidden()
+                        .pickerStyle(.menu)
+                        .lineLimit(1)
+                    }
+
+                    SoftEditorMIDILabelledControl(label: "toggle") {
+                        Button {
+                            isToggleEnabled.toggle()
+                        } label: {
+                            Image(systemName: isToggleEnabled ? "checkmark.square.fill" : "square")
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("toggle")
+                        .accessibilityValue(isToggleEnabled ? "On" : "Off")
+                    }
+
+                    disabledActionButtons(testTitle: "test note")
+                }
+                .padding(SoftEditorAccessoryConfiguration.filesMenuContentPadding)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .foregroundStyle(.white)
+        .background(Color(white: 0.12))
+        .overlay {
+            Rectangle().strokeBorder(
+                SoftEditorAccessoryConfiguration.compactLauncherBorderColor,
+                lineWidth: SoftEditorAccessoryConfiguration.toolsHelperBorderWidth
+            )
+        }
+    }
+
+    private func header(title: String) -> some View {
+        HStack {
+            Button(action: onClose) {
+                Image(systemName: "house")
+                    .frame(width: 44, height: 44)
+                    .foregroundStyle(.cyan)
+            }
+            .accessibilityLabel("Exit \(title)")
+
+            Spacer(minLength: 0)
+            Text(title).foregroundStyle(.cyan)
+            Spacer(minLength: 0)
+            Color.clear.frame(width: 44, height: 44)
+        }
+    }
+
+    private func disabledActionButtons(testTitle: String) -> some View {
+        HStack(spacing: 12) {
+            Button(testTitle) {}
+                .frame(minWidth: 84)
+                .disabled(true)
+            Button("insert") {}
+                .frame(minWidth: 64)
+                .disabled(true)
+        }
+        .padding(.top, 16)
+        .frame(maxWidth: .infinity, alignment: .center)
+        .padding(.horizontal, 8)
+        .buttonStyle(.bordered)
+        .buttonBorderShape(.roundedRectangle(radius: 6))
+        .tint(.gray)
+    }
+}
+
+private struct SoftEditorMIDIControlChangeMenu: View {
+    private enum Mode: String, CaseIterable, Identifiable {
+        case toggle = "Toggle"
+        case hold = "Hold"
+
+        var id: String { rawValue }
+    }
+
+    let defaultChannel: Int
+    let onClose: () -> Void
+    @State private var controller: Int
+    @State private var startValue: Int
+    @State private var endValue: Int
+    @State private var channel: Int
+    @State private var mode: Mode
+
+    init(defaultChannel: Int, onClose: @escaping () -> Void) {
+        let resolvedChannel = MIDIChannelSettings.validRange.contains(defaultChannel)
+            ? defaultChannel
+            : MIDIChannelSettings.defaultChannel
+        self.defaultChannel = resolvedChannel
+        self.onClose = onClose
+        _controller = State(initialValue: 0)
+        _startValue = State(initialValue: 127)
+        _endValue = State(initialValue: 0)
+        _channel = State(initialValue: resolvedChannel)
+        _mode = State(initialValue: .toggle)
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            header
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 12) {
+                    SoftEditorMIDILabelledControl(label: "cc type") {
+                        Picker("cc type", selection: $controller) {
+                            ForEach(0...127, id: \.self) { number in
+                                Text("\(number) \(controllerName(for: number))").tag(number)
+                            }
+                        }
+                        .labelsHidden()
+                        .pickerStyle(.menu)
+                        .lineLimit(1)
+                    }
+
+                    SoftEditorMIDILabelledControl(label: "start") {
+                        SoftEditorMIDINumericSelector(
+                            value: $startValue,
+                            presets: [0, 16, 32, 48, 64, 80, 96, 112, 127],
+                            validRange: 0...127
+                        )
+                    }
+
+                    SoftEditorMIDILabelledControl(label: "end") {
+                        SoftEditorMIDINumericSelector(
+                            value: $endValue,
+                            presets: [0, 16, 32, 48, 64, 80, 96, 112, 127],
+                            validRange: 0...127
+                        )
+                    }
+
+                    SoftEditorMIDILabelledControl(label: "ch") {
+                        Picker("ch", selection: $channel) {
+                            ForEach(MIDIChannelSettings.validRange, id: \.self) { item in
+                                Text(item == defaultChannel ? "default (\(item))" : "ch \(item)")
+                                    .tag(item)
+                            }
+                        }
+                        .labelsHidden()
+                        .pickerStyle(.menu)
+                        .lineLimit(1)
+                    }
+
+                    if !isOneShotController {
+                        SoftEditorMIDILabelledControl(label: "mode") {
+                            Picker("mode", selection: $mode) {
+                                ForEach(Mode.allCases) { option in
+                                    Text(option.rawValue).tag(option)
+                                }
+                            }
+                            .labelsHidden()
+                            .pickerStyle(.segmented)
+                            .clipShape(.rect(cornerRadius: 6))
+                        }
+                    }
+
+                    HStack(spacing: 12) {
+                        Button("test CC") {}
+                            .frame(minWidth: 84)
+                            .disabled(true)
+                        Button("insert") {}
+                            .frame(minWidth: 64)
+                            .disabled(true)
+                    }
+                    .padding(.top, 16)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.horizontal, 8)
+                    .buttonStyle(.bordered)
+                    .buttonBorderShape(.roundedRectangle(radius: 6))
+                    .tint(.gray)
+                }
+                .padding(SoftEditorAccessoryConfiguration.filesMenuContentPadding)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .foregroundStyle(.white)
+        .background(Color(white: 0.12))
+        .overlay {
+            Rectangle().strokeBorder(
+                SoftEditorAccessoryConfiguration.compactLauncherBorderColor,
+                lineWidth: SoftEditorAccessoryConfiguration.toolsHelperBorderWidth
+            )
+        }
+    }
+
+    private var header: some View {
+        HStack {
+            Button(action: onClose) {
+                Image(systemName: "house")
+                    .frame(width: 44, height: 44)
+                    .foregroundStyle(.cyan)
+            }
+            .accessibilityLabel("Exit MIDI CC")
+
+            Spacer(minLength: 0)
+            Text("MIDI CC").foregroundStyle(.cyan)
+            Spacer(minLength: 0)
+            Color.clear.frame(width: 44, height: 44)
+        }
+    }
+
+    private var isOneShotController: Bool {
+        [120, 121, 123].contains(controller)
+    }
+
+    private func controllerName(for number: Int) -> String {
+        MIDIControlChangeCommand(
+            controller: UInt8(number),
+            value: 0,
+            channelOverride: nil,
+            mode: .oneShot
+        ).controllerDisplayName
+    }
+}
+
 private struct SoftEditorAccessoryBar: View {
     let expanded: Bool
     let showsCompact: Bool
     let filesPanelWidth: CGFloat
+    let defaultMIDIChannel: Int
     let onAction: (SoftEditorAccessoryAction) -> Void
     let onFiles: () -> SoftEditorAccessoryInsertionContext?
     let onFileNameSelected: (String, SoftEditorAccessoryInsertionContext) -> Bool
@@ -6461,6 +6848,7 @@ private struct SoftEditorAccessoryBar: View {
     // MARK: - BM:🅱️ Time presentation remains local to the accessory bar, like Files.
     @State private var showTimeMenu = false
     @State private var timeInsertionContext: SoftEditorAccessoryInsertionContext?
+    @State private var midiSelector: SoftEditorMIDISelector?
 
     var body: some View {
         ZStack {
@@ -6477,6 +6865,8 @@ private struct SoftEditorAccessoryBar: View {
                                 } else if action == .time {
                                     timeInsertionContext = onFiles()
                                     showTimeMenu = true
+                                } else if let selector = SoftEditorMIDISelector(action: action) {
+                                    midiSelector = selector
                                 } else {
                                     onAction(action)
                                 }
@@ -6554,6 +6944,28 @@ private struct SoftEditorAccessoryBar: View {
                 .allowsHitTesting(true)
                 .zIndex(500)
             }
+
+            midiSelectorView
+        }
+    }
+
+    @ViewBuilder
+    private var midiSelectorView: some View {
+        switch midiSelector {
+        case .note:
+            SoftEditorMIDINoteMenu(defaultChannel: defaultMIDIChannel) {
+                midiSelector = nil
+            }
+            .frame(width: filesPanelWidth, height: SoftEditorAccessoryConfiguration.filesMenuHeight)
+            .zIndex(500)
+        case .controlChange:
+            SoftEditorMIDIControlChangeMenu(defaultChannel: defaultMIDIChannel) {
+                midiSelector = nil
+            }
+            .frame(width: filesPanelWidth, height: SoftEditorAccessoryConfiguration.filesMenuHeight)
+            .zIndex(500)
+        case nil:
+            EmptyView()
         }
     }
 
@@ -6614,6 +7026,7 @@ private struct SoftEditorAccessoryBar: View {
 
 private struct SoftEditorAccessoryPalette: View {
     let filesPanelWidth: CGFloat
+    let defaultMIDIChannel: Int
     let onAction: (SoftEditorAccessoryAction) -> Void
     let onFiles: () -> SoftEditorAccessoryInsertionContext?
     let onFileNameSelected: (String, SoftEditorAccessoryInsertionContext) -> Bool
@@ -6628,6 +7041,7 @@ private struct SoftEditorAccessoryPalette: View {
     // MARK: - BM:🅱️ Time presentation is local to Quick, preserving Files state and behavior.
     @State private var showTimeMenu = false
     @State private var timeInsertionContext: SoftEditorAccessoryInsertionContext?
+    @State private var midiSelector: SoftEditorMIDISelector?
 
     var body: some View {
         ZStack(alignment: .topLeading) {
@@ -6644,6 +7058,8 @@ private struct SoftEditorAccessoryPalette: View {
                                 } else if action == .time {
                                     timeInsertionContext = onFiles()
                                     showTimeMenu = true
+                                } else if let selector = SoftEditorMIDISelector(action: action) {
+                                    midiSelector = selector
                                 } else {
                                     onAction(action)
                                 }
@@ -6707,6 +7123,8 @@ private struct SoftEditorAccessoryPalette: View {
                 .allowsHitTesting(true)
                 .zIndex(500)
             }
+
+            midiSelectorView
         }
         .buttonStyle(.plain)
         .frame(minHeight: bottomHeightAdjustment, maxHeight: .infinity, alignment: .top)
@@ -6719,6 +7137,26 @@ private struct SoftEditorAccessoryPalette: View {
                     SoftEditorAccessoryConfiguration.compactLauncherBorderColor,
                     lineWidth: SoftEditorAccessoryConfiguration.toolsHelperBorderWidth
                 )
+        }
+    }
+
+    @ViewBuilder
+    private var midiSelectorView: some View {
+        switch midiSelector {
+        case .note:
+            SoftEditorMIDINoteMenu(defaultChannel: defaultMIDIChannel) {
+                midiSelector = nil
+            }
+            .frame(width: filesPanelWidth, height: SoftEditorAccessoryConfiguration.filesMenuHeight)
+            .zIndex(500)
+        case .controlChange:
+            SoftEditorMIDIControlChangeMenu(defaultChannel: defaultMIDIChannel) {
+                midiSelector = nil
+            }
+            .frame(width: filesPanelWidth, height: SoftEditorAccessoryConfiguration.filesMenuHeight)
+            .zIndex(500)
+        case nil:
+            EmptyView()
         }
     }
 }

@@ -1,121 +1,176 @@
-1. Current Back Delete availability conditions
 
-Main_Screen.swift:5051-5054 disables the active delete.left.fill button when canDeleteSmartEditorBackward is false.
+ESP32BLE — MIDI SOFT EDITOR
+READ-ONLY LAYOUT AND COLOUR PROBE
 
-Main_Screen.swift:5095-5126 requires all of these:
+OBJECTIVE
 
-• editingSlotIndex is non-nil.
-• smartPasteTarget.textView exists.
-• The text view is attached to a window.
-• The text view is first responder.
-• Live UITextView text equals softEditorAccessoryTargetText.
-• Live selectedRange is valid for the live UTF-16 text.
-• Live selection exactly equals the tracked selection:
-   • Command: smartScriptEditingModel.selectionRange.
-   • Button: smartButtonPreviewSelectionRange.
-• Selection has length, or cursor location is greater than zero.
+Investigate four persistent visual problems in the
+MIDI Note and MIDI CC accessory screens.
 
-Main_Screen.swift:5129-5147 makes the symbol gray if disabled and red if enabled.
+DO NOT MODIFY ANY FILES.
+DO NOT IMPLEMENT FIXES.
 
-2. Command deletion sequence
+The user has supplied annotated screenshots showing
+the problems.
 
-Current Command path:
+==================================================
+1. HOME ICON POSITION
+==================================================
 
-• Main_Screen.swift:4976-4977 invokes deleteSmartEditorBackward().
-• Lines 5026-5039 validate the live target, copy its current selection into smartScriptEditingModel, delete from the model, then write smartActionTextBinding.
-• Main_SmartScriptEditingModel.swift:217-237 removes the selected text or one composed character before the cursor, and immediately changes the model selection to the new cursor position.
-• smartActionTextBinding at Main_Screen.swift:3718-3733 updates the stored edited-slot text.
-• SwiftUI then re-evaluates views.
-• SmartScriptTextEditor.updateUIView at Main_SmartEditorTextInputs.swift:48-61 later copies the new model text to the live UITextView and applies the new selection.
+On both MIDI screens, the Home icon is positioned
+too far left.
 
-Confirmed synchronization defect:
+Investigate:
 
-Immediately after Command deletion, the model has the new text and new cursor, but the live UITextView can still have the old text and old cursor until updateUIView runs.
+- The header container.
+- Horizontal padding.
+- Any negative offsets.
+- HStack alignment.
+- Frame widths.
+- Shared layout modifiers.
+- Whether the icon extends outside the panel.
 
-During that interval, canDeleteSmartEditorBackward fails both of these checks:
+Compare with the working Files and Time headers.
 
-• Line 5100: live text differs from softEditorAccessoryTargetText.
-• Line 5122: live selection differs from smartScriptEditingModel.selectionRange.
+Identify the exact cause and source location.
 
-This is sufficient to produce the observed red → gray transition.
+==================================================
+2. MISSING LEFT BORDER
+==================================================
 
-After updateUIView synchronizes the UITextView, its selection is applied under isApplyingSelectedRange at Main_SmartEditorTextInputs.swift:174-187. That intentionally prevents the delegate from writing another tracked-selection update. Therefore, there may be no subsequent SwiftUI state change to re-evaluate the gray button. Moving the cursor creates a new delegate selection update at lines 163-171, causing a fresh evaluation and restoring red. This exactly matches the reported device behavior.
+Both MIDI screens appear to have lost their visible
+left panel border.
 
-3. Button deletion sequence
+Investigate:
 
-Button path:
+- Where the accessory panel border is drawn.
+- Whether the MIDI content extends outside it.
+- Whether clipping or overlay ordering hides it.
+- Whether fixed widths or offsets are involved.
+- Whether the Home icon and missing border share
+  the same underlying layout problem.
 
-• Main_Screen.swift:5040-5041 calls the active UITextView.deleteBackward() directly.
-• SmartPreviewTextView.Coordinator.textViewDidChange at Main_SmartEditorTextInputs.swift:302-306 handles the change.
-• syncTextAndSelection at lines 542-553 schedules both Button text and smartButtonPreviewSelectionRange updates on the main queue.
-• textViewDidChangeSelection at lines 334-342 independently schedules selection updates.
+Compare the MIDI screens with Files and Time.
 
-Difference from Command:
+Do not suggest drawing a duplicate border unless
+the existing border is genuinely absent.
 
-• Command changes the model first, then waits for SwiftUI to update UIKit.
-• Button changes UIKit first, then waits for coordinator callbacks to update the model.
+==================================================
+3. DROPDOWN HORIZONTAL ALIGNMENT
+==================================================
 
-Button can also have a temporary live/model mismatch, but the coordinator normally schedules both text and selection together in textViewDidChange, so it has a better opportunity to settle correctly. Static inspection cannot prove the final callback ordering for every UIKit deletion event. The same gray-state defect is possible if SwiftUI evaluates after one asynchronous state update but before the corresponding text or selection update.
+MIDI Note:
 
-4. First-responder findings
+note
+oct
+vol
+ch
 
-canDeleteSmartEditorBackward requires textView.isFirstResponder at line 5099.
+MIDI CC:
 
-No source code in deleteSmartEditorBackward() explicitly resigns first responder or restores it. A SwiftUI button interaction may affect responder state at runtime, but source inspection cannot prove that it does in this case.
+cc type
+start
+end
+ch
 
-This condition can cause gray if focus is lost, but it is not needed to explain the confirmed failure: text and selection mismatches alone occur directly in the Command deletion sequence.
+All adjustable controls should have the same
+leading horizontal position within their screen.
 
-5. Forward Delete comparison
+Currently they do not.
 
-Forward Delete is simpler:
+Investigate:
 
-• Main_Screen.swift:5002-5005 calls smartScriptEditingModel.deleteForward().
-• Its disabled state is only !smartScriptEditingModel.canDeleteForward at lines 5084-5085.
-• canDeleteForward in Main_SmartScriptEditingModel.swift:131-134 uses only tracked model text and selection.
+- Existing label column widths.
+- Control column widths.
+- Picker intrinsic sizes.
+- HStack spacing.
+- Frame alignment.
+- Padding and offsets.
+- Whether the labels or controls are determining
+  each row's horizontal positioning.
 
-Forward Delete does not require live UITextView text equality, first-responder status, or live/tracked selection equality. Consequently, it does not have the same UIKit/SwiftUI synchronization dependency.
+Identify why the numeric dropdowns are not aligned
+with the other dropdowns.
 
-It is not a full Command/Button equivalent: its action is Command-model-only, whereas Back Delete’s new helper supports both active Command and Button targets.
+Recommend the smallest shared MIDI-only layout
+correction.
 
-6. Most likely root cause
+==================================================
+4. NUMERIC DROPDOWN COLOURS
+==================================================
 
-Confirmed source-level cause for Command:
+MIDI Note:
+- vol value is white instead of blue.
 
-Back Delete availability combines model state from after deletion with UITextView state from before updateUIView synchronization. The equality checks at Main_Screen.swift:5100 and 5122 reject this normal transitional state. updateUIView then fixes UIKit without emitting a new SwiftUI state change, leaving the rendered button gray until a cursor movement generates one.
+MIDI CC:
+- start value is white instead of blue.
+- end value is white instead of blue.
 
-The first-responder check may contribute on device, but requires runtime observation to establish.
+Other Picker values already display the correct blue.
 
-7. Smallest safe correction
+Investigate:
 
-Keep deleteSmartEditorBackward() unchanged, including its live target safety validation.
+- Which SwiftUI controls are used for each dropdown.
+- Their foreground styles.
+- Native Picker/Menu styling differences.
+- Whether the visible numeric values are rendered
+  by a separate Text view.
+- Whether foregroundStyle or tint is overridden
+  by the surrounding control.
 
-Change only UI availability calculation in canDeleteSmartEditorBackward at Main_Screen.swift:5095:
+Identify the exact styling difference and recommend
+a specific correction.
 
-• Derive text length and selection availability from existing observable editor state:
-   • Command: smartScriptEditingModel.scriptText and .selectionRange.
-   • Button: smartButtonEditablePreviewTextBinding.wrappedValue and smartButtonPreviewSelectionRange.
-• Retain only appropriate active-target existence/attachment/focus checks for display.
-• Do not require live UITextView text to equal the model.
-• Do not require live UITextView selection to equal the tracked selection for display.
-• Continue using selected length greater than zero or cursor location greater than zero.
+Do not introduce a new colour constant if an
+existing blue style can be reused.
 
-That separates display availability from the existing immediate action validation, avoiding the known post-delete transition while keeping deletion safe against stale targets.
+==================================================
+5. SCOPE
+==================================================
 
-8. Minimal debugger confirmation
+Inspect only code relevant to:
 
-Set a breakpoint at Main_Screen.swift:5122 after one Command Back Delete. Inspect:
+- MIDI Note accessory screen.
+- MIDI CC accessory screen.
+- Their shared layout components.
+- Existing Files/Time header and panel styling,
+  for comparison only.
 
-• textView.isFirstResponder
-• textView.text
-• softEditorAccessoryTargetText
-• textView.selectedRange
-• smartScriptEditingModel.selectionRange
+Do not modify Files or Time.
 
-Expected immediately after the deletion and before UIKit update:
+Do not investigate unrelated MIDI parser or
+transmission behaviour.
 
-• Model text is the shortened value.
-• Model selection is the new cursor location.
-• UITextView text and selection are still the old values.
-• At least one equality guard fails.
+==================================================
+6. REPORT
+==================================================
 
-Files modified: None.
+For each of the four problems, report:
+
+A. Exact source file and line numbers.
+B. Existing layout or styling implementation.
+C. Verified cause, or explicitly state if uncertain.
+D. Smallest recommended correction.
+E. Any risks to existing Quick functionality.
+
+Distinguish verified source findings from hypotheses.
+
+Do not implement corrections.
+
+No build required.
+
+==================================================
+7. RESTRICTIONS
+==================================================
+
+Strictly read-only.
+
+Do not modify source files.
+Do not create reports or logs.
+Do not modify protected .txt files.
+Do not modify notes.txt or VERSIONS.txt.
+Do not modify ESP32BLE.xcodeproj.
+Leave ESPMacHelper and Test Areas untouched.
+No commits, tags, or backups.
+
+Confirm that no files were modified.
