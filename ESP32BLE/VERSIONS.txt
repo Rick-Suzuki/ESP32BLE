@@ -1,4 +1,10 @@
 
+261024 Sat 1358
+backspace key working - just white
+v65.08
+
+
+
 261024 Sat 1317
 quick menu improved, works better
 V65.07
@@ -18,7 +24,6 @@ V65.04
 261023 Fri 1656
 files nearly working
 V65.03
-
 
 261023 Fri 1556
 picker panel in place

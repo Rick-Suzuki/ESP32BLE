@@ -1,30 +1,150 @@
-Stage 3E complete.
+1. Actual displayed button
 
-Build result: succeeded. No build errors.
+The visible standard Soft Editor does not use either previously changed top-left control.
 
-Files modified:
-• ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
+Current presentation path:
 
-Modified Quick palette callbacks:
-• Files selection callback: SoftEditorAccessoryPalette, around lines 6580-6587.
-• Time City selection callback: SoftEditorAccessoryPalette, around lines 6607-6614.
+• Main_Screen.swift:1334-1346 presents smartView(...) for the normal iPad and iPhone editor paths.
+• Main_Screen.swift:3304-3374 defines smartView.
+• Main_Screen.swift:3333 places smartCommandPanel(...) in the left panel.
+• Main_Screen.swift:168-180 defines smartTopPlaceholderSymbols; its first entry is "xmark".
+• Main_Screen.swift:3558-3564 passes that array to IPadSmartCommandKeypad.
+• Main_EditorShellViews.swift:126-132 renders the first four entries in the iPad top row.
+• Main_Screen.swift:3584-3590 renders the same first four entries on iPhone.
+• Main_Screen.swift:4970-5025, smartPlaceholderButton(systemName:), renders and handles the cell.
 
-Change made:
-• Each Quick palette callback now obtains a fresh context with onFiles() at selection time.
-• If no context is available, it safely does nothing.
-• If valid, it updates filesInsertionContext or timeInsertionContext and uses that fresh context with the existing insertion callback.
-• Removed only the stale palette-level requirement that an earlier context must exist and match the current slot/document.
+Therefore, the actual top-left cell is:
+smartTopPlaceholderSymbols[0] = "xmark"
+→ smartPlaceholderButton(systemName: "xmark")
+→ Clear action at Main_Screen.swift:4976-4979.
 
-Preserved:
-• Quick remains open.
-• Files/Time submenu, selected Time command, Files category, loaded choices, navigation, and scroll state remain intact.
-• No palette recreation or identity change.
-• Files/Time layouts and command construction are unchanged.
-• Stage 3 active-editor refresh remains unchanged.
-• Shared insertion validation remains unchanged: slot, document, session, editor type, attached text view, selection validity, and text/model consistency.
+This exactly explains the device result: a cross remains visible and it clears the Command field.
 
-Device testing required:
-• Files and Time insertion across repeated Next/Previous transitions while Quick and submenus remain open.
-• Opening Quick before a cursor, then activating Command or Button and inserting without reopening Quick.
-• Command and Button cursor/selection replacement behavior.
+2. Why previous changes had no visible effect
 
+Main_Screen.swift:3518-3547, smartCommandEditorRow, contains the earlier white delete.left.fill implementation, but there is no call site for smartCommandEditorRow in the current source. The standard editor uses smartColorPanel for its Command text view at Main_Screen.swift:3951-3980, not smartCommandEditorRow.
+
+Soft_Editor_Overlay.swift:3-1061 defines MainScreenSlotEditorOverlay. Its top-left clearActionButton is at lines 1003-1017 and now contains delete.left.fill. However, slotEditorSection is merely defined at Main_Screen.swift:3282-3302; no source call site renders it. It is not the active standard Soft Editor hierarchy.
+
+The Stage 4B correction changed an inactive legacy overlay. It did not affect the visible toolbar.
+
+3. Symbol verification
+
+Actual visible top-left button:
+
+• Main_Screen.swift:170: "xmark".
+• Main_Screen.swift:5014: Image(systemName: systemName).
+• Main_Screen.swift:5098-5100: "xmark" is red, not white.
+• Main_Screen.swift:4976-4979: its action clears smartActionTextBinding and resets the selection to location zero.
+
+Thus the visible control does not currently use delete.left.fill, is not white, and is still a Clear control.
+
+Inactive implementations:
+
+• Main_Screen.swift:3523 uses white delete.left.fill, but smartCommandEditorRow is unused.
+• Soft_Editor_Overlay.swift:1007 uses white delete.left.fill, but MainScreenSlotEditorOverlay is not presented by the standard editor.
+
+4. Actual visible action path
+
+Current top-left tap:
+
+Main_Screen.swift:170
+→ Main_Screen.swift:3558-3564 on iPad, or 3584-3588 on iPhone
+→ Main_Screen.swift:4970, smartPlaceholderButton(systemName:)
+→ Main_Screen.swift:4976-4979, "xmark" branch
+→ smartActionTextBinding.wrappedValue = ""
+→ smartScriptEditingModel.setSelectionRange(NSRange(location: 0, length: 0)).
+
+It always clears the Command text. It does not inspect the active editor, cursor, selection, Button text, document identity, or text-view attachment.
+
+5. Existing Back Delete implementation
+
+Main_Screen.swift:5028-5045, deleteSmartEditorBackward(), is presently unused except by inactive smartCommandEditorRow.
+
+It is the appropriate reusable deletion path:
+
+• Requires an editing slot.
+• Requires a registered smartPasteTarget.textView.
+• Requires that text view to be attached to a window.
+• Requires text-view contents to match the current target model.
+• Uses the current smartPasteTarget.editor.
+
+For Command:
+• Reads the live UITextView.selectedRange.
+• Writes it to smartScriptEditingModel.
+• Calls SmartScriptEditingModel.deleteBackward().
+• Syncs the result through smartActionTextBinding.
+
+Main_SmartScriptEditingModel.swift􀰓:
+• Deletes selected text when selection length is nonzero.
+• Does nothing at location zero.
+• Deletes one composed-character sequence before the cursor.
+• Updates the selection to the deleted range’s start.
+• Is Unicode-safe for composed characters and emoji.
+
+For Button:
+• Calls the active registered UITextView.deleteBackward() at Main_Screen.swift:5042-5043.
+• SmartPreviewTextView.Coordinator.textViewDidChange at Main_SmartEditorTextInputs.swift:302-306 synchronizes edited text and selection.
+• syncTextAndSelection at lines 542-553 updates the binding and cursor range.
+
+The Button branch relies on UIKit’s UITextView deletion semantics. It does not manually slice Unicode text, which avoids a source-level UTF-16 indexing defect. Emoji behavior still requires device testing.
+
+6. Command/Button safety
+
+deleteSmartEditorBackward() has the required current-target checks before it deletes. It will return without changing text if there is no selected slot, no target text view, a detached view, or a text/model mismatch.
+
+It uses smartPasteTarget.editor, so it selects Command or Button according to the actively registered editor. It does not use the legacy overlay’s activeEditorField.
+
+The currently visible "xmark" action has none of these protections and only clears Command text.
+
+7. Duplicate implementations
+
+There are three distinct relevant implementations:
+
+• Active visible Clear:
+Main_Screen.swift:4976-4979, "xmark" branch. This is the defect.
+
+• Unused Smart Back Delete:
+Main_Screen.swift:5028-5045, deleteSmartEditorBackward(), referenced only by unused smartCommandEditorRow.
+
+• Unused legacy Back Delete:
+Soft_Editor_Overlay.swift:477-488, deleteActiveInputBackward(), used by legacy clearActionButton and helperBackspaceButton.
+
+The Stage 4B change refactored helperBackspaceButton() to call deleteActiveInputBackward(). Its deletion behavior is source-equivalent to its previous inline behavior; no active standard-editor behavior changed.
+
+8. Clear independence
+
+The red Quick Clear remains independent:
+
+• Main_Screen.swift:6556-6580, clearLauncher.
+• It shows red xmark and lowercase red clr.
+• It uses the configured 44-point compact launcher dimensions.
+• It uses the same white border configuration as Quick.
+• It calls onClear.
+• Main_Screen.swift:5242 and 5292 pass clearSmartCommandText.
+• Main_Screen.swift:5047-5051 preserves the Clear action: clear Command text and reset its selection.
+
+No source link connects clearLauncher to deleteSmartEditorBackward().
+
+9. Potential defects
+
+Confirmed:
+• The actual top-left control remains a red Clear cross, not Back Delete.
+• The current "xmark" path always clears Command text and cannot operate on Button text.
+• Earlier changes are inactive for the current standard editor.
+
+Not proven by static inspection:
+• UIKit’s final cursor rendering after Button UITextView.deleteBackward().
+• Device behavior for emoji/composed-character deletion in the Button text view.
+
+10. Minimum correction
+
+Modify only Main_Screen.swift in the actual active path:
+
+• Change the first smartTopPlaceholderSymbols entry at line 170 from "xmark" to the desired Back Delete symbol identity.
+• Route that symbol in smartPlaceholderButton(systemName:) to the existing deleteSmartEditorBackward() function at line 5028.
+• Update its foreground-color handling so the actual Back Delete symbol is white.
+
+This would activate the existing validated Command/Button deletion path without changing Files, Time, Quick, insertion, navigation, or the red clr button.
+
+Files modified: None.

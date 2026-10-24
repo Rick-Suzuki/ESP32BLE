@@ -167,7 +167,7 @@ struct MainScreen: View {
     private let smartColorSliderColumnWidth: CGFloat = 48
     private let smartTopPlaceholderSymbols = [
 		// row 0
-        "xmark", "arrow.left", "arrow.right", "arrow.uturn.backward",
+        "delete.left.fill", "arrow.left", "arrow.right", "arrow.uturn.backward",
 		
 		// row 1
         "doc.on.doc", "scissors", "doc.on.clipboard", "arrow.uturn.forward",
@@ -3518,19 +3518,17 @@ Tapping a row inserts the key code at the cursor.
     private var smartCommandEditorRow: some View {
         HStack(spacing: 0) {
             Button {
-                ButtonClickFeedback.playIfEnabled()
-                smartActionTextBinding.wrappedValue = ""
-                smartScriptEditingModel.setSelectionRange(NSRange(location: 0, length: 0))
+                deleteSmartEditorBackward()
             } label: {
-                Text("X")
-                    .font(.system(size: 16, weight: .regular))
-                    .foregroundStyle(.gray)
+                Image(systemName: "delete.left.fill")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(.white)
                     .frame(width: 46)
                     .frame(maxHeight: .infinity)
                     .background(Color.black)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Clear command text")
+            .accessibilityLabel("Delete backward")
 
             SmartActionTextField(
                 placeholder: "characters/command(s)",
@@ -4975,10 +4973,8 @@ Tapping a row inserts the key code at the cursor.
                 return
             }
 
-            if systemName == "xmark" {
-                ButtonClickFeedback.playIfEnabled()
-                smartActionTextBinding.wrappedValue = ""
-                smartScriptEditingModel.setSelectionRange(NSRange(location: 0, length: 0))
+            if systemName == "delete.left.fill" {
+                deleteSmartEditorBackward()
             } else if systemName == "arrow.left" {
                 ButtonClickFeedback.playIfEnabled()
                 smartScriptEditingModel.moveCaretLeft()
@@ -5025,6 +5021,31 @@ Tapping a row inserts the key code at the cursor.
         }
         .buttonStyle(.plain)
         .accessibilityHidden(true)
+    }
+
+    private func deleteSmartEditorBackward() {
+        guard editingSlotIndex != nil,
+              let textView = smartPasteTarget.textView,
+              textView.window != nil,
+              textView.text == softEditorAccessoryTargetText else {
+            return
+        }
+
+        ButtonClickFeedback.playIfEnabled()
+        switch smartPasteTarget.editor {
+        case .command:
+            smartScriptEditingModel.setSelectionRange(textView.selectedRange)
+            smartScriptEditingModel.deleteBackward()
+            smartActionTextBinding.wrappedValue = smartScriptEditingModel.scriptText
+        case .button:
+            textView.deleteBackward()
+        }
+    }
+
+    private func clearSmartCommandText() {
+        ButtonClickFeedback.playIfEnabled()
+        smartActionTextBinding.wrappedValue = ""
+        smartScriptEditingModel.setSelectionRange(NSRange(location: 0, length: 0))
     }
 
     private func smartPlaceholderButtonIsDisabled(_ systemName: String) -> Bool {
@@ -5216,17 +5237,18 @@ Tapping a row inserts the key code at the cursor.
                         onFiles: beginSoftEditorFilesMenu,
                         onFileNameSelected: insertSoftEditorFileName,
                         onTimeCommandSelected: insertSoftEditorTimeCommand,
+                        onClear: clearSmartCommandText,
                         onOpen: { isSoftEditorAccessoryPaletteVisible.toggle() }
                     )
                     .frame(
-                        width: SoftEditorAccessoryConfiguration.compactLauncherDimension,
+                        width: SoftEditorAccessoryConfiguration.compactLauncherDimension * 2,
                         height: SoftEditorAccessoryConfiguration.compactLauncherDimension,
                         alignment: .leading
                     )
                     .position(
                         // MARK: - BM:🅱️ add your comments here
                         // The .commandEditor anchor keeps the button intentionally inside the Command panel at bottom-left.
-                        x: commandEditor.minX + 22,
+                        x: commandEditor.minX + 44,
                         y: commandEditor.maxY - 22
                     )
                     // MARK: - BM:🅱️  Keep accessory controls above command-help hit testing.
@@ -5265,13 +5287,14 @@ Tapping a row inserts the key code at the cursor.
                     onFiles: beginSoftEditorFilesMenu,
                     onFileNameSelected: insertSoftEditorFileName,
                     onTimeCommandSelected: insertSoftEditorTimeCommand,
+                    onClear: clearSmartCommandText,
                     onOpen: { isSoftEditorAccessoryPaletteVisible.toggle() }
                 )
                 .frame(
-                    width: SoftEditorAccessoryConfiguration.compactLauncherDimension,
+                    width: SoftEditorAccessoryConfiguration.compactLauncherDimension * 2,
                     height: SoftEditorAccessoryConfiguration.compactLauncherDimension
                 )
-                .position(x: 30, y: 30)
+                .position(x: 52, y: 30)
                 .zIndex(100)
 
                 if isSoftEditorAccessoryPaletteVisible {
@@ -6394,6 +6417,7 @@ private struct SoftEditorAccessoryBar: View {
     let onFiles: () -> SoftEditorAccessoryInsertionContext?
     let onFileNameSelected: (String, SoftEditorAccessoryInsertionContext) -> Bool
     let onTimeCommandSelected: (String, SoftEditorAccessoryInsertionContext) -> Bool
+    let onClear: () -> Void
     let onOpen: () -> Void
     @State private var filesInsertionContext: SoftEditorAccessoryInsertionContext?
     // MARK: - BM:🅱️ add your comments here
@@ -6445,9 +6469,10 @@ private struct SoftEditorAccessoryBar: View {
                 .foregroundStyle(.white)
                 .background(Color(white: 0.16), in: .rect(cornerRadius: 8))
             } else if showsCompact {
-                launcher
-                    .foregroundStyle(.white)
-                    .background(Color(white: 0.16), in: .rect(cornerRadius: 8))
+                HStack(spacing: 0) {
+                    launcher
+                    clearLauncher
+                }
             }
 
             if showFilesMenu {
@@ -6522,6 +6547,34 @@ private struct SoftEditorAccessoryBar: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Command tools: MIDI, Time, Files, Wait, More")
+        .foregroundStyle(.white)
+        .background(Color(white: 0.16), in: .rect(cornerRadius: 8))
+    }
+
+    private var clearLauncher: some View {
+        Button(action: onClear) {
+            VStack(spacing: 2) {
+                Image(systemName: "xmark")
+                Text("clr")
+                    .font(.caption2)
+            }
+            .foregroundStyle(.red)
+            .frame(
+                width: SoftEditorAccessoryConfiguration.compactLauncherDimension,
+                height: SoftEditorAccessoryConfiguration.compactLauncherDimension
+            )
+            .contentShape(Rectangle())
+            .overlay {
+                Rectangle()
+                    .stroke(
+                        SoftEditorAccessoryConfiguration.compactLauncherBorderColor,
+                        lineWidth: 1
+                    )
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Clear command text")
+        .background(Color(white: 0.16), in: .rect(cornerRadius: 8))
     }
 }
 

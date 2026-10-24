@@ -457,16 +457,7 @@ struct MainScreenSlotEditorOverlay: View {
 
     private func helperBackspaceButton() -> some View {
         Button {
-            ButtonClickFeedback.playIfEnabled()
-            guard !editingSlotText.isEmpty else {
-                activeInputController.focus()
-                focusBinding.wrappedValue = true
-                return
-            }
-
-            activeInputController.deleteBackward()
-            activeInputController.focus()
-            focusBinding.wrappedValue = true
+            deleteActiveInputBackward()
         } label: {
             Image(systemName: "delete.left")
                 .font(.system(size: 16, weight: .semibold))
@@ -481,6 +472,19 @@ struct MainScreenSlotEditorOverlay: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+    }
+
+    private func deleteActiveInputBackward() {
+        ButtonClickFeedback.playIfEnabled()
+        guard !editingSlotText.isEmpty else {
+            activeInputController.focus()
+            focusBinding.wrappedValue = true
+            return
+        }
+
+        activeInputController.deleteBackward()
+        activeInputController.focus()
+        focusBinding.wrappedValue = true
     }
 
     private var newlineInsertButton: some View {
@@ -998,21 +1002,17 @@ struct MainScreenSlotEditorOverlay: View {
 
     private var clearActionButton: some View {
         Button {
-            ButtonClickFeedback.playIfEnabled()
-            actionTextBinding.wrappedValue = ""
-            activeEditorField = .action
-            actionInputController.focus()
-            focusBinding.wrappedValue = true
+            deleteActiveInputBackward()
         } label: {
-				Text("del")
-                .font(.system(size: 14, weight: .bold))
+            Image(systemName: "delete.left.fill")
+                .font(.system(size: 16, weight: .semibold))
                 .foregroundStyle(.white)
-				.frame(width: helperButtonWidth, height: 44)
-					.background(
-						RoundedRectangle(cornerRadius: 12)
-							.fill(Color(red: 0.42, green: 0.12, blue: 0.12))
-					)
-			}
+                .frame(width: helperButtonWidth, height: 44)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color(red: 0.42, green: 0.12, blue: 0.12))
+                )
+        }
         .buttonStyle(.plain)
     }
 
