@@ -5199,6 +5199,7 @@ Tapping a row inserts the key code at the cursor.
                         onAction: performSoftEditorAccessoryAction,
                         onFiles: beginSoftEditorFilesMenu,
                         onFileNameSelected: insertSoftEditorFileName,
+                        onTimeCommandSelected: insertSoftEditorTimeCommand,
                         onOpen: { isSoftEditorAccessoryPaletteVisible.toggle() }
                     )
                     .frame(
@@ -5222,6 +5223,7 @@ Tapping a row inserts the key code at the cursor.
                         onAction: performSoftEditorAccessoryAction,
                         onFiles: beginSoftEditorFilesMenu,
                         onFileNameSelected: insertSoftEditorFileName,
+                        onTimeCommandSelected: insertSoftEditorTimeCommand,
                         onClose: { isSoftEditorAccessoryPaletteVisible = false },
                         bottomHeightAdjustment: isPad ? 0 : SoftEditorAccessoryConfiguration.iPhoneToolsHelperBottomHeightAdjustment
                     )
@@ -5246,6 +5248,7 @@ Tapping a row inserts the key code at the cursor.
                     onAction: performSoftEditorAccessoryAction,
                     onFiles: beginSoftEditorFilesMenu,
                     onFileNameSelected: insertSoftEditorFileName,
+                    onTimeCommandSelected: insertSoftEditorTimeCommand,
                     onOpen: { isSoftEditorAccessoryPaletteVisible.toggle() }
                 )
                 .frame(
@@ -5261,6 +5264,7 @@ Tapping a row inserts the key code at the cursor.
                         onAction: performSoftEditorAccessoryAction,
                         onFiles: beginSoftEditorFilesMenu,
                         onFileNameSelected: insertSoftEditorFileName,
+                        onTimeCommandSelected: insertSoftEditorTimeCommand,
                         onClose: { isSoftEditorAccessoryPaletteVisible = false },
                         bottomHeightAdjustment: isPad ? 0 : SoftEditorAccessoryConfiguration.iPhoneToolsHelperBottomHeightAdjustment
                     )
@@ -5366,6 +5370,14 @@ Tapping a row inserts the key code at the cursor.
             smartButtonPreviewSelectionRange = liveSelection
         }
         return insertSoftEditorAccessoryText(filename)
+    }
+
+    // MARK: - BM:🅱️ Time reuses the validated Files insertion path for the active editor.
+    private func insertSoftEditorTimeCommand(
+        _ command: String,
+        context: SoftEditorAccessoryInsertionContext
+    ) -> Bool {
+        insertSoftEditorFileName(command, context: context)
     }
 
     private var softEditorAccessoryTargetText: String {
@@ -6365,12 +6377,16 @@ private struct SoftEditorAccessoryBar: View {
     let onAction: (SoftEditorAccessoryAction) -> Void
     let onFiles: () -> SoftEditorAccessoryInsertionContext?
     let onFileNameSelected: (String, SoftEditorAccessoryInsertionContext) -> Bool
+    let onTimeCommandSelected: (String, SoftEditorAccessoryInsertionContext) -> Bool
     let onOpen: () -> Void
     @State private var filesInsertionContext: SoftEditorAccessoryInsertionContext?
     // MARK: - BM:🅱️ add your comments here
     // Files presentation is intentionally local to this accessory-bar view; this Boolean
     // controls the real category and file-list panel without MainScreen presentation state.
     @State private var showFilesMenu = false
+    // MARK: - BM:🅱️ Time presentation remains local to the accessory bar, like Files.
+    @State private var showTimeMenu = false
+    @State private var timeInsertionContext: SoftEditorAccessoryInsertionContext?
 
     var body: some View {
         ZStack {
@@ -6384,6 +6400,9 @@ private struct SoftEditorAccessoryBar: View {
                                 if action == .files {
                                     filesInsertionContext = onFiles()
                                     showFilesMenu = true
+                                } else if action == .time {
+                                    timeInsertionContext = onFiles()
+                                    showTimeMenu = true
                                 } else {
                                     onAction(action)
                                 }
@@ -6441,6 +6460,27 @@ private struct SoftEditorAccessoryBar: View {
                 .allowsHitTesting(true)
                 .zIndex(500)
             }
+
+            if showTimeMenu {
+                SoftEditorAccessoryTimeMenu(
+                    onTimeCommandSelected: { command in
+                        if let originalContext = timeInsertionContext,
+                           let currentContext = onFiles(),
+                           currentContext.slot == originalContext.slot,
+                           currentContext.document == originalContext.document {
+                            _ = onTimeCommandSelected(command, currentContext)
+                        }
+                    },
+                    onClose: { showTimeMenu = false }
+                )
+                .frame(
+                    width: filesPanelWidth,
+                    height: SoftEditorAccessoryConfiguration.filesMenuHeight
+                )
+                .contentShape(Rectangle())
+                .allowsHitTesting(true)
+                .zIndex(500)
+            }
         }
     }
 
@@ -6476,6 +6516,7 @@ private struct SoftEditorAccessoryPalette: View {
     let onAction: (SoftEditorAccessoryAction) -> Void
     let onFiles: () -> SoftEditorAccessoryInsertionContext?
     let onFileNameSelected: (String, SoftEditorAccessoryInsertionContext) -> Bool
+    let onTimeCommandSelected: (String, SoftEditorAccessoryInsertionContext) -> Bool
     let onClose: () -> Void
     let bottomHeightAdjustment: CGFloat
     // MARK: - BM:🅱️ add your comments here
@@ -6483,6 +6524,9 @@ private struct SoftEditorAccessoryPalette: View {
     // controls both category and file-list rendering without MainScreen presentation state.
     @State private var showFilesMenu = false
     @State private var filesInsertionContext: SoftEditorAccessoryInsertionContext?
+    // MARK: - BM:🅱️ Time presentation is local to Quick, preserving Files state and behavior.
+    @State private var showTimeMenu = false
+    @State private var timeInsertionContext: SoftEditorAccessoryInsertionContext?
 
     var body: some View {
         ZStack(alignment: .topLeading) {
@@ -6496,6 +6540,9 @@ private struct SoftEditorAccessoryPalette: View {
                                 if action == .files {
                                     filesInsertionContext = onFiles()
                                     showFilesMenu = true
+                                } else if action == .time {
+                                    timeInsertionContext = onFiles()
+                                    showTimeMenu = true
                                 } else {
                                     onAction(action)
                                 }
@@ -6541,6 +6588,26 @@ private struct SoftEditorAccessoryPalette: View {
                 .allowsHitTesting(true)
                 .zIndex(500)
             }
+            if showTimeMenu {
+                SoftEditorAccessoryTimeMenu(
+                    onTimeCommandSelected: { command in
+                        if let originalContext = timeInsertionContext,
+                           let currentContext = onFiles(),
+                           currentContext.slot == originalContext.slot,
+                           currentContext.document == originalContext.document {
+                            _ = onTimeCommandSelected(command, currentContext)
+                        }
+                    },
+                    onClose: { showTimeMenu = false }
+                )
+                .frame(
+                    width: filesPanelWidth,
+                    height: SoftEditorAccessoryConfiguration.filesMenuHeight
+                )
+                .contentShape(Rectangle())
+                .allowsHitTesting(true)
+                .zIndex(500)
+            }
         }
         .buttonStyle(.plain)
         .frame(minHeight: bottomHeightAdjustment, maxHeight: .infinity, alignment: .top)
@@ -6554,6 +6621,162 @@ private struct SoftEditorAccessoryPalette: View {
                     lineWidth: SoftEditorAccessoryConfiguration.toolsHelperBorderWidth
                 )
         }
+    }
+}
+
+// MARK: - BM:🅱️ SoftEditor Accessory Time Menu
+private struct SoftEditorAccessoryTimeMenu: View {
+    let onTimeCommandSelected: (String) -> Void
+    let onClose: () -> Void
+    @State private var selectedCommand: SoftEditorAccessoryTimeCommand?
+
+    var body: some View {
+        VStack(spacing: 0) {
+            header
+
+            ScrollView {
+                LazyVStack(spacing: 0) {
+                    if selectedCommand == nil {
+                        ForEach(SoftEditorAccessoryTimeCommand.allCases) { command in
+                            Button {
+                                selectedCommand = command
+                            } label: {
+                                Text(command.title)
+                                    .frame(maxWidth: .infinity, minHeight: 48, alignment: .leading)
+                                    .contentShape(Rectangle())
+                            }
+                        }
+                    } else {
+                        ForEach(SoftEditorAccessoryTimeCity.allCases) { city in
+                            Button {
+                                if let selectedCommand {
+                                    onTimeCommandSelected(selectedCommand.insertionText(for: city))
+                                }
+                            } label: {
+                                Text(city.title)
+                                    .frame(maxWidth: .infinity, minHeight: 48, alignment: .leading)
+                                    .contentShape(Rectangle())
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, SoftEditorAccessoryConfiguration.filesMenuContentPadding)
+        .foregroundStyle(.white)
+        .background(Color(white: 0.12))
+        .overlay {
+            Rectangle().stroke(
+                SoftEditorAccessoryConfiguration.compactLauncherBorderColor,
+                lineWidth: SoftEditorAccessoryConfiguration.toolsHelperBorderWidth
+            )
+        }
+        .contentShape(Rectangle())
+        .allowsHitTesting(true)
+    }
+
+    private var header: some View {
+        HStack {
+            Button {
+                selectedCommand = nil
+                onClose()
+            } label: {
+                Image(systemName: "house")
+                    .frame(width: 44, height: 44)
+                    .foregroundStyle(.cyan)
+            }
+            .accessibilityLabel(selectedCommand == nil ? "Exit Time" : "Exit City")
+
+            Spacer(minLength: 0)
+            Text(selectedCommand == nil ? "Time" : "City")
+                .foregroundStyle(.cyan)
+            Spacer(minLength: 0)
+
+            if selectedCommand != nil {
+                Button {
+                    selectedCommand = nil
+                } label: {
+                    Image(systemName: "arrowshape.backward")
+                        .frame(width: 44, height: 44)
+                        .foregroundStyle(.cyan)
+                }
+                .accessibilityLabel("Back to Time")
+            } else {
+                Color.clear.frame(width: 44, height: 44)
+            }
+        }
+    }
+}
+
+private enum SoftEditorAccessoryTimeCommand: String, CaseIterable, Identifiable {
+    case date = ".date"
+    case clock = ".clock"
+    case year = ".year"
+    case month = ".month"
+    case day = ".ord"
+    case dayOfWeek = ".dow"
+    case hour = ".hour"
+    case minute = ".min"
+    case second = ".sec"
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .date: "date"
+        case .clock: "clock"
+        case .year: "year"
+        case .month: "month"
+        case .day: "day"
+        case .dayOfWeek: "day of week"
+        case .hour: "hour"
+        case .minute: "minute"
+        case .second: "second"
+        }
+    }
+
+    func insertionText(for city: SoftEditorAccessoryTimeCity) -> String {
+        guard let timeZoneIdentifier = city.timeZoneIdentifier else {
+            return rawValue
+        }
+        return "\(rawValue) \(timeZoneIdentifier)"
+    }
+}
+
+private enum SoftEditorAccessoryTimeCity: String, CaseIterable, Identifiable {
+    case local
+    case losAngeles = "America/Los_Angeles"
+    case newYork = "America/New_York"
+    case london = "Europe/London"
+    case paris = "Europe/Paris"
+    case johannesburg = "Africa/Johannesburg"
+    case dubai = "Asia/Dubai"
+    case kolkata = "Asia/Kolkata"
+    case tokyo = "Asia/Tokyo"
+    case sydney = "Australia/Sydney"
+    case auckland = "Pacific/Auckland"
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .local: "local"
+        case .losAngeles: "Los Angeles"
+        case .newYork: "New York"
+        case .london: "London"
+        case .paris: "Paris"
+        case .johannesburg: "Johannesburg"
+        case .dubai: "Dubai"
+        case .kolkata: "Kolkata"
+        case .tokyo: "Tokyo"
+        case .sydney: "Sydney"
+        case .auckland: "Auckland"
+        }
+    }
+
+    var timeZoneIdentifier: String? {
+        self == .local ? nil : rawValue
     }
 }
 
