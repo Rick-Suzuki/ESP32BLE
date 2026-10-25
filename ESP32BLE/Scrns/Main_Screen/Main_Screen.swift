@@ -132,6 +132,7 @@ struct MainScreen: View {
     @AppStorage(MIDIChannelSettings.storageKey) private var midiDefaultChannel = MIDIChannelSettings.defaultChannel
     @Environment(\.scenePhase) private var midiScenePhase
     @State private var midiActivations = MainMIDIActivationRegistry()
+    @State private var midiCCDisplayValues: [MainGridMIDICCDisplayKey: UInt8] = [:]
 
     // Easy-to-find styling controls for the main button grid.
     private let mainGridButtonSpacingMaximum: CGFloat = 10
@@ -1113,6 +1114,9 @@ Tapping a row inserts the key code at the cursor.
             .onChange(of: midiInputEnabled) {
                 if !midiInputEnabled { resetMIDIActivations() }
             }
+            .onChange(of: macConnection.midiSessionID) {
+                midiCCDisplayValues.removeAll()
+            }
             .onChange(of: selectedDocumentName) {
                 resetMIDIActivations()
                 cancelPendingPopupRestore()
@@ -1507,6 +1511,14 @@ Tapping a row inserts the key code at the cursor.
         )
     }
 
+    func midiCCDisplayValue(for entry: FunctionKeyEntry, index: Int) -> UInt8? {
+        guard let context = midiTouchContext(entry, index: index),
+              let key = MainGridMIDICCDisplayKey(context) else {
+            return nil
+        }
+        return midiCCDisplayValues[key]
+    }
+
     private func sendMIDIActivationOn(_ context: MainMIDITouchContext) -> Bool {
         switch context.message {
         case .note(let note, let velocity, _):
@@ -1517,7 +1529,13 @@ Tapping a row inserts the key code at the cursor.
             return false
         case .controlChangeHold(let controller, let value, _), .controlChangeToggle(let controller, let value, _):
             guard midiInputEnabled, context.connectionSession == macConnection.midiSessionID else { return false }
-            return macConnection.sendAuthenticatedCommand("MIDI:CC:\(controller):\(value):\(context.channel)")
+            let accepted = macConnection.sendAuthenticatedCommand(
+                "MIDI:CC:\(controller):\(value):\(context.channel)"
+            )
+            if accepted {
+                updateMIDICCDisplayValue(context, value: value)
+            }
+            return accepted
         }
     }
 
@@ -1528,10 +1546,24 @@ Tapping a row inserts the key code at the cursor.
             _ = sendMIDINoteOffFromTouch(MIDINoteIdentity(note: note, channel: context.channel))
         case .noteOff:
             break
-        case .controlChangeHold, .controlChangeToggle:
+        case .controlChangeHold(_, _, let endValue), .controlChangeToggle(_, _, let endValue):
             guard macConnection.canSend else { return }
-            _ = macConnection.sendAuthenticatedCommand(context.releaseCommand)
+            if macConnection.sendAuthenticatedCommand(context.releaseCommand) {
+                updateMIDICCDisplayValue(context, value: endValue)
+            }
         }
+    }
+
+    private func updateMIDICCDisplayValue(_ context: MainMIDITouchContext, value: UInt8) {
+        guard let key = MainGridMIDICCDisplayKey(context),
+              context.documentSession == midiDocumentSession,
+              context.documentName == selectedDocumentName,
+              context.connectionSession == macConnection.midiSessionID,
+              functionKeys.indices.contains(context.slot),
+              functionKeys[context.slot].rawLine == context.commandText else {
+            return
+        }
+        midiCCDisplayValues[key] = value
     }
 
     private func beginMIDIActivation(_ context: MainMIDITouchContext) -> UUID? {
@@ -1577,7 +1609,12 @@ Tapping a row inserts the key code at the cursor.
             sendControlChangeOff: { activation in
                 guard activation.connectionSession == macConnection.midiSessionID,
                       macConnection.canSend else { return false }
-                return macConnection.sendAuthenticatedCommand(activation.releaseCommand)
+                let accepted = macConnection.sendAuthenticatedCommand(activation.releaseCommand)
+                if accepted,
+                   case .controlChangeToggle(_, _, let endValue) = activation.message {
+                    updateMIDICCDisplayValue(activation, value: endValue)
+                }
+                return accepted
             },
             sendOff: sendMIDIActivationOff
         )
@@ -1592,6 +1629,7 @@ Tapping a row inserts the key code at the cursor.
     }
 
     private func resetMIDIActivations() {
+        midiCCDisplayValues.removeAll()
         midiActivations.reset(
             connectionSession: macConnection.midiSessionID,
             sendOff: sendMIDIActivationOff

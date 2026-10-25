@@ -1,14 +1,10 @@
-
+261025 Sun 1640
+mdi cc btns toggle/hold state values - ok
+V65.22
 
 261025 Sun 1614
 midi btns all have green borders when tapped
 V65.21
-
-
-
-
-
-
 
 261025 Sun 1537
 midi buttons more consistant text

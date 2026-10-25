@@ -1,61 +1,84 @@
-A. Files modified
+A. Pre-change Git status
 
-ESP32BLE/Scrns/Main_Screen/Main_GridSection.swift only.
+Modified before Stage 3E.2B:
+ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift
 
-B. Existing eligibility reused
+B. Files modified
 
-Used the existing MIDI touch eligibility:
+ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift
+ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
 
-midiInputEnabled && scenePhase == .active
+C. Display-state key and ownership
 
-This already covers Main-screen availability, Mac output mode, send eligibility, and macConnection.canSend.
+MainScreen now owns a non-persistent @State cache keyed by:
 
-C. Connection-gated border mechanism
+• Document session and name
+• Grid slot
+• Raw command text
+• MIDI connection session
+• Resolved channel
 
-• CC One-shot applies its Stage 3E.1B green ButtonStyle only while that eligibility is true.
-																	• Note Off displays its transient green overlay only while its existing isEnabled value is true.
-																	
-																	D. Disconnect/mode-change cleanup
-																	
-																	• CC One-shot reverts to its ordinary plain style when eligibility becomes false, removing green immediately.
-																	• Note Off’s overlay condition becomes false immediately; the existing touch-view reconfiguration also cancels the active touch.
-• Existing release, cancellation, drag-out, and view-removal cleanup remain in place.
+This isolates identical CC commands on separate buttons and prevents stale values after command, channel, document, or session changes.
 
-E. Hold/Toggle unchanged
+D. Existing send-success paths used
 
-No Hold, Toggle, activation-registry, parser, transport, or MIDI send-path code changed.
+• Hold/Toggle Start: update only after sendAuthenticatedCommand returns true.
+• Hold End: update only after the existing release send returns true.
+• Toggle End: update only after the existing Toggle-off send returns true.
 
-F. Execution unchanged
+No extra MIDI messages or altered send timing.
 
-CC One-shot retains its existing Button action timing. Dedicated Note Off retains its existing touch execution and reconciliation. No activation token was added.
+E. Hold and Toggle transitions
 
-G. Build result
-
-Build succeeded.
-Xcode diagnostics for Main_GridSection.swift: no issues.
-						
-						H. Git diff summary
-						
-						The Stage 3E.1B/3E.1C work remains confined to Main_GridSection.swift. The 3E.1C correction itself is the two eligibility gates.
-						
-						Task-file git diff --check passed.
-						
-						Repository-wide git diff --check still exits nonzero because of pre-existing trailing whitespace in ESP32BLE/codex.txt. That file was not changed.
-						
-						I. Remaining device tests
-						
-						Run the requested connected, disconnected, non-Mac-output, Hold/Toggle, cancellation, and screen-change checks. No device testing was performed here.
-						
-						J. Git status
-						
-						Preserved existing modifications:
-							
-							ESP32BLE.xcodeproj/project.pbxproj
-						ESP32BLE/codex.txt
-						ESP32BLE/time-notes.txt
-						
-						Task modification:
-							
-							ESP32BLE/Scrns/Main_Screen/Main_GridSection.swift
-						
-						No commit or backup created.
+Initial: parsed Start-End, for example 127-64.
+								
+								After accepted Start: 127.
+								After accepted End: 64.
+								
+								Toggle physical release does not update the value. Hold release updates only after accepted End transmission.
+								
+								F. Failed sends
+								
+								Rejected Start or End sends do not update the cache. The prior accepted value, or initial Start-End text, remains visible.
+								
+								G. Navigation/document/connection lifecycle
+								
+								• Same document/session navigation retains values.
+								• Raw command edits, document/session changes, default-channel changes, unavailable MIDI output, and activation resets clear the cache.
+								• A new MIDI connection session uses a different key and starts with Start-End.
+								• Cache is not serialized or persisted.
+								
+								H. MIDI borders unchanged
+								
+								No Main_GridSection.swift or border/touch code changes.
+								
+								I. MIDI Notes unchanged
+								
+								No MIDI Note parser, runtime, labels, or activation changes.
+								
+								J. One-shot CC unchanged
+								
+								One-shot labels still use the existing single-value formatter and do not use dynamic cache state.
+								
+								K. Build result
+								
+								Build succeeded.
+								Main_ButtonBehavior diagnostics: no issues.
+								Main_Screen diagnostics request timed out, but the complete project build succeeded.
+								
+								L. Git diff --check
+								
+								Task-source check passed.
+								Repository-wide git diff --check passed.
+								
+								M. Remaining device tests
+								
+								Run the requested Hold/Toggle value transitions, failed-send behavior, duplicate-button isolation, reconnect reset, One-shot preservation, border regression, MIDI Note regression, and Quick-panel regression tests. No device testing was performed.
+								
+								N. Final Git status
+								
+								Modified:
+									ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift
+								ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
+								
+								The combined diff includes the pre-existing uncommitted Stage 3E.2A change in Main_ButtonBehavior.swift. No commit or backup was created.

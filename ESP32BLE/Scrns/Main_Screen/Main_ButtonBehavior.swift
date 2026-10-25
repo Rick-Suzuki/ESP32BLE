@@ -51,6 +51,29 @@ struct MainMIDITouchContext: Equatable {
     }
 }
 
+struct MainGridMIDICCDisplayKey: Hashable {
+    let documentSession: UUID
+    let documentName: String
+    let slot: Int
+    let commandText: String
+    let connectionSession: UUID
+    let channel: UInt8
+
+    init?(_ context: MainMIDITouchContext) {
+        switch context.message {
+        case .controlChangeHold, .controlChangeToggle:
+            documentSession = context.documentSession
+            documentName = context.documentName
+            slot = context.slot
+            commandText = context.commandText
+            connectionSession = context.connectionSession
+            channel = context.channel
+        case .note, .noteOff:
+            return nil
+        }
+    }
+}
+
 @MainActor
 @Observable
 final class MainMIDIActivationRegistry {
@@ -545,6 +568,7 @@ extension MainScreen {
 
     private func automaticMIDILabel(
         for entry: FunctionKeyEntry,
+        index: Int? = nil,
         defaultMIDIChannel: Int
     ) -> MainGridAutomaticMIDILabel? {
         guard resolvedAlternateDisplayText(for: entry)
@@ -557,8 +581,20 @@ extension MainScreen {
         }
 
         if let command = MIDIControlChangeParser.parse(sendText) {
+            let value: String
+            switch command.mode {
+            case .oneShot:
+                value = command.valueDisplayText
+            case .hold, .toggle:
+                if let index,
+                   let lastAcceptedValue = midiCCDisplayValue(for: entry, index: index) {
+                    value = "\(lastAcceptedValue)"
+                } else {
+                    value = "\(command.startValue)-\(command.endValue)"
+                }
+            }
             return MainGridAutomaticMIDILabel(
-                content: .controlChange(name: command.controllerDisplayName, value: command.valueDisplayText, mode: command.mode),
+                content: .controlChange(name: command.controllerDisplayName, value: value, mode: command.mode),
                 channel: MIDIChannelSettings.resolvedChannel(
                     channelOverride: command.channelOverride,
                     defaultChannel: defaultMIDIChannel
@@ -2479,7 +2515,11 @@ extension MainScreen {
         let leftTitle = displayText(from: entry.primaryDisplayText)
         let rightTitle = displayText(from: effectiveAlternateDisplayText(for: entry, defaultMIDIChannel: defaultMIDIChannel))
         let title = buttonTitle(for: entry, defaultMIDIChannel: defaultMIDIChannel)
-        let automaticMIDILabel = automaticMIDILabel(for: entry, defaultMIDIChannel: defaultMIDIChannel)
+        let automaticMIDILabel = automaticMIDILabel(
+            for: entry,
+            index: index,
+            defaultMIDIChannel: defaultMIDIChannel
+        )
 
         return MainScreenButtonLabelView(
             entry: entry,
