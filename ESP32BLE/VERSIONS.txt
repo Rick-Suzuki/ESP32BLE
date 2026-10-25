@@ -1,4 +1,9 @@
 
+261025 Sun 1416
+Stage 3C - CC layout OK
+V65.18
+
+
 261025 Sun 1348
 Stage 3B - cc Layout tested - a few bugs
 V65.17

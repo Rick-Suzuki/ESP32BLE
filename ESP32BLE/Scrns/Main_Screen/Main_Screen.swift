@@ -6939,9 +6939,7 @@ private struct SoftEditorMIDIControlChangeMenu: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
-                    SoftEditorMIDILabelledControl(label: "type", dimensions: dimensions) {
-                        typeSelector(dimensions: dimensions)
-                    }
+                    typeSelector
 
                     SoftEditorMIDILabelledControl(label: "start", dimensions: dimensions) {
                         SoftEditorMIDINumericSelector(
@@ -7033,10 +7031,10 @@ private struct SoftEditorMIDIControlChangeMenu: View {
     }
 
     @ViewBuilder
-    private func typeSelector(dimensions: SoftEditorMIDIControlLayout.Dimensions) -> some View {
+    private var typeSelector: some View {
         if selectedTypeAbbreviation == nil {
-            HStack(spacing: 8) {
-                typeMenu(width: min(56, dimensions.controlWidth))
+            HStack(spacing: 20) {
+                typeMenu(expandsToFill: false)
 
                 Menu {
                     ForEach(0...127, id: \.self) { number in
@@ -7045,20 +7043,19 @@ private struct SoftEditorMIDIControlChangeMenu: View {
                         }
                     }
                 } label: {
-                    SoftEditorMIDIMenuLabel(
-                        value: "\(controller)",
-                        width: max(0, dimensions.controlWidth - 64)
-                    )
+                    typeMenuLabel("\(controller)", expandsToFill: false)
                 }
                 .accessibilityLabel("CC number")
                 .accessibilityValue("\(controller)")
             }
+            .frame(maxWidth: .infinity, alignment: .center)
         } else {
-            typeMenu(width: dimensions.controlWidth)
+            typeMenu(expandsToFill: false)
+                .frame(maxWidth: .infinity, alignment: .center)
         }
     }
 
-    private func typeMenu(width: CGFloat) -> some View {
+    private func typeMenu(expandsToFill: Bool) -> some View {
         Menu {
             ForEach(Self.namedControllers) { option in
                 Button(option.displayName) {
@@ -7070,10 +7067,22 @@ private struct SoftEditorMIDIControlChangeMenu: View {
                 selectedTypeAbbreviation = nil
             }
         } label: {
-            SoftEditorMIDIMenuLabel(value: typeTitle, width: width)
+            typeMenuLabel(typeTitle, expandsToFill: expandsToFill)
         }
         .accessibilityLabel("type")
         .accessibilityValue(typeTitle)
+    }
+
+    private func typeMenuLabel(_ value: String, expandsToFill: Bool) -> some View {
+        HStack(spacing: 4) {
+            Text(value)
+                .lineLimit(1)
+            Image(systemName: "chevron.up.chevron.down")
+                .font(.caption)
+        }
+        .frame(maxWidth: expandsToFill ? .infinity : nil, alignment: .leading)
+        .fixedSize(horizontal: !expandsToFill, vertical: false)
+        .foregroundStyle(.tint)
     }
 
     private var typeTitle: String {
@@ -7081,7 +7090,7 @@ private struct SoftEditorMIDIControlChangeMenu: View {
               let option = Self.namedControllers.first(where: { $0.abbreviation == selectedTypeAbbreviation }) else {
             return "NUM"
         }
-        return option.displayName
+        return option.abbreviation
     }
 
     private func selectNamedController(_ option: NamedController) {

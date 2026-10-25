@@ -1,132 +1,106 @@
-A. Files changed
+Automated visual verification is unavailable here because no supported Simulator 27.0+ target is installed. The build and source checks passed; visual confirmation of the expanded Type row remains for a device or supported simulator.A. Files modified
 
 ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
 
-No parser or runtime files were changed for Stage 3C.
+No parser, runtime, shared selector, or Quick-panel infrastructure files were changed.
 
-Pre-existing uncommitted changes were preserved in:
+B. Type label removal
 
-ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift
-ESP32BLE/codex.txt
-ESP32BLE.xcodeproj/xcuserdata/rick.xcuserdatad/xcdebugger/Breakpoints_v2.xcbkptlist
+The Type row no longer uses SoftEditorMIDILabelledControl.
 
-B. Named Type selector implementation
-
-Replaced the numeric 0...127 Type menu with 51 named controller choices.
+The visible type label and its reserved label width were removed.
 
 Location:
-ESP32BLE/Scrns/Main_Screen/Main_Screen.swift:6826-6905
+ESP32BLE/Scrns/Main_Screen/Main_Screen.swift:6942
 
-• Display names are exactly the approved names.
-• Names are sorted alphabetically at construction.
-• Named menu entries display no CC numbers.
-• NUM is the final menu entry.
+C. Full-width Type row implementation
 
-C. Controller mapping reuse
-
-The selector uses:
-MIDIControlChangeCommand.controllerNumbersByAbbreviation
-
-It does not duplicate controller-number mappings. The local UI mapping supplies only abbreviation-to-display-name text.
-
-No parser behavior changed.
-
-D. NUM selection implementation
-
-NUM is a UI-only Type option.
-
-When selected, the existing Type row shows:
-
-• A NUM menu for returning to named Types.
-• A compact numeric CC menu containing 0...127.
+The Type selector now sits directly in the CC selector VStack and uses the full available content-row width inside existing panel margins.
 
 Location:
-ESP32BLE/Scrns/Main_Screen/Main_Screen.swift:7035-7082
+ESP32BLE/Scrns/Main_Screen/Main_Screen.swift:7034-7054
 
-The numeric selection remains stored locally and does not reset Start, End, Channel, or Mode.
+No spacer, invisible label, fixed label-width placeholder, or panel-size change was added.
 
-E. Three-way mode selector changes
+D. Closed selector abbreviation display
 
-Mode now contains:
+Closed named selection now shows the approved abbreviation:
 
-one | hold | tog
-
-Location:
-ESP32BLE/Scrns/Main_Screen/Main_Screen.swift:6827-6830 and 6982-6992.
-
-• Default is one.
-• one, hold, tog appear in the required order.
-• The former visible mode label was removed.
-• The prior two-way toggle/hold control was replaced.
-
-F. Full-width layout confirmation
-
-The segmented Picker is no longer inside SoftEditorMIDILabelledControl and has:
-
-.frame(maxWidth: .infinity)
+• Channel Volume displays vol.
+• Breath Controller displays breath.
+• Sustain Pedal displays sus.
+• All Sound Off displays sndoff.
+• All Notes Off displays alloff.
 
 Location:
-ESP32BLE/Scrns/Main_Screen/Main_Screen.swift:6982-6992.
+ESP32BLE/Scrns/Main_Screen/Main_Screen.swift:7087-7094
 
-There is no label, spacer, fixed label-width placeholder, or 120-point mode-width restriction. The control uses the full CC content-row width inside existing outer margins.
+The existing Stage 3A abbreviation mapping remains the source of controller numbers.
 
-G. End disabling and state preservation
+E. Full-name dropdown preservation
 
-End is locally disabled whenever effective mode is one, and locally dimmed/grayscaled without modifying SoftEditorMIDINumericSelector.
+The open Type menu still displays the full descriptive names, alphabetically, with no CC numbers beside named entries.
 
-Location:
-ESP32BLE/Scrns/Main_Screen/Main_Screen.swift:6954-6964 and 7027-7031.
-
-• Start remains enabled.
-• End remains stored while disabled.
-• Hold/tog restores End selection.
-• Start and End presets remain exactly:
-[0, 16, 32, 48, 64, 80, 96, 112, 127]
-
-H. Special-controller behaviour
-
-Controllers 120, 121, and 123 remain one-shot-only.
+NUM remains the final menu item.
 
 Location:
-ESP32BLE/Scrns/Main_Screen/Main_Screen.swift:6982 and 7023-7031.
+ESP32BLE/Scrns/Main_Screen/Main_Screen.swift:7057-7073
 
-For named selection or NUM selection of 120, 121, or 123:
+F. NUM numeric display correction
 
-• The mode control remains hidden, as before.
-• Effective mode is one.
-• End is disabled.
-• The previously chosen mode remains stored and is restored after selecting a non-special controller.
+NUM mode now uses two side-by-side Menus in the full-width Type row:
 
-I. Build result
+• Flexible NUM selector, retaining space for the numeric Menu.
+• Intrinsic-width numeric selector, ensuring 0, 64, 100, and 127 remain fully visible with their dropdown indicator.
+
+Location:
+ESP32BLE/Scrns/Main_Screen/Main_Screen.swift:7035-7051
+
+No font size, text weight, horizontal scrolling, or permanent extra row was introduced.
+
+G. State preservation
+
+No CC state ownership or lifecycle changed.
+
+The existing selected named abbreviation, NUM controller, Start, End, channel, mode, special-controller logic, and navigation behavior remain local selector state.
+
+H. Build result
 
 Successful.
 
 The existing Xcode project built successfully with no reported errors.
 
-J. Automated checks performed
+I. Automated verification
 
-• Verified from source that the named display mapping contains 51 entries.
-• Verified named choices are sorted by display name.
-• Verified NUM appears after the named ForEach.
-• Verified numeric NUM choices remain 0...127.
-• Verified mode order/default, full-width Picker, End disabling, special-controller logic, approved presets, and disabled Test/Insert buttons.
+• Confirmed the Type row no longer invokes SoftEditorMIDILabelledControl.
+• Confirmed Type uses full-width local layout.
+• Confirmed closed named display returns abbreviation.
+• Confirmed the open named menu still uses full display names.
+• Confirmed NUM remains after all named entries.
+• Confirmed numeric choices remain 0...127.
+• Confirmed End, Channel, Mode, Test, and Insert code was unchanged.
 • git diff --check passed.
-• Full Xcode project build passed.
+• Full project build passed.
 
-The Xcode snippet runner could not inspect the private selector type directly; source verification and full-project compilation succeeded.
+Visual UI verification could not run because no supported iOS/watchOS/tvOS 27.0+ simulator is available for this workspace. No screenshots or device interaction were performed.
 
-K. Git diff summary
+J. Git diff summary
 
-Stage 3C changes are confined to Main_Screen.swift.
+Task-specific Stage 3C.1 diff:
 
-The current working tree also contains preserved pre-existing user changes listed above. No commit or backup was created.
+ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
+21 additions, 13 deletions.
 
-L. Device tests still required
+The diff is limited to the Type row’s local layout and display helpers.
 
-• Named Type menu ordering and labels.
-• NUM Type flow and 0...127 selection.
-• Full-width one/hold/tog visual layout.
-• End disabled/dimmed appearance and interaction.
-• Special controllers 120, 121, and 123 in both named and NUM paths.
-• State preservation through Next/Previous navigation.
-• Confirmation that MIDI Note, Files, Time, and Quick panel behavior remain unchanged.
+No commit or backup was created.
+
+K. Device tests still required
+
+• Named Type abbreviation visibility.
+• Full descriptive-name dropdown contents/order.
+• NUM 0, NUM 100, and NUM 127 visibility.
+• Both Type-row dropdown indicators and interactions.
+• Type-row height/alignment on target devices.
+• Special-controller behavior in named and NUM modes.
+• Confirmation that other CC rows, MIDI Note, and Quick menus remain unchanged.
