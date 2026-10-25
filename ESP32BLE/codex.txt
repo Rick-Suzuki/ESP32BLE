@@ -1,84 +1,101 @@
-A. Pre-change Git status
+A. Git status before changes
 
-Modified before Stage 3E.2B:
-ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift
+• Pre-existing user change preserved: ESP32BLE/codex.txt
+• No source changes were present before this task.
 
 B. Files modified
 
-ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift
-ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
+• ESP32BLE/Scrns/Main_Screen/Main_Screen.swift􀰓
+• ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift􀰓
+• ESP32BLE/Scrns/Main_Screen/Main_GridSection.swift􀰓
 
-C. Display-state key and ownership
+C. Existing popup reused
 
-MainScreen now owns a non-persistent @State cache keyed by:
+• Reused alertTitle, renameAlertMessage, popupOverlay, and its existing one-second dismissal.
+• No alert, timer, overlay, or warning state was added.
 
-• Document session and name
-• Grid slot
-• Raw command text
-• MIDI connection session
-• Resolved channel
+D. MIDI warning helper and message
 
-This isolates identical CC commands on separate buttons and prevents stale values after command, channel, document, or session changes.
+• Added showMIDIOutputUnavailableWarning() at Main_Screen.swift􀰓.
+• Exact title: MIDI output unavailable
+• Exact message:
+Select Mac output and connect to ESP Mac Helper
+before sending MIDI commands.
 
-D. Existing send-success paths used
+E. CC One-shot warning trigger
 
-• Hold/Toggle Start: update only after sendAuthenticatedCommand returns true.
-• Hold End: update only after the existing release send returns true.
-• Toggle End: update only after the existing Toggle-off send returns true.
+• Updated the existing valid One-shot CC branch at Main_ButtonBehavior.swift􀰓.
+• When Mac output is not selected or macConnection.canSend is false, it shows the shared MIDI warning and returns before sending.
+• Valid connected CC One-shot payload construction and send timing are unchanged.
 
-No extra MIDI messages or altered send timing.
+F. MIDI touch-capture warning trigger
 
-E. Hold and Toggle transitions
+• Passed a narrow unavailable-output callback through MainScreenGridSection at:
+• Main_Screen.swift􀰓
+• Main_GridSection.swift􀰓
+• MIDI Note, Toggle, Note Off, CC Hold, and CC Toggle now accept only an initial unavailable press to request the popup.
+• The callback is invoked only from touchesBegan at Main_GridSection.swift􀰓.
 
-Initial: parsed Start-End, for example 127-64.
-								
-								After accepted Start: 127.
-								After accepted End: 64.
-								
-								Toggle physical release does not update the value. Hold release updates only after accepted End transmission.
-								
-								F. Failed sends
-								
-								Rejected Start or End sends do not update the cache. The prior accepted value, or initial Start-End text, remains visible.
-								
-								G. Navigation/document/connection lifecycle
-								
-								• Same document/session navigation retains values.
-								• Raw command edits, document/session changes, default-channel changes, unavailable MIDI output, and activation resets clear the cache.
-								• A new MIDI connection session uses a different key and starts with Start-End.
-								• Cache is not serialized or persisted.
-								
-								H. MIDI borders unchanged
-								
-								No Main_GridSection.swift or border/touch code changes.
-								
-								I. MIDI Notes unchanged
-								
-								No MIDI Note parser, runtime, labels, or activation changes.
-								
-								J. One-shot CC unchanged
-								
-								One-shot labels still use the existing single-value formatter and do not use dynamic cache state.
-								
-								K. Build result
-								
-								Build succeeded.
-								Main_ButtonBehavior diagnostics: no issues.
-								Main_Screen diagnostics request timed out, but the complete project build succeeded.
-								
-								L. Git diff --check
-								
-								Task-source check passed.
-								Repository-wide git diff --check passed.
-								
-								M. Remaining device tests
-								
-								Run the requested Hold/Toggle value transitions, failed-send behavior, duplicate-button isolation, reconnect reset, One-shot preservation, border regression, MIDI Note regression, and Quick-panel regression tests. No device testing was performed.
-								
-								N. Final Git status
-								
-								Modified:
-									ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift
-								ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
-								
-								The combined diff includes the pre-existing uncommitted Stage 3E.2A change in Main_ButtonBehavior.swift. No commit or backup was created.
+G. Unavailable touches remain send-disabled
+
+• Touch recognition and MIDI activation are now separate:
+• isMIDIActivationEnabled remains false when MIDI output is unavailable.
+• No activation token is created.
+• No MIDI send occurs.
+• No release action occurs.
+• No Toggle state changes.
+• No green border is activated.
+• Existing touch activation still requires the unchanged midiInputEnabled eligibility.
+
+H. Duplicate-warning handling
+
+• Warning callback runs only on initial touchesBegan.
+• Move, release, and cancellation paths do not trigger it.
+• The existing single popup state prevents stacked warning cards.
+
+I. MIDI send semantics unchanged
+
+• No parser, payload, transport, channel-resolution, activation-registry, or cleanup code changed.
+• Connected MIDI Note On/Off/Toggle and CC One-shot/Hold/Toggle continue through their existing send paths.
+
+J. Green/white borders unchanged
+
+• No border colour, width, radius, activation-token, Hold, Toggle, Note Off, or CC One-shot styling code was changed.
+• Unavailable MIDI presses do not set the existing pressed/active states.
+
+K. Dynamic CC labels unchanged
+
+• No CC display-cache or automatic-label code was changed.
+
+L. Keyboard warnings unchanged
+
+• Existing keyboard output routing and warnings remain unchanged.
+• MIDI warning logic is restricted to recognized MIDI grid-command paths.
+
+M. Build result
+
+• Xcode build succeeded.
+• Build time: 28.3 seconds.
+• Focused Xcode live-diagnostic requests timed out without compiler output; the full build completed successfully.
+
+N. Git diff check
+
+• Task-specific git diff --check passed for the three modified source files.
+												• Whole-worktree git diff --check still reports trailing whitespace in the pre-existing modified ESP32BLE/codex.txt; it was not edited.
+
+O. Remaining device tests
+
+• Test disconnected Mac and ESP32-selected output for Note, Note Off, CC One-shot, Hold, and Toggle.
+														• Test connected Mac output produces no warning and preserves all MIDI behavior.
+														• Test non-sending modes, grid editing, editor/preview, and inactive app produce no MIDI warning.
+														• Run the requested ordinary keyboard-output and complete Quick panel regression checks.
+														
+														P. Git status after changes
+														
+														• Modified source files:
+															• ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift􀰓
+														• ESP32BLE/Scrns/Main_Screen/Main_GridSection.swift􀰓
+														• ESP32BLE/Scrns/Main_Screen/Main_Screen.swift􀰓
+														• Preserved pre-existing modification:
+															• ESP32BLE/codex.txt
+														• No commit or backup was created.

@@ -1,5 +1,10 @@
+
+261025 Sun 1726
+disonnected midi now gives warning msg
+V65.23
+
 261025 Sun 1640
-mdi cc btns toggle/hold state values - ok
+midi cc btns toggle/hold state values - ok
 V65.22
 
 261025 Sun 1614

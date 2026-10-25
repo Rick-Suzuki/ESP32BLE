@@ -1466,11 +1466,29 @@ Tapping a row inserts the key code at the cursor.
         }
     }
 
-    // MARK: - BM:🅱️ MIDI ownership outlives individual touch views; every release consumes a unique token.
-    private var midiInputEnabled: Bool {
+    private var midiGridInteractionEnabled: Bool {
         isMainScreenVisible && midiScenePhase == .active &&
         !isGridEditModeEnabled && editingSlotIndex == nil && presentedPreviewFile == nil &&
-        mainGridButtonMode.sendsBluetooth && outputMode == .mac && macConnection.canSend
+        mainGridButtonMode.sendsBluetooth
+    }
+
+    private var midiOutputAvailable: Bool {
+        outputMode == .mac && macConnection.canSend
+    }
+
+    // MARK: - BM:🅱️ MIDI ownership outlives individual touch views; every release consumes a unique token.
+    private var midiInputEnabled: Bool {
+        midiGridInteractionEnabled && midiOutputAvailable
+    }
+
+    private var midiUnavailableWarningEnabled: Bool {
+        midiGridInteractionEnabled && !midiOutputAvailable
+    }
+
+    func showMIDIOutputUnavailableWarning() {
+        guard midiUnavailableWarningEnabled else { return }
+        alertTitle = "MIDI output unavailable"
+        renameAlertMessage = "Select Mac output and connect to ESP Mac Helper\nbefore sending MIDI commands."
     }
 
     private func midiTouchContext(_ entry: FunctionKeyEntry, index: Int) -> MainMIDITouchContext? {
@@ -1672,9 +1690,11 @@ Tapping a row inserts the key code at the cursor.
             midiContext: midiTouchContext,
             midiActivations: midiActivations,
             midiInputEnabled: midiInputEnabled,
+            midiUnavailableWarningEnabled: midiUnavailableWarningEnabled,
             onMIDITouchDown: beginMIDIActivation,
             onMIDITouchUp: endMIDIActivation,
             onMIDITogglePress: toggleMIDIActivation,
+            onMIDIOutputUnavailableAttempt: showMIDIOutputUnavailableWarning,
             sendLine: { entry in
                 sendMainGridEntry(entry, defaultMIDIChannel: midiDefaultChannel)
             },

@@ -630,9 +630,12 @@ extension MainScreen {
         if isMIDIControlChangeCommandForGridEntry(entry) {
             guard let command = midiControlChangeCommandForGridEntry(entry),
                   command.mode == .oneShot,
-                  mainGridButtonMode.sendsBluetooth,
-                  outputMode == .mac,
-                  macConnection.canSend else {
+                  mainGridButtonMode.sendsBluetooth else {
+                return
+            }
+
+            guard outputMode == .mac, macConnection.canSend else {
+                showMIDIOutputUnavailableWarning()
                 return
             }
 
