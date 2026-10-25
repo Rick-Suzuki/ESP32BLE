@@ -1,128 +1,125 @@
 A. Files modified
 
-• ESP32BLE/Scrns/MIDI/MIDICommandParser.swift
-• ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift
-• ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
+ESP32BLE/Scrns/MIDI/MIDIControlChangeParser.swift
 
-No MIDI CC files were modified. No commit created.
+No UI, Quick panel, MIDI Note, MIDI transmission, activation, or preset-array files were changed.
 
-B. Parser changes
+Pre-existing user change preserved:
+ESP32BLE/codex.txt
 
-MIDICommandParser now supports:
+B. Name-to-number mapping implementation
 
-• .midi 60 off
-• .midi 60 off 4
-• Numeric and pitch note syntax use the existing note parser.
-• Omitted channel remains the configured default.
-• Explicit channels remain limited to 1...16.
+Added one reusable mapping:
+MIDIControlChangeCommand.controllerNumbersByAbbreviation
+at ESP32BLE/Scrns/MIDI/MIDIControlChangeParser.swift:44-96.
 
-Implementation:
+• Supports all supplied lowercase abbreviations.
+• Named commands are case-insensitive.
+• Numeric controllers remain supported from 0...127.
+• No unapproved aliases were added.
+• NUM is not recognized.
+• The supplied list contains 51 entries, despite the request referring to 50; all 51 supplied entries were implemented.
 
-• Added explicit MIDINoteCommandKind (on / off) and a defaulted kind initializer parameter, preserving existing parser consumer construction compatibility: MIDICommandParser.swift lines 6-30.
-• Recognizes off only in the velocity position: lines 90-110.
-• Rejects off with toggle: lines 93-96.
-• Existing positive-velocity syntax, default velocity 127, and Note On toggle parsing remain unchanged: lines 76-130.
+C. New parser grammar
 
-Statically verified invalid forms are rejected by the parser structure:
+Implemented at ESP32BLE/Scrns/MIDI/MIDIControlChangeParser.swift:145-203.
 
-• .midi 128 off
-• .midi 60 off 0
-• .midi 60 off 17
-• .midi 60 off toggle
-• .midi 60 off 4 toggle
-• .midi 60 off 4 extra
+One-shot:
+.cc <type> <start> [channel]
 
-C. Runtime Note Off execution changes
+Hold:
+.cc <type> <start> <end> [channel] hold
 
-• Added an explicit .noteOff(number:) touch message.
-• Parsed off commands become that message rather than a velocity-zero Note On: Main_Screen.swift lines 1475-1479.
-• On touch-down, explicit Note Off:
-   • calls the existing sendMIDINoteOffFromTouch transport helper;
-   • sends MIDI:NOTE_OFF:<note>:<channel>;
-   • returns no activation token, so it never sends Note On or creates a new owner.
+Toggle:
+.cc <type> <start> <end> [channel] toggle
 
-Relevant code: Main_Screen.swift lines 1529-1546.
+• Start and End accept 0...127.
+• Optional channel accepts 1...16.
+• Omitted channel remains nil for existing configured-default resolution.
+• A final hold or toggle determines the positional grammar.
+• Unexpected argument counts are rejected.
 
-• The existing Note Off helper now returns the transport success result while continuing to use the same Mac helper path: Main_ButtonBehavior.swift around lines 832-844.
+D. Parsed command model changes
 
-D. Registry reconciliation behavior
+MIDIControlChangeCommand now stores:
 
-Added targeted reconcileExplicitNoteOff:
+• controller
+• startValue
+• endValue
+• channelOverride
+• mode
 
-• Matches only the active note’s connection session, MIDI channel, and note number.
-• Removes all matching active ownership tokens.
-• Leaves other notes, channels, and connections intact.
-• Prevents a later hold release from issuing a second Note Off for the already explicitly stopped note.
-• Allows a subsequent Note On to proceed normally because stale ownership no longer suppresses it.
+Locations:
+ESP32BLE/Scrns/MIDI/MIDIControlChangeParser.swift:7-42.
 
-Relevant code: Main_ButtonBehavior.swift lines 65-81 and 147-156.
+The existing value accessor remains as a compatibility alias for startValue. Existing runtime consumers therefore retain their current Start-value behavior without source changes.
 
-Existing positive-velocity hold/toggle mechanics were not changed.
+One-shot commands receive endValue = 0.
+Legacy hold/toggle forms under the new grammar parse their positional End value.
 
-E. Soft Editor command generation change
+E. Legacy interpretation changes
 
-In SoftEditorMIDINoteMenu:
+Implemented as approved.
 
-• Velocity 0 now generates:
-   • .midi 60 off
-   • .midi 60 off 4
-• The Toggle checkbox is ignored for velocity 0 text generation, but its visible/state value is unchanged.
-• Positive velocities retain the prior format and toggle behavior.
+Example:
+.cc 7 127 6 hold
 
-Relevant code: Main_Screen.swift lines 6793 onward.
+Now parses as:
 
-The preset arrays remain unchanged:
+• Controller 7
+• Start 127
+• End 6
+• Default channel
+• Hold
 
-[0, 16, 32, 48, 64, 80, 96, 112, 127]
+No ambiguous legacy-format detection or migration was added.
 
-F. Build and verification results
+F. Parser checks
 
-• Xcode file diagnostics: no issues in all three modified files.
-• Full Xcode build: succeeded.
-• git diff --check: passed.
-• An in-context parser snippet was attempted but timed out before producing output, so it is not counted as runtime verification.
-• No device testing was performed.
+Passed in-project parser validation:
 
-G. Existing behavior preserved
+• All 51 supplied abbreviations map to their required controller.
+• Numeric controllers 0...127 parse successfully.
+• Named and numeric commands use the same positional grammar.
+• Valid one-shot, hold, and toggle forms parse.
+• Case-insensitive named type and mode parsing works.
+• Requested malformed examples were rejected, including invalid ranges, unknown names, NUM, missing End values for hold/toggle, invalid channels, and extra arguments.
 
-• Existing .midi <note>, positive velocity, optional channel, and toggle forms remain supported.
-• Existing Note On transport and momentary/toggle lifecycle remain unchanged.
-• MIDI CC parser, runtime behavior, selector state/layout, and disabled buttons remain unchanged.
-• Existing Quick insertion callback and insertion-context validation were not modified.
-• Files, Time/City, Wait, More, Command/Button cursor handling, Clear, Back Delete, and navigation were not modified.
+Xcode source diagnostics:
+No issues found in MIDIControlChangeParser.swift.
 
-H. Limitations / concerns
+G. Build result
 
-• Device verification is still needed for actual Mac-helper delivery of MIDI:NOTE_OFF.
-• New explicit Note Off grid labels may display the Note command’s stored velocity value of 0 in existing automatic MIDI label UI; this does not affect transmission or lifecycle behavior.
-• No BLE MIDI output was introduced; the existing Mac-output requirements remain enforced.
+Successful.
+
+The existing Xcode project built successfully with no reported errors.
+
+H. Runtime compatibility concerns
+
+Stage 3B has not been implemented.
+
+Current CC runtime still:
+
+• Sends Start on hold/toggle press.
+• Sends hardcoded value 0 on hold release, toggle-off, and cleanup.
+• Does not use parsed endValue yet.
+
+This is intentional for Stage 3A. Parser acceptance of arbitrary End values does not mean those values are transmitted yet.
 
 I. Git diff summary
 
-Current uncommitted files include preserved user changes:
+git diff --check passed.
 
-• ESP32BLE.xcodeproj/xcuserdata/rick.xcuserdatad/xcdebugger/Breakpoints_v2.xcbkptlist
-• ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
-• ESP32BLE/codex.txt
+Task-specific diff:
+ESP32BLE/Scrns/MIDI/MIDIControlChangeParser.swift
+112 additions, 8 deletions.
 
-This task additionally modifies:
+No commit was created.
 
-• ESP32BLE/Scrns/MIDI/MIDICommandParser.swift
-• ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift
+J. Work remaining for Stage 3B
 
-Main_Screen.swift already contained uncommitted Stage 2 work; this task added only Note Off execution/generation changes there.
-
-J. Device regression tests still required
-
-Please verify on device/Mac helper:
-
-• .midi 60 off using configured default channel.
-• .midi 60 off 4 using explicit channel 4.
-• Note 0 and 127 Off commands.
-• Positive Note On followed by explicit Note Off.
-• Toggle On followed by explicit Note Off, then a new Note On.
-• Hold On, explicit Note Off, then physical hold release.
-• Repeated explicit Note Off.
-• Same note on different channels and different notes on one channel.
-• Velocity-zero Soft Editor insertion with Toggle both on and off.
-• Existing Quick panel and MIDI CC regression behavior.
+• Carry endValue into CC hold/toggle touch contexts.
+• Replace the current hardcoded CC release value of 0 with stored End.
+• Preserve legacy End=0 behavior.
+• Verify hold release, toggle-off, activation cleanup, and session reset use the selected End value.
+• Do not modify CC UI or insertion until its later approved stage.

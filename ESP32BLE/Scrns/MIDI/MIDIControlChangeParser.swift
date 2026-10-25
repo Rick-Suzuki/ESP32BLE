@@ -6,9 +6,94 @@ enum MIDIControlChangeMode {
 
 struct MIDIControlChangeCommand {
     let controller: UInt8
-    let value: UInt8
+    let startValue: UInt8
+    let endValue: UInt8
     let channelOverride: UInt8?
     let mode: MIDIControlChangeMode
+
+    init(
+        controller: UInt8,
+        startValue: UInt8,
+        endValue: UInt8 = 0,
+        channelOverride: UInt8?,
+        mode: MIDIControlChangeMode
+    ) {
+        self.controller = controller
+        self.startValue = startValue
+        self.endValue = endValue
+        self.channelOverride = channelOverride
+        self.mode = mode
+    }
+
+    init(
+        controller: UInt8,
+        value: UInt8,
+        channelOverride: UInt8?,
+        mode: MIDIControlChangeMode
+    ) {
+        self.init(
+            controller: controller,
+            startValue: value,
+            channelOverride: channelOverride,
+            mode: mode
+        )
+    }
+
+    var value: UInt8 { startValue }
+
+    static let controllerNumbersByAbbreviation: [String: UInt8] = [
+        "alloff": 123,
+        "sndoff": 120,
+        "attack": 73,
+        "bal": 8,
+        "bank": 0,
+        "breath": 2,
+        "bright": 74,
+        "vol": 7,
+        "chorus": 93,
+        "dec": 97,
+        "data": 6,
+        "inc": 96,
+        "decay": 75,
+        "effect1": 12,
+        "effect2": 13,
+        "expr": 11,
+        "foot": 4,
+        "gp1": 16,
+        "gp2": 17,
+        "gp3": 18,
+        "gp4": 19,
+        "gp5": 80,
+        "gp6": 81,
+        "gp7": 82,
+        "gp8": 83,
+        "hold2": 69,
+        "legato": 68,
+        "local": 122,
+        "mod": 1,
+        "mono": 126,
+        "omnioff": 124,
+        "omnion": 125,
+        "pan": 10,
+        "poly": 127,
+        "portctl": 84,
+        "portsw": 65,
+        "porttime": 5,
+        "release": 72,
+        "reset": 121,
+        "reverb": 91,
+        "rpnlsb": 100,
+        "rpnmsb": 101,
+        "soft": 67,
+        "sostenuto": 66,
+        "variation": 70,
+        "sus": 64,
+        "timbre": 71,
+        "trem": 92,
+        "vibdelay": 78,
+        "vibdepth": 77,
+        "vibrate": 76
+    ]
 
     // MARK: - BM:🅱️ Display-only names; unlisted controllers retain their numeric identity.
     var controllerDisplayName: String {
@@ -71,18 +156,32 @@ enum MIDIControlChangeParser {
             mode = .oneShot
         }
 
-        guard (3...4).contains(components.count),
+        let expectsEndValue = mode != .oneShot
+        let expectedComponentCount = expectsEndValue ? 4...5 : 3...4
+        guard expectedComponentCount.contains(components.count),
               components[0] == ".cc",
-              let controller = UInt8(components[1]),
+              let controller = controllerNumber(for: components[1]),
               controller <= 127,
-              let value = UInt8(components[2]),
-              value <= 127 else {
+              let startValue = UInt8(components[2]),
+              startValue <= 127 else {
             return nil
         }
 
+        let endValue: UInt8
         let channelOverride: UInt8?
-        if components.count == 4 {
-            guard let parsedChannel = UInt8(components[3]),
+        if expectsEndValue {
+            guard let parsedEndValue = UInt8(components[3]),
+                  parsedEndValue <= 127 else {
+                return nil
+            }
+            endValue = parsedEndValue
+        } else {
+            endValue = 0
+        }
+
+        let channelIndex = expectsEndValue ? 4 : 3
+        if components.count > channelIndex {
+            guard let parsedChannel = UInt8(components[channelIndex]),
                   MIDIChannelSettings.validRange.contains(Int(parsedChannel)) else {
                 return nil
             }
@@ -93,9 +192,14 @@ enum MIDIControlChangeParser {
 
         return MIDIControlChangeCommand(
             controller: controller,
-            value: value,
+            startValue: startValue,
+            endValue: endValue,
             channelOverride: channelOverride,
             mode: mode
         )
+    }
+
+    private static func controllerNumber(for token: Substring) -> UInt8? {
+        UInt8(token) ?? MIDIControlChangeCommand.controllerNumbersByAbbreviation[token.lowercased()]
     }
 }

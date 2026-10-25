@@ -1,4 +1,8 @@
 
+261025 Sun 1302
+Stage 3A — CC Implementation Codex
+V65.16
+
 261025 Sun 1129
 midi note complete (no test)
 V65.15
@@ -33,8 +37,6 @@ V65.09
 261024 Sat 1358
 backspace key working - just white
 v65.08
-
-
 
 261024 Sat 1317
 quick menu improved, works better
