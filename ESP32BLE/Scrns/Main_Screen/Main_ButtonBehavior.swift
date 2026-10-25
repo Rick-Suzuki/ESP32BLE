@@ -186,14 +186,25 @@ struct MainGridAutomaticMIDILabel {
         }
     }
 
-    var controlChangeValue: String? {
-        guard case .controlChange(_, let value, _) = content else { return nil }
-        return value
+    var midiValue: String? {
+        switch content {
+        case .note(_, let velocity, _):
+            return "\(velocity)"
+        case .controlChange(_, let value, _):
+            return value
+        }
+    }
+
+    var usesControlChangeValueColor: Bool {
+        if case .controlChange = content {
+            return true
+        }
+        return false
     }
 
     var detailText: String {
-        if case .note(_, let velocity, _) = content {
-            return "\(velocity) · ch \(channel)"
+        if case .note(_, _, let mode) = content {
+            return mode == .toggle ? "ch \(channel) · toggle" : "ch \(channel)"
         }
         if case .controlChange(_, _, let mode) = content {
             switch mode {
@@ -205,15 +216,8 @@ struct MainGridAutomaticMIDILabel {
         return "ch \(channel)"
     }
 
-    var modeText: String? {
-        switch content {
-        case .note(_, _, .toggle): return "toggle"
-        default: return nil
-        }
-    }
-
     var text: String {
-        [title, controlChangeValue, detailText, modeText].compactMap { $0 }.joined(separator: "\n")
+        [title, midiValue, detailText].compactMap { $0 }.joined(separator: "\n")
     }
 }
 

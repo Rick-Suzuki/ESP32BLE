@@ -908,27 +908,21 @@ struct MainScreenButtonLabelView: View {
             Text(label.title)
                 .font(.system(size: boxFontSize, weight: .bold))
 
-            if let value = label.controlChangeValue {
+            if let value = label.midiValue {
                 Text(value)
                     .font(.system(size: boxFontSize, weight: .semibold))
             }
 
             Text(label.detailText)
-                .font(.system(size: midiChannelFontSize, weight: label.controlChangeValue == nil ? .semibold : .medium))
-                .minimumScaleFactor(label.controlChangeValue == nil ? 0.5 : 1)
-
-            if let modeText = label.modeText {
-                Text(modeText)
-                    .font(.system(size: midiChannelFontSize, weight: .medium))
-                    .minimumScaleFactor(0.5)
-            }
+                .font(.system(size: midiChannelFontSize, weight: label.midiValue == nil ? .semibold : .medium))
+                .minimumScaleFactor(label.midiValue == nil ? 0.5 : 1)
         }
         .id(boxFontSize)
         .multilineTextAlignment(.center)
         .lineLimit(1)
         .truncationMode(.tail)
         .allowsTightening(true)
-        .foregroundStyle(label.controlChangeValue == nil ? buttonTextColor : Color.yellow)
+        .foregroundStyle(label.usesControlChangeValueColor ? Color.yellow : buttonTextColor)
         .frame(maxWidth: .infinity, alignment: .center)
     }
 

@@ -1,154 +1,105 @@
-A. Exact files changed
+A. Files modified
 
-ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
+• ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift
+• ESP32BLE/Scrns/Main_Screen/Main_ButtonLabelView.swift
 
-No parser, MIDI runtime, activation registry, shared insertion helper, or selector-component files were changed.
+Pre-existing user changes were preserved:
+• ESP32BLE.xcodeproj/project.pbxproj
+• ESP32BLE/codex.txt
+• ESP32BLE/notes.txt
+• ESP32BLE/time-notes.txt
 
-B. Named Type command generation
+B. MIDI Note label layout change
 
-Named selections generate the stored Stage 3A abbreviation, never the display name or controller number.
+Automatic MIDI Note labels now render as:
 
-Examples generated:
-.cc vol 127
-.cc sus 0
-.cc sndoff 0
+C3
+120
+ch 1
 
-Location:
-ESP32BLE/Scrns/Main_Screen/Main_Screen.swift:7075-7083
+Or, for Toggle:
+				
+				D3
+			120
+			ch 1 · toggle
+			
+			The Note label model now supplies velocity as its value line and combines Toggle into the channel detail line. See Main_ButtonBehavior.swift:189-220.
+			
+			C. Reused existing rendering structure
+			
+			Reused the existing automatic MIDI label value line and CC-style hierarchy:
+				
+				• Note title remains bold.
+			• Velocity uses the existing prominent semibold value styling.
+			• Channel/detail uses the existing smaller channel styling.
+			• Note text retains its existing normal button-text color.
+			• CC retains its existing yellow value-label color and layout.
+			
+			See Main_ButtonLabelView.swift:906-926.
+			
+			D. MIDI Note Off treatment
+			
+			No parser, runtime, or Note Off behavior changed.
+			
+	.midi 60 off remains a dedicated Note Off command. Its automatic label now follows the same three-line Note hierarchy:
+				
+				C3
+			0
+			ch 1
+			
+			The semantic distinction remains in the parser/runtime; no positive-velocity Note On behavior was introduced.
 
-C. NUM command generation
+E. MIDI CC preservation
 
-NUM selection generates the selected numeric controller only.
+MIDI CC label content and appearance are unchanged:
 
-Examples generated:
-.cc 7 127
-.cc 120 0
-.cc 127 127
+• Controller name
+• Existing CC value text
+• Existing channel/mode detail
+• Existing yellow color path
 
-The literal word NUM is never generated.
+No CC parser, valueDisplayText, Start/End behavior, or dynamic CC label logic was changed.
 
-D. One-shot generation
+F. Explicit-label and right-text preservation
 
-Effective one mode generates:
+Automatic-label eligibility and precedence were not changed. Explicit alternate/right text, symbols, emoji, and custom labels still take precedence exactly as before.
 
-.cc <type> <start> [channel]
+G. Toggle border confirmation
 
-• End is omitted.
-• No mode suffix is appended.
-• Configured-default channel is omitted.
+No border, touch, activation, registry, transmission, or Toggle state code was modified.
 
-Location:
-ESP32BLE/Scrns/Main_Screen/Main_Screen.swift:7051-7073
+The diff contains no changes to:
+• MainMIDIActivationRegistry
+• Main_GridSection.swift
+• MIDI parsers
+• MIDI transport
+• Toggle border colors, widths, corner radii, or active-state handling
 
-E. Hold generation
+H. Build result
 
-Hold mode generates:
+Xcode build succeeded.
 
-.cc <type> <start> <end> [channel] hold
+Both edited files also report no Xcode code issues.
 
-Zero Start and End values are preserved.
+I. Git diff summary
 
-F. Toggle generation
+git diff --check passed.
 
-Toggle mode generates:
+Task-specific changes are limited to:
+• MIDI Note value/detail construction in Main_ButtonBehavior.swift.
+• Existing automatic label rendering expressions in Main_ButtonLabelView.swift.
 
-.cc <type> <start> <end> [channel] toggle
+No commit was created.
 
-The UI label remains tog; generated syntax uses the required full word toggle.
+J. Remaining device tests
 
-G. Default/explicit channel handling
-
-The generated command compares the selected channel with the configured default channel.
-
-• Equal: channel omitted.
-• Different: explicit channel added in the parser-required position.
-
-No channel default was hardcoded.
-
-H. Special-controller handling
-
-Generation uses the existing effectiveMode logic.
-
-Controllers 120, 121, and 123, selected by name or NUM, generate one-shot commands only:
-
-.cc sndoff 0
-.cc reset 0
-.cc alloff 0
-.cc 120 0
-.cc 121 0
-.cc 123 0
-
-Stored Hold/Toggle selection is not reset.
-
-I. CC insertion callback and wiring
-
-Added:
-insertSoftEditorMIDIControlChangeCommand(_:)
-
-Location:
-ESP32BLE/Scrns/Main_Screen/Main_Screen.swift:5501-5508
-
-It exactly follows the established MIDI Note pattern:
-
-1. Captures the current live context with beginSoftEditorFilesMenu().
-2. Delegates insertion to insertSoftEditorFileName(_:context:).
-
-This preserves Command/Button destination selection, text replacement, cursor position, focus, undo, session validation, and repeated insertion behavior.
-
-Wired through all four construction paths for both presentation variants:
-
-• SoftEditorAccessoryBar
-• SoftEditorAccessoryPalette
-• Normal layout
-• Fallback layout
-
-Locations:
-ESP32BLE/Scrns/Main_Screen/Main_Screen.swift:5298-5302, 5325-5330, 5352-5358, 5371-5378, 7197-7329, and 7396-7531.
-
-J. Insert/Test button states
-
-• CC Insert is enabled when the current selector state produces a valid command.
-• CC Test remains disabled.
-• MIDI Note Insert and disabled Test behavior are unchanged.
-
-Location:
-ESP32BLE/Scrns/Main_Screen/Main_Screen.swift:7155-7181
-
-K. Build result
-
-Successful.
-
-The existing Xcode project built successfully with no reported errors.
-
-L. Validation actually performed
-
-• Full project build passed.
-• git diff --check passed.
-• Focused parser validation passed for all requested generated command forms, including named, NUM, one-shot, hold, toggle, zero values, special controllers, and explicit/default-channel examples.
-• Source review confirmed:
-   • CC Insert/Test states.
-   • Existing insertion helper reuse.
-   • Both Quick variants wired.
-   • Existing Type/NUM UI layout left unchanged.
-   • No parser/runtime code modified.
-
-M. Git diff summary
-
-Task-specific source changes are confined to Main_Screen.swift.
-
-The current working tree also contains a preserved user breakpoint-file modification:
-ESP32BLE.xcodeproj/xcuserdata/rick.xcuserdatad/xcdebugger/Breakpoints_v2.xcbkptlist
-
-No commit or backup was created.
-
-N. Remaining device regression tests
-
-• Command-field insertion at cursor.
-• Button-field insertion at cursor.
-• Replacement of selected text.
-• Repeated CC insertion while selector remains open.
-• Both expanded and compact Quick presentation variants.
-• Named and NUM command text in the actual editor.
-• Default/non-default channel text.
-• Special-controller one-shot text.
-• Confirm CC Test remains disabled and MIDI Note behavior is unchanged.
+Device verification is still required for:
+												
+												1. Normal Note: velocity on line two and channel on line three.
+											2. Toggle Note: Toggle shares the channel line.
+											3. Explicit MIDI channel display.
+											4. Dedicated Note Off label clarity.
+											5. MIDI CC labels unchanged.
+											6. Explicit custom/right labels unchanged.
+											7. Green active Toggle border and white inactive border unchanged.
+											8. Existing MIDI Note/CC transmission and full Quick panel regression.

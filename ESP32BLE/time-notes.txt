@@ -1,0 +1,29 @@
+compile times
+-------------
+
+GPT
+create codex
+****
+
+copy instructions, start pun
+5s
+
+
+Xcode codex build
+about 3 mins
+
+XCode codex probe
+can be long 20 mins or short 1:04
+
+copy/save codex, run ipad
+about 15s (after restart)
+
+
+xcode to ChatGPT codex
+5s
+
+commit/backup system
+1:00
+- This can be reduced to 10 seconds
+editing the version list, and doing
+a commit while gpt is reading reports

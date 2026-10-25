@@ -1,4 +1,9 @@
 
+261025 Sun 1537
+midi buttons more consistant text
+V65.20
+
+
 261025 Sun 1457
 MIDI: Notes/CC complete
 V65.19
