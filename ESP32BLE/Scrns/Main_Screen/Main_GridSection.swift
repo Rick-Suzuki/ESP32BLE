@@ -458,6 +458,7 @@ struct MainScreenGridSection<ButtonLabel: View>: View {
             }
         } else {
             editingGestures(
+                midiMomentaryButtonStyle(
                 Button {
                     guard longPressedEditIndex != index else {
                         longPressedEditIndex = nil
@@ -478,13 +479,39 @@ struct MainScreenGridSection<ButtonLabel: View>: View {
                 } label: {
                     buttonLabel(entry, index, buttonHeight, buttonSize)
                 }
-                .buttonStyle(.plain)
                 .contentShape(Rectangle()),
+                isEnabled: midiControlChangeOneShot(entry) &&
+                    midiInputEnabled && scenePhase == .active
+                ),
                 entry: entry,
                 index: index,
                 buttonFrame: buttonFrame,
                 gridDimensions: gridDimensions
             )
+        }
+    }
+
+    private func midiControlChangeOneShot(_ entry: FunctionKeyEntry) -> Bool {
+        guard entry.sendTexts.count == 1,
+              let command = MIDIControlChangeParser.parse(entry.sendTexts[0]) else {
+            return false
+        }
+        return command.mode == .oneShot
+    }
+
+    @ViewBuilder
+    private func midiMomentaryButtonStyle<Content: View>(
+        _ content: Content,
+        isEnabled: Bool
+    ) -> some View {
+        if isEnabled {
+            content.buttonStyle(
+                MainGridMIDIMomentaryButtonStyle(
+                    cornerRadius: mainGridButtonCornerRadius
+                )
+            )
+        } else {
+            content.buttonStyle(.plain)
         }
     }
 
@@ -540,6 +567,14 @@ private struct MIDINoteButton<Label: View>: View {
     let onUp: (UUID) -> Void
     let onTogglePress: (MainMIDITouchContext, UUID?) -> Void
     @ViewBuilder let label: () -> Label
+    @State private var isNoteOffPressed = false
+
+    private var usesNoteOffPressFeedback: Bool {
+        if case .noteOff = context.message {
+            return true
+        }
+        return false
+    }
 
     var body: some View {
         ZStack {
@@ -547,6 +582,15 @@ private struct MIDINoteButton<Label: View>: View {
                 .allowsHitTesting(false)
 
             if activeToken != nil {
+                RoundedRectangle(cornerRadius: cornerRadius)
+                    .strokeBorder(
+                        pressedAccentColor,
+                        lineWidth: pressedAccentStrokeWidth
+                    )
+                    .allowsHitTesting(false)
+            }
+
+            if usesNoteOffPressFeedback && isEnabled && isNoteOffPressed {
                 RoundedRectangle(cornerRadius: cornerRadius)
                     .strokeBorder(
                         pressedAccentColor,
@@ -563,7 +607,11 @@ private struct MIDINoteButton<Label: View>: View {
                 isEnabled: isEnabled,
                 onDown: onDown,
                 onUp: onUp,
-                onTogglePress: onTogglePress
+                onTogglePress: onTogglePress,
+                onPressStateChanged: { isPressed in
+                    guard usesNoteOffPressFeedback else { return }
+                    isNoteOffPressed = isPressed
+                }
             )
         }
     }
@@ -578,6 +626,7 @@ private struct MIDITouchView: UIViewRepresentable {
     let onDown: (MainMIDITouchContext) -> UUID?
     let onUp: (UUID) -> Void
     let onTogglePress: (MainMIDITouchContext, UUID?) -> Void
+    let onPressStateChanged: (Bool) -> Void
 
     func makeUIView(context: Context) -> MIDITouchCaptureView {
         MIDITouchCaptureView()
@@ -592,7 +641,8 @@ private struct MIDITouchView: UIViewRepresentable {
             isEnabled: isEnabled,
             onDown: onDown,
             onUp: onUp,
-            onTogglePress: onTogglePress
+            onTogglePress: onTogglePress,
+            onPressStateChanged: onPressStateChanged
         )
     }
 
@@ -711,6 +761,12 @@ private final class MIDITouchCaptureView: UIView {
         return false
     }
 
+    private var reportsNoteOffPressState: Bool {
+        guard let context else { return false }
+        if case .noteOff = context.message { return true }
+        return false
+    }
+
     fileprivate func beginSlideNote() -> UUID? {
         guard isUserInteractionEnabled, let context else { return nil }
         return onDown?(context)
@@ -724,6 +780,7 @@ private final class MIDITouchCaptureView: UIView {
     private var onDown: ((MainMIDITouchContext) -> UUID?)?
     private var onUp: ((UUID) -> Void)?
     private var onTogglePress: ((MainMIDITouchContext, UUID?) -> Void)?
+    private var onPressStateChanged: ((Bool) -> Void)?
     private var activeTouch: UITouch?
     private var activationToken: UUID?
 
@@ -755,7 +812,8 @@ private final class MIDITouchCaptureView: UIView {
         isEnabled: Bool,
         onDown: @escaping (MainMIDITouchContext) -> UUID?,
         onUp: @escaping (UUID) -> Void,
-        onTogglePress: @escaping (MainMIDITouchContext, UUID?) -> Void
+        onTogglePress: @escaping (MainMIDITouchContext, UUID?) -> Void,
+        onPressStateChanged: @escaping (Bool) -> Void
     ) {
         if self.context != context || self.buttonFrame != buttonFrame ||
             self.slideCoordinator !== slideCoordinator || !isEnabled {
@@ -776,6 +834,7 @@ private final class MIDITouchCaptureView: UIView {
         self.onDown = onDown
         self.onUp = onUp
         self.onTogglePress = onTogglePress
+        self.onPressStateChanged = onPressStateChanged
         isUserInteractionEnabled = isEnabled
         isMultipleTouchEnabled = slideEligible
         slideCoordinator.register(self)
@@ -792,6 +851,9 @@ private final class MIDITouchCaptureView: UIView {
 
         guard activeTouch == nil, let touch = touches.first else { return }
         activeTouch = touch
+        if reportsNoteOffPressState {
+            onPressStateChanged?(true)
+        }
         activationToken = onDown?(context)
         if context.mode == .toggle {
             onTogglePress?(context, activationToken)
@@ -826,9 +888,32 @@ private final class MIDITouchCaptureView: UIView {
         let token = activationToken
         activeTouch = nil
         activationToken = nil
+        if reportsNoteOffPressState {
+            onPressStateChanged?(false)
+        }
         if context?.mode == .momentary, let token {
             onUp?(token)
         }
+    }
+}
+
+private struct MainGridMIDIMomentaryButtonStyle: ButtonStyle {
+    private let pressedAccentColor = Color(red: 0, green: 1, blue: 0)
+    private let pressedAccentStrokeWidth: CGFloat = 3
+    let cornerRadius: CGFloat
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .overlay {
+                if configuration.isPressed {
+                    RoundedRectangle(cornerRadius: cornerRadius)
+                        .strokeBorder(
+                            pressedAccentColor,
+                            lineWidth: pressedAccentStrokeWidth
+                        )
+                        .allowsHitTesting(false)
+                }
+            }
     }
 }
 

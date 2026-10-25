@@ -3,7 +3,7 @@ compile times
 
 GPT
 create codex
-****
+1 min about
 
 copy instructions, start pun
 5s

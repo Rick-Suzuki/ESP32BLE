@@ -1,4 +1,15 @@
 
+
+261025 Sun 1614
+midi btns all have green borders when tapped
+V65.21
+
+
+
+
+
+
+
 261025 Sun 1537
 midi buttons more consistant text
 V65.20

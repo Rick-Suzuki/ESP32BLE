@@ -1,105 +1,61 @@
 A. Files modified
 
-• ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift
-• ESP32BLE/Scrns/Main_Screen/Main_ButtonLabelView.swift
+ESP32BLE/Scrns/Main_Screen/Main_GridSection.swift only.
 
-Pre-existing user changes were preserved:
-• ESP32BLE.xcodeproj/project.pbxproj
-• ESP32BLE/codex.txt
-• ESP32BLE/notes.txt
-• ESP32BLE/time-notes.txt
+B. Existing eligibility reused
 
-B. MIDI Note label layout change
+Used the existing MIDI touch eligibility:
 
-Automatic MIDI Note labels now render as:
+midiInputEnabled && scenePhase == .active
 
-C3
-120
-ch 1
+This already covers Main-screen availability, Mac output mode, send eligibility, and macConnection.canSend.
 
-Or, for Toggle:
-				
-				D3
-			120
-			ch 1 · toggle
-			
-			The Note label model now supplies velocity as its value line and combines Toggle into the channel detail line. See Main_ButtonBehavior.swift:189-220.
-			
-			C. Reused existing rendering structure
-			
-			Reused the existing automatic MIDI label value line and CC-style hierarchy:
-				
-				• Note title remains bold.
-			• Velocity uses the existing prominent semibold value styling.
-			• Channel/detail uses the existing smaller channel styling.
-			• Note text retains its existing normal button-text color.
-			• CC retains its existing yellow value-label color and layout.
-			
-			See Main_ButtonLabelView.swift:906-926.
-			
-			D. MIDI Note Off treatment
-			
-			No parser, runtime, or Note Off behavior changed.
-			
-	.midi 60 off remains a dedicated Note Off command. Its automatic label now follows the same three-line Note hierarchy:
-				
-				C3
-			0
-			ch 1
-			
-			The semantic distinction remains in the parser/runtime; no positive-velocity Note On behavior was introduced.
+C. Connection-gated border mechanism
 
-E. MIDI CC preservation
+• CC One-shot applies its Stage 3E.1B green ButtonStyle only while that eligibility is true.
+																	• Note Off displays its transient green overlay only while its existing isEnabled value is true.
+																	
+																	D. Disconnect/mode-change cleanup
+																	
+																	• CC One-shot reverts to its ordinary plain style when eligibility becomes false, removing green immediately.
+																	• Note Off’s overlay condition becomes false immediately; the existing touch-view reconfiguration also cancels the active touch.
+• Existing release, cancellation, drag-out, and view-removal cleanup remain in place.
 
-MIDI CC label content and appearance are unchanged:
+E. Hold/Toggle unchanged
 
-• Controller name
-• Existing CC value text
-• Existing channel/mode detail
-• Existing yellow color path
+No Hold, Toggle, activation-registry, parser, transport, or MIDI send-path code changed.
 
-No CC parser, valueDisplayText, Start/End behavior, or dynamic CC label logic was changed.
+F. Execution unchanged
 
-F. Explicit-label and right-text preservation
+CC One-shot retains its existing Button action timing. Dedicated Note Off retains its existing touch execution and reconciliation. No activation token was added.
 
-Automatic-label eligibility and precedence were not changed. Explicit alternate/right text, symbols, emoji, and custom labels still take precedence exactly as before.
+G. Build result
 
-G. Toggle border confirmation
-
-No border, touch, activation, registry, transmission, or Toggle state code was modified.
-
-The diff contains no changes to:
-• MainMIDIActivationRegistry
-• Main_GridSection.swift
-• MIDI parsers
-• MIDI transport
-• Toggle border colors, widths, corner radii, or active-state handling
-
-H. Build result
-
-Xcode build succeeded.
-
-Both edited files also report no Xcode code issues.
-
-I. Git diff summary
-
-git diff --check passed.
-
-Task-specific changes are limited to:
-• MIDI Note value/detail construction in Main_ButtonBehavior.swift.
-• Existing automatic label rendering expressions in Main_ButtonLabelView.swift.
-
-No commit was created.
-
-J. Remaining device tests
-
-Device verification is still required for:
-												
-												1. Normal Note: velocity on line two and channel on line three.
-											2. Toggle Note: Toggle shares the channel line.
-											3. Explicit MIDI channel display.
-											4. Dedicated Note Off label clarity.
-											5. MIDI CC labels unchanged.
-											6. Explicit custom/right labels unchanged.
-											7. Green active Toggle border and white inactive border unchanged.
-											8. Existing MIDI Note/CC transmission and full Quick panel regression.
+Build succeeded.
+Xcode diagnostics for Main_GridSection.swift: no issues.
+						
+						H. Git diff summary
+						
+						The Stage 3E.1B/3E.1C work remains confined to Main_GridSection.swift. The 3E.1C correction itself is the two eligibility gates.
+						
+						Task-file git diff --check passed.
+						
+						Repository-wide git diff --check still exits nonzero because of pre-existing trailing whitespace in ESP32BLE/codex.txt. That file was not changed.
+						
+						I. Remaining device tests
+						
+						Run the requested connected, disconnected, non-Mac-output, Hold/Toggle, cancellation, and screen-change checks. No device testing was performed here.
+						
+						J. Git status
+						
+						Preserved existing modifications:
+							
+							ESP32BLE.xcodeproj/project.pbxproj
+						ESP32BLE/codex.txt
+						ESP32BLE/time-notes.txt
+						
+						Task modification:
+							
+							ESP32BLE/Scrns/Main_Screen/Main_GridSection.swift
+						
+						No commit or backup created.
