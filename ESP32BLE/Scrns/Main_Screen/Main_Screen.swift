@@ -5298,6 +5298,7 @@ Tapping a row inserts the key code at the cursor.
                         onFileNameSelected: insertSoftEditorFileName,
                         onTimeCommandSelected: insertSoftEditorTimeCommand,
                         onMIDINoteInsert: insertSoftEditorMIDINoteCommand,
+                        onMIDIControlChangeInsert: insertSoftEditorMIDIControlChangeCommand,
                         onClear: clearSmartCommandText,
                         onOpen: { isSoftEditorAccessoryPaletteVisible.toggle() }
                     )
@@ -5325,6 +5326,7 @@ Tapping a row inserts the key code at the cursor.
                         onFileNameSelected: insertSoftEditorFileName,
                         onTimeCommandSelected: insertSoftEditorTimeCommand,
                         onMIDINoteInsert: insertSoftEditorMIDINoteCommand,
+                        onMIDIControlChangeInsert: insertSoftEditorMIDIControlChangeCommand,
                         onClose: { isSoftEditorAccessoryPaletteVisible = false },
                         bottomHeightAdjustment: isPad ? 0 : SoftEditorAccessoryConfiguration.iPhoneToolsHelperBottomHeightAdjustment
                     )
@@ -5352,6 +5354,7 @@ Tapping a row inserts the key code at the cursor.
                     onFileNameSelected: insertSoftEditorFileName,
                     onTimeCommandSelected: insertSoftEditorTimeCommand,
                     onMIDINoteInsert: insertSoftEditorMIDINoteCommand,
+                    onMIDIControlChangeInsert: insertSoftEditorMIDIControlChangeCommand,
                     onClear: clearSmartCommandText,
                     onOpen: { isSoftEditorAccessoryPaletteVisible.toggle() }
                 )
@@ -5371,6 +5374,7 @@ Tapping a row inserts the key code at the cursor.
                         onFileNameSelected: insertSoftEditorFileName,
                         onTimeCommandSelected: insertSoftEditorTimeCommand,
                         onMIDINoteInsert: insertSoftEditorMIDINoteCommand,
+                        onMIDIControlChangeInsert: insertSoftEditorMIDIControlChangeCommand,
                         onClose: { isSoftEditorAccessoryPaletteVisible = false },
                         bottomHeightAdjustment: isPad ? 0 : SoftEditorAccessoryConfiguration.iPhoneToolsHelperBottomHeightAdjustment
                     )
@@ -5487,6 +5491,14 @@ Tapping a row inserts the key code at the cursor.
     }
 
     private func insertSoftEditorMIDINoteCommand(_ command: String) {
+        guard let context = beginSoftEditorFilesMenu() else {
+            return
+        }
+
+        _ = insertSoftEditorFileName(command, context: context)
+    }
+
+    private func insertSoftEditorMIDIControlChangeCommand(_ command: String) {
         guard let context = beginSoftEditorFilesMenu() else {
             return
         }
@@ -6902,6 +6914,7 @@ private struct SoftEditorMIDIControlChangeMenu: View {
 
     let defaultChannel: Int
     let onClose: () -> Void
+    let onInsert: (String) -> Void
     @State private var controller: Int
     @State private var startValue: Int
     @State private var endValue: Int
@@ -6909,12 +6922,17 @@ private struct SoftEditorMIDIControlChangeMenu: View {
     @State private var mode: Mode
     @State private var selectedTypeAbbreviation: String?
 
-    init(defaultChannel: Int, onClose: @escaping () -> Void) {
+    init(
+        defaultChannel: Int,
+        onClose: @escaping () -> Void,
+        onInsert: @escaping (String) -> Void
+    ) {
         let resolvedChannel = MIDIChannelSettings.validRange.contains(defaultChannel)
             ? defaultChannel
             : MIDIChannelSettings.defaultChannel
         self.defaultChannel = resolvedChannel
         self.onClose = onClose
+        self.onInsert = onInsert
         _controller = State(initialValue: 0)
         _startValue = State(initialValue: 127)
         _endValue = State(initialValue: 0)
@@ -6993,7 +7011,7 @@ private struct SoftEditorMIDIControlChangeMenu: View {
                 .padding(.vertical, SoftEditorAccessoryConfiguration.filesMenuContentPadding)
             }
 
-            disabledActionButtons
+            actionButtons
                 .padding(.bottom, 22)
         }
         .padding(.horizontal, SoftEditorAccessoryConfiguration.filesMenuContentPadding)
@@ -7028,6 +7046,39 @@ private struct SoftEditorMIDIControlChangeMenu: View {
 
     private var isEndDisabled: Bool {
         effectiveMode == .one
+    }
+
+    private var midiCommand: String? {
+        guard let commandType,
+              (0...127).contains(startValue),
+              (0...127).contains(endValue),
+              MIDIChannelSettings.validRange.contains(channel) else {
+            return nil
+        }
+
+        var components = [".cc", commandType, "\(startValue)"]
+        switch effectiveMode {
+        case .one:
+            if channel != defaultChannel {
+                components.append("\(channel)")
+            }
+        case .hold, .toggle:
+            components.append("\(endValue)")
+            if channel != defaultChannel {
+                components.append("\(channel)")
+            }
+            components.append(effectiveMode == .hold ? "hold" : "toggle")
+        }
+        return components.joined(separator: " ")
+    }
+
+    private var commandType: String? {
+        if let selectedTypeAbbreviation {
+            return MIDIControlChangeCommand.controllerNumbersByAbbreviation[selectedTypeAbbreviation] == nil
+                ? nil
+                : selectedTypeAbbreviation
+        }
+        return (0...127).contains(controller) ? "\(controller)" : nil
     }
 
     @ViewBuilder
@@ -7101,7 +7152,7 @@ private struct SoftEditorMIDIControlChangeMenu: View {
         controller = Int(number)
     }
 
-    private var disabledActionButtons: some View {
+    private var actionButtons: some View {
         HStack(spacing: 8) {
             Button {} label: {
                 Text("test")
@@ -7111,13 +7162,17 @@ private struct SoftEditorMIDIControlChangeMenu: View {
             }
                 .disabled(true)
                 .frame(maxWidth: .infinity)
-            Button {} label: {
+            Button {
+                if let midiCommand {
+                    onInsert(midiCommand)
+                }
+            } label: {
                 Text("insert")
                     .lineLimit(1)
                     .fixedSize(horizontal: true, vertical: false)
                     .frame(maxWidth: .infinity)
             }
-                .disabled(true)
+                .disabled(midiCommand == nil)
                 .frame(maxWidth: .infinity)
         }
         .frame(maxWidth: .infinity, alignment: .center)
@@ -7142,6 +7197,7 @@ private struct SoftEditorAccessoryBar: View {
     let onFileNameSelected: (String, SoftEditorAccessoryInsertionContext) -> Bool
     let onTimeCommandSelected: (String, SoftEditorAccessoryInsertionContext) -> Bool
     let onMIDINoteInsert: (String) -> Void
+    let onMIDIControlChangeInsert: (String) -> Void
     let onClear: () -> Void
     let onOpen: () -> Void
     @State private var filesInsertionContext: SoftEditorAccessoryInsertionContext?
@@ -7265,9 +7321,11 @@ private struct SoftEditorAccessoryBar: View {
             .frame(width: filesPanelWidth, height: SoftEditorAccessoryConfiguration.filesMenuHeight)
             .zIndex(500)
         case .controlChange:
-            SoftEditorMIDIControlChangeMenu(defaultChannel: defaultMIDIChannel) {
-                midiSelector = nil
-            }
+            SoftEditorMIDIControlChangeMenu(
+                defaultChannel: defaultMIDIChannel,
+                onClose: { midiSelector = nil },
+                onInsert: onMIDIControlChangeInsert
+            )
             .frame(width: filesPanelWidth, height: SoftEditorAccessoryConfiguration.filesMenuHeight)
             .zIndex(500)
         case nil:
@@ -7338,6 +7396,7 @@ private struct SoftEditorAccessoryPalette: View {
     let onFileNameSelected: (String, SoftEditorAccessoryInsertionContext) -> Bool
     let onTimeCommandSelected: (String, SoftEditorAccessoryInsertionContext) -> Bool
     let onMIDINoteInsert: (String) -> Void
+    let onMIDIControlChangeInsert: (String) -> Void
     let onClose: () -> Void
     let bottomHeightAdjustment: CGFloat
     // MARK: - BM:🅱️ add your comments here
@@ -7464,9 +7523,11 @@ private struct SoftEditorAccessoryPalette: View {
             )
             .zIndex(500)
         case .controlChange:
-            SoftEditorMIDIControlChangeMenu(defaultChannel: defaultMIDIChannel) {
-                midiSelector = nil
-            }
+            SoftEditorMIDIControlChangeMenu(
+                defaultChannel: defaultMIDIChannel,
+                onClose: { midiSelector = nil },
+                onInsert: onMIDIControlChangeInsert
+            )
             .frame(
                 maxWidth: .infinity,
                 minHeight: SoftEditorAccessoryConfiguration.filesMenuHeight,

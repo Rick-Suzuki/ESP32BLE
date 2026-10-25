@@ -1,106 +1,154 @@
-Automated visual verification is unavailable here because no supported Simulator 27.0+ target is installed. The build and source checks passed; visual confirmation of the expanded Type row remains for a device or supported simulator.A. Files modified
+A. Exact files changed
 
 ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
 
-No parser, runtime, shared selector, or Quick-panel infrastructure files were changed.
+No parser, MIDI runtime, activation registry, shared insertion helper, or selector-component files were changed.
 
-B. Type label removal
+B. Named Type command generation
 
-The Type row no longer uses SoftEditorMIDILabelledControl.
+Named selections generate the stored Stage 3A abbreviation, never the display name or controller number.
 
-The visible type label and its reserved label width were removed.
-
-Location:
-ESP32BLE/Scrns/Main_Screen/Main_Screen.swift:6942
-
-C. Full-width Type row implementation
-
-The Type selector now sits directly in the CC selector VStack and uses the full available content-row width inside existing panel margins.
+Examples generated:
+.cc vol 127
+.cc sus 0
+.cc sndoff 0
 
 Location:
-ESP32BLE/Scrns/Main_Screen/Main_Screen.swift:7034-7054
+ESP32BLE/Scrns/Main_Screen/Main_Screen.swift:7075-7083
 
-No spacer, invisible label, fixed label-width placeholder, or panel-size change was added.
+C. NUM command generation
 
-D. Closed selector abbreviation display
+NUM selection generates the selected numeric controller only.
 
-Closed named selection now shows the approved abbreviation:
+Examples generated:
+.cc 7 127
+.cc 120 0
+.cc 127 127
 
-• Channel Volume displays vol.
-• Breath Controller displays breath.
-• Sustain Pedal displays sus.
-• All Sound Off displays sndoff.
-• All Notes Off displays alloff.
+The literal word NUM is never generated.
 
-Location:
-ESP32BLE/Scrns/Main_Screen/Main_Screen.swift:7087-7094
+D. One-shot generation
 
-The existing Stage 3A abbreviation mapping remains the source of controller numbers.
+Effective one mode generates:
 
-E. Full-name dropdown preservation
+.cc <type> <start> [channel]
 
-The open Type menu still displays the full descriptive names, alphabetically, with no CC numbers beside named entries.
-
-NUM remains the final menu item.
+• End is omitted.
+• No mode suffix is appended.
+• Configured-default channel is omitted.
 
 Location:
-ESP32BLE/Scrns/Main_Screen/Main_Screen.swift:7057-7073
+ESP32BLE/Scrns/Main_Screen/Main_Screen.swift:7051-7073
 
-F. NUM numeric display correction
+E. Hold generation
 
-NUM mode now uses two side-by-side Menus in the full-width Type row:
+Hold mode generates:
 
-• Flexible NUM selector, retaining space for the numeric Menu.
-• Intrinsic-width numeric selector, ensuring 0, 64, 100, and 127 remain fully visible with their dropdown indicator.
+.cc <type> <start> <end> [channel] hold
+
+Zero Start and End values are preserved.
+
+F. Toggle generation
+
+Toggle mode generates:
+
+.cc <type> <start> <end> [channel] toggle
+
+The UI label remains tog; generated syntax uses the required full word toggle.
+
+G. Default/explicit channel handling
+
+The generated command compares the selected channel with the configured default channel.
+
+• Equal: channel omitted.
+• Different: explicit channel added in the parser-required position.
+
+No channel default was hardcoded.
+
+H. Special-controller handling
+
+Generation uses the existing effectiveMode logic.
+
+Controllers 120, 121, and 123, selected by name or NUM, generate one-shot commands only:
+
+.cc sndoff 0
+.cc reset 0
+.cc alloff 0
+.cc 120 0
+.cc 121 0
+.cc 123 0
+
+Stored Hold/Toggle selection is not reset.
+
+I. CC insertion callback and wiring
+
+Added:
+insertSoftEditorMIDIControlChangeCommand(_:)
 
 Location:
-ESP32BLE/Scrns/Main_Screen/Main_Screen.swift:7035-7051
+ESP32BLE/Scrns/Main_Screen/Main_Screen.swift:5501-5508
 
-No font size, text weight, horizontal scrolling, or permanent extra row was introduced.
+It exactly follows the established MIDI Note pattern:
 
-G. State preservation
+1. Captures the current live context with beginSoftEditorFilesMenu().
+2. Delegates insertion to insertSoftEditorFileName(_:context:).
 
-No CC state ownership or lifecycle changed.
+This preserves Command/Button destination selection, text replacement, cursor position, focus, undo, session validation, and repeated insertion behavior.
 
-The existing selected named abbreviation, NUM controller, Start, End, channel, mode, special-controller logic, and navigation behavior remain local selector state.
+Wired through all four construction paths for both presentation variants:
 
-H. Build result
+• SoftEditorAccessoryBar
+• SoftEditorAccessoryPalette
+• Normal layout
+• Fallback layout
+
+Locations:
+ESP32BLE/Scrns/Main_Screen/Main_Screen.swift:5298-5302, 5325-5330, 5352-5358, 5371-5378, 7197-7329, and 7396-7531.
+
+J. Insert/Test button states
+
+• CC Insert is enabled when the current selector state produces a valid command.
+• CC Test remains disabled.
+• MIDI Note Insert and disabled Test behavior are unchanged.
+
+Location:
+ESP32BLE/Scrns/Main_Screen/Main_Screen.swift:7155-7181
+
+K. Build result
 
 Successful.
 
 The existing Xcode project built successfully with no reported errors.
 
-I. Automated verification
+L. Validation actually performed
 
-• Confirmed the Type row no longer invokes SoftEditorMIDILabelledControl.
-• Confirmed Type uses full-width local layout.
-• Confirmed closed named display returns abbreviation.
-• Confirmed the open named menu still uses full display names.
-• Confirmed NUM remains after all named entries.
-• Confirmed numeric choices remain 0...127.
-• Confirmed End, Channel, Mode, Test, and Insert code was unchanged.
-• git diff --check passed.
 • Full project build passed.
+• git diff --check passed.
+• Focused parser validation passed for all requested generated command forms, including named, NUM, one-shot, hold, toggle, zero values, special controllers, and explicit/default-channel examples.
+• Source review confirmed:
+   • CC Insert/Test states.
+   • Existing insertion helper reuse.
+   • Both Quick variants wired.
+   • Existing Type/NUM UI layout left unchanged.
+   • No parser/runtime code modified.
 
-Visual UI verification could not run because no supported iOS/watchOS/tvOS 27.0+ simulator is available for this workspace. No screenshots or device interaction were performed.
+M. Git diff summary
 
-J. Git diff summary
+Task-specific source changes are confined to Main_Screen.swift.
 
-Task-specific Stage 3C.1 diff:
-
-ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
-21 additions, 13 deletions.
-
-The diff is limited to the Type row’s local layout and display helpers.
+The current working tree also contains a preserved user breakpoint-file modification:
+ESP32BLE.xcodeproj/xcuserdata/rick.xcuserdatad/xcdebugger/Breakpoints_v2.xcbkptlist
 
 No commit or backup was created.
 
-K. Device tests still required
+N. Remaining device regression tests
 
-• Named Type abbreviation visibility.
-• Full descriptive-name dropdown contents/order.
-• NUM 0, NUM 100, and NUM 127 visibility.
-• Both Type-row dropdown indicators and interactions.
-• Type-row height/alignment on target devices.
-• Special-controller behavior in named and NUM modes.
-• Confirmation that other CC rows, MIDI Note, and Quick menus remain unchanged.
+• Command-field insertion at cursor.
+• Button-field insertion at cursor.
+• Replacement of selected text.
+• Repeated CC insertion while selector remains open.
+• Both expanded and compact Quick presentation variants.
+• Named and NUM command text in the actual editor.
+• Default/non-default channel text.
+• Special-controller one-shot text.
+• Confirm CC Test remains disabled and MIDI Note behavior is unchanged.

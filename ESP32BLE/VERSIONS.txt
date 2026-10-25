@@ -1,4 +1,8 @@
 
+261025 Sun 1457
+MIDI: Notes/CC complete
+V65.19
+
 261025 Sun 1416
 Stage 3C - CC layout OK
 V65.18
