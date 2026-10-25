@@ -25,6 +25,7 @@ struct MainMIDITouchContext: Equatable {
     let connectionSession: UUID
     enum Message: Equatable {
         case note(number: UInt8, velocity: UInt8, mode: MIDINoteMode)
+        case noteOff(number: UInt8)
         case controlChangeHold(controller: UInt8, value: UInt8)
         case controlChangeToggle(controller: UInt8, value: UInt8)
     }
@@ -41,6 +42,8 @@ struct MainMIDITouchContext: Equatable {
     var releaseCommand: String {
         switch message {
         case .note(let note, _, _):
+            return "MIDI:NOTE_OFF:\(note):\(channel)"
+        case .noteOff(let note):
             return "MIDI:NOTE_OFF:\(note):\(channel)"
         case .controlChangeHold(let controller, _), .controlChangeToggle(let controller, _):
             return "MIDI:CC:\(controller):0:\(channel)"
@@ -68,6 +71,12 @@ final class MainMIDIActivationRegistry {
             guard case .note(let note, _, _) = context.message else { return nil }
             connectionSession = context.connectionSession
             channel = context.channel
+            self.note = note
+        }
+
+        init(connectionSession: UUID, channel: UInt8, note: UInt8) {
+            self.connectionSession = connectionSession
+            self.channel = channel
             self.note = note
         }
     }
@@ -133,6 +142,17 @@ final class MainMIDIActivationRegistry {
             return
         }
         sendOff(activation)
+    }
+
+    func reconcileExplicitNoteOff(_ identity: MIDINoteIdentity, connectionSession: UUID) {
+        let soundingNote = SoundingNote(
+            connectionSession: connectionSession,
+            channel: identity.channel,
+            note: identity.note
+        )
+        activations = activations.filter { _, activation in
+            SoundingNote(activation) != soundingNote
+        }
     }
 
     func reset(connectionSession: UUID, sendOff: (MainMIDITouchContext) -> Void) {
@@ -812,14 +832,14 @@ extension MainScreen {
         )
     }
 
-    func sendMIDINoteOffFromTouch(_ identity: MIDINoteIdentity) {
+    func sendMIDINoteOffFromTouch(_ identity: MIDINoteIdentity) -> Bool {
         guard identity.note <= 127,
               MIDIChannelSettings.validRange.contains(Int(identity.channel)),
               macConnection.canSend else {
-            return
+            return false
         }
 
-        _ = macConnection.sendAuthenticatedCommand(
+        return macConnection.sendAuthenticatedCommand(
             "MIDI:NOTE_OFF:\(identity.note):\(identity.channel)"
         )
     }

@@ -3,11 +3,31 @@ enum MIDINoteMode: String {
     case toggle
 }
 
+enum MIDINoteCommandKind {
+    case on
+    case off
+}
+
 struct MIDICommand {
     let note: UInt8
     let velocity: UInt8
     let channelOverride: UInt8?
     let mode: MIDINoteMode
+    let kind: MIDINoteCommandKind
+
+    init(
+        note: UInt8,
+        velocity: UInt8,
+        channelOverride: UInt8?,
+        mode: MIDINoteMode,
+        kind: MIDINoteCommandKind = .on
+    ) {
+        self.note = note
+        self.velocity = velocity
+        self.channelOverride = channelOverride
+        self.mode = mode
+        self.kind = kind
+    }
 
     var noteDisplayName: String {
         let pitchClasses = [
@@ -68,14 +88,25 @@ enum MIDICommandParser {
         }
 
         let velocity: UInt8
+        let kind: MIDINoteCommandKind
         if components.count >= 3 {
-            guard let parsedVelocity = UInt8(components[2]),
-                  (1...127).contains(parsedVelocity) else {
-                return nil
+            if components[2].lowercased() == "off" {
+                guard mode == .momentary else {
+                    return nil
+                }
+                velocity = 0
+                kind = .off
+            } else {
+                guard let parsedVelocity = UInt8(components[2]),
+                      (1...127).contains(parsedVelocity) else {
+                    return nil
+                }
+                velocity = parsedVelocity
+                kind = .on
             }
-            velocity = parsedVelocity
         } else {
             velocity = 127
+            kind = .on
         }
 
         let channelOverride: UInt8?
@@ -93,7 +124,8 @@ enum MIDICommandParser {
             note: note,
             velocity: velocity,
             channelOverride: channelOverride,
-            mode: mode
+            mode: mode,
+            kind: kind
         )
     }
 

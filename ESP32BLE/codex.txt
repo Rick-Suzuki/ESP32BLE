@@ -1,185 +1,128 @@
-The double-line ownership is source-grounded: the Quick palette has its own one-point white outer overlay, while the newly fitting MIDI panel has a separate one-point white overlay inset by the palette’s 8-point horizontal padding. The responsive correction exposed both instead of letting the MIDI overlay be clipped.A. Current source locations
+A. Files modified
 
-File inspected:
-ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
+• ESP32BLE/Scrns/MIDI/MIDICommandParser.swift
+• ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift
+• ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
 
-• Responsive MIDI layout constants/calculation: lines 6469–6482
-• Shared labelled-control helper: lines 6484–6510
-• Shared Menu label: lines 6512–6526
-• Numeric selector: lines 6528–6591
-• MIDI Note GeometryReader/root/border/buttons: lines 6593–6749
-• MIDI CC GeometryReader/root/Mode/border/buttons: lines 6752–6932
-• Quick palette root/background/border/padding: lines 7129–7243
-• MIDI presentation routing: lines 7245–7275
-• Primary palette frame/clipping: lines 5293–5311
-• Files panel: lines 7433 onward
-• Time panel: lines 7277 onward
+No MIDI CC files were modified. No commit created.
 
-B. Ownership of the two visible left borders
+B. Parser changes
 
-VERIFIED FROM SOURCE
+MIDICommandParser now supports:
 
-The outer Quick palette owns one border:
-• Palette horizontal padding: line 7233, 8 points per side.
-• Palette background: line 7235.
-• Palette white one-point overlay: lines 7236–7242.
+• .midi 60 off
+• .midi 60 off 4
+• Numeric and pitch note syntax use the existing note parser.
+• Omitted channel remains the configured default.
+• Explicit channels remain limited to 1...16.
 
-Each MIDI panel owns a second border:
-• MIDI Note root padding/background/white one-point overlay: lines 6703–6712.
-• MIDI CC root padding/background/white one-point overlay: lines 6868–6877.
+Implementation:
 
-The MIDI selector is a child of the palette’s ZStack and is now constrained to the palette’s padded content width:
-• MIDI presentation: lines 7248–7269.
-• The palette’s 8-point padding places the MIDI panel border inside the palette border.
+• Added explicit MIDINoteCommandKind (on / off) and a defaulted kind initializer parameter, preserving existing parser consumer construction compatibility: MIDICommandParser.swift lines 6-30.
+• Recognizes off only in the velocity position: lines 90-110.
+• Rejects off with toggle: lines 93-96.
+• Existing positive-velocity syntax, default velocity 127, and Note On toggle parsing remain unchanged: lines 76-130.
 
-This produces:
-• Outer palette border at the visible palette edge.
-• MIDI panel border approximately 8 points inward.
+Statically verified invalid forms are rejected by the parser structure:
 
-That is the source-backed explanation for the two vertical white lines.
+• .midi 128 off
+• .midi 60 off 0
+• .midi 60 off 17
+• .midi 60 off toggle
+• .midi 60 off 4 toggle
+• .midi 60 off 4 extra
 
-C. Current responsive-width calculation
+C. Runtime Note Off execution changes
 
-VERIFIED FROM SOURCE
+• Added an explicit .noteOff(number:) touch message.
+• Parsed off commands become that message rather than a velocity-zero Note On: Main_Screen.swift lines 1475-1479.
+• On touch-down, explicit Note Off:
+   • calls the existing sendMIDINoteOffFromTouch transport helper;
+   • sends MIDI:NOTE_OFF:<note>:<channel>;
+   • returns no activation token, so it never sends Note On or creates a new owner.
 
-The GeometryReader is at:
-• Note: lines 6621–6625.
-• CC: lines 6782–6786.
+Relevant code: Main_Screen.swift lines 1529-1546.
 
-It supplies proxy.size.width to:
+• The existing Note Off helper now returns the transport success result while continuing to use the same Mac helper path: Main_ButtonBehavior.swift around lines 832-844.
 
-panel width
-minus 24 points of MIDI root padding
-minus 68-point label column
-minus 8-point label/control gap
-capped at 140 points.
+D. Registry reconciliation behavior
 
-Source:
-• Formula: lines 6475–6480.
-• Root padding: Note line 6703; CC line 6868.
-• Palette padding: line 7233.
+Added targeted reconcileExplicitNoteOff:
 
-The MIDI GeometryReader receives the width offered by the selector presentation frame, which is inside the palette’s 8-point horizontal padding. Root padding is subtracted once in the calculation and then applied once by the selector root.
+• Matches only the active note’s connection session, MIDI channel, and note number.
+• Removes all matching active ownership tokens.
+• Leaves other notes, channels, and connections intact.
+• Prevents a later hold release from issuing a second Note Off for the already explicitly stopped note.
+• Allows a subsequent Note On to proceed normally because stale ownership no longer suppresses it.
 
-There is no source evidence that the 24-point root padding is double-counted.
+Relevant code: Main_ButtonBehavior.swift lines 65-81 and 147-156.
 
-D. Horizontal allocation and recoverable width
+Existing positive-velocity hold/toggle mechanics were not changed.
 
-VERIFIED FROM SOURCE
+E. Soft Editor command generation change
 
-Current allocation before the control column:
-• Root left/right padding: 24 points.
-• Label column: 68 points.
-• Gap: 8 points.
-• Total reserved: 100 points.
+In SoftEditorMIDINoteMenu:
 
-Control width:
-panel width minus 100, capped at 140.
+• Velocity 0 now generates:
+   • .midi 60 off
+   • .midi 60 off 4
+• The Toggle checkbox is ignored for velocity 0 text generation, but its visible/state value is unchanged.
+• Positive velocities retain the prior format and toggle behavior.
 
-At any offered panel width below 220 points, the current layout gives the control column less than 120 points.
+Relevant code: Main_Screen.swift lines 6793 onward.
 
-The Mode control is:
-min(120, controlWidth)
-at lines 6851–6857.
+The preset arrays remain unchanged:
 
-Therefore, when the offered width is below 220 points, Toggle/Hold must receive less than its previously approved 120 points.
+[0, 16, 32, 48, 64, 80, 96, 112, 127]
 
-Recoverable width:
-• Reducing the 8-point gap can recover at most 4 points without materially changing the compact layout.
-• The 68-point label column is the largest recoverable reservation.
-• The longest current white labels are “cc type” and “toggle”; source does not specify a font size or text metrics, so their exact safe minimum width cannot be proven from source alone.
-• There is no fixed width in the numeric controls beyond the shared responsive Menu label.
+F. Build and verification results
 
-E. Channel truncation
+• Xcode file diagnostics: no issues in all three modified files.
+• Full Xcode build: succeeded.
+• git diff --check: passed.
+• An in-context parser snippet was attempted but timed out before producing output, so it is not counted as runtime verification.
+• No device testing was performed.
 
-VERIFIED FROM SOURCE
+G. Existing behavior preserved
 
-Channel values use:
-• a shared Menu label with a fixed responsive frame: lines 6512–6524.
-• a one-line Text plus a chevron and 4-point internal gap: lines 6517–6521.
-• the current calculated control width: Note line 6679; CC line 6835.
+• Existing .midi <note>, positive velocity, optional channel, and toggle forms remain supported.
+• Existing Note On transport and momentary/toggle lifecycle remain unchanged.
+• MIDI CC parser, runtime behavior, selector state/layout, and disabled buttons remain unchanged.
+• Existing Quick insertion callback and insertion-context validation were not modified.
+• Files, Time/City, Wait, More, Command/Button cursor handling, Clear, Back Delete, and navigation were not modified.
 
-The channel Text itself uses lineLimit(1), so when its available area is too narrow after the chevron and Menu rendering, SwiftUI truncates it to default....
+H. Limitations / concerns
 
-LIKELY BUT UNCONFIRMED
+• Device verification is still needed for actual Mac-helper delivery of MIDI:NOTE_OFF.
+• New explicit Note Off grid labels may display the Note command’s stored velocity value of 0 in existing automatic MIDI label UI; this does not affect transmission or lifecycle behavior.
+• No BLE MIDI output was introduced; the existing Mac-output requirements remain enforced.
 
-The actual device control width is below the practical width needed for default (16) plus the chevron. Source cannot quantify native Menu label insets or rendered text width.
+I. Git diff summary
 
-F. Toggle/Hold truncation
+Current uncommitted files include preserved user changes:
 
-VERIFIED FROM SOURCE
+• ESP32BLE.xcodeproj/xcuserdata/rick.xcuserdatad/xcdebugger/Breakpoints_v2.xcbkptlist
+• ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
+• ESP32BLE/codex.txt
 
-The native segmented Picker is capped at 120 points but shrinks below that when controlWidth is below 120:
-lines 6851–6857.
+This task additionally modifies:
 
-Therefore Tog... directly indicates that the responsive control width is below the practical native segmented-control width.
+• ESP32BLE/Scrns/MIDI/MIDICommandParser.swift
+• ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift
 
-G. Bottom-button wrapping
+Main_Screen.swift already contained uncommitted Stage 2 work; this task added only Note Off execution/generation changes there.
 
-VERIFIED FROM SOURCE
+J. Device regression tests still required
 
-Both action rows use:
-• Button minimum widths of 84 and 64.
-• 12-point inter-button gap.
-• 8-point row padding on each side.
-• Native bordered button styling, which adds internal label padding.
+Please verify on device/Mac helper:
 
-Note: lines 6731–6744.
-CC: lines 6900–6913.
-
-The source-only minimum before native button insets is 176 points:
-84 + 12 + 64 + 16.
-
-When the selector’s inner content width is below the native buttons’ combined preferred width, SwiftUI can wrap button labels despite the minimum frame values. test note is especially susceptible because its text is longer than the nominal 84-point button frame after native button insets.
-
-H. Files and Time comparison
-
-VERIFIED FROM SOURCE
-
-Files and Time have their own panel border overlays, but their presentation frames are explicitly forced to filesPanelWidth:
-• Files: lines 7200–7207.
-• Time: lines 7220–7227.
-
-That lets their panel borders meet or overflow the palette’s padded area, visually merging with or hiding behind the palette border.
-
-MIDI now deliberately accepts the padded available width:
-• Note: lines 7252–7258.
-• CC: lines 7263–7269.
-
-The MIDI panel border is therefore visibly inset from the palette border. This explains why Files/Time show one apparent edge while MIDI now shows two.
-
-I. Recommended smallest coordinated correction
-
-RECOMMENDED
-
-1. Remove only the two MIDI selector panel border overlays.
-   • Keep the existing shared Quick palette border.
-   • The palette border is the outer, visible panel boundary.
-   • This removes the known duplicate inner line without touching shared Quick geometry.
-   • Do not change Files or Time.
-
-2. Reallocate responsive width with priority for the control column.
-   • Keep the 12-point root padding.
-   • Reduce the label/control gap from 8 to 4 only in the MIDI helper.
-   • Make the label column responsive: use up to 68 points when space permits, but allow it to contract before the control column falls below the preferred 120 points.
-   • Use the resulting same control width for every shared Menu label, numeric selector, and Mode row.
-
-3. Preserve the 120-point Mode width whenever the offered panel width allows it.
-   • The responsive label column should yield width to the control column first.
-   • If the panel is genuinely narrower than the combined requirements, the control must shrink rather than overflow.
-
-4. Make action buttons resist wrapping without changing vertical position.
-   • Keep the existing row and bottom placement.
-   • Use one-line labels for only the two disabled MIDI action buttons.
-   • Reduce row-only horizontal padding and/or the 12-point inter-button gap before changing font size or outer panel geometry.
-
-LIKELY SUFFICIENT FOR THE TESTED DEVICE
-
-Reducing the gap by 4 points and allowing the label column to contract by approximately 10–12 points should restore at least 120 points to the control column while preserving labels such as “cc type” and “toggle” at ordinary text size. Exact text-metric safety is not provable from source.
-
-J. Remaining uncertainty
-
-A new device geometry probe is only needed if the current offered selector width remains below approximately 204 points after the duplicate-border correction. That would leave insufficient space for:
-24 root padding + approximately 56 label width + 4 gap + 120 Mode width.
-
-No files were modified. No build was run.
+• .midi 60 off using configured default channel.
+• .midi 60 off 4 using explicit channel 4.
+• Note 0 and 127 Off commands.
+• Positive Note On followed by explicit Note Off.
+• Toggle On followed by explicit Note Off, then a new Note On.
+• Hold On, explicit Note Off, then physical hold release.
+• Repeated explicit Note Off.
+• Same note on different channels and different notes on one channel.
+• Velocity-zero Soft Editor insertion with Toggle both on and off.
+• Existing Quick panel and MIDI CC regression behavior.
