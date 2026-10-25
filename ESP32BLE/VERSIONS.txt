@@ -1,4 +1,8 @@
 
+261025 Sun 1348
+Stage 3B - cc Layout tested - a few bugs
+V65.17
+
 261025 Sun 1302
 Stage 3A — CC Implementation Codex
 V65.16

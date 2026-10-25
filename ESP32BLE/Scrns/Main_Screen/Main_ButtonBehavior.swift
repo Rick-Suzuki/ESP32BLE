@@ -26,8 +26,8 @@ struct MainMIDITouchContext: Equatable {
     enum Message: Equatable {
         case note(number: UInt8, velocity: UInt8, mode: MIDINoteMode)
         case noteOff(number: UInt8)
-        case controlChangeHold(controller: UInt8, value: UInt8)
-        case controlChangeToggle(controller: UInt8, value: UInt8)
+        case controlChangeHold(controller: UInt8, value: UInt8, endValue: UInt8)
+        case controlChangeToggle(controller: UInt8, value: UInt8, endValue: UInt8)
     }
 
     let message: Message
@@ -45,8 +45,8 @@ struct MainMIDITouchContext: Equatable {
             return "MIDI:NOTE_OFF:\(note):\(channel)"
         case .noteOff(let note):
             return "MIDI:NOTE_OFF:\(note):\(channel)"
-        case .controlChangeHold(let controller, _), .controlChangeToggle(let controller, _):
-            return "MIDI:CC:\(controller):0:\(channel)"
+        case .controlChangeHold(let controller, _, let endValue), .controlChangeToggle(let controller, _, let endValue):
+            return "MIDI:CC:\(controller):\(endValue):\(channel)"
         }
     }
 }

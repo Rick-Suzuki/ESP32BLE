@@ -1,125 +1,132 @@
-A. Files modified
+A. Files changed
 
-ESP32BLE/Scrns/MIDI/MIDIControlChangeParser.swift
+ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
 
-No UI, Quick panel, MIDI Note, MIDI transmission, activation, or preset-array files were changed.
+No parser or runtime files were changed for Stage 3C.
 
-Pre-existing user change preserved:
+Pre-existing uncommitted changes were preserved in:
+
+ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift
 ESP32BLE/codex.txt
+ESP32BLE.xcodeproj/xcuserdata/rick.xcuserdatad/xcdebugger/Breakpoints_v2.xcbkptlist
 
-B. Name-to-number mapping implementation
+B. Named Type selector implementation
 
-Added one reusable mapping:
+Replaced the numeric 0...127 Type menu with 51 named controller choices.
+
+Location:
+ESP32BLE/Scrns/Main_Screen/Main_Screen.swift:6826-6905
+
+• Display names are exactly the approved names.
+• Names are sorted alphabetically at construction.
+• Named menu entries display no CC numbers.
+• NUM is the final menu entry.
+
+C. Controller mapping reuse
+
+The selector uses:
 MIDIControlChangeCommand.controllerNumbersByAbbreviation
-at ESP32BLE/Scrns/MIDI/MIDIControlChangeParser.swift:44-96.
 
-• Supports all supplied lowercase abbreviations.
-• Named commands are case-insensitive.
-• Numeric controllers remain supported from 0...127.
-• No unapproved aliases were added.
-• NUM is not recognized.
-• The supplied list contains 51 entries, despite the request referring to 50; all 51 supplied entries were implemented.
+It does not duplicate controller-number mappings. The local UI mapping supplies only abbreviation-to-display-name text.
 
-C. New parser grammar
+No parser behavior changed.
 
-Implemented at ESP32BLE/Scrns/MIDI/MIDIControlChangeParser.swift:145-203.
+D. NUM selection implementation
 
-One-shot:
-.cc <type> <start> [channel]
+NUM is a UI-only Type option.
 
-Hold:
-.cc <type> <start> <end> [channel] hold
+When selected, the existing Type row shows:
 
-Toggle:
-.cc <type> <start> <end> [channel] toggle
+• A NUM menu for returning to named Types.
+• A compact numeric CC menu containing 0...127.
 
-• Start and End accept 0...127.
-• Optional channel accepts 1...16.
-• Omitted channel remains nil for existing configured-default resolution.
-• A final hold or toggle determines the positional grammar.
-• Unexpected argument counts are rejected.
+Location:
+ESP32BLE/Scrns/Main_Screen/Main_Screen.swift:7035-7082
 
-D. Parsed command model changes
+The numeric selection remains stored locally and does not reset Start, End, Channel, or Mode.
 
-MIDIControlChangeCommand now stores:
+E. Three-way mode selector changes
 
-• controller
-• startValue
-• endValue
-• channelOverride
-• mode
+Mode now contains:
 
-Locations:
-ESP32BLE/Scrns/MIDI/MIDIControlChangeParser.swift:7-42.
+one | hold | tog
 
-The existing value accessor remains as a compatibility alias for startValue. Existing runtime consumers therefore retain their current Start-value behavior without source changes.
+Location:
+ESP32BLE/Scrns/Main_Screen/Main_Screen.swift:6827-6830 and 6982-6992.
 
-One-shot commands receive endValue = 0.
-Legacy hold/toggle forms under the new grammar parse their positional End value.
+• Default is one.
+• one, hold, tog appear in the required order.
+• The former visible mode label was removed.
+• The prior two-way toggle/hold control was replaced.
 
-E. Legacy interpretation changes
+F. Full-width layout confirmation
 
-Implemented as approved.
+The segmented Picker is no longer inside SoftEditorMIDILabelledControl and has:
 
-Example:
-.cc 7 127 6 hold
+.frame(maxWidth: .infinity)
 
-Now parses as:
+Location:
+ESP32BLE/Scrns/Main_Screen/Main_Screen.swift:6982-6992.
 
-• Controller 7
-• Start 127
-• End 6
-• Default channel
-• Hold
+There is no label, spacer, fixed label-width placeholder, or 120-point mode-width restriction. The control uses the full CC content-row width inside existing outer margins.
 
-No ambiguous legacy-format detection or migration was added.
+G. End disabling and state preservation
 
-F. Parser checks
+End is locally disabled whenever effective mode is one, and locally dimmed/grayscaled without modifying SoftEditorMIDINumericSelector.
 
-Passed in-project parser validation:
+Location:
+ESP32BLE/Scrns/Main_Screen/Main_Screen.swift:6954-6964 and 7027-7031.
 
-• All 51 supplied abbreviations map to their required controller.
-• Numeric controllers 0...127 parse successfully.
-• Named and numeric commands use the same positional grammar.
-• Valid one-shot, hold, and toggle forms parse.
-• Case-insensitive named type and mode parsing works.
-• Requested malformed examples were rejected, including invalid ranges, unknown names, NUM, missing End values for hold/toggle, invalid channels, and extra arguments.
+• Start remains enabled.
+• End remains stored while disabled.
+• Hold/tog restores End selection.
+• Start and End presets remain exactly:
+[0, 16, 32, 48, 64, 80, 96, 112, 127]
 
-Xcode source diagnostics:
-No issues found in MIDIControlChangeParser.swift.
+H. Special-controller behaviour
 
-G. Build result
+Controllers 120, 121, and 123 remain one-shot-only.
+
+Location:
+ESP32BLE/Scrns/Main_Screen/Main_Screen.swift:6982 and 7023-7031.
+
+For named selection or NUM selection of 120, 121, or 123:
+
+• The mode control remains hidden, as before.
+• Effective mode is one.
+• End is disabled.
+• The previously chosen mode remains stored and is restored after selecting a non-special controller.
+
+I. Build result
 
 Successful.
 
 The existing Xcode project built successfully with no reported errors.
 
-H. Runtime compatibility concerns
+J. Automated checks performed
 
-Stage 3B has not been implemented.
+• Verified from source that the named display mapping contains 51 entries.
+• Verified named choices are sorted by display name.
+• Verified NUM appears after the named ForEach.
+• Verified numeric NUM choices remain 0...127.
+• Verified mode order/default, full-width Picker, End disabling, special-controller logic, approved presets, and disabled Test/Insert buttons.
+• git diff --check passed.
+• Full Xcode project build passed.
 
-Current CC runtime still:
+The Xcode snippet runner could not inspect the private selector type directly; source verification and full-project compilation succeeded.
 
-• Sends Start on hold/toggle press.
-• Sends hardcoded value 0 on hold release, toggle-off, and cleanup.
-• Does not use parsed endValue yet.
+K. Git diff summary
 
-This is intentional for Stage 3A. Parser acceptance of arbitrary End values does not mean those values are transmitted yet.
+Stage 3C changes are confined to Main_Screen.swift.
 
-I. Git diff summary
+The current working tree also contains preserved pre-existing user changes listed above. No commit or backup was created.
 
-git diff --check passed.
+L. Device tests still required
 
-Task-specific diff:
-ESP32BLE/Scrns/MIDI/MIDIControlChangeParser.swift
-112 additions, 8 deletions.
-
-No commit was created.
-
-J. Work remaining for Stage 3B
-
-• Carry endValue into CC hold/toggle touch contexts.
-• Replace the current hardcoded CC release value of 0 with stored End.
-• Preserve legacy End=0 behavior.
-• Verify hold release, toggle-off, activation cleanup, and session reset use the selected End value.
-• Do not modify CC UI or insertion until its later approved stage.
+• Named Type menu ordering and labels.
+• NUM Type flow and 0...127 selection.
+• Full-width one/hold/tog visual layout.
+• End disabled/dimmed appearance and interaction.
+• Special controllers 120, 121, and 123 in both named and NUM paths.
+• State preservation through Next/Previous navigation.
+• Confirmation that MIDI Note, Files, Time, and Quick panel behavior remain unchanged.

@@ -1479,8 +1479,16 @@ Tapping a row inserts the key code at the cursor.
             channel = MIDIChannelSettings.resolvedChannel(for: command, defaultChannel: midiDefaultChannel)
         } else if let command = midiControlChangeCommandForGridEntry(entry), command.mode != .oneShot {
             message = command.mode == .hold
-                ? .controlChangeHold(controller: command.controller, value: command.value)
-                : .controlChangeToggle(controller: command.controller, value: command.value)
+                ? .controlChangeHold(
+                    controller: command.controller,
+                    value: command.value,
+                    endValue: command.endValue
+                )
+                : .controlChangeToggle(
+                    controller: command.controller,
+                    value: command.value,
+                    endValue: command.endValue
+                )
             channel = MIDIChannelSettings.resolvedChannel(
                 channelOverride: command.channelOverride, defaultChannel: midiDefaultChannel
             )
@@ -1507,7 +1515,7 @@ Tapping a row inserts the key code at the cursor.
             )
         case .noteOff:
             return false
-        case .controlChangeHold(let controller, let value), .controlChangeToggle(let controller, let value):
+        case .controlChangeHold(let controller, let value, _), .controlChangeToggle(let controller, let value, _):
             guard midiInputEnabled, context.connectionSession == macConnection.midiSessionID else { return false }
             return macConnection.sendAuthenticatedCommand("MIDI:CC:\(controller):\(value):\(context.channel)")
         }
@@ -6817,11 +6825,80 @@ private struct SoftEditorMIDINoteMenu: View {
 
 private struct SoftEditorMIDIControlChangeMenu: View {
     private enum Mode: String, CaseIterable, Identifiable {
-        case toggle = "tog"
+        case one = "one"
         case hold = "hold"
+        case toggle = "tog"
 
         var id: String { rawValue }
     }
+
+    private struct NamedController: Identifiable {
+        let abbreviation: String
+        let displayName: String
+
+        var id: String { abbreviation }
+    }
+
+    private static let namedControllerDisplayNames: [String: String] = [
+        "alloff": "All Notes Off",
+        "sndoff": "All Sound Off",
+        "attack": "Attack Time",
+        "bal": "Balance",
+        "bank": "Bank Select",
+        "breath": "Breath Controller",
+        "bright": "Brightness",
+        "vol": "Channel Volume",
+        "chorus": "Chorus Depth",
+        "dec": "Data Decrement",
+        "data": "Data Entry",
+        "inc": "Data Increment",
+        "decay": "Decay Time",
+        "effect1": "Effect Control 1",
+        "effect2": "Effect Control 2",
+        "expr": "Expression",
+        "foot": "Foot Controller",
+        "gp1": "General Purpose 1",
+        "gp2": "General Purpose 2",
+        "gp3": "General Purpose 3",
+        "gp4": "General Purpose 4",
+        "gp5": "General Purpose 5",
+        "gp6": "General Purpose 6",
+        "gp7": "General Purpose 7",
+        "gp8": "General Purpose 8",
+        "hold2": "Hold 2",
+        "legato": "Legato Footswitch",
+        "local": "Local Control",
+        "mod": "Modulation",
+        "mono": "Mono Mode On",
+        "omnioff": "Omni Mode Off",
+        "omnion": "Omni Mode On",
+        "pan": "Pan",
+        "poly": "Poly Mode On",
+        "portctl": "Portamento Control",
+        "portsw": "Portamento Switch",
+        "porttime": "Portamento Time",
+        "release": "Release Time",
+        "reset": "Reset All Controllers",
+        "reverb": "Reverb Depth",
+        "rpnlsb": "RPN LSB",
+        "rpnmsb": "RPN MSB",
+        "soft": "Soft Pedal",
+        "sostenuto": "Sostenuto",
+        "variation": "Sound Variation",
+        "sus": "Sustain Pedal",
+        "timbre": "Timbre / Harmonic Intensity",
+        "trem": "Tremolo Depth",
+        "vibdelay": "Vibrato Delay",
+        "vibdepth": "Vibrato Depth",
+        "vibrate": "Vibrato Rate"
+    ]
+
+    private static let namedControllers = namedControllerDisplayNames.compactMap { abbreviation, displayName in
+        MIDIControlChangeCommand.controllerNumbersByAbbreviation[abbreviation].map { _ in
+            NamedController(abbreviation: abbreviation, displayName: displayName)
+        }
+    }
+    .sorted { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending }
 
     let defaultChannel: Int
     let onClose: () -> Void
@@ -6830,6 +6907,7 @@ private struct SoftEditorMIDIControlChangeMenu: View {
     @State private var endValue: Int
     @State private var channel: Int
     @State private var mode: Mode
+    @State private var selectedTypeAbbreviation: String?
 
     init(defaultChannel: Int, onClose: @escaping () -> Void) {
         let resolvedChannel = MIDIChannelSettings.validRange.contains(defaultChannel)
@@ -6841,7 +6919,8 @@ private struct SoftEditorMIDIControlChangeMenu: View {
         _startValue = State(initialValue: 127)
         _endValue = State(initialValue: 0)
         _channel = State(initialValue: resolvedChannel)
-        _mode = State(initialValue: .toggle)
+        _mode = State(initialValue: .one)
+        _selectedTypeAbbreviation = State(initialValue: "bank")
     }
 
     var body: some View {
@@ -6861,20 +6940,7 @@ private struct SoftEditorMIDIControlChangeMenu: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
                     SoftEditorMIDILabelledControl(label: "type", dimensions: dimensions) {
-                        Menu {
-                            ForEach(0...127, id: \.self) { number in
-                                Button(controllerTitle(for: number)) {
-                                    controller = number
-                                }
-                            }
-                        } label: {
-                            SoftEditorMIDIMenuLabel(
-                                value: controllerTitle(for: controller),
-                                width: dimensions.controlWidth
-                            )
-                        }
-                        .accessibilityLabel("type")
-                        .accessibilityValue(controllerTitle(for: controller))
+                        typeSelector(dimensions: dimensions)
                     }
 
                     SoftEditorMIDILabelledControl(label: "start", dimensions: dimensions) {
@@ -6891,7 +6957,10 @@ private struct SoftEditorMIDIControlChangeMenu: View {
                             controlWidth: dimensions.controlWidth,
                             presets: [0, 16, 32, 48, 64, 80, 96, 112, 127]
                         )
+                        .disabled(isEndDisabled)
                     }
+                    .grayscale(isEndDisabled ? 1 : 0)
+                    .opacity(isEndDisabled ? 0.45 : 1)
 
                     SoftEditorMIDILabelledControl(label: "ch", dimensions: dimensions) {
                         Menu {
@@ -6910,24 +6979,16 @@ private struct SoftEditorMIDIControlChangeMenu: View {
                         .accessibilityValue(channelTitle(for: channel))
                     }
 
-                    if !isOneShotController {
-                        SoftEditorMIDILabelledControl(label: "mode", dimensions: dimensions) {
-                            Picker("mode", selection: $mode) {
-                                ForEach(Mode.allCases) { option in
-                                    Text(option.rawValue).tag(option)
-                                }
+                    if !isSpecialController {
+                        Picker("mode", selection: $mode) {
+                            ForEach(Mode.allCases) { option in
+                                Text(option.rawValue).tag(option)
                             }
-                            .labelsHidden()
-                            .pickerStyle(.segmented)
-                            .clipShape(.rect(cornerRadius: 6))
-                            .frame(
-                                width: min(
-                                    SoftEditorMIDIControlLayout.preferredModeWidth,
-                                    dimensions.controlWidth
-                                ),
-                                alignment: .leading
-                            )
                         }
+                        .labelsHidden()
+                        .pickerStyle(.segmented)
+                        .clipShape(.rect(cornerRadius: 6))
+                        .frame(maxWidth: .infinity)
                     }
 
                 }
@@ -6959,8 +7020,76 @@ private struct SoftEditorMIDIControlChangeMenu: View {
         }
     }
 
-    private var isOneShotController: Bool {
+    private var isSpecialController: Bool {
         [120, 121, 123].contains(controller)
+    }
+
+    private var effectiveMode: Mode {
+        isSpecialController ? .one : mode
+    }
+
+    private var isEndDisabled: Bool {
+        effectiveMode == .one
+    }
+
+    @ViewBuilder
+    private func typeSelector(dimensions: SoftEditorMIDIControlLayout.Dimensions) -> some View {
+        if selectedTypeAbbreviation == nil {
+            HStack(spacing: 8) {
+                typeMenu(width: min(56, dimensions.controlWidth))
+
+                Menu {
+                    ForEach(0...127, id: \.self) { number in
+                        Button("\(number)") {
+                            controller = number
+                        }
+                    }
+                } label: {
+                    SoftEditorMIDIMenuLabel(
+                        value: "\(controller)",
+                        width: max(0, dimensions.controlWidth - 64)
+                    )
+                }
+                .accessibilityLabel("CC number")
+                .accessibilityValue("\(controller)")
+            }
+        } else {
+            typeMenu(width: dimensions.controlWidth)
+        }
+    }
+
+    private func typeMenu(width: CGFloat) -> some View {
+        Menu {
+            ForEach(Self.namedControllers) { option in
+                Button(option.displayName) {
+                    selectNamedController(option)
+                }
+            }
+
+            Button("NUM") {
+                selectedTypeAbbreviation = nil
+            }
+        } label: {
+            SoftEditorMIDIMenuLabel(value: typeTitle, width: width)
+        }
+        .accessibilityLabel("type")
+        .accessibilityValue(typeTitle)
+    }
+
+    private var typeTitle: String {
+        guard let selectedTypeAbbreviation,
+              let option = Self.namedControllers.first(where: { $0.abbreviation == selectedTypeAbbreviation }) else {
+            return "NUM"
+        }
+        return option.displayName
+    }
+
+    private func selectNamedController(_ option: NamedController) {
+        guard let number = MIDIControlChangeCommand.controllerNumbersByAbbreviation[option.abbreviation] else {
+            return
+        }
+        selectedTypeAbbreviation = option.abbreviation
+        controller = Int(number)
     }
 
     private var disabledActionButtons: some View {
@@ -6987,19 +7116,6 @@ private struct SoftEditorMIDIControlChangeMenu: View {
         .buttonStyle(.bordered)
         .buttonBorderShape(.roundedRectangle(radius: 6))
         .tint(.gray)
-    }
-
-    private func controllerName(for number: Int) -> String {
-        MIDIControlChangeCommand(
-            controller: UInt8(number),
-            value: 0,
-            channelOverride: nil,
-            mode: .oneShot
-        ).controllerDisplayName
-    }
-
-    private func controllerTitle(for number: Int) -> String {
-        "\(number) \(controllerName(for: number))"
     }
 
     private func channelTitle(for item: Int) -> String {
