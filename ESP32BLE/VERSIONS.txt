@@ -1,7 +1,15 @@
 
-261025 Sun 1726
+V65.25_
+midi: completely independent notes
+
+
+
+V65.24_261026 Mon 0930
+Quick flat menu improvements
+
+V65.23_261025 Sun 1726
 disonnected midi now gives warning msg
-V65.23
+
 
 261025 Sun 1640
 midi cc btns toggle/hold state values - ok

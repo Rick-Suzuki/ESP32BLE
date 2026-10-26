@@ -16,8 +16,8 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "6654"
             endingLineNumber = "6654"
-            landmarkName = "init(defaultChannel:onClose:onInsert:)"
-            landmarkType = "7">
+            landmarkName = "SoftEditorMIDILabelledControl"
+            landmarkType = "14">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -32,8 +32,8 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "6694"
             endingLineNumber = "6694"
-            landmarkName = "selectorContent(dimensions:)"
-            landmarkType = "7">
+            landmarkName = "SoftEditorMIDINumericSelector"
+            landmarkType = "14">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -48,8 +48,8 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "6594"
             endingLineNumber = "6594"
-            landmarkName = "body"
-            landmarkType = "24">
+            landmarkName = "SoftEditorMIDISelector"
+            landmarkType = "13">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -64,8 +64,8 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "6595"
             endingLineNumber = "6595"
-            landmarkName = "body"
-            landmarkType = "24">
+            landmarkName = "SoftEditorMIDISelector"
+            landmarkType = "13">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -80,8 +80,8 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "6596"
             endingLineNumber = "6596"
-            landmarkName = "body"
-            landmarkType = "24">
+            landmarkName = "SoftEditorMIDISelector"
+            landmarkType = "13">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -96,8 +96,8 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "6597"
             endingLineNumber = "6597"
-            landmarkName = "body"
-            landmarkType = "24">
+            landmarkName = "SoftEditorMIDISelector"
+            landmarkType = "13">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -112,8 +112,8 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "6598"
             endingLineNumber = "6598"
-            landmarkName = "body"
-            landmarkType = "24">
+            landmarkName = "init?(action:)"
+            landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -128,8 +128,8 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "6599"
             endingLineNumber = "6599"
-            landmarkName = "SoftEditorMIDIMenuLabel"
-            landmarkType = "14">
+            landmarkName = "init?(action:)"
+            landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -384,7 +384,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "5392"
             endingLineNumber = "5392"
-            landmarkName = "performSoftEditorAccessoryAction(_:)"
+            landmarkName = "softEditorAccessoryOverlay(anchors:)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -400,7 +400,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "5393"
             endingLineNumber = "5393"
-            landmarkName = "performSoftEditorAccessoryAction(_:)"
+            landmarkName = "softEditorAccessoryOverlay(anchors:)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -416,7 +416,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "5394"
             endingLineNumber = "5394"
-            landmarkName = "performSoftEditorAccessoryAction(_:)"
+            landmarkName = "softEditorAccessoryOverlay(anchors:)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -432,7 +432,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "5395"
             endingLineNumber = "5395"
-            landmarkName = "performSoftEditorAccessoryAction(_:)"
+            landmarkName = "softEditorAccessoryOverlay(anchors:)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -448,7 +448,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "5396"
             endingLineNumber = "5396"
-            landmarkName = "performSoftEditorAccessoryAction(_:)"
+            landmarkName = "softEditorAccessoryOverlay(anchors:)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -464,7 +464,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "5397"
             endingLineNumber = "5397"
-            landmarkName = "performSoftEditorAccessoryAction(_:)"
+            landmarkName = "softEditorAccessoryOverlay(anchors:)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -480,7 +480,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "5398"
             endingLineNumber = "5398"
-            landmarkName = "performSoftEditorAccessoryAction(_:)"
+            landmarkName = "softEditorAccessoryOverlay(anchors:)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -496,7 +496,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "5399"
             endingLineNumber = "5399"
-            landmarkName = "performSoftEditorAccessoryAction(_:)"
+            landmarkName = "softEditorAccessoryOverlay(anchors:)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -512,7 +512,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "5400"
             endingLineNumber = "5400"
-            landmarkName = "performSoftEditorAccessoryAction(_:)"
+            landmarkName = "softEditorAccessoryOverlay(anchors:)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -528,7 +528,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "5401"
             endingLineNumber = "5401"
-            landmarkName = "performSoftEditorAccessoryAction(_:)"
+            landmarkName = "softEditorAccessoryOverlay(anchors:)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -544,7 +544,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "5402"
             endingLineNumber = "5402"
-            landmarkName = "performSoftEditorAccessoryAction(_:)"
+            landmarkName = "softEditorAccessoryOverlay(anchors:)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -560,7 +560,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "5403"
             endingLineNumber = "5403"
-            landmarkName = "performSoftEditorAccessoryAction(_:)"
+            landmarkName = "softEditorAccessoryOverlay(anchors:)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -576,7 +576,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "5404"
             endingLineNumber = "5404"
-            landmarkName = "performSoftEditorAccessoryAction(_:)"
+            landmarkName = "softEditorAccessoryOverlay(anchors:)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -592,7 +592,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "5405"
             endingLineNumber = "5405"
-            landmarkName = "performSoftEditorAccessoryAction(_:)"
+            landmarkName = "softEditorAccessoryOverlay(anchors:)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -608,7 +608,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "5406"
             endingLineNumber = "5406"
-            landmarkName = "performSoftEditorAccessoryAction(_:)"
+            landmarkName = "softEditorAccessoryOverlay(anchors:)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>

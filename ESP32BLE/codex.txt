@@ -1,101 +1,314 @@
-A. Git status before changes
+A. Current Quick menu structure
 
-• Pre-existing user change preserved: ESP32BLE/codex.txt
-• No source changes were present before this task.
+CONFIRMED FROM SOURCE
 
-B. Files modified
+The active Quick menu is SoftEditorAccessoryPalette in:
 
-• ESP32BLE/Scrns/Main_Screen/Main_Screen.swift􀰓
-• ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift􀰓
-• ESP32BLE/Scrns/Main_Screen/Main_GridSection.swift􀰓
+ESP32BLE/Scrns/Main_Screen/Main_Screen.swift􀰓
 
-C. Existing popup reused
+Its current top-level order comes from:
 
-• Reused alertTitle, renameAlertMessage, popupOverlay, and its existing one-second dismissal.
-• No alert, timer, overlay, or warning state was added.
+SoftEditorAccessoryConfiguration.permanentOrder
+at lines 6412-6426:
 
-D. MIDI warning helper and message
+1. MIDI Note
+2. MIDI CC
+3. Time
+4. Files
+5. Wait
+6. More
 
-• Added showMIDIOutputUnavailableWarning() at Main_Screen.swift􀰓.
-• Exact title: MIDI output unavailable
-• Exact message:
-Select Mac output and connect to ESP Mac Helper
-before sending MIDI commands.
+The palette renders those entries in a vertical ScrollView at lines 7473-7503.
 
-E. CC One-shot warning trigger
+The separate SoftEditorAccessoryBar has an expanded horizontal layout at lines 7248-7318, but softEditorAccessoryOverlay currently sets:
 
-• Updated the existing valid One-shot CC branch at Main_ButtonBehavior.swift􀰓.
-• When Mac output is not selected or macConnection.canSend is false, it shows the shared MIDI warning and returns before sending.
-• Valid connected CC One-shot payload construction and send timing are unchanged.
+let expanded = false
 
-F. MIDI touch-capture warning trigger
+at line 5334. Therefore the compact Quick launcher plus palette is the active path on both iPad and iPhone.
 
-• Passed a narrow unavailable-output callback through MainScreenGridSection at:
-• Main_Screen.swift􀰓
-• Main_GridSection.swift􀰓
-• MIDI Note, Toggle, Note Off, CC Hold, and CC Toggle now accept only an initial unavailable press to request the popup.
-• The callback is invoked only from touchesBegan at Main_GridSection.swift􀰓.
+B. Top-level state and dispatch
 
-G. Unavailable touches remain send-disabled
+CONFIRMED FROM SOURCE
 
-• Touch recognition and MIDI activation are now separate:
-• isMIDIActivationEnabled remains false when MIDI output is unavailable.
-• No activation token is created.
-• No MIDI send occurs.
-• No release action occurs.
-• No Toggle state changes.
-• No green border is activated.
-• Existing touch activation still requires the unchanged midiInputEnabled eligibility.
+MainScreen owns visibility only:
 
-H. Duplicate-warning handling
+• isSoftEditorAccessoryPaletteVisible
+Main_Screen.swift􀰓
 
-• Warning callback runs only on initial touchesBegan.
-• Move, release, and cancellation paths do not trigger it.
-• The existing single popup state prevents stacked warning cards.
+The palette owns its local navigation state:
 
-I. MIDI send semantics unchanged
+• showFilesMenu
+• filesInsertionContext
+• showTimeMenu
+• timeInsertionContext
+• midiSelector
 
-• No parser, payload, transport, channel-resolution, activation-registry, or cleanup code changed.
-• Connected MIDI Note On/Off/Toggle and CC One-shot/Hold/Toggle continue through their existing send paths.
+at lines 7460-7468.
 
-J. Green/white borders unchanged
+Top-level dispatch is duplicated in the dormant accessory bar and active palette:
 
-• No border colour, width, radius, activation-token, Hold, Toggle, Note Off, or CC One-shot styling code was changed.
-• Unavailable MIDI presses do not set the existing pressed/active states.
+• Accessory bar: lines 7276-7290.
+• Active palette: lines 7475-7489.
 
-K. Dynamic CC labels unchanged
+Current routing:
 
-• No CC display-cache or automatic-label code was changed.
+• Files captures the current insertion context and presents SoftEditorAccessoryFilesMenu.
+• Time captures the current insertion context and presents SoftEditorAccessoryTimeMenu.
+• MIDI Note and MIDI CC set midiSelector.
+• Wait and More call performSoftEditorAccessoryAction.
 
-L. Keyboard warnings unchanged
+No integer menu indices are used. Ordering is array-driven, so removing Wait/More does not create index-shift risk.
 
-• Existing keyboard output routing and warnings remain unchanged.
-• MIDI warning logic is restricted to recognized MIDI grid-command paths.
+C. Existing file-category mapping and extensions
 
-M. Build result
+CONFIRMED FROM SOURCE
 
-• Xcode build succeeded.
-• Build time: 28.3 seconds.
-• Focused Xcode live-diagnostic requests timed out without compiler output; the full build completed successfully.
+SoftEditorAccessoryFilesMenuConfiguration.categories at lines 6480-6488 defines:
 
-N. Git diff check
+• Audio:
+	.mp3, .wav, .m4a, .aiff, .aac, .caf
+• Images:
+	.png, .jpg, .jpeg, .heic, .heif, .gif, .bmp, .tiff, .webp
+• PDFs:
+	.pdf
+• Markdown:
+	.md, .markdown
 
-• Task-specific git diff --check passed for the three modified source files.
-												• Whole-worktree git diff --check still reports trailing whitespace in the pre-existing modified ESP32BLE/codex.txt; it was not edited.
+Requested mapping:
 
-O. Remaining device tests
+• Files: Audio -> existing Audio category.
+• Files: Image -> existing Images category.
+• Files: PDF -> existing PDFs category.
+• Files: Txt/MD -> does not exactly exist.
 
-• Test disconnected Mac and ESP32-selected output for Note, Note Off, CC One-shot, Hold, and Toggle.
-														• Test connected Mac output produces no warning and preserves all MIDI behavior.
-														• Test non-sending modes, grid editing, editor/preview, and inactive app produce no MIDI warning.
-														• Run the requested ordinary keyboard-output and complete Quick panel regression checks.
-														
-														P. Git status after changes
-														
-														• Modified source files:
-															• ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift􀰓
-														• ESP32BLE/Scrns/Main_Screen/Main_GridSection.swift􀰓
-														• ESP32BLE/Scrns/Main_Screen/Main_Screen.swift􀰓
-														• Preserved pre-existing modification:
-															• ESP32BLE/codex.txt
-														• No commit or backup was created.
+There is no .txt extension in the current Quick file-category configuration. The closest current category is Markdown only. Supporting the requested Txt/MD entry requires an approved change to that category’s display title and allowed extensions, likely adding .txt.
+
+File catalog behavior is in SoftEditorAccessoryCatalog.fileChoices(for:), lines 7894-7930:
+
+• Reads regular files from Documents first, then app-bundle resources.
+• Filters by lowercased file extension.
+• De-duplicates case-insensitive filenames; Documents wins over a matching bundle filename.
+• Sorts case-insensitively by filename.
+• Inserts only the final filename including extension.
+• Displays “No matching files” for an empty category at lines 7845-7853.
+									• Displays an error message if catalog loading fails.
+									
+									D. Direct-file entry feasibility
+									
+									RECOMMENDED DESIGN
+									
+									Direct category entry is feasible without a new browser or insertion system.
+									
+									Smallest safe approach:
+										
+										• Replace the single .files action with four file-category actions.
+									• Continue using SoftEditorAccessoryFilesMenu.
+									• Add an initial-category input to that existing menu, causing it to call its current loadFiles(for:) implementation immediately.
+									• Reuse the existing selectedCategory, fileChoices, filtering, sorting, file-row, and insertion behavior.
+									
+									Existing direct category selection is currently performed by:
+										
+										• loadFiles(for:): lines 7874-7884.
+									• Category rows: lines 7812-7825.
+									
+									Back/Home decision needed:
+										
+										• Current file-list Back returns to the category list at lines 7799-7808.
+									• For a direct category launch, returning to a now-removed category list would be undesirable.
+									• Recommended direct-launch behavior:
+										• Home: return to the seven-item Quick menu.
+									• Back from the direct file list: also return to the seven-item Quick menu.
+									• Preserve existing category-list Back behavior only if the old Files category screen is deliberately retained internally.
+									
+									E. Wait and More dependencies
+									
+									CONFIRMED FROM SOURCE
+									
+									Wait:
+										
+										• Quick action inserts .wait 5 through insertionTemplates and behavior(for:):
+										Main_Screen.swift􀰓.
+									• The underlying .wait command remains available through the normal command table:
+										• “wait time” at lines 695-698.
+									• “wait” at lines 832-846.
+									• Removing the Quick Wait button removes only the one-tap Quick insertion shortcut, not parser/runtime support.
+									
+									More:
+										
+										• Quick More routes to the widgets command-table/help route:
+										• moreTableRoute: line 6458.
+									• .more behavior: lines 6471-6472.
+									• Widgets remain available through the existing command-panel widgets/special-key toggle:
+										• smartEscapeCodeToggleButton: lines 5267-5288.
+									• Removing More removes a Quick shortcut to widgets/help; it does not remove widget functionality.
+
+POTENTIAL REGRESSION
+
+If the requirement means all current shortcuts must remain reachable from Quick itself, removing More makes Quick widget access unavailable. Widgets remain available in the Smart Editor command table.
+
+F. MIDI Note, MIDI CC, and Time preservation
+
+CONFIRMED FROM SOURCE
+
+MIDI Note:
+
+• Selector: SoftEditorMIDINoteMenu, lines 6689-6894.
+• Defaults:
+• C3
+• velocity 127
+• configured channel
+• Toggle enabled
+• lines 6715-6719.
+• Velocity presets remain:
+[0, 16, 32, 48, 64, 80, 96, 112, 127]
+at line 6770.
+• Insert callback remains insertSoftEditorMIDINoteCommand.
+• Test remains disabled at lines 6830-6837.
+• Home closes only the selector and returns to Quick at lines 6812-6825.
+
+MIDI CC:
+
+• Selector: SoftEditorMIDIControlChangeMenu, lines 6896 onward.
+• Existing named controller list, NUM path, Start/End presets, channel, one/hold/tog state, special-controller logic, and Insert callback are all local to this view.
+• Home closes only the selector at lines 7081-7094.
+• Its state is local while the selector remains mounted.
+							
+							Time:
+								
+								• SoftEditorAccessoryTimeMenu, lines 7603-7757.
+							• Commands:
+		.date, .clock, .year, .month, .ord, .dow, .hour, .min, .sec.
+							• City list includes local plus Los Angeles, New York, London, Paris, Johannesburg, Dubai, Kolkata, Tokyo, Sydney, and Auckland.
+							• City selection inserts command + optional time-zone identifier.
+							• Home exits Time; Back returns City selection to Time command selection:
+lines 7655-7684.
+
+G. Help/description UI mechanisms
+
+CONFIRMED FROM SOURCE
+
+The existing reusable command-description mechanism is:
+
+• State: smartCommandDescription
+Main_Screen.swift􀰓
+• Display panel:
+Main_Screen.swift􀰓
+• Command-table rows already update it with command descriptions:
+Main_Screen.swift􀰓
+
+This is the appropriate existing mechanism for future Quick descriptions. It already supports Markdown-like Text(.init(...)) content and scrolling.
+												
+												RECOMMENDED DESIGN
+												
+												Add a Quick-action description mapping beside the existing labels/symbols/behavior configuration, then pass a narrow description callback from MainScreen to the palette. Selecting one of the seven top-level entries could update smartCommandDescription without adding a new Help menu, overlay, or panel.
+												
+												No help content should be created until approved.
+												
+												H. iPhone/iPad layout limitations
+												
+												CONFIRMED FROM SOURCE
+												
+												• Active Quick palette rows are .callout, full width, minimum height 44:
+													Main_Screen.swift􀰓.
+												• The palette is already vertically scrollable:
+													lines 7473-7503.
+												• Seven standard rows require at least 308 points before padding.
+												• The palette’s available height derives from keypad geometry:
+													Main_Screen.swift􀰓.
+												• There is no source guarantee that all seven entries are simultaneously visible on every device.
+												• Existing scrolling means seven rows can remain usable without changing panel geometry.
+												• Text has no explicit one-line restriction in the palette rows. Narrow widths can wrap a long label and increase that row’s height.
+												
+												POTENTIAL REGRESSION
+												
+												Files: Txt/MD is the longest proposed label. Source inspection cannot prove it remains one line on all supported iPhone widths. Device visual verification is required. Do not silently abbreviate it.
+												
+												I. Navigation and insertion-state risks
+												
+												CONFIRMED FROM SOURCE
+												
+												The shared insertion mechanism is correct to reuse:
+													
+													• Context capture:
+													beginSoftEditorFilesMenu(), lines 5480-5496.
+												• Context validation and live selection handling:
+													insertSoftEditorFileName(_:context:), lines 5499-5541.
+												• Shared text replacement:
+													insertSoftEditorAccessoryText(_:), lines 5575-5589.
+												
+												It preserves:
+													
+													• Command versus Button destination.
+												• Current UITextView selection.
+												• Replacement of selected text.
+												• Cursor advancement through the existing insertion model.
+												• Focus restoration when needed.
+												• Current document, slot, and editor validation.
+												
+												Files and Time refresh the insertion context immediately before each insertion:
+													
+													• Files: lines 7321-7331 and 7506-7517.
+												• Time: lines 7346-7355 and 7531-7540.
+												
+												State lifecycle:
+													
+													• Palette-local state survives normal view updates while the palette remains open.
+												• Closing the palette destroys its local File/Time/MIDI selector state.
+												• Closing a submenu destroys that submenu’s local state.
+												• Changing slot/document invalidates insertion context but intentionally does not force-dismiss Quick:
+													lines 1378-1383 and 5592-5594.
+												
+												J. Minimum source changes
+												
+												RECOMMENDED DESIGN
+												
+												Likely only one source file is needed:
+													
+													ESP32BLE/Scrns/Main_Screen/Main_Screen.swift􀰓
+												
+												Target areas:
+													
+													• SoftEditorAccessoryConfiguration: lines 6412-6475.
+												• SoftEditorAccessoryAction: lines 6547-6558.
+												• SoftEditorMIDISelector: lines 6560-6574.
+												• SoftEditorAccessoryBar: lines 7248-7447.
+												• SoftEditorAccessoryPalette: lines 7449-7601.
+												• SoftEditorAccessoryFilesMenu: lines 7760-7885.
+												• Optional reuse of smartCommandDescription: lines 948-1000 and 4065-4085.
+												
+												No parser, runtime, insertion helper, selector, grid, or Quick panel infrastructure changes should be necessary.
+												
+												K. Recommended small implementation stages
+												
+												1. Replace configuration/action data with exactly seven ordered actions:
+													Files: Audio, Files: Image, Files: PDF, Files: Txt/MD, Midi Note, Midi CC, Time.
+												
+												2. Add direct-category presentation to the existing Files menu, with direct-category Back/Home returning to Quick.
+												
+												3. Remove visible Wait and More routing only. Keep .wait parser/runtime and command-table entries intact; retain widget command-table access.
+
+4. Update both SoftEditorAccessoryPalette and dormant SoftEditorAccessoryBar dispatch paths so future expanded use cannot diverge.
+
+5. Separately, after approval, add a description-data mapping using the existing smartCommandDescription panel.
+
+L. Full regression-testing requirements
+
+• All file categories, extension filtering, sorting, duplicate-name precedence, empty state, and failure state.
+• Command and Button insertion, selection replacement, cursor position, focus, and repeated insertion.
+• Direct category Back/Home behavior.
+• MIDI Note insertion, dedicated Note Off text, Test disabled state, and selector state.
+• MIDI CC named/NUM selection, one/hold/tog behavior, Insert/Test states, special controllers, and state.
+• All Time commands, every City selection, Back/Home behavior, and insertion.
+• Next/Previous navigation, Clear, Back Delete red/gray behavior, Wait parser/runtime, widget command-table reachability, More removal consequences, Quick open/close/reopen.
+• iPhone and iPad visual checks for all seven labels and scrolling.
+										• Full Quick panel regression.
+										
+										M. Git status and latest commit
+										
+										• Current uncommitted changes:
+											• ESP32BLE.xcodeproj/xcuserdata/rick.xcuserdatad/xcdebugger/Breakpoints_v2.xcbkptlist
+										• ESP32BLE/VERSIONS.txt
+										• Latest commit:
+											• 1a093b3 disonnected midi now gives warning msg
+										• The Stage 3F MIDI connection-warning work is committed.
+										• No files were modified, created, built, staged, reset, or committed during this probe.

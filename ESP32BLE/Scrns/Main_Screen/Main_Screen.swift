@@ -6410,20 +6410,33 @@ Tapping a row inserts the key code at the cursor.
 //
 // MARK: - BM:🅱️  add your comments here
 private enum SoftEditorAccessoryConfiguration {
-    static let permanentOrder: [SoftEditorAccessoryAction] = [.midiNote, .midiCC, .time, .files, .wait, .more]
+    static let permanentOrder: [SoftEditorAccessoryAction] = [
+        .filesAudio, .filesImage, .filesPDF, .filesTextMarkdown,
+        .midiNote, .midiCC, .time
+    ]
 
     static let labels: [SoftEditorAccessoryAction: String] = [
-        .midiNote: "MIDI Note", .midiCC: "MIDI CC", .time: "Time",
+        .filesAudio: "Files: Audio", .filesImage: "Files: Image",
+        .filesPDF: "Files: PDF", .filesTextMarkdown: "Files: Txt/MD",
+        .midiNote: "Midi Note", .midiCC: "Midi CC", .time: "Time",
         .files: "Files", .wait: "Wait", .more: "More"
     ]
 
     static let symbols: [SoftEditorAccessoryAction: String] = [
+        .filesAudio: "folder", .filesImage: "folder",
+        .filesPDF: "folder", .filesTextMarkdown: "folder",
         .midiNote: "music.note", .midiCC: "slider.horizontal.3",
         .time: "clock", .files: "folder", .wait: "hourglass", .more: "list.bullet"
     ]
 
-    static let compactVisible: Set<SoftEditorAccessoryAction> = [.midiNote, .midiCC, .time, .files, .wait, .more]
-    static let expandedVisible: Set<SoftEditorAccessoryAction> = [.midiNote, .midiCC, .time, .files, .wait, .more]
+    static let compactVisible: Set<SoftEditorAccessoryAction> = [
+        .filesAudio, .filesImage, .filesPDF, .filesTextMarkdown,
+        .midiNote, .midiCC, .time
+    ]
+    static let expandedVisible: Set<SoftEditorAccessoryAction> = [
+        .filesAudio, .filesImage, .filesPDF, .filesTextMarkdown,
+        .midiNote, .midiCC, .time
+    ]
 
     // MARK: - BM:🅱️ add your comments here
     // Compact launcher styling only: 44 points matches the existing accessory/keypad buttons.
@@ -6466,7 +6479,7 @@ private enum SoftEditorAccessoryConfiguration {
             return nil
         case .time:
             return .revealTable(timeDateTableRoute)
-        case .files:
+        case .files, .filesAudio, .filesImage, .filesPDF, .filesTextMarkdown:
             return .openPicker(.files)
         case .more:
             return .revealTable(moreTableRoute)
@@ -6484,8 +6497,13 @@ private enum SoftEditorAccessoryFilesMenuConfiguration {
         SoftEditorAccessoryFileCategory(id: "audio", title: "Audio", allowedExtensions: ["mp3", "wav", "m4a", "aiff", "aac", "caf"]),
         SoftEditorAccessoryFileCategory(id: "images", title: "Images", allowedExtensions: ["png", "jpg", "jpeg", "heic", "heif", "gif", "bmp", "tiff", "webp"]),
         SoftEditorAccessoryFileCategory(id: "pdfs", title: "PDFs", allowedExtensions: ["pdf"]),
-        SoftEditorAccessoryFileCategory(id: "markdown", title: "Markdown", allowedExtensions: ["md", "markdown"])
+        SoftEditorAccessoryFileCategory(id: "markdown", title: "Txt/MD", allowedExtensions: ["txt", "md", "markdown"])
     ]
+
+    static func category(for action: SoftEditorAccessoryAction) -> SoftEditorAccessoryFileCategory? {
+        guard let identifier = action.fileCategoryIdentifier else { return nil }
+        return categories.first { $0.id == identifier }
+    }
 }
 
 private final class SoftEditorAccessoryInsertionContext {
@@ -6545,6 +6563,7 @@ private struct SoftEditorAccessoryBounds: PreferenceKey {
 }
 
 private enum SoftEditorAccessoryAction: String, CaseIterable, Identifiable {
+    case filesAudio, filesImage, filesPDF, filesTextMarkdown
     case midiNote, midiCC, time, files, wait, more
     var id: String { rawValue }
 
@@ -6554,6 +6573,21 @@ private enum SoftEditorAccessoryAction: String, CaseIterable, Identifiable {
 
     var symbol: String {
         SoftEditorAccessoryConfiguration.symbols[self] ?? "questionmark"
+    }
+
+    var fileCategoryIdentifier: String? {
+        switch self {
+        case .filesAudio:
+            return "audio"
+        case .filesImage:
+            return "images"
+        case .filesPDF:
+            return "pdfs"
+        case .filesTextMarkdown:
+            return "markdown"
+        case .midiNote, .midiCC, .time, .files, .wait, .more:
+            return nil
+        }
     }
 }
 
@@ -6567,7 +6601,8 @@ private enum SoftEditorMIDISelector {
             self = .note
         case .midiCC:
             self = .controlChange
-        case .time, .files, .wait, .more:
+        case .filesAudio, .filesImage, .filesPDF, .filesTextMarkdown,
+             .time, .files, .wait, .more:
             return nil
         }
     }
@@ -7263,6 +7298,7 @@ private struct SoftEditorAccessoryBar: View {
     // Files presentation is intentionally local to this accessory-bar view; this Boolean
     // controls the real category and file-list panel without MainScreen presentation state.
     @State private var showFilesMenu = false
+    @State private var initialFilesCategory: SoftEditorAccessoryFileCategory?
     // MARK: - BM:🅱️ Time presentation remains local to the accessory bar, like Files.
     @State private var showTimeMenu = false
     @State private var timeInsertionContext: SoftEditorAccessoryInsertionContext?
@@ -7277,8 +7313,9 @@ private struct SoftEditorAccessoryBar: View {
                             SoftEditorAccessoryConfiguration.expandedVisible.contains($0)
                         }) { action in
                             Button {
-                                if action == .files {
+                                if let category = SoftEditorAccessoryFilesMenuConfiguration.category(for: action) {
                                     filesInsertionContext = onFiles()
+                                    initialFilesCategory = category
                                     showFilesMenu = true
                                 } else if action == .time {
                                     timeInsertionContext = onFiles()
@@ -7319,6 +7356,7 @@ private struct SoftEditorAccessoryBar: View {
 
             if showFilesMenu {
                 SoftEditorAccessoryFilesMenu(
+                    initialCategory: initialFilesCategory,
                     onFileNameSelected: { filename in
                         if let currentContext = onFiles() {
                             // MARK: - BM:🅱️ Keep the open Files workflow while refreshing its target for the current slot.
@@ -7331,6 +7369,7 @@ private struct SoftEditorAccessoryBar: View {
                     },
                     onClose: {
                         filesInsertionContext = nil
+                        initialFilesCategory = nil
                         showFilesMenu = false
                     }
                 )
@@ -7414,7 +7453,7 @@ private struct SoftEditorAccessoryBar: View {
             }
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("Command tools: MIDI, Time, Files, Wait, More")
+        .accessibilityLabel("Command tools: Files, Midi Note, Midi CC, Time")
         .foregroundStyle(.white)
         .background(Color(white: 0.16), in: .rect(cornerRadius: 8))
     }
@@ -7462,6 +7501,7 @@ private struct SoftEditorAccessoryPalette: View {
     // controls both category and file-list rendering without MainScreen presentation state.
     @State private var showFilesMenu = false
     @State private var filesInsertionContext: SoftEditorAccessoryInsertionContext?
+    @State private var initialFilesCategory: SoftEditorAccessoryFileCategory?
     // MARK: - BM:🅱️ Time presentation is local to Quick, preserving Files state and behavior.
     @State private var showTimeMenu = false
     @State private var timeInsertionContext: SoftEditorAccessoryInsertionContext?
@@ -7476,8 +7516,9 @@ private struct SoftEditorAccessoryPalette: View {
                             SoftEditorAccessoryConfiguration.compactVisible.contains($0)
                         }) { action in
                             Button {
-                                if action == .files {
+                                if let category = SoftEditorAccessoryFilesMenuConfiguration.category(for: action) {
                                     filesInsertionContext = onFiles()
+                                    initialFilesCategory = category
                                     showFilesMenu = true
                                 } else if action == .time {
                                     timeInsertionContext = onFiles()
@@ -7504,6 +7545,7 @@ private struct SoftEditorAccessoryPalette: View {
             }
             if showFilesMenu {
                 SoftEditorAccessoryFilesMenu(
+                    initialCategory: initialFilesCategory,
                     onFileNameSelected: { filename in
                         if let currentContext = onFiles() {
                             // MARK: - BM:🅱️ Refresh only the insertion target; retain the open Files workflow.
@@ -7517,6 +7559,7 @@ private struct SoftEditorAccessoryPalette: View {
                     },
                     onClose: {
                         filesInsertionContext = nil
+                        initialFilesCategory = nil
                         showFilesMenu = false
                     }
                 )
@@ -7758,11 +7801,23 @@ private enum SoftEditorAccessoryTimeCity: String, CaseIterable, Identifiable {
 
 // MARK: - BM:🅱️ SoftEditor Accessory Files Menu
 private struct SoftEditorAccessoryFilesMenu: View {
+    let initialCategory: SoftEditorAccessoryFileCategory?
     let onFileNameSelected: (String) -> Void
     let onClose: () -> Void
     @State private var selectedCategory: SoftEditorAccessoryFileCategory?
     @State private var fileChoices: [SoftEditorAccessoryChoice] = []
     @State private var fileError: String?
+
+    init(
+        initialCategory: SoftEditorAccessoryFileCategory? = nil,
+        onFileNameSelected: @escaping (String) -> Void,
+        onClose: @escaping () -> Void
+    ) {
+        self.initialCategory = initialCategory
+        self.onFileNameSelected = onFileNameSelected
+        self.onClose = onClose
+        _selectedCategory = State(initialValue: initialCategory)
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -7796,16 +7851,18 @@ private struct SoftEditorAccessoryFilesMenu: View {
 
 					Spacer(minLength: 0)
 
-					Button {
-                        selectedCategory = nil
-                        fileChoices = []
-                        fileError = nil
-                    } label: {
-                        Image(systemName: "arrowshape.backward")
-                            .frame(width: 44, height: 44)
-							.foregroundStyle(.cyan)
+                    if initialCategory == nil {
+                        Button {
+                            selectedCategory = nil
+                            fileChoices = []
+                            fileError = nil
+                        } label: {
+                            Image(systemName: "arrowshape.backward")
+                                .frame(width: 44, height: 44)
+								.foregroundStyle(.cyan)
+                        }
+                        .accessibilityLabel("Back to file categories")
                     }
-                    .accessibilityLabel("Back to file categories")
                 }
             }
 
@@ -7869,6 +7926,11 @@ private struct SoftEditorAccessoryFilesMenu: View {
         }
         .contentShape(Rectangle())
         .allowsHitTesting(true)
+        .onAppear {
+            if let initialCategory {
+                loadFiles(for: initialCategory)
+            }
+        }
     }
 
     // MARK: - BM:🅱️ Route a selected category through the existing Documents-first catalog.
