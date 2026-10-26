@@ -1,4 +1,7 @@
 
+V65.27_261026 Mon 1243
+midi note complete
+
 v65.26_261026 Mon 1224
 midi, preview notes improved
 

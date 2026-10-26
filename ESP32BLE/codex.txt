@@ -1,61 +1,60 @@
-Completed Stage 2. No CC Preview or CC Play was added.
-
 Files modified
 
 • ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
 
-UI changes
+Preview layout correction
 
-• The Note menu action area is now two rows:
-• Row 1: Preview + Play, equal flexible widths.
-• Row 2: full-width “insert MIDI”.
-• Preview displays “Preview” with poweroutlet.type.k horizontally.
-• Play displays “Play” with pianokeys.inverse horizontally.
-• Preview symbol remains green when enabled and gray when disabled.
-• The old speaker slash/wave symbols are no longer used.
-• No horizontal scrolling was introduced; both top controls use equal max-width layout.
-• CC menu remains unchanged, including its disabled test button.
+• Removed the visible “Preview” text.
+• Kept the existing equal-width button frame and action-row position.
+• Preview now displays only poweroutlet.type.k.
+• Green when enabled; gray when disabled.
+• Existing accessibility label and one-second preview behaviour remain unchanged.
 
-Manual Play handling
+Previous Play handling
 
-• Play uses a zero-distance DragGesture, not a release-only SwiftUI Button.
-• Touch down captures the current MIDI note, velocity, channel, and session, then sends:
-MIDI:NOTE_ON:<note>:<velocity>:<channel>
-	• Touch up, cancellation, leaving the control bounds, menu close, view disappearance, transport loss, and session replacement all clear local manual state.
-	• Valid matching-session releases send:
-	MIDI:NOTE_OFF:<captured-note>:<captured-channel>
-		• There is no timer for Manual Play.
-		• A continuous touch is handled only once, preventing duplicate Note On sends.
-		• Velocity 0 sends no Manual Play Note On. A previously captured valid manual note remains active until released.
+• Play previously used a SwiftUI zero-distance DragGesture.
+• Its gesture-state timing could defer the begin callback until release on the reported device.
+
+New Play touch handling
+
+• Replaced only the Play interaction with ManualMIDINotePlayControl, a small UIViewRepresentable wrapping UIButton/UIControl.
+• The visual still displays “Play” and pianokeys.inverse horizontally.
+• UIKit target events are now:
+• touchDown: begin Manual Play.
+• touchUpInside: end Manual Play.
+• touchUpOutside: end Manual Play.
+• touchCancel: end Manual Play.
+• touchDragExit: end Manual Play immediately when leaving bounds.
+• View dismantling also calls the same guarded end path.
+
+MIDI event sequence
+
+• touchDown captures the current calculated note, velocity, channel, and authenticated session.
+• It stops an active automatic preview, then sends one MIDI:NOTE_ON:<note>:<velocity>:<channel>.
+	• No timer is scheduled for Manual Play.
+	• While held, existing local active-manual state blocks duplicates and automatic preview.
+	• Release or cancellation sends one matching MIDI:NOTE_OFF:<captured-note>:<captured-channel>, only if the original session remains current.
+		• Velocity 0 continues to send no Manual Play Note On.
 		
-		Preview and Play interaction
+		Cancellation and cleanup
 		
-		• Manual Play stops and cancels any active automatic preview before sending its Note On.
-		• Automatic preview does not start while Manual Play is active.
-		• Value changes during a manual hold do not alter, retrigger, or release the held note.
-		• Turning Preview on or off affects only automatic preview; it does not interrupt Manual Play.
-		• After Manual Play ends, Preview remains enabled if it was enabled, ready for later value changes.
-		
-		Transport and session protection
-		
-		• Preview and Manual Play remain local to SoftEditorMIDINoteMenu.
-		• They use the existing injected authenticated Mac transport.
-		• Both active-note records retain note, channel, unique token, and connection-session ID.
-		• Cleanup sends Note Off only when the original session is still available and matches, preventing stale Note Off messages from entering a replacement connection.
-		• MainMIDIActivationRegistry, main-grid MIDI, CC dispatch, Settings, and editor insertion logic were not changed.
+		• Menu close, view disappearance, output loss, and connection-session replacement use the existing reset/transport-cleanup path.
+		• Repeated end events are harmless because Manual Play clears its active record before attempting Note Off.
+		• No stale Note Off is sent to a replacement connection session.
+		• Preview enable/disable continues not to interrupt an active Manual Play note.
 		
 		Validation
 		
 		• Full project build succeeded with no errors.
-		• Static checks confirmed:
-		• exact requested SF Symbol names;
-		• horizontal Preview/Play labels;
-		• full-width “insert MIDI” row;
-		• automatic-preview velocity-zero guard;
-		• manual state isolation and duplicate-send guards;
-		• unchanged CC menu.
-		• No device or audio test was performed.
+		• Source checks confirm:
+		• no visible Preview text remains;
+		• poweroutlet.type.k is used for Preview;
+		• pianokeys.inverse is used for Play;
+		• Play is wired to touchDown, touchUpInside, touchUpOutside, touchCancel, and touchDragExit;
+		• existing Note On/Off capture and session guards remain in place;
+		• Insert MIDI generation and CC menu code remain unchanged.
+		• No physical-device or audio validation was performed.
 		
 		Remaining limitation
 		
-		• If the Mac transport disconnects after a Note On, the app clears local state but intentionally does not send a Note Off through a replacement session. Receiver behaviour after a physical disconnect remains receiver-dependent.
+		• If the authenticated Mac transport disconnects after Note On, local state is cleared but no Note Off is sent through a replacement session. Receiver behaviour after an actual transport loss remains receiver-dependent.

@@ -6823,6 +6823,65 @@ private struct SoftEditorMIDINumericSelector: View {
         .accessibilityValue("\(value)")
     }
 }
+private struct ManualMIDINotePlayControl: UIViewRepresentable {
+    let onTouchDown: () -> Void
+    let onTouchEnd: () -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onTouchDown: onTouchDown, onTouchEnd: onTouchEnd)
+    }
+
+    func makeUIView(context: Context) -> UIButton {
+        var configuration = UIButton.Configuration.gray()
+        configuration.title = "Play"
+        configuration.image = UIImage(systemName: "pianokeys.inverse")
+        configuration.imagePlacement = .trailing
+        configuration.imagePadding = 4
+        configuration.baseForegroundColor = .white
+        configuration.background.backgroundColor = UIColor(white: 0.22, alpha: 1)
+        configuration.background.cornerRadius = 6
+
+        let button = UIButton(type: .system)
+        button.configuration = configuration
+        button.titleLabel?.font = .preferredFont(forTextStyle: .body)
+        button.accessibilityLabel = "Play MIDI note while held"
+        button.addTarget(context.coordinator, action: #selector(Coordinator.touchDown), for: .touchDown)
+        button.addTarget(
+            context.coordinator,
+            action: #selector(Coordinator.touchEnded),
+            for: [.touchUpInside, .touchUpOutside, .touchCancel, .touchDragExit]
+        )
+        return button
+    }
+
+    func updateUIView(_ uiView: UIButton, context: Context) {
+        context.coordinator.onTouchDown = onTouchDown
+        context.coordinator.onTouchEnd = onTouchEnd
+    }
+
+    static func dismantleUIView(_ uiView: UIButton, coordinator: Coordinator) {
+        coordinator.touchEnded()
+    }
+
+    final class Coordinator: NSObject {
+        var onTouchDown: () -> Void
+        var onTouchEnd: () -> Void
+
+        init(onTouchDown: @escaping () -> Void, onTouchEnd: @escaping () -> Void) {
+            self.onTouchDown = onTouchDown
+            self.onTouchEnd = onTouchEnd
+        }
+
+        @objc func touchDown() {
+            onTouchDown()
+        }
+
+        @objc func touchEnded() {
+            onTouchEnd()
+        }
+    }
+}
+
 private struct SoftEditorMIDINotePreviewTransport {
     let isAvailable: Bool
     let connectionSessionID: UUID
@@ -7007,9 +7066,6 @@ private struct SoftEditorMIDINoteMenu: View {
     @State private var channel: Int
     @State private var isToggleEnabled: Bool
     @State private var notePreview = SoftEditorMIDINotePreview()
-    @State private var isManualPlayTouchCancelled = false
-    @State private var hasHandledManualPlayTouchDown = false
-    @GestureState private var isManualPlayTouchActive = false
 
     init(
         defaultChannel: Int,
@@ -7166,13 +7222,9 @@ private struct SoftEditorMIDINoteMenu: View {
         VStack(spacing: 8) {
             HStack(spacing: 8) {
                 Button(action: toggleNotePreview) {
-                    HStack(spacing: 4) {
-                        Text("Preview")
-                        Image(systemName: "poweroutlet.type.k")
-                            .foregroundStyle(notePreview.isEnabled ? Color.green : Color.gray)
-                    }
-                    .lineLimit(1)
-                    .frame(maxWidth: .infinity)
+                    Image(systemName: "poweroutlet.type.k")
+                        .foregroundStyle(notePreview.isEnabled ? Color.green : Color.gray)
+                        .frame(maxWidth: .infinity)
                 }
                 .frame(maxWidth: .infinity)
                 .accessibilityLabel(notePreview.isEnabled ? "MIDI note preview enabled" : "MIDI note preview disabled")
@@ -7202,30 +7254,12 @@ private struct SoftEditorMIDINoteMenu: View {
     }
 
     private var manualPlayButton: some View {
-        GeometryReader { proxy in
-            HStack(spacing: 4) {
-                Text("Play")
-                Image(systemName: "pianokeys.inverse")
-            }
-            .lineLimit(1)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .contentShape(Rectangle())
-            .background(Color.gray.opacity(0.22), in: .rect(cornerRadius: 6))
-            .overlay {
-                RoundedRectangle(cornerRadius: 6)
-                    .stroke(Color.gray.opacity(0.8), lineWidth: 1)
-            }
-            .highPriorityGesture(manualPlayGesture(in: proxy.size))
-        }
+        ManualMIDINotePlayControl(
+            onTouchDown: beginManualPlay,
+            onTouchEnd: endManualPlay
+        )
         .frame(height: 32)
-        .onChange(of: isManualPlayTouchActive) {
-            guard !isManualPlayTouchActive else { return }
-            endManualPlay()
-            isManualPlayTouchCancelled = false
-            hasHandledManualPlayTouchDown = false
-        }
         .accessibilityLabel("Play MIDI note while held")
-        .accessibilityAddTraits(.isButton)
     }
 
     private func channelTitle(for item: Int) -> String {
@@ -7247,30 +7281,6 @@ private struct SoftEditorMIDINoteMenu: View {
             channel: channel,
             using: previewTransport
         )
-    }
-
-    private func manualPlayGesture(in size: CGSize) -> some Gesture {
-        DragGesture(minimumDistance: 0, coordinateSpace: .local)
-            .updating($isManualPlayTouchActive) { _, state, _ in
-                state = true
-            }
-            .onChanged { value in
-                guard CGRect(origin: .zero, size: size).contains(value.location) else {
-                    isManualPlayTouchCancelled = true
-                    endManualPlay()
-                    return
-                }
-
-                guard !isManualPlayTouchCancelled,
-                      !hasHandledManualPlayTouchDown else { return }
-                hasHandledManualPlayTouchDown = true
-                beginManualPlay()
-            }
-            .onEnded { _ in
-                endManualPlay()
-                isManualPlayTouchCancelled = false
-                hasHandledManualPlayTouchDown = false
-            }
     }
 
     private func beginManualPlay() {
