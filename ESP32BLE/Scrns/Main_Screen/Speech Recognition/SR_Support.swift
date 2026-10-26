@@ -51,7 +51,17 @@ extension MainScreen {
             return
         }
 
-        guard let matchingEntry = matchingSpeechEntry(for: recognizedText) else {
+        let speechMatchResult = speechMatchResult(for: recognizedText)
+        let matchingEntry: FunctionKeyEntry
+
+        switch speechMatchResult {
+        case .unique(let entry):
+            matchingEntry = entry
+        case .ambiguous:
+            unmatchedSpeechText = nil
+            renameAlertMessage = "Voice command matches\nmultiple buttons"
+            return
+        case .noMatch:
             unmatchedSpeechText = recognizedText
             return
         }
@@ -173,44 +183,76 @@ extension MainScreen {
         return targetDocumentName.isEmpty ? nil : targetDocumentName
     }
 
-    func matchingSpeechEntry(for recognizedText: String) -> FunctionKeyEntry? {
-        let recognizedTextWithoutSpaces = recognizedText.replacingOccurrences(of: " ", with: "")
-        let entriesWithAlternateText = functionKeys.filter { $0.alternateDisplayText != nil }
+    private enum SpeechMatchResult {
+        case unique(FunctionKeyEntry)
+        case ambiguous
+        case noMatch
+    }
 
-        if let exactMatch = entriesWithAlternateText.first(where: { entry in
+    private func speechMatchResult(for recognizedText: String) -> SpeechMatchResult {
+        let recognizedTextWithoutSpaces = recognizedText.replacingOccurrences(of: " ", with: "")
+        let entriesWithAlternateText = functionKeys.enumerated().filter { $0.element.alternateDisplayText != nil }
+
+        func matchResult(where matchesEntry: (FunctionKeyEntry) -> Bool) -> SpeechMatchResult {
+            let matches = entriesWithAlternateText.filter { matchesEntry($0.element) }
+
+            switch matches.count {
+            case 0:
+                return .noMatch
+            case 1:
+                return .unique(matches[0].element)
+            default:
+                return .ambiguous
+            }
+        }
+
+        let exactMatchResult = matchResult { entry in
             guard let alternateDisplayText = entry.alternateDisplayText else {
                 return false
             }
 
             return normalizedSpeechMatchText(alternateDisplayText) == recognizedText
-        }) {
-            return exactMatch
+        }
+        if case .unique = exactMatchResult {
+            return exactMatchResult
+        }
+        if case .ambiguous = exactMatchResult {
+            return exactMatchResult
         }
 
-        if recognizedTextWithoutSpaces != recognizedText,
-           let exactMatchWithoutSpaces = entriesWithAlternateText.first(where: { entry in
+        if recognizedTextWithoutSpaces != recognizedText {
+            let exactMatchWithoutSpacesResult = matchResult { entry in
                guard let alternateDisplayText = entry.alternateDisplayText else {
                    return false
                }
 
                return normalizedSpeechMatchText(alternateDisplayText)
                    .replacingOccurrences(of: " ", with: "") == recognizedTextWithoutSpaces
-           }) {
-            return exactMatchWithoutSpaces
+            }
+            if case .unique = exactMatchWithoutSpacesResult {
+                return exactMatchWithoutSpacesResult
+            }
+            if case .ambiguous = exactMatchWithoutSpacesResult {
+                return exactMatchWithoutSpacesResult
+            }
         }
 
-        if let subphraseMatch = entriesWithAlternateText.first(where: { entry in
+        let subphraseMatchResult = matchResult { entry in
             guard let alternateDisplayText = entry.alternateDisplayText else {
                 return false
             }
 
             return speechText(normalizedSpeechMatchText(alternateDisplayText), containsPhrase: recognizedText)
-        }) {
-            return subphraseMatch
+        }
+        if case .unique = subphraseMatchResult {
+            return subphraseMatchResult
+        }
+        if case .ambiguous = subphraseMatchResult {
+            return subphraseMatchResult
         }
 
         if recognizedTextWithoutSpaces != recognizedText {
-            return entriesWithAlternateText.first(where: { entry in
+            return matchResult { entry in
                 guard let alternateDisplayText = entry.alternateDisplayText else {
                     return false
                 }
@@ -218,10 +260,10 @@ extension MainScreen {
                 return normalizedSpeechMatchText(alternateDisplayText)
                     .replacingOccurrences(of: " ", with: "")
                     .contains(recognizedTextWithoutSpaces)
-            })
+            }
         }
 
-        return nil
+        return .noMatch
     }
 
     func speechText(_ candidateText: String, containsPhrase phraseText: String) -> Bool {
