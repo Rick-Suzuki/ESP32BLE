@@ -1,4 +1,8 @@
 
+V65.28_261026 Mon 1254
+midi cc complete
+
+
 V65.27_261026 Mon 1243
 midi note complete
 

@@ -5353,6 +5353,7 @@ Tapping a row inserts the key code at the cursor.
                         filesPanelWidth: pickerWidth,
                         defaultMIDIChannel: midiDefaultChannel,
                         midiNotePreviewTransport: softEditorMIDINotePreviewTransport,
+                        midiControlChangeTestTransport: softEditorMIDIControlChangeTestTransport,
                         onAction: performSoftEditorAccessoryAction,
                         onFiles: beginSoftEditorFilesMenu,
                         onFileNameSelected: insertSoftEditorFileName,
@@ -5383,6 +5384,7 @@ Tapping a row inserts the key code at the cursor.
                         filesPanelWidth: pickerWidth,
                         defaultMIDIChannel: midiDefaultChannel,
                         midiNotePreviewTransport: softEditorMIDINotePreviewTransport,
+                        midiControlChangeTestTransport: softEditorMIDIControlChangeTestTransport,
                         onAction: performSoftEditorAccessoryAction,
                         onFiles: beginSoftEditorFilesMenu,
                         onFileNameSelected: insertSoftEditorFileName,
@@ -5413,6 +5415,7 @@ Tapping a row inserts the key code at the cursor.
                     filesPanelWidth: fallbackWidth,
                     defaultMIDIChannel: midiDefaultChannel,
                     midiNotePreviewTransport: softEditorMIDINotePreviewTransport,
+                    midiControlChangeTestTransport: softEditorMIDIControlChangeTestTransport,
                     onAction: performSoftEditorAccessoryAction,
                     onFiles: beginSoftEditorFilesMenu,
                     onFileNameSelected: insertSoftEditorFileName,
@@ -5435,6 +5438,7 @@ Tapping a row inserts the key code at the cursor.
                         filesPanelWidth: fallbackWidth,
                         defaultMIDIChannel: midiDefaultChannel,
                         midiNotePreviewTransport: softEditorMIDINotePreviewTransport,
+                        midiControlChangeTestTransport: softEditorMIDIControlChangeTestTransport,
                         onAction: performSoftEditorAccessoryAction,
                         onFiles: beginSoftEditorFilesMenu,
                         onFileNameSelected: insertSoftEditorFileName,
@@ -5457,6 +5461,16 @@ Tapping a row inserts the key code at the cursor.
         SoftEditorMIDINotePreviewTransport(
             isAvailable: outputMode == .mac && macConnection.canSend,
             connectionSessionID: macConnection.midiSessionID,
+            sendAuthenticatedCommand: { [macConnection, outputMode] command in
+                guard outputMode == .mac, macConnection.canSend else { return false }
+                return macConnection.sendAuthenticatedCommand(command)
+            }
+        )
+    }
+
+    private var softEditorMIDIControlChangeTestTransport: SoftEditorMIDIControlChangeTestTransport {
+        SoftEditorMIDIControlChangeTestTransport(
+            isAvailable: outputMode == .mac && macConnection.canSend,
             sendAuthenticatedCommand: { [macConnection, outputMode] command in
                 guard outputMode == .mac, macConnection.canSend else { return false }
                 return macConnection.sendAuthenticatedCommand(command)
@@ -6888,6 +6902,11 @@ private struct SoftEditorMIDINotePreviewTransport {
     let sendAuthenticatedCommand: (String) -> Bool
 }
 
+private struct SoftEditorMIDIControlChangeTestTransport {
+    let isAvailable: Bool
+    let sendAuthenticatedCommand: (String) -> Bool
+}
+
 @MainActor
 @Observable
 private final class SoftEditorMIDINotePreview {
@@ -7413,6 +7432,7 @@ private struct SoftEditorMIDIControlChangeMenu: View {
     .sorted { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending }
 
     let defaultChannel: Int
+    let testTransport: SoftEditorMIDIControlChangeTestTransport
     let onClose: () -> Void
     let onInsert: (String) -> Void
     @State private var controller: Int
@@ -7424,6 +7444,7 @@ private struct SoftEditorMIDIControlChangeMenu: View {
 
     init(
         defaultChannel: Int,
+        testTransport: SoftEditorMIDIControlChangeTestTransport,
         onClose: @escaping () -> Void,
         onInsert: @escaping (String) -> Void
     ) {
@@ -7431,6 +7452,7 @@ private struct SoftEditorMIDIControlChangeMenu: View {
             ? defaultChannel
             : MIDIChannelSettings.defaultChannel
         self.defaultChannel = resolvedChannel
+        self.testTransport = testTransport
         self.onClose = onClose
         self.onInsert = onInsert
         _controller = State(initialValue: 0)
@@ -7653,21 +7675,25 @@ private struct SoftEditorMIDIControlChangeMenu: View {
     }
 
     private var actionButtons: some View {
-        HStack(spacing: 8) {
-            Button {} label: {
-                Text("test")
-                    .lineLimit(1)
-                    .fixedSize(horizontal: true, vertical: false)
-                    .frame(maxWidth: .infinity)
-            }
-                .disabled(true)
+        VStack(spacing: 8) {
+            Button(action: sendControlChangeTest) {
+                HStack(spacing: 4) {
+                    Text("test")
+                    Image(systemName: "poweroutlet.type.k")
+                }
+                .lineLimit(1)
+                .foregroundStyle(isTestEnabled ? Color.white : Color.gray)
                 .frame(maxWidth: .infinity)
+            }
+                .disabled(!isTestEnabled)
+                .frame(maxWidth: .infinity)
+
             Button {
                 if let midiCommand {
                     onInsert(midiCommand)
                 }
             } label: {
-                Text("insert")
+                Text("insert MIDI")
                     .lineLimit(1)
                     .fixedSize(horizontal: true, vertical: false)
                     .frame(maxWidth: .infinity)
@@ -7682,6 +7708,32 @@ private struct SoftEditorMIDIControlChangeMenu: View {
         .tint(.gray)
     }
 
+    private var isTestEnabled: Bool {
+        mode == .one
+    }
+
+    private var testControllerNumber: Int? {
+        if let selectedTypeAbbreviation,
+           let number = MIDIControlChangeCommand.controllerNumbersByAbbreviation[selectedTypeAbbreviation] {
+            return Int(number)
+        }
+        return (0...127).contains(controller) ? controller : nil
+    }
+
+    private func sendControlChangeTest() {
+        guard isTestEnabled,
+              testTransport.isAvailable,
+              let controller = testControllerNumber,
+              (0...127).contains(startValue),
+              MIDIChannelSettings.validRange.contains(channel) else {
+            return
+        }
+
+        _ = testTransport.sendAuthenticatedCommand(
+            "MIDI:CC:\(controller):\(startValue):\(channel)"
+        )
+    }
+
     private func channelTitle(for item: Int) -> String {
         item == defaultChannel ? "(\(item))" : "\(item)"
     }
@@ -7693,6 +7745,7 @@ private struct SoftEditorAccessoryBar: View {
     let filesPanelWidth: CGFloat
     let defaultMIDIChannel: Int
     let midiNotePreviewTransport: SoftEditorMIDINotePreviewTransport
+    let midiControlChangeTestTransport: SoftEditorMIDIControlChangeTestTransport
     let onAction: (SoftEditorAccessoryAction) -> Void
     let onFiles: () -> SoftEditorAccessoryInsertionContext?
     let onFileNameSelected: (String, SoftEditorAccessoryInsertionContext) -> Bool
@@ -7835,6 +7888,7 @@ private struct SoftEditorAccessoryBar: View {
         case .controlChange:
             SoftEditorMIDIControlChangeMenu(
                 defaultChannel: defaultMIDIChannel,
+                testTransport: midiControlChangeTestTransport,
                 onClose: { midiSelector = nil },
                 onInsert: onMIDIControlChangeInsert
             )
@@ -7904,6 +7958,7 @@ private struct SoftEditorAccessoryPalette: View {
     let filesPanelWidth: CGFloat
     let defaultMIDIChannel: Int
     let midiNotePreviewTransport: SoftEditorMIDINotePreviewTransport
+    let midiControlChangeTestTransport: SoftEditorMIDIControlChangeTestTransport
     let onAction: (SoftEditorAccessoryAction) -> Void
     let onFiles: () -> SoftEditorAccessoryInsertionContext?
     let onFileNameSelected: (String, SoftEditorAccessoryInsertionContext) -> Bool
@@ -8049,6 +8104,7 @@ private struct SoftEditorAccessoryPalette: View {
         case .controlChange:
             SoftEditorMIDIControlChangeMenu(
                 defaultChannel: defaultMIDIChannel,
+                testTransport: midiControlChangeTestTransport,
                 onClose: { midiSelector = nil },
                 onInsert: onMIDIControlChangeInsert
             )
