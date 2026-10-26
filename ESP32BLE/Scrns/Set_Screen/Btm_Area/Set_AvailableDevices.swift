@@ -23,10 +23,12 @@ struct SettingsAvailableDevicesPanel: View {
     }
 
     var body: some View {
-        if isPad {
-            iPadBody
-        } else {
-            iPhoneBody
+        Group {
+            if isPad {
+                iPadBody
+            } else {
+                iPhoneBody
+            }
         }
     }
 

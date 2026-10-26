@@ -1,5 +1,6 @@
 
 import SwiftUI
+import Observation
 import UIKit
 import AVFoundation
 import PDFKit
@@ -5351,12 +5352,14 @@ Tapping a row inserts the key code at the cursor.
                         showsCompact: true,
                         filesPanelWidth: pickerWidth,
                         defaultMIDIChannel: midiDefaultChannel,
+                        midiNotePreviewTransport: softEditorMIDINotePreviewTransport,
                         onAction: performSoftEditorAccessoryAction,
                         onFiles: beginSoftEditorFilesMenu,
                         onFileNameSelected: insertSoftEditorFileName,
                         onTimeCommandSelected: insertSoftEditorTimeCommand,
                         onMIDINoteInsert: insertSoftEditorMIDINoteCommand,
                         onMIDIControlChangeInsert: insertSoftEditorMIDIControlChangeCommand,
+                        onDescriptionSelected: { smartCommandDescription = $0 },
                         onClear: clearSmartCommandText,
                         onOpen: { isSoftEditorAccessoryPaletteVisible.toggle() }
                     )
@@ -5379,12 +5382,14 @@ Tapping a row inserts the key code at the cursor.
                     SoftEditorAccessoryPalette(
                         filesPanelWidth: pickerWidth,
                         defaultMIDIChannel: midiDefaultChannel,
+                        midiNotePreviewTransport: softEditorMIDINotePreviewTransport,
                         onAction: performSoftEditorAccessoryAction,
                         onFiles: beginSoftEditorFilesMenu,
                         onFileNameSelected: insertSoftEditorFileName,
                         onTimeCommandSelected: insertSoftEditorTimeCommand,
                         onMIDINoteInsert: insertSoftEditorMIDINoteCommand,
                         onMIDIControlChangeInsert: insertSoftEditorMIDIControlChangeCommand,
+                        onDescriptionSelected: { smartCommandDescription = $0 },
                         onClose: { isSoftEditorAccessoryPaletteVisible = false },
                         bottomHeightAdjustment: isPad ? 0 : SoftEditorAccessoryConfiguration.iPhoneToolsHelperBottomHeightAdjustment
                     )
@@ -5407,12 +5412,14 @@ Tapping a row inserts the key code at the cursor.
                     showsCompact: true,
                     filesPanelWidth: fallbackWidth,
                     defaultMIDIChannel: midiDefaultChannel,
+                    midiNotePreviewTransport: softEditorMIDINotePreviewTransport,
                     onAction: performSoftEditorAccessoryAction,
                     onFiles: beginSoftEditorFilesMenu,
                     onFileNameSelected: insertSoftEditorFileName,
                     onTimeCommandSelected: insertSoftEditorTimeCommand,
                     onMIDINoteInsert: insertSoftEditorMIDINoteCommand,
                     onMIDIControlChangeInsert: insertSoftEditorMIDIControlChangeCommand,
+                    onDescriptionSelected: { smartCommandDescription = $0 },
                     onClear: clearSmartCommandText,
                     onOpen: { isSoftEditorAccessoryPaletteVisible.toggle() }
                 )
@@ -5427,12 +5434,14 @@ Tapping a row inserts the key code at the cursor.
                     SoftEditorAccessoryPalette(
                         filesPanelWidth: fallbackWidth,
                         defaultMIDIChannel: midiDefaultChannel,
+                        midiNotePreviewTransport: softEditorMIDINotePreviewTransport,
                         onAction: performSoftEditorAccessoryAction,
                         onFiles: beginSoftEditorFilesMenu,
                         onFileNameSelected: insertSoftEditorFileName,
                         onTimeCommandSelected: insertSoftEditorTimeCommand,
                         onMIDINoteInsert: insertSoftEditorMIDINoteCommand,
                         onMIDIControlChangeInsert: insertSoftEditorMIDIControlChangeCommand,
+                        onDescriptionSelected: { smartCommandDescription = $0 },
                         onClose: { isSoftEditorAccessoryPaletteVisible = false },
                         bottomHeightAdjustment: isPad ? 0 : SoftEditorAccessoryConfiguration.iPhoneToolsHelperBottomHeightAdjustment
                     )
@@ -5442,6 +5451,17 @@ Tapping a row inserts the key code at the cursor.
                 }
             }
         }
+    }
+
+    private var softEditorMIDINotePreviewTransport: SoftEditorMIDINotePreviewTransport {
+        SoftEditorMIDINotePreviewTransport(
+            isAvailable: outputMode == .mac && macConnection.canSend,
+            connectionSessionID: macConnection.midiSessionID,
+            sendAuthenticatedCommand: { [macConnection, outputMode] command in
+                guard outputMode == .mac, macConnection.canSend else { return false }
+                return macConnection.sendAuthenticatedCommand(command)
+            }
+        )
     }
 
     private func performSoftEditorAccessoryAction(_ action: SoftEditorAccessoryAction) {
@@ -6429,6 +6449,89 @@ private enum SoftEditorAccessoryConfiguration {
         .time: "clock", .files: "folder", .wait: "hourglass", .more: "list.bullet"
     ]
 
+    static let timeDescription = """
+**Time**
+
+Select a Time command, then choose Local or City. Quick inserts `.date`, `.clock`, `.year`, `.month`, `.ord`, `.dow`, `.hour`, `.min`, or `.sec`.
+
+Local inserts the command alone. A city appends its time-zone identifier, for example `.clock Asia/Tokyo`.
+"""
+
+    static let cityDescription = """
+**City**
+
+Choose local time or a listed city for the Time command selected previously. Local inserts the command without a time zone. A city appends its IANA identifier; for example, `.clock Asia/Tokyo`.
+
+The selection applies only to the inserted command. It does not change the device time zone.
+"""
+
+    static func description(for action: SoftEditorAccessoryAction) -> String? {
+        switch action {
+        case .filesAudio:
+            return """
+**Files: Audio**
+
+Select an audio file; Quick inserts its filename, including the extension.
+
+**Playback:** `filename`, `snd filename`, or `snd filename 0...100`. Ordinary sound playback replaces the current ordinary sound. Use `.amb filename [0...100]` for the separate ambient-sound widget.
+
+Audio files: `.mp3`, `.wav`, `.m4a`, `.aiff`, `.aac`, `.caf`.
+"""
+        case .filesImage:
+            return """
+**Files: Image**
+
+Select an image file; Quick inserts its filename, including the extension. Enter a selected preview-supported filename by itself, for example `photo.png`, to open its preview.
+
+The file list accepts `.png`, `.jpg`, `.jpeg`, `.heic`, `.heif`, `.gif`, `.bmp`, `.tiff`, and `.webp`. The current preview command recognizes `.png`, `.jpg`, `.jpeg`, `.gif`, `.heic`, and `.webp`.
+"""
+        case .filesPDF:
+            return """
+**Files: PDF**
+
+Select a PDF; Quick inserts its filename. Enter the selected filename by itself, for example `manual.pdf`, to open the media preview.
+
+PDF preview rendering supports a single-page PDF. The file list accepts `.pdf`.
+"""
+        case .filesTextMarkdown:
+            return """
+**Files: Txt/MD**
+
+Select a text or Markdown file; Quick inserts its filename. The file list accepts `.txt`, `.md`, and `.markdown`.
+
+Enter `notes.txt` or `notes.md` by itself to open a preview. `.spk notes.txt` speaks a text file, and `.rnd notes.txt` selects a random text-file line. `.markdown` is available for filename insertion; current preview recognition confirms `.txt` and `.md`.
+"""
+        case .midiNote:
+            return """
+**Midi Note**
+
+**Syntax:** `.midi <note> [velocity] [channel] [toggle]`
+
+Notes are 0...127. Note On velocity is 1...127 and defaults to 127. Channel defaults to the configured MIDI channel; an explicit channel is 1...16.
+
+`.midi 60` and `.midi 60 120 1` are momentary: press sends Note On and release sends Note Off. `.midi 60 120 1 toggle` sends Note On on the first press and Note Off on the second.
+
+**Note Off:** `.midi <note> off [channel]`, for example `.midi 60 off 1`, sends Note Off directly. MIDI requires Mac output and ESP Mac Helper.
+"""
+        case .midiCC:
+            return """
+**Midi CC**
+
+Controllers are numeric 0...127 or supported named abbreviations. Start and End values are 0...127. An omitted channel uses the configured default; an explicit channel is 1...16.
+
+**One-shot:** `.cc <controller> <start> [channel]` — `.cc vol 127` or `.cc 64 0` sends Start once.
+
+**Hold:** `.cc <controller> <start> <end> [channel] hold` — `.cc vol 127 64 hold` sends Start on press and End on release.
+
+**Toggle:** `.cc <controller> <start> <end> [channel] toggle` — `.cc mod 100 0 1 toggle` alternates Start and End. Thus `.cc 1 100 1 hold` means controller 1, Start 100, End 1, default channel. MIDI requires Mac output and ESP Mac Helper.
+"""
+        case .time:
+            return timeDescription
+        case .files, .wait, .more:
+            return nil
+        }
+    }
+
     static let compactVisible: Set<SoftEditorAccessoryAction> = [
         .filesAudio, .filesImage, .filesPDF, .filesTextMarkdown,
         .midiNote, .midiCC, .time
@@ -6720,6 +6823,116 @@ private struct SoftEditorMIDINumericSelector: View {
         .accessibilityValue("\(value)")
     }
 }
+private struct SoftEditorMIDINotePreviewTransport {
+    let isAvailable: Bool
+    let connectionSessionID: UUID
+    let sendAuthenticatedCommand: (String) -> Bool
+}
+
+@MainActor
+@Observable
+private final class SoftEditorMIDINotePreview {
+    private struct ActiveNote {
+        let id = UUID()
+        let note: UInt8
+        let channel: UInt8
+        let connectionSessionID: UUID
+    }
+
+    var isEnabled = false
+    private var activeNote: ActiveNote?
+    private var releaseTask: Task<Void, Never>?
+
+    func enable() {
+        isEnabled = true
+    }
+
+    func disable(using transport: SoftEditorMIDINotePreviewTransport) {
+        isEnabled = false
+        stopActiveNote(using: transport)
+    }
+
+    func trigger(
+        note: Int?,
+        velocity: Int,
+        channel: Int,
+        using transport: SoftEditorMIDINotePreviewTransport
+    ) {
+        stopActiveNote(using: transport)
+
+        guard isEnabled,
+              transport.isAvailable,
+              let note,
+              (0...127).contains(note),
+              (1...127).contains(velocity),
+              MIDIChannelSettings.validRange.contains(channel) else {
+            return
+        }
+
+        let noteValue = UInt8(note)
+        let velocityValue = UInt8(velocity)
+        let channelValue = UInt8(channel)
+        let connectionSessionID = transport.connectionSessionID
+        guard transport.sendAuthenticatedCommand(
+            "MIDI:NOTE_ON:\(noteValue):\(velocityValue):\(channelValue)"
+        ) else {
+            return
+        }
+
+        let activeNote = ActiveNote(
+            note: noteValue,
+            channel: channelValue,
+            connectionSessionID: connectionSessionID
+        )
+        self.activeNote = activeNote
+        releaseTask = Task { [weak self] in
+            do {
+                try await Task.sleep(for: .seconds(1))
+            } catch {
+                return
+            }
+
+            guard !Task.isCancelled else { return }
+            self?.release(activeNote, using: transport)
+        }
+    }
+
+    func handleTransportChange(using transport: SoftEditorMIDINotePreviewTransport) {
+        stopActiveNote(using: transport)
+    }
+
+    private func release(_ note: ActiveNote, using transport: SoftEditorMIDINotePreviewTransport) {
+        guard activeNote?.id == note.id else { return }
+        releaseTask = nil
+        activeNote = nil
+
+        guard transport.isAvailable,
+              note.connectionSessionID == transport.connectionSessionID else {
+            return
+        }
+
+        _ = transport.sendAuthenticatedCommand(
+            "MIDI:NOTE_OFF:\(note.note):\(note.channel)"
+        )
+    }
+
+    private func stopActiveNote(using transport: SoftEditorMIDINotePreviewTransport) {
+        releaseTask?.cancel()
+        releaseTask = nil
+        guard let activeNote else { return }
+        self.activeNote = nil
+
+        guard transport.isAvailable,
+              activeNote.connectionSessionID == transport.connectionSessionID else {
+            return
+        }
+
+        _ = transport.sendAuthenticatedCommand(
+            "MIDI:NOTE_OFF:\(activeNote.note):\(activeNote.channel)"
+        )
+    }
+}
+
 // MARK: - BM:🟥 Soft Editor MIDI NOTE VIEW
 private struct SoftEditorMIDINoteMenu: View {
     private static let notes = [
@@ -6728,6 +6941,7 @@ private struct SoftEditorMIDINoteMenu: View {
     ]
 
     let defaultChannel: Int
+    let previewTransport: SoftEditorMIDINotePreviewTransport
     let onClose: () -> Void
     let onInsert: (String) -> Void
     @State private var selectedNote: String
@@ -6735,9 +6949,11 @@ private struct SoftEditorMIDINoteMenu: View {
     @State private var velocity: Int
     @State private var channel: Int
     @State private var isToggleEnabled: Bool
+    @State private var notePreview = SoftEditorMIDINotePreview()
 
     init(
         defaultChannel: Int,
+        previewTransport: SoftEditorMIDINotePreviewTransport,
         onClose: @escaping () -> Void,
         onInsert: @escaping (String) -> Void
     ) {
@@ -6745,6 +6961,7 @@ private struct SoftEditorMIDINoteMenu: View {
             ? defaultChannel
             : MIDIChannelSettings.defaultChannel
         self.defaultChannel = resolvedChannel
+        self.previewTransport = previewTransport
         self.onClose = onClose
         self.onInsert = onInsert
         _selectedNote = State(initialValue: "C")
@@ -6759,6 +6976,31 @@ private struct SoftEditorMIDINoteMenu: View {
             selectorContent(
                 dimensions: SoftEditorMIDIControlLayout.dimensions(for: proxy.size.width)
             )
+        }
+        .onAppear {
+            notePreview.disable(using: previewTransport)
+        }
+        .onChange(of: selectedNote) {
+            triggerNotePreview()
+        }
+        .onChange(of: selectedOctave) {
+            triggerNotePreview()
+        }
+        .onChange(of: velocity) {
+            triggerNotePreview()
+        }
+        .onChange(of: channel) {
+            triggerNotePreview()
+        }
+        .onChange(of: previewTransport.isAvailable) {
+            guard !previewTransport.isAvailable else { return }
+            notePreview.handleTransportChange(using: previewTransport)
+        }
+        .onChange(of: previewTransport.connectionSessionID) {
+            notePreview.handleTransportChange(using: previewTransport)
+        }
+        .onDisappear {
+            notePreview.disable(using: previewTransport)
         }
     }
 
@@ -6846,7 +7088,7 @@ private struct SoftEditorMIDINoteMenu: View {
 
     private func header(title: String) -> some View {
         HStack {
-            Button(action: onClose) {
+            Button(action: closeMenu) {
                 Image(systemName: "house")
                     .frame(width: 44, height: 44)
                     .foregroundStyle(.cyan)
@@ -6862,14 +7104,13 @@ private struct SoftEditorMIDINoteMenu: View {
 
     private var actionButtons: some View {
         HStack(spacing: 8) {
-            Button {} label: {
-                Text("test")
-                    .lineLimit(1)
-                    .fixedSize(horizontal: true, vertical: false)
+            Button(action: toggleNotePreview) {
+                Image(systemName: notePreview.isEnabled ? "speaker.wave.2.fill" : "speaker.slash.fill")
+                    .foregroundStyle(notePreview.isEnabled ? Color.green : Color.gray)
                     .frame(maxWidth: .infinity)
             }
-                .disabled(true)
                 .frame(maxWidth: .infinity)
+                .accessibilityLabel(notePreview.isEnabled ? "MIDI note preview enabled" : "MIDI note preview disabled")
             Button {
                 if let midiCommand {
                     onInsert(midiCommand)
@@ -6892,6 +7133,28 @@ private struct SoftEditorMIDINoteMenu: View {
 
     private func channelTitle(for item: Int) -> String {
         item == defaultChannel ? "(\(item))" : "\(item)"
+    }
+
+    private func toggleNotePreview() {
+        if notePreview.isEnabled {
+            notePreview.disable(using: previewTransport)
+        } else {
+            notePreview.enable()
+        }
+    }
+
+    private func triggerNotePreview() {
+        notePreview.trigger(
+            note: midiNoteNumber,
+            velocity: velocity,
+            channel: channel,
+            using: previewTransport
+        )
+    }
+
+    private func closeMenu() {
+        notePreview.disable(using: previewTransport)
+        onClose()
     }
 
     private var midiNoteNumber: Int? {
@@ -7285,12 +7548,14 @@ private struct SoftEditorAccessoryBar: View {
     let showsCompact: Bool
     let filesPanelWidth: CGFloat
     let defaultMIDIChannel: Int
+    let midiNotePreviewTransport: SoftEditorMIDINotePreviewTransport
     let onAction: (SoftEditorAccessoryAction) -> Void
     let onFiles: () -> SoftEditorAccessoryInsertionContext?
     let onFileNameSelected: (String, SoftEditorAccessoryInsertionContext) -> Bool
     let onTimeCommandSelected: (String, SoftEditorAccessoryInsertionContext) -> Bool
     let onMIDINoteInsert: (String) -> Void
     let onMIDIControlChangeInsert: (String) -> Void
+    let onDescriptionSelected: (String) -> Void
     let onClear: () -> Void
     let onOpen: () -> Void
     @State private var filesInsertionContext: SoftEditorAccessoryInsertionContext?
@@ -7313,6 +7578,9 @@ private struct SoftEditorAccessoryBar: View {
                             SoftEditorAccessoryConfiguration.expandedVisible.contains($0)
                         }) { action in
                             Button {
+                                if let description = SoftEditorAccessoryConfiguration.description(for: action) {
+                                    onDescriptionSelected(description)
+                                }
                                 if let category = SoftEditorAccessoryFilesMenuConfiguration.category(for: action) {
                                     filesInsertionContext = onFiles()
                                     initialFilesCategory = category
@@ -7384,6 +7652,8 @@ private struct SoftEditorAccessoryBar: View {
 
             if showTimeMenu {
                 SoftEditorAccessoryTimeMenu(
+                    onCitySelected: { onDescriptionSelected(SoftEditorAccessoryConfiguration.cityDescription) },
+                    onReturnToTime: { onDescriptionSelected(SoftEditorAccessoryConfiguration.timeDescription) },
                     onTimeCommandSelected: { command in
                         if let currentContext = onFiles() {
                             // MARK: - BM:🅱️ Keep the open Time workflow while refreshing its target for the current slot.
@@ -7412,6 +7682,7 @@ private struct SoftEditorAccessoryBar: View {
         case .note:
             SoftEditorMIDINoteMenu(
                 defaultChannel: defaultMIDIChannel,
+                previewTransport: midiNotePreviewTransport,
                 onClose: { midiSelector = nil },
                 onInsert: onMIDINoteInsert
             )
@@ -7488,12 +7759,14 @@ private struct SoftEditorAccessoryBar: View {
 private struct SoftEditorAccessoryPalette: View {
     let filesPanelWidth: CGFloat
     let defaultMIDIChannel: Int
+    let midiNotePreviewTransport: SoftEditorMIDINotePreviewTransport
     let onAction: (SoftEditorAccessoryAction) -> Void
     let onFiles: () -> SoftEditorAccessoryInsertionContext?
     let onFileNameSelected: (String, SoftEditorAccessoryInsertionContext) -> Bool
     let onTimeCommandSelected: (String, SoftEditorAccessoryInsertionContext) -> Bool
     let onMIDINoteInsert: (String) -> Void
     let onMIDIControlChangeInsert: (String) -> Void
+    let onDescriptionSelected: (String) -> Void
     let onClose: () -> Void
     let bottomHeightAdjustment: CGFloat
     // MARK: - BM:🅱️ add your comments here
@@ -7516,6 +7789,9 @@ private struct SoftEditorAccessoryPalette: View {
                             SoftEditorAccessoryConfiguration.compactVisible.contains($0)
                         }) { action in
                             Button {
+                                if let description = SoftEditorAccessoryConfiguration.description(for: action) {
+                                    onDescriptionSelected(description)
+                                }
                                 if let category = SoftEditorAccessoryFilesMenuConfiguration.category(for: action) {
                                     filesInsertionContext = onFiles()
                                     initialFilesCategory = category
@@ -7573,6 +7849,8 @@ private struct SoftEditorAccessoryPalette: View {
             }
             if showTimeMenu {
                 SoftEditorAccessoryTimeMenu(
+                    onCitySelected: { onDescriptionSelected(SoftEditorAccessoryConfiguration.cityDescription) },
+                    onReturnToTime: { onDescriptionSelected(SoftEditorAccessoryConfiguration.timeDescription) },
                     onTimeCommandSelected: { command in
                         if let currentContext = onFiles() {
                             // MARK: - BM:🅱️ Refresh only the insertion target; retain the open Time workflow.
@@ -7613,6 +7891,7 @@ private struct SoftEditorAccessoryPalette: View {
         case .note:
             SoftEditorMIDINoteMenu(
                 defaultChannel: defaultMIDIChannel,
+                previewTransport: midiNotePreviewTransport,
                 onClose: { midiSelector = nil },
                 onInsert: onMIDINoteInsert
             )
@@ -7645,6 +7924,8 @@ private struct SoftEditorAccessoryPalette: View {
 
 // MARK: - BM:🅱️ SoftEditor Accessory Time Menu
 private struct SoftEditorAccessoryTimeMenu: View {
+    let onCitySelected: () -> Void
+    let onReturnToTime: () -> Void
     let onTimeCommandSelected: (String) -> Void
     let onClose: () -> Void
     @State private var selectedCommand: SoftEditorAccessoryTimeCommand?
@@ -7659,6 +7940,7 @@ private struct SoftEditorAccessoryTimeMenu: View {
                         ForEach(SoftEditorAccessoryTimeCommand.allCases) { command in
                             Button {
                                 selectedCommand = command
+                                onCitySelected()
                             } label: {
                                 Text(command.title)
                                     .frame(maxWidth: .infinity, minHeight: 48, alignment: .leading)
@@ -7715,6 +7997,7 @@ private struct SoftEditorAccessoryTimeMenu: View {
             if selectedCommand != nil {
                 Button {
                     selectedCommand = nil
+                    onReturnToTime()
                 } label: {
                     Image(systemName: "arrowshape.backward")
                         .frame(width: 44, height: 44)
