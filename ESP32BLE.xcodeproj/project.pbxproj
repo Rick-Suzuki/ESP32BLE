@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		1D0CCE4A308F1B80006622D6 /* SR_Homophones.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D0CCE49308F1B80006622D6 /* SR_Homophones.swift */; };
 		1D16CD11302F1954004E330E /* ScreenConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D16CD10302F1954004E330E /* ScreenConfig.swift */; };
 		1D16CD1330304347004E330E /* ScreenDocument.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D16CD1230304347004E330E /* ScreenDocument.swift */; };
 		1D2A22C3307DF60E003CCFCF /* Set_ArchiveDocuments.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D2A22C2307DF60E003CCFCF /* Set_ArchiveDocuments.swift */; };
@@ -69,6 +70,7 @@
 
 /* Begin PBXFileReference section */
 		1D0CCE48308DD6BE006622D6 /* time-notes.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "time-notes.txt"; sourceTree = "<group>"; };
+		1D0CCE49308F1B80006622D6 /* SR_Homophones.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SR_Homophones.swift; sourceTree = "<group>"; };
 		1D16CD10302F1954004E330E /* ScreenConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenConfig.swift; sourceTree = "<group>"; };
 		1D16CD1230304347004E330E /* ScreenDocument.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenDocument.swift; sourceTree = "<group>"; };
 		1D23A17A3075B984003B646C /* VERSIONS.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = VERSIONS.txt; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.swift; };
@@ -272,6 +274,7 @@
 			children = (
 				1D9E1CDA2FC92DC600DB3621 /* SR_Manager.swift */,
 				1D9E1CDB2FC92DC600DB3621 /* SR_Support.swift */,
+				1D0CCE49308F1B80006622D6 /* SR_Homophones.swift */,
 			);
 			path = "Speech Recognition";
 			sourceTree = "<group>";
@@ -449,6 +452,7 @@
 				1D9E1CFA2FC92DC600DB3621 /* KB_Screen.swift in Sources */,
 				1D9E1CFB2FC92DC600DB3621 /* KB_ModeRows.swift in Sources */,
 				1D9E1CFC2FC92DC600DB3621 /* KB_GridView.swift in Sources */,
+				1D0CCE4A308F1B80006622D6 /* SR_Homophones.swift in Sources */,
 				1D9E1CFD2FC92DC600DB3621 /* Main_BtmRightTxt.swift in Sources */,
 				1D77C6DD3087545A004396AF /* MIDICommandParser.swift in Sources */,
 				1D9E1CFE2FC92DC600DB3621 /* KB_Navigation.swift in Sources */,

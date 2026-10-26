@@ -321,6 +321,10 @@ final class SpeechRecognitionManager: NSObject, ObservableObject {
     private var isInputTapInstalled = false
     private var audioSessionGeneration: UInt64?
 
+    var recognitionLocale: Locale {
+        speechRecognizer?.locale ?? .current
+    }
+
     override init() {
         super.init()
         speechRecognizer?.delegate = self

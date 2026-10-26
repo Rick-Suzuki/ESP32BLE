@@ -193,8 +193,7 @@ extension MainScreen {
         let recognizedTextWithoutSpaces = recognizedText.replacingOccurrences(of: " ", with: "")
         let entriesWithAlternateText = functionKeys.enumerated().filter { $0.element.alternateDisplayText != nil }
 
-        func matchResult(where matchesEntry: (FunctionKeyEntry) -> Bool) -> SpeechMatchResult {
-            let matches = entriesWithAlternateText.filter { matchesEntry($0.element) }
+        func matchResult(for matches: [(offset: Int, element: FunctionKeyEntry)]) -> SpeechMatchResult {
 
             switch matches.count {
             case 0:
@@ -206,38 +205,63 @@ extension MainScreen {
             }
         }
 
-        let exactMatchResult = matchResult { entry in
+        func matchingEntries(where matchesEntry: (FunctionKeyEntry) -> Bool) -> [(offset: Int, element: FunctionKeyEntry)] {
+            entriesWithAlternateText.filter { matchesEntry($0.element) }
+        }
+
+        let exactMatches = matchingEntries { entry in
             guard let alternateDisplayText = entry.alternateDisplayText else {
                 return false
             }
 
             return normalizedSpeechMatchText(alternateDisplayText) == recognizedText
         }
-        if case .unique = exactMatchResult {
-            return exactMatchResult
-        }
-        if case .ambiguous = exactMatchResult {
-            return exactMatchResult
-        }
 
+        var spaceStrippedMatches: [(offset: Int, element: FunctionKeyEntry)] = []
         if recognizedTextWithoutSpaces != recognizedText {
-            let exactMatchWithoutSpacesResult = matchResult { entry in
-               guard let alternateDisplayText = entry.alternateDisplayText else {
-                   return false
-               }
+            spaceStrippedMatches = matchingEntries { entry in
+                guard let alternateDisplayText = entry.alternateDisplayText else {
+                    return false
+                }
 
-               return normalizedSpeechMatchText(alternateDisplayText)
-                   .replacingOccurrences(of: " ", with: "") == recognizedTextWithoutSpaces
-            }
-            if case .unique = exactMatchWithoutSpacesResult {
-                return exactMatchWithoutSpacesResult
-            }
-            if case .ambiguous = exactMatchWithoutSpacesResult {
-                return exactMatchWithoutSpacesResult
+                return normalizedSpeechMatchText(alternateDisplayText)
+                    .replacingOccurrences(of: " ", with: "") == recognizedTextWithoutSpaces
             }
         }
 
-        return .noMatch
+        guard speechRecognition.recognitionLocale.language.languageCode?.identifier.lowercased() == "en" else {
+            let exactMatchResult = matchResult(for: exactMatches)
+            if case .noMatch = exactMatchResult {
+                return matchResult(for: spaceStrippedMatches)
+            }
+            return exactMatchResult
+        }
+
+        let recognizedTokens = EnglishHomophones.tokens(from: recognizedText)
+        let homophoneMatches = matchingEntries { entry in
+            guard let alternateDisplayText = entry.alternateDisplayText else {
+                return false
+            }
+
+            let candidateTokens = EnglishHomophones.tokens(
+                from: normalizedSpeechMatchText(alternateDisplayText)
+            )
+            guard candidateTokens.count == recognizedTokens.count else {
+                return false
+            }
+
+            return zip(candidateTokens, recognizedTokens).allSatisfy { candidateToken, recognizedToken in
+                candidateToken == recognizedToken || EnglishHomophones.matches(candidateToken, recognizedToken)
+            }
+        }
+
+        var candidatesByOffset: [Int: FunctionKeyEntry] = [:]
+        for candidate in exactMatches + spaceStrippedMatches + homophoneMatches {
+            candidatesByOffset[candidate.offset] = candidate.element
+        }
+
+        return matchResult(for: candidatesByOffset.map { (offset: $0.key, element: $0.value) })
+
     }
 
     func handleSpeechRecognitionToggle() {
