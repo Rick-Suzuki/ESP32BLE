@@ -1488,6 +1488,14 @@ Tapping a row inserts the key code at the cursor.
 
     func showMIDIOutputUnavailableWarning() {
         guard midiUnavailableWarningEnabled else { return }
+        presentMIDIOutputUnavailableWarning()
+    }
+
+    private func showSoftEditorMIDIOutputUnavailableWarning() {
+        presentMIDIOutputUnavailableWarning()
+    }
+
+    private func presentMIDIOutputUnavailableWarning() {
         alertTitle = "MIDI output unavailable"
         renameAlertMessage = "Select Mac output and connect to ESP Mac Helper\nbefore sending MIDI commands."
     }
@@ -5464,7 +5472,8 @@ Tapping a row inserts the key code at the cursor.
             sendAuthenticatedCommand: { [macConnection, outputMode] command in
                 guard outputMode == .mac, macConnection.canSend else { return false }
                 return macConnection.sendAuthenticatedCommand(command)
-            }
+            },
+            showOutputUnavailableWarning: showSoftEditorMIDIOutputUnavailableWarning
         )
     }
 
@@ -5474,7 +5483,8 @@ Tapping a row inserts the key code at the cursor.
             sendAuthenticatedCommand: { [macConnection, outputMode] command in
                 guard outputMode == .mac, macConnection.canSend else { return false }
                 return macConnection.sendAuthenticatedCommand(command)
-            }
+            },
+            showOutputUnavailableWarning: showSoftEditorMIDIOutputUnavailableWarning
         )
     }
 
@@ -6900,11 +6910,13 @@ private struct SoftEditorMIDINotePreviewTransport {
     let isAvailable: Bool
     let connectionSessionID: UUID
     let sendAuthenticatedCommand: (String) -> Bool
+    let showOutputUnavailableWarning: () -> Void
 }
 
 private struct SoftEditorMIDIControlChangeTestTransport {
     let isAvailable: Bool
     let sendAuthenticatedCommand: (String) -> Bool
+    let showOutputUnavailableWarning: () -> Void
 }
 
 @MainActor
@@ -6947,11 +6959,15 @@ private final class SoftEditorMIDINotePreview {
         stopActivePreview(using: transport)
 
         guard isEnabled,
-              transport.isAvailable,
               let note,
               (0...127).contains(note),
               (1...127).contains(velocity),
               MIDIChannelSettings.validRange.contains(channel) else {
+            return
+        }
+
+        guard transport.isAvailable else {
+            isEnabled = false
             return
         }
 
@@ -6962,6 +6978,8 @@ private final class SoftEditorMIDINotePreview {
         guard transport.sendAuthenticatedCommand(
             "MIDI:NOTE_ON:\(noteValue):\(velocityValue):\(channelValue)"
         ) else {
+            isEnabled = false
+            transport.showOutputUnavailableWarning()
             return
         }
 
@@ -6984,6 +7002,7 @@ private final class SoftEditorMIDINotePreview {
     }
 
     func handleTransportChange(using transport: SoftEditorMIDINotePreviewTransport) {
+        isEnabled = false
         stopActivePreview(using: transport)
         stopManualPlay(using: transport)
     }
@@ -6997,8 +7016,12 @@ private final class SoftEditorMIDINotePreview {
         guard activeManualNote == nil else { return }
         stopActivePreview(using: transport)
 
-        guard transport.isAvailable,
-              let note,
+        guard transport.isAvailable else {
+            transport.showOutputUnavailableWarning()
+            return
+        }
+
+        guard let note,
               (0...127).contains(note),
               (1...127).contains(velocity),
               MIDIChannelSettings.validRange.contains(channel) else {
@@ -7012,6 +7035,7 @@ private final class SoftEditorMIDINotePreview {
         guard transport.sendAuthenticatedCommand(
             "MIDI:NOTE_ON:\(noteValue):\(velocityValue):\(channelValue)"
         ) else {
+            transport.showOutputUnavailableWarning()
             return
         }
 
@@ -7288,6 +7312,8 @@ private struct SoftEditorMIDINoteMenu: View {
     private func toggleNotePreview() {
         if notePreview.isEnabled {
             notePreview.disablePreview(using: previewTransport)
+        } else if !previewTransport.isAvailable {
+            previewTransport.showOutputUnavailableWarning()
         } else {
             notePreview.enable()
         }
@@ -7721,8 +7747,14 @@ private struct SoftEditorMIDIControlChangeMenu: View {
     }
 
     private func sendControlChangeTest() {
-        guard isTestEnabled,
-              testTransport.isAvailable,
+        guard isTestEnabled else { return }
+
+        guard testTransport.isAvailable else {
+            testTransport.showOutputUnavailableWarning()
+            return
+        }
+
+        guard
               let controller = testControllerNumber,
               (0...127).contains(startValue),
               MIDIChannelSettings.validRange.contains(channel) else {

@@ -1,52 +1,367 @@
-Files modified
+ESP32BLE — Read-only speech-recognition probe report
 
-• ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
+No source, project settings, tests, commits, or backups were modified.
 
-Test button UI changes
+1. Relevant files, functions, and line numbers
 
-• Replaced the disabled CC test button with two full-width stacked action buttons:
-• test + poweroutlet.type.k
-• insert MIDI
-• Test text and symbol are horizontal.
-• Both rows use the existing bordered Soft Editor action styling and available menu width.
-• Bank/type, Start, End, Channel, and mode controls were not moved or changed.
+Speech recognition:
+• Scrns/Main_Screen/Speech Recognition/SR_Manager.swift
+• normalizedSpeechRecognitionText(_:), lines 48–79
+• SpeechRecognitionManager, lines 305–602
+• Permission requests, lines 373–418
+• Recognition setup/audio capture, lines 424–459
+• Result/error handling, lines 462–490
+• Silence commit timeout, lines 492–518
+• Event publication, lines 520–527
+• Session teardown/restart, lines 529–577
+• Speech recognizer availability changes, lines 584–600
 
-Enable/disable logic
+Speech-to-button matching:
+• Scrns/Main_Screen/Speech Recognition/SR_Support.swift
+• applyRecognizedSpeech(_:), lines 5–145
+• normalizedSpeechMatchText(_:), lines 147–149
+• speechMatchDisplayText(from:), lines 155–163
+• matchingSpeechEntry(for:), lines 176–225
+• speechText(_:containsPhrase:), lines 227–250
+• Speech toggle/auto-off/event consumption, lines 252–315
 
-• Test is enabled only when the selected CC mode state is one.
-• Test is disabled for hold and tog.
-• Disabled Test applies gray styling to both text and symbol.
-• Insert MIDI remains available in all modes.
+Speech UI and event hookup:
+• Scrns/Main_Screen/Main_Screen.swift
+• Speech state, lines 880–897
+• latestRecognition observer, lines 1154–1162
+• Scrns/Main_Screen/Toolbars/Main_BtmToolbar.swift
+• Recognition toggle and transcript display, lines 430–475
 
-Exact CC transport path
+Button data parsing:
+• Scrns/ContentView.swift
+• FunctionKeyEntry, lines 68–83
+• Function-key line parsing, lines 2683–2729
+• Hidden-button metadata parsing, lines 2702–2727
 
-• MainScreen creates a narrow SoftEditorMIDIControlChangeTestTransport:
-• available only when Mac output mode is selected and macConnection.canSend;
-• sends through the existing authenticated Mac transport.
-• The existing accessory-bar and palette paths inject that transport into SoftEditorMIDIControlChangeMenu.
-• Test validates mode, transport availability, controller, Start value, and channel before dispatching exactly:
-MIDI:CC:<controller>:<startValue>:<channel>
-	• No End value, reset value, timer, repeat, hold, toggle, or Note message is sent.
+Physical button execution:
+• Scrns/Main_Screen/Main_GridSection.swift
+• Physical grid branching, lines 418–495
+• MIDI touch control implementation, lines 560 onward
+• Scrns/Main_Screen/Main_ButtonBehavior.swift
+• Physical ordinary-button command path: sendMainGridEntry(_:defaultMIDIChannel:), lines 624–824
+• MIDI parsing, lines 826–860
+• Bluetooth/keyboard filtering, lines 913–934
+
+Temporary warning popup:
+• Scrns/Main_Screen/Main_Screen.swift
+• Shared state, lines 916–917 and 1024–1026
+• Existing MIDI-unavailable warning, lines 1489–1501
+• Popup view, lines 6263–6296
+• Automatic dismissal, lines 6373–6391
+
+2. Current recognition lifecycle
+
+Verified behavior:
+
+1. The user turns recognition on in the bottom toolbar.
+2. MainScreen observes isSpkRecEnabled and calls handleSpeechRecognitionToggle() at Main_Screen.swift:1154–1155.
+3. SR_Support calls SpeechRecognitionManager.setListeningEnabled(true) at SR_Support.swift:252–264.
+4. SpeechRecognitionManager requests Speech authorization and microphone permission before starting, SR_Manager.swift:373–418.
+5. It creates SFSpeechRecognizer(locale: .current), SR_Manager.swift:313. Recognition language therefore follows the device’s current locale; there is no explicit English locale selection.
+6. It configures AVAudioSession for recording using category .record, mode .measurement, and .duckOthers, SR_Manager.swift:230–250.
+7. It creates an SFSpeechAudioBufferRecognitionRequest, enables partial results, and requests on-device recognition when Apple reports it supported, SR_Manager.swift:430–435.
+8. AVAudioEngine’s input-node tap appends 1024-frame audio buffers to the recognition request, SR_Manager.swift:439–450.
+9. Apple callbacks update the current normalized transcript. They do not activate a button immediately, SR_Manager.swift:471–480.
+10. A 700 ms silence timer is reset after every recognition callback, SR_Manager.swift:310 and 492–506.
+11. Recognition is committed either:
+• after 700 ms of silence, or
+• when Apple marks a result final.
+12. Committing creates a new SpeechRecognitionEvent with a fresh UUID, SR_Manager.swift:520–527.
+13. MainScreen observes that event and calls applyRecognizedSpeech(_:), Main_Screen.swift:1160–1162 and SR_Support.swift:278–284.
+14. The audio session is stopped and, while listening remains enabled, restarted after 150 ms, SR_Manager.swift:529–577.
+15. MainScreen also has an application-level auto-off timer. Default storage value is five minutes; values under 31 minutes schedule shutdown, while 31+ means no auto-off, SR_Support.swift:291–315.
+
+Errors:
+• Permission denial simply prevents listening; no in-app error popup is produced.
+• Recognition startup failure stops the session and retries if listening remains requested, SR_Manager.swift:357–363.
+• An Apple recognition callback containing an error tears down and restarts if requested, SR_Manager.swift:485–488.
+• If the recognizer becomes unavailable, the session is stopped; when it becomes available again it attempts to start if listening is still wanted, SR_Manager.swift:584–600.
+
+3. Current phrase normalization and matching
+
+Verified normalization:
+• Lowercases text.
+• Splits on non-letter/non-number characters.
+• Discards punctuation except “+” and “-”.
+• Collapses token boundaries into one space.
+• Converts spoken numbers, including “twenty”, “hundred”, “thousand”, and number-word sequences, into digits.
+• Converts “plus”, “positive”, “minus”, and “negative” into signs where appropriate.
+
+This is implemented by normalizedSpeechRecognitionText(_:) in SR_Manager.swift:48–184.
+
+Button labels use a further pipeline:
+• speechMatchDisplayText(from:) converts a display string and retains text after the final colon, SR_Support.swift:155–163.
+• normalizedSpeechMatchText(_:) applies speech-synthesis conversion then the same canonical normalization, SR_Support.swift:147–153.
+
+Current matching order in matchingSpeechEntry(for:), SR_Support.swift:176–225:
+
+1. First exact normalized alternate-display-text match.
+2. First match after removing all ordinary spaces from both strings.
+3. First candidate whose normalized label contains the recognized phrase as a contiguous, ordered word sequence.
+4. If the recognized phrase contains spaces, first candidate whose space-stripped normalized label contains the space-stripped recognized text as a substring.
+
+Consequences:
+• Matching is case-insensitive.
+• Most punctuation is ignored by canonicalization.
+• Number-word/digit equivalents can match because both sides normalize.
+• Exact full-phrase matching is supported, but is not required.
+• Partial phrase matching is currently supported.
+• Ordered contiguous multiword matches are supported as a fallback.
+• Space-stripped substring matching is also supported as a fallback.
+• “press right button” can match a longer button label if the ordered phrase occurs inside it.
+• “right” can match “right button.”
+• No homophone comparison exists.
+• No fuzzy edit-distance, phonetic, or Soundex-style matching exists.
+• Built-in spoken commands are leading command phrases: “go back”, “go home”, “speech off”, “stop listening”, and “open <document>”, SR_Support.swift:12–52 and 165–174.
 	
-	Controller and channel resolution
+	Important: the requested future “entire phrase only” behavior is stricter than current behavior. It would remove or bypass the current partial and substring fallbacks; it is not merely an added homophone feature.
 	
-	• Named controller selections resolve through the existing MIDIControlChangeCommand.controllerNumbersByAbbreviation mapping.
-	• Numeric controller selection uses the existing controller value.
-	• Test uses the current Start value and current resolved channel.
-	• Existing default-channel display and Insert MIDI command construction remain unchanged.
+	4. Current button eligibility rules
 	
-	Build and test results
+	Speech searches functionKeys for entries where alternateDisplayText is non-nil, SR_Support.swift:176–179.
 	
-	• Full project build succeeded with no errors.
-	• Source checks confirmed:
-	• poweroutlet.type.k is used by the CC Test button.
-	• Test is mode-gated by mode == .one.
-	• CC dispatch is MIDI:CC:<controller>:<startValue>:<channel>.
-		• existing main-screen CC transport format remains unchanged.
-		• Note menu code and CC Insert command generation were not altered.
-		• No physical-device/audio testing was performed.
-		• No relevant automated test coverage was found or added.
-		
-		Unresolved issues
-		
-		• None within this stage. Transport unavailability simply prevents sending; no message is queued or false success state shown.
+	It matches:
+	• The alternate/right-side display label, after speech normalization.
+	• Not rawLine.
+	• Not sendTexts/command text.
+	• Not the currently rendered visual title if that title is an automatically generated MIDI or navigation label.
+	
+	It searches:
+	• The functionKeys array supplied to the currently displayed MainScreen. ContentView passes the current document’s functionKeys into MainScreen, ContentView.swift:248–257.
+	• All entries in that array, not only visible grid cells.
+	
+	It does not exclude:
+	• Hidden buttons. Hidden state is parsed into isHiddenInNormalMode, ContentView.swift:2702–2727, but matchingSpeechEntry does not check it.
+	• Blank placeholders specifically, although placeholders normally lack alternateDisplayText and so are naturally excluded.
+	• Disabled output mode.
+	• MIDI entries, widgets, navigation entries, or special-command entries, provided they have an alternate display label.
+	
+	5. Current button activation path
+	
+	Actual speech path:
+	
+	Apple transcript
+	-> SpeechRecognitionEvent
+	-> MainScreen.handleLatestRecognizedTextChange()
+	-> applyRecognizedSpeech(_:)
+	-> matchingSpeechEntry(for:)
+	-> direct speech-specific command execution in applyRecognizedSpeech(_:).
+	
+	Speech does not synthesize a SwiftUI tap, touch-down, touch-up, or press/release event. It does not call sendMainGridEntry(_:defaultMIDIChannel:), the physical ordinary-button handler.
+	
+	Speech-specific activation supports:
+	• Wait chains.
+	• Stop-media commands.
+	• Document selection.
+	• Preview-file opening.
+	• Sound playback.
+	• Spoken-text playback.
+	• Keyboard/BLE/Mac output through sendKeyboardOutputTokens(_:respectsButtonMode:).
+	
+	Speech-specific activation does not mirror every physical action:
+	• MIDI notes: not activated. Physical MIDI note buttons use dedicated touch-down/touch-up/toggle handlers in Main_GridSection.swift and Main_Screen.swift:1503 onward.
+	• MIDI CC:
+	• Physical one-shot CC is sent by sendMainGridEntry, Main_ButtonBehavior.swift:630–649.
+	• Hold/toggle CC is gesture-based and emits distinct activation/release behavior, Main_Screen.swift:1511–1581.
+	• Speech does not use either path.
+	• Momentary MIDI notes and CC hold/release behavior: not available through speech.
+	• MIDI toggles: not available through speech.
+	• Physical special handling for URL/app/shortcut/clipboard commands is not present in the speech method. The physical path handles those at Main_ButtonBehavior.swift:758–805.
+	• Interactive widgets have their own rendering/touch behavior. Speech’s generic execution only reaches them indirectly if their command tokens survive bluetoothSendTexts filtering; widget command tokens are explicitly filtered, Main_ButtonBehavior.swift:913–934.
+	• Physical ordinary sound buttons have tap/double-tap behavior; speech does not reproduce those gestures, Main_GridSection.swift:418–443.
+	• Physical button mode .disabled is checked immediately by sendMainGridEntry, Main_ButtonBehavior.swift:624–628. Speech does not make that initial check, although keyboard/BLE sending later respects the active output mode.
+	
+	6. Current duplicate-label behavior
+	
+	Verified behavior: duplicate matching labels cause accidental first-match selection.
+	
+	matchingSpeechEntry(for:) uses first(where:) at every matching tier:
+	• Exact match: SR_Support.swift:180–188.
+	• Space-free exact match: lines 190–200.
+	• Ordered phrase match: lines 202–210.
+	• Space-free substring match: lines 212–221.
+	
+	The first entry’s position in functionKeys determines the result. There is:
+	• no collection of candidates,
+	• no ambiguity detection,
+	• no warning,
+	• no stable semantic priority beyond array order,
+	• no activation of all duplicates.
+	
+	Hidden entries remain candidates, so a hidden duplicate earlier in the array can win over a visible one.
+	
+	7. Homophone matching integration options
+	
+	Safest location:
+	• Keep Apple recognition and command execution untouched.
+	• Add a pure matching layer beside matchingSpeechEntry(for:) in SR_Support.swift.
+	• Make the layer return a result such as unique exact match, ambiguous exact match, unique homophone match, ambiguous homophone match, or no match.
+	• Only return the selected FunctionKeyEntry to existing applyRecognizedSpeech(_:). This preserves the established speech execution path and does not require changing physical-button code.
+	
+	Recommended representation:
+	• A static English-only dictionary mapping every normalized word to a canonical equivalence key.
+	• Example concept: “right”, “write”, and “rite” each map to one shared key.
+	• Compare token arrays: same count, same order, and every corresponding token either exactly equal or has the same homophone key.
+	• Avoid generating candidate strings or testing all substitution combinations.
+	
+	Efficiency:
+	• Current screen has a bounded grid; scanning eligible labels is inexpensive.
+	• Pre-tokenizing each label once per matching call is acceptable at this scale, but a future cache keyed by FunctionKeyEntry position/document session would avoid repeated normalization.
+	• A dictionary lookup per corresponding token is effectively constant-time.
+	• A 200–300 group curated dictionary has trivial memory and CPU cost for this UI.
+	
+	Locale:
+	• The recognizer currently uses Locale.current, not English.
+	• Homophone equivalence should be gated to English language codes such as “en”, preferably based on the actual recognizer locale used for that session.
+	• English labels can still be used on a non-English device today, but English homophone expansion should not silently apply to transcripts from other locales.
+	• Design decision needed: whether English homophones should apply only to English recognition locale, or also whenever button labels are English.
+	
+	False-match risks:
+	• English homophones can legitimately create ambiguity: “write button” could match a “right button” label and a literal “write button” label.
+	• Exact matching must always have precedence over homophone matching.
+	• The dictionary should be curated rather than phonetic/fuzzy, especially for short words such as “to”, “two”, “too”, “by”, “buy”, and “bye.”
+	
+	8. Existing temporary warning mechanism
+	
+	The existing temporary popup requested by the prompt is renameAlertMessage-backed:
+	• Shared message state: Main_Screen.swift:916–917.
+	• Presentation: popupOverlay(...), lines 6263–6296.
+	• It is a noninteractive overlay: allowsHitTesting(false), line 6295.
+	• It has no OK button.
+	• It automatically clears after one second, lines 6373–6391.
+	• Every assignment cancels the prior dismissal task and starts a new one.
+	• Existing MIDI connection warning uses it through presentMIDIOutputUnavailableWarning(), Main_Screen.swift:1489–1501.
+	
+	The exact future warning text can be supplied through that state:
+	Voice command matches multiple buttons
+	
+	Warning overlap behavior:
+	• There is one shared message slot. A new warning replaces the visible text and cancels/restarts the one-second timer.
+	• It does not queue messages.
+	• Repeated callbacks could repeatedly reset the same popup unless the matching/session layer reports ambiguity only once per committed recognition attempt.
+	• Since current recognition emits one SpeechRecognitionEvent per recognition session, the event boundary is a suitable deduplication boundary.
+	
+	There is a separate mainGridOperationMessageText toast with a two-second timeout, Main_Screen.swift:2610–2624 and 6348–6370. It is not the existing connection-warning mechanism.
+	
+	9. Recognition callbacks and deduplication
+	
+	Verified behavior:
+	• Apple sends partial results because shouldReportPartialResults is true.
+	• Partial results update latestTranscript only and reset the 700 ms timer.
+	• Button matching occurs only after a silence timeout or final result, never for each partial callback.
+	• If a final result arrives, commitTranscriptIfNeeded() occurs before teardown.
+	• The silence task is cancelled during session teardown, which avoids a second commit from the same session.
+	• SpeechRecognitionEvent contains a fresh UUID, so identical text spoken in separate sessions is intentionally processed again.
+	• A new session starts after 150 ms while listening stays enabled.
+	
+	Therefore:
+	• A single recognition session is designed to produce one activation attempt.
+	• Identical phrases in successive utterances are not suppressed.
+	• An ambiguity warning can use the same one-event-per-session behavior; no independent persistent “already warned phrase” store should be needed.
+	• Toggle and momentary MIDI concerns are substantial because speech currently bypasses their gesture lifecycle altogether.
+	
+	10. Existing tests and coverage gaps
+	
+	Automated test coverage:
+	• No dedicated XCTest or Swift Testing files were found.
+	• The only Test-named Swift file is Scrns/TestArea.swift. It is a manual BLE button playground, not automated coverage.
+	• No tests reference normalizedSpeechRecognitionText, matchingSpeechEntry, applyRecognizedSpeech, or SpeechRecognitionManager.
+	
+	Missing coverage includes:
+	• Exact phrase matches.
+	• Case, punctuation, and number normalization.
+	• Multiword and substring fallback behavior.
+	• Duplicate labels and hidden duplicate labels.
+	• Partial/final/silence callback behavior.
+	• Repeated utterances.
+	• No-match display behavior.
+	• Permission and recognizer error handling.
+	• Speech interaction with output modes.
+	• MIDI note, MIDI CC, toggle, hold, and momentary restrictions.
+	• Warning presentation/deduplication.
+	• English versus non-English locale behavior.
+	
+	11. Recommended implementation stages
+	
+	Stage 1: exact-match ambiguity handling
+	
+	Expected files:
+	• SR_Support.swift.
+	• Main_Screen.swift only if setting the existing popup state directly requires a small helper.
+	
+	Affected area:
+	• Replace first(where:) exact-match selection with collect-and-classify logic.
+	• Preserve existing execution after a unique match is chosen.
+	• Emit the existing popup message only for an ambiguous committed speech event.
+	
+	Required decisions:
+	• Whether “exact” includes today’s space-stripped exact fallback.
+	• Whether hidden buttons remain speech eligible. Current behavior says yes, but this is likely surprising and should be deliberately preserved or explicitly changed.
+	• Whether the existing permissive partial/subphrase fallbacks remain after an exact no-match. The requested future full-phrase rule conflicts with those fallbacks.
+	
+	Tests:
+	• One exact candidate activates.
+	• Two same normalized labels do not activate either.
+	• Visible and hidden duplicates.
+	• Same label after punctuation/case normalization.
+	• Warning appears once and clears after one second.
+	• A subsequent utterance is eligible again.
+	
+	Complexity/risk:
+	• Low code complexity.
+	• Main regression risk is changing legacy fallback matching accidentally.
+	
+	Stage 2: English homophone-equivalent full-phrase matching
+	
+	Expected files:
+	• SR_Support.swift, or preferably a new small speech-matching support file beside it to keep the curated data isolated.
+	• No changes should be required in SR_Manager.swift or physical grid execution.
+	
+	Affected area:
+	• Add a pure word-equivalence dictionary and a whole-phrase homophone comparison.
+	• Apply it only after zero exact candidates.
+	• Require same token count and token order.
+	• Return ambiguity rather than selecting grid order.
+	
+	Tests:
+	• right/write/rite; hi/high; there/their/they’re; to/too/two; hear/here; by/buy/bye.
+	• Exact match wins over a homophone match.
+	• Unique homophone activates.
+	• Multiple homophone candidates warn and do not activate.
+	• Extra leading word, omitted word, substring, reordered words, and arbitrary near-spelling do not match.
+	• Non-English locale does not use the English dictionary.
+	
+	Complexity/risk:
+	• Moderate, mainly because dictionary quality and locale policy are product decisions.
+	• The matching logic itself is small and isolated.
+	
+	Stage 3: regression and device validation
+	
+	Expected files:
+	• Ideally test targets plus only targeted fixes discovered during validation.
+	
+	Required validation:
+	• Real-device permission prompts, audio capture, silence timeout, final result, restart, and auto-off.
+	• iPhone and iPad speech UI layouts.
+	• BLE and Mac output warnings.
+	• Physical MIDI Note Preview/Play and MIDI CC Test behavior.
+	• MIDI momentary, hold, and toggle paths.
+	• Dynamic labels, hidden buttons, widgets, border states, quick menus, editor navigation, Clear, and Back Delete.
+	
+	Complexity/risk:
+	• Moderate validation effort.
+	• The main architecture risk is not the matching algorithm; it is unintentionally broadening speech activation into physical MIDI/gesture semantics or changing existing permissive matching behavior.
+	
+	12. Unresolved questions and risks
+	
+	• The proposed full-phrase rule conflicts with verified existing partial and substring matching. This needs an explicit product decision before implementation.
+	• Hidden buttons currently participate in speech matching. If Stage 1 collects candidates without changing eligibility, hidden duplicates can make a visible command ambiguous.
+	• Speech does not execute the physical button path. Refactoring it to do so would be high risk because MIDI, widgets, gesture timing, URL/app/clipboard behavior, and mode checks differ.
+	• The word “button” is not special in the matcher. It is merely another token.
+	• Apple locale is Locale.current. A future English dictionary needs a deliberate locale gate.
+	• No automated safety net currently exists for this feature area.

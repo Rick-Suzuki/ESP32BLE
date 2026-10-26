@@ -16,8 +16,8 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "6654"
             endingLineNumber = "6654"
-            landmarkName = "SoftEditorAccessoryPickerRoute"
-            landmarkType = "13">
+            landmarkName = "SoftEditorAccessoryFileCategory"
+            landmarkType = "14">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -48,8 +48,8 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "6594"
             endingLineNumber = "6594"
-            landmarkName = "behavior(for:)"
-            landmarkType = "7">
+            landmarkName = "SoftEditorAccessoryConfiguration"
+            landmarkType = "13">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -64,8 +64,8 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "6595"
             endingLineNumber = "6595"
-            landmarkName = "behavior(for:)"
-            landmarkType = "7">
+            landmarkName = "SoftEditorAccessoryConfiguration"
+            landmarkType = "13">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -80,8 +80,8 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "6596"
             endingLineNumber = "6596"
-            landmarkName = "behavior(for:)"
-            landmarkType = "7">
+            landmarkName = "SoftEditorAccessoryConfiguration"
+            landmarkType = "13">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -96,8 +96,8 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "6597"
             endingLineNumber = "6597"
-            landmarkName = "behavior(for:)"
-            landmarkType = "7">
+            landmarkName = "SoftEditorAccessoryConfiguration"
+            landmarkType = "13">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -112,8 +112,8 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "6598"
             endingLineNumber = "6598"
-            landmarkName = "behavior(for:)"
-            landmarkType = "7">
+            landmarkName = "SoftEditorAccessoryConfiguration"
+            landmarkType = "13">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -128,8 +128,8 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "6599"
             endingLineNumber = "6599"
-            landmarkName = "behavior(for:)"
-            landmarkType = "7">
+            landmarkName = "SoftEditorAccessoryConfiguration"
+            landmarkType = "13">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
