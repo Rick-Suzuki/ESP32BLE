@@ -1,9 +1,17 @@
 
+261026 Mon 1541
+STAGE 1 — SMART KEYCODE INSERTION
+V65.34
+
+//
+//----------------------------------------
+//
 261026 Mon 1459
 STAGE 3: ENGLISH HOMOPHONE MATCHING WORKS
-V65.33
-
-
+V65.33 + BB BACKUP
+//
+//----------------------------------------
+//
 261026 Mon 1417
 STAGE 2: STRICT WHOLE-PHRASE MATCHING
 V65.32

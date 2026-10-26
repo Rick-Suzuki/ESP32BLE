@@ -333,25 +333,24 @@ private let smartButtonSwatchHexColors = [
 ]
 	// MARK: - BM:🟥 smart keycodes
     private let smartEscapeCodeRows: [(english: String, command: String, description: String)] = [
-		("escape key", 			"ESC", 		"sends the escape key"),
-		("send return", 		"RET", 		"sends the return key"),
-		("backspace key", 		"BS", 		"sends a backspace key"),
-		("space key", 			"SP", 		"sends the space character."),
-		("tab key", 			"TAB", 		"sends the tab key"),
-		("new line", 			"NL", 		"sends a newline character."),
+		("escape key", 			".ESC", 		"sends the escape key"),
+		("send return", 		".RET", 		"sends the return key"),
+		("backspace key", 		".BS", 		"sends a backspace key"),
+		("space key", 			".SP", 		"sends the space character."),
+		("tab key", 			".TAB", 		"sends the tab key"),
 		("colon", 				":", 		"a colon is used to separate keyboard presses"),
-		("up key", 				"UP", 		"sends up arrow"),
-		("down key", 			"DOWN", 	"sends down arrow"),
-		("left key", 			"LEFT", 	"sends left arrow"),
-		("right key", 			"RIGHT",	"sends right arrow"),
-		("select all (ctl-a)", 	"CA", 		"sends control-a"),
-		("copy (ctl-c)", 		"CC", 		"sends control-c"),
-		("paste (ctl-v)", 		"CV", 		"sends control-v"),
-		("cut (ctl-x)", 		"CX", 		"sends control-x"),
-		("select all (cmd-a)", 	"MA", 		"sends command-a"),
-		("copy (cmd-c)", 		"MC", 		"sends command-c"),
-		("paste (cmd-v)", 		"MV", 		"sends command-v"),
-		("cut (cmd-x)", 		"MX", 		"sends command-x")
+		("up key", 				".UP", 		"sends up arrow"),
+		("down key", 			".DOWN", 	"sends down arrow"),
+		("left key", 			".LEFT", 	"sends left arrow"),
+		("right key", 			".RIGHT",	"sends right arrow"),
+		("select all (ctl-a)", 	".CTA", 		"sends control-a"),
+		("copy (ctl-c)", 		".CTC", 		"sends control-c"),
+		("paste (ctl-v)", 		".CTV", 		"sends control-v"),
+		("cut (ctl-x)", 		".CTX", 		"sends control-x"),
+		("select all (cmd-a)", 	".MA", 		"sends command-a"),
+		("copy (cmd-c)", 		".MC", 		"sends command-c"),
+		("paste (cmd-v)", 		".MV", 		"sends command-v"),
+		("cut (cmd-x)", 		".MX", 		"sends command-x")
 	]
 	//
 	//-----------------------------------------------------------------------------------------------

@@ -177,10 +177,10 @@ struct MainScreenSlotEditorOverlay: View {
                         helperInsertButton(label: "⇧", insertedText: "sh:")
                         helperInsertButton(label: "⌘", insertedText: "cm:")
 
-                        helperInsertButton("ESC:")
-                        helperInsertButton("RET:")
-                        helperInsertButton("BS:")
-                        helperInsertButton("CA:")
+                        helperInsertButton(".ESC:")
+                        helperInsertButton(".RET:")
+                        helperInsertButton(".BS:")
+                        helperInsertButton(".CTA:")
                         helperBackspaceButton()
 
                         deleteButtonPlaceholder
@@ -204,9 +204,9 @@ struct MainScreenSlotEditorOverlay: View {
 						
 						VStack(spacing: buttonSpacing) {
 							HStack(spacing: buttonSpacing) {
-								helperInsertButton("SP:")
-								helperInsertButton("TAB:")
-								helperInsertButton("MA:")
+								helperInsertButton(".SP:")
+								helperInsertButton(".TAB:")
+								helperInsertButton(".MA:")
 								newlineInsertButton
 								forwardDeleteButton
 								testButton
@@ -215,10 +215,10 @@ struct MainScreenSlotEditorOverlay: View {
 							// MARK: - BM:🟧 soft KB: arrows
 							HStack(spacing: buttonSpacing) {
 								helperInsertButton(":")
-								helperInsertButton(systemImage: "triangle.fill", rotationDegrees: 0, 	insertedText: "UP:")
-								helperInsertButton(systemImage: "triangle.fill", rotationDegrees: 180, 	insertedText: "DOWN:")
-								helperInsertButton(systemImage: "triangle.fill", rotationDegrees: -90, 	insertedText: "LEFT:")
-								helperInsertButton(systemImage: "triangle.fill", rotationDegrees: 90,	insertedText: "RIGHT:")
+								helperInsertButton(systemImage: "triangle.fill", rotationDegrees: 0, 	insertedText: ".UP:")
+								helperInsertButton(systemImage: "triangle.fill", rotationDegrees: 180, 	insertedText: ".DOWN:")
+								helperInsertButton(systemImage: "triangle.fill", rotationDegrees: -90, 	insertedText: ".LEFT:")
+								helperInsertButton(systemImage: "triangle.fill", rotationDegrees: 90,	insertedText: ".RIGHT:")
 								saveButton
 							}
 							
