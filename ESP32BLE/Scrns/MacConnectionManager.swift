@@ -284,6 +284,15 @@ final class MacConnectionManager: ObservableObject {
 
     func sendKeyboardTokens(_ tokens: [String]) -> Bool {
         let messages = macMessages(from: tokens)
+        return sendKeyboardMessages(messages)
+    }
+
+    func sendSmartScriptKeyboardTokens(_ tokens: [String]) -> Bool {
+        let messages = macMessages(from: tokens, interpretsSmartScriptKeycodes: true)
+        return sendKeyboardMessages(messages)
+    }
+
+    private func sendKeyboardMessages(_ messages: [String]) -> Bool {
         guard !messages.isEmpty else {
             return true
         }
@@ -540,13 +549,30 @@ final class MacConnectionManager: ObservableObject {
         print("[ESP-AUTH] pairing request sent")
     }
 
-    private func macMessages(from tokens: [String]) -> [String] {
+    private func macMessages(
+        from tokens: [String],
+        interpretsSmartScriptKeycodes: Bool = false
+    ) -> [String] {
         var messages: [String] = []
         var modifiers: [String] = []
 
         for token in tokens {
             let commandToken = token == " " ? token : token.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !commandToken.isEmpty else {
+                continue
+            }
+
+            if interpretsSmartScriptKeycodes,
+               let smartKeycodeMessage = macSmartScriptKeycodeMessage(for: commandToken) {
+                messages.append(smartKeycodeMessage)
+                modifiers.removeAll()
+                continue
+            }
+
+            if interpretsSmartScriptKeycodes,
+               isObsoleteSmartScriptKeycode(commandToken) {
+                messages.append("TEXT:\(commandToken)")
+                modifiers.removeAll()
                 continue
             }
 
@@ -562,6 +588,59 @@ final class MacConnectionManager: ObservableObject {
         }
 
         return messages
+    }
+
+    private func macSmartScriptKeycodeMessage(for token: String) -> String? {
+        switch token {
+        case ".ESC":
+            return "KEY:ESC"
+        case ".RET":
+            return "KEY:RETURN"
+        case ".BS":
+            return "KEY:BACKSPACE"
+        case ".SP":
+            return "KEY:SPACE"
+        case ".TAB":
+            return "KEY:TAB"
+        case ".UP":
+            return "KEY:UP"
+        case ".DOWN":
+            return "KEY:DOWN"
+        case ".LEFT":
+            return "KEY:LEFT"
+        case ".RIGHT":
+            return "KEY:RIGHT"
+        case ".CTA":
+            return "CTRL+A"
+        case ".CTC":
+            return "CTRL+C"
+        case ".CTV":
+            return "CTRL+V"
+        case ".CTX":
+            return "CTRL+X"
+        case ".MA":
+            return "CMD+A"
+        case ".MC":
+            return "CMD+C"
+        case ".MV":
+            return "CMD+V"
+        case ".MX":
+            return "CMD+X"
+        default:
+            return nil
+        }
+    }
+
+    private func isObsoleteSmartScriptKeycode(_ token: String) -> Bool {
+        switch token.uppercased() {
+        case "ESC", "RET", "BS", "SP", "TAB",
+             "UP", "DOWN", "LEFT", "RIGHT",
+             "CA", "CC", "CV", "CX",
+             "MA", "MC", "MV", "MX":
+            return true
+        default:
+            return false
+        }
     }
 
     private func macMessage(for token: String, modifiers: [String]) -> String {

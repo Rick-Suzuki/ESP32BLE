@@ -1181,8 +1181,13 @@ extension MainScreen {
         }
 
         let keyboardOutputTokens = tokens
-            .map(normalizedBluetoothSendText)
-            .filter { !$0.hasPrefix(".") }
+            .compactMap { token in
+                let normalizedToken = normalizedBluetoothSendText(token)
+                if let smartKeycode = canonicalSmartScriptKeycode(normalizedToken) {
+                    return smartKeycode
+                }
+                return normalizedToken.hasPrefix(".") ? nil : normalizedToken
+            }
 
         guard !keyboardOutputTokens.isEmpty else {
             return true
@@ -1196,7 +1201,7 @@ extension MainScreen {
             renameAlertMessage = "Select Mac or ESP32 before sending keyboard output."
             return false
         case .mac:
-            guard macConnection.sendKeyboardTokens(keyboardOutputTokens) else {
+            guard macConnection.sendSmartScriptKeyboardTokens(keyboardOutputTokens) else {
                 alertTitle = "Mac helper not connected"
                 renameAlertMessage = "ESP needs to connect to ESP Mac Helper before sending keyboard output to the Mac."
                 return false
@@ -2446,10 +2451,6 @@ extension MainScreen {
         let trimmedSendText = sendText.trimmingCharacters(in: .whitespacesAndNewlines)
         let loweredSendText = trimmedSendText.lowercased()
 
-        if loweredSendText == "sp" {
-            return " "
-        }
-
         if let outputCommand = normalizedNumericBluetoothCommand(
             from: trimmedSendText,
             command: "out",
@@ -2472,6 +2473,20 @@ extension MainScreen {
         }
 
         return loweredSendText
+    }
+
+    private func canonicalSmartScriptKeycode(_ token: String) -> String? {
+        let uppercaseToken = token.uppercased()
+
+        switch uppercaseToken {
+        case ".ESC", ".RET", ".BS", ".SP", ".TAB",
+             ".UP", ".DOWN", ".LEFT", ".RIGHT",
+             ".CTA", ".CTC", ".CTV", ".CTX",
+             ".MA", ".MC", ".MV", ".MX":
+            return uppercaseToken
+        default:
+            return nil
+        }
     }
 
     private func normalizedNumericBluetoothCommand(

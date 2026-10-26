@@ -1,35 +1,58 @@
-Stage 1 complete.
+Stage 2A complete.
 
-Files modified:
+A. Functions modified
 
-• ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
-• Updated all Smart Keycode menu command values to dotted syntax.
-• Renamed Control commands to .CTA, .CTC, .CTV, .CTX.
-• Updated Command commands to .MA, .MC, .MV, .MX.
-• Removed the NL Smart Keycode menu row.
-• Left the colon separator as exactly ":".
+ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift only.
 
-• ESP32BLE/Scrns/Main_Screen/Soft_Editor/Soft_Editor_Overlay.swift
-• Updated existing Smart Keycode shortcuts to insert:
-.ESC:, .RET:, .BS:, .CTA:, .SP:, .TAB:, .MA:
+• sendKeyboardOutputTokens(_:respectsButtonMode:)
+• Replaced isSmartScriptKeycode(:) with canonicalSmartScriptKeycode(:)
 
-and .UP:, .DOWN:, .LEFT:, .RIGHT:
+B. Canonicalization helper
 
-• Preserved existing trailing colon separators.
-• Preserved the ordinary editor newline control; it is not a Smart Keycode.
+canonicalSmartScriptKeycode(_:) uppercases a complete candidate only for comparison against the exact 17 supported dotted commands.
 
-No parser, execution, BLE, Mac Helper, MIDI, speech, keyboard-screen, or transport code was changed.
+Recognized examples:
 
-Build result: successful, with no build errors.
+.up, .Up, .UP -> .UP
+.sp, .Sp, .SP -> .SP
+.ctc, .CtC, .CTC -> .CTC
+.mc, .Mc, .MC -> .MC
 
-Note: Xcode’s live per-file diagnostics refresh timed out before returning, but the full project build completed successfully.
+It returns nil for every other token. There is no substring or prefix matching.
 
-Suggested manual tests:
+C. Application before output
 
-• Insert every Smart Keycode from the menu and confirm its dotted text.
-• Confirm colon inserts only ":".
-• Confirm no NL Smart Keycode menu entry exists.
-• Confirm each Soft Editor shortcut inserts the dotted form with its existing trailing colon.
-• Confirm normal editor newline, Clear, Back Delete, cursor positioning, and iPhone/iPad editor layout remain unchanged.
+sendKeyboardOutputTokens now:
+
+1. Preserves existing normalization.
+2. Replaces a recognized Smart Keycode with its canonical uppercase token.
+3. Removes unknown dotted tokens as before.
+4. Preserves non-dotted text unchanged.
+
+Thus canonical dotted commands now reach the existing Mac Smart Script sender or BLE line sender.
+
+D. Scope protection
+
+• Only the agreed 17 commands are recognized.
+• No .NL handling was introduced.
+• Bare UP, up, SP, sp, RET, ret, CTC, and MA remain ordinary text with original casing.
+• .cc, .midi, .amb, widgets, and unknown dotted commands are not canonicalized.
+• No MacConnectionManager, BLE manager, firmware, MIDI, speech, widget, or dedicated-keyboard files were modified.
+
+E. Validation
+
+• Xcode diagnostics: no issues in Main_ButtonBehavior.swift.
+• Full project build: successful, no build errors.
+• No physical-device testing was performed.
+
+F. Suggested device checks
+
+• Mac output: .up/.Up/.UP, .sp/.Sp/.SP, .ret, .ctc, and .mc.
+• Confirm Mac transport frames use canonical messages such as KEY:UP, KEY:SPACE, KEY:RETURN, CTRL+C, and CMD+C.
+• Confirm bare UP/up/SP/sp/RET/ret/CTC/MA type literally.
+• Confirm .cc MIDI CC behavior remains unchanged.
+• Confirm .midi, .amb, and unknown tokens such as .upward remain unaffected.
+• With BLE selected, confirm mixed-case Smart Keycodes are forwarded canonically as uppercase dotted tokens; firmware execution remains deferred to the firmware stage.
+• Confirm dedicated keyboard behavior is unchanged.
 
 No commit or backup was created.

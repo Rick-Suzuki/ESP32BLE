@@ -103,10 +103,6 @@ func parsedActionTokens(from text: String) -> [String] {
                 return []
             }
 
-            if trimmedComponent.caseInsensitiveCompare("sp") == .orderedSame {
-                return [" "]
-            }
-
             return expandedCompactDisplayModifierToken(trimmedComponent) ?? [trimmedComponent]
         }
 }

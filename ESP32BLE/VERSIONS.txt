@@ -1,8 +1,13 @@
 
+261026 Mon 1727
+STAGE 2 — SMART KEYCODE PARSING AND MAC OUTPUT
+V65.35
+
+
+
 261026 Mon 1541
 STAGE 1 — SMART KEYCODE INSERTION
 V65.34
-
 //
 //----------------------------------------
 //
