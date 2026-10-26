@@ -1129,6 +1129,7 @@ Tapping a row inserts the key code at the cursor.
                 showFilenameToastIfNeeded()
             }
             .onChange(of: editingSlotIndex) {
+                handleSpeechRecognitionEditingStateChange()
                 if editingSlotIndex != nil {
                     resetDirectionalDeleteState()
                     dismissMainGridActionMenu()
@@ -1139,6 +1140,7 @@ Tapping a row inserts the key code at the cursor.
                 smartButtonBrightnessBaseHex = smartButtonColorHex
             }
             .onChange(of: isGridEditModeEnabled) {
+                handleSpeechRecognitionEditingStateChange()
                 if !isGridEditModeEnabled {
                     cancelPendingPopupRestore()
                     resetDirectionalDeleteState()

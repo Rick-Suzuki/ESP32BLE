@@ -48,8 +48,8 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "6594"
             endingLineNumber = "6594"
-            landmarkName = "SoftEditorAccessoryConfiguration"
-            landmarkType = "13">
+            landmarkName = "insertionTemplates"
+            landmarkType = "24">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -64,8 +64,8 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "6595"
             endingLineNumber = "6595"
-            landmarkName = "SoftEditorAccessoryConfiguration"
-            landmarkType = "13">
+            landmarkName = "insertionTemplates"
+            landmarkType = "24">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy

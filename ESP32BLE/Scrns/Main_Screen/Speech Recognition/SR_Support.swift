@@ -3,7 +3,7 @@ import AVFAudio
 
 extension MainScreen {
     func applyRecognizedSpeech(_ recognizedText: String) {
-        guard isSpkRecEnabled, !isGridEditModeEnabled else {
+        guard isSpkRecEnabled, !isSpeechRecognitionBlockedByEditing else {
             return
         }
 
@@ -293,6 +293,11 @@ extension MainScreen {
 
     func handleSpeechRecognitionToggle() {
         if isSpkRecEnabled {
+            guard !isSpeechRecognitionBlockedByEditing else {
+                handleSpeechRecognitionEditingStateChange()
+                return
+            }
+
             unmatchedSpeechText = nil
             speechRecognition.setListeningEnabled(true)
             scheduleSpeechRecognitionAutoOff()
@@ -302,6 +307,22 @@ extension MainScreen {
         speechRecognitionAutoOffTask?.cancel()
         speechRecognitionAutoOffTask = nil
         unmatchedSpeechText = nil
+        speechRecognition.setListeningEnabled(false)
+    }
+
+    private var isSpeechRecognitionBlockedByEditing: Bool {
+        isGridEditModeEnabled || editingSlotIndex != nil
+    }
+
+    func handleSpeechRecognitionEditingStateChange() {
+        guard isSpeechRecognitionBlockedByEditing else {
+            return
+        }
+
+        speechRecognitionAutoOffTask?.cancel()
+        speechRecognitionAutoOffTask = nil
+        unmatchedSpeechText = nil
+        isSpkRecEnabled = false
         speechRecognition.setListeningEnabled(false)
     }
 

@@ -1,7 +1,11 @@
 
-V65.30_261026 Mon 1349
-SR stage 1 complete
+261026 Mon 1406
+SR disabled when entering soft editor
+V65.31
 
+261026 Mon 1349
+SR stage 1 complete
+V65.30
 
 V65.29_261026 Mon 1330
 quick midi complete
