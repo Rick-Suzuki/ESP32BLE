@@ -1,4 +1,9 @@
 
+261026 Mon 1417
+STAGE 2: STRICT WHOLE-PHRASE MATCHING
+V65.32
+
+
 261026 Mon 1406
 SR disabled when entering soft editor
 V65.31

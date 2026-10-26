@@ -237,58 +237,7 @@ extension MainScreen {
             }
         }
 
-        let subphraseMatchResult = matchResult { entry in
-            guard let alternateDisplayText = entry.alternateDisplayText else {
-                return false
-            }
-
-            return speechText(normalizedSpeechMatchText(alternateDisplayText), containsPhrase: recognizedText)
-        }
-        if case .unique = subphraseMatchResult {
-            return subphraseMatchResult
-        }
-        if case .ambiguous = subphraseMatchResult {
-            return subphraseMatchResult
-        }
-
-        if recognizedTextWithoutSpaces != recognizedText {
-            return matchResult { entry in
-                guard let alternateDisplayText = entry.alternateDisplayText else {
-                    return false
-                }
-
-                return normalizedSpeechMatchText(alternateDisplayText)
-                    .replacingOccurrences(of: " ", with: "")
-                    .contains(recognizedTextWithoutSpaces)
-            }
-        }
-
         return .noMatch
-    }
-
-    func speechText(_ candidateText: String, containsPhrase phraseText: String) -> Bool {
-        let candidateTokens = candidateText
-            .split(whereSeparator: \.isWhitespace)
-            .map(String.init)
-        let phraseTokens = phraseText
-            .split(whereSeparator: \.isWhitespace)
-            .map(String.init)
-
-        guard !candidateTokens.isEmpty,
-              !phraseTokens.isEmpty,
-              phraseTokens.count <= candidateTokens.count else {
-            return false
-        }
-
-        let lastStartIndex = candidateTokens.count - phraseTokens.count
-        for startIndex in 0...lastStartIndex {
-            let candidateSlice = candidateTokens[startIndex..<(startIndex + phraseTokens.count)]
-            if Array(candidateSlice).elementsEqual(phraseTokens) {
-                return true
-            }
-        }
-
-        return false
     }
 
     func handleSpeechRecognitionToggle() {
