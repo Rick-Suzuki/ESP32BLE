@@ -70,7 +70,7 @@ extension KeyboardScreen {
                 showNoOutputModePopup()
                 return
             case .mac:
-                guard macConnection.sendKeyboardTokens(["BS"]) else {
+                guard macConnection.sendKeyboardTokens([".BS"]) else {
                     showMacDisconnectedPopup()
                     return
                 }
@@ -80,7 +80,7 @@ extension KeyboardScreen {
                     return
                 }
 
-                ble.pressBackspace()
+                ble.sendLine(".BS")
             }
 
             showImmediateTypingPreview("⏪")
@@ -104,7 +104,7 @@ extension KeyboardScreen {
                 showNoOutputModePopup()
                 return
             case .mac:
-                guard macConnection.sendKeyboardTokens(["ENTER"]) else {
+                guard macConnection.sendKeyboardTokens([".RET"]) else {
                     showMacDisconnectedPopup()
                     return
                 }
@@ -114,7 +114,7 @@ extension KeyboardScreen {
                     return
                 }
 
-                ble.pressEnter()
+                ble.sendLine(".RET")
             }
 
             showImmediateTypingPreview("➡️")

@@ -99,16 +99,16 @@ extension KeyboardScreen {
             plainFunctionCell("F18"),
             plainFunctionCell("F19"),
             plainFunctionCell("F20"),
-            keyTokenCell(title: "", systemImageName: "triangle.fill", keyToken: "UP", background: arrowColor, applyStickyModifiers: true),
-            keyTokenCell(title: "", systemImageName: "triangle.fill", keyToken: "DOWN", background: arrowColor, applyStickyModifiers: true),
-            keyTokenCell(title: "", systemImageName: "triangle.fill", keyToken: "LEFT", background: arrowColor, applyStickyModifiers: true),
-            keyTokenCell(title: "", systemImageName: "triangle.fill", keyToken: "RIGHT", background: arrowColor, applyStickyModifiers: true)
+            keyTokenCell(title: "", systemImageName: "triangle.fill", keyToken: ".UP", background: arrowColor, applyStickyModifiers: true),
+            keyTokenCell(title: "", systemImageName: "triangle.fill", keyToken: ".DOWN", background: arrowColor, applyStickyModifiers: true),
+            keyTokenCell(title: "", systemImageName: "triangle.fill", keyToken: ".LEFT", background: arrowColor, applyStickyModifiers: true),
+            keyTokenCell(title: "", systemImageName: "triangle.fill", keyToken: ".RIGHT", background: arrowColor, applyStickyModifiers: true)
         ]
     }
 
     var bottomRowCells: [KeyboardCell] {
         [
-            keyTokenCell(title: "ESC", keyToken: "ESC", background: standardFunctionColor),
+            keyTokenCell(title: "ESC", keyToken: ".ESC", background: standardFunctionColor),
             KeyboardCell(title: "clr all", background: clearAllButtonColor, foreground: activeModifiers.isEmpty ? .white : .black) {
                 resetModifierToggles()
             },
@@ -178,10 +178,10 @@ extension KeyboardScreen {
             modifierCell(.option),
             modifierCell(.shift),
             modifierCell(.command),
-            keyTokenCell(title: "", systemImageName: "triangle.fill", keyToken: "UP", background: arrowColor, applyStickyModifiers: true),
-            keyTokenCell(title: "", systemImageName: "triangle.fill", keyToken: "DOWN", background: arrowColor, applyStickyModifiers: true),
-            keyTokenCell(title: "", systemImageName: "triangle.fill", keyToken: "LEFT", background: arrowColor, applyStickyModifiers: true),
-            keyTokenCell(title: "", systemImageName: "triangle.fill", keyToken: "RIGHT", background: arrowColor, applyStickyModifiers: true)
+            keyTokenCell(title: "", systemImageName: "triangle.fill", keyToken: ".UP", background: arrowColor, applyStickyModifiers: true),
+            keyTokenCell(title: "", systemImageName: "triangle.fill", keyToken: ".DOWN", background: arrowColor, applyStickyModifiers: true),
+            keyTokenCell(title: "", systemImageName: "triangle.fill", keyToken: ".LEFT", background: arrowColor, applyStickyModifiers: true),
+            keyTokenCell(title: "", systemImageName: "triangle.fill", keyToken: ".RIGHT", background: arrowColor, applyStickyModifiers: true)
         ]
     }
 
@@ -205,7 +205,7 @@ extension KeyboardScreen {
 
     var mode2BottomRowCells: [KeyboardCell] {
         [
-            keyTokenCell(title: "ESC", keyToken: "ESC", background: standardFunctionColor),
+            keyTokenCell(title: "ESC", keyToken: ".ESC", background: standardFunctionColor),
             keyTokenCell(title: "0", keyToken: "kp0", background: keypadColor),
             keyTokenCell(title: ".", keyToken: "kp.", background: keypadColor),
             plainFunctionCell("F1"),
@@ -233,8 +233,8 @@ extension KeyboardScreen {
             comboFunctionCell(title: "cmd F13", tokens: ["cm"], functionKey: "f13", background: commandRowColor),
             comboFunctionCell(title: "F14", tokens: ["cm"], functionKey: "f14", background: commandRowColor),
             comboFunctionCell(title: "F15", tokens: ["cm"], functionKey: "f15", background: commandRowColor),
-            keyTokenCell(title: "", systemImageName: "triangle.fill", keyToken: "UP", background: arrowColor, applyStickyModifiers: true),
-            keyTokenCell(title: "", systemImageName: "triangle.fill", keyToken: "DOWN", background: arrowColor, applyStickyModifiers: true)
+            keyTokenCell(title: "", systemImageName: "triangle.fill", keyToken: ".UP", background: arrowColor, applyStickyModifiers: true),
+            keyTokenCell(title: "", systemImageName: "triangle.fill", keyToken: ".DOWN", background: arrowColor, applyStickyModifiers: true)
         ]
     }
 
@@ -248,8 +248,8 @@ extension KeyboardScreen {
             modifierCell(.option),
             comboFunctionCell(title: "F16", tokens: ["cm"], functionKey: "f16", background: commandRowColor),
             comboFunctionCell(title: "F17", tokens: ["cm"], functionKey: "f17", background: commandRowColor),
-            keyTokenCell(title: "", systemImageName: "triangle.fill", keyToken: "LEFT", background: arrowColor, applyStickyModifiers: true),
-            keyTokenCell(title: "", systemImageName: "triangle.fill", keyToken: "RIGHT", background: arrowColor, applyStickyModifiers: true)
+            keyTokenCell(title: "", systemImageName: "triangle.fill", keyToken: ".LEFT", background: arrowColor, applyStickyModifiers: true),
+            keyTokenCell(title: "", systemImageName: "triangle.fill", keyToken: ".RIGHT", background: arrowColor, applyStickyModifiers: true)
         ]
     }
 
@@ -270,7 +270,7 @@ extension KeyboardScreen {
 
     var mode3BottomRowCells: [KeyboardCell] {
         [
-            keyTokenCell(title: "ESC", keyToken: "ESC", background: standardFunctionColor),
+            keyTokenCell(title: "ESC", keyToken: ".ESC", background: standardFunctionColor),
             keyTokenCell(title: "0", keyToken: "kp0", background: keypadColor),
             keyTokenCell(title: ".", keyToken: "kp.", background: keypadColor),
             keyTokenCell(title: "+", keyToken: "kp+", background: keypadColor),
@@ -467,13 +467,13 @@ extension KeyboardScreen {
         }
 
         switch keyToken {
-        case "UP":
+        case ".UP":
             return 0
-        case "DOWN":
+        case ".DOWN":
             return 180
-        case "LEFT":
+        case ".LEFT":
             return -90
-        case "RIGHT":
+        case ".RIGHT":
             return 90
         default:
             return 0

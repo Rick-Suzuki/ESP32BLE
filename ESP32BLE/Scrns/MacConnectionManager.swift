@@ -644,66 +644,18 @@ final class MacConnectionManager: ObservableObject {
     }
 
     private func macMessage(for token: String, modifiers: [String]) -> String {
+        if let smartKeycodeMessage = directKeyboardSmartKeycodeMessage(for: token, modifiers: modifiers) {
+            return smartKeycodeMessage
+        }
+
         let upperToken = token.uppercased()
 
         if !modifiers.isEmpty {
             return (modifiers + [upperToken]).joined(separator: "+")
         }
 
-        if upperToken == "RET" || upperToken == "RETURN" || upperToken == "ENTER" {
-            return "KEY:RETURN"
-        }
-
-        if token == " " || upperToken == "SP" || upperToken == "SPACE" {
+        if token == " " {
             return "KEY:SPACE"
-        }
-
-        if upperToken == "TAB" {
-            return "KEY:TAB"
-        }
-
-        if upperToken == "BS" || upperToken == "BACKSPACE" || upperToken == "DELETE" {
-            return "KEY:BACKSPACE"
-        }
-
-        if upperToken == "ESC" || upperToken == "ESCAPE" {
-            return "KEY:ESC"
-        }
-
-        if upperToken == "CA" {
-            return "CTRL+A"
-        }
-
-        if upperToken == "CC" {
-            return "CTRL+C"
-        }
-
-        if upperToken == "CV" {
-            return "CTRL+V"
-        }
-
-        if upperToken == "CX" {
-            return "CTRL+X"
-        }
-
-        if upperToken == "MA" {
-            return "CMD+A"
-        }
-
-        if upperToken == "MC" {
-            return "CMD+C"
-        }
-
-        if upperToken == "MV" {
-            return "CMD+V"
-        }
-
-        if upperToken == "MX" {
-            return "CMD+X"
-        }
-
-        if upperToken == "UP" || upperToken == "DOWN" || upperToken == "LEFT" || upperToken == "RIGHT" {
-            return "KEY:\(upperToken)"
         }
 
         if let keypadKeyName = macKeypadKeyName(for: upperToken) {
@@ -719,6 +671,37 @@ final class MacConnectionManager: ObservableObject {
         }
 
         return "TEXT:\(token)"
+    }
+
+    private func directKeyboardSmartKeycodeMessage(for token: String, modifiers: [String]) -> String? {
+        switch token.uppercased() {
+        case ".ESC": return keyboardMessage(for: "ESC", modifiers: modifiers, unmodifiedMessage: "KEY:ESC")
+        case ".RET": return keyboardMessage(for: "RET", modifiers: modifiers, unmodifiedMessage: "KEY:RETURN")
+        case ".BS": return keyboardMessage(for: "BS", modifiers: modifiers, unmodifiedMessage: "KEY:BACKSPACE")
+        case ".SP": return keyboardMessage(for: "SP", modifiers: modifiers, unmodifiedMessage: "KEY:SPACE")
+        case ".TAB": return keyboardMessage(for: "TAB", modifiers: modifiers, unmodifiedMessage: "KEY:TAB")
+        case ".UP": return keyboardMessage(for: "UP", modifiers: modifiers, unmodifiedMessage: "KEY:UP")
+        case ".DOWN": return keyboardMessage(for: "DOWN", modifiers: modifiers, unmodifiedMessage: "KEY:DOWN")
+        case ".LEFT": return keyboardMessage(for: "LEFT", modifiers: modifiers, unmodifiedMessage: "KEY:LEFT")
+        case ".RIGHT": return keyboardMessage(for: "RIGHT", modifiers: modifiers, unmodifiedMessage: "KEY:RIGHT")
+        case ".CTA": return "CTRL+A"
+        case ".CTC": return "CTRL+C"
+        case ".CTV": return "CTRL+V"
+        case ".CTX": return "CTRL+X"
+        case ".MA": return "CMD+A"
+        case ".MC": return "CMD+C"
+        case ".MV": return "CMD+V"
+        case ".MX": return "CMD+X"
+        default: return nil
+        }
+    }
+
+    private func keyboardMessage(for key: String, modifiers: [String], unmodifiedMessage: String) -> String {
+        guard !modifiers.isEmpty else {
+            return unmodifiedMessage
+        }
+
+        return (modifiers + [key]).joined(separator: "+")
     }
 
     private func macKeypadKeyName(for token: String) -> String? {

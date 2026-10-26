@@ -1,58 +1,142 @@
-Stage 2A complete.
+Stage 3B source update is complete. No firmware was flashed, installed, committed, or backed up.
 
-A. Functions modified
+A. Firmware changes
 
-ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift only.
+Modified:
+/Users/rick/00-Home/Xcode/Projects2/103_MICRO PROJECTS/ESP32_S3/00_keyboard/ESP_32_2v3/ESP_32_2v3.ino
 
-• sendKeyboardOutputTokens(_:respectsButtonMode:)
-• Replaced isSmartScriptKeycode(:) with canonicalSmartScriptKeycode(:)
+sendCommandOrText() now creates an uppercase comparison copy only for Smart Keycode recognition.
 
-B. Canonicalization helper
+New mappings at lines 835–853:
 
-canonicalSmartScriptKeycode(_:) uppercases a complete candidate only for comparison against the exact 17 supported dotted commands.
+• .RET, .TAB, .BS, .ESC, .UP, .DOWN, .LEFT, .RIGHT, .SP
+• .CTA, .CTC, .CTV, .CTX
+• .MA, .MC, .MV, .MX
 
-Recognized examples:
+Only complete dotted tokens match. Recognition is case-insensitive.
 
-.up, .Up, .UP -> .UP
-.sp, .Sp, .SP -> .SP
-.ctc, .CtC, .CTC -> .CTC
-.mc, .Mc, .MC -> .MC
+Examples:
+• .up → Up Arrow
+• .Up → Up Arrow
+• .UP → Up Arrow
+• UP, SP, RET, CA, MC → literal text fallback
 
-It returns nil for every other token. There is no substring or prefix matching.
+The legacy bare Smart Keycode comparisons were removed, including ENTER, RETURN, RET, SP, arrows, CA/CC/CV/CX, and MA/MC/MV/MX.
 
-C. Application before output
+Single-key dotted commands continue using pressKeyTimed(), retaining sticky modifier behavior.
 
-sendKeyboardOutputTokens now:
+B. iOS files modified
 
-1. Preserves existing normalization.
-2. Replaces a recognized Smart Keycode with its canonical uppercase token.
-3. Removes unknown dotted tokens as before.
-4. Preserves non-dotted text unchanged.
+• Scrns/KB_Screen/KB_ModeRows.swift􀰓
+• Scrns/KB_Screen/KB_InputBehavior.swift􀰓
+• Scrns/MacConnectionManager.swift􀰓
 
-Thus canonical dotted commands now reach the existing Mac Smart Script sender or BLE line sender.
+codex.txt􀰓 was already modified in the worktree and was not changed by this work.
 
-D. Scope protection
+C. Dedicated keyboard changes
 
-• Only the agreed 17 commands are recognized.
-• No .NL handling was introduced.
-• Bare UP, up, SP, sp, RET, ret, CTC, and MA remain ordinary text with original casing.
-• .cc, .midi, .amb, widgets, and unknown dotted commands are not canonicalized.
-• No MacConnectionManager, BLE manager, firmware, MIDI, speech, widget, or dedicated-keyboard files were modified.
+KB_ModeRows.swift􀰓
 
-E. Validation
+All dedicated arrow controls now emit:
 
-• Xcode diagnostics: no issues in Main_ButtonBehavior.swift.
-• Full project build: successful, no build errors.
+• .UP
+• .DOWN
+• .LEFT
+• .RIGHT
+
+All dedicated Escape controls now emit .ESC.
+
+The arrow rotation switch was updated for dotted arrow tokens. Layout, labels, icons, button placement, function keys, keypad tokens, and modifier controls are unchanged.
+
+KB_InputBehavior.swift􀰓
+
+The dedicated keyboard now sends:
+
+• Backspace: .BS
+• Return: .RET
+
+This applies to both Mac and BLE output paths.
+
+Shared BLE helpers such as pressEnter(), pressBackspace(), and pressRightArrow() were deliberately not changed, because other active UI code uses them.
+
+D. Mac direct-keyboard support
+
+MacConnectionManager.swift:647–707 now recognizes the 17 dotted Smart Keycodes in the direct keyboard sender.
+
+Examples:
+
+• .UP → KEY:UP
+• .RET → KEY:RETURN
+• .BS → KEY:BACKSPACE
+• .SP → KEY:SPACE
+• .CTC → CTRL+C
+• .MC → CMD+C
+
+The main-screen Smart Script sender remains separate and unchanged.
+
+E. Sticky modifier preservation
+
+Direct keyboard dotted single-key commands retain pending modifiers.
+
+Examples:
+
+• ct + .UP → CTRL+UP
+• sh + .LEFT → SHIFT+LEFT
+• cm + .RIGHT → CMD+RIGHT
+• op + .ESC → ALT+ESC
+
+This does not use the Smart Script Mac encoder, so pending modifiers are not discarded.
+
+F. Validation
+
+iOS build:
+• Succeeded.
+• No build errors.
+
+Xcode source diagnostics:
+• KB_ModeRows.swift􀰓: no issues.
+• KB_InputBehavior.swift􀰓: no issues.
+• MacConnectionManager.swift􀰓: no issues.
+
+Firmware source validation:
+• Confirmed exactly 17 dotted mappings.
+• Confirmed no remaining legacy bare Smart Keycode comparisons in the firmware dispatcher.
+• Confirmed no .NL handling was added.
+
+Firmware compile:
+• Not run: arduino-cli is not installed or available in the current environment.
+
+G. Remaining limitations
+
 • No physical-device testing was performed.
+• No firmware flashing was performed.
+• A complete dedicated-keyboard input line exactly equal to a Smart Keycode, such as .UP, is intentionally treated as a command. No literal-text escape protocol was added, per the requested scope.
+• Shared legacy BLE helpers remain unchanged for unrelated active interfaces.
 
-F. Suggested device checks
+H. Coordinated deployment and device checklist
 
-• Mac output: .up/.Up/.UP, .sp/.Sp/.SP, .ret, .ctc, and .mc.
-• Confirm Mac transport frames use canonical messages such as KEY:UP, KEY:SPACE, KEY:RETURN, CTRL+C, and CMD+C.
-• Confirm bare UP/up/SP/sp/RET/ret/CTC/MA type literally.
-• Confirm .cc MIDI CC behavior remains unchanged.
-• Confirm .midi, .amb, and unknown tokens such as .upward remain unaffected.
-• With BLE selected, confirm mixed-case Smart Keycodes are forwarded canonically as uppercase dotted tokens; firmware execution remains deferred to the firmware stage.
-• Confirm dedicated keyboard behavior is unchanged.
+Deploy the iOS build and firmware together.
 
-No commit or backup was created.
+Test over BLE:
+
+• .UP, .up, .Up
+• .SP, .sp, .Sp
+• .RET, .BS, .ESC, .TAB
+• .CTA, .CTC, .CTV, .CTX
+• .MA, .MC, .MV, .MX
+• Bare UP, SP, RET, CA, and MC typing literally
+• Dedicated keyboard arrows, Escape, Return, Backspace
+• Control-Up, Shift-Left, Command-Right, Option-Escape
+• Function keys F1–F24
+• Keypad commands
+• Immediate typing, send-on-return, and reconnect behavior
+
+Test over Mac:
+
+• Dedicated dotted arrows, Escape, Return, Backspace
+• Sticky modifier combinations
+• Ordinary text such as UP, SP, and RET
+• Existing main-screen dotted Smart Scripts
+• Existing Mac Helper connection and framing
+
+Then regression-test MIDI, speech recognition and homophone ambiguity, hidden buttons, widgets, Quick menus, editor behavior, dynamic labels, and iPhone/iPad layouts.
