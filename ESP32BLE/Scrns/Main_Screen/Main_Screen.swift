@@ -6841,15 +6841,22 @@ private final class SoftEditorMIDINotePreview {
 
     var isEnabled = false
     private var activeNote: ActiveNote?
+    private var activeManualNote: ActiveNote?
     private var releaseTask: Task<Void, Never>?
 
     func enable() {
         isEnabled = true
     }
 
-    func disable(using transport: SoftEditorMIDINotePreviewTransport) {
+    func disablePreview(using transport: SoftEditorMIDINotePreviewTransport) {
         isEnabled = false
-        stopActiveNote(using: transport)
+        stopActivePreview(using: transport)
+    }
+
+    func reset(using transport: SoftEditorMIDINotePreviewTransport) {
+        isEnabled = false
+        stopActivePreview(using: transport)
+        stopManualPlay(using: transport)
     }
 
     func trigger(
@@ -6858,7 +6865,8 @@ private final class SoftEditorMIDINotePreview {
         channel: Int,
         using transport: SoftEditorMIDINotePreviewTransport
     ) {
-        stopActiveNote(using: transport)
+        guard activeManualNote == nil else { return }
+        stopActivePreview(using: transport)
 
         guard isEnabled,
               transport.isAvailable,
@@ -6893,15 +6901,64 @@ private final class SoftEditorMIDINotePreview {
             }
 
             guard !Task.isCancelled else { return }
-            self?.release(activeNote, using: transport)
+            self?.releasePreview(activeNote, using: transport)
         }
     }
 
     func handleTransportChange(using transport: SoftEditorMIDINotePreviewTransport) {
-        stopActiveNote(using: transport)
+        stopActivePreview(using: transport)
+        stopManualPlay(using: transport)
     }
 
-    private func release(_ note: ActiveNote, using transport: SoftEditorMIDINotePreviewTransport) {
+    func startManualPlay(
+        note: Int?,
+        velocity: Int,
+        channel: Int,
+        using transport: SoftEditorMIDINotePreviewTransport
+    ) {
+        guard activeManualNote == nil else { return }
+        stopActivePreview(using: transport)
+
+        guard transport.isAvailable,
+              let note,
+              (0...127).contains(note),
+              (1...127).contains(velocity),
+              MIDIChannelSettings.validRange.contains(channel) else {
+            return
+        }
+
+        let noteValue = UInt8(note)
+        let velocityValue = UInt8(velocity)
+        let channelValue = UInt8(channel)
+        let connectionSessionID = transport.connectionSessionID
+        guard transport.sendAuthenticatedCommand(
+            "MIDI:NOTE_ON:\(noteValue):\(velocityValue):\(channelValue)"
+        ) else {
+            return
+        }
+
+        activeManualNote = ActiveNote(
+            note: noteValue,
+            channel: channelValue,
+            connectionSessionID: connectionSessionID
+        )
+    }
+
+    func stopManualPlay(using transport: SoftEditorMIDINotePreviewTransport) {
+        guard let activeManualNote else { return }
+        self.activeManualNote = nil
+
+        guard transport.isAvailable,
+              activeManualNote.connectionSessionID == transport.connectionSessionID else {
+            return
+        }
+
+        _ = transport.sendAuthenticatedCommand(
+            "MIDI:NOTE_OFF:\(activeManualNote.note):\(activeManualNote.channel)"
+        )
+    }
+
+    private func releasePreview(_ note: ActiveNote, using transport: SoftEditorMIDINotePreviewTransport) {
         guard activeNote?.id == note.id else { return }
         releaseTask = nil
         activeNote = nil
@@ -6916,7 +6973,7 @@ private final class SoftEditorMIDINotePreview {
         )
     }
 
-    private func stopActiveNote(using transport: SoftEditorMIDINotePreviewTransport) {
+    private func stopActivePreview(using transport: SoftEditorMIDINotePreviewTransport) {
         releaseTask?.cancel()
         releaseTask = nil
         guard let activeNote else { return }
@@ -6950,6 +7007,9 @@ private struct SoftEditorMIDINoteMenu: View {
     @State private var channel: Int
     @State private var isToggleEnabled: Bool
     @State private var notePreview = SoftEditorMIDINotePreview()
+    @State private var isManualPlayTouchCancelled = false
+    @State private var hasHandledManualPlayTouchDown = false
+    @GestureState private var isManualPlayTouchActive = false
 
     init(
         defaultChannel: Int,
@@ -6978,7 +7038,7 @@ private struct SoftEditorMIDINoteMenu: View {
             )
         }
         .onAppear {
-            notePreview.disable(using: previewTransport)
+            notePreview.reset(using: previewTransport)
         }
         .onChange(of: selectedNote) {
             triggerNotePreview()
@@ -7000,7 +7060,7 @@ private struct SoftEditorMIDINoteMenu: View {
             notePreview.handleTransportChange(using: previewTransport)
         }
         .onDisappear {
-            notePreview.disable(using: previewTransport)
+            notePreview.reset(using: previewTransport)
         }
     }
 
@@ -7103,20 +7163,30 @@ private struct SoftEditorMIDINoteMenu: View {
     }
 
     private var actionButtons: some View {
-        HStack(spacing: 8) {
-            Button(action: toggleNotePreview) {
-                Image(systemName: notePreview.isEnabled ? "speaker.wave.2.fill" : "speaker.slash.fill")
-                    .foregroundStyle(notePreview.isEnabled ? Color.green : Color.gray)
+        VStack(spacing: 8) {
+            HStack(spacing: 8) {
+                Button(action: toggleNotePreview) {
+                    HStack(spacing: 4) {
+                        Text("Preview")
+                        Image(systemName: "poweroutlet.type.k")
+                            .foregroundStyle(notePreview.isEnabled ? Color.green : Color.gray)
+                    }
+                    .lineLimit(1)
                     .frame(maxWidth: .infinity)
-            }
+                }
                 .frame(maxWidth: .infinity)
                 .accessibilityLabel(notePreview.isEnabled ? "MIDI note preview enabled" : "MIDI note preview disabled")
+
+                manualPlayButton
+                    .frame(maxWidth: .infinity)
+            }
+
             Button {
                 if let midiCommand {
                     onInsert(midiCommand)
                 }
             } label: {
-                Text("insert")
+                Text("insert MIDI")
                     .lineLimit(1)
                     .fixedSize(horizontal: true, vertical: false)
                     .frame(maxWidth: .infinity)
@@ -7131,13 +7201,40 @@ private struct SoftEditorMIDINoteMenu: View {
         .tint(.gray)
     }
 
+    private var manualPlayButton: some View {
+        GeometryReader { proxy in
+            HStack(spacing: 4) {
+                Text("Play")
+                Image(systemName: "pianokeys.inverse")
+            }
+            .lineLimit(1)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .contentShape(Rectangle())
+            .background(Color.gray.opacity(0.22), in: .rect(cornerRadius: 6))
+            .overlay {
+                RoundedRectangle(cornerRadius: 6)
+                    .stroke(Color.gray.opacity(0.8), lineWidth: 1)
+            }
+            .highPriorityGesture(manualPlayGesture(in: proxy.size))
+        }
+        .frame(height: 32)
+        .onChange(of: isManualPlayTouchActive) {
+            guard !isManualPlayTouchActive else { return }
+            endManualPlay()
+            isManualPlayTouchCancelled = false
+            hasHandledManualPlayTouchDown = false
+        }
+        .accessibilityLabel("Play MIDI note while held")
+        .accessibilityAddTraits(.isButton)
+    }
+
     private func channelTitle(for item: Int) -> String {
         item == defaultChannel ? "(\(item))" : "\(item)"
     }
 
     private func toggleNotePreview() {
         if notePreview.isEnabled {
-            notePreview.disable(using: previewTransport)
+            notePreview.disablePreview(using: previewTransport)
         } else {
             notePreview.enable()
         }
@@ -7152,8 +7249,45 @@ private struct SoftEditorMIDINoteMenu: View {
         )
     }
 
+    private func manualPlayGesture(in size: CGSize) -> some Gesture {
+        DragGesture(minimumDistance: 0, coordinateSpace: .local)
+            .updating($isManualPlayTouchActive) { _, state, _ in
+                state = true
+            }
+            .onChanged { value in
+                guard CGRect(origin: .zero, size: size).contains(value.location) else {
+                    isManualPlayTouchCancelled = true
+                    endManualPlay()
+                    return
+                }
+
+                guard !isManualPlayTouchCancelled,
+                      !hasHandledManualPlayTouchDown else { return }
+                hasHandledManualPlayTouchDown = true
+                beginManualPlay()
+            }
+            .onEnded { _ in
+                endManualPlay()
+                isManualPlayTouchCancelled = false
+                hasHandledManualPlayTouchDown = false
+            }
+    }
+
+    private func beginManualPlay() {
+        notePreview.startManualPlay(
+            note: midiNoteNumber,
+            velocity: velocity,
+            channel: channel,
+            using: previewTransport
+        )
+    }
+
+    private func endManualPlay() {
+        notePreview.stopManualPlay(using: previewTransport)
+    }
+
     private func closeMenu() {
-        notePreview.disable(using: previewTransport)
+        notePreview.reset(using: previewTransport)
         onClose()
     }
 

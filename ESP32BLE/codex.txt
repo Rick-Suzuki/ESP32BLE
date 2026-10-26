@@ -1,57 +1,61 @@
-Completed the Stage 1 location correction.
+Completed Stage 2. No CC Preview or CC Play was added.
 
-Files changed
+Files modified
 
 • ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
-• ESP32BLE/Scrns/Set_Screen/Btm_Area/Set_AvailableDevices.swift
 
-UI correction
+UI changes
 
-• Removed all prior Note Preview UI, state, scheduling, lifecycle observers, and transport logic from SettingsAvailableDevicesPanel.
-• Preserved the Settings Mac pairing, connection controls, output modes, status, and default MIDI channel picker.
-• Replaced the disabled “test” button in SoftEditorMIDINoteMenu with the compact speaker control at Main_Screen.swift:7105.
-• Disabled state: gray speaker.slash.fill.
-• Enabled state: green speaker.wave.2.fill.
-• Added accessibility labels for enabled/disabled state.
-• Preserved the Note menu’s Insert button and action-row layout.
-• The CC menu remains unchanged, including its disabled Test button at Main_Screen.swift:7511–7518.
+• The Note menu action area is now two rows:
+• Row 1: Preview + Play, equal flexible widths.
+• Row 2: full-width “insert MIDI”.
+• Preview displays “Preview” with poweroutlet.type.k horizontally.
+• Play displays “Play” with pianokeys.inverse horizontally.
+• Preview symbol remains green when enabled and gray when disabled.
+• The old speaker slash/wave symbols are no longer used.
+• No horizontal scrolling was introduced; both top controls use equal max-width layout.
+• CC menu remains unchanged, including its disabled test button.
 
-Preview implementation
+Manual Play handling
 
-• The Note menu now owns its preview state, beginning disabled on every menu appearance: Main_Screen.swift:6980–6982.
-• Preview triggers only when note, octave, velocity, or channel changes: 6983–6994.
-• Toggle-mode changes do not trigger a preview.
-• The current calculated MIDI note number is used.
-• Velocity 0 remains available for editor insertion and immediately stops any active preview without sending a new Note On: 6861–6869.
-• Enabling the speaker alone sends no MIDI.
-
-Transport integration
-
-• Added a narrow injected SoftEditorMIDINotePreviewTransport interface containing:
-• current availability;
-• authenticated connection-session UUID;
-• authenticated command-send closure.
-• MainScreen supplies it using Mac output mode and MacConnectionManager: Main_Screen.swift:5456–5464.
-• The Note menu does not access MainMIDIActivationRegistry or alter main-grid activation state.
-
-MIDI sequence
-
-• Note On: MIDI:NOTE_ON:<note>:<velocity>:<channel> at Main_Screen.swift:6876–6878.
-	• The actual transmitted note, channel, token, and connection-session identity are stored at 6882–6887.
-	• Matching Note Off is scheduled after one second: 6888–6897.
-	• Rapid qualifying changes cancel the prior release, send its valid-session Note Off immediately, then transmit the new Note On: 6861 and 6919–6932.
-	• Speaker OFF, menu close, menu disappearance, unavailable transport, and connection-session replacement cancel active preview safely: 6995–7004 and 7155–7158.
-	• A delayed callback verifies the active token and original session before sending Note Off, preventing it from releasing a newer preview: 6904–6916.
-	
-	Validation
-	
-	• Confirmed no Note Preview identifiers or speaker controls remain in Set_AvailableDevices.swift.
-	• Confirmed the Note menu contains the speaker control and no visible Test text button.
-	• Confirmed the CC Test button remains unchanged.
-	• Project build succeeded with no errors.
-	• No relevant automated test target was found or run.
-	• No device or audio test was performed.
-	
-	Remaining limitation
-	
-	If the authenticated connection is lost or replaced after a Note On, the app intentionally does not send that old session’s Note Off into the new session. Local preview state is cleared, but a disconnected receiver may retain a sounding note according to its own MIDI/disconnection behaviour.
+• Play uses a zero-distance DragGesture, not a release-only SwiftUI Button.
+• Touch down captures the current MIDI note, velocity, channel, and session, then sends:
+MIDI:NOTE_ON:<note>:<velocity>:<channel>
+	• Touch up, cancellation, leaving the control bounds, menu close, view disappearance, transport loss, and session replacement all clear local manual state.
+	• Valid matching-session releases send:
+	MIDI:NOTE_OFF:<captured-note>:<captured-channel>
+		• There is no timer for Manual Play.
+		• A continuous touch is handled only once, preventing duplicate Note On sends.
+		• Velocity 0 sends no Manual Play Note On. A previously captured valid manual note remains active until released.
+		
+		Preview and Play interaction
+		
+		• Manual Play stops and cancels any active automatic preview before sending its Note On.
+		• Automatic preview does not start while Manual Play is active.
+		• Value changes during a manual hold do not alter, retrigger, or release the held note.
+		• Turning Preview on or off affects only automatic preview; it does not interrupt Manual Play.
+		• After Manual Play ends, Preview remains enabled if it was enabled, ready for later value changes.
+		
+		Transport and session protection
+		
+		• Preview and Manual Play remain local to SoftEditorMIDINoteMenu.
+		• They use the existing injected authenticated Mac transport.
+		• Both active-note records retain note, channel, unique token, and connection-session ID.
+		• Cleanup sends Note Off only when the original session is still available and matches, preventing stale Note Off messages from entering a replacement connection.
+		• MainMIDIActivationRegistry, main-grid MIDI, CC dispatch, Settings, and editor insertion logic were not changed.
+		
+		Validation
+		
+		• Full project build succeeded with no errors.
+		• Static checks confirmed:
+		• exact requested SF Symbol names;
+		• horizontal Preview/Play labels;
+		• full-width “insert MIDI” row;
+		• automatic-preview velocity-zero guard;
+		• manual state isolation and duplicate-send guards;
+		• unchanged CC menu.
+		• No device or audio test was performed.
+		
+		Remaining limitation
+		
+		• If the Mac transport disconnects after a Note On, the app clears local state but intentionally does not send a Note Off through a replacement session. Receiver behaviour after a physical disconnect remains receiver-dependent.

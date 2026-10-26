@@ -1,8 +1,9 @@
 
+v65.26_261026 Mon 1224
+midi, preview notes improved
+
 V65.25_261026 Mon 1208
 midi: preview midi notes
-
-
 
 V65.24_261026 Mon 0930
 Quick flat menu improvements
