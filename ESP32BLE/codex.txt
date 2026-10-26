@@ -1,142 +1,75 @@
-Stage 3B source update is complete. No firmware was flashed, installed, committed, or backed up.
+CLEANUP STAGE 1 COMPLETE
 
-A. Firmware changes
+A. Pre-removal verification
 
-Modified:
-/Users/rick/00-Home/Xcode/Projects2/103_MICRO PROJECTS/ESP32_S3/00_keyboard/ESP_32_2v3/ESP_32_2v3.ino
+• CommandButtonsSection.swift and PhraseButtonsSection.swift were present in the active ESP32BLE target’s Compile Sources phase.
+• Each file contained only its named obsolete SwiftUI view.
+• Project-wide searches found no remaining instantiation, presentation, navigation, preview, conditional-compilation, or type references.
+• No unexpected active dependencies were found.
+• CommandButtonsSection.swift had a pre-existing user modification; it was deleted as explicitly requested, not reverted.
 
-sendCommandOrText() now creates an uppercase comparison copy only for Smart Keycode recognition.
+B. Exact files deleted
 
-New mappings at lines 835–853:
+• ESP32BLE/btns/CommandButtonsSection.swift
+• ESP32BLE/btns/PhraseButtonsSection.swift
 
-• .RET, .TAB, .BS, .ESC, .UP, .DOWN, .LEFT, .RIGHT, .SP
-• .CTA, .CTC, .CTV, .CTX
-• .MA, .MC, .MV, .MX
+Both were moved to Trash by Xcode’s project removal action.
 
-Only complete dotted tokens match. Recognition is case-insensitive.
+C. Exact Xcode project references removed
 
-Examples:
-• .up → Up Arrow
-• .Up → Up Arrow
-• .UP → Up Arrow
-• UP, SP, RET, CA, MC → literal text fallback
+From ESP32BLE.xcodeproj/project.pbxproj:
 
-The legacy bare Smart Keycode comparisons were removed, including ENTER, RETURN, RET, SP, arrows, CA/CC/CV/CX, and MA/MC/MV/MX.
+• PBXBuildFile entries for both Swift files.
+• PBXFileReference entries for both Swift files.
+• Both children from the btns group.
+• Both entries from the ESP32BLE target’s PBXSourcesBuildPhase.
 
-Single-key dotted commands continue using pressKeyTimed(), retaining sticky modifier behavior.
+The btns group remains; it was not removed.
 
-B. iOS files modified
+D. Active dependency result
 
-• Scrns/KB_Screen/KB_ModeRows.swift􀰓
-• Scrns/KB_Screen/KB_InputBehavior.swift􀰓
-• Scrns/MacConnectionManager.swift􀰓
+No active dependencies were found. Post-removal project searches return zero matches for both CommandButtonsSection and PhraseButtonsSection.
 
-codex.txt􀰓 was already modified in the worktree and was not changed by this work.
+E. Build result
 
-C. Dedicated keyboard changes
+Complete ESP32BLE iOS application build succeeded.
 
-KB_ModeRows.swift􀰓
+• Result: successful
+• Errors: none
+• Build time: approximately 61 seconds
 
-All dedicated arrow controls now emit:
+F. Warnings or unexpected findings
 
-• .UP
-• .DOWN
-• .LEFT
-• .RIGHT
+• No removal-related warnings or failures.
+• Pre-existing modified files remain untouched:
+• ESP32BLE/VERSIONS.txt
+• ESP32BLE/codex.txt
+• ESP32BLE/notes.txt
 
-All dedicated Escape controls now emit .ESC.
+G. Scope confirmation
 
-The arrow rotation switch was updated for dotted arrow tokens. Layout, labels, icons, button placement, function keys, keypad tokens, and modifier controls are unchanged.
+Only these project changes were made:
 
-KB_InputBehavior.swift􀰓
+• Deleted the two selected skeleton view files.
+• Removed their corresponding Xcode references/build-phase entries.
 
-The dedicated keyboard now sends:
+Confirmed unchanged:
 
-• Backspace: .BS
-• Return: .RET
+• BLE_KB_Manager.swift
+• Dedicated keyboard files
+• Main screen, button behavior, Soft Editor, and experimental editor layouts
+• MIDI, speech recognition, Mac Helper, and Settings code
+• No project settings were changed.
+• No commit or backup was created.
 
-This applies to both Mac and BLE output paths.
+H. Recommended device checks
 
-Shared BLE helpers such as pressEnter(), pressBackspace(), and pressRightArrow() were deliberately not changed, because other active UI code uses them.
+• Main grid, physical buttons, hidden buttons, and Smart Keycodes.
+• Dedicated keyboard typing, arrows, Return, Backspace, and sticky modifiers.
+• BLE output, Mac Helper output, and device switching.
+• Files, Time, and MIDI Quick menus; Clear and Back Delete.
+• MIDI Note/CC, Preview, Play, and CC Test.
+• Speech recognition, ambiguity warning, and hidden-button speech activation.
+• Soft Editor and both iPhone/iPad layouts.
 
-D. Mac direct-keyboard support
-
-MacConnectionManager.swift:647–707 now recognizes the 17 dotted Smart Keycodes in the direct keyboard sender.
-
-Examples:
-
-• .UP → KEY:UP
-• .RET → KEY:RETURN
-• .BS → KEY:BACKSPACE
-• .SP → KEY:SPACE
-• .CTC → CTRL+C
-• .MC → CMD+C
-
-The main-screen Smart Script sender remains separate and unchanged.
-
-E. Sticky modifier preservation
-
-Direct keyboard dotted single-key commands retain pending modifiers.
-
-Examples:
-
-• ct + .UP → CTRL+UP
-• sh + .LEFT → SHIFT+LEFT
-• cm + .RIGHT → CMD+RIGHT
-• op + .ESC → ALT+ESC
-
-This does not use the Smart Script Mac encoder, so pending modifiers are not discarded.
-
-F. Validation
-
-iOS build:
-• Succeeded.
-• No build errors.
-
-Xcode source diagnostics:
-• KB_ModeRows.swift􀰓: no issues.
-• KB_InputBehavior.swift􀰓: no issues.
-• MacConnectionManager.swift􀰓: no issues.
-
-Firmware source validation:
-• Confirmed exactly 17 dotted mappings.
-• Confirmed no remaining legacy bare Smart Keycode comparisons in the firmware dispatcher.
-• Confirmed no .NL handling was added.
-
-Firmware compile:
-• Not run: arduino-cli is not installed or available in the current environment.
-
-G. Remaining limitations
-
-• No physical-device testing was performed.
-• No firmware flashing was performed.
-• A complete dedicated-keyboard input line exactly equal to a Smart Keycode, such as .UP, is intentionally treated as a command. No literal-text escape protocol was added, per the requested scope.
-• Shared legacy BLE helpers remain unchanged for unrelated active interfaces.
-
-H. Coordinated deployment and device checklist
-
-Deploy the iOS build and firmware together.
-
-Test over BLE:
-
-• .UP, .up, .Up
-• .SP, .sp, .Sp
-• .RET, .BS, .ESC, .TAB
-• .CTA, .CTC, .CTV, .CTX
-• .MA, .MC, .MV, .MX
-• Bare UP, SP, RET, CA, and MC typing literally
-• Dedicated keyboard arrows, Escape, Return, Backspace
-• Control-Up, Shift-Left, Command-Right, Option-Escape
-• Function keys F1–F24
-• Keypad commands
-• Immediate typing, send-on-return, and reconnect behavior
-
-Test over Mac:
-
-• Dedicated dotted arrows, Escape, Return, Backspace
-• Sticky modifier combinations
-• Ordinary text such as UP, SP, and RET
-• Existing main-screen dotted Smart Scripts
-• Existing Mac Helper connection and framing
-
-Then regression-test MIDI, speech recognition and homophone ambiguity, hidden buttons, widgets, Quick menus, editor behavior, dynamic labels, and iPhone/iPad layouts.
+Stopped after Cleanup Stage 1.

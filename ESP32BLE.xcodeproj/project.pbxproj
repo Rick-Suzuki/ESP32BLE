@@ -21,10 +21,8 @@
 		1D2A22D3307E4D24003CCFCF /* Main_SmartScriptEditingModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D2A22D2307E4D24003CCFCF /* Main_SmartScriptEditingModel.swift */; };
 		1D2A22D5307EF4E0003CCFCF /* Main_ModePersistence.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D2A22D4307EF4E0003CCFCF /* Main_ModePersistence.swift */; };
 		1D2B666F2FE78E0400F10733 /* color.png in Resources */ = {isa = PBXBuildFile; fileRef = 1D2B666E2FE78E0400F10733 /* color.png */; };
-		1D590E582F61206100E430E0 /* CommandButtonsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D590E4D2F61206100E430E0 /* CommandButtonsSection.swift */; };
 		1D590E5A2F61206100E430E0 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D590E4F2F61206100E430E0 /* ContentView.swift */; };
 		1D590E5C2F61206100E430E0 /* ESP32BLEApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D590E512F61206100E430E0 /* ESP32BLEApp.swift */; };
-		1D590E5D2F61206100E430E0 /* PhraseButtonsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D590E522F61206100E430E0 /* PhraseButtonsSection.swift */; };
 		1D590E5E2F61206100E430E0 /* TestArea.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D590E542F61206100E430E0 /* TestArea.swift */; };
 		1D590E5F2F61206100E430E0 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 1D590E4A2F61206100E430E0 /* Assets.xcassets */; };
 		1D77C6DD3087545A004396AF /* MIDICommandParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D77C6DC3087545A004396AF /* MIDICommandParser.swift */; };
@@ -90,10 +88,8 @@
 		1D33C2D12F6145DC0098FD5C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1D590E292F611FB700E430E0 /* ESP32BLE.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ESP32BLE.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		1D590E4A2F61206100E430E0 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		1D590E4D2F61206100E430E0 /* CommandButtonsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandButtonsSection.swift; sourceTree = "<group>"; };
 		1D590E4F2F61206100E430E0 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		1D590E512F61206100E430E0 /* ESP32BLEApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ESP32BLEApp.swift; sourceTree = "<group>"; };
-		1D590E522F61206100E430E0 /* PhraseButtonsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhraseButtonsSection.swift; sourceTree = "<group>"; };
 		1D590E532F61206100E430E0 /* console m2.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "console m2.txt"; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.swift; };
 		1D590E542F61206100E430E0 /* TestArea.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestArea.swift; sourceTree = "<group>"; };
 		1D77C6DC3087545A004396AF /* MIDICommandParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MIDICommandParser.swift; sourceTree = "<group>"; };
@@ -155,8 +151,6 @@
 		1D1B29CB2F63ABE7004733D7 /* btns */ = {
 			isa = PBXGroup;
 			children = (
-				1D590E4D2F61206100E430E0 /* CommandButtonsSection.swift */,
-				1D590E522F61206100E430E0 /* PhraseButtonsSection.swift */,
 			);
 			path = btns;
 			sourceTree = "<group>";
@@ -429,11 +423,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				1D590E582F61206100E430E0 /* CommandButtonsSection.swift in Sources */,
 				1D590E5A2F61206100E430E0 /* ContentView.swift in Sources */,
 				1DF165EA3086EACE003DFD80 /* TemplateDocument.swift in Sources */,
 				1D590E5C2F61206100E430E0 /* ESP32BLEApp.swift in Sources */,
-				1D590E5D2F61206100E430E0 /* PhraseButtonsSection.swift in Sources */,
 				1D2A22CB307E198C003CCFCF /* Main_GridActionMenuViews.swift in Sources */,
 				1D2A22C9307E0916003CCFCF /* Main_FilePreviewOverlay.swift in Sources */,
 				1D77C6DF308840BA004396AF /* MIDIControlChangeParser.swift in Sources */,
