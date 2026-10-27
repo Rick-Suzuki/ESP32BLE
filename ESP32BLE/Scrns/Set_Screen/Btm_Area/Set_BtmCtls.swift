@@ -11,6 +11,7 @@ struct SettingsBottomControlsSection: View {
     @Binding var opacitySliderValue: Double
     let imageControlButtons: AnyView
     let presentDeleteAllDataConfirmation: () -> Void
+    let presentHelp: () -> Void
 
     var body: some View {
         SettingsAvailableDevicesPanel(
@@ -23,7 +24,8 @@ struct SettingsBottomControlsSection: View {
             isStatusBarVisible: $isStatusBarVisible,
             opacitySliderValue: $opacitySliderValue,
             imageControlButtons: imageControlButtons,
-            presentDeleteAllDataConfirmation: presentDeleteAllDataConfirmation
+            presentDeleteAllDataConfirmation: presentDeleteAllDataConfirmation,
+            presentHelp: presentHelp
         )
     }
 }

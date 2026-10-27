@@ -89,8 +89,8 @@ struct SettingsKeyboardTimingSection: View {
     }
 
     private func sliderRow(title: String, value: Binding<Double>, range: ClosedRange<Double>) -> some View {
-        HStack(spacing: 4) {
-            Text(isPad ? title : title.uppercased())
+        HStack(spacing: 9) {
+            Text(title)
                 .font(settingsCompactControlFont)
                 .foregroundStyle(.primary)
                 .frame(width: timingLabelWidth, alignment: .trailing)
@@ -140,8 +140,8 @@ struct SettingsKeyboardTimingSection: View {
     }
 
     private var speechRecognitionAutoOffRow: some View {
-        HStack(spacing: 4) {
-            Text(isPad ? "rec off" : "REC OFF")
+        HStack(spacing: 0) {
+            Text("rec off")
                 .font(settingsCompactControlFont)
                 .foregroundStyle(.white)
                 .frame(width: timingLabelWidth, alignment: .trailing)

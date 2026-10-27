@@ -381,6 +381,7 @@ struct SettingsScreen: View {
     @State private var templateDescriptionDraft = ""
     @State private var settingsFeedbackMessage: String?
     @State private var settingsFeedbackTask: Task<Void, Never>?
+    @State private var isHelpPresented = false
 
     var body: some View {
         configuredSettingsScreen
@@ -417,6 +418,12 @@ struct SettingsScreen: View {
                                 .frame(width: documentTableWidth(for: geometry.size.width))
                         }
                         .frame(maxHeight: .infinity, alignment: .top)
+                        .overlay(alignment: .bottomLeading) {
+                            SettingsHelpButton {
+                                isHelpPresented = true
+                            }
+                            .padding()
+                        }
                     } else {
                         iPhoneSettingsBody(availableWidth: geometry.size.width)
                     }
@@ -464,10 +471,10 @@ struct SettingsScreen: View {
 			// back to main
 		//
 				HStack(spacing: 8) {
-						SettingsToolbarButton(title: "main", backgroundColor: Color.gray.opacity(0.45), minWidth: isPad ? 92 : 70, isEnabled: true) {
+					SettingsToolbarButton(title: "main", backgroundColor: Color.gray.opacity(0.45), minWidth: isPad ? 92 : 70, isEnabled: true) {
 				saveAndReturnToMain()
 			}
-			//
+				//
 			//----------------------------------------
 			// tts voice
 			//
@@ -616,6 +623,35 @@ struct SettingsScreen: View {
                 .onDisappear {
                 }
             }
+        }
+        .fullScreenCover(
+            isPresented: Binding(
+                get: { !isPad && isHelpPresented },
+                set: { isPresented in
+                    if !isPresented {
+                        isHelpPresented = false
+                    }
+                }
+            )
+        ) {
+            ESPHelpView {
+                isHelpPresented = false
+            }
+        }
+        .sheet(
+            isPresented: Binding(
+                get: { isPad && isHelpPresented },
+                set: { isPresented in
+                    if !isPresented {
+                        isHelpPresented = false
+                    }
+                }
+            )
+        ) {
+            ESPHelpView {
+                isHelpPresented = false
+            }
+            .presentationDetents([.large])
         }
         .onChange(of: ble.isConnected) {
             if ble.isConnected {
@@ -1183,7 +1219,10 @@ struct SettingsScreen: View {
             isStatusBarVisible: $isStatusBarVisible,
             opacitySliderValue: $opacitySliderValue,
             imageControlButtons: AnyView(imageControlButtons),
-            presentDeleteAllDataConfirmation: presentDeleteAllDataConfirmation
+            presentDeleteAllDataConfirmation: presentDeleteAllDataConfirmation,
+            presentHelp: {
+                isHelpPresented = true
+            }
         )
     }
 
@@ -5312,4 +5351,36 @@ private extension VerticalAlignment {
     }
 
     static let sliderTrackCenter = VerticalAlignment(SliderTrackCenterAlignment.self)
+}
+
+private struct ESPHelpView: View {
+    let onClose: () -> Void
+
+    var body: some View {
+        ZStack {
+            Color(uiColor: .systemBackground)
+                .ignoresSafeArea()
+
+            VStack(alignment: .leading, spacing: 24) {
+                HStack {
+                    Text("ESP Help")
+                        .font(.title2.weight(.semibold))
+                }
+
+                Text("Help content will be added in the next stage.")
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+
+                Spacer()
+
+                HStack {
+                    Spacer()
+
+                    Button("Close", action: onClose)
+                        .buttonStyle(.bordered)
+                }
+            }
+            .padding()
+        }
+    }
 }

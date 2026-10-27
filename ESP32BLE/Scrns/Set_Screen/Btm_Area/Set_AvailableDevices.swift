@@ -11,6 +11,7 @@ struct SettingsAvailableDevicesPanel: View {
     @Binding var opacitySliderValue: Double
     let imageControlButtons: AnyView
     let presentDeleteAllDataConfirmation: () -> Void
+    let presentHelp: () -> Void
     @State private var macPairingButtonWidth: CGFloat = 132
     @AppStorage(MIDIChannelSettings.storageKey) private var midiDefaultChannel = MIDIChannelSettings.defaultChannel
 
@@ -51,7 +52,7 @@ struct SettingsAvailableDevicesPanel: View {
 							VStack(spacing:10) {
 								sleepWakeButton
 								editorOrDeleteButton
-							}
+						}
 						VStack(spacing:10) {
 							buttonClickToggleButton
 							spareButtonPlaceholder
@@ -76,6 +77,7 @@ struct SettingsAvailableDevicesPanel: View {
             Spacer(minLength: 0)
 
             HStack(spacing: 8) {
+                helpButton
                 buttonClickToggleButton
                 sleepWakeButton
                 compactDeleteAllDataButton
@@ -154,7 +156,7 @@ struct SettingsAvailableDevicesPanel: View {
     private var midiDefaultChannelControl: some View {
         Picker("MIDI Default Channel", selection: $midiDefaultChannel) {
             ForEach(MIDIChannelSettings.validRange, id: \.self) { channel in
-                Text("Channel \(channel)")
+                Text("midi ch \(channel)")
                     .tag(channel)
             }
         }
@@ -448,6 +450,10 @@ struct SettingsAvailableDevicesPanel: View {
         .clipShape(.rect(cornerRadius: bodyButtonCornerRadius))
     }
 
+    private var helpButton: some View {
+        SettingsHelpButton(action: presentHelp)
+    }
+
     private var settingsBodyButtonFont: Font {
         isPad ? .headline : .system(size: 15, weight: .semibold)
     }
@@ -474,6 +480,24 @@ struct SettingsAvailableDevicesPanel: View {
                 .tint(.cyan)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+struct SettingsHelpButton: View {
+    let action: () -> Void
+
+    var body: some View {
+        Button {
+            ButtonClickFeedback.playIfEnabled()
+            action()
+        } label: {
+            Image(systemName: "questionmark.circle")
+                .font(.title)
+                .foregroundStyle(.green)
+        }
+        .buttonStyle(.plain)
+        .contentShape(.rect)
+        .accessibilityLabel("Help")
     }
 }
 
