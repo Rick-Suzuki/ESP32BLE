@@ -1,76 +1,56 @@
-CLEANUP STAGE 3 COMPLETE
+CLEANUP STAGE 4 COMPLETE
 
-A. Pre-removal reference verification
+A. Exact files verified and moved to Trash
 
-All four helpers were located in BLE_KB_Manager.swift:
+• ESP32BLE/Scrns/KB_Screen/KB_Screen.swift
+• ESP32BLE/Scrns/KB_Screen/KB_TopToolbar.swift
+• ESP32BLE/Scrns/Main_Screen/Toolbars/Main_TopToolbar BU.swift
 
-• pressAnyKey()
-• pressRightArrow()
-• pressEnter()
-• pressBackspace()
+B. Inactive project status
 
-Project-wide searches found only their declarations. No active call sites, selector-based references, extensions, test references, or remaining skeleton-view files were found.
+All three files were absent from the Xcode project navigator and active target Compile Sources membership. No exact-path references were found.
 
-B. Exact functions removed
+C. Active replacements preserved
 
-From BLEKeyboardManager:
+Confirmed present and active in the ESP32BLE target:
 
-• pressAnyKey()
-• pressRightArrow()
-• pressEnter()
-• pressBackspace()
+• ESP32BLE/Scrns/KB_Screen/Top_Screen/KB_Screen.swift
+• ESP32BLE/Scrns/KB_Screen/Top_Screen/KB_TopToolbar.swift
+• ESP32BLE/Scrns/Main_Screen/Toolbars/Main_TopToolbar.swift
 
-C. Source file and changed range
+D. Unexpected dependencies
 
-File changed:
+None found.
 
-• ESP32BLE/Scrns/BLE/BLE_KB_Manager.swift
+E. File.txt protection
 
-Changed area:
+ESP32BLE/File.txt was not modified, moved, renamed, or deleted.
 
-• Formerly approximately lines 330–359.
-• Removed only the four helper declarations/bodies and their exclusive “Command helpers for the UI” comments.
+F. Project file
 
-D. Active callers
+ESP32BLE.xcodeproj/project.pbxproj remains unchanged.
 
-Confirmed: no active callers remain. Post-removal project search returns zero matches for all four function names.
-
-E. Full iOS build result
+G. Full iOS build result
 
 Build succeeded.
 
 • Errors: none
-• Build time: approximately 55 seconds
-
-F. Active BLE transport protection
-
-Unchanged:
-
-• sendLine(_:)
-• sendString(_:)
-• BLE queueing and normalization
-• Peripheral discovery, scanning, connection, disconnect/reconnect
-• BLE state reporting, identification, timing, characteristics, and diagnostics
-• Smart Keycode implementation
-
-G. Warnings or unexpected findings
-
-No unexpected dependencies or build warnings were found.
+• Build time: approximately 17 seconds
 
 H. Scope confirmation
 
-The only modified file is:
+Only the three authorized legacy files changed, as deletions moved to macOS Trash. No source code, project settings, targets, build phases, or unrelated files changed. No commit or backup was created.
 
-• ESP32BLE/Scrns/BLE/BLE_KB_Manager.swift
+I. Notes
 
-No Xcode project settings, target membership, or unrelated source files changed. No commit or backup was created.
+The initial Trash command failed before execution because of shell quoting. The corrected Finder operation then moved only the three authorized files to Trash.
 
-I. Recommended practical device tests
+J. Recommended device checks
 
-• Scan, connect, disconnect, reconnect, and send ordinary BLE text.
-• Verify dotted Smart Keycodes: .UP, .RIGHT, .RET, and .BS.
-• Verify dedicated keyboard typing, arrows, Return, Backspace, Escape, sticky modifiers, function keys, keypad, immediate typing, and send-on-return.
-• Verify Mac Helper output and modifier combinations.
-• Verify Quick Panel, MIDI, speech recognition, hidden-button activation, widgets, Soft Editor, main grid, and iPhone/iPad layouts.
+• Dedicated keyboard opens; toolbar, typing, arrows, Return, Backspace, modifiers, function keys, keypad, BLE, and Mac output work.
+• Main toolbar displays; buttons, sliders, menus, grid buttons, Smart Keycodes, hidden buttons, and BLE/Mac selection work.
+• Soft Editor and iPhone/iPad layouts remain unchanged.
+• Files, Time, MIDI Quick menus, insertion, navigation, Clear, and Back Delete work.
+• MIDI, speech recognition, homophone handling, widgets, and connection management work.
 
-Stopped after Cleanup Stage 3.
+Stopped after Cleanup Stage 4.
