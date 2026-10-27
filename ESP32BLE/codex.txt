@@ -1,75 +1,79 @@
-CLEANUP STAGE 1 COMPLETE
+CLEANUP STAGE 2 COMPLETE
 
 A. Pre-removal verification
 
-• CommandButtonsSection.swift and PhraseButtonsSection.swift were present in the active ESP32BLE target’s Compile Sources phase.
-• Each file contained only its named obsolete SwiftUI view.
-• Project-wide searches found no remaining instantiation, presentation, navigation, preview, conditional-compilation, or type references.
-• No unexpected active dependencies were found.
-• CommandButtonsSection.swift had a pre-existing user modification; it was deleted as explicitly requested, not reverted.
+• BLE_Status.swift contained only ConnectionStatusSection.
+• TestArea.swift contained only the ContentView.TestArea extension/view.
+• Project-wide searches found no active references to:
+• ConnectionStatusSection
+• TestArea
+• ContentView.TestArea
+• The workspace contains one application target only: ESP32BLE.
+• Both files were active Compile Sources members before removal.
+• No unexpected dependencies were found.
 
-B. Exact files deleted
+B. Exact source files deleted
 
-• ESP32BLE/btns/CommandButtonsSection.swift
-• ESP32BLE/btns/PhraseButtonsSection.swift
+• ESP32BLE/Scrns/BLE/BLE_Status.swift
+• ESP32BLE/Scrns/TestArea.swift
 
-Both were moved to Trash by Xcode’s project removal action.
+Both were moved to Trash by Xcode’s removal action.
 
 C. Exact Xcode project references removed
 
-From ESP32BLE.xcodeproj/project.pbxproj:
+For both files, only the required project.pbxproj entries were removed:
 
-• PBXBuildFile entries for both Swift files.
-• PBXFileReference entries for both Swift files.
-• Both children from the btns group.
-• Both entries from the ESP32BLE target’s PBXSourcesBuildPhase.
-
-The btns group remains; it was not removed.
+• PBXBuildFile entries
+• PBXFileReference entries
+• Corresponding group-child entries
+• PBXSourcesBuildPhase entries
 
 D. Active dependency result
 
-No active dependencies were found. Post-removal project searches return zero matches for both CommandButtonsSection and PhraseButtonsSection.
+No active dependencies were found. Post-removal searches return zero matches for ConnectionStatusSection and TestArea. Neither file remains in the Xcode project or target Compile Sources list.
 
-E. Build result
+E. Complete iOS build result
 
-Complete ESP32BLE iOS application build succeeded.
+Build succeeded.
 
-• Result: successful
 • Errors: none
 • Build time: approximately 61 seconds
 
 F. Warnings or unexpected findings
 
-• No removal-related warnings or failures.
-• Pre-existing modified files remain untouched:
-• ESP32BLE/VERSIONS.txt
-• ESP32BLE/codex.txt
-• ESP32BLE/notes.txt
+No removal-related warnings or unexpected dependencies were found.
 
-G. Scope confirmation
-
-Only these project changes were made:
-
-• Deleted the two selected skeleton view files.
-• Removed their corresponding Xcode references/build-phase entries.
+G. BLE manager protection
 
 Confirmed unchanged:
 
 • BLE_KB_Manager.swift
-• Dedicated keyboard files
-• Main screen, button behavior, Soft Editor, and experimental editor layouts
-• MIDI, speech recognition, Mac Helper, and Settings code
-• No project settings were changed.
-• No commit or backup was created.
+• BLEKeyboardManager
+• bluetoothStateText
+• connectionText
+• lastMessage
+• disconnect()
+• startScan()
+• sendLine(_:)
+• sendString(_:)
 
-H. Recommended device checks
+H. Scope confirmation
 
-• Main grid, physical buttons, hidden buttons, and Smart Keycodes.
-• Dedicated keyboard typing, arrows, Return, Backspace, and sticky modifiers.
-• BLE output, Mac Helper output, and device switching.
-• Files, Time, and MIDI Quick menus; Clear and Back Delete.
-• MIDI Note/CC, Preview, Play, and CC Test.
-• Speech recognition, ambiguity warning, and hidden-button speech activation.
-• Soft Editor and both iPhone/iPad layouts.
+The only changed paths are:
 
-Stopped after Cleanup Stage 1.
+• ESP32BLE.xcodeproj/project.pbxproj
+• Deleted ESP32BLE/Scrns/BLE/BLE_Status.swift
+• Deleted ESP32BLE/Scrns/TestArea.swift
+
+No other source files or project settings changed. No commit or backup was created.
+
+I. Recommended physical-device checks
+
+• Open Settings; scan, connect, disconnect, reconnect, and inspect BLE diagnostics.
+• Verify main-grid buttons, hidden buttons, Smart Keycodes, and BLE/Mac output switching.
+• Verify keyboard typing, arrows, Return, Backspace, sticky modifiers, function keys, and keypad.
+• Verify Files, Time, and MIDI Quick menus; insertion, navigation, Clear, and Back Delete.
+• Verify MIDI Note/CC, Preview, Play, and CC Test.
+• Verify speech recognition, ambiguity warnings, hidden-button activation, Soft Editor, widgets, and iPhone/iPad layouts.
+
+Stopped after Cleanup Stage 2.
