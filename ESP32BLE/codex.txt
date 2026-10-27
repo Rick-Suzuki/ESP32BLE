@@ -1,79 +1,76 @@
-CLEANUP STAGE 2 COMPLETE
+CLEANUP STAGE 3 COMPLETE
 
-A. Pre-removal verification
+A. Pre-removal reference verification
 
-• BLE_Status.swift contained only ConnectionStatusSection.
-• TestArea.swift contained only the ContentView.TestArea extension/view.
-• Project-wide searches found no active references to:
-• ConnectionStatusSection
-• TestArea
-• ContentView.TestArea
-• The workspace contains one application target only: ESP32BLE.
-• Both files were active Compile Sources members before removal.
-• No unexpected dependencies were found.
+All four helpers were located in BLE_KB_Manager.swift:
 
-B. Exact source files deleted
+• pressAnyKey()
+• pressRightArrow()
+• pressEnter()
+• pressBackspace()
 
-• ESP32BLE/Scrns/BLE/BLE_Status.swift
-• ESP32BLE/Scrns/TestArea.swift
+Project-wide searches found only their declarations. No active call sites, selector-based references, extensions, test references, or remaining skeleton-view files were found.
 
-Both were moved to Trash by Xcode’s removal action.
+B. Exact functions removed
 
-C. Exact Xcode project references removed
+From BLEKeyboardManager:
 
-For both files, only the required project.pbxproj entries were removed:
+• pressAnyKey()
+• pressRightArrow()
+• pressEnter()
+• pressBackspace()
 
-• PBXBuildFile entries
-• PBXFileReference entries
-• Corresponding group-child entries
-• PBXSourcesBuildPhase entries
+C. Source file and changed range
 
-D. Active dependency result
+File changed:
 
-No active dependencies were found. Post-removal searches return zero matches for ConnectionStatusSection and TestArea. Neither file remains in the Xcode project or target Compile Sources list.
+• ESP32BLE/Scrns/BLE/BLE_KB_Manager.swift
 
-E. Complete iOS build result
+Changed area:
+
+• Formerly approximately lines 330–359.
+• Removed only the four helper declarations/bodies and their exclusive “Command helpers for the UI” comments.
+
+D. Active callers
+
+Confirmed: no active callers remain. Post-removal project search returns zero matches for all four function names.
+
+E. Full iOS build result
 
 Build succeeded.
 
 • Errors: none
-• Build time: approximately 61 seconds
+• Build time: approximately 55 seconds
 
-F. Warnings or unexpected findings
+F. Active BLE transport protection
 
-No removal-related warnings or unexpected dependencies were found.
+Unchanged:
 
-G. BLE manager protection
-
-Confirmed unchanged:
-
-• BLE_KB_Manager.swift
-• BLEKeyboardManager
-• bluetoothStateText
-• connectionText
-• lastMessage
-• disconnect()
-• startScan()
 • sendLine(_:)
 • sendString(_:)
+• BLE queueing and normalization
+• Peripheral discovery, scanning, connection, disconnect/reconnect
+• BLE state reporting, identification, timing, characteristics, and diagnostics
+• Smart Keycode implementation
+
+G. Warnings or unexpected findings
+
+No unexpected dependencies or build warnings were found.
 
 H. Scope confirmation
 
-The only changed paths are:
+The only modified file is:
 
-• ESP32BLE.xcodeproj/project.pbxproj
-• Deleted ESP32BLE/Scrns/BLE/BLE_Status.swift
-• Deleted ESP32BLE/Scrns/TestArea.swift
+• ESP32BLE/Scrns/BLE/BLE_KB_Manager.swift
 
-No other source files or project settings changed. No commit or backup was created.
+No Xcode project settings, target membership, or unrelated source files changed. No commit or backup was created.
 
-I. Recommended physical-device checks
+I. Recommended practical device tests
 
-• Open Settings; scan, connect, disconnect, reconnect, and inspect BLE diagnostics.
-• Verify main-grid buttons, hidden buttons, Smart Keycodes, and BLE/Mac output switching.
-• Verify keyboard typing, arrows, Return, Backspace, sticky modifiers, function keys, and keypad.
-• Verify Files, Time, and MIDI Quick menus; insertion, navigation, Clear, and Back Delete.
-• Verify MIDI Note/CC, Preview, Play, and CC Test.
-• Verify speech recognition, ambiguity warnings, hidden-button activation, Soft Editor, widgets, and iPhone/iPad layouts.
+• Scan, connect, disconnect, reconnect, and send ordinary BLE text.
+• Verify dotted Smart Keycodes: .UP, .RIGHT, .RET, and .BS.
+• Verify dedicated keyboard typing, arrows, Return, Backspace, Escape, sticky modifiers, function keys, keypad, immediate typing, and send-on-return.
+• Verify Mac Helper output and modifier combinations.
+• Verify Quick Panel, MIDI, speech recognition, hidden-button activation, widgets, Soft Editor, main grid, and iPhone/iPad layouts.
 
-Stopped after Cleanup Stage 2.
+Stopped after Cleanup Stage 3.

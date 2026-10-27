@@ -327,17 +327,6 @@ final class BLEKeyboardManager: NSObject, ObservableObject {
 		startSendQueueIfNeeded()
 	}
 	
-	//
-	// Command helpers for the UI.
-	//
-	func pressAnyKey() {
-		//
-		// The ESP32 types literal text unless it sees a bracket command.
-		// Sending "z" is a simple "press any key" test.
-		//
-		sendLine("z")
-	}
-	
 	func sendString(_ text: String) {
 		sendNormalizedKeyboardText(text)
 	}
@@ -346,18 +335,6 @@ final class BLEKeyboardManager: NSObject, ObservableObject {
 		sendLine("set:\(onMs):\(offMs)")
 	}
 	
-	func pressRightArrow() {
-		sendLine("RIGHT")
-	}
-	
-	func pressEnter() {
-		sendLine("ENTER")
-	}
-
-		func pressBackspace() {
-			sendLine("BS")
-		}
-
 		private func sendNormalizedKeyboardText(_ text: String) {
 			sendLine(normalizedKeyboardText(text))
 	}
