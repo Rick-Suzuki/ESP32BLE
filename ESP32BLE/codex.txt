@@ -1,56 +1,312 @@
-CLEANUP STAGE 4 COMPLETE
+A. Current layout architecture
 
-A. Exact files verified and moved to Trash
+The active iPhone main screen is not a single vertical stack containing the top toolbar, grid, and bottom toolbar.
 
-• ESP32BLE/Scrns/KB_Screen/KB_Screen.swift
-• ESP32BLE/Scrns/KB_Screen/KB_TopToolbar.swift
-• ESP32BLE/Scrns/Main_Screen/Toolbars/Main_TopToolbar BU.swift
+It is built as:
 
-B. Inactive project status
+• A root GeometryReader in MainScreen.
+• A top-aligned VStack containing:
+• MainScreenToolbarContent
+• 2-point spacer
+• MainScreenGridSection with an explicit calculated height
+• A separate bottom-aligned VStack, layered above it in the same ZStack, containing the bottom toolbar.
 
-All three files were absent from the Xcode project navigator and active target Compile Sources membership. No exact-path references were found.
+The bottom toolbar therefore does not automatically consume layout space. The grid must reserve that space manually.
 
-C. Active replacements preserved
+No files were modified.
 
-Confirmed present and active in the ESP32BLE target:
+B. Exact source locations
 
-• ESP32BLE/Scrns/KB_Screen/Top_Screen/KB_Screen.swift
-• ESP32BLE/Scrns/KB_Screen/Top_Screen/KB_TopToolbar.swift
-• ESP32BLE/Scrns/Main_Screen/Toolbars/Main_TopToolbar.swift
+1. Root screen sizing and safe-area expansion
 
-D. Unexpected dependencies
+File:
+ESP32BLE/Scrns/ContentView.swift
 
-None found.
+Lines 221-343
 
-E. File.txt protection
+Relevant behavior:
 
-ESP32BLE/File.txt was not modified, moved, renamed, or deleted.
+• Lines 223-226: reads root GeometryReader width, height, and bottom safe-area inset.
+• Line 226: on iPhone, expands the outer clipped container by geometry.safeAreaInsets.bottom.
+• Lines 244-321: places MainScreen in a frame using containerWidth and containerHeight.
+• Lines 330-333: clips the enclosing ZStack to the expanded iPhone container height.
 
-F. Project file
+This means MainScreen itself and its containing visual region are not using exactly the same height rule on iPhone.
 
-ESP32BLE.xcodeproj/project.pbxproj remains unchanged.
+2. Main-grid and toolbar vertical layout
 
-G. Full iOS build result
+File:
+ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
 
-Build succeeded.
+Lines 238-249: relevant constants
 
-• Errors: none
-• Build time: approximately 17 seconds
+• topToolbarToGridSpacing = 2
+• mainTopToolbarHeight = 44
+• iPhoneBottomToolbarRegionHeight = 36
+• iPhoneGridToBottomToolbarClearance = 4
+• iPhoneGridReservedBottomInset = 30
 
-H. Scope confirmation
+Lines 1218-1232: iPhone grid-height calculation
 
-Only the three authorized legacy files changed, as deletions moved to macOS Trash. No source code, project settings, targets, build phases, or unrelated files changed. No commit or backup was created.
+iPhonePhysicalContentHeight =
+geometry.size.height + geometry.safeAreaInsets.bottom
 
-I. Notes
+iPhoneGridHeight =
+iPhonePhysicalContentHeight
+• 44 top-toolbar height
+• 2 top-to-grid spacing
+• 36 bottom-toolbar reservation
+• 4 clearance
 
-The initial Trash command failed before execution because of shell quoting. The corrected Finder operation then moved only the three authorized files to Trash.
+Lines 1240-1314: top-aligned grid layout
 
-J. Recommended device checks
+• Lines 1241-1308: vertical stack contains the top toolbar and grid.
+• Lines 1303-1307: iPhone grid receives a fixed frame height of iPhoneGridHeight.
+• Line 1305: passes reservedBottomInset = 30.
 
-• Dedicated keyboard opens; toolbar, typing, arrows, Return, Backspace, modifiers, function keys, keypad, BLE, and Mac output work.
-• Main toolbar displays; buttons, sliders, menus, grid buttons, Smart Keycodes, hidden buttons, and BLE/Mac selection work.
-• Soft Editor and iPhone/iPad layouts remain unchanged.
-• Files, Time, MIDI Quick menus, insertion, navigation, Clear, and Back Delete work.
-• MIDI, speech recognition, homophone handling, widgets, and connection management work.
+Lines 1316-1326: bottom-toolbar overlay
 
-Stopped after Cleanup Stage 4.
+• The bottom toolbar is in a separate VStack with a Spacer.
+• Line 1323: its layout frame is geometry.size.height.
+• Line 1325: it ignores the container safe area at the bottom.
+• It is layered over the grid’s VStack in the ZStack, rather than taking normal vertical space.
+
+Lines 1364-1370: action-menu geometry uses the same calculated iPhoneGridHeight.
+
+3. Main-grid cell sizing
+
+File:
+ESP32BLE/Scrns/Main_Screen/Main_GridSection.swift
+
+Lines 141-160
+
+• The grid uses its received frame height.
+• Lines 144-146: total row spacing is subtracted, then the remainder is divided equally among rows.
+• For iPhone, reservedBottomInset is 30, and line 145 subtracts reservedBottomInset - 30. That evaluates to zero.
+• Therefore, the effective bottom reservation is entirely the iPhoneGridHeight calculation in Main_Screen.swift, not a second 30-point inset inside the grid.
+
+Lines 177-210: each button is positioned manually using calculated row/column coordinates.
+
+Lines 363-394: rendered visual height is derived from the actual button shapes, including multi-row buttons.
+
+4. Active bottom toolbar
+
+File:
+ESP32BLE/Scrns/Main_Screen/Toolbars/Main_BtmToolbar.swift
+
+Lines 240-280: MainScreenBottomBar declaration.
+
+Lines 282-311:
+
+• Uses GeometryReader and ViewThatFits horizontally only.
+• On iPhone, is fixed at 36 points high.
+• It has no direct safe-area input or vertical device-specific calculation.
+
+Lines 313-349:
+
+• Phone toolbar controls are also based on a 36-point toolbar-button height.
+• Compact alternatives only change horizontal widths and text sizing.
+
+5. Row count and persistence
+
+Files:
+
+ESP32BLE/Scrns/Main_Screen/Main_GridSection.swift
+Lines 19-96: default grid-dimension selection.
+
+ESP32BLE/Scrns/Main_Screen/Main_DocumentActions.swift
+Lines 144-160: row increment/decrement.
+Lines 208-228: applying a grid size also resizes the document’s visible slot count and saves dimensions.
+
+ESP32BLE/Scrns/ContentView.swift
+Lines 1136-1222: grid dimensions are loaded and saved per document.
+
+ESP32BLE/Scrns/ScreenConfig.swift
+Lines 3-24, 53-81: rows and columns are Codable fields in the screen configuration.
+
+C. Most likely reason for the iPhone XS overlap
+
+The most likely cause is a fragile manually coordinated layout, not an inherently bad grid row count.
+
+The grid height is calculated using:
+
+geometry.size.height + geometry.safeAreaInsets.bottom
+
+But the bottom toolbar is independently anchored using:
+
+geometry.size.height
+
+and then allowed to ignore the bottom container safe area.
+
+The two areas are intended to meet with a fixed 4-point clearance. That can work only if the GeometryReader’s height and bottom-inset behavior match the assumptions made by both branches on a given device and orientation.
+
+On the iPhone XS landscape layout, the actual visual bottom-toolbar position appears to be higher than the space effectively reserved for it, or the grid is being allowed to extend farther down than the toolbar calculation assumes. The final row then appears behind the overlay.
+
+D. Why iPhone 17 does not show the problem
+
+There is no iPhone XS-specific or iPhone 17-specific layout branch in the active main-screen code.
+
+The only hardware-model checks in Main_Screen.swift, lines 29-69, are for iPad editor diagnostics. They do not affect the iPhone main-grid layout.
+
+The iPhone 17 likely avoids the symptom because its landscape geometry provides more vertical slack and/or reports a safe-area/layout-region combination that happens to agree with the current manual calculation. The iPhone XS has a shorter landscape usable height, so a small coordinate or reservation mismatch becomes visible as overlap.
+
+E. Cause classification
+
+Primary cause:
+Manual reserved-height / safe-area coordinate mismatch risk.
+
+Contributing factors:
+
+• The bottom toolbar is an overlay, not part of normal vertical layout.
+• Grid height depends on fixed constants: 44, 2, 36, and 4 points.
+• The grid calculation and bottom-toolbar positioning use different safe-area treatment.
+• The root ContentView also expands its iPhone clipping container by the bottom safe-area inset.
+• No actual rendered toolbar frame is measured on iPhone.
+• No device-height threshold or short-landscape adjustment exists.
+
+Not supported by the code:
+
+• A display-scale issue.
+• A UIScreen-bounds calculation in the active main layout.
+• An iPhone XS hardware-model branch.
+• A different row-count implementation specifically for iPhone XS.
+• A deliberate intended overlap.
+
+F. Assessment of adding one grid row
+
+Adding one row would not create additional vertical space.
+
+The grid retains the same calculated iPhoneGridHeight. Main_GridSection divides that fixed height among the number of rows:
+
+buttonHeight =
+(available grid height - inter-row spacing) / row count
+
+Therefore, one more row would make all rows shorter. It might make the overlap look less severe by moving the final row’s visual boundary upward, but it would not correct the bottom-toolbar reservation.
+
+It also has significant functional risk:
+
+• Grid rows and columns are persisted in each .screen configuration.
+• Changing row count changes button coordinate mapping.
+• It can increase slot count and invoke document resize behavior.
+• Existing button placement, multi-cell button shapes, and editor coordinates can be affected.
+• It would alter working iPhone 17 and iPad grid geometry.
+
+Conclusion: do not use an extra row as the fix.
+
+G. Ranked minimal solutions
+
+1. Correct the iPhone available-height calculation after measuring actual runtime geometry.
+
+Expected effect:
+Correctly aligns the grid’s bottom edge with the actual bottom-toolbar top edge on iPhone XS.
+
+Impact on iPhone 17:
+Should remain visually unchanged if the corrected calculation is based on actual geometry rather than a device name.
+
+Impact on iPad:
+None if restricted to the existing !isPad branch.
+
+Risk:
+Low to moderate. Requires confirming whether the problematic value is the grid frame, safe-area inset, or toolbar frame.
+
+2. Reserve the bottom toolbar through SwiftUI layout rather than an overlay.
+
+For example, use a safe-area inset or a normal vertical layout so the bottom toolbar consumes space automatically.
+
+Expected effect:
+Eliminates manual competition between the grid and toolbar for vertical space.
+
+Impact on iPhone 17:
+Likely stable after visual verification.
+
+Impact on iPad:
+Can remain unchanged if the change is only in the iPhone branch.
+
+Risk:
+Moderate. It changes the layout structure and requires checking popups, action-menu placement, editor overlays, and existing toolbar behavior.
+
+3. Keep the overlay but derive its reservation from the same coordinate system as the overlay.
+
+Expected effect:
+Preserves the present visual design while removing the current two-coordinate-system assumption.
+
+Impact on iPhone 17:
+Should remain unchanged when the measured result matches its present layout.
+
+Impact on iPad:
+None if iPhone-only.
+
+Risk:
+Low to moderate. This is likely the smallest production fix once runtime values are known.
+
+4. Apply a short-landscape adjustment to the vertical clearance or spacing.
+
+Expected effect:
+Can provide a small additional margin on short iPhones.
+
+Impact on iPhone 17:
+Can remain unchanged if gated by available height rather than a device model.
+
+Impact on iPad:
+None if iPhone-only.
+
+Risk:
+Moderate. It treats the symptom and can still fail on a future device with different safe-area geometry.
+
+5. Add one grid row.
+
+Expected effect:
+Shrinks cells but does not produce new usable height.
+
+Impact on iPhone 17 and iPad:
+Changes grid geometry and document coordinates.
+
+Risk:
+High.
+
+Recommendation:
+Do not use this approach.
+
+H. Recommended smallest implementation stage
+
+Change only:
+
+ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
+
+Target area:
+
+Lines 1218-1326, specifically the relationship between:
+
+• iPhonePhysicalContentHeight
+• iPhoneGridHeight
+• the fixed 36-point toolbar reservation
+• the separate bottom-overlay frame and safe-area behavior
+
+Before a production layout change, the smallest safe stage would be a narrowly scoped runtime geometry measurement on an iPhone XS in landscape. It should record:
+
+• geometry.size.height
+• geometry.safeAreaInsets.top and bottom
+• grid global frame
+• bottom-toolbar global frame
+• toolbar top Y
+• final-row bottom Y
+• root container frame
+
+That determines whether the defect is:
+
+• an incorrect additional bottom safe-area calculation,
+• a toolbar position shifted by safe-area ignoring,
+• an insufficient 4-point clearance,
+• or an unexpected actual frame difference.
+
+No change is recommended to ContentView, Main_GridSection, ScreenConfig, document formats, row count, or iPad layout until those values are observed.
+
+I. Runtime uncertainties
+
+Static analysis cannot establish the actual iPhone XS landscape values for GeometryReader size, safe-area inset, and global toolbar frame.
+
+The referenced screenshots were not available as inspectable local image attachments in this session, so I could not measure the exact overlap in points.
+
+The key unresolved question is whether the iPhone XS bottom safe-area inset is being added once too often, or whether the bottom overlay’s actual visual frame is outside the coordinate space assumed by iPhoneGridHeight.
+
+No source files, project settings, backups, or commits were created or changed.

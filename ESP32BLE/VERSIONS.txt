@@ -1,6 +1,10 @@
 
+V65.40_261027 Tue 1326
+before iPhone XS fix
+
+
 V65.39_261027 Tue 0927
-Stage 4 cleanup
+Stage 4 cleanup + BB BACKUP
 
 
 V65.38_261027 Tue 0916
