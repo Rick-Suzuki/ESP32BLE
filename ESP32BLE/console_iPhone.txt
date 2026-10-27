@@ -1,9 +1,0 @@
-API MISUSE: <CBCentralManager: 0x1567ccdc0> can only accept this command while in the powered on state
-non-launching port is incompatible with service identifier "com.apple.PointerUI.pointeruid.default-service"
-261010_1241_260 🐞Main_Screen.swift:logESP001Test3EditorPresentation(presentation:):2736 [ESP-001-TEST3] model=iPhone18,3
-261010_1241_260 🐞Main_Screen.swift:logESP001Test3EditorPresentation(presentation:):2737 [ESP-001-TEST3] isPad=false
-261010_1241_260 🐞Main_Screen.swift:logESP001Test3EditorPresentation(presentation:):2738 [ESP-001-TEST3] isIPadMini5=false
-261010_1241_260 🐞Main_Screen.swift:logESP001Test3EditorPresentation(presentation:):2739 [ESP-001-TEST3] isIPadAirM2=false
-261010_1241_260 🐞Main_Screen.swift:logESP001Test3EditorPresentation(presentation:):2740 [ESP-001-TEST3] editingSlotIndexNonNil=true
-261010_1241_260 🐞Main_Screen.swift:logESP001Test3EditorPresentation(presentation:):2741 [ESP-001-TEST3] presentation=iPhoneSmartEditorPresentation
-UITextView 0x1577b1800 is switching to TextKit 1 compatibility mode because its layoutManager was accessed. Break on void _UITextViewEnablingCompatibilityMode(UITextView *__strong, BOOL) to debug.

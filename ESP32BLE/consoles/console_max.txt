@@ -1,0 +1,42 @@
+Looking up debug dylib relative path
+Found debug dylib relative path string `ESP32BLE.debug.dylib`
+Looking up debug dylib entry point name
+No debug dylib entry point name defined.
+Looking up debug dylib install name
+Found debug dylib install name string `@rpath/ESP32BLE.debug.dylib`
+Looking for Previews JIT link entry point.
+No Previews JIT entry point found.
+Gave PreviewsInjection a chance to run and it returned, continuing with debug dylib.
+Looking for main entry point.
+Opening debug dylib with '@rpath/ESP32BLE.debug.dylib'
+Debug dylib handle: 0x3c5a2a230
+No entry point found. Checking for alias.
+Calling provided entry point.
+#FactoryInstall Unable to query results, error: 5
+[BLE-CONNECT-PROBE] 🐞 t=0.000s scan stop requested reason=stop() activePeripheralUUID=nil discoveredDeviceCount=0
+API MISUSE: <CBCentralManager: 0x1042a9080> can only accept this command while in the powered on state
+[BLE-CONNECT-PROBE] 🐞 t=0.000s scanning stopped
+[BLE-CONNECT-PROBE] 🐞 t=0.001s state isConnected previous=false new=false activePeripheralUUID=nil attempt=0
+[BLE-CONNECT-PROBE] 🐞 t=0.281s scan stop requested reason=stop() activePeripheralUUID=nil discoveredDeviceCount=0
+[BLE-CONNECT-PROBE] 🐞 t=0.281s scanning stopped
+[BLE-CONNECT-PROBE] 🐞 t=0.281s state isConnected previous=false new=false activePeripheralUUID=nil attempt=0
+App is being debugged, do not track this hang
+Hang detected: 0.55s (debugger attached, not reporting)
+🐞 [IPHONE_LAYOUT_PROBE] snapshot
+device=iPhone11,6 iOS=18.7.10 landscape=true
+geometry=(w:804.0, h:393.0, safeTop:0.0, safeBottom:21.0)
+calculated=(physicalContentHeight:414.0, gridHeight:307.0, topToolbar:44.0, topSpacing:2.0, bottomToolbarRegion:36.0, clearanceReservation:4.0, reservedBottomInset:30.0)
+frames.global=(root:(x:46.0, y:0.0, w:804.0, h:393.0), topToolbar:(x:46.0, y:0.0, w:804.0, h:44.0), grid:(x:46.0, y:46.0, w:804.0, h:307.0), bottomToolbar:(x:46.0, y:357.0, w:804.0, h:36.0))
+measured=(bottomToolbarTopY:357.0, gridBottomY:353.0, clearance:4.0, overlapDetected:false, actualBottomToolbarHeight:36.0, calculatedMinusMeasuredGridHeight:0.0, rootMinusGeometryHeight:0.0)
+[BLE-CONNECT-PROBE] 🐞 t=3.318s scan stop requested reason=stop() activePeripheralUUID=nil discoveredDeviceCount=0
+[BLE-CONNECT-PROBE] 🐞 t=3.318s scanning stopped
+[BLE-CONNECT-PROBE] 🐞 t=3.319s state isConnected previous=false new=false activePeripheralUUID=nil attempt=0
+App is being debugged, do not track this hang
+Hang detected: 0.42s (debugger attached, not reporting)
+App is being debugged, do not track this hang
+Hang detected: 1.50s (debugger attached, not reporting)
+[ESP-MAC-TX] payload="AUTH:RESPONSE:1:esp-361fa79d2f1beaa862bc81538af36048:c58e719c455ad64198d482d1b3d2dbe097560e689272e0b7a88c5b49381862e7\n" bytes=118 values=[65,85,84,72,58,82,69,83,80,79,78,83,69,58,49,58,101,115,112,45,51,54,49,102,97,55,57,100,50,102,49,98,101,97,97,56,54,50,98,99,56,49,53,51,56,97,102,51,54,48,52,56,58,99,53,56,101,55,49,57,99,52,53,53,97,100,54,52,49,57,56,100,52,56,50,100,49,98,51,100,50,100,98,101,48,57,55,53,54,48,101,54,56,57,50,55,50,101,48,98,55,97,56,56,99,53,98,52,57,51,56,49,56,54,50,101,55,10]
+[ESP-AUTH] authentication response sent
+[ESP-AUTH] authenticated with Mac Helper
+App is being debugged, do not track this hang
+Hang detected: 0.29s (debugger attached, not reporting)

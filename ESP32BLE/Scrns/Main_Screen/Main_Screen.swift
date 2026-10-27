@@ -112,6 +112,26 @@ private struct MainGridDeleteFootprint {
     var maxColumn: Int { column + width - 1 }
 }
 
+// MARK: - BM:🅱️ iPhone bottom-toolbar geometry
+private struct IPhoneBottomToolbarFramePreferenceKey: PreferenceKey {
+    static var defaultValue: CGRect?
+
+    static func reduce(value: inout CGRect?, nextValue: () -> CGRect?) {
+        value = nextValue() ?? value
+    }
+}
+
+private struct IPhoneBottomToolbarFrameReporter: View {
+    var body: some View {
+        GeometryReader { geometry in
+            Color.clear.preference(
+                key: IPhoneBottomToolbarFramePreferenceKey.self,
+                value: geometry.frame(in: .global)
+            )
+        }
+    }
+}
+
 struct MainScreen: View {
     enum PreviewedFile: Equatable, Identifiable {
         case text(filename: String, contents: String)
@@ -935,6 +955,7 @@ This command requires an ESP32 connection. Not all pins will work, it will depen
     @State private var mainGridRenderedFrame: CGRect?
     @State private var iPadBottomToolbarTopY: CGFloat?
     @State private var iPadBottomToolbarVisibleContentTopY: CGFloat?
+    @State private var iPhoneBottomToolbarFrame: CGRect?
     @State private var popupUndoHistory: [PopupUndoEntry] = []
     @State private var popupRedoHistory: [PopupUndoEntry] = []
     @State private var directionalDeleteLastFootprint: MainGridDeleteFootprint?
@@ -1222,13 +1243,20 @@ Tapping a row inserts the key code at the cursor.
             let topContentInset: CGFloat = 0
             let bottomContentInset: CGFloat = 0
             let iPhonePhysicalContentHeight = geometry.size.height + geometry.safeAreaInsets.bottom
-            let iPhoneGridHeight = max(
-                0,
-                iPhonePhysicalContentHeight
-                - mainTopToolbarHeight
-                - topToolbarToGridSpacing
+            let iPhoneFallbackGridBottomY = iPhonePhysicalContentHeight
                 - iPhoneBottomToolbarRegionHeight
                 - iPhoneGridToBottomToolbarClearance
+            let iPhoneToolbarTopY = iPhoneBottomToolbarFrame.map { frame in
+                frame.minY - geometry.frame(in: .global).minY
+            }
+            // MARK: - BM:🅱️ Match the grid to the rendered toolbar position when it is available.
+            let iPhoneGridBottomY = (iPhoneToolbarTopY.map { $0 - iPhoneGridToBottomToolbarClearance })
+                ?? iPhoneFallbackGridBottomY
+            let iPhoneGridHeight = max(
+                0,
+                iPhoneGridBottomY
+                - mainTopToolbarHeight
+                - topToolbarToGridSpacing
             )
             
 			let containerFrame = geometry.frame(in: .global)
@@ -1318,6 +1346,9 @@ Tapping a row inserts the key code at the cursor.
                         Spacer(minLength: 0)
 
                         displayModeButtonSection(availableWidth: contentWidth)
+                            .background {
+                                IPhoneBottomToolbarFrameReporter()
+                            }
                     }
                     .frame(width: contentWidth)
                     .frame(height: geometry.size.height, alignment: .bottom)
@@ -1396,6 +1427,10 @@ Tapping a row inserts the key code at the cursor.
                 if iPadBottomToolbarVisibleContentTopY != toolbarVisibleContentTopY {
                     iPadBottomToolbarVisibleContentTopY = toolbarVisibleContentTopY
                 }
+            }
+            .onPreferenceChange(IPhoneBottomToolbarFramePreferenceKey.self) { frame in
+                guard !isPad, iPhoneBottomToolbarFrame != frame else { return }
+                iPhoneBottomToolbarFrame = frame
             }
             .editorGeometryProbe(.screen, isEnabled: debugEditorGeometry)
             .ignoresSafeArea(.keyboard)

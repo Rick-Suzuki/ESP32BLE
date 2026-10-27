@@ -1,3 +1,6 @@
+V65.41_261027 Tue 1421
+iPhone SX fix complete
++ BB Backup
 
 V65.40_261027 Tue 1326
 before iPhone XS fix

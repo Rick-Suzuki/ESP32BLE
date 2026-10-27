@@ -67,10 +67,11 @@
 /* Begin PBXFileReference section */
 		1D0CCE48308DD6BE006622D6 /* time-notes.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "time-notes.txt"; sourceTree = "<group>"; };
 		1D0CCE49308F1B80006622D6 /* SR_Homophones.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SR_Homophones.swift; sourceTree = "<group>"; };
+		1D0CCE4B309061C6006622D6 /* console_max.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = console_max.txt; sourceTree = "<group>"; };
 		1D16CD10302F1954004E330E /* ScreenConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenConfig.swift; sourceTree = "<group>"; };
 		1D16CD1230304347004E330E /* ScreenDocument.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenDocument.swift; sourceTree = "<group>"; };
 		1D23A17A3075B984003B646C /* VERSIONS.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = VERSIONS.txt; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.swift; };
-		1D23A17C3075C212003B646C /* console_iPhone.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = console_iPhone.txt; sourceTree = "<group>"; };
+		1D23A17C3075C212003B646C /* console_17.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = console_17.txt; sourceTree = "<group>"; };
 		1D2A22AF307C69D3003CCFCF /* notes.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = notes.txt; sourceTree = "<group>"; };
 		1D2A22C2307DF60E003CCFCF /* Set_ArchiveDocuments.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Set_ArchiveDocuments.swift; sourceTree = "<group>"; };
 		1D2A22C4307DFAF0003CCFCF /* MacConnectionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacConnectionManager.swift; sourceTree = "<group>"; };
@@ -144,6 +145,19 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		1D0CCE4C309063E5006622D6 /* consoles */ = {
+			isa = PBXGroup;
+			children = (
+				1D0CCE4B309061C6006622D6 /* console_max.txt */,
+				1D23A17C3075C212003B646C /* console_17.txt */,
+				1DA256FD3065FD1A008C934A /* console pro.txt */,
+				1DDA41A63078D0CA00D03761 /* console mini.txt */,
+				1D590E532F61206100E430E0 /* console m2.txt */,
+				1DDA41A83079DDE200D03761 /* console_sim.swift */,
+			);
+			path = consoles;
+			sourceTree = "<group>";
+		};
 		1D1B29CB2F63ABE7004733D7 /* btns */ = {
 			isa = PBXGroup;
 			children = (
@@ -197,11 +211,7 @@
 			children = (
 				1D23A17A3075B984003B646C /* VERSIONS.txt */,
 				1D9A8748302D3885005B5E36 /* codex.txt */,
-				1D590E532F61206100E430E0 /* console m2.txt */,
-				1D23A17C3075C212003B646C /* console_iPhone.txt */,
-				1DA256FD3065FD1A008C934A /* console pro.txt */,
-				1DDA41A63078D0CA00D03761 /* console mini.txt */,
-				1DDA41A83079DDE200D03761 /* console_sim.swift */,
+				1D0CCE4C309063E5006622D6 /* consoles */,
 				1D2A22AF307C69D3003CCFCF /* notes.txt */,
 				1D0CCE48308DD6BE006622D6 /* time-notes.txt */,
 				1D590E512F61206100E430E0 /* ESP32BLEApp.swift */,

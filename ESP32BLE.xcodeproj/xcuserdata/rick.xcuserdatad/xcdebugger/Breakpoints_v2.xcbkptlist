@@ -16,8 +16,8 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "6654"
             endingLineNumber = "6654"
-            landmarkName = "SoftEditorAccessoryFileCategory"
-            landmarkType = "14">
+            landmarkName = "unknown"
+            landmarkType = "0">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -32,7 +32,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "6694"
             endingLineNumber = "6694"
-            landmarkName = "SoftEditorAccessoryAction"
+            landmarkName = "SoftEditorAccessoryBehavior"
             landmarkType = "13">
          </BreakpointContent>
       </BreakpointProxy>
@@ -48,8 +48,8 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "6594"
             endingLineNumber = "6594"
-            landmarkName = "insertionTemplates"
-            landmarkType = "24">
+            landmarkName = "SoftEditorAccessoryConfiguration"
+            landmarkType = "13">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -64,8 +64,8 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "6595"
             endingLineNumber = "6595"
-            landmarkName = "SoftEditorAccessoryConfiguration"
-            landmarkType = "13">
+            landmarkName = "compactVisible"
+            landmarkType = "24">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -80,8 +80,8 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "6596"
             endingLineNumber = "6596"
-            landmarkName = "SoftEditorAccessoryConfiguration"
-            landmarkType = "13">
+            landmarkName = "compactVisible"
+            landmarkType = "24">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -96,8 +96,8 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "6597"
             endingLineNumber = "6597"
-            landmarkName = "SoftEditorAccessoryConfiguration"
-            landmarkType = "13">
+            landmarkName = "compactVisible"
+            landmarkType = "24">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -112,8 +112,8 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "6598"
             endingLineNumber = "6598"
-            landmarkName = "SoftEditorAccessoryConfiguration"
-            landmarkType = "13">
+            landmarkName = "compactVisible"
+            landmarkType = "24">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -128,8 +128,8 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "6599"
             endingLineNumber = "6599"
-            landmarkName = "SoftEditorAccessoryConfiguration"
-            landmarkType = "13">
+            landmarkName = "expandedVisible"
+            landmarkType = "24">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -160,8 +160,8 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "5331"
             endingLineNumber = "5331"
-            landmarkName = "softEditorAccessoryOverlay(anchors:)"
-            landmarkType = "7">
+            landmarkName = "smartEscapeCodeToggleButton"
+            landmarkType = "24">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -176,7 +176,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "5335"
             endingLineNumber = "5335"
-            landmarkName = "softEditorAccessoryOverlay(anchors:)"
+            landmarkName = "smartCommandTableButton(_:foreground:action:)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -192,7 +192,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "5342"
             endingLineNumber = "5342"
-            landmarkName = "softEditorAccessoryOverlay(anchors:)"
+            landmarkName = "smartCommandTableButton(_:foreground:action:)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -208,7 +208,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "5340"
             endingLineNumber = "5340"
-            landmarkName = "softEditorAccessoryOverlay(anchors:)"
+            landmarkName = "smartCommandTableButton(_:foreground:action:)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -224,7 +224,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "5339"
             endingLineNumber = "5339"
-            landmarkName = "softEditorAccessoryOverlay(anchors:)"
+            landmarkName = "smartCommandTableButton(_:foreground:action:)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -240,7 +240,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "5338"
             endingLineNumber = "5338"
-            landmarkName = "softEditorAccessoryOverlay(anchors:)"
+            landmarkName = "smartCommandTableButton(_:foreground:action:)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -256,7 +256,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "5337"
             endingLineNumber = "5337"
-            landmarkName = "softEditorAccessoryOverlay(anchors:)"
+            landmarkName = "smartCommandTableButton(_:foreground:action:)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -272,7 +272,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "5336"
             endingLineNumber = "5336"
-            landmarkName = "softEditorAccessoryOverlay(anchors:)"
+            landmarkName = "smartCommandTableButton(_:foreground:action:)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -288,7 +288,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "5354"
             endingLineNumber = "5354"
-            landmarkName = "softEditorAccessoryOverlay(anchors:)"
+            landmarkName = "smartCommandTableButton(_:foreground:action:)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -304,7 +304,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "5355"
             endingLineNumber = "5355"
-            landmarkName = "softEditorAccessoryOverlay(anchors:)"
+            landmarkName = "smartCommandTableButton(_:foreground:action:)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -320,7 +320,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "5356"
             endingLineNumber = "5356"
-            landmarkName = "softEditorAccessoryOverlay(anchors:)"
+            landmarkName = "smartCommandTableButton(_:foreground:action:)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -336,7 +336,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "5357"
             endingLineNumber = "5357"
-            landmarkName = "softEditorAccessoryOverlay(anchors:)"
+            landmarkName = "smartCommandTableButton(_:foreground:action:)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -352,7 +352,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "5358"
             endingLineNumber = "5358"
-            landmarkName = "softEditorAccessoryOverlay(anchors:)"
+            landmarkName = "smartCommandTableButton(_:foreground:action:)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -368,7 +368,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "5359"
             endingLineNumber = "5359"
-            landmarkName = "softEditorAccessoryOverlay(anchors:)"
+            landmarkName = "smartCommandTableButton(_:foreground:action:)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
