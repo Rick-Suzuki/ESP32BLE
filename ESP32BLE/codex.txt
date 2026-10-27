@@ -1,618 +1,592 @@
-ESP-HELP-001 — READ-ONLY HELP SYSTEM ARCHITECTURE PROBE
-
-Scope: ESP32BLE iOS/iPadOS development project only.
-
-No files, settings, packages, builds, runs, commits, backups, ESPMacHelper files, or firmware were modified.
-
-A. EXECUTIVE SUMMARY
-
-ESP has a custom full-screen Settings implementation, not NavigationStack, NavigationView, or a Settings sheet. Settings is conditionally overlaid by the root ContentView and returned from through a callback that sets isSettingsScreenPresented to false.
-
-The smallest, safest Help architecture is:
-
-• A single Help entry point in Settings.
-• A self-contained Help sheet.
-• A NavigationStack inside that sheet only.
-• A SwiftUI topic list.
-• A WKWebView wrapped by a new UIViewRepresentable for offline HTML topic pages.
-• Bundled local HTML/CSS/images in one preserved Help resource directory.
-• External PDF link opened through the existing UIApplication.shared.open mechanism.
-
-This avoids changing the existing root screen switching, BLE state, Mac Helper state, import/export state, Settings document editor, or Soft Editor.
-
-There is no existing WebKit, WKWebView, local HTML renderer, or bundled HTML content to reuse. The project does have several UIKit bridges using UIViewRepresentable, so that bridge pattern is already established, but none is suitable for reuse as a web renderer.
-
-The app target supports iPhone and iPad with an iOS 17.6 deployment target. A WKWebView-based bridge is appropriate for that target. The newer native SwiftUI WebView API must not be the sole implementation if iOS 17.6 remains supported.
-
-B. CURRENT SETTINGS ARCHITECTURE
-
-Confirmed presentation architecture:
-
-• Root presentation state is owned by ContentView:
-• @State private var isSettingsScreenPresented = true
-• Source: Scrns/ContentView.swift:213-216.
-
-• The main/root layout conditionally inserts SettingsScreen when that state is true.
-• Source: Scrns/ContentView.swift:325-328.
-
-• SettingsScreen is instantiated in launchedSettingsScreen.
-• Source: Scrns/ContentView.swift:2900-2930.
-
-• Returning from Settings calls a callback that animates:
-isSettingsScreenPresented = false
-• Source: Scrns/ContentView.swift:2921-2925.
-
-• Settings is reopened by showSettingsScreen(), which sets that same state to true.
-• Source: Scrns/ContentView.swift:2941-2949.
-
-• Settings is initially presented on app appearance.
-• Source: Scrns/ContentView.swift:349-352 and 2932-2939.
-
-Navigation model:
-
-• Settings does not use NavigationStack.
-• Settings does not use NavigationView.
-• Settings is not presented by .sheet.
-• It is a custom root-level, full-size conditional screen with a trailing transition.
-• Source: Scrns/ContentView.swift:325-328; Scrns/ContentView.swift:2900-2949.
-
-Settings screen structure:
-
-• Main Settings view:
-• Scrns/Set_Screen/Set_Screen.swift
-• SettingsScreen starts at line 6.
-
-• The Settings body uses GeometryReader and a custom top toolbar.
-• Source: Set_Screen.swift:399-427.
-
-• iPad layout:
-• Horizontal split layout.
-• Left: editable document and bottom panel.
-• Right: document table.
-• Source: Set_Screen.swift:405-419.
-
-• iPhone layout:
-• Custom HStack.
-• Left: available devices / keyboard settings.
-• Right: document table.
-• Source: Set_Screen.swift:429-459.
-
-• Settings top toolbar:
-• Source: Set_Screen.swift:461-587.
-• Existing controls: main, text-to-speech voice, text-to-speech speed, settings title, import menu, export menu, table selector, repair, new.
-
-• Return-to-main behavior:
-• The main toolbar button calls saveAndReturnToMain().
-• Source: Set_Screen.swift:466-469.
-• saveAndReturnToMain saves the current document, verifies that usable screen documents exist, then invokes returnToMain().
-• Source: Set_Screen.swift:1851-1879.
-
-Settings-related supporting files:
-
-• Scrns/Set_Screen/Set_TxtEditor.swift
-• UIKit-backed Settings document editor and visual controls.
-
-• Scrns/Set_Screen/Btm_Area/Set_BtmCtls.swift
-• Composes SettingsAvailableDevicesPanel.
-• Source: lines 3-28.
-
-• Scrns/Set_Screen/Btm_Area/Set_AvailableDevices.swift
-• ESP32/Mac connection and pairing controls.
-• iPad/iPhone-specific layouts.
-• Source: lines 25-86.
-• Mac pairing controls:
-• Source: lines 166-215.
-
-• Scrns/Set_Screen/Btm_Area/Set_ImgCtlsSection.swift
-• Image controls.
-
-• Scrns/Set_Screen/Btm_Area/Set_SendTextSupport.swift
-• Manual text-send controls.
-• Source: lines 3-86.
-
-C. RECOMMENDED HELP BUTTON LOCATION
-
-Recommendation:
-
-Place one compact Help button in the Settings top toolbar, immediately after the existing main button.
-
-Why this is preferred:
-
-• It is consistently available in both iPhone and iPad Settings layouts.
-• It is visible before the user reaches device, document, import/export, or file-management controls.
-• It is clearly separate from BLE and Mac connection controls, so it can serve all Help topics rather than appearing to be only connection help.
-• It avoids changing the existing connection panel, device list, file table, Soft Editor, and data-management controls.
-• It is the least invasive location in the established Settings hierarchy.
-
-Relevant toolbar source:
-
-• Toolbar container: Set_Screen.swift:461-587.
-• Existing main button: Set_Screen.swift:466-469.
-• Import menu: Set_Screen.swift:497-515.
-• Export menu: Set_Screen.swift:524-562.
-• Table selector: Set_Screen.swift:569.
-• Repair/new controls: Set_Screen.swift:574-583.
-
-iPhone landscape assessment:
-
-• The existing toolbar is dense and uses an HStack with fixed-width controls, menus, title control, spacers, and conditional iPad spacing.
-• Source: Set_Screen.swift:461-587.
-• A text-labeled “Help” button would create avoidable compression risk.
-• A compact icon-only button with a clear accessibility label is the appropriate form.
-• This must be tested on the smallest supported iPhone landscape width.
-
-iPad assessment:
-
-• The toolbar already inserts spacers around the title area on iPad.
-• Source: Set_Screen.swift:484-492 and 516-519.
-• A compact Help control should have materially lower layout risk on iPad.
-
-Alternative considered:
-
-• Adding Help inside SettingsAvailableDevicesPanel would avoid toolbar pressure, but it would associate general application help with connection controls and would appear in different visual positions on iPhone versus iPad.
-• Not recommended.
-
-D. EXISTING WEBKIT/HTML FACILITIES
-
-Confirmed:
-
-• No import WebKit was found.
-• No WKWebView was found.
-• No local HTML loading was found.
-• No HTML resources were found.
-• No existing bundled web content was found.
-• No existing HTML renderer can be reused.
-
-Existing UIViewRepresentable usage:
-
-• Soft Editor text field:
-• Scrns/Main_Screen/Soft_Editor/Soft_Editor_TextField.swift:53-185.
-
-• Smart Editor text views:
-• Scrns/Main_Screen/Main_SmartEditorTextInputs.swift.
-
-• Settings text editor:
-• Scrns/Set_Screen/Set_TxtEditor.swift:8 onward.
-
-• Settings PDF preview:
-• Scrns/Set_Screen/Table_Img/Set_ImgPanel.swift:120 onward.
-
-These are specialized UIKit bridges for text editing, gestures, and PDF rendering. They should not be repurposed for Help.
-
-Existing resource pattern:
-
-• The project currently copies only Assets.xcassets and resources/color.png through Copy Bundle Resources.
-• Source: ESP32BLE.xcodeproj/project.pbxproj:413-423.
-• The resource folder exists in the project, but only color.png is currently a bundled non-asset resource.
-• Source: project.pbxproj:23, 86, 418-420.
-
-E. RECOMMENDED HELP VIEWER ARCHITECTURE
-
-Recommendation:
-
-1. Keep Help state local to SettingsScreen.
-
-• A local Boolean presentation state in Settings is sufficient.
-• Do not add Help state to BLEKeyboardManager, MacConnectionManager, document persistence, or the root ContentView unless later requirements demand deep links.
-
-2. Present a Help sheet from Settings.
-
-• The sheet opens above Settings.
-• Dismissing the sheet returns the user directly to the unchanged Settings screen.
-• This isolates Help from the application’s custom root-level screen switching.
-
-3. Put NavigationStack inside Help only.
-
-• The Help sheet can contain a native SwiftUI topic list:
-• Connect to Mac
-• Connect to ESP32BLE
-• Using ESP
-• Troubleshooting
-• Complete User Manual
-
-• Tapping an offline topic pushes a detail view containing a local WKWebView.
-• The system navigation back control returns to the topic list.
-• The sheet’s Close/Done control returns to Settings.
-
-This is intentionally limited to Help. It does not redesign Settings navigation.
-
-4. Use WKWebView through a small UIViewRepresentable.
-
-• Import WebKit only in the new Help renderer file.
-• Load local content with WKWebView.loadFileURL(_:allowingReadAccessTo:).
-• Grant read access to only the bundled Help directory, not the full application bundle.
-• Apple documents that the read-access URL controls which additional local files WebKit may read. A directory access URL is appropriate when HTML relies on local CSS and images.
-
-5. Keep Help content offline.
-
-• The four short Help topics should be fully usable without network access.
-• Do not fetch, download, or update those pages dynamically.
-
-6. Handle PDF link separately.
-
-• The Complete User Manual item should use an external HTTPS URL through UIApplication.shared.open.
-• It should not be rendered inside the offline Help WKWebView by default.
-
-iOS compatibility:
-
-• Target deployment is iOS 17.6 for both target configurations.
-• Source: ESP32BLE.xcodeproj/project.pbxproj:634 and 676.
-
-• A UIKit WKWebView wrapped in UIViewRepresentable is compatible with that deployment target.
-
-• Apple now provides a native SwiftUI WebView API in newer OS releases, but it must not be the only solution while iOS 17.6 support remains required.
-
-Light/dark appearance:
-
-• Use standard semantic CSS with:
-• color-scheme: light dark
-• @media (prefers-color-scheme: dark)
-• system colors or paired light/dark CSS variables.
-
-• Do not hard-code black backgrounds, white text, or fixed contrast assumptions.
-
-Dynamic Type and readability:
-
-• Use a viewport meta tag.
-• Use relative CSS sizing such as rem/em rather than fixed pixel text.
-• Use readable line height and an adaptable content width.
-• WKWebView/HTML Dynamic Type behavior must be tested at larger accessibility sizes. HTML does not automatically gain all native SwiftUI text-style behavior.
-
-Accessibility:
-
-• Use semantic HTML:
-• h1, h2, p, ul, ol, nav, main.
-• Use meaningful link labels.
-• Add alt text for instructional images.
-• Maintain sufficient contrast in both appearances.
-• Keep links and controls large enough for touch.
-• Do not use image-only text for instructional content.
-• Test VoiceOver heading navigation, link traversal, focus order, text selection, and larger text sizes.
-
-Rotation and landscape:
-
-• A sheet plus NavigationStack handles navigation independently of the custom Settings layout.
-• WKWebView should be constrained to the Help detail view’s available size, not assigned fixed device dimensions.
-• Relative HTML/CSS should reflow automatically as width changes.
-• Test iPhone landscape and iPad split/rotation behavior.
-
-Technical risks requiring device testing:
-
-• Sheet appearance on compact iPhone landscape.
-• Toolbar button fit on smallest supported iPhone landscape.
-• WKWebView rendering of local CSS/images after app-store packaging.
-• Relative local links across topic pages.
-• Dynamic Type behavior at accessibility text sizes.
-• Dark/light switching while Help is visible.
-• VoiceOver focus after pushing/popping Help pages and dismissing the sheet.
-• External PDF handling when Safari is unavailable, restricted, or offline.
-
-F. SUGGESTED HTML RESOURCE ORGANIZATION
-
-Recommended organization:
-
-Help/
-index.html
-connect-mac.html
-connect-esp32ble.html
-using-esp.html
-troubleshooting.html
-css/
-help.css
-
-images/
-mac-helper-menu-bar.png
-
-accessibility-settings.png
-
-pairing-example.png
-
-
-Design notes:
-
-• Keep index.html optional if SwiftUI provides the Help topic list. It can still be useful as a fallback landing page or for future web publication.
-• Use relative paths:
-• css/help.css
-• images/example.png
-• connect-mac.html
-
-• Preserve the Help directory hierarchy in the app bundle.
-• Add the Help directory as a resource in a way that copies its hierarchy rather than flattening files into the bundle root.
-• Then locate index.html through Bundle.main with the Help subdirectory and grant WKWebView read access to that Help directory.
-
-Why preserving the folder hierarchy matters:
-
-• Relative image, CSS, and local HTML links depend on a stable directory structure.
-• Flattened resources can break relative paths or require content changes that should not be necessary.
-
-No existing HTML-resource convention was found, so this should be introduced as an isolated Help-only resource directory.
-
-G. SOFT EDITOR COMMAND INFO DEPENDENCIES
-
-The existing Command Info feature is separate from general Help and should remain separate.
-
-Confirmed implementation:
-
-• The current command-description state is:
-smartCommandDescription
-• Source: Scrns/Main_Screen/Main_Screen.swift:969-971.
-
-• Static explanatory strings for Smart Editor controls are declared in Main_Screen.swift.
-• Examples:
-• smartHelpButtonColor: lines 973-975.
-• smartHelpButtonColon: lines 977-982.
-• smartHelpButtonVisibility: lines 993-998.
-• smartHelpSFTestButton: lines 1004-1007.
-
-• The visible Command Info area displays:
-Text(.init(smartCommandDescription))
-in a scroll view.
-• Source: Main_Screen.swift:4079-4134.
-• The .init form permits the existing Markdown-like formatting in these strings.
-
-• The command-info content changes based on Soft Editor action selection.
-• Source: Main_Screen.swift:3778, 3786, 4165, 4197, 4203, 4716, 4742, 4765, 4786, 5296, 5317, 5407, 5438, 5469, 5492, 5528-5555.
-
-• Quick/Soft Editor descriptions are supplied by static configuration:
-• SoftEditorAccessoryConfiguration
-• Source: Main_Screen.swift:6492-6651.
-
-• Its description(for:) method returns static strings for File, MIDI, and Time actions.
-• Source: Main_Screen.swift:6528-6593.
-
-• Some Command Info selection behavior depends on editor/session state:
-• SoftEditorAccessoryInsertionContext retains session ID, slot, document, editor target, and first-responder state.
-• Source: Main_Screen.swift:6672-6687.
-
-Conclusion:
-
-• Existing Command Info is partly static text and partly driven by currently selected Smart Editor controls, command tables, insertion context, and editor state.
-• General Help must not write to smartCommandDescription, share its presentation state, change Soft Editor overlays, or reuse Soft Editor navigation.
-• A separate Settings-owned Help sheet isolates it safely.
-
-H. PDF MANUAL LINKING APPROACH
-
-Confirmed existing external URL mechanism:
-
-• The app already opens external URLs through UIApplication.shared.open.
-• Source: Scrns/Main_Screen/Main_ButtonBehavior.swift:758-772 and 803-805.
-• There are also async URL-open calls in the same file.
-• Source: Main_ButtonBehavior.swift:1027-1030 and 1086.
-
-Recommendation:
-
-• The Complete User Manual Help item should open the future HTTPS PDF URL externally through UIApplication.shared.open.
-• Safari/default browser handling is provided by iOS.
-• No new application permission is needed merely to open a normal HTTPS URL.
-• The existing Info.plist has no ATS exceptions; a standard HTTPS GitHub Pages URL should not require one.
-• Source: ESP32BLE/Info.plist:1-13.
-
-Offline behavior:
-
-• The app can attempt to open the external URL, but cannot guarantee that the PDF is reachable.
-• The Help UI should make the distinction explicit:
-“Complete User Manual — opens online PDF”
-and provide a short offline/unavailable explanation if opening fails or the document cannot load.
-
-• Final behavior must be tested with:
-• Airplane mode.
-• No DNS.
-• Captive portal.
-• GitHub Pages unavailable.
-• Safari restrictions or device-management restrictions.
-
-No final PDF URL was invented.
-
-I. COMPATIBILITY AND REGRESSION RISKS
-
-BLE discovery and connection:
-
-• Risk is low if Help is an isolated Settings sheet with no BLE state changes.
-• Do not create, reset, or observe BLE discovery state from Help.
-• Relevant current connection UI:
-• SettingsAvailableDevicesPanel.
-• Source: Set_AvailableDevices.swift:88-151 and 237-287.
-
-Mac Helper discovery and pairing:
-
-• Risk is low if Help only displays static content.
-• Do not alter MacConnectionManager state or pairing operations.
-• Existing pairing UI:
-• Source: Set_AvailableDevices.swift:166-235.
-
-Settings navigation:
-
-• Main risk: adding Help to the root ContentView’s custom screen-state system would couple Help to existing main/settings transitions.
-• Isolation approach: keep Help as a Settings-owned sheet.
-
-Settings toolbar:
-
-• Highest layout risk is iPhone landscape because the existing toolbar is already dense.
-• Use one compact icon button only; test all supported iPhone widths/orientations.
-
-Files, import/export, backup, restore:
-
-• Help must not use the Settings document directory, file picker state, archive state, import state, or export state.
-• It should use only bundled app resources.
-• Existing toolbar contains import/export and full-backup actions:
-• Source: Set_Screen.swift:497-562.
-
-Soft Editor and Command Info:
-
-• Keep Help independent from smartCommandDescription, Soft Editor accessory state, Smart Editor text fields, and command insertion state.
-• This is essential because Command Info depends on selected editor action and insertion state.
-
-iPad layout:
-
-• The current iPad Settings layout is a split HStack, not standard split-view navigation.
-• A self-contained Help sheet avoids changing its document table and editor sizing.
-• Source: Set_Screen.swift:405-419.
-
-iPhone landscape:
-
-• Help content itself should reflow, but the entry button and sheet presentation require real-device testing.
-• Existing iPhone Settings layout is a custom HStack with fixed device-panel width and a calculated document-table width.
-• Source: Set_Screen.swift:429-459.
-
-iOS 17.6:
-
-• Keep implementation to SwiftUI, UIKit, WebKit APIs available on iOS 17.6.
-• Do not require newer native SwiftUI WebView APIs as the only renderer.
-• Target configuration:
-• ESP32BLE.xcodeproj/project.pbxproj:634 and 676.
-
-J. PROPOSED IMPLEMENTATION STAGES
-
-Stage 1: Help entry point and empty container
-
-• Add one Help entry point in Settings.
-• Present a minimal empty Help sheet with title and Close/Done action.
-• Keep all state inside SettingsScreen.
-• Test:
-• Open/close returns to Settings unchanged.
-• iPhone portrait/landscape.
-• iPad portrait/landscape.
-• Existing main return continues to save and return correctly.
-
-Stage 2: Bundled renderer and one demonstration page
-
-• Add a Help resource directory.
-• Add one local HTML page and CSS.
-• Add a small WKWebView UIViewRepresentable dedicated to local files.
-• Test:
-• File loads from release-style app bundle.
-• CSS and one local image resolve.
-• Rotation.
-• dark/light appearance.
-• Dynamic Type and VoiceOver basics.
-
-Stage 3: Help contents and all offline topic pages
-
-• Add native SwiftUI Help topic list.
-• Add the four offline pages:
-• Connect to Mac.
-• Connect to ESP32BLE.
-• Using ESP.
-• Troubleshooting.
-• Test:
-• Native back navigation.
-• Local HTML links.
-• Close from list/detail.
-• Return to unchanged Settings.
-• No BLE/Mac connection interruption.
-
-Stage 4: Complete User Manual link
-
-• Add the online-PDF item after its final public URL exists.
-• Use the existing external URL opening pattern.
-• Add unavailable/offline user messaging.
-• Test:
-• Safari handoff.
-• No-network behavior.
-• Return to ESP.
-• URL changes through future app updates.
-
-Stage 5: Release regression and accessibility testing
-
-• Test the entire Help flow on iPhone and iPad.
-• Test smallest supported iPhone landscape width.
-• Test iOS 17.6 and latest supported iOS.
-• Test BLE discovery/connection before, during, and after Help.
-• Test Mac Helper discovery/pairing before, during, and after Help.
-• Test Settings import/export/full backup/restore.
-• Test Soft Editor and Command Info unchanged.
-• Test VoiceOver, Dynamic Type, dark/light, orientation, and external PDF failure cases.
-
-Each stage can remain independently buildable and testable.
-
-K. EXACT SOURCE FILES AND REFERENCES INSPECTED
-
-Root Settings presentation:
-
-• ESP32BLE/Scrns/ContentView.swift
-• Settings state: lines 213-216.
-• Conditional Settings screen display: lines 325-328.
-• Settings construction and return callback: lines 2900-2930.
-• Initial Settings presentation: lines 2932-2939.
-• Reopen Settings function: lines 2941-2949.
-
-Main Settings implementation:
-
-• ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
-• SettingsScreen declaration: line 6.
-• Dependencies and return callback: lines 295-313.
-• iPad/iPhone body layout: lines 399-459.
-• Settings toolbar: lines 461-587.
-• Sheet usage currently limited to export picker: lines 589-619.
-• Current Settings return logic: lines 1851-1879.
-
-Settings support:
-
-• ESP32BLE/Scrns/Set_Screen/Set_TxtEditor.swift
-• UIKit-backed Settings text editor.
-
-• ESP32BLE/Scrns/Set_Screen/Btm_Area/Set_BtmCtls.swift
-• Settings bottom-control composition: lines 3-28.
-
-• ESP32BLE/Scrns/Set_Screen/Btm_Area/Set_AvailableDevices.swift
-• iPad/iPhone layout: lines 25-86.
-• Connection controls: lines 88-151.
-• Mac pairing controls: lines 166-235.
-• Output mode selection: lines 237-287.
-
-• ESP32BLE/Scrns/Set_Screen/Btm_Area/Set_ImgCtlsSection.swift
-• Image controls: lines 3-129.
-
-• ESP32BLE/Scrns/Set_Screen/Btm_Area/Set_SendTextSupport.swift
-• Manual send-text support: lines 3-86.
-
-Existing external URL support:
-
-• ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift
-• UIApplication.shared.open target URL: lines 758-772.
-• UIApplication.shared.open shortcut URL: lines 803-805.
-• Additional async external URL opening: lines 1027-1030 and 1086.
-
-Soft Editor Command Info:
-
-• ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
-• smartCommandDescription state and static help text: lines 969 onward.
-• Command-description display panel: lines 4079-4134.
-• Quick-accessory description callbacks: lines 5407-5494.
-• SoftEditorAccessoryConfiguration: lines 6492-6651.
-• Static action descriptions: lines 6512-6593.
-• Insertion context/state dependency: lines 6672-6687.
-
-Project resources and deployment:
-
-• ESP32BLE/Info.plist
-• Bonjour service and file sharing only: lines 5-10.
-
-• ESP32BLE.xcodeproj/project.pbxproj
-• Current bundle resources: lines 413-423.
-• Display name ESP and utility category: lines 620-623 and 662-665.
-• iOS deployment target 17.6: lines 634 and 676.
-• iPhone/iPad device family: lines 648 and 690.
-
-L. USER DECISIONS NEEDED
-
-No decision is needed to begin the future Stage 1 implementation, assuming the recommended compact toolbar Help button and Settings-owned Help sheet are acceptable.
-
-Decisions needed before later stages:
-
-1. Help presentation style:
-• Recommended: a dismissible Help sheet containing its own NavigationStack.
-• Alternative: another full custom root screen.
-• The sheet is substantially safer because it avoids altering existing custom root navigation.
-
-2. Offline content policy:
-• Recommended: English-only bundled HTML for initial public release.
-• Decide later whether Help content will be localized with the app.
-
-3. PDF handoff policy:
-• Recommended: open the hosted PDF externally in Safari/default browser.
-• Decide whether a future version should offer in-app browser viewing instead.
-
-4. Final manual URL:
-• Required before Stage 4.
-• The URL should be final, HTTPS, public, and stable before it is embedded in a release.
+A. Exact IPadSmartButtonPanel declaration
+
+CONFIRMED
+
+File:
+ESP32BLE/Scrns/Main_Screen/Main_EditorShellViews.swift
+
+Declaration:
+Lines 170–232
+
+Complete generic declaration:
+
+struct IPadSmartButtonPanel<
+	BrightnessSliderColumn: View,
+	
+	Preview: View,
+	
+	ClearPreviewBackground: View,
+	
+	LowerEditingArea: View,
+	
+	PanelBorder: View
+	
+	: View
+	
+	The five generic View parameters are:
+	
+	1. BrightnessSliderColumn
+	2. Preview
+	3. ClearPreviewBackground
+	4. LowerEditingArea
+	5. PanelBorder
+	
+	Stored builder closures, lines 177–182:
+	
+	@ViewBuilder let brightnessSliderColumn: () -> BrightnessSliderColumn
+	@ViewBuilder let preview: () -> Preview
+	@ViewBuilder let clearPreviewBackground: () -> ClearPreviewBackground
+	@ViewBuilder let lowerEditingArea: () -> LowerEditingArea
+	@ViewBuilder let panelBorder: () -> PanelBorder
+	
+	There is no handwritten initializer. Swift synthesizes a memberwise initializer corresponding to these stored properties.
+	
+	Its body, lines 199–231:
+	
+	• Outer VStack
+	• Upper HStack containing:
+	• brightnessSliderColumn()
+	• nested VStack containing preview()
+	• upper HStack background closure invoking clearPreviewBackground()
+	• lowerEditingArea()
+	• outer background Color.black
+	• overlay closure invoking panelBorder()
+	• clipped()
+	
+	The panel itself has no recursive calls.
+	
+	B. Five generic arguments and their types
+	
+	CONFIRMED
+	
+	Call site:
+	ESP32BLE/Scrns/Main_Screen/Main_Screen.swift, lines 4269–4308
+	
+	1. BrightnessSliderColumn
+	
+	Call-site expression:
+	brightnessSliderColumn: {
+	smartButtonBrightnessSliderColumn
+	
+	}
+	
+	Implementation:
+	Main_Screen.swift, lines 4310–4319
+	
+	Declared return:
+	some View
+	
+	Content:
+	Slider with rotationEffect, frame, tint, onChange, and another frame.
+	
+	Metadata complexity:
+	Low to moderate. It is a modifier chain over Slider, with an onChange closure and Binding<Double>. It is much smaller than the preview or lower editor area.
+		
+		2. Preview
+		
+		Call-site expression:
+		preview: {
+		smartButtonPreview()
+		
+		}
+		
+		Implementation:
+		Main_Screen.swift, lines 4493–4617
+		
+		Declared return:
+		some View, with @ViewBuilder
+		
+		Content:
+		• Conditional branch for smartIsButtonHidden.
+		• Non-hidden branch uses Group.
+		• Nested conditional for whether text parses as an SF Symbol.
+		• SF Symbol branch contains VStack, Image, SmartPreviewTextView, bindings, two callback closures, frames, padding, foreground style, and offset.
+		• Ordinary-text branch contains SmartPreviewTextView, bindings, two callback closures, frame calculation, and padding.
+		• Shared modifier chain: frames, background, clip shape, two overlays, editorGeometryProbe, final frame.
+		• Preview background is itself a nested @ViewBuilder hierarchy.
+		
+		Metadata complexity:
+		High.
+		
+		The returned concrete type contains conditional-content wrappers for:
+		• hidden versus visible preview
+		• SF Symbol versus ordinary text
+		• iPad border style versus iPhone border style
+		• preview background’s image-present versus image-absent branch
+		• preview background’s color-present versus clear branch
+		
+		SmartPreviewTextView is a concrete UIViewRepresentable, defined in:
+		ESP32BLE/Scrns/Main_Screen/Main_SmartEditorTextInputs.swift, line 191.
+		
+		It is not itself generic, but it carries bindings and callback closures.
+		
+		3. ClearPreviewBackground
+		
+		Call-site expression:
+		clearPreviewBackground: {
+		smartButtonClearPreviewBackground
+		
+		}
+		
+		Implementation:
+		Main_Screen.swift, lines 4977–4979
+		
+		Declared return:
+		some View
+		
+		Content:
+		Color.black
+		
+		Metadata complexity:
+		Very low.
+		
+		4. LowerEditingArea
+		
+		Call-site expression:
+		lowerEditingArea: {
+		smartButtonLowerEditingArea(editorWidth: resolvedEditorWidth)
+		
+		}
+		
+		Implementation:
+		Main_Screen.swift, lines 4388–4404
+		
+		Declared return:
+		some View, with @ViewBuilder
+		
+		iPad branch:
+		smartButtonColorGrid, followed by two frame modifiers and editorGeometryProbe.
+		
+		smartButtonColorGrid:
+		Main_Screen.swift, lines 4415–4440
+		
+		It contains:
+		• VStack
+		• HStack of four independently built buttons
+		• ScrollView
+		• LazyVGrid
+		• ForEach over iPad/iPhone swatch data
+		• smartButtonColorSwatch for each color
+		
+		smartButtonColorSwatch:
+		Main_Screen.swift, lines 4819–4851
+		
+		It contains:
+		• Button
+		• ZStack
+		• conditional “black” text label
+		• overlay
+		• custom geometry-related modifiers
+		• accessibility modifier
+		
+		Metadata complexity:
+		High.
+		
+		Important detail:
+		Although the mini executes the isPad branch, the @ViewBuilder return type structurally represents both the iPad and iPhone branches. The iPhone alternative includes smartIPhoneButtonSharedEditingArea, which adds a further color-grid/SF-symbol-grid conditional path.
+		
+		5. PanelBorder
+		
+		Call-site expression:
+		panelBorder: {
+		smartPanelBorder(edges: .all)
+		
+		}
+		
+		Implementation:
+		Main_Screen.swift, lines 3613–3644
+		
+		Declared return:
+		some View
+		
+		Content:
+		ZStack with four conditional branches:
+		• top edge
+		• bottom edge
+		• leading edge
+		• trailing edge
+		
+		Each present edge is a Rectangle with fill and frame modifiers. The outer ZStack has allowsHitTesting(false).
+		
+		Metadata complexity:
+		Moderate. It is not large visually, but four ViewBuilder-style conditionals create nested conditional view types.
+		
+		C. Generated view complexity
+		
+		CONFIRMED
+		
+		The runtime concrete type for the iPad branch is conceptually:
+		
+		IPadSmartButtonPanel<
+			BrightnessSliderColumnConcreteType,
+			
+			PreviewConcreteType,
+			
+			ClearPreviewBackgroundConcreteType,
+			
+			LowerEditingAreaConcreteType,
+			
+			PanelBorderConcreteType
+			
+			
+			
+			The exact compiler-generated mangled types cannot be recovered from source without compiling/inspecting symbols, which this probe did not do.
+			
+			LIKELY
+			
+			The Preview and LowerEditingArea generic parameters are unusually large SwiftUI concrete types. They combine nested conditional content, modifier chains, bindings, callback closures, overlays, GeometryReader-based custom modifiers, LazyVGrid, ForEach, Button labels, and UIKit representable content.
+			
+			The outer smartButtonPanel return type adds another structural layer:
+			
+			Group {
+			if isPad {
+			
+			IPadSmartButtonPanel(...)
+			
+			} else {
+			
+			iPhone VStack(...)
+			
+			}
+			
+			}
+			
+			That is also a conditional concrete view type. The diagnostic code then constructs:
+			
+			AnyView(smartButtonPanel())
+			
+			at Main_Screen.swift:3354.
+			
+			The repeated editorGeometryProbe modifiers add generic ModifiedContent layers. Its implementation uses a ViewModifier with an if isEnabled branch:
+			Main_EditorGeometrySupport.swift, lines 83–102 and 135–142.
+			
+			This source composition is sufficiently complex to justify concern about generic metadata instantiation. It does not prove a Swift runtime defect by itself.
+			
+			D. Device execution paths
+			
+			CONFIRMED
+			
+			Routing is in Main_Screen.swift, lines 1371–1383.
+			
+			When editingSlotIndex is non-nil:
+			
+			• iPad and usesESP001DiagnosticEditor true:
+			esp001MiniDiagnosticEditor(...)
+			• iPad and usesESP001DiagnosticEditor false:
+			smartView(...)
+			• iPhone:
+			iPhoneSmartEditorPresentation(...)
+			
+			The diagnostic-device selector is:
+			Main_Screen.swift, lines 29–54.
+			
+			iPad mini 5:
+			iPad11,1 or iPad11,2
+			
+			iPad Air M2:
+			iPad14,8, iPad14,9, iPad14,10, or iPad14,11
+			
+			iPad Pro test device:
+			iPad7,1
+			
+			These three categories return true from usesESP001DiagnosticEditor.
+			
+			The current Test B selector is confirmed unchanged:
+			Main_Screen.swift, line 32:
+			activeMiniEditorTest = .buttonOnly
+			
+			Test B builds these diagnostic panels:
+			Main_Screen.swift, lines 3350–3356.
+			
+			Only the button slot is:
+			AnyView(smartButtonPanel())
+			
+			The other three slots are ESP001MiniDiagnosticEmptyPanel values.
+			
+			The diagnostic shell itself accepts AnyView for all four panels:
+			Main_EditorShellViews.swift, lines 3–45.
+			
+			Normal iPad smartView calls smartButtonPanel directly:
+			Main_Screen.swift, lines 3472–3476.
+			
+			iPhone uses iPhoneSmartEditorPresentation:
+			Main_Screen.swift, lines 3504–3572.
+			
+			The current iPhone structure is experimental and also constructs:
+			AnyView(smartButtonPanel(editorWidth: ...))
+			
+			at line 3571. However, isPad is false inside smartButtonPanel, so it takes the iPhone VStack branch, not IPadSmartButtonPanel.
+			
+			LIKELY
+			
+			For a current build on any mapped iPad device, the source-level IPadSmartButtonPanel specialization is the same:
+			
+			• Same generic arguments
+			• Same closures
+			• Same MainScreen type
+			• Same isPad branch
+			• Same binary architecture family
+			
+			Runtime values such as screen dimensions, current button text, background image presence, and debugEditorGeometry can change behavior and layout, but do not alter the generic parameter list of IPadSmartButtonPanel.
+			
+			UNPROVEN
+			
+			The reported working iPad Air M2 and iPad Pro results do not prove that they executed the identical runtime path in the identical build and selector state.
+			
+			In particular:
+			• The iPad Pro diagnostic route applies only to iPad7,1.
+			• The current source routes iPad Air M2 identifiers to the diagnostic editor.
+			• The historical console for iPad7,1 recorded smartView, so it reflects an earlier source/configuration state rather than proving the current path.
+			• No current Test B result was supplied for the Air M2 or Pro.
+			
+			There are no relevant #available checks in the button-panel presentation path. Availability checks found in the Main_Screen area concern speech recognition and toolbar behavior, not this panel.
+			
+			E. Potential root causes
+			
+			1. Stack exhaustion during generic metadata decoding
+			
+			UNPROVEN
+			
+			The backtrace has many repeated metadata-decoding frames. This is compatible with deep generic metadata work. It does not establish stack exhaustion: there is no reported stack-overflow diagnostic, guard-page address evidence, or an exceptionally deep application-level recursive call chain.
+			
+			2. Swift compiler-generated metadata issue
+			
+			LIKELY
+			
+			The crash occurs in:
+			swift::SubstGenericParametersFromMetadata
+			swift_getTypeByMangledName
+			__swift_instantiateConcreteTypeFromMangledNameV2
+			
+			and the first source-associated frame is the generic IPadSmartButtonPanel call at line 4274.
+			
+			That strongly supports a failure during compiler-generated type metadata instantiation for the SwiftUI composition. It does not identify whether the compiler-generated metadata is malformed, merely too complex for a runtime path, or being mishandled by the runtime.
+			
+			3. iPadOS 26.7.1 Swift runtime issue
+			
+			POSSIBLE, UNPROVEN
+			
+			The mini runs iPadOS 26.7.1, while reported working iPads run iPadOS 27.0.1 and 17.7.11. The crash is inside the OS Swift runtime, so OS-version behavior is a credible hypothesis.
+			
+			There is not enough evidence to attribute the issue to iPadOS 26.7.1 alone. Hardware, OS version, build history, runtime state, and diagnostic routing have not been controlled independently.
+			
+			4. Unexpected recursive generic requirements
+			
+			NOT SUPPORTED BY SOURCE INSPECTION
+			
+			No recursive source-level view construction was found:
+			smartButtonPanel does not call itself, directly or indirectly.
+			
+			The runtime’s recursive generic-requirement checking may be processing nested generic metadata, but there is no source-level generic recursion.
+			
+			5. Diagnostic AnyView wrapping
+			
+			POSSIBLE, UNPROVEN
+			
+			The failing mini route is:
+			AnyView(smartButtonPanel())
+			
+			Normal iPad smartView uses smartButtonPanel directly.
+			
+			AnyView is therefore a real difference between the diagnostic and normal iPad paths. However, it cannot prevent smartButtonPanel and IPadSmartButtonPanel from being formed; their concrete type still must be instantiated to supply AnyView.
+			
+			It may change the metadata-instantiation context or timing. It is not currently proven to be the cause.
+			
+			6. Invalid application state or memory access
+			
+			NOT SUPPORTED BY CURRENT EVIDENCE
+			
+			Test A proves that the diagnostic shell and its AnyView slots can instantiate and display.
+			
+			Test B proves that adding only smartButtonPanel reproduces the crash.
+			
+			The failure occurs during type metadata resolution before a source-level data-access frame appears. The source inspected does contain bindings, UIImage background use, and callback closures, but no evidence connects those values to this specific metadata crash.
+			
+			F. Comparison of possible corrections
+			
+			Approach A: Type-erasure at all five supplied ViewBuilder arguments
+			
+			Example concept:
+			Each supplied closure returns AnyView rather than its large concrete view type.
+			
+			Specific simplification:
+			IPadSmartButtonPanel would become specialized as:
+			
+			IPadSmartButtonPanel<AnyView, AnyView, AnyView, AnyView, AnyView>
+			
+			rather than five large compiler-generated concrete types.
+			
+			Likelihood of reducing this failure:
+			Moderate to high as a targeted experiment. It directly changes the generic metadata being instantiated at line 4274.
+			
+			Limitation:
+			Each child view must still be constructed before being placed in AnyView. If the failure is in a child’s own metadata, rather than in the five-argument panel specialization, the crash may move into that child construction.
+			
+			Functional and visual impact:
+			Expected none if each existing child is wrapped exactly as-is.
+			
+			Regression risk:
+			Low to moderate. AnyView changes SwiftUI structural identity and invalidation behavior. It can affect state preservation and animations if the erased view’s dynamic structure changes. This editor does contain conditional preview content and text-editing state, so this must be tested, not assumed safe.
+			
+			Affected devices:
+			All iPads that execute the iPad branch of smartButtonPanel. iPhones use the other branch.
+			
+			Approach B: Type-erasure inside IPadSmartButtonPanel
+			
+			Concept:
+			Make the panel non-generic and have it store five AnyView values, or five closures returning AnyView.
+			
+			Specific simplification:
+			Removes the five generic type parameters from IPadSmartButtonPanel itself.
+			
+			Likelihood of reducing this failure:
+			Similar to Approach A if the erasure occurs before generic specialization. It offers no clear technical advantage over A.
+			
+			Limitation:
+			If AnyView conversion happens only after generic inference of the original child types, it may merely relocate the same metadata work.
+			
+			Functional and visual impact:
+			Expected visually neutral if implemented exactly.
+			
+			Regression risk:
+			Moderate. It changes the reusable panel abstraction itself. The panel has one current call site, but it is used by every iPad through smartButtonPanel.
+			
+			Affected devices:
+			All iPads using the iPad branch.
+			
+			Approach C: Type-erasure at smartButtonPanel’s return boundary
+			
+			Concept:
+			Return AnyView from smartButtonPanel, or wrap the existing Group in AnyView.
+			
+			Specific simplification:
+			Erases the outer Group/conditional result from callers.
+			
+			Likelihood of reducing this failure:
+			Low.
+			
+			Reason:
+			The IPadSmartButtonPanel generic specialization must already be established inside smartButtonPanel before the outer return value can be erased. This approach is unlikely to prevent the failing instantiation at line 4274.
+			
+			Functional and visual impact:
+			Expected visually neutral, but no meaningful expected benefit.
+			
+			Regression risk:
+			Low to moderate with little justification.
+			
+			Affected devices:
+			All callers, including iPhone presentation paths.
+			
+			Approach D: Extract a complex child into a dedicated concrete View type
+			
+			Most suitable candidates:
+			1. The iPad button preview from smartButtonPreview().
+			2. The iPad lower editing area / color grid from smartButtonLowerEditingArea().
+			
+			Specific simplification:
+			Instead of passing an enormous opaque builder result as Preview or LowerEditingArea, IPadSmartButtonPanel receives a small named View type, such as an iPad-specific preview view with explicit bindings, state values, and callbacks.
+			
+			The complex implementation remains inside that child’s body, but it is no longer part of IPadSmartButtonPanel’s five generic-argument specialization.
+			
+			Likelihood of reducing this failure:
+			Moderate to high.
+			
+			This is the strongest structural correction because it creates a genuine SwiftUI view boundary rather than only erasing a type. It aligns with SwiftUI guidance to use separate View types for substantial sections.
+			
+			Functional and visual impact:
+			Expected none if the child receives every required input unchanged.
+			
+			Regression risk:
+			Moderate. The preview currently reads multiple bindings and invokes callbacks. Moving it requires careful preservation of:
+			• text binding behavior
+			• selected range
+			• SF Symbol parsing
+			• insertion-target refresh behavior
+			• keyboard/session handling
+			• preview image and color state
+			• geometry probes
+			• clear button behavior
+			
+			Affected devices:
+			All iPads using the iPad branch. It need not affect iPhone implementation if the extracted view is iPad-specific.
+			
+			G. Recommended next step
+			
+			RECOMMENDED: smallest diagnostic experiment before adopting a permanent correction
+			
+			Apply Approach A only to the five IPadSmartButtonPanel arguments, preserving the same child expressions and visuals, then rerun Test B on the mini.
+			
+			Why this is the smallest useful experiment:
+			
+			• It targets exactly the generic boundary identified by the crash.
+			• It keeps the diagnostic routing, shell, layout, button functionality, data model, and persistence unchanged.
+			• It distinguishes “the five-argument generic specialization is the trigger” from “one of the child views independently fails during construction.”
+			• It is smaller and more reversible than extracting the preview or lower editor area.
+			• It has stronger technical justification than erasing only the outer smartButtonPanel return.
+			
+			If that experiment passes:
+			Use a named iPad-specific child View extraction, beginning with the Preview argument, as the preferable production-quality correction. It avoids broad permanent AnyView dependence while reducing the parent generic specialization.
+			
+			If that experiment still crashes:
+			The next narrow experiment should replace only the Preview generic argument with AnyView while leaving the other four arguments concrete. Preview is the largest and most conditional child. This would identify whether Preview, rather than the five-argument panel structure generally, is the principal trigger.
+			
+			H. Specific regression tests required after an approved implementation
+			
+			1. iPad mini 5, iPadOS 26.7.1:
+			• Open editor repeatedly from multiple slots.
+			• Empty text, ordinary text, multiline text, SF Symbol with subtitle.
+			• Hidden and visible button.
+			• Clear button.
+			• Brightness slider.
+			• Visibility, clear-color, random-color, colon, and swatch buttons.
+			• Background image present and absent.
+			• Rotate and reopen editor.
+			
+			2. iPad Air M2, iPadOS 27.0.1:
+			• Same iPad button-panel interactions.
+			• Confirm diagnostic/normal route expected for the active build.
+			• Confirm no layout or geometry-probe regression.
+			
+			3. iPad Pro, iPadOS 17.7.11:
+			• Confirm hardware identifier and actual route.
+			• Same button-panel interaction coverage.
+			• Confirm iPadOS 17 compatibility.
+			
+			4. iPhone 17 and iPhone XS Max:
+			• Open the experimental iPhone editor.
+			• Verify its distinct iPhone branch remains unchanged.
+			• Verify color/SF mode switching, brightness, preview editing, and keyboard behavior.
+			
+			5. State/persistence:
+			• Save a button after every interaction category.
+			• Close and reopen.
+			• Relaunch and confirm text, SF Symbol encoding, visibility, and color persistence remain correct.
+			
+			I. Supporting source references
+			
+			Main_Screen.swift:
+			• 29–54: diagnostic hardware routing and current .buttonOnly selector.
+			• 1371–1383: editor presentation routing.
+			• 3316–3331: diagnostic shell construction.
+			• 3334–3392: diagnostic test panel selection.
+			• 3350–3356: buttonOnly constructs only AnyView(smartButtonPanel()).
+			• 3432–3501: normal smartView and direct iPad panel call.
+			• 3504–3572: iPhone editor presentation.
+			• 4269–4308: smartButtonPanel and IPadSmartButtonPanel call site.
+			• 4310–4319: brightness-slider argument.
+			• 4388–4440: lower editing area and iPad color grid.
+			• 4493–4617: preview argument.
+			• 4662–4680: editable preview binding.
+			• 4705–4851: button controls and swatch construction.
+			• 4951–4979: preview background and clear background.
+			• 3613–3644: panel border argument.
+			
+			Main_EditorShellViews.swift:
+			• 3–45: diagnostic shell’s AnyView panel storage.
+			• 170–232: complete IPadSmartButtonPanel declaration and body.
+			
+			Main_EditorGeometrySupport.swift:
+			• 83–102: conditional EditorGeometryProbeModifier.
+			• 135–142: editorGeometryProbe generic View extension.
+			
+			No source files were modified. The selector remains .buttonOnly. No build, run, commit, patch, or backup was performed.

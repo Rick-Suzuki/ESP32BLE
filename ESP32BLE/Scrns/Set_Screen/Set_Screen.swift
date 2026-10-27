@@ -5355,32 +5355,416 @@ private extension VerticalAlignment {
 
 private struct ESPHelpView: View {
     let onClose: () -> Void
+    @State private var path: [ESPHelpDestination] = []
 
     var body: some View {
         ZStack {
             Color(uiColor: .systemBackground)
                 .ignoresSafeArea()
 
-            VStack(alignment: .leading, spacing: 24) {
-                HStack {
-                    Text("ESP Help")
-                        .font(.title2.weight(.semibold))
-                }
+            NavigationStack(path: $path) {
+                ESPHelpContentsView(onClose: onClose)
+                    .navigationDestination(for: ESPHelpDestination.self) { destination in
+                        switch destination {
+                        case .topic(let topic):
+                            ESPHelpTopicPager(
+                                initialTopic: topic,
+                                onHome: { path = [] },
+                                onClose: onClose
+                            )
 
-                Text("Help content will be added in the next stage.")
-                    .font(.body)
-                    .foregroundStyle(.secondary)
+                        case .completeUserManual:
+                            ESPHelpUserManualView(
+                                onHome: { path = [] },
+                                onClose: onClose
+                            )
+                        }
+                    }
+                    .toolbar(.hidden, for: .navigationBar)
+            }
+            .onAppear {
+                path = []
+            }
+        }
+    }
+}
 
-                Spacer()
+private enum ESPHelpDestination: Hashable {
+    case topic(ESPHelpTopic)
+    case completeUserManual
+}
 
-                HStack {
-                    Spacer()
+private enum ESPHelpTopic: CaseIterable, Hashable, Identifiable {
+    case connectToMac
+    case connectToESP32BLE
+    case usingESP
+    case troubleshooting
 
-                    Button("Close", action: onClose)
-                        .buttonStyle(.bordered)
+    var id: Self { self }
+
+    var title: String {
+        switch self {
+        case .connectToMac:
+            "Connect to Mac"
+        case .connectToESP32BLE:
+            "Connect to ESP32BLE"
+        case .usingESP:
+            "Using ESP"
+        case .troubleshooting:
+            "Troubleshooting"
+        }
+    }
+
+    var symbolName: String {
+        switch self {
+        case .connectToMac:
+            "desktopcomputer"
+        case .connectToESP32BLE:
+            "antenna.radiowaves.left.and.right"
+        case .usingESP:
+            "hand.tap"
+        case .troubleshooting:
+            "wrench.and.screwdriver"
+        }
+    }
+
+    var previous: ESPHelpTopic? {
+        guard let index = Self.allCases.firstIndex(of: self), index > 0 else {
+            return nil
+        }
+
+        return Self.allCases[index - 1]
+    }
+
+    var next: ESPHelpTopic? {
+        guard let index = Self.allCases.firstIndex(of: self), index < Self.allCases.count - 1 else {
+            return nil
+        }
+
+        return Self.allCases[index + 1]
+    }
+}
+
+private struct ESPHelpContentsView: View {
+    let onClose: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            Text("ESP Help")
+                .font(.title2.weight(.semibold))
+
+            ScrollView {
+                VStack(spacing: 0) {
+                    ForEach(ESPHelpTopic.allCases) { topic in
+                        NavigationLink(value: ESPHelpDestination.topic(topic)) {
+                            ESPHelpContentsRow(
+                                title: topic.title,
+                                symbolName: topic.symbolName
+                            )
+                        }
+
+                        if topic != ESPHelpTopic.allCases.last {
+                            Divider()
+                        }
+                    }
+
+                    NavigationLink(value: ESPHelpDestination.completeUserManual) {
+                        ESPHelpContentsRow(
+                            title: "Complete User Manual",
+                            symbolName: "book"
+                        )
+                    }
                 }
             }
-            .padding()
+
+            ESPHelpNavigationBar(
+                showsHome: false,
+                showsTopicNavigation: false,
+                onPrevious: nil,
+                onNext: nil,
+                onHome: nil,
+                onClose: onClose,
+                isTopicTransitioning: false
+            )
         }
+        .padding()
+    }
+}
+
+private struct ESPHelpContentsRow: View {
+    let title: String
+    let symbolName: String
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: symbolName)
+                .frame(width: 24)
+                .foregroundStyle(Color.accentColor)
+
+            Text(title)
+                .foregroundStyle(.primary)
+
+            Spacer()
+
+            Image(systemName: "chevron.right")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.tertiary)
+        }
+        .padding(.vertical, 14)
+        .contentShape(.rect)
+    }
+}
+
+private enum ESPHelpTopicNavigationDirection {
+    case previous
+    case next
+}
+
+private struct ESPHelpTopicPager: View {
+    let onHome: () -> Void
+    let onClose: () -> Void
+    @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
+    @State private var currentTopic: ESPHelpTopic
+    @State private var navigationDirection: ESPHelpTopicNavigationDirection = .next
+    @State private var isTransitioning = false
+
+    init(
+        initialTopic: ESPHelpTopic,
+        onHome: @escaping () -> Void,
+        onClose: @escaping () -> Void
+    ) {
+        self.onHome = onHome
+        self.onClose = onClose
+        _currentTopic = State(initialValue: initialTopic)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            ZStack {
+                ESPHelpTopicView(topic: currentTopic)
+                    .id(currentTopic)
+                    .transition(topicTransition)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .clipped()
+            .simultaneousGesture(
+                DragGesture(minimumDistance: 24)
+                    .onEnded(handleTopicSwipe)
+            )
+
+            ESPHelpNavigationBar(
+                showsHome: true,
+                showsTopicNavigation: true,
+                onPrevious: currentTopic.previous.map { previousTopic in
+                    { changeTopic(to: previousTopic, direction: .previous) }
+                },
+                onNext: currentTopic.next.map { nextTopic in
+                    { changeTopic(to: nextTopic, direction: .next) }
+                },
+                onHome: onHome,
+                onClose: onClose,
+                isTopicTransitioning: isTransitioning
+            )
+        }
+        .padding()
+        .toolbar(.hidden, for: .navigationBar)
+    }
+
+    private var topicTransition: AnyTransition {
+        switch navigationDirection {
+        case .previous:
+            .asymmetric(
+                insertion: .move(edge: .leading),
+                removal: .move(edge: .trailing)
+            )
+        case .next:
+            .asymmetric(
+                insertion: .move(edge: .trailing),
+                removal: .move(edge: .leading)
+            )
+        }
+    }
+
+    private func changeTopic(
+        to topic: ESPHelpTopic,
+        direction: ESPHelpTopicNavigationDirection
+    ) {
+        guard !isTransitioning, topic != currentTopic else {
+            return
+        }
+
+        navigationDirection = direction
+
+        guard !accessibilityReduceMotion else {
+            currentTopic = topic
+            return
+        }
+
+        isTransitioning = true
+        withAnimation(
+            .easeInOut(duration: 0.25),
+            completionCriteria: .logicallyComplete
+        ) {
+            currentTopic = topic
+        } completion: {
+            isTransitioning = false
+        }
+    }
+
+    private func handleTopicSwipe(_ value: DragGesture.Value) {
+        let horizontalDistance = value.translation.width
+        let verticalDistance = value.translation.height
+
+        guard abs(horizontalDistance) > abs(verticalDistance), abs(horizontalDistance) >= 60 else {
+            return
+        }
+
+        if horizontalDistance < 0, let nextTopic = currentTopic.next {
+            changeTopic(to: nextTopic, direction: .next)
+        } else if horizontalDistance > 0, let previousTopic = currentTopic.previous {
+            changeTopic(to: previousTopic, direction: .previous)
+        }
+    }
+}
+
+private struct ESPHelpTopicView: View {
+    let topic: ESPHelpTopic
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            Text(topic.title)
+                .font(.title2.weight(.semibold))
+
+            ScrollView {
+                Text("Help content will be added in Stage 2B.")
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(.rect)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+}
+
+private struct ESPHelpUserManualView: View {
+    let onHome: () -> Void
+    let onClose: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            Text("Complete User Manual")
+                .font(.title2.weight(.semibold))
+
+            Text("The complete PDF user manual will be available online when ESP is released.")
+                .font(.body)
+                .foregroundStyle(.secondary)
+
+            Spacer()
+
+            ESPHelpNavigationBar(
+                showsHome: true,
+                showsTopicNavigation: false,
+                onPrevious: nil,
+                onNext: nil,
+                onHome: onHome,
+                onClose: onClose,
+                isTopicTransitioning: false
+            )
+        }
+        .padding()
+        .toolbar(.hidden, for: .navigationBar)
+    }
+}
+// MARK: - BM:😎 HELP Navigation bar
+private struct ESPHelpNavigationBar: View {
+    let showsHome: Bool
+    let showsTopicNavigation: Bool
+    let onPrevious: (() -> Void)?
+    let onNext: (() -> Void)?
+    let onHome: (() -> Void)?
+    let onClose: () -> Void
+    let isTopicTransitioning: Bool
+
+    var body: some View {
+        HStack(spacing: 12) {
+            if showsHome, let onHome {
+                ESPHelpNavigationButton(
+                    systemName: "house",
+                    rotation: .zero,
+                    accessibilityLabel: "Home",
+                    isEnabled: !isTopicTransitioning,
+                    action: onHome
+                )
+            } else {
+                Color.clear
+                    .frame(width: 1, height: 1)
+            }
+
+            Spacer(minLength: 0)
+
+            if showsTopicNavigation {
+                HStack(spacing: 12) {
+                    ESPHelpNavigationButton(
+                        systemName: "triangle.fill",
+                        rotation: .degrees(-90),
+                        accessibilityLabel: "Previous",
+                        isEnabled: onPrevious != nil && !isTopicTransitioning,
+                        action: onPrevious ?? {}
+                    )
+
+                    ESPHelpNavigationButton(
+                        systemName: "triangle.fill",
+                        rotation: .degrees(90),
+                        accessibilityLabel: "Next",
+                        isEnabled: onNext != nil && !isTopicTransitioning,
+                        action: onNext ?? {}
+                    )
+                }
+            }
+
+            Spacer(minLength: 0)
+
+            ESPHelpNavigationButton(
+                systemName: "checkmark",
+                rotation: .zero,
+                accessibilityLabel: "Close",
+                isEnabled: true,
+                action: onClose
+            )
+        }
+        .frame(minHeight: 44)
+    }
+}
+
+private struct ESPHelpNavigationButton: View {
+    let systemName: String
+    let rotation: Angle
+    let accessibilityLabel: String
+    let isEnabled: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: systemName)
+                .font(.system(size: 18, weight: .semibold))
+                .rotationEffect(rotation)
+                .frame(width: 44, height: 44)
+                .foregroundStyle(.primary)
+                .background {
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(Color(uiColor: .tertiarySystemFill))
+                }
+                .overlay {
+                    RoundedRectangle(cornerRadius: 6)
+                        .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
+                }
+                .clipShape(.rect(cornerRadius: 6))
+                .opacity(isEnabled ? 1 : 0.45)
+        }
+        .buttonStyle(.plain)
+        .contentShape(.rect)
+        .accessibilityLabel(accessibilityLabel)
+        .disabled(!isEnabled)
     }
 }

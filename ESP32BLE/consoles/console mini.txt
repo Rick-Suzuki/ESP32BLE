@@ -9,103 +9,13 @@ No Previews JIT entry point found.
 Gave PreviewsInjection a chance to run and it returned, continuing with debug dylib.
 Looking for main entry point.
 Opening debug dylib with '@rpath/ESP32BLE.debug.dylib'
-Debug dylib handle: 0x6d9d5010
+Debug dylib handle: 0x6d8f5010
 No entry point found. Checking for alias.
 Calling provided entry point.
 Update the Info.plist: Support for all orientations will soon be required.
-API MISUSE: <CBCentralManager: 0x10e214300> can only accept this command while in the powered on state
-API MISUSE: <CBCentralManager: 0x10e214300> can only accept this command while in the powered on state
-<0x10e221f40> Touch: System gesture gate timed out.
-<0x10e221e00> Gesture: System gesture gate timed out.
-261010_1538_307 🐞Main_Screen.swift:logESP003MiniGeometryFrames(_:):1585 [ESP-003-TEST2] CONTAINER GLOBAL x=0.0 y=0.0 w=1024.0 h=768.0 minX=0.0 maxX=1024.0 minY=0.0 maxY=768.0
-261010_1538_308 🐞Main_Screen.swift:logESP003MiniGeometryFrames(_:):1590 [ESP-003-TEST2] SHELL GLOBAL requestedWidth=1024.0 x=0.0 y=0.0 w=1024.0 h=338.0 minX=0.0 maxX=1024.0 minY=0.0 maxY=338.0
-261010_1538_308 🐞Main_Screen.swift:logESP003MiniGeometryFrames(_:):1598 [ESP-003-TEST2] HSTACK GLOBAL expectedColumnSum=1024.0 x=0.0 y=0.0 w=1024.0 h=338.0 minX=0.0 maxX=1024.0 minY=0.0 maxY=338.0
-261010_1538_308 🐞Main_Screen.swift:logESP003MiniGeometryFrames(_:):1606 [ESP-003-TEST2] SF GLOBAL x=786.0 y=0.0 w=238.0 h=338.0 minX=786.0 maxX=1024.0 minY=0.0 maxY=338.0
-261010_1538_308 🐞Main_Screen.swift:logESP003MiniMainGeometry(_:):1570 [ESP-003-TEST2] MAIN geometryWidth=1024.0 geometryHeight=768.0 safeLeading=0.0 safeTrailing=0.0 contentWidth=1024.0 horizontalContentInset=0.0 outerHorizontalPadding=0.0
-261010_1538_308 🐞Main_Screen.swift:logESP003MiniMainGeometry(_:):1580 [ESP-003-TEST2] AVAILABLE GLOBAL x=0.0 y=0.0 w=1024.0 h=768.0 minX=0.0 maxX=1024.0 minY=0.0 maxY=768.0
-261010_1538_308 🐞Main_Screen.swift:logESP003MiniGeometryComparisonIfReady():1629 [ESP-003-TEST2] COMPARISON shellWidth=1024.0 hstackWidth=1024.0 widthDifference=0.0 hstackBeyondShell=0.0 sfBeyondShell=0.0 hstackBeyondAvailable=0.0 sfBeyondAvailable=0.0 leftMargin=0.0 rightMargin=0.0
-261010_1538_309 🐞Main_Screen.swift:logESP001Test3EditorPresentation(presentation:):2922 [ESP-001-TEST3] model=iPad11,1
-261010_1538_309 🐞Main_Screen.swift:logESP001Test3EditorPresentation(presentation:):2923 [ESP-001-TEST3] isPad=true
-261010_1538_309 🐞Main_Screen.swift:logESP001Test3EditorPresentation(presentation:):2924 [ESP-001-TEST3] isIPadMini5=true
-261010_1538_309 🐞Main_Screen.swift:logESP001Test3EditorPresentation(presentation:):2925 [ESP-001-TEST3] isIPadAirM2=false
-261010_1538_309 🐞Main_Screen.swift:logESP001Test3EditorPresentation(presentation:):2926 [ESP-001-TEST3] editingSlotIndexNonNil=true
-261010_1538_309 🐞Main_Screen.swift:logESP001Test3EditorPresentation(presentation:):2927 [ESP-001-TEST3] presentation=diagnostic
-261010_1538_310 🐞Main_Screen.swift:logESP001Test4MiniEditorPresentation():2932 [ESP-001-TEST4] model=iPad11,1
-261010_1538_310 🐞Main_Screen.swift:logESP001Test4MiniEditorPresentation():2933 [ESP-001-TEST4] configuration=allPanels
-261010_1538_310 🐞Main_Screen.swift:logESP001Test4MiniEditorPresentation():2934 [ESP-001-TEST4] presentation=diagnostic
-261010_1538_310 🐞Main_Screen.swift:logESP001Test4MiniEditorPresentation():2935 [ESP-001-TEST4] appeared=true
-261010_1538_310 🐞Main_Screen.swift:logESP001Test3EditorPresentation(presentation:):2922 [ESP-001-TEST3] model=iPad11,1
-261010_1538_310 🐞Main_Screen.swift:logESP001Test3EditorPresentation(presentation:):2923 [ESP-001-TEST3] isPad=true
-261010_1538_310 🐞Main_Screen.swift:logESP001Test3EditorPresentation(presentation:):2924 [ESP-001-TEST3] isIPadMini5=true
-261010_1538_310 🐞Main_Screen.swift:logESP001Test3EditorPresentation(presentation:):2925 [ESP-001-TEST3] isIPadAirM2=false
-261010_1538_311 🐞Main_Screen.swift:logESP001Test3EditorPresentation(presentation:):2926 [ESP-001-TEST3] editingSlotIndexNonNil=true
-261010_1538_311 🐞Main_Screen.swift:logESP001Test3EditorPresentation(presentation:):2927 [ESP-001-TEST3] presentation=diagnostic
-261010_1538_311 🐞Main_Screen.swift:logESP001Test4MiniEditorPresentation():2932 [ESP-001-TEST4] model=iPad11,1
-261010_1538_311 🐞Main_Screen.swift:logESP001Test4MiniEditorPresentation():2933 [ESP-001-TEST4] configuration=allPanels
-261010_1538_311 🐞Main_Screen.swift:logESP001Test4MiniEditorPresentation():2934 [ESP-001-TEST4] presentation=diagnostic
-261010_1538_311 🐞Main_Screen.swift:logESP001Test4MiniEditorPresentation():2935 [ESP-001-TEST4] appeared=true
-UITextView 0x1187e2400 is switching to TextKit 1 compatibility mode because its layoutManager was accessed. Break on void _UITextViewEnablingCompatibilityMode(UITextView *__strong, BOOL) to debug.
-<0x10e221e00> Gesture: System gesture gate timed out.
-[ESP-OUTPUT] #1 "cm"
-[ESP-OUTPUT] #2 "a"
-[ESP-OUTPUT] #3 "cm"
-[ESP-OUTPUT] #4 "c"
-261010_1538_716 🐞Main_Screen.swift:logESP003MiniGeometryFrames(_:):1585 [ESP-003-TEST2] CONTAINER GLOBAL x=0.0 y=0.0 w=1024.0 h=768.0 minX=0.0 maxX=1024.0 minY=0.0 maxY=768.0
-261010_1538_716 🐞Main_Screen.swift:logESP003MiniGeometryFrames(_:):1590 [ESP-003-TEST2] SHELL GLOBAL requestedWidth=1024.0 x=0.0 y=0.0 w=1024.0 h=338.0 minX=0.0 maxX=1024.0 minY=0.0 maxY=338.0
-261010_1538_716 🐞Main_Screen.swift:logESP003MiniGeometryFrames(_:):1598 [ESP-003-TEST2] HSTACK GLOBAL expectedColumnSum=1024.0 x=0.0 y=0.0 w=1024.0 h=338.0 minX=0.0 maxX=1024.0 minY=0.0 maxY=338.0
-261010_1538_716 🐞Main_Screen.swift:logESP003MiniGeometryFrames(_:):1606 [ESP-003-TEST2] SF GLOBAL x=786.0 y=0.0 w=238.0 h=338.0 minX=786.0 maxX=1024.0 minY=0.0 maxY=338.0
-261010_1538_717 🐞Main_Screen.swift:logESP003MiniMainGeometry(_:):1570 [ESP-003-TEST2] MAIN geometryWidth=1024.0 geometryHeight=768.0 safeLeading=0.0 safeTrailing=0.0 contentWidth=1024.0 horizontalContentInset=0.0 outerHorizontalPadding=0.0
-261010_1538_717 🐞Main_Screen.swift:logESP003MiniMainGeometry(_:):1580 [ESP-003-TEST2] AVAILABLE GLOBAL x=0.0 y=0.0 w=1024.0 h=768.0 minX=0.0 maxX=1024.0 minY=0.0 maxY=768.0
-261010_1538_717 🐞Main_Screen.swift:logESP003MiniGeometryComparisonIfReady():1629 [ESP-003-TEST2] COMPARISON shellWidth=1024.0 hstackWidth=1024.0 widthDifference=0.0 hstackBeyondShell=0.0 sfBeyondShell=0.0 hstackBeyondAvailable=0.0 sfBeyondAvailable=0.0 leftMargin=0.0 rightMargin=0.0
-261010_1538_717 🐞Main_Screen.swift:logESP001Test3EditorPresentation(presentation:):2922 [ESP-001-TEST3] model=iPad11,1
-261010_1538_717 🐞Main_Screen.swift:logESP001Test3EditorPresentation(presentation:):2923 [ESP-001-TEST3] isPad=true
-261010_1538_717 🐞Main_Screen.swift:logESP001Test3EditorPresentation(presentation:):2924 [ESP-001-TEST3] isIPadMini5=true
-261010_1538_718 🐞Main_Screen.swift:logESP001Test3EditorPresentation(presentation:):2925 [ESP-001-TEST3] isIPadAirM2=false
-261010_1538_718 🐞Main_Screen.swift:logESP001Test3EditorPresentation(presentation:):2926 [ESP-001-TEST3] editingSlotIndexNonNil=true
-261010_1538_718 🐞Main_Screen.swift:logESP001Test3EditorPresentation(presentation:):2927 [ESP-001-TEST3] presentation=diagnostic
-261010_1538_718 🐞Main_Screen.swift:logESP001Test4MiniEditorPresentation():2932 [ESP-001-TEST4] model=iPad11,1
-261010_1538_718 🐞Main_Screen.swift:logESP001Test4MiniEditorPresentation():2933 [ESP-001-TEST4] configuration=allPanels
-261010_1538_718 🐞Main_Screen.swift:logESP001Test4MiniEditorPresentation():2934 [ESP-001-TEST4] presentation=diagnostic
-261010_1538_718 🐞Main_Screen.swift:logESP001Test4MiniEditorPresentation():2935 [ESP-001-TEST4] appeared=true
-261010_1538_718 🐞Main_Screen.swift:logESP001Test3EditorPresentation(presentation:):2922 [ESP-001-TEST3] model=iPad11,1
-261010_1538_719 🐞Main_Screen.swift:logESP001Test3EditorPresentation(presentation:):2923 [ESP-001-TEST3] isPad=true
-261010_1538_719 🐞Main_Screen.swift:logESP001Test3EditorPresentation(presentation:):2924 [ESP-001-TEST3] isIPadMini5=true
-261010_1538_719 🐞Main_Screen.swift:logESP001Test3EditorPresentation(presentation:):2925 [ESP-001-TEST3] isIPadAirM2=false
-261010_1538_719 🐞Main_Screen.swift:logESP001Test3EditorPresentation(presentation:):2926 [ESP-001-TEST3] editingSlotIndexNonNil=true
-261010_1538_719 🐞Main_Screen.swift:logESP001Test3EditorPresentation(presentation:):2927 [ESP-001-TEST3] presentation=diagnostic
-261010_1538_719 🐞Main_Screen.swift:logESP001Test4MiniEditorPresentation():2932 [ESP-001-TEST4] model=iPad11,1
-261010_1538_719 🐞Main_Screen.swift:logESP001Test4MiniEditorPresentation():2933 [ESP-001-TEST4] configuration=allPanels
-261010_1538_719 🐞Main_Screen.swift:logESP001Test4MiniEditorPresentation():2934 [ESP-001-TEST4] presentation=diagnostic
-261010_1538_720 🐞Main_Screen.swift:logESP001Test4MiniEditorPresentation():2935 [ESP-001-TEST4] appeared=true
-UITextView 0x1187e2400 is switching to TextKit 1 compatibility mode because its layoutManager was accessed. Break on void _UITextViewEnablingCompatibilityMode(UITextView *__strong, BOOL) to debug.
-<0x10e221e00> Gesture: System gesture gate timed out.
-UITextView 0x10ddeb000 is switching to TextKit 1 compatibility mode because its layoutManager was accessed. Break on void _UITextViewEnablingCompatibilityMode(UITextView *__strong, BOOL) to debug.
-261010_1539_844 🐞Main_Screen.swift:logESP003MiniGeometryFrames(_:):1585 [ESP-003-TEST2] CONTAINER GLOBAL x=0.0 y=0.0 w=1024.0 h=768.0 minX=0.0 maxX=1024.0 minY=0.0 maxY=768.0
-261010_1539_844 🐞Main_Screen.swift:logESP003MiniGeometryFrames(_:):1590 [ESP-003-TEST2] SHELL GLOBAL requestedWidth=1024.0 x=0.0 y=0.0 w=1024.0 h=338.0 minX=0.0 maxX=1024.0 minY=0.0 maxY=338.0
-261010_1539_844 🐞Main_Screen.swift:logESP003MiniGeometryFrames(_:):1598 [ESP-003-TEST2] HSTACK GLOBAL expectedColumnSum=1024.0 x=0.0 y=0.0 w=1024.0 h=338.0 minX=0.0 maxX=1024.0 minY=0.0 maxY=338.0
-261010_1539_844 🐞Main_Screen.swift:logESP003MiniGeometryFrames(_:):1606 [ESP-003-TEST2] SF GLOBAL x=786.0 y=0.0 w=238.0 h=338.0 minX=786.0 maxX=1024.0 minY=0.0 maxY=338.0
-261010_1539_845 🐞Main_Screen.swift:logESP003MiniMainGeometry(_:):1570 [ESP-003-TEST2] MAIN geometryWidth=1024.0 geometryHeight=768.0 safeLeading=0.0 safeTrailing=0.0 contentWidth=1024.0 horizontalContentInset=0.0 outerHorizontalPadding=0.0
-261010_1539_845 🐞Main_Screen.swift:logESP003MiniMainGeometry(_:):1580 [ESP-003-TEST2] AVAILABLE GLOBAL x=0.0 y=0.0 w=1024.0 h=768.0 minX=0.0 maxX=1024.0 minY=0.0 maxY=768.0
-261010_1539_845 🐞Main_Screen.swift:logESP003MiniGeometryComparisonIfReady():1629 [ESP-003-TEST2] COMPARISON shellWidth=1024.0 hstackWidth=1024.0 widthDifference=0.0 hstackBeyondShell=0.0 sfBeyondShell=0.0 hstackBeyondAvailable=0.0 sfBeyondAvailable=0.0 leftMargin=0.0 rightMargin=0.0
-261010_1539_845 🐞Main_Screen.swift:logESP001Test3EditorPresentation(presentation:):2922 [ESP-001-TEST3] model=iPad11,1
-261010_1539_845 🐞Main_Screen.swift:logESP001Test3EditorPresentation(presentation:):2923 [ESP-001-TEST3] isPad=true
-261010_1539_845 🐞Main_Screen.swift:logESP001Test3EditorPresentation(presentation:):2924 [ESP-001-TEST3] isIPadMini5=true
-261010_1539_846 🐞Main_Screen.swift:logESP001Test3EditorPresentation(presentation:):2925 [ESP-001-TEST3] isIPadAirM2=false
-261010_1539_846 🐞Main_Screen.swift:logESP001Test3EditorPresentation(presentation:):2926 [ESP-001-TEST3] editingSlotIndexNonNil=true
-261010_1539_846 🐞Main_Screen.swift:logESP001Test3EditorPresentation(presentation:):2927 [ESP-001-TEST3] presentation=diagnostic
-261010_1539_846 🐞Main_Screen.swift:logESP001Test4MiniEditorPresentation():2932 [ESP-001-TEST4] model=iPad11,1
-261010_1539_846 🐞Main_Screen.swift:logESP001Test4MiniEditorPresentation():2933 [ESP-001-TEST4] configuration=allPanels
-261010_1539_846 🐞Main_Screen.swift:logESP001Test4MiniEditorPresentation():2934 [ESP-001-TEST4] presentation=diagnostic
-261010_1539_846 🐞Main_Screen.swift:logESP001Test4MiniEditorPresentation():2935 [ESP-001-TEST4] appeared=true
-261010_1539_846 🐞Main_Screen.swift:logESP001Test3EditorPresentation(presentation:):2922 [ESP-001-TEST3] model=iPad11,1
-261010_1539_847 🐞Main_Screen.swift:logESP001Test3EditorPresentation(presentation:):2923 [ESP-001-TEST3] isPad=true
-261010_1539_847 🐞Main_Screen.swift:logESP001Test3EditorPresentation(presentation:):2924 [ESP-001-TEST3] isIPadMini5=true
-261010_1539_847 🐞Main_Screen.swift:logESP001Test3EditorPresentation(presentation:):2925 [ESP-001-TEST3] isIPadAirM2=false
-261010_1539_847 🐞Main_Screen.swift:logESP001Test3EditorPresentation(presentation:):2926 [ESP-001-TEST3] editingSlotIndexNonNil=true
-261010_1539_847 🐞Main_Screen.swift:logESP001Test3EditorPresentation(presentation:):2927 [ESP-001-TEST3] presentation=diagnostic
-261010_1539_847 🐞Main_Screen.swift:logESP001Test4MiniEditorPresentation():2932 [ESP-001-TEST4] model=iPad11,1
-261010_1539_847 🐞Main_Screen.swift:logESP001Test4MiniEditorPresentation():2933 [ESP-001-TEST4] configuration=allPanels
-261010_1539_847 🐞Main_Screen.swift:logESP001Test4MiniEditorPresentation():2934 [ESP-001-TEST4] presentation=diagnostic
-261010_1539_848 🐞Main_Screen.swift:logESP001Test4MiniEditorPresentation():2935 [ESP-001-TEST4] appeared=true
-UITextView 0x1187e2400 is switching to TextKit 1 compatibility mode because its layoutManager was accessed. Break on void _UITextViewEnablingCompatibilityMode(UITextView *__strong, BOOL) to debug.
-<0x10e221e00> Gesture: System gesture gate timed out.
+[BLE-CONNECT-PROBE] 🐞 t=0.000s scan stop requested reason=stop() activePeripheralUUID=nil discoveredDeviceCount=0
+API MISUSE: <CBCentralManager: 0x1071c0500> can only accept this command while in the powered on state
+[BLE-CONNECT-PROBE] 🐞 t=0.000s scanning stopped
+[BLE-CONNECT-PROBE] 🐞 t=0.001s state isConnected previous=false new=false activePeripheralUUID=nil attempt=0
+UITextView 0x113cd8000 is switching to TextKit 1 compatibility mode because its layoutManager was accessed. Break on void _UITextViewEnablingCompatibilityMode(UITextView *__strong, BOOL) to debug.
+<0x1071fde00> Gesture: System gesture gate timed out.

@@ -4274,19 +4274,21 @@ Tapping a row inserts the key code at the cursor.
                 IPadSmartButtonPanel(
                     debugEditorGeometry: debugEditorGeometry,
                     brightnessSliderColumn: {
-                        smartButtonBrightnessSliderColumn
+                        AnyView(smartButtonBrightnessSliderColumn)
                     },
                     preview: {
-                        smartButtonPreview()
+                        AnyView(smartButtonPreview())
                     },
                     clearPreviewBackground: {
-                        smartButtonClearPreviewBackground
+                        AnyView(smartButtonClearPreviewBackground)
                     },
                     lowerEditingArea: {
-                        smartButtonLowerEditingArea(editorWidth: resolvedEditorWidth)
+                        AnyView(
+                            smartButtonLowerEditingArea(editorWidth: resolvedEditorWidth)
+                        )
                     },
                     panelBorder: {
-                        smartPanelBorder(edges: .all)
+                        AnyView(smartPanelBorder(edges: .all))
                     }
                 )
             } else {

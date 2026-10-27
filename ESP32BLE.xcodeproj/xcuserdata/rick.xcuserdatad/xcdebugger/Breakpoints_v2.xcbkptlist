@@ -32,8 +32,8 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "6694"
             endingLineNumber = "6694"
-            landmarkName = "SoftEditorAccessoryBehavior"
-            landmarkType = "13">
+            landmarkName = "SoftEditorAccessoryFileCategory"
+            landmarkType = "14">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -48,8 +48,8 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "6594"
             endingLineNumber = "6594"
-            landmarkName = "SoftEditorAccessoryConfiguration"
-            landmarkType = "13">
+            landmarkName = "description(for:)"
+            landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -64,8 +64,8 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "6595"
             endingLineNumber = "6595"
-            landmarkName = "compactVisible"
-            landmarkType = "24">
+            landmarkName = "description(for:)"
+            landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -80,8 +80,8 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "6596"
             endingLineNumber = "6596"
-            landmarkName = "compactVisible"
-            landmarkType = "24">
+            landmarkName = "SoftEditorAccessoryConfiguration"
+            landmarkType = "13">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -128,7 +128,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "6599"
             endingLineNumber = "6599"
-            landmarkName = "expandedVisible"
+            landmarkName = "compactVisible"
             landmarkType = "24">
          </BreakpointContent>
       </BreakpointProxy>
@@ -176,8 +176,8 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "5335"
             endingLineNumber = "5335"
-            landmarkName = "smartCommandTableButton(_:foreground:action:)"
-            landmarkType = "7">
+            landmarkName = "smartEscapeCodeToggleButton"
+            landmarkType = "24">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -272,8 +272,8 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "5336"
             endingLineNumber = "5336"
-            landmarkName = "smartCommandTableButton(_:foreground:action:)"
-            landmarkType = "7">
+            landmarkName = "MainScreen"
+            landmarkType = "14">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
