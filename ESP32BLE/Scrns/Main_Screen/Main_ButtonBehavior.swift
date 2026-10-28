@@ -375,31 +375,18 @@ private func commandClassification(for token: String) -> CommandClassification {
     return .external
 }
 
-struct ESPOutputSourceMetadata {
-    let sfSymbolName: String
-    let buttonText: String
-}
-
 // MARK: - BM:🅱️🅱️🅱️ ESP-OUTPUT diagnostic probe
 private enum ESPOutputProbe {
     private static var sequenceNumber = 0
 
-    static func printGeneratedItems(
-        _ items: [String],
-        sourceMetadata: ESPOutputSourceMetadata? = nil
-    ) {
+    static func printGeneratedItems(_ items: [String]) {
         for item in items {
             sequenceNumber += 1
-            var output = "[ESP-OUTPUT] #\(sequenceNumber) \"\(escapedString(item))\""
-            if let sourceMetadata {
-                output += " | SF=\"\(escapedString(sourceMetadata.sfSymbolName))\""
-                output += " | Text=\"\(escapedString(sourceMetadata.buttonText))\""
-            }
-            print(output)
+            print("[ESP-OUTPUT] #\(sequenceNumber) \"\(escapedString(item))\"")
         }
     }
 
-    private static func escapedString(_ string: String) -> String {
+    static func escapedString(_ string: String) -> String {
         var escaped = ""
         escaped.reserveCapacity(string.count)
 
@@ -424,7 +411,55 @@ private enum ESPOutputProbe {
     }
 }
 
+#if DEBUG
+private enum ESPButtonProbe {
+    static func printActivation(
+        via: String,
+        sfSymbolName: String,
+        buttonText: String
+    ) {
+        print(
+            "🐞 [ESP-BUTTON] Via=\"\(ESPOutputProbe.escapedString(via))\" | " +
+            "SF=\"\(ESPOutputProbe.escapedString(sfSymbolName))\" | " +
+            "Text=\"\(ESPOutputProbe.escapedString(buttonText))\""
+        )
+    }
+
+    static func printCommand(_ command: String) {
+        guard !command.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            print("🐞 [ESP-COMMAND] no content")
+            return
+        }
+
+        print("🐞 [ESP-COMMAND] \(ESPOutputProbe.escapedString(command))")
+    }
+}
+#endif
+
 extension MainScreen {
+#if DEBUG
+    func printMainGridButtonActivation(_ entry: FunctionKeyEntry, via: String) {
+        if let sfSymbolDisplay = parsedSFSymbolDisplay(for: entry) {
+            ESPButtonProbe.printActivation(
+                via: via,
+                sfSymbolName: sfSymbolDisplay.name,
+                buttonText: sfSymbolDisplay.subtitle ?? ""
+            )
+        } else {
+            ESPButtonProbe.printActivation(
+                via: via,
+                sfSymbolName: "",
+                buttonText: displayText(from: resolvedAlternateDisplayText(for: entry))
+            )
+        }
+
+        let command = entry.rawLine.range(of: "::").map {
+            String(entry.rawLine[..<$0.lowerBound])
+        } ?? entry.rawLine
+        ESPButtonProbe.printCommand(command)
+    }
+#endif
+
 		// MARK: - BM:🔳 main scrn SF symbols
     private var supportedMainScreenSFSymbolNames: Set<String> {
         [
@@ -470,25 +505,6 @@ extension MainScreen {
         }
 
         return lastComponent
-    }
-
-    func outputSourceMetadata(for entry: FunctionKeyEntry) -> ESPOutputSourceMetadata {
-        if let sfSymbolDisplay = parsedSFSymbolDisplay(for: entry) {
-            return ESPOutputSourceMetadata(
-                sfSymbolName: sfSymbolDisplay.name,
-                buttonText: sfSymbolDisplay.subtitle ?? ""
-            )
-        }
-
-        let storedButtonText = entry.alternateDisplayText.map(displayText(from:)) ?? ""
-        let buttonText: String
-        switch displayMode {
-        case .last:
-            buttonText = displayTextAfterLastColon(in: storedButtonText)
-        case .left, .right, .both:
-            buttonText = storedButtonText
-        }
-        return ESPOutputSourceMetadata(sfSymbolName: "", buttonText: buttonText)
     }
 
     func resolvedAlternateDisplayText(for entry: FunctionKeyEntry) -> String {
@@ -659,8 +675,6 @@ extension MainScreen {
             return
         }
 
-        let outputSourceMetadata = outputSourceMetadata(for: entry)
-
         if isMIDIControlChangeCommandForGridEntry(entry) {
             guard let command = midiControlChangeCommandForGridEntry(entry),
                   command.mode == .oneShot,
@@ -689,9 +703,6 @@ extension MainScreen {
 
         // MARK: - BM:🅱️  Main Screen button command logging
         if db_btnCode {
-            let command = entry.rawLine.components(separatedBy: "::").first ?? entry.rawLine
-            print("🐞 \(command)")
-
             for token in entry.sendTexts {
                 let classificationLabel: String
 
@@ -730,7 +741,6 @@ extension MainScreen {
         if containsWaitCommand(in: entry.sendTexts) {
             startWaitChainCommandTokens(
                 entry.sendTexts,
-                sourceEntry: entry,
                 respectsBluetoothMode: true
             )
             return
@@ -778,8 +788,7 @@ extension MainScreen {
 
             guard sendKeyboardOutputTokens(
                 bluetoothSendTexts,
-                respectsButtonMode: true,
-                sourceMetadata: outputSourceMetadata
+                respectsButtonMode: true
             ) else {
                 return false
             }
@@ -977,11 +986,9 @@ extension MainScreen {
     @MainActor
     func startWaitChainCommandTokens(
         _ actionTokens: [String],
-        sourceEntry: FunctionKeyEntry?,
         respectsBluetoothMode: Bool
     ) {
         let sequenceID = UUID()
-        let outputSourceMetadata = sourceEntry.map(outputSourceMetadata(for:))
         let task = Task { @MainActor in
             defer {
                 activeWaitChainTasks.removeValue(forKey: sequenceID)
@@ -989,7 +996,6 @@ extension MainScreen {
 
             await runWaitChainCommandTokens(
                 actionTokens,
-                sourceMetadata: outputSourceMetadata,
                 respectsBluetoothMode: respectsBluetoothMode
             )
         }
@@ -1010,7 +1016,6 @@ extension MainScreen {
     @MainActor
     func runWaitChainCommandTokens(
         _ actionTokens: [String],
-        sourceMetadata: ESPOutputSourceMetadata?,
         respectsBluetoothMode: Bool
     ) async {
         var pendingModifierTokens: [String] = []
@@ -1173,8 +1178,7 @@ extension MainScreen {
                 let keyboardCommandTokens = pendingModifierTokens + [bluetoothSendText]
                 let didSendKeyboardCommand = sendKeyboardOutputTokens(
                     keyboardCommandTokens,
-                    respectsButtonMode: respectsBluetoothMode,
-                    sourceMetadata: sourceMetadata
+                    respectsButtonMode: respectsBluetoothMode
                 )
                 pendingModifierTokens.removeAll()
 
@@ -1186,8 +1190,7 @@ extension MainScreen {
 
             guard sendBluetoothCommandToken(
                 trimmedActionToken,
-                respectsBluetoothMode: respectsBluetoothMode,
-                sourceMetadata: sourceMetadata
+                respectsBluetoothMode: respectsBluetoothMode
             ) else {
                 return
             }
@@ -1197,8 +1200,7 @@ extension MainScreen {
 
     private func sendBluetoothCommandToken(
         _ actionToken: String,
-        respectsBluetoothMode: Bool,
-        sourceMetadata: ESPOutputSourceMetadata?
+        respectsBluetoothMode: Bool
     ) -> Bool {
         let bluetoothSendText = normalizedBluetoothSendText(actionToken)
         guard !bluetoothSendText.isEmpty else {
@@ -1207,15 +1209,13 @@ extension MainScreen {
 
         return sendKeyboardOutputTokens(
             [bluetoothSendText],
-            respectsButtonMode: respectsBluetoothMode,
-            sourceMetadata: sourceMetadata
+            respectsButtonMode: respectsBluetoothMode
         )
     }
 
     func sendKeyboardOutputTokens(
         _ tokens: [String],
-        respectsButtonMode: Bool,
-        sourceMetadata: ESPOutputSourceMetadata? = nil
+        respectsButtonMode: Bool
     ) -> Bool {
         guard !respectsButtonMode || mainGridButtonMode.sendsBluetooth else {
             return true
@@ -1234,10 +1234,7 @@ extension MainScreen {
             return true
         }
 
-        ESPOutputProbe.printGeneratedItems(
-            keyboardOutputTokens,
-            sourceMetadata: sourceMetadata
-        )
+        ESPOutputProbe.printGeneratedItems(keyboardOutputTokens)
 
         switch outputMode {
         case .none:
@@ -2619,8 +2616,7 @@ extension MainScreen {
                 let bluetoothSendTexts = bluetoothSendTexts(for: entry)
                 return sendKeyboardOutputTokens(
                     bluetoothSendTexts,
-                    respectsButtonMode: false,
-                    sourceMetadata: outputSourceMetadata(for: entry)
+                    respectsButtonMode: false
                 )
             },
             resolveSoundURL: { soundURL(named: $0) },

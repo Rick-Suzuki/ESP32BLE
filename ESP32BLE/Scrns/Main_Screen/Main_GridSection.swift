@@ -111,6 +111,7 @@ struct MainScreenGridSection<ButtonLabel: View>: View {
     let renderedButtonFrameRefreshToken: Int
     let bleSendEnabled: Bool
     let onButtonClick: () -> Void
+    let onAcceptedOrdinaryButtonTap: (FunctionKeyEntry) -> Void
     let isHiddenEntry: (FunctionKeyEntry) -> Bool
     let isEmptyEntry: (FunctionKeyEntry) -> Bool
     let isInteractiveWidgetEntry: (FunctionKeyEntry) -> Bool
@@ -479,6 +480,7 @@ struct MainScreenGridSection<ButtonLabel: View>: View {
                         return
                     }
 
+                    onAcceptedOrdinaryButtonTap(entry)
                     sendLine(entry)
                 } label: {
                     buttonLabel(entry, index, buttonHeight, buttonSize)

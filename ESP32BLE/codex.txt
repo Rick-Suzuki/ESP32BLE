@@ -1,257 +1,250 @@
-A. Relevant logging code
+No files changed. No build or app run was performed.
+
+A. Relevant files and current locations
 
 ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift
 
-• Lines 656–675: main-grid button diagnostic prints.
-• 🐞 .sp is printed at line 659 from the command portion of entry.rawLine.
-• 🐞 .sp → internal is printed at line 673 for each entry.sendTexts token.
-• These prints occur only when db_btnCode is enabled.
+• Lines 378-412: ESPOutputProbe and shared escaping.
+• Lines 414-428: DEBUG-only ESPButtonProbe.
+• Lines 431-448: printMainGridButtonActivation(_:via:).
+• Lines 659-845: sendMainGridEntry(_:defaultMIDIChannel:), including legacy command diagnostics at lines 691-710.
+• Lines 970-1204: wait-chain execution.
+• Lines 1206-1240: sendKeyboardOutputTokens(_:respectsButtonMode:).
+• Lines 2759-2778: parsedSFSymbolDisplay(for:).
+• Lines 2822-2827: rawLineWithoutHiddenMetadata(_:).
 
-• Lines 378–412: ESPOutputProbe.
-• ESPOutputProbe.printGeneratedItems(_:), lines 382–387, owns the [ESP-OUTPUT] sequence counter and log format.
-• The current logging method accepts only [String] output items.
+ESP32BLE/Scrns/Main_Screen/Main_GridSection.swift
 
-• Lines 1175–1231: sendKeyboardOutputTokens(_:respectsButtonMode:).
-• Converts command tokens to keyboard output tokens.
-• Calls ESPOutputProbe.printGeneratedItems(keyboardOutputTokens) at line 1196.
-• This is the only current application source of [ESP-OUTPUT].
+• Lines 467-484: ordinary SwiftUI Button activation path.
+• Line 483: accepted-tap callback.
+• Line 484: sendLine(entry).
+
+ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
+
+• Lines 1714-1750: MainScreenGridSection wiring.
+• Lines 1731-1735: physical tap invokes printMainGridButtonActivation(entry, via: "tap").
+• Lines 1748-1750: sendLine routes to sendMainGridEntry.
+
+ESP32BLE/Scrns/Main_Screen/Speech Recognition/SR_Support.swift
+ 
+• Lines 5-156: applyRecognizedSpeech(_:).
+• Lines 54-72: unique-match selection and current [ESP-BUTTON] diagnostic.
+• Lines 187-290: speechMatchResult(for:).
+
+ESP32BLE/ContentView.swift
+
+• Lines 68-83: FunctionKeyEntry.
+• Lines 92-108: parsedActionTokens(from:).
+• Lines 2679-2741: functionKeyEntry(from:) and command parsing.
 
 ESP32BLE/Scrns/MacConnectionManager.swift
 
-• Lines 7–38: ESPMacTransportProbe.
-• [ESP-MAC-TX] is printed by printPayload(_:) at line 11.
+• Lines 7-38: ESPMacTransportProbe.
+• Lines 328-345: actual authenticated framed transmission and [ESP-MAC-TX].
 
-• Lines 285–345: Mac Helper send flow.
-• sendSmartScriptKeyboardTokens(_:), line 290.
-• sendFramedMessage(_:requiresAuthentication:), lines 328–345.
-• [ESP-MAC-TX] is printed at line 335 immediately before NWConnection.send.
-  
-ESP32BLE/Scrns/Main_Screen/Main_GridSection.swift
+ESP32BLE/debug.swift
 
-• Lines 466–484: normal main-grid button tap.
-• The SwiftUI button action calls sendLine(entry) at line 482.
-• That resolves to sendMainGridEntry(_:defaultMIDIChannel:).
+• Line 13: db_btnCode is currently true and is not DEBUG-conditional.
 
-ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift
+B. Current command storage and safest extraction
 
-• Lines 624 onward: sendMainGridEntry(_:defaultMIDIChannel:).
-• The originating FunctionKeyEntry is available throughout this direct main-grid execution path.
-• The normal output path reaches sendKeyboardOutputTokens through the local sendBluetoothIfNeeded() closure at lines 740–756.
+FunctionKeyEntry contains:
 
-B. Existing originating-button data
+• rawLine: original stored line, except blank-placeholder input "_" and empty input become rawLine == "".
+• sendTexts: parsed action tokens used for execution.
+• alternateDisplayText: optional right-side display field.
+• isBlankPlaceholder and isHiddenInNormalMode flags.
 
-ESP32BLE/Scrns/ContentView.swift
+The stored format is:
 
-• Lines 68–83: FunctionKeyEntry.
-• rawLine: original stored button definition.
-• sendTexts: parsed command tokens.
-• alternateDisplayText: stored right-side display data.
-• buttonColorCode, isBlankPlaceholder, and isHiddenInNormalMode.
+• Command only: ".sp"
+• Command plus display: ".sp::Play"
+• Empty command plus display: "::Play"
+• SF Symbol plus subtitle: ".sp::play.fill:Play"
+• Hidden entry: command/display fields plus the hidden metadata token on the right side.
 
-• Lines 2679–2724: functionKeyEntry(from:).
-• Parses the stored command::display button line.
-• Preserves hidden-button metadata separately.
-• Parses command content into sendTexts.
-• Stores display content in alternateDisplayText.
+The first "::" is the command/display boundary. The safest diagnostic command extraction is therefore the exact substring of entry.rawLine before its first "::"; if no "::" exists, use rawLine itself.
 
-ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift
+Do not use sendTexts for [ESP-COMMAND]. It has already been parsed: it trims content, splits ordinary colon-separated command chains, expands compact modifier syntax, and preserves HTTP/HTTPS specially. It does not reliably represent the original stored command field.
 
-• Lines 2728–2747: parsedSFSymbolDisplay(for:).
-• Extracts the source SF Symbol name and subtitle from alternateDisplayText.
-• Validates the symbol through UIImage(systemName:).
-• For a stored value such as space:Space:
-• SF Symbol name: space
-• button text/subtitle: Space
+This extraction supports:
 
-• Lines 425–443: buttonTitle(for:defaultMIDIChannel:).
-• Produces the rendered title according to the current display mode.
-• This may differ from an SF Symbol subtitle, command-default label, or raw alternate text.
+• "::Play" -> no content.
+• ".sp::Play" -> ".sp".
+• "Hello" -> "Hello".
+• ".sp:.ret::Play" -> ".sp:.ret", once, before tokenization.
+• Hidden entries -> original command only; hidden metadata is to the right of the first separator.
+• Blank placeholders -> no content when an ordinary activation is accepted.
 
-CONFIRMED: SF Symbol name and visible text are not independent FunctionKeyEntry stored fields. They are derived from the originating entry’s display-side data, not from the command string.
+A literal "::" cannot be represented as part of the command field under the existing file grammar; it is already the display separator.
 
-C. Main-grid call path
+C. Physical tap logging location
 
-Normal button tap:
+Confirmed ordinary tap path:
 
-Main_GridSection.swift button action
-→ sendLine(entry)
-→ sendMainGridEntry(entry:defaultMIDIChannel:)
-→ local sendBluetoothIfNeeded()
-→ sendKeyboardOutputTokens(_:respectsButtonMode:)
-→ ESPOutputProbe.printGeneratedItems(_:)
-→ [ESP-OUTPUT]
+Main_GridSection.swift:467
+-> onButtonClick()
+-> guard bleSendEnabled else return at lines 479-481
+-> onAcceptedOrdinaryButtonTap(entry) at line 483
+-> sendLine(entry) at line 484
+-> sendMainGridEntry(_:defaultMIDIChannel:)
 
-Mac Helper mode then continues:
+The accepted-tap callback is the correct location for [ESP-COMMAND]. It is reached after disabled-mode rejection and before any command execution, including before sendMainGridEntry’s empty-sendTexts return at Main_ButtonBehavior.swift:721-728.
 
-sendKeyboardOutputTokens
-→ macConnection.sendSmartScriptKeyboardTokens(_:)
-→ sendKeyboardMessages(_:)
-→ sendFramedMessage(_:requiresAuthentication:)
-→ [ESP-MAC-TX]
+It is also where [ESP-BUTTON] is currently emitted through Main_Screen.swift:1731-1735.
 
-ESP32 mode then continues:
+D. Speech activation logging location
 
-sendKeyboardOutputTokens
-→ ble.sendLine(_:)
-→ BLE outgoing queue.
+Confirmed speech path:
 
-D. Availability of source data at the logging point
+applyRecognizedSpeech(_:)
+-> speechMatchResult(for:)
+-> .unique(entry)
+-> matchingEntry
+-> unmatchedSpeechText = nil
+-> current [ESP-BUTTON] at SR_Support.swift:70-72
+-> wait, media, file, sound, speech, Bluetooth, or keyboard-output processing.
 
-CONFIRMED: the originating FunctionKeyEntry is not directly available at the current [ESP-OUTPUT] logging point.
+The correct [ESP-COMMAND] location is immediately after the current [ESP-BUTTON] call, before the wait-chain branch at line 73.
 
-sendKeyboardOutputTokens currently receives only:
+This supports empty commands and hidden matched entries. It excludes:
 
-• [String] tokens
-• respectsButtonMode
+• Ambiguous matches: return at lines 60-63.
+• Unmatched speech: return at lines 64-66.
+• Built-in speech commands such as “go back,” “go home,” and “speech off,” which return before grid matching.
 
-By line 1196, the source button entry has been discarded.
+Speech matching examines entries with alternateDisplayText and does not filter isHiddenInNormalMode, so a uniquely matched hidden button reaches the existing [ESP-BUTTON] location and would reach [ESP-COMMAND].
 
-The metadata is available earlier for direct main-grid activation and speech-recognition activation, but it is not passed to the shared output function.
+E. Shared helper feasibility
 
-E. Special cases
+Yes. The smallest approach is to extend the existing DEBUG-only printMainGridButtonActivation(:via:) helper, or rename it to a Help-local equivalent such as printMainGridActivationDiagnostics(:via:).
 
-Speech recognition
+It can:
 
-ESP32BLE/Scrns/Main_Screen/Speech Recognition/SR_Support.swift
+1. Print [ESP-BUTTON].
+2. Extract the original command field from immutable entry.rawLine.
+3. Print exactly one [ESP-COMMAND].
 
-• Lines 54–69: speech matching produces matchingEntry.
-• Lines 71–155: speech activation processes that same entry.
-• Lines 103–118: speech calls sendKeyboardOutputTokens.
+The current physical and speech call sites can remain otherwise unchanged. This guarantees the intended ordering without adding state or altering execution.
 
-CONFIRMED: speech recognition has the matched source entry available before sending. It currently does not pass it to [ESP-OUTPUT].
+F. Existing legacy diagnostics and recommended treatment
 
-Wait/delayed command chains
+Current legacy physical-path diagnostics are in sendMainGridEntry at Main_ButtonBehavior.swift:691-710 and are gated by db_btnCode:
 
-Main_ButtonBehavior.swift
+• Line 694: print("🐞 (command)")
+• Prints the pre-display-separator command field.
+• Physical ordinary path only.
+• Produces the confusing bare “🐞 ” line for an empty command.
+• Does not run for speech because speech bypasses sendMainGridEntry.
+• Recommendation: remove or replace this one redundant line when [ESP-COMMAND] is added.
 
-• Lines 942–962: startWaitChainCommandTokens.
-• Lines 975–1158: runWaitChainCommandTokens.
+• Line 708: print("🐞 (token) → (classificationLabel)")
+• Prints one line per parsed token.
+• Indicates internal/file/external classification.
+• May produce multiple lines for one stored command chain.
+• Is useful execution-oriented diagnostic detail and should remain unchanged for this narrowly scoped work.
 
-The delayed-task API already receives sourceEntry: FunctionKeyEntry?, and direct button and speech callers supply it:
+The new [ESP-COMMAND] should not be added to sendMainGridEntry, sendKeyboardOutputTokens, wait-chain execution, timer completion, or Mac transmission. Those locations either miss speech, occur after execution begins, or would create duplicates.
 
-• Main-grid activation: lines 696–702.
-• Speech activation: SR_Support.swift lines 71–77.
+G. Empty, multiline, and multi-command handling
 
-However, runWaitChainCommandTokens currently discards it in its signature at line 977:
+Recommended output policy:
 
-sourceEntry _: FunctionKeyEntry?
+• Empty or whitespace-only command field:
+🐞 [ESP-COMMAND] no content
 
-CONFIRMED: delayed command chains can preserve reliable source metadata, but they do not currently do so.
+• Nonempty command:
+🐞 [ESP-COMMAND] <original escaped command field>
 
-Command chains
+Use the existing ESPOutputProbe.escapedString(_:) helper at Main_ButtonBehavior.swift:389-410. It already escapes:
 
-One originating button can produce multiple [ESP-OUTPUT] events:
+• Backslash
+• Double quote
+• Newline
+• Carriage return
+• Tab
 
-• Multiple generated keyboard tokens in one output call.
-• Separate modifier-plus-key command batches.
-• Wait-chain command output after one or more delays.
+This keeps one activation to one console line while preserving the original stored command content for diagnostics.
 
-A source snapshot passed alongside each output batch would reliably associate all generated events with the originating button.
+For multiple stored commands, print one [ESP-COMMAND] line containing the original pre-parser field, such as .sp:.ret; do not print one command diagnostic per token.
 
-MIDI buttons
+Identical button labels are not a logging ambiguity for this purpose because the log describes the selected FunctionKeyEntry’s stored command. The existing [ESP-BUTTON] metadata identifies the displayed symbol/text alongside it.
 
-Main_ButtonBehavior.swift lines 630–649 show MIDI control-change handling sends directly through:
+H. Independence from output and transmission
 
-macConnection.sendAuthenticatedCommand(...)
+The proposed [ESP-COMMAND] can be entirely independent of:
 
-This bypasses sendKeyboardOutputTokens and therefore does not produce [ESP-OUTPUT]. It can produce [ESP-MAC-TX].
+• [ESP-OUTPUT], which is emitted only after Bluetooth-mode gating and nonempty normalized keyboard output tokens at Main_ButtonBehavior.swift:1210-1227.
+• [ESP-MAC-TX], which is emitted only after an authenticated Mac Helper connection is ready at MacConnectionManager.swift:328-335.
+• BLE and Mac connection state.
+• Actual command execution.
 
-Keyboard screen
+It would therefore log empty commands, internal-only commands, sound/file/navigation commands, connection failures, and commands producing no keyboard output.
 
-KeyboardScreen sends directly through macConnection.sendKeyboardTokens, ble.sendLine, or ble.sendString.
+I. DEBUG-only strategy
 
-It bypasses sendKeyboardOutputTokens, so it does not produce [ESP-OUTPUT]. Mac output can still produce [ESP-MAC-TX].
+[ESP-BUTTON] is already compiled only in DEBUG through:
 
-Quick panel Preview/Play and editor test execution
+• ESPButtonProbe at Main_ButtonBehavior.swift:414-428.
+• Its call sites in Main_Screen.swift:1732-1734 and SR_Support.swift:70-72.
 
-Main_Screen.swift lines 6092–6168 contains testEditingSlotText().
+[ESP-COMMAND] should use the same #if DEBUG boundary and be printed by the same shared activation helper. Release builds would then contain neither new diagnostic.
 
-It calls sendKeyboardOutputTokens at lines 6145–6148 with editor text, not a persisted FunctionKeyEntry. Therefore it currently generates [ESP-OUTPUT] without a source button identity.
+Do not use db_btnCode as the new diagnostic gate. It is a runtime global currently set to true in debug.swift and is not compiled out of Release builds.
 
-Modifier-function-key helper
+J. Duplicate-logging risks
 
-SR_Support.swift lines 409–418 calls sendKeyboardOutputTokens with generated modifier/function-key tokens and no source button entry.
+Avoid these locations for the new diagnostic:
 
-Timer completion
+• sendMainGridEntry: misses speech and duplicates the physical activation event.
+• sendKeyboardOutputTokens: logs output tokens rather than originating stored command fields; misses empty commands.
+• runWaitChainCommandTokens: would add a line for continuations rather than one line per original activation.
+• sendTimerCompletionAction: timer completion is not a new ordinary physical or speech button activation.
+• MacConnectionManager: only sees successful transmission.
+• MIDI, interactive-widget, and simple-sound specialized paths: excluded by this stage’s stated scope.
 
-Main_ButtonBehavior.swift lines 2574–2580 provides a timer-completion closure that receives an entry and sends its Bluetooth output through sendKeyboardOutputTokens.
+The current generic physical callback is only reached after the ordinary button passes edit-mode, long-press, and bleSendEnabled guards. The speech location is reached only after a unique grid-button match.
 
-This can produce [ESP-OUTPUT]; the entry is available in that closure, but it is not currently propagated to the logger.
+K. Current [ESP-OUTPUT] format
 
-F. BLE versus Mac Helper behavior
+Confirmed: the prior SF/Text cleanup is present.
 
-CONFIRMED
+Current output is exactly:
 
-[ESP-OUTPUT] is shared by both output modes. It is emitted before the output-mode switch in sendKeyboardOutputTokens, at line 1196.
+[ESP-OUTPUT] #N "COMMAND"
 
-Therefore it logs generated keyboard items for:
+ESPOutputProbe.printGeneratedItems(_:) at Main_ButtonBehavior.swift:382-386 prints only the sequence number and escaped generated item. It no longer includes SF Symbol or button-text metadata.
 
-• Mac Helper mode
-• ESP32 BLE mode
-• Even .none output mode, before the not-connected alert is shown
+[ESP-MAC-TX] remains unchanged and reports framed payload, byte count, and byte values.
 
-[ESP-MAC-TX] is Mac Helper transport-specific. It logs all framed Mac traffic, including authentication frames, and has no originating button metadata.
+L. Smallest safe implementation recommendation
 
-BLE does not use [ESP-MAC-TX].
+1. Keep both current [ESP-BUTTON] call sites.
+2. Extend their shared DEBUG-only helper to print [ESP-BUTTON], then one [ESP-COMMAND].
+3. Extract command text from rawLine before the first "::", without invoking the parser.
+4. Print no content for empty or whitespace-only command fields.
+5. Reuse ESPOutputProbe.escapedString(_:) for one-line escaping.
+6. Remove only the legacy bare print("🐞 \(command)") at Main_ButtonBehavior.swift:694.
+7. Preserve the per-token 🐞 token → classification lines and all command execution paths unchanged.
 
-G. Smallest safe implementation approach
+This is confined to the Main Screen diagnostic code plus its existing two call sites, with no state, UI, parser, BLE, Mac Helper, MIDI, sound, or Help changes.
 
-Recommended approach, not implemented:
+M. Recommended regression tests
 
-1. Add an optional immutable source diagnostic value to the shared output path, rather than global mutable “current button” state.
-
-2. Pass that optional value into ESPOutputProbe.printGeneratedItems.
-
-3. Form the value from the originating FunctionKeyEntry before asynchronous work begins:
-• SF Symbol name from parsedSFSymbolDisplay(for:)?.name
-• button text from parsedSFSymbolDisplay(for:)?.subtitle
-• no metadata when the entry is not an SF Symbol button, or when no source entry exists.
-
-4. Thread the optional source information through:
-• direct main-grid activation
-• speech-recognition activation
-• wait-chain execution, using its existing sourceEntry
-• timer completion, where an entry is already supplied
-
-5. Leave editor Preview/Play, keyboard screen, modifier helper, and non-button sources without source-button metadata.
-
-This avoids deriving display values from the command, avoids changing transport behavior, preserves existing output numbering, and avoids metadata being overwritten by another button while delayed tasks are running.
-
-Do not use a shared mutable currentSourceButton property. Concurrent button presses and asynchronous wait chains could then label output from one button with another button’s SF Symbol/text.
-
-H. Regression risks and tests
-
-Manual regression areas:
-
-• Normal main-grid SF Symbol button:
-• Verify [ESP-OUTPUT] includes the expected SF name and subtitle.
-• Verify command and [ESP-MAC-TX] payload are unchanged.
-
-• Normal text-only button:
-• Confirm a defined no-SF metadata format, such as omitted fields or explicit nil/empty fields.
-
-• Speech-triggered SF Symbol button:
-• Confirm source metadata identifies the matched button, not recognized text or command text.
-
-• Two rapid button presses:
-• Confirm each output event retains its own source metadata.
-
-• Wait chain:
-• Press one SF Symbol button containing .wait.
-• Press another button before the delay expires.
-• Confirm delayed output still identifies the original button.
-
-• Multi-token command:
-• Confirm every [ESP-OUTPUT] event from that button has consistent source metadata.
-
-• Timer completion:
-• Confirm its output metadata reflects the intended originating entry, or is deliberately omitted if it represents a separate generated action.
-
-• Mac Helper and BLE modes:
-• Confirm [ESP-OUTPUT] formatting is correct in both modes.
-• Confirm [ESP-MAC-TX] remains unchanged.
-
-• Keyboard screen, Preview/Play, modifier helper, MIDI:
-• Confirm they retain their current output behavior and do not receive misleading button metadata.
-
-No files were modified, no build or runtime test was performed, and no commits or backups were created.
+1. Tap a text-only button with empty command.
+2. Tap an SF Symbol + subtitle button with empty command.
+3. Tap an SF Symbol-only button with empty command.
+4. Tap a normal .sp command button.
+5. Tap a literal-text command button.
+6. Tap a multi-token command button and confirm one [ESP-COMMAND], with existing token-classification lines still separate.
+7. Test command text containing quotes, backslashes, tabs, and newline escapes.
+8. Test a blank placeholder if its ordinary tap path is available.
+9. Test a hidden button by speech.
+10. Test exact, space-stripped, homophone, and partial unique speech matches.
+11. Test ambiguous and unmatched speech; confirm neither [ESP-BUTTON] nor [ESP-COMMAND] appears.
+12. Test built-in speech commands; confirm neither new grid-button diagnostic appears.
+13. Test disabled physical main-grid mode; confirm no accepted-tap diagnostics.
+14. Test current speech behavior while the main grid is disabled; preserve its present behavior.
+15. Test a .wait command; confirm one [ESP-COMMAND] only and none during continuation.
+16. Confirm [ESP-OUTPUT] and [ESP-MAC-TX] formats remain unchanged.
+17. Build both Debug and Release configurations; confirm [ESP-COMMAND] is absent from Release.

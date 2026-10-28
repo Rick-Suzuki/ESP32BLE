@@ -1728,6 +1728,11 @@ Tapping a row inserts the key code at the cursor.
             renderedButtonFrameRefreshToken: mainGridRenderedButtonFrameRefreshToken,
             bleSendEnabled: mainGridButtonMode != .disabled,
             onButtonClick: { ButtonClickFeedback.playIfEnabled() },
+            onAcceptedOrdinaryButtonTap: { entry in
+                #if DEBUG
+                printMainGridButtonActivation(entry, via: "tap")
+                #endif
+            },
             isHiddenEntry: isMainGridEntryHidden,
             isEmptyEntry: isEmptyButtonEntry,
             isInteractiveWidgetEntry: isInteractiveMainGridWidgetEntry,
@@ -6097,7 +6102,6 @@ Tapping a row inserts the key code at the cursor.
         if containsWaitCommand(in: actionTokens) {
             startWaitChainCommandTokens(
                 actionTokens,
-                sourceEntry: nil,
                 respectsBluetoothMode: false
             )
             return

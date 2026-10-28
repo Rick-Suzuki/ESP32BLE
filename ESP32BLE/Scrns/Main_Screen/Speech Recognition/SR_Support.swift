@@ -67,12 +67,12 @@ extension MainScreen {
         }
 
         unmatchedSpeechText = nil
-        let outputSourceMetadata = outputSourceMetadata(for: matchingEntry)
-
+        #if DEBUG
+        printMainGridButtonActivation(matchingEntry, via: "speech")
+        #endif
         if containsWaitCommand(in: matchingEntry.sendTexts) {
             startWaitChainCommandTokens(
                 matchingEntry.sendTexts,
-                sourceEntry: matchingEntry,
                 respectsBluetoothMode: true
             )
             return
@@ -108,8 +108,7 @@ extension MainScreen {
 
             guard sendKeyboardOutputTokens(
                 bluetoothSendTexts,
-                respectsButtonMode: true,
-                sourceMetadata: outputSourceMetadata
+                respectsButtonMode: true
             ) else {
                 return false
             }
