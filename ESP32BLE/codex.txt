@@ -1,131 +1,176 @@
-A. Exact source locations
+A. Files, views, and locations inspected
 
-File: ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
+ESP32BLE/Scrns/Set_Screen/Btm_Area/Set_KB_Timing.swift
 
-• Category definitions and labels: lines 7-57
-• Settings toolbar placement: lines 468-586
-• File-filter selector: settingsTableSelector, lines 811-852
-• Menu construction: lines 817-829
-• iPad/iPhone width constraint: line 841
+• SettingsKeyboardTimingSection: lines 3–227
+• ON/OFF shared sliderRow: lines 91–140
+• REC OFF row: lines 142–198
+• iPhone IMAGE row: lines 200–216
+• iPad/iPhone branching: lines 23–36
 
-B. Presentation mechanism
+ESP32BLE/Scrns/Set_Screen/Btm_Area/Set_ImgCtlsSection.swift
 
-The control is one native SwiftUI Menu.
+• SettingsImageControlsSection: lines 3–128
+• Four cyan image controls: lines 22–35
+• Full-width image-controls modifier: line 37
 
-It contains Buttons generated from:
+ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
 
-SettingsListMode.visibleMenuModes
+• Shared timing label width (90 points): line 294
+• SettingsKeyboardTimingSection wiring and bindings: lines 1588–1602
+• Image-control callback construction: lines 1232–1256
+• Parent Settings bottom-panel layout: lines 1286–1301
 
-at lines 16-23 and 818-829.
+B. ON and OFF reference geometry on iPhone
 
-There is no custom popover, Picker, confirmation dialog, or custom dropdown implementation. The opened popdown is the system presentation of SwiftUI Menu.
+ON and OFF use the same sliderRow implementation:
 
-Actual visible source labels are:
+• Fixed label column: 90 points.
+• Label-to-content spacing: 9 points.
+• No arrow buttons on iPhone.
+• Slider/value column has 12-point horizontal padding on both sides.
+• The two rows are grouped in a VStack, then placed as the leading content of an HStack followed by a Spacer:
 
-• screens
-• plates
-• text
-• images
-• sounds
-• PDFs
+Set_KB_Timing.swift:50–58
 
-The .all mode exists in the enum but is not in visibleMenuModes and is normalized to .files; it is not currently a visible popdown item.
+This leading-group-plus-Spacer arrangement establishes the current correct reference width.
 
-C. iPad versus iPhone behavior
+C. REC OFF geometry on iPhone
 
-Both platforms use the same SwiftUI Menu and the same menu-item construction.
+REC OFF now correctly uses the same internal row geometry as ON/OFF:
 
-They differ through isPad:
+• 90-point label column: line 147.
+• 9-point HStack spacing: line 143.
+• 12-point horizontal slider-column padding: line 180.
+• No iPhone arrow buttons.
 
-• iPad uses full selected labels, such as “screens,” “images,” and “sounds”: lines 44-56.
-• iPhone uses abbreviated closed-control labels: “scrns,” “imgs,” and “snds”: lines 47-55.
-• iPad uses .body font and 6-point horizontal padding.
-• iPhone uses 15-point system font and 4-point horizontal padding.
-• iPad closed-control width is 92 points.
-• iPhone closed-control width is 74 points.
+Therefore, the prior iPad correction from spacing 0 to spacing 9 is present and correct.
 
-D. Exact source of the width restriction
+The remaining difference is its parent layout. On iPhone, REC OFF is inserted directly into the section’s outer VStack:
 
-The only explicit sizing constraint associated with this Menu is:
+Set_KB_Timing.swift:30–32
 
-.frame(width: isPad ? 92 : 74)
+It is not contained in the ON/OFF-style leading group followed by a trailing Spacer. Consequently, SwiftUI can offer its flexible Slider a different width proposal from the one received by the ON/OFF group. This is the confirmed structural cause of the remaining iPhone inconsistency.
 
-at Set_Screen.swift:841.
+D. IMAGE geometry on iPhone
 
-There is no width, fixed-size, line-limit, or padding modifier on the opened menu rows themselves. The system controls the Menu popdown geometry.
+IMAGE has two confirmed layout differences from ON/OFF:
 
-Therefore, the 92-point iPad label/anchor width is the only source-level constraint that can account for the narrow iPad popdown. The checked item uses Label(mode.selectorTitle, systemImage: "checkmark") at line 824, which needs more horizontal room than the unselected plain Text rows.
+1. Its row uses 4-point spacing rather than 9 points:
 
-E. Truncation, clipping, or compression
+Set_KB_Timing.swift:201
 
-Confirmed from source:
+This places the IMAGE slider column 5 points farther left than the timing-slider columns.
 
-• The closed Menu label has .lineLimit(1) at line 833.
-• The opened category rows have no .lineLimit, .fixedSize, frame, or truncation modifier.
-• No custom clipping is applied to the Menu content.
+2. The Slider shares a VStack with the four cyan image controls:
 
-The source does not explicitly truncate opened row labels. The reported narrow appearance is therefore most likely the native Menu’s sizing in relation to its 92-point iPad anchor/control width, not a custom row-level clipping rule. Physical iPad confirmation is still needed.
+Set_KB_Timing.swift:207–214
 
-F. Recommended minimal adjustment
+Those controls have an 18-point HStack spacing and 28-point symbols:
 
-Change only the iPad value in line 841:
+Set_ImgCtlsSection.swift:22–35, 56–58, 70–72
 
-Current:
-.frame(width: isPad ? 92 : 74)
+The image-controls view also declares:
 
-Recommended first test:
-.frame(width: isPad ? 108 : 74)
+.frame(maxWidth: .infinity, alignment: .leading)
 
-This is a modest 16-point iPad-only increase. It preserves:
+at Set_ImgCtlsSection.swift:37.
 
-• iPhone width of 74 points.
-• Font sizes.
-• Labels.
-• Menu order.
-• Colors.
-• Row heights.
-• File-filter behavior.
-• Existing SwiftUI Menu implementation.
+This means the IMAGE slider’s available width is influenced by both its direct placement in the outer VStack and the image-control row, rather than by the ON/OFF reference grouping.
 
-G. iPad scope
+E. Confirmed causes
 
-The isPad branch is shared by all iPads, including iPad Pro, iPad Air, and iPad mini. A 108-point fixed width would therefore apply consistently across supported iPads.
+REC OFF:
+• Its internal spacing and padding now match ON/OFF.
+• Its parent containment does not: it is a direct flexible child of the outer VStack, unlike the ON/OFF leading group.
 
-H. Guarantee that iPhone remains unchanged
+IMAGE:
+• It has a 4-point gap instead of the 9-point reference gap.
+• Its Slider shares a flexible column with the image controls.
+• It is also a direct child of the outer VStack rather than being contained in the ON/OFF-style leading group.
 
-Keep the existing ternary’s iPhone value unchanged:
+There is no difference in slider binding, range, step, timing logic, persistence, or iPad arrow-button logic causing the visual width differences.
 
-isPad ? 108 : 74
+F. Recommended minimal iPhone-only REC OFF correction
 
-The iPhone label abbreviations and 74-point width would remain exactly as implemented.
+Within the existing else branch at Set_KB_Timing.swift:30–32, place speechRecognitionAutoOffRow in the same leading-content-plus-trailing-Spacer arrangement used by ON/OFF at lines 50–58.
 
-I. Relationship to Repair-button removal
+This is iPhone-only because the else branch is selected only when isPad is false. It leaves the successful iPad branch at lines 23–29 unchanged.
 
-Not related.
+G. Recommended minimal iPhone-only IMAGE correction
 
-The selector’s iPad width was already explicitly fixed at 92 points. Removing Repair only removed a neighbouring toolbar item; it did not change settingsTableSelector, its Menu content, padding, font, or frame width.
+Two narrowly scoped iPhone-only adjustments are indicated:
 
-J. Layout and compatibility considerations
+1. Change the IMAGE row’s HStack spacing from 4 to 9 at Set_KB_Timing.swift:201, matching ON/OFF and REC OFF.
 
-• The toolbar has a Spacer immediately before the selector at line 571, so the extra 16 points should normally be taken from flexible toolbar space.
-• On iPad mini, the toolbar has less horizontal room than iPad Pro, but 108 points remains small and should be lower risk than a larger adaptive redesign.
-• Because this is a native system Menu, the exact opened-popdown sizing remains subject to iPadOS behavior and should be checked on iPad Pro, Air, and mini.
-• Dynamic Type testing is advisable. The current closed label is single-line and fixed-width, so very large accessibility text could still be constrained even after a 16-point increase.
+2. Place iPhoneImageControls in the same leading-content-plus-trailing-Spacer arrangement as the ON/OFF reference group. The IMAGE view is only included under if !isPad at lines 34–36, so this cannot affect iPad.
 
-K. Smallest safe implementation approach
+This is the smallest consistent layout approach because it preserves the current controls and establishes the same width proposal pattern as ON/OFF.
 
-Modify only the iPad branch of the existing width modifier at Set_Screen.swift:841 from 92 to 108. Do not alter Menu construction, labels, fonts, or toolbar layout.
+H. Exact source locations for a future correction
 
-L. Manual regression checklist
+REC OFF:
+• Set_KB_Timing.swift:30–32
 
-1. On iPad Pro, open the file-filter Menu and verify screens, images, and sounds have comfortable horizontal room.
-2. Check the selected category row, including its checkmark.
-3. Repeat on iPad Air and iPad mini.
-4. Confirm the closed selector remains visually aligned with the new button.
-5. Check the adjacent New button and toolbar spacing.
-6. Confirm all categories still select the correct list.
-7. On iPhone, verify the closed labels, Menu presentation, width, and toolbar spacing are unchanged.
-8. Test iPad portrait and landscape.
-9. Check a larger Dynamic Type setting if supported by the test device.
+IMAGE:
+• Set_KB_Timing.swift:34–36
+• Set_KB_Timing.swift:201
 
-No files were modified, no build was run, and no toolbar changes were made.
+No change is indicated in Set_ImgCtlsSection.swift unless device testing shows that the image-control row’s intrinsic minimum width still exceeds the ON/OFF reference width after the containment correction.
+
+I. ON/OFF preservation
+
+The recommended changes do not require changing:
+
+• sliderRow
+• ON/OFF label width
+• ON/OFF spacing
+• ON/OFF padding
+• ON/OFF Slider frames
+• ON/OFF ranges, steps, bindings, or actions
+
+The current ON/OFF appearance remains the reference.
+
+J. iPad preservation
+
+The recommended changes are confined to existing !isPad branches.
+
+The following iPad code remains untouched:
+
+• REC OFF iPad containment and 520-point maximum-width handling: Set_KB_Timing.swift:23–29
+• iPad arrows and timing controls: lines 98–111, 125–138, 149–162, 183–196
+• iPad IMAGE presentation, which is not constructed through iPhoneImageControls.
+
+K. Smaller-iPhone risks
+
+The proposed containment changes should reduce, not increase, the horizontal demand of REC OFF and IMAGE because the trailing Spacer absorbs unused width.
+
+The remaining device-test risk is the intrinsic width of the four-image-control row. If it is wider than the ON/OFF reference width on a particular small landscape iPhone, a follow-up would need one measured, iPhone-only width constraint for the IMAGE content column. There is no existing fixed width constant in source that safely identifies that value without visual testing.
+
+L. Functionality unaffected
+
+The layout-only correction can leave unchanged:
+
+• Keyboard timing ON/OFF values and ranges.
+• Speech-recognition auto-off binding and scheduling.
+• Image opacity binding and range.
+• AppStorage persistence.
+• iPad arrow controls.
+• Image reset, random, previous, and next controls.
+• Settings navigation and toolbar behavior.
+
+M. Manual regression checklist
+
+1. On iPhone 17, confirm all four tracks have identical left and right ends.
+2. On iPhone XS Max, repeat in the supported Settings orientation.
+3. Confirm ON and OFF have not moved or changed width.
+4. Confirm REC OFF remains aligned when displaying values such as “1 min,” “11 min,” and “Never.”
+5. Confirm IMAGE remains aligned with all four cyan controls visible and tappable.
+6. Confirm image reset, random, previous, and next actions still work.
+7. Confirm all timing sliders retain their existing ranges and values.
+8. Confirm opacity slider still updates image opacity.
+9. Confirm iPad Pro, iPad Air, and iPad mini layouts remain unchanged.
+
+N. Physical-device uncertainty
+
+The source fully confirms the differing containment and IMAGE spacing. Exact rendered Slider widths are ultimately resolved by SwiftUI’s runtime layout proposals, so physical testing is still required after any correction—particularly to verify the IMAGE icon row does not impose a larger intrinsic minimum width on the smallest supported iPhone.

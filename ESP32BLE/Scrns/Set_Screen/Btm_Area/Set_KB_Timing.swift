@@ -140,7 +140,7 @@ struct SettingsKeyboardTimingSection: View {
     }
 
     private var speechRecognitionAutoOffRow: some View {
-        HStack(spacing: 0) {
+        HStack(spacing: 9) {
             Text("rec off")
                 .font(settingsCompactControlFont)
                 .foregroundStyle(.white)

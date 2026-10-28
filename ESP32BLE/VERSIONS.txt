@@ -1,4 +1,10 @@
 
+V65.50_261028 Wed 1609
+Settings: iPad Sliders width same
+
+
+
+
 V65.49_261028 Wed 1516
 Settings: file type popup - too small
 
