@@ -77,6 +77,7 @@ struct MainScreenButtonLabelView: View {
     let backgroundOpacity: Double
     @ObservedObject var sharedTimer: MainGridSharedTimerState
     @ObservedObject var ambientSoundState: MainGridAmbientSoundState
+    let onAmbientSoundPress: () -> Void
     let playSoundNamed: (String) -> Void
     let playLoopingSoundNamed: (String) -> Void
     let stopSoundPlayback: () -> Void
@@ -505,6 +506,7 @@ struct MainScreenButtonLabelView: View {
                     isInteractionEnabled: !isGridEditModeEnabled,
                     interactionSize: buttonSize,
                     sharedState: ambientSoundState,
+                    onPress: onAmbientSoundPress,
                     resolveSoundURL: resolveSoundURL,
                     activateAudioSession: activateAudioSession,
                     reportSoundError: reportSoundError
@@ -1823,6 +1825,7 @@ private struct MainGridAmbientSoundWidgetView: View {
     let isInteractionEnabled: Bool
     let interactionSize: CGSize
     @ObservedObject var sharedState: MainGridAmbientSoundState
+    let onPress: () -> Void
     let resolveSoundURL: (String) -> URL?
     let activateAudioSession: () async -> Bool
     let reportSoundError: (String, String) -> Void
@@ -1855,6 +1858,7 @@ private struct MainGridAmbientSoundWidgetView: View {
     }
 
     private func togglePlayback() {
+        onPress()
         guard let volume = resolvedVolume else {
             return
         }
@@ -1872,6 +1876,7 @@ private struct MainGridAmbientSoundWidgetView: View {
     }
 
     private func restartPlayback() {
+        onPress()
         guard let volume = resolvedVolume else {
             return
         }

@@ -120,6 +120,7 @@ struct MainScreenGridSection<ButtonLabel: View>: View {
     let midiActivations: MainMIDIActivationRegistry
     let midiInputEnabled: Bool
     let midiUnavailableWarningEnabled: Bool
+    let onMIDIButtonPress: (MainMIDITouchContext) -> Void
     let onMIDITouchDown: (MainMIDITouchContext) -> UUID?
     let onMIDITouchUp: (UUID) -> Void
     let onMIDITogglePress: (MainMIDITouchContext, UUID?) -> Void
@@ -434,6 +435,7 @@ struct MainScreenGridSection<ButtonLabel: View>: View {
                                 return
                             }
 
+                            onAcceptedOrdinaryButtonTap(entry)
                             switch gesture {
                             case .first:
                                 onSimpleOrdinarySoundDoubleTap(entry, index)
@@ -454,6 +456,7 @@ struct MainScreenGridSection<ButtonLabel: View>: View {
                 isEnabled: midiInputEnabled && scenePhase == .active,
                 isUnavailableWarningEnabled: midiUnavailableWarningEnabled && scenePhase == .active,
                 cornerRadius: mainGridButtonCornerRadius,
+                onPress: onMIDIButtonPress,
                 onDown: onMIDITouchDown,
                 onUp: onMIDITouchUp,
                 onTogglePress: onMIDITogglePress,
@@ -570,6 +573,7 @@ private struct MIDINoteButton<Label: View>: View {
     let isEnabled: Bool
     let isUnavailableWarningEnabled: Bool
     let cornerRadius: CGFloat
+    let onPress: (MainMIDITouchContext) -> Void
     let onDown: (MainMIDITouchContext) -> UUID?
     let onUp: (UUID) -> Void
     let onTogglePress: (MainMIDITouchContext, UUID?) -> Void
@@ -614,6 +618,7 @@ private struct MIDINoteButton<Label: View>: View {
                 activeToken: activeToken,
                 isEnabled: isEnabled,
                 isUnavailableWarningEnabled: isUnavailableWarningEnabled,
+                onPress: onPress,
                 onDown: onDown,
                 onUp: onUp,
                 onTogglePress: onTogglePress,
@@ -634,6 +639,7 @@ private struct MIDITouchView: UIViewRepresentable {
     let activeToken: UUID?
     let isEnabled: Bool
     let isUnavailableWarningEnabled: Bool
+    let onPress: (MainMIDITouchContext) -> Void
     let onDown: (MainMIDITouchContext) -> UUID?
     let onUp: (UUID) -> Void
     let onTogglePress: (MainMIDITouchContext, UUID?) -> Void
@@ -652,6 +658,7 @@ private struct MIDITouchView: UIViewRepresentable {
             activeToken: activeToken,
             isEnabled: isEnabled,
             isUnavailableWarningEnabled: isUnavailableWarningEnabled,
+            onPress: onPress,
             onDown: onDown,
             onUp: onUp,
             onTogglePress: onTogglePress,
@@ -783,6 +790,7 @@ private final class MIDITouchCaptureView: UIView {
 
     fileprivate func beginSlideNote() -> UUID? {
         guard isUserInteractionEnabled, let context else { return nil }
+        onPress?(context)
         return onDown?(context)
     }
 
@@ -791,6 +799,7 @@ private final class MIDITouchCaptureView: UIView {
     func unregisterSlideTarget() {
         slideCoordinator?.unregister(self)
     }
+    private var onPress: ((MainMIDITouchContext) -> Void)?
     private var onDown: ((MainMIDITouchContext) -> UUID?)?
     private var onUp: ((UUID) -> Void)?
     private var onTogglePress: ((MainMIDITouchContext, UUID?) -> Void)?
@@ -827,6 +836,7 @@ private final class MIDITouchCaptureView: UIView {
         activeToken: UUID?,
         isEnabled: Bool,
         isUnavailableWarningEnabled: Bool,
+        onPress: @escaping (MainMIDITouchContext) -> Void,
         onDown: @escaping (MainMIDITouchContext) -> UUID?,
         onUp: @escaping (UUID) -> Void,
         onTogglePress: @escaping (MainMIDITouchContext, UUID?) -> Void,
@@ -850,6 +860,7 @@ private final class MIDITouchCaptureView: UIView {
         self.slideCoordinator = slideCoordinator
         self.buttonFrame = buttonFrame
         self.context = context
+        self.onPress = onPress
         self.onDown = onDown
         self.onUp = onUp
         self.onTogglePress = onTogglePress
@@ -863,17 +874,25 @@ private final class MIDITouchCaptureView: UIView {
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard isUserInteractionEnabled, let context else { return }
-        guard isMIDIActivationEnabled else {
-            onUnavailableMIDIOutputAttempt?()
-            return
-        }
-        guard let onDown else { return }
         if slideEligible {
+            guard isMIDIActivationEnabled else {
+                onPress?(context)
+                onUnavailableMIDIOutputAttempt?()
+                return
+            }
+
             for touch in touches where touch.type == .direct {
                 slideCoordinator?.begin(touch, from: self)
             }
             return
         }
+
+        onPress?(context)
+        guard isMIDIActivationEnabled else {
+            onUnavailableMIDIOutputAttempt?()
+            return
+        }
+        guard let onDown else { return }
 
         guard activeTouch == nil, let touch = touches.first else { return }
         activeTouch = touch

@@ -1741,6 +1741,15 @@ Tapping a row inserts the key code at the cursor.
             midiActivations: midiActivations,
             midiInputEnabled: midiInputEnabled,
             midiUnavailableWarningEnabled: midiUnavailableWarningEnabled,
+            onMIDIButtonPress: { context in
+                #if DEBUG
+                guard functionKeys.indices.contains(context.slot),
+                      functionKeys[context.slot].rawLine == context.commandText else {
+                    return
+                }
+                printMainGridButtonActivation(functionKeys[context.slot], via: "tap")
+                #endif
+            },
             onMIDITouchDown: beginMIDIActivation,
             onMIDITouchUp: endMIDIActivation,
             onMIDITogglePress: toggleMIDIActivation,

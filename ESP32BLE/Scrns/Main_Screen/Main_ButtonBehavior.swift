@@ -2609,6 +2609,11 @@ extension MainScreen {
             backgroundOpacity: backgroundOpacity,
             sharedTimer: mainGridTimerState,
             ambientSoundState: mainGridAmbientSoundState,
+            onAmbientSoundPress: {
+                #if DEBUG
+                printMainGridButtonActivation(entry, via: "tap")
+                #endif
+            },
             playSoundNamed: { playMainGridSound(named: $0) },
             playLoopingSoundNamed: { playMainGridSound(named: $0, repeats: true) },
             stopSoundPlayback: stopMainGridSoundPlayback,
