@@ -574,14 +574,6 @@ struct SettingsScreen: View {
 			// show type of table
 			//
 						settingsTableSelector
-			//
-			//----------------------------------------
-			// repair btn
-			//
-						SettingsToolbarButton(title: "repair", backgroundColor: Color.red.opacity(0.5), minWidth: isPad ? 70 : 60, isEnabled: listMode == .files) {
-				repairDocument()
-			}
-			//
 			//----------------------------------------
 			// new file
 			//
@@ -2152,6 +2144,25 @@ struct SettingsScreen: View {
         }
     }
 
+    // MARK: - BM:🅱️
+    // MARK: - Legacy Screen Repair (Retained for Future Recovery)
+    //
+    // This repair utility was introduced during development of multi-cell
+    // screen buttons to reconstruct malformed @@wide and @@block continuation
+    // markers and normalize damaged .screen grid data.
+    //
+    // The Settings toolbar Repair button was intentionally removed before
+    // public release because this operation is rarely needed and can
+    // overwrite the selected screen without creating a backup or undo.
+    //
+    // Keep this function and its supporting helpers for possible future
+    // recovery or migration work. It is intentionally not exposed in the
+    // normal Settings interface.
+    //
+    // IMPORTANT: Do not call this automatically during app startup,
+    // screen loading, import, or backup restoration. Any future user-facing
+    // repair operation should provide clear confirmation and appropriate
+    // protection of the original screen data.
     private func repairDocument() {
         guard listMode == .files, let fileURL = selectedDocumentFileURL else {
             repairAlertMessage = "Select a text file to repair"

@@ -1,4 +1,7 @@
 
+V65.48_261028 Wed 1508
+settings: repair btn removed
+
 V65.47_261028 Wed 1438
 quick edit: midi note: toggle default off
 
