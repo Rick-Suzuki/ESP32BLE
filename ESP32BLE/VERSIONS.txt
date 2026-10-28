@@ -1,4 +1,9 @@
 
+
+V65.51_261028 Wed 1630
+Settings: iPhone Sliders width same
+
+
 V65.50_261028 Wed 1609
 Settings: iPad Sliders width same
 

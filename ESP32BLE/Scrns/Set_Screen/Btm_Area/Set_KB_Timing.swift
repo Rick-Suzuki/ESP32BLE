@@ -28,11 +28,19 @@ struct SettingsKeyboardTimingSection: View {
                     Spacer(minLength: 0)
                 }
             } else {
-                speechRecognitionAutoOffRow
+                HStack(alignment: .top, spacing: 12) {
+                    speechRecognitionAutoOffRow
+
+                    Spacer(minLength: 0)
+                }
             }
 
             if !isPad {
-                iPhoneImageControls
+                HStack(alignment: .top, spacing: 12) {
+                    iPhoneImageControls
+
+                    Spacer(minLength: 0)
+                }
             }
         }
     }
@@ -198,7 +206,7 @@ struct SettingsKeyboardTimingSection: View {
     }
 
     private var iPhoneImageControls: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 9) {
             Text("IMAGE")
                 .font(settingsCompactControlFont)
                 .foregroundStyle(.white)
