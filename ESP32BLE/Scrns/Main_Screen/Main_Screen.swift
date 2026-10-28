@@ -7178,7 +7178,7 @@ private struct SoftEditorMIDINoteMenu: View {
         _selectedOctave = State(initialValue: 3)
         _velocity = State(initialValue: 127)
         _channel = State(initialValue: resolvedChannel)
-        _isToggleEnabled = State(initialValue: true)
+        _isToggleEnabled = State(initialValue: false)
     }
 
     var body: some View {
