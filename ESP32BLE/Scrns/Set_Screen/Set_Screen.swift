@@ -838,7 +838,7 @@ struct SettingsScreen: View {
                 .font(isPad ? .body : .system(size: 15))
                 .foregroundStyle(.white)
                 .padding(.horizontal, isPad ? 6 : 4)
-                .frame(width: isPad ? 92 : 74)
+                .frame(width: isPad ? 110 : 74)
                 .frame(minHeight: 36)
                 .background(Color.gray.opacity(0.45))
                 .overlay {

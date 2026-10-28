@@ -1,4 +1,7 @@
 
+V65.49_261028 Wed 1516
+Settings: file type popup - too small
+
 V65.48_261028 Wed 1508
 settings: repair btn removed
 

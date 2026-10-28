@@ -1,196 +1,131 @@
-A. Settings Repair button location
+A. Exact source locations
 
-File: ESP32BLE/Scrns/Set_Screen/Set_Screen.swift:581-583
+File: ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
 
-It is a text-only SettingsToolbarButton:
+• Category definitions and labels: lines 7-57
+• Settings toolbar placement: lines 468-586
+• File-filter selector: settingsTableSelector, lines 811-852
+• Menu construction: lines 817-829
+• iPad/iPhone width constraint: line 841
 
-• Label: “repair”
-• SF Symbol: none
-• Appearance: semi-transparent red
-• Width: 70 points on iPad, 60 on iPhone
-• Enabled only while the Settings list mode is Files
+B. Presentation mechanism
 
-The shared toolbar control is defined in ESP32BLE/Scrns/Set_Screen/Set_TxtEditor.swift:190-245. It gives tap feedback before invoking the supplied action.
+The control is one native SwiftUI Menu.
 
-B. Complete call path
+It contains Buttons generated from:
 
-Settings toolbar “repair”
-→ SettingsToolbarButton action at Set_Screen.swift:581-583
-→ repairDocument() at Set_Screen.swift:2155
-→ saveCurrentDocumentText() at 2161 / 1863
-→ saveDocumentText(_:to:) at 2040
-→ repairedDocumentText(from:documentName:) at 2164 / 2185
-→ saveDocumentText(repairedText,to:) at 2167
-→ loadFunctionKeys(fileURL) at 2176
-→ repair result overlay at 1032-1073.
+SettingsListMode.visibleMenuModes
 
-There are no other callers of repairDocument() or repairedDocumentText().
+at lines 16-23 and 818-829.
 
-C. What Repair actually does
+There is no custom popover, Picker, confirmation dialog, or custom dropdown implementation. The opened popdown is the system presentation of SwiftUI Menu.
 
-Repair operates on one selected screen document only. It does not scan the Documents directory, rebuild indexes, restore backups, create directories, rename files, copy files, delete files, modify MIDI/BLE settings, or repair unrelated data.
+Actual visible source labels are:
 
-It:
+• screens
+• plates
+• text
+• images
+• sounds
+• PDFs
 
-1. Requires Files mode and a selected screen file.
-2. Saves current editor text first, using the normal conflict and missing-file safeguards.
-3. Reads the editor text and normalizes line endings.
-4. Limits the result to maxFunctionKeyCount lines.
-5. Rebuilds the selected screen’s grid storage lines:
-• Keeps ordinary button-anchor lines.
-• Converts blank lines and _ placeholders to _.
-• Removes orphaned @@wide and @@block continuation lines.
-• Reconstructs valid continuation tokens for button shapes that fit the screen grid.
-• Uses the screen’s .config.json grid dimensions when valid; otherwise uses legacy AppStorage grid dimensions; otherwise falls back to calculated grid dimensions.
-6. Atomically overwrites the selected screen file with the reconstructed text if it differs.
-7. Reloads that same screen into Settings and displays “Document repaired” or “Document checked.”
+The .all mode exists in the enum but is not in visibleMenuModes and is normalized to .files; it is not currently a visible popdown item.
 
-Relevant implementation:
+C. iPad versus iPhone behavior
 
-• Main action: Set_Screen.swift:2155-2183
-• Text reconstruction: 2185-2218
-• Line-ending normalization and 100-line cap: 2221-2230
-• Grid-dimension lookup: 2233-2259
-• Valid shape recognition: 2261-2328
-• Continuation reconstruction: 2330-2366
-• Blank/continuation classification: 2369-2376
+Both platforms use the same SwiftUI Menu and the same menu-item construction.
 
-D. Files, directories, settings, or data modified
+They differ through isPad:
 
-Modified:
+• iPad uses full selected labels, such as “screens,” “images,” and “sounds”: lines 44-56.
+• iPhone uses abbreviated closed-control labels: “scrns,” “imgs,” and “snds”: lines 47-55.
+• iPad uses .body font and 6-point horizontal padding.
+• iPhone uses 15-point system font and 4-point horizontal padding.
+• iPad closed-control width is 92 points.
+• iPhone closed-control width is 74 points.
 
-• Only the currently selected screen document, in the app Documents directory.
-• The in-memory Settings editor state for that same document.
-• The loaded function-key state after reload.
+D. Exact source of the width restriction
 
-Read, but not modified:
+The only explicit sizing constraint associated with this Menu is:
 
-• The matching .config.json screen configuration, if present.
-• The documentGridDimensionsData AppStorage value, as a fallback source of grid dimensions.
+.frame(width: isPad ? 92 : 74)
 
-Not modified:
+at Set_Screen.swift:841.
 
-• Other screen files.
-• Config files.
-• Imported files.
-• Images, sounds, PDFs, templates, backups.
-• Selected-document preference, except that the already-selected document is reloaded.
-• BLE, Mac Helper, MIDI, or general application settings.
+There is no width, fixed-size, line-limit, or padding modifier on the opened menu rows themselves. The system controls the Menu popdown geometry.
 
-E. Confirmed historical purpose
+Therefore, the 92-point iPad label/anchor width is the only source-level constraint that can account for the narrow iPad popdown. The checked item uses Label(mode.selectorTitle, systemImage: "checkmark") at line 824, which needs more horizontal room than the unselected plain Text rows.
 
-Confirmed source-history evidence:
+E. Truncation, clipping, or compression
 
-• Repair was introduced in commit c6fdd0e, dated 2026-05-19, titled “repair document added.”
-• The initial commit added Repair together with stored per-document grid dimensions and continuation-token reconstruction.
-• Grid-size and larger-button work occurred immediately before it.
+Confirmed from source:
 
-The commit message does not state a user-facing problem. The code establishes that its purpose was to repair malformed screen-grid storage, especially the @@wide and @@block continuation markers used by multi-cell buttons.
+• The closed Menu label has .lineLimit(1) at line 833.
+• The opened category rows have no .lineLimit, .fixedSize, frame, or truncation modifier.
+• No custom clipping is applied to the Menu content.
 
-F. Current relevance
+The source does not explicitly truncate opened row labels. The reported narrow appearance is therefore most likely the native Menu’s sizing in relation to its 92-point iPad anchor/control width, not a custom row-level clipping rule. Physical iPad confirmation is still needed.
 
-Still potentially useful, but only in rare cases:
+F. Recommended minimal adjustment
 
-• A hand-edited or externally damaged .screen file has missing, stale, or orphaned multi-cell continuation markers.
-• A legacy/imported screen has inconsistent button-grid storage.
-• A screen has malformed blank/continuation lines and must be normalized into a loadable grid layout.
+Change only the iPad value in line 841:
 
-It is not needed for:
+Current:
+.frame(width: isPad ? 92 : 74)
 
-• Fresh installations.
-• Ordinary screen editing.
-• Normal app restarts.
-• Normal import/export or full-backup restoration.
-• Missing .config.json files.
-• Ordinary loading of valid screens.
+Recommended first test:
+.frame(width: isPad ? 108 : 74)
 
-G. Automatic recovery comparison
+This is a modest 16-point iPad-only increase. It preserves:
 
-Automatic recovery exists, but it is different:
+• iPhone width of 74 points.
+• Font sizes.
+• Labels.
+• Menu order.
+• Colors.
+• Row heights.
+• File-filter behavior.
+• Existing SwiftUI Menu implementation.
 
-• On launch, ContentView ensures at least one default screen file exists when no screen files are present: ContentView.swift:488-522.
-• During document refresh, ContentView creates missing screen .config.json files from AppStorage/default data: ContentView.swift:524-563 and 1066-1087.
-• When a screen loads, ContentView normalizes its lines in memory for display, but does not rewrite the document merely because it contains malformed continuation markers: ContentView.swift:694-715 and 811-824.
-• Normal editor persistence writes only intentional user edits: ContentView.swift:875-904.
+G. iPad scope
 
-Therefore, Repair is the only code path that rewrites an existing screen specifically to reconstruct its stored button-layout markers.
+The isPad branch is shared by all iPads, including iPad Pro, iPad Air, and iPad mini. A 108-point fixed width would therefore apply consistently across supported iPads.
 
-H. Data safety risks
+H. Guarantee that iPhone remains unchanged
 
-Repair can overwrite the selected screen document. The write itself is atomic, but the previous content is not retained by the app.
+Keep the existing ternary’s iPhone value unchanged:
 
-Specific risks:
+isPad ? 108 : 74
 
-• No confirmation is requested.
-• No backup or undo is created.
-• Lines after maxFunctionKeyCount are discarded.
-• Orphaned or malformed continuation markers are replaced with _.
-• A malformed larger-button layout can be reduced to individual 1×1 buttons.
-• A user who intentionally stored unusual blank/continuation-line data can lose that exact formatting.
+The iPhone label abbreviations and 74-point width would remain exactly as implemented.
 
-The normal save path protects against an external-file conflict or missing file before writing: Set_Screen.swift:2040-2124. If the on-disk document changed externally, Repair either reloads it and asks the user to check it, or prevents a conflicting write.
+I. Relationship to Repair-button removal
 
-I. Repeat safety
+Not related.
 
-For stable grid dimensions, Repair is effectively idempotent: after its reconstructed output is saved, a second run should report “Document checked.”
+The selector’s iPad width was already explicitly fixed at 92 points. Removing Repair only removed a neighbouring toolbar item; it did not change settingsTableSelector, its Menu content, padding, font, or frame width.
 
-It is not reversible within the app, because it does not preserve the pre-repair content.
+J. Layout and compatibility considerations
 
-J. User-visible feedback and error handling
+• The toolbar has a Spacer immediately before the selector at line 571, so the extra 16 points should normally be taken from flexible toolbar space.
+• On iPad mini, the toolbar has less horizontal room than iPad Pro, but 108 points remains small and should be lower risk than a larger adaptive redesign.
+• Because this is a native system Menu, the exact opened-popdown sizing remains subject to iPadOS behavior and should be checked on iPad Pro, Air, and mini.
+• Dynamic Type testing is advisable. The current closed label is single-line and fixed-width, so very large accessibility text could still be constrained even after a 16-point increase.
 
-Feedback:
+K. Smallest safe implementation approach
 
-• “Select a text file to repair” when no selected document is available.
-• “Document repaired” when text changed.
-• “Document checked” when no change was required.
-• “The file changed outside ESP and was reloaded. Check it before repairing.”
+Modify only the iPad branch of the existing width modifier at Set_Screen.swift:841 from 92 to 108. Do not alter Menu construction, labels, fonts, or toolbar layout.
 
-The feedback is a custom modal overlay with an OK button: Set_Screen.swift:1032-1073.
+L. Manual regression checklist
 
-There is no progress UI, no confirmation dialog, and no repair-specific error message for conflict, missing-file, or failed-save cases. Those cases rely on the normal document-save alerts or silently stop within repairDocument’s final switch.
+1. On iPad Pro, open the file-filter Menu and verify screens, images, and sounds have comfortable horizontal room.
+2. Check the selected category row, including its checkmark.
+3. Repeat on iPad Air and iPad mini.
+4. Confirm the closed selector remains visually aligned with the new button.
+5. Check the adjacent New button and toolbar spacing.
+6. Confirm all categories still select the correct list.
+7. On iPhone, verify the closed labels, Menu presentation, width, and toolbar spacing are unchanged.
+8. Test iPad portrait and landscape.
+9. Check a larger Dynamic Type setting if supported by the test device.
 
-The work is synchronous in the toolbar button action. For normal screen sizes, this is likely brief; it is not dispatched to a background task.
-
-K. Dependencies and callers
-
-Direct callers:
-
-• Only the Settings toolbar button at Set_Screen.swift:581-583.
-
-Underlying helpers are private to SettingsScreen:
-
-• repairDocument()
-• repairedDocumentText(...)
-• normalizedRepairLines(...)
-• repairGridDimensions(...)
-• validRepairShape(...)
-• repairShapeTokensMatch(...)
-• canPlaceRepairShape(...)
-• repairIndexes(...)
-• repairContinuationAssignments(...)
-• isRepairBlankLine(...)
-• isRepairContinuationLine(...)
-
-No automatic recovery, import, backup, or main-screen code calls the repair implementation.
-
-Removing only the toolbar button would not affect normal startup, loading, import/export, backup/restore, or automatic config-file recovery.
-
-L. Recommendation
-
-RELOCATE.
-
-Repair still has a legitimate narrow recovery purpose for malformed multi-cell screen layouts, so retiring the underlying mechanism would be speculative. However, it is destructive enough to be poorly suited to an always-visible, unexplained top-toolbar control for a public App Store user.
-
-M. Smallest safe future change
-
-Move only the existing Repair entry point out of the top toolbar into a clearly labelled advanced/recovery area. Preserve the current implementation initially.
-
-Before exposing it publicly in another location, add a user explanation and confirmation that the selected screen will be normalized and overwritten without an automatic backup. That would be a separate scoped change.
-
-N. Remaining uncertainties
-
-• No real malformed legacy or imported screen file was tested during this read-only probe.
-• The historical commit identifies the feature’s implementation period and grid-layout relationship, but does not document the exact incident that prompted it.
-• Device testing would be needed to assess whether Repair’s synchronous work is visibly blocking on the largest supported screen file.
-
-No files were modified, and Repair was not executed.
+No files were modified, no build was run, and no toolbar changes were made.
