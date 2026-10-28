@@ -194,7 +194,7 @@ struct MainScreenToolbarContent: View {
 			}
 			.buttonStyle(.plain)
 			.foregroundStyle(.cyan)
-			.disabled(currentBackgroundImageNumber <= 1)
+			.disabled(currentBackgroundImageNumber <= 0)
 			//
 			//----------------------------------------
 			// rnd image

@@ -385,6 +385,9 @@ struct SettingsScreen: View {
 
     var body: some View {
         configuredSettingsScreen
+            .onAppear {
+                restorePreviewFromAppliedBackground()
+            }
             .onChange(of: selectedDocumentName) {
                 previewImageURL = nil
             }
@@ -1231,29 +1234,59 @@ struct SettingsScreen: View {
 
     private var imageControlButtons: some View {
         SettingsImageControlsSection(
-            canGoPrevious: (selectedImagePosition ?? 0) > 0,
-            canGoNext: (selectedImagePosition ?? 0) < maximumSelectableImageIndex,
+            canGoPrevious: canPreviewPreviousImage,
+            canGoNext: canPreviewNextImage,
             onReset: {
-                persistSelectedImage(nil)
+                selectPreviewImage(nil)
             },
             onRandom: {
-                guard maximumSelectableImageIndex > 0 else { return }
-                let randomIndex = Int.random(in: 0..<maximumSelectableImageIndex)
-                persistSelectedImage(availableImageURLs[randomIndex])
+                let imageURLs = availableImageURLs
+                guard !imageURLs.isEmpty else { return }
+                let candidateURLs = imageURLs.filter { imageURL in
+                    imageURL.path != previewImageURL?.path
+                }
+                selectPreviewImage(candidateURLs.randomElement() ?? imageURLs.first)
             },
             onPrevious: {
-                guard let selectedImagePosition, selectedImagePosition > 1 else {
-                    persistSelectedImage(nil)
-                    return
-                }
-                persistSelectedImage(availableImageURLs[selectedImagePosition - 2])
+                guard let previewImagePosition, previewImagePosition > 1 else { return }
+                selectPreviewImage(availableImageURLs[previewImagePosition - 2])
             },
             onNext: {
-                let currentPosition = selectedImagePosition ?? 0
-                guard currentPosition < maximumSelectableImageIndex else { return }
-                persistSelectedImage(availableImageURLs[currentPosition])
+                guard !availableImageURLs.isEmpty else { return }
+                let nextIndex = previewImagePosition ?? 0
+                guard availableImageURLs.indices.contains(nextIndex) else { return }
+                selectPreviewImage(availableImageURLs[nextIndex])
             }
         )
+    }
+
+    private var previewImagePosition: Int? {
+        guard let previewImageURL,
+              let imageIndex = availableImageURLs.firstIndex(where: { $0.path == previewImageURL.path }) else {
+            return nil
+        }
+
+        return imageIndex + 1
+    }
+
+    private var canPreviewPreviousImage: Bool {
+        guard let previewImagePosition else { return false }
+        return previewImagePosition > 1
+    }
+
+    private var canPreviewNextImage: Bool {
+        guard !availableImageURLs.isEmpty else { return false }
+        guard let previewImagePosition else { return true }
+        return previewImagePosition < availableImageURLs.count
+    }
+
+    private func selectPreviewImage(_ imageURL: URL?) {
+        previewImageURL = imageURL
+        imageScrollPositionIDStorage = imageURL?.path ?? ""
+    }
+
+    private func restorePreviewFromAppliedBackground() {
+        selectPreviewImage(selectedImageURL)
     }
 
     private func settingsBluePlaceholderButton(_ title: String) -> some View {

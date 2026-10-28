@@ -1,176 +1,215 @@
-A. Files, views, and locations inspected
-
-ESP32BLE/Scrns/Set_Screen/Btm_Area/Set_KB_Timing.swift
-
-• SettingsKeyboardTimingSection: lines 3–227
-• ON/OFF shared sliderRow: lines 91–140
-• REC OFF row: lines 142–198
-• iPhone IMAGE row: lines 200–216
-• iPad/iPhone branching: lines 23–36
-
-ESP32BLE/Scrns/Set_Screen/Btm_Area/Set_ImgCtlsSection.swift
-
-• SettingsImageControlsSection: lines 3–128
-• Four cyan image controls: lines 22–35
-• Full-width image-controls modifier: line 37
-
-ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
-
-• Shared timing label width (90 points): line 294
-• SettingsKeyboardTimingSection wiring and bindings: lines 1588–1602
-• Image-control callback construction: lines 1232–1256
-• Parent Settings bottom-panel layout: lines 1286–1301
-
-B. ON and OFF reference geometry on iPhone
-
-ON and OFF use the same sliderRow implementation:
-
-• Fixed label column: 90 points.
-• Label-to-content spacing: 9 points.
-• No arrow buttons on iPhone.
-• Slider/value column has 12-point horizontal padding on both sides.
-• The two rows are grouped in a VStack, then placed as the leading content of an HStack followed by a Spacer:
-
-Set_KB_Timing.swift:50–58
-
-This leading-group-plus-Spacer arrangement establishes the current correct reference width.
-
-C. REC OFF geometry on iPhone
-
-REC OFF now correctly uses the same internal row geometry as ON/OFF:
-
-• 90-point label column: line 147.
-• 9-point HStack spacing: line 143.
-• 12-point horizontal slider-column padding: line 180.
-• No iPhone arrow buttons.
-
-Therefore, the prior iPad correction from spacing 0 to spacing 9 is present and correct.
-
-The remaining difference is its parent layout. On iPhone, REC OFF is inserted directly into the section’s outer VStack:
-
-Set_KB_Timing.swift:30–32
-
-It is not contained in the ON/OFF-style leading group followed by a trailing Spacer. Consequently, SwiftUI can offer its flexible Slider a different width proposal from the one received by the ON/OFF group. This is the confirmed structural cause of the remaining iPhone inconsistency.
-
-D. IMAGE geometry on iPhone
-
-IMAGE has two confirmed layout differences from ON/OFF:
-
-1. Its row uses 4-point spacing rather than 9 points:
-
-Set_KB_Timing.swift:201
-
-This places the IMAGE slider column 5 points farther left than the timing-slider columns.
-
-2. The Slider shares a VStack with the four cyan image controls:
-
-Set_KB_Timing.swift:207–214
-
-Those controls have an 18-point HStack spacing and 28-point symbols:
-
-Set_ImgCtlsSection.swift:22–35, 56–58, 70–72
-
-The image-controls view also declares:
-
-.frame(maxWidth: .infinity, alignment: .leading)
-
-at Set_ImgCtlsSection.swift:37.
-
-This means the IMAGE slider’s available width is influenced by both its direct placement in the outer VStack and the image-control row, rather than by the ON/OFF reference grouping.
-
-E. Confirmed causes
-
-REC OFF:
-• Its internal spacing and padding now match ON/OFF.
-• Its parent containment does not: it is a direct flexible child of the outer VStack, unlike the ON/OFF leading group.
-
-IMAGE:
-• It has a 4-point gap instead of the 9-point reference gap.
-• Its Slider shares a flexible column with the image controls.
-• It is also a direct child of the outer VStack rather than being contained in the ON/OFF-style leading group.
-
-There is no difference in slider binding, range, step, timing logic, persistence, or iPad arrow-button logic causing the visual width differences.
-
-F. Recommended minimal iPhone-only REC OFF correction
-
-Within the existing else branch at Set_KB_Timing.swift:30–32, place speechRecognitionAutoOffRow in the same leading-content-plus-trailing-Spacer arrangement used by ON/OFF at lines 50–58.
-
-This is iPhone-only because the else branch is selected only when isPad is false. It leaves the successful iPad branch at lines 23–29 unchanged.
-
-G. Recommended minimal iPhone-only IMAGE correction
-
-Two narrowly scoped iPhone-only adjustments are indicated:
-
-1. Change the IMAGE row’s HStack spacing from 4 to 9 at Set_KB_Timing.swift:201, matching ON/OFF and REC OFF.
-
-2. Place iPhoneImageControls in the same leading-content-plus-trailing-Spacer arrangement as the ON/OFF reference group. The IMAGE view is only included under if !isPad at lines 34–36, so this cannot affect iPad.
-
-This is the smallest consistent layout approach because it preserves the current controls and establishes the same width proposal pattern as ON/OFF.
-
-H. Exact source locations for a future correction
-
-REC OFF:
-• Set_KB_Timing.swift:30–32
-
-IMAGE:
-• Set_KB_Timing.swift:34–36
-• Set_KB_Timing.swift:201
-
-No change is indicated in Set_ImgCtlsSection.swift unless device testing shows that the image-control row’s intrinsic minimum width still exceeds the ON/OFF reference width after the containment correction.
-
-I. ON/OFF preservation
-
-The recommended changes do not require changing:
-
-• sliderRow
-• ON/OFF label width
-• ON/OFF spacing
-• ON/OFF padding
-• ON/OFF Slider frames
-• ON/OFF ranges, steps, bindings, or actions
-
-The current ON/OFF appearance remains the reference.
-
-J. iPad preservation
-
-The recommended changes are confined to existing !isPad branches.
-
-The following iPad code remains untouched:
-
-• REC OFF iPad containment and 520-point maximum-width handling: Set_KB_Timing.swift:23–29
-• iPad arrows and timing controls: lines 98–111, 125–138, 149–162, 183–196
-• iPad IMAGE presentation, which is not constructed through iPhoneImageControls.
-
-K. Smaller-iPhone risks
-
-The proposed containment changes should reduce, not increase, the horizontal demand of REC OFF and IMAGE because the trailing Spacer absorbs unused width.
-
-The remaining device-test risk is the intrinsic width of the four-image-control row. If it is wider than the ON/OFF reference width on a particular small landscape iPhone, a follow-up would need one measured, iPhone-only width constraint for the IMAGE content column. There is no existing fixed width constant in source that safely identifies that value without visual testing.
-
-L. Functionality unaffected
-
-The layout-only correction can leave unchanged:
-
-• Keyboard timing ON/OFF values and ranges.
-• Speech-recognition auto-off binding and scheduling.
-• Image opacity binding and range.
-• AppStorage persistence.
-• iPad arrow controls.
-• Image reset, random, previous, and next controls.
-• Settings navigation and toolbar behavior.
-
-M. Manual regression checklist
-
-1. On iPhone 17, confirm all four tracks have identical left and right ends.
-2. On iPhone XS Max, repeat in the supported Settings orientation.
-3. Confirm ON and OFF have not moved or changed width.
-4. Confirm REC OFF remains aligned when displaying values such as “1 min,” “11 min,” and “Never.”
-5. Confirm IMAGE remains aligned with all four cyan controls visible and tappable.
-6. Confirm image reset, random, previous, and next actions still work.
-7. Confirm all timing sliders retain their existing ranges and values.
-8. Confirm opacity slider still updates image opacity.
-9. Confirm iPad Pro, iPad Air, and iPad mini layouts remain unchanged.
-
-N. Physical-device uncertainty
-
-The source fully confirms the differing containment and IMAGE spacing. Exact rendered Slider widths are ultimately resolved by SwiftUI’s runtime layout proposals, so physical testing is still required after any correction—particularly to verify the IMAGE icon row does not impose a larger intrinsic minimum width on the smallest supported iPhone.
+No files were modified and no app was run.
+
+A. Files inspected
+
+• ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
+• Background AppStorage: lines 1055–1057.
+• Toolbar construction and values: lines 1271–1309.
+• Previous/Next/Random/persistence: lines 3247–3315.
+
+• ESP32BLE/Scrns/Main_Screen/Toolbars/Main_TopToolbar.swift
+• Single shared toolbar type: line 9.
+• Background Previous button: lines 177–197.
+• Random button: lines 200–213.
+• Next button: lines 216–230.
+
+• ESP32BLE/Scrns/ContentView.swift
+• Shared AppStorage: lines 182–184.
+• Background-key reactions: lines 371–385.
+• Reload logic: lines 595–640.
+• Per-screen restoration: lines 1306–1370.
+• Actual background rendering: lines 2951–2964.
+
+• ESP32BLE/Scrns/Main_Screen/Main_BG_img.swift
+• Available-image ordering: lines 5–29.
+• Legacy index-to-image lookup: lines 31–35.
+
+B. Stage C1 source changes are present
+
+Confirmed in the current working tree:
+
+• Previous from index 1 calls persistMainBackgroundImage(nil) at Main_Screen.swift lines 3253–3255.
+• BLACK persistence clears path, name, and index at lines 3303–3306.
+• Random starts with a nil/BLACK candidate at lines 3282–3283.
+• Toolbar Previous is disabled only when currentBackgroundImageNumber <= 0 at Main_TopToolbar.swift line 197.
+
+C. Actual Previous disabled expression
+
+The visible cyan image-Previous button uses exactly:
+
+.disabled(currentBackgroundImageNumber <= 0)
+	
+	There is no other condition on that button.
+	
+	The toolbar’s outer HStack has no .disabled(...) modifier. No ancestor in this toolbar disables the image-Previous control.
+	
+	D. Previous button call path
+	
+	Visible cyan image Previous button:
+	
+	Main_TopToolbar.swift line 185
+	→ selectPreviousBackgroundImage() line 187
+	→ closure supplied by MainScreen.swift line 1294
+	→ MainScreen.selectPreviousBackgroundImage() lines 3247–3263
+	→ persistMainBackgroundImage(nil) for index 1
+	→ shared AppStorage keys change
+	→ ContentView observes the keys, lines 371–385
+	→ reloadBackgroundImage() clears the loaded image when the canonical BLACK state is present, lines 621–626
+	→ mainScreenBackgroundView reveals its Color.black base, lines 2952–2961.
+	
+	E. Current background-number origin
+	
+	currentBackgroundImageNumber is an Int property of MainScreenToolbarContent, declared at Main_TopToolbar.swift line 48.
+	
+	It is supplied directly and without conversion from:
+	
+	selectedBackgroundImageIndex
+	
+	at Main_Screen.swift line 1276.
+	
+	There is no clamping, offset, max, min, or separate calculation between the AppStorage index and the toolbar input.
+	
+	Expected values:
+	
+	• BLACK: 0
+	• aces.jpg, first sorted image: 1
+	• Second image: 2
+	• Last image: availableBackgroundImageURLs.count
+	
+	Therefore, if aces.jpg is the actual first selected main background, the source requires the toolbar input to be 1 and the cyan image-Previous button must be enabled.
+	
+	F. Main Previous callback
+	
+	The callback is correct in the current source:
+	
+	• Index 0: returns immediately.
+	• Index 1: persists nil/BLACK.
+	• Index 2+: persists the preceding actual image.
+	• A stale positive index can still fail the image-array bounds guard, preserving prior behavior.
+	
+	If the button receives index 1 and is tapped, the callback should select BLACK.
+	
+	G. Random verification
+	
+	BLACK remains a genuine Random candidate.
+	
+	At Main_Screen.swift lines 3282–3299:
+	
+	• Candidate array begins as [nil].
+	• Actual image URLs are appended.
+	• When BLACK/index 0 is current, nil is removed, leaving all actual images.
+	• When a valid actual image is current, only that image is removed; nil/BLACK remains.
+	• The selected optional candidate is passed to persistMainBackgroundImage(_:).
+	
+	There is no compactMap that removes nil/BLACK.
+	
+	H. Can aces.jpg be visible while the toolbar receives index 0?
+	
+	Under canonical state, no.
+	
+	With:
+	
+	• index = 0
+	• name = ""
+	• path = ""
+	
+	ContentView clears loadedBackgroundImage and renders black.
+	
+	A temporary or inconsistent state could theoretically display aces.jpg while index is 0 if either selectedBackgroundImagePath or selectedBackgroundImageName still contains aces.jpg. reloadBackgroundImage() resolves path and name before checking the index, at ContentView.swift lines 598–618.
+	
+	However, the current Stage C1 nil persistence helper clears all three values. Every relevant per-screen BLACK restoration path also clears all three values:
+	
+	• ContentView.swift lines 1314–1316.
+	• ContentView.swift lines 1354–1356.
+	
+	Source inspection found no steady-state writer that deliberately leaves:
+	
+	• index = 0
+	• name/path = aces.jpg
+	
+	Therefore, the current source does not explain an ongoing aces-visible/index-0 condition.
+	
+	I. Background restoration
+	
+	A canonical BLACK selection is not replaced with Image 1 by the current source:
+	
+	• Empty path and empty name bypass both path/name lookup branches.
+	• Index 0 enters the no-image branch.
+	• The loaded image is cleared.
+	
+	Per-screen restoration similarly clears all keys when the screen has no configured image.
+	
+	The existing stale-reference fallback is separate: a nonempty invalid path/name combined with a positive index can fall back to an indexed image. That does not apply to canonical BLACK.
+	
+	J. iPhone/iPad behavior
+	
+	There is one MainScreenToolbarContent implementation and one background-image Previous button.
+	
+	iPhone and iPad differ only in spacing/layout around the same controls. They receive the same:
+	
+	• selectedBackgroundImageIndex
+	• Previous callback
+	• Previous disabled expression
+	• Random callback
+	• Next callback
+	
+	No device-specific background Previous path or alternate toolbar instance was found.
+	
+	K. Important visual distinction
+	
+	The toolbar contains two left-facing triangle buttons:
+	
+	• Document Previous: Main_TopToolbar.swift lines 116–130.
+	• Disabled when currentFileNumber <= 1.
+	• Uses the normal toolbar foreground color.
+	
+	• Background-image Previous: lines 177–197.
+	• Cyan.
+	• Disabled only when currentBackgroundImageNumber <= 0.
+	
+	The physical test should confirm it is the cyan image Previous button that appears disabled, rather than the document Previous button.
+	
+	L. Confirmed root-cause status
+	
+	The Stage C1 source itself is correct for the required Image 1 → BLACK behavior.
+	
+	The reported runtime result means one of these conditions must be true:
+	
+	1. The app installed and tested on the device was not rebuilt/reinstalled from the current source containing line 197’s <= 0 condition.
+	
+	2. The disabled control observed was the document Previous control rather than the cyan background-image Previous control.
+	
+	3. At runtime, the toolbar received index 0 while an image remained visually present due to an inconsistent transient AppStorage state. Current source inspection does not reveal a stable code path that produces that state.
+	
+	The source does not support an explanation based on an incorrect Stage C1 toolbar condition, incorrect MainScreen callback wiring, a second toolbar implementation, or an iPhone/iPad-specific disabled path.
+	
+	M. Smallest safe correction recommendation
+	
+	Do not alter <= 0 to another number. It is already the correct expression.
+	
+	First verify that the device is running the current build and that the tested control is the cyan image Previous button.
+	
+	If the issue persists with the current device build, add a narrowly scoped DEBUG-only runtime probe before changing behavior. It should log, when the toolbar is rendered and when image Previous is tapped:
+	
+	• selectedBackgroundImageIndex
+	• selectedBackgroundImageName
+	• selectedBackgroundImagePath
+	• currentBackgroundImageNumber
+	• available image count
+	• first image filename
+	• whether image Previous is enabled
+	• callback entry
+	• resulting key values after persistence
+	
+	That evidence will distinguish a deployment issue from an actual state-synchronization defect.
+	
+	N. Regression checklist
+	
+	• Confirm the physical device build contains the Stage C1 source.
+	• Confirm the tested button is cyan image Previous, not document Previous.
+	• With aces.jpg selected, verify the toolbar receives/display state corresponding to index 1.
+	• Press cyan image Previous from aces.jpg; verify all three keys become canonical BLACK values and the screen becomes black.
+	• From BLACK, verify image Previous is disabled and Next selects aces.jpg.
+	• Verify Random can select BLACK from an actual image.
+	• Verify Settings opens with black preview and no image selection after BLACK is applied.
+	• Verify iPhone and iPad use the same behavior.

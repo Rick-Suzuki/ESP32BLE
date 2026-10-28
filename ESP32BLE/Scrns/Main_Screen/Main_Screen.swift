@@ -3246,8 +3246,16 @@ Tapping a row inserts the key code at the cursor.
 
     private func selectPreviousBackgroundImage() {
         let imageURLs = availableBackgroundImageURLs
-        guard selectedBackgroundImageIndex > 1,
-              imageURLs.indices.contains(selectedBackgroundImageIndex - 2) else {
+        guard selectedBackgroundImageIndex > 0 else {
+            return
+        }
+
+        if selectedBackgroundImageIndex == 1 {
+            persistMainBackgroundImage(nil)
+            return
+        }
+
+        guard imageURLs.indices.contains(selectedBackgroundImageIndex - 2) else {
             return
         }
 
@@ -3271,19 +3279,34 @@ Tapping a row inserts the key code at the cursor.
             return
         }
 
-        let currentIndex = selectedBackgroundImageIndex - 1
-        let candidateURLs = imageURLs.count > 1
-            ? imageURLs.enumerated().compactMap { index, imageURL in
-                index == currentIndex ? nil : imageURL
-            }
-            : imageURLs
+        var candidateURLs: [URL?] = [nil]
+        candidateURLs.append(contentsOf: imageURLs.map { $0 as URL? })
 
-        if let randomImageURL = candidateURLs.randomElement() {
-            persistMainBackgroundImage(randomImageURL)
+        if selectedBackgroundImageIndex == 0 {
+            candidateURLs.removeAll { $0 == nil }
+        } else {
+            let currentIndex = selectedBackgroundImageIndex - 1
+            if imageURLs.indices.contains(currentIndex) {
+                let currentImageURL = imageURLs[currentIndex]
+                candidateURLs.removeAll { $0?.path == currentImageURL.path }
+            }
         }
+
+        guard let randomImageURL = candidateURLs.randomElement() else {
+            return
+        }
+
+        persistMainBackgroundImage(randomImageURL)
     }
 
-    private func persistMainBackgroundImage(_ imageURL: URL) {
+    private func persistMainBackgroundImage(_ imageURL: URL?) {
+        guard let imageURL else {
+            selectedBackgroundImagePath = ""
+            selectedBackgroundImageName = ""
+            selectedBackgroundImageIndex = 0
+            return
+        }
+
         selectedBackgroundImagePath = imageURL.path
         selectedBackgroundImageName = imageURL.lastPathComponent
         if let imageIndex = availableBackgroundImageURLs.firstIndex(where: { $0.path == imageURL.path }) {
