@@ -67,6 +67,7 @@ extension MainScreen {
         }
 
         unmatchedSpeechText = nil
+        let outputSourceMetadata = outputSourceMetadata(for: matchingEntry)
 
         if containsWaitCommand(in: matchingEntry.sendTexts) {
             startWaitChainCommandTokens(
@@ -107,7 +108,8 @@ extension MainScreen {
 
             guard sendKeyboardOutputTokens(
                 bluetoothSendTexts,
-                respectsButtonMode: true
+                respectsButtonMode: true,
+                sourceMetadata: outputSourceMetadata
             ) else {
                 return false
             }
@@ -209,6 +211,20 @@ extension MainScreen {
             entriesWithAlternateText.filter { matchesEntry($0.element) }
         }
 
+        func partialMatchResult() -> SpeechMatchResult {
+            let partialMatches = matchingEntries { entry in
+                guard let alternateDisplayText = entry.alternateDisplayText else {
+                    return false
+                }
+
+                return speechText(
+                    normalizedSpeechMatchText(alternateDisplayText),
+                    containsWholeTokenPhrase: recognizedText
+                )
+            }
+            return matchResult(for: partialMatches)
+        }
+
         let exactMatches = matchingEntries { entry in
             guard let alternateDisplayText = entry.alternateDisplayText else {
                 return false
@@ -232,7 +248,11 @@ extension MainScreen {
         guard speechRecognition.recognitionLocale.language.languageCode?.identifier.lowercased() == "en" else {
             let exactMatchResult = matchResult(for: exactMatches)
             if case .noMatch = exactMatchResult {
-                return matchResult(for: spaceStrippedMatches)
+                let spaceStrippedMatchResult = matchResult(for: spaceStrippedMatches)
+                if case .noMatch = spaceStrippedMatchResult {
+                    return partialMatchResult()
+                }
+                return spaceStrippedMatchResult
             }
             return exactMatchResult
         }
@@ -260,8 +280,37 @@ extension MainScreen {
             candidatesByOffset[candidate.offset] = candidate.element
         }
 
-        return matchResult(for: candidatesByOffset.map { (offset: $0.key, element: $0.value) })
+        let existingMatchResult = matchResult(
+            for: candidatesByOffset.map { (offset: $0.key, element: $0.value) }
+        )
+        if case .noMatch = existingMatchResult {
+            return partialMatchResult()
+        }
+        return existingMatchResult
 
+    }
+
+    private func speechText(
+        _ candidateText: String,
+        containsWholeTokenPhrase phraseText: String
+    ) -> Bool {
+        let candidateTokens = candidateText.split(whereSeparator: \.isWhitespace).map(String.init)
+        let phraseTokens = phraseText.split(whereSeparator: \.isWhitespace).map(String.init)
+
+        guard !candidateTokens.isEmpty,
+              !phraseTokens.isEmpty,
+              phraseTokens.count <= candidateTokens.count else {
+            return false
+        }
+
+        let lastStartIndex = candidateTokens.count - phraseTokens.count
+        for startIndex in 0...lastStartIndex {
+            let candidateSlice = candidateTokens[startIndex..<(startIndex + phraseTokens.count)]
+            if Array(candidateSlice).elementsEqual(phraseTokens) {
+                return true
+            }
+        }
+        return false
     }
 
     func handleSpeechRecognitionToggle() {

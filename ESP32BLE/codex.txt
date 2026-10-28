@@ -1,592 +1,257 @@
-A. Exact IPadSmartButtonPanel declaration
+A. Relevant logging code
+
+ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift
+
+• Lines 656–675: main-grid button diagnostic prints.
+• 🐞 .sp is printed at line 659 from the command portion of entry.rawLine.
+• 🐞 .sp → internal is printed at line 673 for each entry.sendTexts token.
+• These prints occur only when db_btnCode is enabled.
+
+• Lines 378–412: ESPOutputProbe.
+• ESPOutputProbe.printGeneratedItems(_:), lines 382–387, owns the [ESP-OUTPUT] sequence counter and log format.
+• The current logging method accepts only [String] output items.
+
+• Lines 1175–1231: sendKeyboardOutputTokens(_:respectsButtonMode:).
+• Converts command tokens to keyboard output tokens.
+• Calls ESPOutputProbe.printGeneratedItems(keyboardOutputTokens) at line 1196.
+• This is the only current application source of [ESP-OUTPUT].
+
+ESP32BLE/Scrns/MacConnectionManager.swift
+
+• Lines 7–38: ESPMacTransportProbe.
+• [ESP-MAC-TX] is printed by printPayload(_:) at line 11.
+
+• Lines 285–345: Mac Helper send flow.
+• sendSmartScriptKeyboardTokens(_:), line 290.
+• sendFramedMessage(_:requiresAuthentication:), lines 328–345.
+• [ESP-MAC-TX] is printed at line 335 immediately before NWConnection.send.
+  
+ESP32BLE/Scrns/Main_Screen/Main_GridSection.swift
+
+• Lines 466–484: normal main-grid button tap.
+• The SwiftUI button action calls sendLine(entry) at line 482.
+• That resolves to sendMainGridEntry(_:defaultMIDIChannel:).
+
+ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift
+
+• Lines 624 onward: sendMainGridEntry(_:defaultMIDIChannel:).
+• The originating FunctionKeyEntry is available throughout this direct main-grid execution path.
+• The normal output path reaches sendKeyboardOutputTokens through the local sendBluetoothIfNeeded() closure at lines 740–756.
+
+B. Existing originating-button data
+
+ESP32BLE/Scrns/ContentView.swift
+
+• Lines 68–83: FunctionKeyEntry.
+• rawLine: original stored button definition.
+• sendTexts: parsed command tokens.
+• alternateDisplayText: stored right-side display data.
+• buttonColorCode, isBlankPlaceholder, and isHiddenInNormalMode.
+
+• Lines 2679–2724: functionKeyEntry(from:).
+• Parses the stored command::display button line.
+• Preserves hidden-button metadata separately.
+• Parses command content into sendTexts.
+• Stores display content in alternateDisplayText.
+
+ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift
+
+• Lines 2728–2747: parsedSFSymbolDisplay(for:).
+• Extracts the source SF Symbol name and subtitle from alternateDisplayText.
+• Validates the symbol through UIImage(systemName:).
+• For a stored value such as space:Space:
+• SF Symbol name: space
+• button text/subtitle: Space
+
+• Lines 425–443: buttonTitle(for:defaultMIDIChannel:).
+• Produces the rendered title according to the current display mode.
+• This may differ from an SF Symbol subtitle, command-default label, or raw alternate text.
+
+CONFIRMED: SF Symbol name and visible text are not independent FunctionKeyEntry stored fields. They are derived from the originating entry’s display-side data, not from the command string.
+
+C. Main-grid call path
+
+Normal button tap:
+
+Main_GridSection.swift button action
+→ sendLine(entry)
+→ sendMainGridEntry(entry:defaultMIDIChannel:)
+→ local sendBluetoothIfNeeded()
+→ sendKeyboardOutputTokens(_:respectsButtonMode:)
+→ ESPOutputProbe.printGeneratedItems(_:)
+→ [ESP-OUTPUT]
+
+Mac Helper mode then continues:
+
+sendKeyboardOutputTokens
+→ macConnection.sendSmartScriptKeyboardTokens(_:)
+→ sendKeyboardMessages(_:)
+→ sendFramedMessage(_:requiresAuthentication:)
+→ [ESP-MAC-TX]
+
+ESP32 mode then continues:
+
+sendKeyboardOutputTokens
+→ ble.sendLine(_:)
+→ BLE outgoing queue.
+
+D. Availability of source data at the logging point
+
+CONFIRMED: the originating FunctionKeyEntry is not directly available at the current [ESP-OUTPUT] logging point.
+
+sendKeyboardOutputTokens currently receives only:
+
+• [String] tokens
+• respectsButtonMode
+
+By line 1196, the source button entry has been discarded.
+
+The metadata is available earlier for direct main-grid activation and speech-recognition activation, but it is not passed to the shared output function.
+
+E. Special cases
+
+Speech recognition
+
+ESP32BLE/Scrns/Main_Screen/Speech Recognition/SR_Support.swift
+
+• Lines 54–69: speech matching produces matchingEntry.
+• Lines 71–155: speech activation processes that same entry.
+• Lines 103–118: speech calls sendKeyboardOutputTokens.
+
+CONFIRMED: speech recognition has the matched source entry available before sending. It currently does not pass it to [ESP-OUTPUT].
+
+Wait/delayed command chains
+
+Main_ButtonBehavior.swift
+
+• Lines 942–962: startWaitChainCommandTokens.
+• Lines 975–1158: runWaitChainCommandTokens.
+
+The delayed-task API already receives sourceEntry: FunctionKeyEntry?, and direct button and speech callers supply it:
+
+• Main-grid activation: lines 696–702.
+• Speech activation: SR_Support.swift lines 71–77.
+
+However, runWaitChainCommandTokens currently discards it in its signature at line 977:
+
+sourceEntry _: FunctionKeyEntry?
+
+CONFIRMED: delayed command chains can preserve reliable source metadata, but they do not currently do so.
+
+Command chains
+
+One originating button can produce multiple [ESP-OUTPUT] events:
+
+• Multiple generated keyboard tokens in one output call.
+• Separate modifier-plus-key command batches.
+• Wait-chain command output after one or more delays.
+
+A source snapshot passed alongside each output batch would reliably associate all generated events with the originating button.
+
+MIDI buttons
+
+Main_ButtonBehavior.swift lines 630–649 show MIDI control-change handling sends directly through:
+
+macConnection.sendAuthenticatedCommand(...)
+
+This bypasses sendKeyboardOutputTokens and therefore does not produce [ESP-OUTPUT]. It can produce [ESP-MAC-TX].
+
+Keyboard screen
+
+KeyboardScreen sends directly through macConnection.sendKeyboardTokens, ble.sendLine, or ble.sendString.
+
+It bypasses sendKeyboardOutputTokens, so it does not produce [ESP-OUTPUT]. Mac output can still produce [ESP-MAC-TX].
+
+Quick panel Preview/Play and editor test execution
+
+Main_Screen.swift lines 6092–6168 contains testEditingSlotText().
+
+It calls sendKeyboardOutputTokens at lines 6145–6148 with editor text, not a persisted FunctionKeyEntry. Therefore it currently generates [ESP-OUTPUT] without a source button identity.
+
+Modifier-function-key helper
+
+SR_Support.swift lines 409–418 calls sendKeyboardOutputTokens with generated modifier/function-key tokens and no source button entry.
+
+Timer completion
+
+Main_ButtonBehavior.swift lines 2574–2580 provides a timer-completion closure that receives an entry and sends its Bluetooth output through sendKeyboardOutputTokens.
+
+This can produce [ESP-OUTPUT]; the entry is available in that closure, but it is not currently propagated to the logger.
+
+F. BLE versus Mac Helper behavior
 
 CONFIRMED
 
-File:
-ESP32BLE/Scrns/Main_Screen/Main_EditorShellViews.swift
+[ESP-OUTPUT] is shared by both output modes. It is emitted before the output-mode switch in sendKeyboardOutputTokens, at line 1196.
 
-Declaration:
-Lines 170–232
+Therefore it logs generated keyboard items for:
 
-Complete generic declaration:
+• Mac Helper mode
+• ESP32 BLE mode
+• Even .none output mode, before the not-connected alert is shown
 
-struct IPadSmartButtonPanel<
-	BrightnessSliderColumn: View,
-	
-	Preview: View,
-	
-	ClearPreviewBackground: View,
-	
-	LowerEditingArea: View,
-	
-	PanelBorder: View
-	
-	: View
-	
-	The five generic View parameters are:
-	
-	1. BrightnessSliderColumn
-	2. Preview
-	3. ClearPreviewBackground
-	4. LowerEditingArea
-	5. PanelBorder
-	
-	Stored builder closures, lines 177–182:
-	
-	@ViewBuilder let brightnessSliderColumn: () -> BrightnessSliderColumn
-	@ViewBuilder let preview: () -> Preview
-	@ViewBuilder let clearPreviewBackground: () -> ClearPreviewBackground
-	@ViewBuilder let lowerEditingArea: () -> LowerEditingArea
-	@ViewBuilder let panelBorder: () -> PanelBorder
-	
-	There is no handwritten initializer. Swift synthesizes a memberwise initializer corresponding to these stored properties.
-	
-	Its body, lines 199–231:
-	
-	• Outer VStack
-	• Upper HStack containing:
-	• brightnessSliderColumn()
-	• nested VStack containing preview()
-	• upper HStack background closure invoking clearPreviewBackground()
-	• lowerEditingArea()
-	• outer background Color.black
-	• overlay closure invoking panelBorder()
-	• clipped()
-	
-	The panel itself has no recursive calls.
-	
-	B. Five generic arguments and their types
-	
-	CONFIRMED
-	
-	Call site:
-	ESP32BLE/Scrns/Main_Screen/Main_Screen.swift, lines 4269–4308
-	
-	1. BrightnessSliderColumn
-	
-	Call-site expression:
-	brightnessSliderColumn: {
-	smartButtonBrightnessSliderColumn
-	
-	}
-	
-	Implementation:
-	Main_Screen.swift, lines 4310–4319
-	
-	Declared return:
-	some View
-	
-	Content:
-	Slider with rotationEffect, frame, tint, onChange, and another frame.
-	
-	Metadata complexity:
-	Low to moderate. It is a modifier chain over Slider, with an onChange closure and Binding<Double>. It is much smaller than the preview or lower editor area.
-		
-		2. Preview
-		
-		Call-site expression:
-		preview: {
-		smartButtonPreview()
-		
-		}
-		
-		Implementation:
-		Main_Screen.swift, lines 4493–4617
-		
-		Declared return:
-		some View, with @ViewBuilder
-		
-		Content:
-		• Conditional branch for smartIsButtonHidden.
-		• Non-hidden branch uses Group.
-		• Nested conditional for whether text parses as an SF Symbol.
-		• SF Symbol branch contains VStack, Image, SmartPreviewTextView, bindings, two callback closures, frames, padding, foreground style, and offset.
-		• Ordinary-text branch contains SmartPreviewTextView, bindings, two callback closures, frame calculation, and padding.
-		• Shared modifier chain: frames, background, clip shape, two overlays, editorGeometryProbe, final frame.
-		• Preview background is itself a nested @ViewBuilder hierarchy.
-		
-		Metadata complexity:
-		High.
-		
-		The returned concrete type contains conditional-content wrappers for:
-		• hidden versus visible preview
-		• SF Symbol versus ordinary text
-		• iPad border style versus iPhone border style
-		• preview background’s image-present versus image-absent branch
-		• preview background’s color-present versus clear branch
-		
-		SmartPreviewTextView is a concrete UIViewRepresentable, defined in:
-		ESP32BLE/Scrns/Main_Screen/Main_SmartEditorTextInputs.swift, line 191.
-		
-		It is not itself generic, but it carries bindings and callback closures.
-		
-		3. ClearPreviewBackground
-		
-		Call-site expression:
-		clearPreviewBackground: {
-		smartButtonClearPreviewBackground
-		
-		}
-		
-		Implementation:
-		Main_Screen.swift, lines 4977–4979
-		
-		Declared return:
-		some View
-		
-		Content:
-		Color.black
-		
-		Metadata complexity:
-		Very low.
-		
-		4. LowerEditingArea
-		
-		Call-site expression:
-		lowerEditingArea: {
-		smartButtonLowerEditingArea(editorWidth: resolvedEditorWidth)
-		
-		}
-		
-		Implementation:
-		Main_Screen.swift, lines 4388–4404
-		
-		Declared return:
-		some View, with @ViewBuilder
-		
-		iPad branch:
-		smartButtonColorGrid, followed by two frame modifiers and editorGeometryProbe.
-		
-		smartButtonColorGrid:
-		Main_Screen.swift, lines 4415–4440
-		
-		It contains:
-		• VStack
-		• HStack of four independently built buttons
-		• ScrollView
-		• LazyVGrid
-		• ForEach over iPad/iPhone swatch data
-		• smartButtonColorSwatch for each color
-		
-		smartButtonColorSwatch:
-		Main_Screen.swift, lines 4819–4851
-		
-		It contains:
-		• Button
-		• ZStack
-		• conditional “black” text label
-		• overlay
-		• custom geometry-related modifiers
-		• accessibility modifier
-		
-		Metadata complexity:
-		High.
-		
-		Important detail:
-		Although the mini executes the isPad branch, the @ViewBuilder return type structurally represents both the iPad and iPhone branches. The iPhone alternative includes smartIPhoneButtonSharedEditingArea, which adds a further color-grid/SF-symbol-grid conditional path.
-		
-		5. PanelBorder
-		
-		Call-site expression:
-		panelBorder: {
-		smartPanelBorder(edges: .all)
-		
-		}
-		
-		Implementation:
-		Main_Screen.swift, lines 3613–3644
-		
-		Declared return:
-		some View
-		
-		Content:
-		ZStack with four conditional branches:
-		• top edge
-		• bottom edge
-		• leading edge
-		• trailing edge
-		
-		Each present edge is a Rectangle with fill and frame modifiers. The outer ZStack has allowsHitTesting(false).
-		
-		Metadata complexity:
-		Moderate. It is not large visually, but four ViewBuilder-style conditionals create nested conditional view types.
-		
-		C. Generated view complexity
-		
-		CONFIRMED
-		
-		The runtime concrete type for the iPad branch is conceptually:
-		
-		IPadSmartButtonPanel<
-			BrightnessSliderColumnConcreteType,
-			
-			PreviewConcreteType,
-			
-			ClearPreviewBackgroundConcreteType,
-			
-			LowerEditingAreaConcreteType,
-			
-			PanelBorderConcreteType
-			
-			
-			
-			The exact compiler-generated mangled types cannot be recovered from source without compiling/inspecting symbols, which this probe did not do.
-			
-			LIKELY
-			
-			The Preview and LowerEditingArea generic parameters are unusually large SwiftUI concrete types. They combine nested conditional content, modifier chains, bindings, callback closures, overlays, GeometryReader-based custom modifiers, LazyVGrid, ForEach, Button labels, and UIKit representable content.
-			
-			The outer smartButtonPanel return type adds another structural layer:
-			
-			Group {
-			if isPad {
-			
-			IPadSmartButtonPanel(...)
-			
-			} else {
-			
-			iPhone VStack(...)
-			
-			}
-			
-			}
-			
-			That is also a conditional concrete view type. The diagnostic code then constructs:
-			
-			AnyView(smartButtonPanel())
-			
-			at Main_Screen.swift:3354.
-			
-			The repeated editorGeometryProbe modifiers add generic ModifiedContent layers. Its implementation uses a ViewModifier with an if isEnabled branch:
-			Main_EditorGeometrySupport.swift, lines 83–102 and 135–142.
-			
-			This source composition is sufficiently complex to justify concern about generic metadata instantiation. It does not prove a Swift runtime defect by itself.
-			
-			D. Device execution paths
-			
-			CONFIRMED
-			
-			Routing is in Main_Screen.swift, lines 1371–1383.
-			
-			When editingSlotIndex is non-nil:
-			
-			• iPad and usesESP001DiagnosticEditor true:
-			esp001MiniDiagnosticEditor(...)
-			• iPad and usesESP001DiagnosticEditor false:
-			smartView(...)
-			• iPhone:
-			iPhoneSmartEditorPresentation(...)
-			
-			The diagnostic-device selector is:
-			Main_Screen.swift, lines 29–54.
-			
-			iPad mini 5:
-			iPad11,1 or iPad11,2
-			
-			iPad Air M2:
-			iPad14,8, iPad14,9, iPad14,10, or iPad14,11
-			
-			iPad Pro test device:
-			iPad7,1
-			
-			These three categories return true from usesESP001DiagnosticEditor.
-			
-			The current Test B selector is confirmed unchanged:
-			Main_Screen.swift, line 32:
-			activeMiniEditorTest = .buttonOnly
-			
-			Test B builds these diagnostic panels:
-			Main_Screen.swift, lines 3350–3356.
-			
-			Only the button slot is:
-			AnyView(smartButtonPanel())
-			
-			The other three slots are ESP001MiniDiagnosticEmptyPanel values.
-			
-			The diagnostic shell itself accepts AnyView for all four panels:
-			Main_EditorShellViews.swift, lines 3–45.
-			
-			Normal iPad smartView calls smartButtonPanel directly:
-			Main_Screen.swift, lines 3472–3476.
-			
-			iPhone uses iPhoneSmartEditorPresentation:
-			Main_Screen.swift, lines 3504–3572.
-			
-			The current iPhone structure is experimental and also constructs:
-			AnyView(smartButtonPanel(editorWidth: ...))
-			
-			at line 3571. However, isPad is false inside smartButtonPanel, so it takes the iPhone VStack branch, not IPadSmartButtonPanel.
-			
-			LIKELY
-			
-			For a current build on any mapped iPad device, the source-level IPadSmartButtonPanel specialization is the same:
-			
-			• Same generic arguments
-			• Same closures
-			• Same MainScreen type
-			• Same isPad branch
-			• Same binary architecture family
-			
-			Runtime values such as screen dimensions, current button text, background image presence, and debugEditorGeometry can change behavior and layout, but do not alter the generic parameter list of IPadSmartButtonPanel.
-			
-			UNPROVEN
-			
-			The reported working iPad Air M2 and iPad Pro results do not prove that they executed the identical runtime path in the identical build and selector state.
-			
-			In particular:
-			• The iPad Pro diagnostic route applies only to iPad7,1.
-			• The current source routes iPad Air M2 identifiers to the diagnostic editor.
-			• The historical console for iPad7,1 recorded smartView, so it reflects an earlier source/configuration state rather than proving the current path.
-			• No current Test B result was supplied for the Air M2 or Pro.
-			
-			There are no relevant #available checks in the button-panel presentation path. Availability checks found in the Main_Screen area concern speech recognition and toolbar behavior, not this panel.
-			
-			E. Potential root causes
-			
-			1. Stack exhaustion during generic metadata decoding
-			
-			UNPROVEN
-			
-			The backtrace has many repeated metadata-decoding frames. This is compatible with deep generic metadata work. It does not establish stack exhaustion: there is no reported stack-overflow diagnostic, guard-page address evidence, or an exceptionally deep application-level recursive call chain.
-			
-			2. Swift compiler-generated metadata issue
-			
-			LIKELY
-			
-			The crash occurs in:
-			swift::SubstGenericParametersFromMetadata
-			swift_getTypeByMangledName
-			__swift_instantiateConcreteTypeFromMangledNameV2
-			
-			and the first source-associated frame is the generic IPadSmartButtonPanel call at line 4274.
-			
-			That strongly supports a failure during compiler-generated type metadata instantiation for the SwiftUI composition. It does not identify whether the compiler-generated metadata is malformed, merely too complex for a runtime path, or being mishandled by the runtime.
-			
-			3. iPadOS 26.7.1 Swift runtime issue
-			
-			POSSIBLE, UNPROVEN
-			
-			The mini runs iPadOS 26.7.1, while reported working iPads run iPadOS 27.0.1 and 17.7.11. The crash is inside the OS Swift runtime, so OS-version behavior is a credible hypothesis.
-			
-			There is not enough evidence to attribute the issue to iPadOS 26.7.1 alone. Hardware, OS version, build history, runtime state, and diagnostic routing have not been controlled independently.
-			
-			4. Unexpected recursive generic requirements
-			
-			NOT SUPPORTED BY SOURCE INSPECTION
-			
-			No recursive source-level view construction was found:
-			smartButtonPanel does not call itself, directly or indirectly.
-			
-			The runtime’s recursive generic-requirement checking may be processing nested generic metadata, but there is no source-level generic recursion.
-			
-			5. Diagnostic AnyView wrapping
-			
-			POSSIBLE, UNPROVEN
-			
-			The failing mini route is:
-			AnyView(smartButtonPanel())
-			
-			Normal iPad smartView uses smartButtonPanel directly.
-			
-			AnyView is therefore a real difference between the diagnostic and normal iPad paths. However, it cannot prevent smartButtonPanel and IPadSmartButtonPanel from being formed; their concrete type still must be instantiated to supply AnyView.
-			
-			It may change the metadata-instantiation context or timing. It is not currently proven to be the cause.
-			
-			6. Invalid application state or memory access
-			
-			NOT SUPPORTED BY CURRENT EVIDENCE
-			
-			Test A proves that the diagnostic shell and its AnyView slots can instantiate and display.
-			
-			Test B proves that adding only smartButtonPanel reproduces the crash.
-			
-			The failure occurs during type metadata resolution before a source-level data-access frame appears. The source inspected does contain bindings, UIImage background use, and callback closures, but no evidence connects those values to this specific metadata crash.
-			
-			F. Comparison of possible corrections
-			
-			Approach A: Type-erasure at all five supplied ViewBuilder arguments
-			
-			Example concept:
-			Each supplied closure returns AnyView rather than its large concrete view type.
-			
-			Specific simplification:
-			IPadSmartButtonPanel would become specialized as:
-			
-			IPadSmartButtonPanel<AnyView, AnyView, AnyView, AnyView, AnyView>
-			
-			rather than five large compiler-generated concrete types.
-			
-			Likelihood of reducing this failure:
-			Moderate to high as a targeted experiment. It directly changes the generic metadata being instantiated at line 4274.
-			
-			Limitation:
-			Each child view must still be constructed before being placed in AnyView. If the failure is in a child’s own metadata, rather than in the five-argument panel specialization, the crash may move into that child construction.
-			
-			Functional and visual impact:
-			Expected none if each existing child is wrapped exactly as-is.
-			
-			Regression risk:
-			Low to moderate. AnyView changes SwiftUI structural identity and invalidation behavior. It can affect state preservation and animations if the erased view’s dynamic structure changes. This editor does contain conditional preview content and text-editing state, so this must be tested, not assumed safe.
-			
-			Affected devices:
-			All iPads that execute the iPad branch of smartButtonPanel. iPhones use the other branch.
-			
-			Approach B: Type-erasure inside IPadSmartButtonPanel
-			
-			Concept:
-			Make the panel non-generic and have it store five AnyView values, or five closures returning AnyView.
-			
-			Specific simplification:
-			Removes the five generic type parameters from IPadSmartButtonPanel itself.
-			
-			Likelihood of reducing this failure:
-			Similar to Approach A if the erasure occurs before generic specialization. It offers no clear technical advantage over A.
-			
-			Limitation:
-			If AnyView conversion happens only after generic inference of the original child types, it may merely relocate the same metadata work.
-			
-			Functional and visual impact:
-			Expected visually neutral if implemented exactly.
-			
-			Regression risk:
-			Moderate. It changes the reusable panel abstraction itself. The panel has one current call site, but it is used by every iPad through smartButtonPanel.
-			
-			Affected devices:
-			All iPads using the iPad branch.
-			
-			Approach C: Type-erasure at smartButtonPanel’s return boundary
-			
-			Concept:
-			Return AnyView from smartButtonPanel, or wrap the existing Group in AnyView.
-			
-			Specific simplification:
-			Erases the outer Group/conditional result from callers.
-			
-			Likelihood of reducing this failure:
-			Low.
-			
-			Reason:
-			The IPadSmartButtonPanel generic specialization must already be established inside smartButtonPanel before the outer return value can be erased. This approach is unlikely to prevent the failing instantiation at line 4274.
-			
-			Functional and visual impact:
-			Expected visually neutral, but no meaningful expected benefit.
-			
-			Regression risk:
-			Low to moderate with little justification.
-			
-			Affected devices:
-			All callers, including iPhone presentation paths.
-			
-			Approach D: Extract a complex child into a dedicated concrete View type
-			
-			Most suitable candidates:
-			1. The iPad button preview from smartButtonPreview().
-			2. The iPad lower editing area / color grid from smartButtonLowerEditingArea().
-			
-			Specific simplification:
-			Instead of passing an enormous opaque builder result as Preview or LowerEditingArea, IPadSmartButtonPanel receives a small named View type, such as an iPad-specific preview view with explicit bindings, state values, and callbacks.
-			
-			The complex implementation remains inside that child’s body, but it is no longer part of IPadSmartButtonPanel’s five generic-argument specialization.
-			
-			Likelihood of reducing this failure:
-			Moderate to high.
-			
-			This is the strongest structural correction because it creates a genuine SwiftUI view boundary rather than only erasing a type. It aligns with SwiftUI guidance to use separate View types for substantial sections.
-			
-			Functional and visual impact:
-			Expected none if the child receives every required input unchanged.
-			
-			Regression risk:
-			Moderate. The preview currently reads multiple bindings and invokes callbacks. Moving it requires careful preservation of:
-			• text binding behavior
-			• selected range
-			• SF Symbol parsing
-			• insertion-target refresh behavior
-			• keyboard/session handling
-			• preview image and color state
-			• geometry probes
-			• clear button behavior
-			
-			Affected devices:
-			All iPads using the iPad branch. It need not affect iPhone implementation if the extracted view is iPad-specific.
-			
-			G. Recommended next step
-			
-			RECOMMENDED: smallest diagnostic experiment before adopting a permanent correction
-			
-			Apply Approach A only to the five IPadSmartButtonPanel arguments, preserving the same child expressions and visuals, then rerun Test B on the mini.
-			
-			Why this is the smallest useful experiment:
-			
-			• It targets exactly the generic boundary identified by the crash.
-			• It keeps the diagnostic routing, shell, layout, button functionality, data model, and persistence unchanged.
-			• It distinguishes “the five-argument generic specialization is the trigger” from “one of the child views independently fails during construction.”
-			• It is smaller and more reversible than extracting the preview or lower editor area.
-			• It has stronger technical justification than erasing only the outer smartButtonPanel return.
-			
-			If that experiment passes:
-			Use a named iPad-specific child View extraction, beginning with the Preview argument, as the preferable production-quality correction. It avoids broad permanent AnyView dependence while reducing the parent generic specialization.
-			
-			If that experiment still crashes:
-			The next narrow experiment should replace only the Preview generic argument with AnyView while leaving the other four arguments concrete. Preview is the largest and most conditional child. This would identify whether Preview, rather than the five-argument panel structure generally, is the principal trigger.
-			
-			H. Specific regression tests required after an approved implementation
-			
-			1. iPad mini 5, iPadOS 26.7.1:
-			• Open editor repeatedly from multiple slots.
-			• Empty text, ordinary text, multiline text, SF Symbol with subtitle.
-			• Hidden and visible button.
-			• Clear button.
-			• Brightness slider.
-			• Visibility, clear-color, random-color, colon, and swatch buttons.
-			• Background image present and absent.
-			• Rotate and reopen editor.
-			
-			2. iPad Air M2, iPadOS 27.0.1:
-			• Same iPad button-panel interactions.
-			• Confirm diagnostic/normal route expected for the active build.
-			• Confirm no layout or geometry-probe regression.
-			
-			3. iPad Pro, iPadOS 17.7.11:
-			• Confirm hardware identifier and actual route.
-			• Same button-panel interaction coverage.
-			• Confirm iPadOS 17 compatibility.
-			
-			4. iPhone 17 and iPhone XS Max:
-			• Open the experimental iPhone editor.
-			• Verify its distinct iPhone branch remains unchanged.
-			• Verify color/SF mode switching, brightness, preview editing, and keyboard behavior.
-			
-			5. State/persistence:
-			• Save a button after every interaction category.
-			• Close and reopen.
-			• Relaunch and confirm text, SF Symbol encoding, visibility, and color persistence remain correct.
-			
-			I. Supporting source references
-			
-			Main_Screen.swift:
-			• 29–54: diagnostic hardware routing and current .buttonOnly selector.
-			• 1371–1383: editor presentation routing.
-			• 3316–3331: diagnostic shell construction.
-			• 3334–3392: diagnostic test panel selection.
-			• 3350–3356: buttonOnly constructs only AnyView(smartButtonPanel()).
-			• 3432–3501: normal smartView and direct iPad panel call.
-			• 3504–3572: iPhone editor presentation.
-			• 4269–4308: smartButtonPanel and IPadSmartButtonPanel call site.
-			• 4310–4319: brightness-slider argument.
-			• 4388–4440: lower editing area and iPad color grid.
-			• 4493–4617: preview argument.
-			• 4662–4680: editable preview binding.
-			• 4705–4851: button controls and swatch construction.
-			• 4951–4979: preview background and clear background.
-			• 3613–3644: panel border argument.
-			
-			Main_EditorShellViews.swift:
-			• 3–45: diagnostic shell’s AnyView panel storage.
-			• 170–232: complete IPadSmartButtonPanel declaration and body.
-			
-			Main_EditorGeometrySupport.swift:
-			• 83–102: conditional EditorGeometryProbeModifier.
-			• 135–142: editorGeometryProbe generic View extension.
-			
-			No source files were modified. The selector remains .buttonOnly. No build, run, commit, patch, or backup was performed.
+[ESP-MAC-TX] is Mac Helper transport-specific. It logs all framed Mac traffic, including authentication frames, and has no originating button metadata.
+
+BLE does not use [ESP-MAC-TX].
+
+G. Smallest safe implementation approach
+
+Recommended approach, not implemented:
+
+1. Add an optional immutable source diagnostic value to the shared output path, rather than global mutable “current button” state.
+
+2. Pass that optional value into ESPOutputProbe.printGeneratedItems.
+
+3. Form the value from the originating FunctionKeyEntry before asynchronous work begins:
+• SF Symbol name from parsedSFSymbolDisplay(for:)?.name
+• button text from parsedSFSymbolDisplay(for:)?.subtitle
+• no metadata when the entry is not an SF Symbol button, or when no source entry exists.
+
+4. Thread the optional source information through:
+• direct main-grid activation
+• speech-recognition activation
+• wait-chain execution, using its existing sourceEntry
+• timer completion, where an entry is already supplied
+
+5. Leave editor Preview/Play, keyboard screen, modifier helper, and non-button sources without source-button metadata.
+
+This avoids deriving display values from the command, avoids changing transport behavior, preserves existing output numbering, and avoids metadata being overwritten by another button while delayed tasks are running.
+
+Do not use a shared mutable currentSourceButton property. Concurrent button presses and asynchronous wait chains could then label output from one button with another button’s SF Symbol/text.
+
+H. Regression risks and tests
+
+Manual regression areas:
+
+• Normal main-grid SF Symbol button:
+• Verify [ESP-OUTPUT] includes the expected SF name and subtitle.
+• Verify command and [ESP-MAC-TX] payload are unchanged.
+
+• Normal text-only button:
+• Confirm a defined no-SF metadata format, such as omitted fields or explicit nil/empty fields.
+
+• Speech-triggered SF Symbol button:
+• Confirm source metadata identifies the matched button, not recognized text or command text.
+
+• Two rapid button presses:
+• Confirm each output event retains its own source metadata.
+
+• Wait chain:
+• Press one SF Symbol button containing .wait.
+• Press another button before the delay expires.
+• Confirm delayed output still identifies the original button.
+
+• Multi-token command:
+• Confirm every [ESP-OUTPUT] event from that button has consistent source metadata.
+
+• Timer completion:
+• Confirm its output metadata reflects the intended originating entry, or is deliberately omitted if it represents a separate generated action.
+
+• Mac Helper and BLE modes:
+• Confirm [ESP-OUTPUT] formatting is correct in both modes.
+• Confirm [ESP-MAC-TX] remains unchanged.
+
+• Keyboard screen, Preview/Play, modifier helper, MIDI:
+• Confirm they retain their current output behavior and do not receive misleading button metadata.
+
+No files were modified, no build or runtime test was performed, and no commits or backups were created.

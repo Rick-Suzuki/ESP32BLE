@@ -1,4 +1,7 @@
 
+V65.44_261028 Wed 1001
+btn debugging improved
+
 V65.43_261028 Wed 0825
 Fixed iPad mini SwiftUI generic metadata crash in Soft Editor
 

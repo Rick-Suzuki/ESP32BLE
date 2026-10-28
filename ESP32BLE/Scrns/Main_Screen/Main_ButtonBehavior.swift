@@ -375,14 +375,27 @@ private func commandClassification(for token: String) -> CommandClassification {
     return .external
 }
 
+struct ESPOutputSourceMetadata {
+    let sfSymbolName: String
+    let buttonText: String
+}
+
 // MARK: - BM:🅱️🅱️🅱️ ESP-OUTPUT diagnostic probe
 private enum ESPOutputProbe {
     private static var sequenceNumber = 0
 
-    static func printGeneratedItems(_ items: [String]) {
+    static func printGeneratedItems(
+        _ items: [String],
+        sourceMetadata: ESPOutputSourceMetadata? = nil
+    ) {
         for item in items {
             sequenceNumber += 1
-            print("[ESP-OUTPUT] #\(sequenceNumber) \"\(escapedString(item))\"")
+            var output = "[ESP-OUTPUT] #\(sequenceNumber) \"\(escapedString(item))\""
+            if let sourceMetadata {
+                output += " | SF=\"\(escapedString(sourceMetadata.sfSymbolName))\""
+                output += " | Text=\"\(escapedString(sourceMetadata.buttonText))\""
+            }
+            print(output)
         }
     }
 
@@ -457,6 +470,25 @@ extension MainScreen {
         }
 
         return lastComponent
+    }
+
+    func outputSourceMetadata(for entry: FunctionKeyEntry) -> ESPOutputSourceMetadata {
+        if let sfSymbolDisplay = parsedSFSymbolDisplay(for: entry) {
+            return ESPOutputSourceMetadata(
+                sfSymbolName: sfSymbolDisplay.name,
+                buttonText: sfSymbolDisplay.subtitle ?? ""
+            )
+        }
+
+        let storedButtonText = entry.alternateDisplayText.map(displayText(from:)) ?? ""
+        let buttonText: String
+        switch displayMode {
+        case .last:
+            buttonText = displayTextAfterLastColon(in: storedButtonText)
+        case .left, .right, .both:
+            buttonText = storedButtonText
+        }
+        return ESPOutputSourceMetadata(sfSymbolName: "", buttonText: buttonText)
     }
 
     func resolvedAlternateDisplayText(for entry: FunctionKeyEntry) -> String {
@@ -622,10 +654,12 @@ extension MainScreen {
         return trimmedText.allSatisfy { hexDigits.contains($0) }
     }
     func sendMainGridEntry(_ entry: FunctionKeyEntry, defaultMIDIChannel: Int) {
-		
+			
         guard mainGridButtonMode != .disabled else {
             return
         }
+
+        let outputSourceMetadata = outputSourceMetadata(for: entry)
 
         if isMIDIControlChangeCommandForGridEntry(entry) {
             guard let command = midiControlChangeCommandForGridEntry(entry),
@@ -744,7 +778,8 @@ extension MainScreen {
 
             guard sendKeyboardOutputTokens(
                 bluetoothSendTexts,
-                respectsButtonMode: true
+                respectsButtonMode: true,
+                sourceMetadata: outputSourceMetadata
             ) else {
                 return false
             }
@@ -946,6 +981,7 @@ extension MainScreen {
         respectsBluetoothMode: Bool
     ) {
         let sequenceID = UUID()
+        let outputSourceMetadata = sourceEntry.map(outputSourceMetadata(for:))
         let task = Task { @MainActor in
             defer {
                 activeWaitChainTasks.removeValue(forKey: sequenceID)
@@ -953,7 +989,7 @@ extension MainScreen {
 
             await runWaitChainCommandTokens(
                 actionTokens,
-                sourceEntry: sourceEntry,
+                sourceMetadata: outputSourceMetadata,
                 respectsBluetoothMode: respectsBluetoothMode
             )
         }
@@ -974,7 +1010,7 @@ extension MainScreen {
     @MainActor
     func runWaitChainCommandTokens(
         _ actionTokens: [String],
-        sourceEntry _: FunctionKeyEntry?,
+        sourceMetadata: ESPOutputSourceMetadata?,
         respectsBluetoothMode: Bool
     ) async {
         var pendingModifierTokens: [String] = []
@@ -1137,7 +1173,8 @@ extension MainScreen {
                 let keyboardCommandTokens = pendingModifierTokens + [bluetoothSendText]
                 let didSendKeyboardCommand = sendKeyboardOutputTokens(
                     keyboardCommandTokens,
-                    respectsButtonMode: respectsBluetoothMode
+                    respectsButtonMode: respectsBluetoothMode,
+                    sourceMetadata: sourceMetadata
                 )
                 pendingModifierTokens.removeAll()
 
@@ -1149,7 +1186,8 @@ extension MainScreen {
 
             guard sendBluetoothCommandToken(
                 trimmedActionToken,
-                respectsBluetoothMode: respectsBluetoothMode
+                respectsBluetoothMode: respectsBluetoothMode,
+                sourceMetadata: sourceMetadata
             ) else {
                 return
             }
@@ -1159,7 +1197,8 @@ extension MainScreen {
 
     private func sendBluetoothCommandToken(
         _ actionToken: String,
-        respectsBluetoothMode: Bool
+        respectsBluetoothMode: Bool,
+        sourceMetadata: ESPOutputSourceMetadata?
     ) -> Bool {
         let bluetoothSendText = normalizedBluetoothSendText(actionToken)
         guard !bluetoothSendText.isEmpty else {
@@ -1168,13 +1207,15 @@ extension MainScreen {
 
         return sendKeyboardOutputTokens(
             [bluetoothSendText],
-            respectsButtonMode: respectsBluetoothMode
+            respectsButtonMode: respectsBluetoothMode,
+            sourceMetadata: sourceMetadata
         )
     }
 
     func sendKeyboardOutputTokens(
         _ tokens: [String],
-        respectsButtonMode: Bool
+        respectsButtonMode: Bool,
+        sourceMetadata: ESPOutputSourceMetadata? = nil
     ) -> Bool {
         guard !respectsButtonMode || mainGridButtonMode.sendsBluetooth else {
             return true
@@ -1193,7 +1234,10 @@ extension MainScreen {
             return true
         }
 
-        ESPOutputProbe.printGeneratedItems(keyboardOutputTokens)
+        ESPOutputProbe.printGeneratedItems(
+            keyboardOutputTokens,
+            sourceMetadata: sourceMetadata
+        )
 
         switch outputMode {
         case .none:
@@ -2575,7 +2619,8 @@ extension MainScreen {
                 let bluetoothSendTexts = bluetoothSendTexts(for: entry)
                 return sendKeyboardOutputTokens(
                     bluetoothSendTexts,
-                    respectsButtonMode: false
+                    respectsButtonMode: false,
+                    sourceMetadata: outputSourceMetadata(for: entry)
                 )
             },
             resolveSoundURL: { soundURL(named: $0) },
