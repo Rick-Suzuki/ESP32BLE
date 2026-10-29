@@ -92,7 +92,7 @@
 		1D590E532F61206100E430E0 /* console m2.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "console m2.txt"; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.swift; };
 		1D77C6DC3087545A004396AF /* MIDICommandParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MIDICommandParser.swift; sourceTree = "<group>"; };
 		1D77C6DE308840BA004396AF /* MIDIControlChangeParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MIDIControlChangeParser.swift; sourceTree = "<group>"; };
-		1D9A8748302D3885005B5E36 /* codex.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = codex.txt; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.plist; };
+		1D9A8748302D3885005B5E36 /* codex 2.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "codex 2.txt"; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.plist; };
 		1D9E1CC82FC92DC600DB3621 /* KB_GridView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KB_GridView.swift; sourceTree = "<group>"; };
 		1D9E1CC92FC92DC600DB3621 /* KB_InputField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KB_InputField.swift; sourceTree = "<group>"; };
 		1D9E1CCA2FC92DC600DB3621 /* KB_Screen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KB_Screen.swift; sourceTree = "<group>"; };
@@ -132,6 +132,7 @@
 		1DDA41A83079DDE200D03761 /* console_sim.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = console_sim.swift; sourceTree = "<group>"; };
 		1DDFB8102F87C64000776ED6 /* debug.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = debug.swift; sourceTree = "<group>"; };
 		1DF165E93086EACE003DFD80 /* TemplateDocument.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TemplateDocument.swift; sourceTree = "<group>"; };
+		1DF5EE0330933A62003E5ACF /* codex 1.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "codex 1.txt"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -233,7 +234,8 @@
 			isa = PBXGroup;
 			children = (
 				1D23A17A3075B984003B646C /* VERSIONS.txt */,
-				1D9A8748302D3885005B5E36 /* codex.txt */,
+				1DF5EE0330933A62003E5ACF /* codex 1.txt */,
+				1D9A8748302D3885005B5E36 /* codex 2.txt */,
 				1D0CCE4C309063E5006622D6 /* consoles */,
 				1D2A22AF307C69D3003CCFCF /* notes.txt */,
 				1D0CCE48308DD6BE006622D6 /* time-notes.txt */,

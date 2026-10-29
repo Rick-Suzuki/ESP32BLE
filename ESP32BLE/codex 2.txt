@@ -1,0 +1,53 @@
+A. File modified
+
+ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
+
+B. Exact location
+
+Set_Screen.swift:1920, inside the existing onSetAndTest callback.
+
+C. Old test sequence
+
+Hello World! Let's go. (test) 1!2"3#4$5%6&7'8(9)
+
+D. New test sequence
+
+Hello World! ABC abc 123 456 aa BB 11 !! ?? -- ..
+
+E. One-line confirmation
+
+The Swift string literal is one line and contains no newline, carriage return, Return/Enter command, or other control character.
+
+Existing BLE line framing remains unchanged, as required.
+
+F. SET order preserved
+
+The callback remains:
+
+1. sendKeyboardTimingCommand()
+2. ble.sendString(new test sequence)
+
+Timing is sent first.
+
+G. BLE routing unchanged
+
+The existing direct BLE route remains unchanged. Nothing was added for ESPMacHelper or output-mode handling.
+
+H. UI unchanged
+
+The “set & test” label, button appearance, disabled state, layout, and action structure are unchanged.
+
+I. Build result
+
+Source verification passed:
+
+• Exact new literal present once.
+• Old literal absent.
+• git diff --check passed.
+• Only the requested line changed in Set_Screen.swift.
+
+Xcode’s build and diagnostics services failed before compilation because of an IDE state error. A fallback Simulator-SDK build was attempted but could not complete because the local Swift macro plugin service produced project-wide SwiftUIMacros.StateMacro failures, unrelated to this string change. The Simulator service was also unavailable.
+
+J. Unexpected findings
+
+No source-level issues. Existing unrelated modified files were preserved.

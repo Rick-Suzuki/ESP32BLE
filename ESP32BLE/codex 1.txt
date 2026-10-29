@@ -1,0 +1,230 @@
+ESP-HELP-008C-1 — READ-ONLY PROBE REPORT
+
+No files were modified. No build, run, commit, backup, or project-setting change was performed.
+
+A. Executive summary
+
+Confirmed source facts:
+
+• The iPad Help presentation is a SwiftUI sheet with only .presentationDetents([.large]).
+• There are no explicit iPad Help width, height, minimum-size, maximum-size, GeometryReader, corner-radius, or presentation-background settings.
+• The current iPad window size is therefore determined by the system’s iPad sheet/form presentation behavior, not by an ESP numeric layout value.
+• The internal Help layout is flexible. Increasing the sheet size should increase the WKWebView reading area because no internal fixed frame prevents expansion.
+• Current iPad HTML typography is body 0.875rem and h2 1.125rem.
+• The current CSS contains the ESP-HELP-008B iPhone-only edits. iPad typography remains unchanged.
+
+Recommendation:
+
+For a future ESP-HELP-008C-2 stage, use an iPad-only fixed preferred sheet content size of 760 x 620 points and increase iPad HTML typography to body 1rem and h2 1.25rem.
+
+B. Current source locations
+
+Set_Screen.swift
+
+• iPhone full-screen presentation: lines 593–606
+• iPad sheet presentation: lines 607–621
+• ESPHelpView: lines 5708–5742
+• ESPHelpTopicPager: lines 5875–5981
+• ESPHelpTopicView: lines 5983–6012
+• ESPHelpHTMLView: lines 6015–6142
+• ESPHelpNavigationBar: lines 6174–6232
+• ESPHelpNavigationButton: lines 6234–6264
+
+Help/css/help.css
+
+• Base typography and main layout: lines 22–57
+• iPhone rules: lines 59–84
+• iPad rules: lines 86–102
+
+Help/connect-mac.html
+
+• Viewport: line 5
+• Main content container: line 10
+• First h2: line 12
+
+C. Current iPad sheet width and height rules
+
+Confirmed from Set_Screen.swift lines 607–621:
+
+• Help is presented with .sheet when isPad is true.
+• The only sheet sizing modifier is:
+
+.presentationDetents([.large])
+
+• .large requests the system’s large sheet height.
+• No explicit width is specified.
+• No explicit height is specified beyond the system large detent.
+• No minimum or maximum dimensions are specified.
+• No GeometryReader or proportional frame is used.
+• No presentation corner radius, placement, background, or adaptation modifier is set.
+
+The visible floating-window size is therefore platform-controlled.
+
+D. Current internal Help layout constraints
+
+Confirmed from source:
+
+• ESPHelpTopicPager uses a VStack with 20-point spacing, lines 5893–5921.
+• The topic-content ZStack is flexible in both dimensions:
+
+.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+
+at line 5900.
+
+• The pager has standard outer padding, line 5922.
+• ESPHelpTopicView also uses a flexible maximum frame, line 6010.
+• The native topic title uses .title2, lines 5988–5989.
+• The title-to-WKWebView VStack spacing is 20 points, line 5987.
+• ESPHelpNavigationBar has a minimum height of 44 points, line 6230.
+• Each navigation button is 44 x 44 points, line 6246.
+• ESPHelpHTMLView has no fixed frame or internal SwiftUI padding.
+
+Conclusion: additional sheet width and height should be made available to the topic content and WKWebView after the title, footer, spacing, and outer padding take their required space.
+
+E. Expected behavior on different iPad sizes
+
+Technical inference:
+
+A single larger fixed preferred content size is more predictable than trying to derive a window size from screen dimensions. The existing sheet is system-managed, and the Help view has no current geometry-based sizing mechanism.
+
+A 760 x 620-point preferred content size should:
+
+• Be substantially more useful than a standard narrow form-style sheet.
+• Leave meaningful surrounding space on landscape iPad mini, Air, and Pro devices.
+• Keep the Help presentation recognizably floating rather than full screen.
+• Provide a larger HTML reading region while retaining the existing footer.
+
+The system may clamp a requested sheet size when necessary for the active scene, safe areas, multitasking, or future windowing modes. Physical-device testing remains required.
+
+F. Recommended new window dimensions
+
+Recommendation:
+
+• Preferred width: 760 points
+• Preferred height: 620 points
+• Intended minimum surrounding visual margin: at least approximately 32 points where the system can provide it
+• Reading-width target: approximately 700 points after native outer padding
+• CSS maximum reading width remains 48rem, or approximately 768 CSS points
+
+Why 760 x 620:
+
+• It increases the useful reading area without approaching full-screen presentation.
+• It stays near the existing CSS maximum content width rather than creating an overly wide text column.
+• It accommodates the title, flexible WKWebView area, 44-point footer, 20-point stack spacing, and outer padding.
+
+The exploratory “20% wider and 15% taller” target cannot be calculated precisely from source because the current sheet has no numeric dimensions. The current size is decided by the system.
+
+G. Current iPad typography
+
+Confirmed from Help/css/help.css:
+
+• Body font: 0.875rem, line 87
+• Body line height: 1.5, line 88
+• h2 font: 1.125rem, line 92
+• h2 line height: 1.25, line 93
+• Paragraph bottom margin: 0.875rem, line 97
+• Consecutive list-item spacing: 0.4rem, line 101
+• Main content width: min(100%, 48rem), line 35
+• Main padding: clamp(1rem, 4vw, 2rem), line 37
+• No iPad text-size-adjust declaration exists.
+
+H. Recommended new typography
+
+Recommendation:
+
+• iPad body: 1rem
+• iPad h2: 1.25rem
+• Keep body line height: 1.5
+• Keep h2 line height: 1.25
+• Keep paragraph bottom margin: 0.875rem
+• Keep list-item spacing: 0.4rem
+
+This preserves a 25% h2-to-body size difference, maintains the native SwiftUI title as the largest heading, and improves readability on iPad mini.
+
+I. WebKit scaling considerations
+
+Confirmed source facts:
+
+• WKWebView uses no custom zoom, magnification, user agent, scroll-view inset, or text-scale configuration.
+• The device-family script adds esp-ipad for .pad, lines 6045–6060.
+• The HTML viewport is width=device-width, initial-scale=1, Help/connect-mac.html line 5.
+• The base font remains -apple-system-body, Help/css/help.css line 28.
+• Only esp-iphone has text-size-adjust: 100%, lines 59–62.
+
+Technical inference:
+
+Increasing the window width changes available line length and responsive main padding, but it does not directly increase the authored CSS font size. Increasing iPad font sizes must therefore be a separate CSS change.
+
+Do not add iPad text-size-adjust preemptively. The iPhone rule addressed a demonstrated iPhone paragraph-autosizing problem. There is no source or device evidence that iPad currently has the same problem. The larger iPad font should be tested first without altering WebKit behavior.
+
+J. One preferred implementation approach
+
+Modify only these two files in a future ESP-HELP-008C-2 stage:
+
+1. Set_Screen.swift
+
+In the existing iPad-only .sheet content at lines 616–621, apply a fixed preferred frame to ESPHelpView:
+
+.frame(width: 760, height: 620)
+
+Keep .presentationDetents([.large]) initially and let the system clamp the requested content size where necessary.
+
+2. Help/css/help.css
+
+Change only the existing iPad typography values:
+
+• Body: 0.875rem to 1rem
+• h2: 1.125rem to 1.25rem
+
+No iPad text-size-adjust rule, iPhone rule, main padding, navigation layout, or renderer change is recommended.
+
+K. Why iPhone remains unaffected
+
+• The sheet branch executes only when isPad is true.
+• iPhone continues using the existing fullScreenCover branch.
+• The CSS changes would be scoped to html.esp-ipad.
+• iPhone esp-iphone typography, text-size-adjust, main top-padding refinement, navigation, and full-screen presentation remain untouched.
+
+L. Risks and uncertainties
+
+• SwiftUI/iPadOS ultimately controls sheet dimensions and may clamp the requested frame for available space, safe areas, multitasking, or future windowing modes.
+• The current source cannot provide the system-selected sheet’s actual width and height; device measurement is required.
+• The 760 x 620 proposal is a preferred content size, not a guarantee that every iPad context displays exactly those dimensions.
+• Larger iPad text may increase line wrapping and vertical scrolling, especially on iPad mini.
+• No source evidence supports changing iPad WebKit text autosizing. Leave it untouched unless testing identifies a real issue.
+
+M. Physical-device regression tests
+
+iPad mini:
+
+• Help window visibly larger while retaining surrounding margins.
+• Body text is easier to read.
+• h2 remains larger than body text.
+• Footer remains fully visible.
+• No clipping or horizontal overflow.
+
+iPad Air and iPad Pro:
+
+• Window no longer appears unnecessarily small.
+• HTML region expands.
+• Text column remains comfortable rather than overly wide.
+• Window remains a floating presentation.
+
+All iPads:
+
+• Landscape presentation.
+• Light and Dark appearance.
+• Contents screen and native placeholders.
+• Home, Previous, Next, and Close.
+• Directional transitions.
+• HTML vertical scrolling.
+• No horizontal overflow.
+• Reopening Help.
+• Offline HTML and CSS loading.
+
+iPhone regression:
+
+• Full-screen presentation unchanged.
+• Current iPhone typography unchanged.
+• Current text-size-adjust behavior unchanged.
+• Existing navigation and transitions unchanged.

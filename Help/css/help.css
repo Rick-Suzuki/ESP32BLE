@@ -62,8 +62,12 @@ html.esp-iphone {
 }
 
 html.esp-iphone body {
-    font-size: 0.875rem;
+    font-size: 0.9375rem;
     line-height: 1.5;
+}
+
+html.esp-iphone main {
+    padding-block-start: 1rem;
 }
 
 html.esp-iphone h2 {
@@ -80,12 +84,12 @@ html.esp-iphone li + li {
 }
 
 html.esp-ipad body {
-    font-size: 0.875rem;
+    font-size: 1rem;
     line-height: 1.5;
 }
 
 html.esp-ipad h2 {
-    font-size: 1.125rem;
+    font-size: 1.25rem;
     line-height: 1.25;
 }
 

@@ -617,6 +617,7 @@ struct SettingsScreen: View {
             ESPHelpView {
                 isHelpPresented = false
             }
+            .frame(width: 760, height: 620)
             .presentationDetents([.large])
         }
         .onChange(of: ble.isConnected) {
@@ -1917,7 +1918,7 @@ struct SettingsScreen: View {
             isEnabled: isCustomKeyboardTimingEnabled,
             onSetAndTest: {
                 sendKeyboardTimingCommand()
-                ble.sendString("Hello World! Let's go. (test) 1!2\"3#4$5%6&7'8(9)")
+                ble.sendString("Hello World! ABC abc 123 456 aa BB 11 !! ?? -- ..")
             }
         )
     }

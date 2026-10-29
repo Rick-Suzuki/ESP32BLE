@@ -1,4 +1,8 @@
 
+V65.66_261029 Thu 1813
+1. html improvements, 2. set & test msg improved for esp32
+
+
 V65.65_261029 Thu 1703
 1. html fix, 2. settings too big for 17 Fix
 
