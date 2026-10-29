@@ -1,4 +1,7 @@
 
+V65.61_261029 Thu 1346
+C4-P2: Background Image Persistence After App Restart
+
 V65.60_261029 Thu 1323
 C4-D: IMAGE Deletion Predecessor Correction
 

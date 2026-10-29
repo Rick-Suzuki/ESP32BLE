@@ -1,238 +1,238 @@
-Read-only probe complete. No files, UserDefaults, builds, Git state, or branches were changed.
+Read-only probe complete. No files, builds, application data, UserDefaults, Git state, or branches were changed.
 
 A. Relevant files and locations
 
+ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
+
+• Lines 383–384: previewImageURL state declaration.
+• Lines 399–413: Settings lifecycle handlers.
+• Lines 401–403: onAppear restoration call.
+• Lines 404–406: selectedDocumentName change clears previewImageURL to BLACK.
+• Lines 407–412: documentDirectorySnapshot cleanup observer.
+• Lines 1461–1477: large IMAGE preview panel wiring.
+• Lines 1483–1511: Reset, Random, Previous, and Next preview controls.
+• Lines 1514–1530: preview position and button availability.
+• Lines 1533–1536: selectPreviewImage(_:).
+• Lines 1538–1540: restorePreviewFromAppliedBackground().
+• Lines 1624–1629: IMAGE table receives previewedImageURL and appliedImageURL.
+• Lines 1654–1656: table callbacks that set preview or apply a background.
+• Lines 3187–3194: applySettingsBackground(_:).
+• Lines 3286–3325: C4-D deleteImage(_:).
+
 ESP32BLE/Scrns/Set_Screen/Table_Img/Set_ImgSelectionSupport.swift
-• Lines 5–14: image discovery and alphabetical sorting.
-• Lines 20–37: selectedImageURL resolution.
+
+• Lines 5–14: availableImageURLs is derived from documentDirectorySnapshot and sorted alphabetically.
+• Lines 20–37: selectedImageURL resolves persisted path, filename, then one-based index.
 • Lines 63–72: persistSelectedImage(_:).
 
-ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
-• Lines 370–372: Settings AppStorage bindings for background index, name, and path.
-• Around lines 1461–1480: Settings preview panel and its single-tap application.
-• Around lines 1533–1537: selectPreviewImage(_:).
-• Around lines 3187–3195: applySettingsBackground(_:).
-• Lines 3286–3325: current C4-D deleteImage(_:).
-
-ESP32BLE/Scrns/Set_Screen/Table_Img/Set_Table.swift
-• Around lines 540 onward: IMAGE double-tap calls the injected background-application closure.
-
 ESP32BLE/Scrns/ContentView.swift
-• Lines 182–184: ContentView AppStorage bindings for the same three keys.
-• Lines 349–360: startup task sequence.
-• Lines 371–384: observers for persisted background values.
-• Lines 573–593: refreshBackgroundImageFiles().
-• Lines 595–640: reloadBackgroundImage().
-• Lines 669–676: updateLoadedBackgroundImageForVisibleScreen().
-• Lines 694–707: loadFunctionKeys(from:), including restoration.
-• Lines 1291–1304: saveBackgroundImageSelection(for:).
-• Lines 1306–1371: restoreBackgroundImageSelection(for:).
 
-ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
-• Around lines 1055–1057: main-screen AppStorage bindings.
-• Around lines 3302–3315: main-screen background persistence helper.
+• Lines 202–205: documentDirectorySnapshot and backgroundImageFiles begin empty.
+• Line 215: Settings is initially presented.
+• Lines 325–329: SettingsScreen is created while Settings is presented.
+• Lines 353–360: C4-P startup task.
+• Lines 550–562: refreshDocumentFiles() updates documentDirectorySnapshot.
+• Lines 573–593: refreshBackgroundImageFiles() updates ContentView’s separate backgroundImageFiles collection.
+• Lines 678–707: initial document loading and screen-background restoration.
+• Lines 1306–1371: per-screen background restoration.
+• Lines 2901–2929: SettingsScreen construction and presentation wiring.
 
-ESP32BLE/Scrns/Main_Screen/Main_BG_img.swift
-• Lines 5–29: main-screen image discovery and alphabetical sorting.
-• Lines 31–36: main-screen image resolution by persisted position.
+ESP32BLE/Scrns/Set_Screen/Table_Img/Set_ImgPanel.swift
 
-ESP32BLEApp.swift
-• Lines 10–16: standard WindowGroup startup only; no background reset logic.
+• Lines 5–82: preview panel renders from imageURL, which is previewImageURL.
+• Lines 32–40: BLACK label appears only when imageURL is nil.
 
-B. Background persistence storage and writers
+B. Confirmed Settings initialization sequence
 
-The three shared AppStorage keys are:
+The initial Settings presentation is active from launch:
 
-• selectedBackgroundImageIndex, default 0
-• selectedBackgroundImageName, default empty
-• selectedBackgroundImagePath, default empty
+• ContentView initializes isSettingsScreenPresented as true at line 215.
+• ContentView therefore creates SettingsScreen at lines 325–329.
+• SettingsScreen initializes previewImageURL as nil at line 383.
+• SettingsScreen onAppear calls restorePreviewFromAppliedBackground() at lines 401–403.
+• That function calls selectPreviewImage(selectedImageURL) at lines 1538–1540.
+• selectedImageURL depends on availableImageURLs.
+• availableImageURLs depends on documentDirectorySnapshot, not ContentView.backgroundImageFiles.
+• documentDirectorySnapshot begins empty at ContentView line 203.
 
-Settings and ContentView use the same UserDefaults keys.
+C4-P corrected ContentView.backgroundImageFiles ordering, which fixes main-screen/per-screen background restoration. It does not guarantee that Settings’ separate documentDirectorySnapshot has been populated when Settings onAppear executes.
 
-The primary Settings writer is persistSelectedImage(_:), in Set_ImgSelectionSupport.swift lines 63–72:
+Later, ensureDefaultFunctionKeysFile() refreshes document files, causing documentDirectorySnapshot to become populated. At that point selectedImageURL can correctly resolve the applied image, so the IMAGE row becomes GREEN. However, Settings does not retry restorePreviewFromAppliedBackground() when the snapshot becomes available.
 
-• Physical image: stores its full path, basename, and one-based sorted index.
-• BLACK/nil: stores index 0, empty name, and empty path.
+This exactly matches the observed state:
 
-Known background-state writers include:
+• Applied image row: GREEN, because selectedImageURL now resolves.
+• previewImageURL: nil, because it was initialized/restored before image URLs existed and never restored again.
+• BLACK row: YELLOW, because nil is a preview-only BLACK state while a different image is applied.
+• Large preview: BLACK, because it renders previewImageURL, which remains nil.
 
-• Settings manual application through applySettingsBackground(_:).
-• IMAGE table double-tap through the same Settings application path.
-• Preview-panel tap through the same Settings application path.
-• C4-D deletion fallback through persistSelectedImage(predecessorURL).
-• Main-screen background controls through their own persistence helper.
-• ContentView restoration and normalization paths.
+C. Document snapshot interaction
 
-C. Manual IMAGE application path
+The Settings observer is:
 
-Both manual Settings application routes are correct by source inspection.
+• Lines 407–412 in Set_Screen.swift.
 
-IMAGE double tap:
+Its current behavior is cleanup only:
 
-• Set_Table.swift invokes handleImageBackgroundSelection(imageURL).
-• Set_Screen.swift injects applySettingsBackground(imageURL).
-• applySettingsBackground(_:) calls persistSelectedImage(imageURL).
-• It synchronizes previewImageURL to the applied URL.
-• It triggers the existing changed-BG feedback.
+• If previewImageURL is nonnil and no longer exists in availableImageURLs, it clears previewImageURL to nil.
+• If previewImageURL is already nil, it does nothing.
+• It never retries restorePreviewFromAppliedBackground().
 
-Large preview single tap:
+Therefore, after the snapshot changes from empty to populated:
 
-• The preview panel call site invokes applySettingsBackground(previewImageURL).
-• It uses previewImageURL, not the decoded image.
-• It therefore persists the same full path, name, and index through persistSelectedImage(_:).
+• A valid applied image becomes resolvable as selectedImageURL.
+• The table correctly marks it GREEN.
+• The preview remains nil/BLACK.
+• No current callback repairs that initial preview state.
 
-Conclusion: manual application should persist correctly at the Settings layer. There is no source evidence that either Settings application path writes BLACK for a valid image.
+The snapshot cleanup observer does not itself clear a valid image preview after the image collection has populated. Its role is valid for deletion or external removal.
 
-D. Current C4-D deletion path
+D. Applied-background resolution
 
-C4-D is present in the current deleteImage(_:) implementation.
+selectedImageURL, in Set_ImgSelectionSupport.swift lines 20–37, resolves in this order:
 
-It correctly:
+1. Persisted complete path, if it is present in availableImageURLs.
+2. Persisted filename, case-insensitively.
+3. Persisted one-based image index.
+4. nil/BLACK if none resolve.
 
-• Captures availableImageURLs before deletion.
-• Finds the deleted image using complete URL-path equality.
-• Chooses the preceding original image, or nil/BLACK for the first image.
-• Captures whether the deleted image was applied and/or previewed.
-• Deletes the file and refreshes the document snapshot.
-• Validates that the predecessor still exists after refresh.
-• Uses persistSelectedImage(validatedPredecessorURL) when the deleted image was applied.
-• Synchronizes the Settings preview to that same predecessor.
-• Changes only the preview when the deleted image was preview-only.
-• Leaves both applied and preview state unchanged for unrelated deletion.
+Because availableImageURLs derives from Settings’ documentDirectorySnapshot, selectedImageURL is temporarily nil while that snapshot is empty, even though the persisted image selection and ContentView’s own background collection may already be valid.
 
-The predecessor index is recalculated after refresh inside persistSelectedImage(_:), using the refreshed sorted collection. Therefore C4-D does not appear to write a stale post-deletion index.
+Image sorting is consistent alphabetical filename sorting. There is no evidence that sorting or path identity causes this particular BLACK preview result.
 
-E. Confirmed cause of the BLACK reset after app restart
+E. Every previewImageURL writer identified
 
-The source establishes a startup ordering problem in ContentView.
+Lifecycle and cleanup:
 
-Current sequence:
+• Settings onAppear: restorePreviewFromAppliedBackground() at lines 401–403.
+• selectedDocumentName change: direct nil assignment at lines 404–406.
+• documentDirectorySnapshot cleanup: direct nil assignment at lines 407–412.
 
-1. ContentView’s .task begins.
-2. ensureDefaultFunctionKeysFile() runs.
-3. It refreshes document files and selects/loads the current screen.
-4. loadFunctionKeys(from:) calls restoreBackgroundImageSelection(for:).
-5. Only after this completes does the outer startup task call refreshBackgroundImageFiles().
+Preview controls:
 
-At step 4, backgroundImageFiles is still initially empty.
+• Reset: selectPreviewImage(nil), lines 1487–1489.
+• Random: selectPreviewImage(...), lines 1490–1495.
+• Previous: selectPreviewImage(nil or predecessor), lines 1497–1503.
+• Next: selectPreviewImage(next image), lines 1505–1510.
+• selectPreviewImage(_:), lines 1533–1536.
 
-restoreBackgroundImageSelection(for:) restores the image using the saved screen configuration’s backgroundImageName. It searches backgroundImageFiles for that name. Since that collection is empty at this point, the lookup fails and lines approximately 1352–1358 explicitly write:
+Table/application paths:
 
-• selectedBackgroundImageIndex = 0
-• selectedBackgroundImagePath = ""
-• selectedBackgroundImageName = ""
-• loadedBackgroundImage = nil
+• IMAGE row preview callback: direct previewImageURL assignment, line 1654.
+• BLACK table row preview callback: selectPreviewImage(nil), line 1655.
+• applySettingsBackground(_:): synchronizes preview with the applied background, lines 3187–3194.
+• C4-D deleteImage(_:): synchronizes preview to the validated predecessor, lines 3311–3323.
 
-This permanently changes the shared AppStorage selection to BLACK before the background image collection is populated.
+The initial-restart failure is not caused by Reset, navigation, C4-D, or image decoding. It is caused by initialization occurring before Settings receives its populated document snapshot, followed by no restoration retry.
 
-The later refreshBackgroundImageFiles() loads the images, but does not retry restoration of the saved screen background.
+F. Selected-document interaction
 
-This is a confirmed source-order cause, not merely a timing hypothesis. It explains both cases:
+The selectedDocumentName observer at lines 404–406 unconditionally sets previewImageURL to nil.
 
-• Manual application: the screen configuration retains the image name, but startup clears the active AppStorage selection before the image list is ready.
-• C4-D predecessor application: the predecessor name is saved through the normal persistence/ContentView observer path, but the same premature startup restore subsequently clears the active selection to BLACK.
+This can also contribute during startup if selectedDocumentName changes after Settings has appeared. It likewise does not call restorePreviewFromAppliedBackground() afterward.
 
-F. Absolute path and identity findings
+The empty document snapshot alone is sufficient to explain the observed result. The selected-document handler is an additional initialization-order risk because it can clear a correctly restored preview without a subsequent restore call.
 
-Image URLs are built from the application Documents directory. Those URLs and their absolute paths are stable across ordinary app relaunches on the same installation.
+G. Confirmed cause
 
-Settings resolves a persisted selection in this order:
+Confirmed source cause:
 
-1. Stored full path.
-2. Stored filename.
-3. Stored one-based sorted index.
+• Settings preview restoration depends on documentDirectorySnapshot.
+• The initial Settings view can restore before that snapshot contains files.
+• selectedImageURL consequently resolves to nil.
+• previewImageURL becomes nil/BLACK.
+• Snapshot population later enables the applied row to become GREEN.
+• No handler restores previewImageURL after that point.
 
-ContentView screen configuration persists only the portable filename, not the full path or index. That is appropriate for the screen configuration, but requires the image collection to be available before restoration.
+This explains the exact GREEN applied-image / YELLOW BLACK / BLACK preview combination observed after relaunch.
 
-A genuinely missing, renamed, or deleted image should safely resolve to BLACK. A valid existing image currently fails only because restoration occurs before image discovery.
+H. Main-screen rendering remains independently unproven
 
-G. Can the three stored values diverge?
+The green Settings row proves that Settings can now resolve the stored applied selection after document snapshot population.
 
-Yes, briefly. persistSelectedImage(_:) writes path, then name, then index. AppStorage observers can react to individual changes. The normal final state is coherent, and this is not the confirmed restart cause.
+It does not prove that the main-screen UIImage was decoded and rendered successfully. ContentView intentionally clears loadedBackgroundImage while Settings is visible, at lines 669–676.
 
-More importantly, ContentView’s restoration failure explicitly overwrites all three values with the BLACK representation. That is the observed persistent failure.
+Physical verification should therefore include:
 
-H. Expected current behavior by case
-
-Case 1 — Manual application then restart
-• Before restart: correct persistence path.
-• Restart: valid saved image name is looked up while backgroundImageFiles is empty.
-• Current result: active selection is overwritten to BLACK.
-• Confirmed failure condition.
-
-Case 2 — Apply C, delete C, predecessor B applied, then restart
-• C4-D correctly persists B after deletion.
-• Restart follows the same premature restoration path.
-• Current result: B can be overwritten to BLACK.
-• Confirmed failure condition.
-
-Case 3 — Apply first image, delete it, BLACK selected, then restart
-• BLACK is correctly persisted as index 0 with empty name/path.
-• Restart remains BLACK.
-• Expected correct behavior.
-
-Case 4 — Apply B, preview D, delete unrelated A
-• C4-D correctly preserves applied B and preview D during the active Settings session.
-• After full restart, B is subject to the same startup restoration failure.
-• Preview is temporary and should not persist across Settings sessions.
-
-Case 5 — Close and reopen Settings without terminating ESP
-• Settings restores preview from selectedImageURL.
-• This should work while the app remains alive, because image collections have already loaded.
-• Expected: applied image is previewed and highlighted green.
-
-Case 6 — Background collection initially empty but image exists
-• Current behavior incorrectly treats the valid name as missing and persists BLACK.
-• Required behavior: defer resolution until the collection is available, without overwriting valid stored state.
+• Return to the main screen after relaunch.
+• Confirm the actual background image is rendered.
+• Then reopen Settings and confirm the same image is both GREEN and previewed.
 
 I. Smallest safe correction recommendation
 
-Correct the existing ContentView startup/restoration ordering, rather than altering C4-D, adding storage, adding delays, or changing Settings application code.
+Only Set_Screen.swift needs to change.
 
-Smallest likely correction:
+Recommended approach:
 
-• Ensure refreshBackgroundImageFiles() completes before the first restoreBackgroundImageSelection(for:) call that occurs during initial screen loading.
+• Treat preview restoration as pending only during Settings initialization and after a selected-document change.
+• Restore preview from selectedImageURL once documentDirectorySnapshot becomes available.
+• Do not use a blanket rule such as “if previewImageURL is nil, restore it,” because that would incorrectly overwrite an intentional user BLACK preview during a Settings session.
 
-A narrowly scoped equivalent is to make restoreBackgroundImageSelection(for:) refresh/obtain the background image collection before deciding that a nonempty saved background name is invalid.
+A minimal state-aware approach would be:
 
-Important preservation rule:
+1. Mark initial preview restoration as pending when Settings appears.
+2. Mark it pending when selectedDocumentName changes.
+3. On documentDirectorySnapshot change:
+• If restoration is pending, call restorePreviewFromAppliedBackground() after the snapshot is available, then clear the pending flag.
+• Otherwise retain the current deletion cleanup behavior only.
+4. User actions through Reset, Random, Previous, Next, IMAGE table single-tap, and BLACK row single-tap must clear or bypass the pending-initialization condition so intentional preview-only selection is never overwritten.
 
-• A nonempty saved image name must not be converted to BLACK merely because backgroundImageFiles is temporarily empty during startup.
-• BLACK should still be persisted only for an actually empty saved name or a confirmed missing image after the collection is available.
+This preserves:
 
-The preferred correction is startup ordering because it preserves the existing restoration implementation and avoids an additional retry/state mechanism.
+• Valid initial applied-image preview restoration.
+• Intentional BLACK preview.
+• C4-D preview synchronization.
+• Snapshot cleanup after deletion or external file removal.
+• Existing applied/preview GREEN/YELLOW/WHITE rules.
 
-J. C4-D assessment
+No timer, polling, retry delay, persistent state, or changes to C4-P/C4-D are needed.
 
-C4-D’s predecessor selection is not the source of the restart BLACK reset.
+J. iPhone and iPad behavior
 
-Its predecessor calculation, post-delete validation, full-path comparisons, persisted replacement, and preview synchronization are consistent with the requested behavior. The restart defect occurs later in ContentView startup restoration.
+Both platforms use the same SettingsScreen state, lifecycle handlers, availableImageURLs computation, and preview panel.
 
-K. Regression risks for the correction
+There is no platform-specific preview restoration branch. The issue and correction should apply consistently to iPhone and iPad.
 
-• Must preserve per-screen background restoration when switching screens.
-• Must not change BLACK behavior when the saved screen background name is intentionally empty.
-• Must keep missing/deleted image fallback to BLACK once image discovery has completed.
-• Must preserve main-screen background navigation and Settings preview reopening.
-• Must not alter C4-D’s predecessor behavior, image sorting, IMAGE gestures, or notification behavior.
-• No production test should include an All Files Settings category.
+K. Potential regressions to protect against
 
-L. Recommended manual test plan after a future correction
+• Do not restore over a user-selected BLACK preview after Reset.
+• Do not restore over an intentionally previewed physical image after a normal file refresh.
+• Preserve C4-D behavior when deletion changes the applied or previewed image.
+• Preserve snapshot cleanup when the currently previewed physical image is deleted externally.
+• Preserve the preview-only versus applied-background distinction.
+• Preserve immediate Settings reopening behavior within a running application.
+• Do not alter C4-P startup ordering.
 
-1. Apply image A by IMAGE-table double tap. Terminate and relaunch ESP. Confirm A remains applied.
+L. Recommended physical regression tests
 
-2. Apply image A by tapping the large Settings preview. Terminate and relaunch ESP. Confirm A remains applied.
+1. Apply image A, terminate ESP, relaunch, return to main, and confirm image A is visibly rendered.
 
-3. Apply image C, delete C, confirm predecessor B becomes green and previewed. Terminate and relaunch. Confirm B remains applied.
+2. Open Settings after relaunch and confirm:
+• Image A is GREEN.
+• BLACK is WHITE.
+• The large preview displays image A.
 
-4. Apply the first sorted image, delete it, confirm BLACK becomes green. Terminate and relaunch. Confirm BLACK remains applied.
+3. Apply BLACK, relaunch, and confirm:
+• BLACK is GREEN.
+• The large preview shows the BLACK label.
+• No physical image row is YELLOW.
 
-5. Apply image B, preview image D, delete unrelated image A. Confirm B remains green and D remains yellow during the Settings session. Restart and confirm B remains applied.
+4. Apply image C, delete it, confirm predecessor B is applied and previewed, restart, then confirm B remains rendered on the main screen and GREEN in Settings.
 
-6. Apply an image, close Settings, reopen Settings without terminating. Confirm that image is previewed and green.
+5. While image A is applied, press Reset in Settings:
+• BLACK becomes YELLOW.
+• Image A remains GREEN.
+• Perform a document refresh that does not remove files.
+• Confirm BLACK remains YELLOW rather than being overwritten by A.
 
-7. Delete or rename an applied image outside ESP, restart, and confirm the app safely falls back to BLACK only after the image collection is available and the reference is genuinely unresolved.
+6. While image A is applied, single-tap image B:
+• A remains GREEN.
+• B becomes YELLOW.
+• Perform a normal snapshot refresh.
+• Confirm B remains YELLOW.
 
-8. Repeat manual application and restart checks on iPhone and iPad.
+7. Change screens while Settings is open and confirm the newly loaded screen’s applied background becomes the preview once its file list is available.
+
+8. Repeat the restart, Settings opening, BLACK preview, and intentional preview-only checks on iPhone and iPad.
 
 No implementation was performed.

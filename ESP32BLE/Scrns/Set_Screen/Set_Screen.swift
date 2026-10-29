@@ -381,6 +381,7 @@ struct SettingsScreen: View {
     @FocusState private var isDocumentNameFieldFocused: Bool
     @State private var isCancellingDocumentNameFromOutsideTap = false
     @State private var previewImageURL: URL?
+    @State private var isImagePreviewRestorePending = false
     @State private var backgroundChangeFeedbackID = UUID()
     @State private var selectedTextFileName = ""
     @State private var templateURLs: [URL] = []
@@ -399,16 +400,18 @@ struct SettingsScreen: View {
     var body: some View {
         configuredSettingsScreen
             .onAppear {
-                restorePreviewFromAppliedBackground()
+                beginImagePreviewRestoration()
             }
             .onChange(of: selectedDocumentName) {
                 previewImageURL = nil
+                beginImagePreviewRestoration()
             }
             .onChange(of: documentDirectorySnapshot) {
                 if let previewImageURL,
                    !availableImageURLs.contains(previewImageURL) {
                     self.previewImageURL = nil
                 }
+                restorePendingImagePreviewIfPossible()
             }
     }
 
@@ -1530,13 +1533,35 @@ struct SettingsScreen: View {
         return previewImagePosition < availableImageURLs.count
     }
 
-    private func selectPreviewImage(_ imageURL: URL?) {
+    private func selectPreviewImage(_ imageURL: URL?, cancelsPendingRestore: Bool = true) {
+        if cancelsPendingRestore {
+            isImagePreviewRestorePending = false
+        }
         previewImageURL = imageURL
         imageScrollPositionIDStorage = imageURL?.path ?? ""
     }
 
     private func restorePreviewFromAppliedBackground() {
-        selectPreviewImage(selectedImageURL)
+        selectPreviewImage(selectedImageURL, cancelsPendingRestore: false)
+    }
+
+    private var isCurrentDocumentAvailableForImagePreviewRestoration: Bool {
+        documentDirectorySnapshot.contains { $0.lastPathComponent == selectedDocumentName }
+    }
+
+    private func beginImagePreviewRestoration() {
+        isImagePreviewRestorePending = true
+        restorePendingImagePreviewIfPossible()
+    }
+
+    private func restorePendingImagePreviewIfPossible() {
+        guard isImagePreviewRestorePending,
+              isCurrentDocumentAvailableForImagePreviewRestoration else {
+            return
+        }
+
+        restorePreviewFromAppliedBackground()
+        isImagePreviewRestorePending = false
     }
 
     private func settingsBluePlaceholderButton(_ title: String) -> some View {
@@ -1651,7 +1676,10 @@ struct SettingsScreen: View {
             deleteDocument: deleteDocument,
             duplicateDocument: duplicateDocument,
             deleteTextFile: deleteTextFile,
-            previewImage: { previewImageURL = $0 },
+            previewImage: { imageURL in
+                isImagePreviewRestorePending = false
+                previewImageURL = imageURL
+            },
             previewBlackImage: { selectPreviewImage(nil) },
             applyImageBackground: applySettingsBackground,
             deleteImage: deleteImage,
@@ -3185,6 +3213,7 @@ struct SettingsScreen: View {
     }
 
     private func applySettingsBackground(_ imageURL: URL?) {
+        isImagePreviewRestorePending = false
         persistSelectedImage(imageURL)
         if imageURL == nil {
             selectPreviewImage(nil)

@@ -352,8 +352,8 @@ struct ContentView: View {
         }
         .task {
             applyStartupOutputModeIfNeeded()
-            ensureDefaultFunctionKeysFile()
             refreshBackgroundImageFiles()
+            ensureDefaultFunctionKeysFile()
             updateLoadedBackgroundImageForVisibleScreen()
             refreshOrientationState()
             updateTransportStateForOutputMode()
