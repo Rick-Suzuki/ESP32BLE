@@ -3284,7 +3284,16 @@ struct SettingsScreen: View {
     }
 
     private func deleteImage(_ imageURL: URL) {
-        let previousSelectedImageURL = selectedImageURL
+        let originalImageURLs = availableImageURLs
+        let deletedImageIndex = originalImageURLs.firstIndex(where: { $0.path == imageURL.path })
+        let predecessorURL: URL?
+        if let deletedImageIndex, deletedImageIndex > 0 {
+            predecessorURL = originalImageURLs[deletedImageIndex - 1]
+        } else {
+            predecessorURL = nil
+        }
+        let wasApplied = selectedImageURL?.path == imageURL.path
+        let wasPreviewed = previewImageURL?.path == imageURL.path
 
         do {
             try FileManager.default.removeItem(at: imageURL)
@@ -3295,19 +3304,23 @@ struct SettingsScreen: View {
 
         refreshDocumentFiles()
         let refreshedImageURLs = availableImageURLs
+        let validatedPredecessorURL = predecessorURL.flatMap { predecessorURL in
+            refreshedImageURLs.contains(where: { $0.path == predecessorURL.path }) ? predecessorURL : nil
+        }
 
-        if let previousSelectedImageURL,
-           previousSelectedImageURL.lastPathComponent == imageURL.lastPathComponent {
-            if let replacementURL = refreshedImageURLs.first {
-                persistSelectedImage(replacementURL)
+        if wasApplied {
+            persistSelectedImage(validatedPredecessorURL)
+            if let validatedPredecessorURL {
+                previewImageURL = validatedPredecessorURL
             } else {
-                persistSelectedImage(nil)
+                selectPreviewImage(nil)
             }
-        } else if let previousSelectedImageURL,
-                  let refreshedImageIndex = refreshedImageURLs.firstIndex(where: { $0.lastPathComponent == previousSelectedImageURL.lastPathComponent }) {
-            persistSelectedImage(refreshedImageURLs[refreshedImageIndex])
-        } else if let selectedImagePosition, selectedImagePosition > refreshedImageURLs.count {
-            persistSelectedImage(refreshedImageURLs.last)
+        } else if wasPreviewed {
+            if let validatedPredecessorURL {
+                previewImageURL = validatedPredecessorURL
+            } else {
+                selectPreviewImage(nil)
+            }
         }
     }
 

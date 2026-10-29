@@ -1,7 +1,6 @@
 
-V65.60_
-C4-3:
-
+V65.60_261029 Thu 1323
+C4-D: IMAGE Deletion Predecessor Correction
 
 V65.59_261029 Thu 1259
 C4-2: Settings TEXT, SOUND and PDF Table Highlighting
