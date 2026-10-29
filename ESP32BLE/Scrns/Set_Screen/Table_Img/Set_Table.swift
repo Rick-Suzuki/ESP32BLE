@@ -59,9 +59,27 @@ struct SettingsDocumentTableSection: View {
     @State private var tableFeedbackMessage: String?
     @State private var tableFeedbackTask: Task<Void, Never>?
 
-	// set table font size for iphone
+    // MARK: - BM:🅱️ IPHONE FILENAME FONT SIZE — Change 15 below to adjust all seven filename categories; leave iPad unchanged.
     private var tableRowFont: Font? {
         isPad ? nil : .system(size: 15)
+    }
+
+    // MARK: - BM:🅱️ IPHONE ROW HEIGHT — Change 30 to adjust compact filename rows; keep iPad at 44. The iPhone List minimum matches this value.
+    private var filenameRowMinimumHeight: CGFloat {
+        isPad ? 44 : 30
+    }
+
+    private struct IPhoneFilenameRowMinimumHeightModifier: ViewModifier {
+        let height: CGFloat
+
+        @ViewBuilder
+        func body(content: Content) -> some View {
+            if isPad {
+                content
+            } else {
+                content.environment(\.defaultMinListRowHeight, height)
+            }
+        }
     }
 
     private var itemCountReservedHeight: CGFloat {
@@ -117,6 +135,7 @@ struct SettingsDocumentTableSection: View {
                     }
                 }
                 .listStyle(.plain)
+                .modifier(IPhoneFilenameRowMinimumHeightModifier(height: filenameRowMinimumHeight))
                 .scrollContentBackground(.hidden)
                 .scrollPosition(id: activeScrollPositionID, anchor: .top)
                 .background(.clear)
@@ -333,17 +352,19 @@ struct SettingsDocumentTableSection: View {
             showTableFeedback("copied name")
         } label: {
             HStack {
-                Text(fileURL.lastPathComponent)
+                Text(fileURL.deletingPathExtension().lastPathComponent)
                     .font(tableRowFont)
                     .fontWeight(isSelected ? .bold : .regular)
                     .foregroundStyle(isSelected ? Color.green : .white)
                     .multilineTextAlignment(.leading)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
                     .fixedSize(horizontal: false, vertical: true)
 
                 Spacer()
             }
             .padding(.leading, 10)
-            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            .frame(maxWidth: .infinity, minHeight: filenameRowMinimumHeight, alignment: .leading)
             .background(Color.black)
             .overlay {
                 Rectangle()
@@ -399,12 +420,14 @@ struct SettingsDocumentTableSection: View {
                     .fontWeight(isSelected ? .bold : .regular)
                     .foregroundStyle(isSelected ? Color.green : .white)
                     .multilineTextAlignment(.leading)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
                     .fixedSize(horizontal: false, vertical: true)
 
                 Spacer()
             }
             .padding(.leading, 10)
-            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            .frame(maxWidth: .infinity, minHeight: filenameRowMinimumHeight, alignment: .leading)
             .background(Color.black)
             .overlay {
                 Rectangle()
@@ -437,12 +460,14 @@ struct SettingsDocumentTableSection: View {
                 .fontWeight(isSelected ? .bold : .regular)
                 .foregroundStyle(isSelected ? Color.green : .white)
                 .multilineTextAlignment(.leading)
+                .lineLimit(1)
+                .truncationMode(.tail)
                 .fixedSize(horizontal: false, vertical: true)
 
             Spacer()
         }
         .padding(.leading, 10)
-        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+        .frame(maxWidth: .infinity, minHeight: filenameRowMinimumHeight, alignment: .leading)
         .background(Color.black)
         .overlay {
             Rectangle()
@@ -516,12 +541,14 @@ struct SettingsDocumentTableSection: View {
                     .fontWeight(isSelected ? .bold : .regular)
                     .foregroundStyle(isSelected ? Color.green : .white)
                     .multilineTextAlignment(.leading)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
                     .fixedSize(horizontal: false, vertical: true)
 
                 Spacer()
             }
             .padding(.leading, 10)
-            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            .frame(maxWidth: .infinity, minHeight: filenameRowMinimumHeight, alignment: .leading)
             .background(Color.black)
             .overlay {
                 Rectangle()
@@ -561,12 +588,14 @@ struct SettingsDocumentTableSection: View {
                     .fontWeight(isSelected ? .bold : .regular)
                     .foregroundStyle(isSelected ? Color.green : .white)
                     .multilineTextAlignment(.leading)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
                     .fixedSize(horizontal: false, vertical: true)
 
                 Spacer()
             }
             .padding(.leading, 10)
-            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            .frame(maxWidth: .infinity, minHeight: filenameRowMinimumHeight, alignment: .leading)
             .background(Color.black)
             .overlay {
                 Rectangle()
@@ -599,12 +628,14 @@ struct SettingsDocumentTableSection: View {
                     .font(tableRowFont)
                     .foregroundStyle(.white)
                     .multilineTextAlignment(.leading)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
                     .fixedSize(horizontal: false, vertical: true)
 
                 Spacer()
             }
             .padding(.leading, 10)
-            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            .frame(maxWidth: .infinity, minHeight: filenameRowMinimumHeight, alignment: .leading)
             .background(Color.black)
             .overlay {
                 Rectangle()
@@ -650,12 +681,14 @@ struct SettingsDocumentTableSection: View {
                 .fontWeight(isSelected ? .bold : .regular)
                 .foregroundStyle(isSelected ? Color.green : .white)
                 .multilineTextAlignment(.leading)
+                .lineLimit(1)
+                .truncationMode(.tail)
                 .fixedSize(horizontal: false, vertical: true)
 
             Spacer()
         }
         .padding(.leading, 10)
-        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+        .frame(maxWidth: .infinity, minHeight: filenameRowMinimumHeight, alignment: .leading)
         .background(Color.black)
         .overlay {
             Rectangle()

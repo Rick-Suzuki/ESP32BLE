@@ -1,3 +1,6 @@
+V65.53_261029 Thu 1103
+settings, files,import drop downs better on phones
+
 V65.52_261029 Thu 0854
 settings, images, table, stage A
 

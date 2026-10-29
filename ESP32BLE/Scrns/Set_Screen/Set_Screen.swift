@@ -41,6 +41,15 @@ struct SettingsScreen: View {
             }
         }
 
+        var menuItemTitle: String {
+            switch self {
+            case .templates:
+                return "templates"
+            default:
+                return selectorTitle
+            }
+        }
+
         var selectedButtonTitle: String {
             guard !isPad else { return selectorTitle }
 
@@ -332,6 +341,8 @@ struct SettingsScreen: View {
     @State private var isDeleteAllDataConfirmationPresented = false
     @State private var isRestoreAllFilesConfirmationPresented = false
     @AppStorage("settingsListMode") private var listModeRawValue = SettingsListMode.files.rawValue
+    @State private var isIPhoneSettingsCategoryPopoverPresented = false
+    @State private var isIPhoneSettingsImportPopoverPresented = false
     @AppStorage("settingsFilesScrollPositionID") private var fileScrollPositionIDStorage = ""
     @AppStorage("settingsTextScrollPositionID") private var textScrollPositionIDStorage = ""
     @AppStorage("settingsImagesScrollPositionID") private var imageScrollPositionIDStorage = ""
@@ -504,24 +515,11 @@ struct SettingsScreen: View {
 			//----------------------------------------
 			// import btn
 			//
-				Menu {
-					Button("Import Screen(s)") {
-						ButtonClickFeedback.playIfEnabled()
-                        importConflictApplyToAll = false
-                        activeImportMode = .screen
-						pendingImportMode = .screen
-					}
-					Button("Restore Full Backup") {
-						ButtonClickFeedback.playIfEnabled()
-						beginRestoreAllFiles()
-					}
-				} label: {
-					Image(systemName: "square.and.arrow.down")
-						.font(.title)
-						.foregroundStyle(.white)
-				}
-				.contentShape(.rect)
-				.accessibilityLabel("Import from iCloud")
+                    if isPad {
+                        settingsImportNativeMenu
+                    } else {
+                        settingsIPhoneImportButton
+                    }
 
 				if isPad {
 					Spacer()
@@ -811,47 +809,205 @@ struct SettingsScreen: View {
         }
     }
 
+    // MARK: - BM:🅱️ IPHONE FILE CATEGORY FONT SIZE — Change 13 to adjust the Settings file-category selector label on iPhone; iPad appearance is unchanged.
+    private var settingsTableSelectorFont: Font {
+        isPad ? .body : .system(size: 13)
+    }
+
+    // MARK: - BM:🅱️ IPHONE SETTINGS MENU ITEM FONT SIZE
+    // Change 13 to adjust the opened file-category
+    // menu text on iPhone.
+    // iPad continues using its native menu.
+    private var iphoneSettingsMenuItemFont: Font {
+        .system(size: 13)
+    }
+
+    // MARK: - BM:🅱️ IPHONE SETTINGS MENU ROW HEIGHT
+    // Change 36 to adjust the minimum height of
+    // the opened iPhone category-menu rows.
+    private var iphoneSettingsMenuRowMinimumHeight: CGFloat {
+        36
+    }
+
     private var settingsTableSelector: some View {
-        HStack(spacing: 4) {
- //           Text("Table")
- //               .font(isPad ? .body : .system(size: 15))
-  //              .foregroundStyle(.white)
-
-            Menu {
-                ForEach(SettingsListMode.visibleMenuModes, id: \.rawValue) { mode in
-                    Button {
-                        ButtonClickFeedback.playIfEnabled()
-                        listMode = mode
-                    } label: {
-                        if listMode == mode {
-                            Label(mode.selectorTitle, systemImage: "checkmark")
-                        } else {
-                            Text(mode.selectorTitle)
-                        }
-                    }
+        Group {
+            if isPad {
+                settingsTableSelectorNativeMenu
+            } else {
+                Button {
+                    isIPhoneSettingsCategoryPopoverPresented = true
+                } label: {
+                    settingsTableSelectorLabel
                 }
-            } label: {
-                HStack(spacing: 3) {
-                    Text(listMode.selectedButtonTitle)
-                        .lineLimit(1)
-
-                    Image(systemName: "chevron.down")
-                        .font(.caption2)
+                .buttonStyle(.plain)
+                .accessibilityLabel("File category: \(listMode.selectedButtonTitle)")
+                .popover(isPresented: $isIPhoneSettingsCategoryPopoverPresented) {
+                    iphoneSettingsCategoryPopover
+                        .presentationCompactAdaptation(.popover)
                 }
-                .font(isPad ? .body : .system(size: 15))
-                .foregroundStyle(.white)
-                .padding(.horizontal, isPad ? 6 : 4)
-                .frame(width: isPad ? 110 : 74)
-                .frame(minHeight: 36)
-                .background(Color.gray.opacity(0.45))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.gray.opacity(0.5), lineWidth: 1.5)
-                }
-                .clipShape(.rect(cornerRadius: 12))
-                .contentShape(.rect)
             }
         }
+    }
+
+    private var settingsTableSelectorNativeMenu: some View {
+        Menu {
+            ForEach(SettingsListMode.visibleMenuModes, id: \.rawValue) { mode in
+                Button {
+                    selectSettingsListMode(mode)
+                } label: {
+                    if listMode == mode {
+                        Label(mode.menuItemTitle, systemImage: "checkmark")
+                    } else {
+                        Text(mode.menuItemTitle)
+                    }
+                }
+            }
+        } label: {
+            settingsTableSelectorLabel
+        }
+    }
+
+    private var settingsTableSelectorLabel: some View {
+        HStack(spacing: 3) {
+            Text(listMode.selectedButtonTitle)
+                .lineLimit(1)
+
+            Image(systemName: "chevron.down")
+                .font(.caption2)
+        }
+        .font(settingsTableSelectorFont)
+        .foregroundStyle(.white)
+        .padding(.horizontal, isPad ? 6 : 4)
+        .frame(width: isPad ? 110 : 74)
+        .frame(minHeight: 36)
+        .background(Color.gray.opacity(0.45))
+        .overlay {
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.gray.opacity(0.5), lineWidth: 1.5)
+        }
+        .clipShape(.rect(cornerRadius: 12))
+        .contentShape(.rect)
+    }
+
+    private var iphoneSettingsCategoryPopover: some View {
+        VStack(spacing: 0) {
+            ForEach(SettingsListMode.visibleMenuModes, id: \.rawValue) { mode in
+                Button {
+                    isIPhoneSettingsCategoryPopoverPresented = false
+                    selectSettingsListMode(mode)
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "checkmark")
+                            .opacity(listMode == mode ? 1 : 0)
+                            .frame(width: 14, alignment: .leading)
+
+                        Text(mode.menuItemTitle)
+                            .lineLimit(1)
+
+                        Spacer(minLength: 0)
+                    }
+                    .font(iphoneSettingsMenuItemFont)
+                    .foregroundStyle(.primary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .frame(maxWidth: .infinity, minHeight: iphoneSettingsMenuRowMinimumHeight, alignment: .leading)
+                    .contentShape(.rect)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(mode.menuItemTitle)
+                .accessibilityValue(listMode == mode ? "Selected" : "")
+            }
+        }
+        .frame(minWidth: 150)
+        .padding(.vertical, 4)
+        .background(.regularMaterial)
+    }
+
+    private var settingsImportNativeMenu: some View {
+        Menu {
+            Button("Import Screen(s)") {
+                beginScreenImport()
+            }
+            Button("Restore Full Backup") {
+                beginFullBackupRestore()
+            }
+        } label: {
+            settingsImportTriggerLabel
+        }
+        .contentShape(.rect)
+        .accessibilityLabel("Import from iCloud")
+    }
+
+    private var settingsIPhoneImportButton: some View {
+        Button {
+            isIPhoneSettingsImportPopoverPresented = true
+        } label: {
+            settingsImportTriggerLabel
+        }
+        .buttonStyle(.plain)
+        .contentShape(.rect)
+        .accessibilityLabel("Import from iCloud")
+        .popover(isPresented: $isIPhoneSettingsImportPopoverPresented) {
+            iphoneSettingsImportPopover
+                .presentationCompactAdaptation(.popover)
+        }
+    }
+
+    private var settingsImportTriggerLabel: some View {
+        Image(systemName: "square.and.arrow.down")
+            .font(.title)
+            .foregroundStyle(.white)
+    }
+
+    private var iphoneSettingsImportPopover: some View {
+        VStack(spacing: 0) {
+            iphoneSettingsMenuActionRow(title: "Import Screen(s)") {
+                isIPhoneSettingsImportPopoverPresented = false
+                beginScreenImport()
+            }
+            iphoneSettingsMenuActionRow(title: "Restore Full Backup") {
+                isIPhoneSettingsImportPopoverPresented = false
+                beginFullBackupRestore()
+            }
+        }
+        .frame(minWidth: 180)
+        .padding(.vertical, 4)
+        .background(.regularMaterial)
+    }
+
+    private func iphoneSettingsMenuActionRow(
+        title: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Text(title)
+                .lineLimit(1)
+                .font(iphoneSettingsMenuItemFont)
+                .foregroundStyle(.primary)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .frame(maxWidth: .infinity, minHeight: iphoneSettingsMenuRowMinimumHeight, alignment: .leading)
+                .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(title)
+    }
+
+    private func selectSettingsListMode(_ mode: SettingsListMode) {
+        ButtonClickFeedback.playIfEnabled()
+        listMode = mode
+    }
+
+    private func beginScreenImport() {
+        ButtonClickFeedback.playIfEnabled()
+        importConflictApplyToAll = false
+        activeImportMode = .screen
+        pendingImportMode = .screen
+    }
+
+    private func beginFullBackupRestore() {
+        ButtonClickFeedback.playIfEnabled()
+        beginRestoreAllFiles()
     }
 
     private func normalizeVisibleListMode() {
