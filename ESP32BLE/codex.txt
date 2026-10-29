@@ -1,71 +1,43 @@
-C3-0 implemented successfully.
+C4-1 implemented and built successfully.
 
-A. Files modified
-
+Files modified:
+• ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
 • ESP32BLE/Scrns/Set_Screen/Table_Img/Set_Table.swift
 
-No other files changed.
+Changes:
+• Added nonpersistent temporaryScreenSelectionPath at Set_Table.swift:66.
+• SCREEN rows now compare:
+• Loaded URL path: green, bold.
+• Temporary single-tap path: yellow, bold.
+• Otherwise: white, regular.
+• GREEN takes priority at Set_Table.swift:365–369.
+• Set_Screen passes the resolved selectedDocumentFileURL at Set_Screen.swift:1623, so loaded-screen comparison uses complete paths.
+• Single tap still copies the complete filename and shows yellow “copied name”; it now records the tapped row path at Set_Table.swift:839–843.
+• Double tap retains the C3-0 exclusive action. After the existing load and Task.yield(), it clears the temporary selection only when the target is confirmed loaded at Set_Table.swift:827–836.
+• Temporary selection clears:
+• When Settings/table section disappears: Set_Table.swift:227–230.
+• When its file disappears after a refresh/import: Set_Table.swift:220–225.
+• Before deleting its selected row: Set_Table.swift:846–851.
+• Category switching retains the temporary SCREEN selection during the current Settings session.
 
-B. Functions modified
+Preserved:
+• C3-0 exclusive SCREEN gestures and no-copy-on-double-tap behavior.
+• C3-1 yellow copied-name and green changed-screen notifications.
+• SCREEN row layout, IDs, scrolling, accessibility actions, duplicate/delete swipes, loading, and background restoration.
+• IMAGE, BLACK, Text, Sound, PDF, Templates, and all other Settings behavior were unchanged.
 
-• documentRow(for:) at lines 346–412
-• handleScreenDoubleTap(_:) at lines 739–746
-• Added handleScreenSingleTap(_:) at lines 748–752
+Build:
+• Succeeded.
+• Build time: 15.279 seconds.
+• No physical-device testing performed.
 
-C. Gesture changes
+Manual tests:
+• Load Home, single-tap Music: Home green, Music yellow.
+• Single-tap Home: Home remains green; Music clears.
+• Single-tap Music, then Games: Home green, Games yellow, Music white.
+• Double-tap the yellow Music row: Music green, temporary yellow clears, clipboard unchanged, green “changed screen” appears.
+• Delete the temporary yellow row and confirm no stale highlight.
+• Close and reopen Settings: only the currently loaded screen is green.
+• Change screen outside Settings, reopen Settings, and verify the new loaded screen is green.
 
-Screen rows now use the same exclusive gesture arrangement as Images:
-
-• Double tap: TapGesture(count: 2)
-• Single tap: TapGesture(count: 1)
-• The double gesture is exclusive before the single gesture.
-
-This ensures only one action executes:
-
-
-• Single tap copies the full original filename and shows “copied name.”
-• Double tap loads the Screen and shows “changed screen.”
-
-D. Double-tap clipboard behavior
-
-Confirmed by code inspection:
-
-• handleScreenDoubleTap(_:) no longer writes to UIPasteboard.
-• The single-tap copy operation is now only in handleScreenSingleTap(_:).
-• Double-tapping an already-selected Screen continues to call loadFunctionKeys(fileURL).
-
-E. Accessibility
-
-The former Button semantics were restored explicitly:
-
-• Combined row accessibility element.
-• Button trait.
-• Default accessibility action copies the filename.
-• Named “Load Screen” accessibility action loads the Screen.
-
-F. Preserved behavior
-
-• Existing row dimensions, text formatting, highlighting, padding, separators, row ID, and content shape remain unchanged.
-• Existing duplicate and delete swipe actions remain unchanged.
-• Existing “copied name” and “changed screen” text, duration, and placement remain unchanged.
-• Image gestures and all other table categories were not modified.
-
-G. Build result
-
-• Xcode diagnostics: no issues in Set_Table.swift.
-• Build: successful.
-• Build time: 15.005 seconds.
-• Build errors/warnings reported: none.
-
-H. Recommended manual tests
-
-1. Single-tap a Screen row: confirm filename copies and “copied name” appears.
-2. Double-tap a different Screen row: confirm it loads and only “changed screen” appears.
-3. Confirm clipboard contents do not change after a Screen double tap.
-4. Double-tap the currently selected Screen: confirm it reloads.
-5. Rapidly repeat single taps and double taps on different rows.
-6. Verify Screen duplicate/delete swipe actions.
-7. Verify VoiceOver default action copies and “Load Screen” action loads.
-8. Verify Image single/double taps remain unchanged.
-
-No physical-device testing was performed.
+Existing VERSIONS.txt and codex.txt worktree modifications were left untouched.

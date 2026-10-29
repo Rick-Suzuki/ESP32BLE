@@ -1620,7 +1620,7 @@ struct SettingsScreen: View {
         SettingsDocumentTableSection(
             listMode: settingsDocumentTableListMode,
             documentFiles: availableDocumentURLs,
-            selectedDocumentName: selectedDocumentName,
+            loadedDocumentURL: selectedDocumentFileURL,
             textURLs: availableTextURLs,
             selectedTextFileName: selectedTextFileName,
             imageURLs: availableImageURLs,
@@ -1646,6 +1646,7 @@ struct SettingsScreen: View {
             canDeleteDocuments: canDeleteDocuments,
             imagePreviewSection: settingsTablePreviewSection,
             loadFunctionKeys: handleSettingsDocumentSelection,
+            isLoadedDocument: { selectedDocumentFileURL?.path == $0.path },
             loadTextFile: loadTextFile,
             deleteDocument: deleteDocument,
             duplicateDocument: duplicateDocument,

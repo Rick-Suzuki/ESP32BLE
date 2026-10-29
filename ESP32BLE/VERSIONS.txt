@@ -1,8 +1,15 @@
 
+V65.60_
+C4-3:
+
+
+V65.59_261029 Thu 1259
+C4-2: Settings TEXT, SOUND and PDF Table Highlighting
+
+C4:1: *** skipped becuase I started the codex
 
 V65.58_261029 Thu 1228
 C3-3: Settings IMAGE: BLACK Table Row and Preview Application
-
 
 V65.57_261029 Thu 1216
 C3-2: Settings IMAGE Table: Applied and Preview Highlight Colours
@@ -10,10 +17,8 @@ C3-2: Settings IMAGE Table: Applied and Preview Highlight Colours
 V65.56_261029 Thu 1210
 C3-1: Settings SCREEN and IMAGE Notification Colours
 
-
 V65.55_261029 Thu 1204
 C3-0: Exclusive Tap Gestures
-
 
 
 V65.54_261029 Thu 1114
