@@ -8,6 +8,10 @@ struct SettingsImagePreviewPanel: View {
     @State private var previewImage: UIImage?
     @State private var previewRequestID = ""
 
+    // MARK: - BM:🅱 BLACK PREVIEW LABEL FONT SIZE
+    // Controls the centered two-line BLACK preview label.
+    private let blackPreviewLabelFont: Font = .system(size: 16, weight: .medium)
+
     var body: some View {
         GeometryReader { geometry in
             let previewWidth = geometry.size.width
@@ -23,6 +27,16 @@ struct SettingsImagePreviewPanel: View {
                         .scaledToFill()
                         .frame(width: previewWidth, height: previewHeight)
                         .opacity(opacitySliderValue)
+                }
+
+                if imageURL == nil {
+                    VStack(spacing: 2) {
+                        Text("black")
+                        Text("background")
+                    }
+                    .font(blackPreviewLabelFont)
+                    .foregroundStyle(.white)
+                    .multilineTextAlignment(.center)
                 }
             }
             .frame(width: previewWidth, height: previewHeight)

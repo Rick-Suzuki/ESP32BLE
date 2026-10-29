@@ -346,41 +346,48 @@ struct SettingsDocumentTableSection: View {
     private func documentRow(for fileURL: URL) -> some View {
         let isSelected = selectedDocumentName == fileURL.lastPathComponent
 
-        return Button {
-            ButtonClickFeedback.playIfEnabled()
-            handleFileSelection(fileURL)
-            showTableFeedback("copied name")
-        } label: {
-            HStack {
-                Text(fileURL.deletingPathExtension().lastPathComponent)
-                    .font(tableRowFont)
-                    .fontWeight(isSelected ? .bold : .regular)
-                    .foregroundStyle(isSelected ? Color.green : .white)
-                    .multilineTextAlignment(.leading)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                    .fixedSize(horizontal: false, vertical: true)
+        return HStack {
+            Text(fileURL.deletingPathExtension().lastPathComponent)
+                .font(tableRowFont)
+                .fontWeight(isSelected ? .bold : .regular)
+                .foregroundStyle(isSelected ? Color.green : .white)
+                .multilineTextAlignment(.leading)
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .fixedSize(horizontal: false, vertical: true)
 
-                Spacer()
-            }
-            .padding(.leading, 10)
-            .frame(maxWidth: .infinity, minHeight: filenameRowMinimumHeight, alignment: .leading)
-            .background(Color.black)
-            .overlay {
-                Rectangle()
-                    .fill(Color.gray.opacity(0.6))
-                    .frame(height: 1)
-                    .frame(maxHeight: .infinity, alignment: .bottom)
-            }
-            .contentShape(.rect)
+            Spacer()
         }
-        .buttonStyle(.plain)
-        .simultaneousGesture(
+        .padding(.leading, 10)
+        .frame(maxWidth: .infinity, minHeight: filenameRowMinimumHeight, alignment: .leading)
+        .background(Color.black)
+        .overlay {
+            Rectangle()
+                .fill(Color.gray.opacity(0.6))
+                .frame(height: 1)
+                .frame(maxHeight: .infinity, alignment: .bottom)
+        }
+        .contentShape(.rect)
+        .gesture(
             TapGesture(count: 2)
-                .onEnded {
-                    handleScreenDoubleTap(fileURL)
+                .exclusively(before: TapGesture(count: 1))
+                .onEnded { gesture in
+                    switch gesture {
+                    case .first:
+                        handleScreenDoubleTap(fileURL)
+                    case .second:
+                        handleScreenSingleTap(fileURL)
+                    }
                 }
         )
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityAction {
+            handleScreenSingleTap(fileURL)
+        }
+        .accessibilityAction(named: Text("Load Screen")) {
+            handleScreenDoubleTap(fileURL)
+        }
         .id(fileURL.path)
         .listRowInsets(EdgeInsets())
         .listRowSeparator(.hidden)
@@ -730,12 +737,17 @@ struct SettingsDocumentTableSection: View {
     }
 
     private func handleScreenDoubleTap(_ fileURL: URL) {
-        UIPasteboard.general.string = fileURL.lastPathComponent
         loadFunctionKeys(fileURL)
 
         Task { @MainActor in
             await Task.yield()
             showTableFeedback("changed screen")
         }
+    }
+
+    private func handleScreenSingleTap(_ fileURL: URL) {
+        ButtonClickFeedback.playIfEnabled()
+        handleFileSelection(fileURL)
+        showTableFeedback("copied name")
     }
 }

@@ -1,134 +1,71 @@
-Stage D1C-2 implemented and built successfully.
+C3-0 implemented successfully.
 
 A. Files modified
 
-ESP32BLE/Scrns/Set_Screen/Set_Screen.swift only.
+• ESP32BLE/Scrns/Set_Screen/Table_Img/Set_Table.swift
 
-B. Source locations changed
+No other files changed.
 
-• iPhone Import popover state: line 345
-• iPhone/iPad Import trigger branch: lines 518–522
-• Existing Export Menu remains unchanged: lines 532–570
-• Native iPad Import Menu: lines 924–939
-• iPhone Import Button and popover: lines 941–954
-• Preserved Import icon trigger styling: lines 956–960
-• iPhone Import popover: lines 962–976
-• Shared compact action-row styling: lines 978–994
-• Shared Import Screen(s) action: lines 1001–1006
-• Shared Restore Full Backup action: lines 1008–1011
+B. Functions modified
 
-C. iPhone Import trigger
+• documentRow(for:) at lines 346–412
+• handleScreenDoubleTap(_:) at lines 739–746
+• Added handleScreenSingleTap(_:) at lines 748–752
 
-On iPhone, the existing Import icon is now a plain Button that opens a SwiftUI popover.
+C. Gesture changes
 
-The closed control remains:
+Screen rows now use the same exclusive gesture arrangement as Images:
 
-• square.and.arrow.down
-• .title symbol size
-• White foreground
-• Existing toolbar position
-• Existing rectangular hit area
-• Existing “Import from iCloud” accessibility label
+• Double tap: TapGesture(count: 2)
+• Single tap: TapGesture(count: 1)
+• The double gesture is exclusive before the single gesture.
 
-No visible Import text label was added.
+This ensures only one action executes:
 
-D. Popover appearance and dismissal
 
-The iPhone popover uses the established D1C-1 approach:
+• Single tap copies the full original filename and shows “copied name.”
+• Double tap loads the Screen and shows “changed screen.”
 
-• .popover(isPresented:)
-• .presentationCompactAdaptation(.popover)
-• System-managed positioning and outside-tap dismissal
-• Adaptive material background
-• Two full-width Button rows
-• One-line labels
+D. Double-tap clipboard behavior
 
-It contains, in order:
+Confirmed by code inspection:
 
-• Import Screen(s)
-• Restore Full Backup
+• handleScreenDoubleTap(_:) no longer writes to UIPasteboard.
+• The single-tap copy operation is now only in handleScreenSingleTap(_:).
+• Double-tapping an already-selected Screen continues to call loadFunctionKeys(fileURL).
 
-E. Shared styling reuse
+E. Accessibility
 
-The Import rows reuse the existing D1C-1 configuration:
+The former Button semantics were restored explicitly:
 
-• iphoneSettingsMenuItemFont: 13 points
-• iphoneSettingsMenuRowMinimumHeight: 36 points
-• 12-point horizontal padding
-• 6-point vertical padding
+• Combined row accessibility element.
+• Button trait.
+• Default accessibility action copies the filename.
+• Named “Load Screen” accessibility action loads the Screen.
 
-No additional font-size or row-height properties were added.
+F. Preserved behavior
 
-F. Import Screen(s) preservation
+• Existing row dimensions, text formatting, highlighting, padding, separators, row ID, and content shape remain unchanged.
+• Existing duplicate and delete swipe actions remain unchanged.
+• Existing “copied name” and “changed screen” text, duration, and placement remain unchanged.
+• Image gestures and all other table categories were not modified.
 
-The new shared beginScreenImport() helper preserves the original action exactly:
+G. Build result
 
-• Plays ButtonClickFeedback
-• Clears importConflictApplyToAll
-• Sets activeImportMode to .screen
-• Sets pendingImportMode to .screen
-• Uses the unchanged existing fileImporter, content types, validation, conflict handling, and feedback paths
+• Xcode diagnostics: no issues in Set_Table.swift.
+• Build: successful.
+• Build time: 15.005 seconds.
+• Build errors/warnings reported: none.
 
-G. Restore Full Backup preservation
+H. Recommended manual tests
 
-The new shared beginFullBackupRestore() helper preserves the original action exactly:
-
-• Plays ButtonClickFeedback
-• Calls existing beginRestoreAllFiles()
-• Retains .allFiles import mode
-• Retains the existing ZIP-only importer, restoration validation, conflict alerts, cancellation, and error paths
-
-H. Presentation sequencing
-
-When an iPhone popover row is selected:
-
-1. The Import popover presentation state is set to false.
-2. The existing Import action helper runs.
-
-No timer, delay, alternate importer, or new presentation handoff was introduced.
-
-Opening or dismissing the popover without selecting a row performs no file operation.
-
-I. iPad preservation
-
-On iPad, Import remains a native SwiftUI Menu with:
-
-• Original icon trigger appearance
-• Native menu typography and positioning
-• Original two actions
-• Existing importer and restore workflows
-• Existing accessibility label
-
-Both platforms call the same two action helpers.
-
-J. Unchanged scope
-
-Not modified:
-
-• Export Menu, options, disabled states, alert, or exporters
-• D1C-1 category popover
-• D1/D1A file-table behavior
-• Filename display, copying, scrolling, or gestures
-• IMAGE controls, preview, background navigation, BLE, MIDI, or ESP Help
-
-K. Build result
-
-Xcode diagnostics: no issues in Set_Screen.swift.
-
-Build: succeeded.
-Elapsed time: 21.2 seconds.
+1. Single-tap a Screen row: confirm filename copies and “copied name” appears.
+2. Double-tap a different Screen row: confirm it loads and only “changed screen” appears.
+3. Confirm clipboard contents do not change after a Screen double tap.
+4. Double-tap the currently selected Screen: confirm it reloads.
+5. Rapidly repeat single taps and double taps on different rows.
+6. Verify Screen duplicate/delete swipe actions.
+7. Verify VoiceOver default action copies and “Load Screen” action loads.
+8. Verify Image single/double taps remain unchanged.
 
 No physical-device testing was performed.
-
-L. Manual regression checklist
-
-• On iPhone, tap the Import icon and confirm a compact popover, not a sheet.
-• Confirm 13-point text and compact 36-point minimum rows.
-• Confirm item order: Import Screen(s), Restore Full Backup.
-• Tap outside; confirm no file picker, restore, or file change occurs.
-• Select Import Screen(s); confirm the existing picker opens and cancellation works.
-• Select Restore Full Backup; confirm the existing ZIP-only picker opens and cancellation works.
-• Test a disposable backup to confirm existing restore conflict behavior.
-• Confirm category popover still works.
-• Confirm Export remains the existing native Menu.
-• On iPad Pro, Air, and mini, confirm Import remains native and both actions retain their original behavior.

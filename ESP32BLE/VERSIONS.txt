@@ -1,4 +1,9 @@
 
+V65.55_261029 Thu 1204
+C3-0: Exclusive Tap Gestures
+
+
+
 V65.54_261029 Thu 1114
 settings: all 3 iphone dropdowns, smaller
 

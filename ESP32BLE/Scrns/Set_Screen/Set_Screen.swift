@@ -1476,16 +1476,19 @@ struct SettingsScreen: View {
                 selectPreviewImage(nil)
             },
             onRandom: {
-                let imageURLs = availableImageURLs
-                guard !imageURLs.isEmpty else { return }
-                let candidateURLs = imageURLs.filter { imageURL in
-                    imageURL.path != previewImageURL?.path
+                let previewChoices: [URL?] = [nil] + availableImageURLs
+                let candidateURLs = previewChoices.filter { imageURL in
+                    imageURL?.path != previewImageURL?.path
                 }
-                selectPreviewImage(candidateURLs.randomElement() ?? imageURLs.first)
+                selectPreviewImage(candidateURLs.randomElement() ?? previewImageURL)
             },
             onPrevious: {
-                guard let previewImagePosition, previewImagePosition > 1 else { return }
-                selectPreviewImage(availableImageURLs[previewImagePosition - 2])
+                guard let previewImagePosition else { return }
+                if previewImagePosition == 1 {
+                    selectPreviewImage(nil)
+                } else {
+                    selectPreviewImage(availableImageURLs[previewImagePosition - 2])
+                }
             },
             onNext: {
                 guard !availableImageURLs.isEmpty else { return }
@@ -1506,8 +1509,7 @@ struct SettingsScreen: View {
     }
 
     private var canPreviewPreviousImage: Bool {
-        guard let previewImagePosition else { return false }
-        return previewImagePosition > 1
+        previewImagePosition != nil
     }
 
     private var canPreviewNextImage: Bool {
