@@ -2,6 +2,7 @@ import SwiftUI
 import UIKit
 import AVFoundation
 import UniformTypeIdentifiers
+import WebKit
 
 struct SettingsScreen: View {
     private enum SettingsListMode: String {
@@ -5895,7 +5896,8 @@ private struct ESPHelpTopicPager: View {
             .clipped()
             .simultaneousGesture(
                 DragGesture(minimumDistance: 24)
-                    .onEnded(handleTopicSwipe)
+                    .onEnded(handleTopicSwipe),
+                including: currentTopic == .connectToMac ? .none : .all
             )
 
             ESPHelpNavigationBar(
@@ -5981,15 +5983,109 @@ private struct ESPHelpTopicView: View {
             Text(topic.title)
                 .font(.title2.weight(.semibold))
 
-            ScrollView {
-                Text("Help content will be added in Stage 2B.")
-                    .font(.body)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .contentShape(.rect)
+            if topic == .connectToMac {
+                if ESPHelpHTMLView.isConnectToMacAvailable {
+                    ESPHelpHTMLView()
+                } else {
+                    Text("This Help topic is unavailable.")
+                        .font(.body)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            } else {
+                ScrollView {
+                    Text("Help content will be added in Stage 2B.")
+                        .font(.body)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(.rect)
+                }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+}
+
+// MARK: - BM:🅱️ HTML Help renderer
+private struct ESPHelpHTMLView: UIViewRepresentable {
+    static var isConnectToMacAvailable: Bool {
+        connectToMacResources() != nil
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator()
+    }
+
+    func makeUIView(context: Context) -> WKWebView {
+        let webView = WKWebView(frame: .zero)
+        webView.navigationDelegate = context.coordinator
+        webView.allowsBackForwardNavigationGestures = false
+
+        loadConnectToMacPage(in: webView, coordinator: context.coordinator)
+        return webView
+    }
+
+    func updateUIView(_ webView: WKWebView, context: Context) {
+        loadConnectToMacPage(in: webView, coordinator: context.coordinator)
+    }
+
+    private func loadConnectToMacPage(
+        in webView: WKWebView,
+        coordinator: Coordinator
+    ) {
+        guard let resources = Self.connectToMacResources(),
+              coordinator.lastLoadedURL != resources.pageURL else {
+            return
+        }
+
+        coordinator.lastLoadedURL = resources.pageURL
+        coordinator.allowedPageURL = resources.pageURL
+        webView.loadFileURL(
+            resources.pageURL,
+            allowingReadAccessTo: resources.directoryURL
+        )
+    }
+
+    private static func connectToMacResources() -> (
+        directoryURL: URL,
+        pageURL: URL
+    )? {
+        guard let resourceURL = Bundle.main.resourceURL else {
+            return nil
+        }
+
+        let directoryURL = resourceURL
+            .appendingPathComponent("Help", isDirectory: true)
+        let pageURL = directoryURL
+            .appendingPathComponent("connect-mac.html", isDirectory: false)
+
+        guard FileManager.default.fileExists(atPath: directoryURL.path),
+              FileManager.default.fileExists(atPath: pageURL.path) else {
+            return nil
+        }
+
+        return (directoryURL, pageURL)
+    }
+
+    final class Coordinator: NSObject, WKNavigationDelegate {
+        var allowedPageURL: URL?
+        var lastLoadedURL: URL?
+
+        func webView(
+            _ webView: WKWebView,
+            decidePolicyFor navigationAction: WKNavigationAction,
+            decisionHandler: @escaping (WKNavigationActionPolicy) -> Void
+        ) {
+            guard navigationAction.targetFrame?.isMainFrame == true,
+                  let requestedURL = navigationAction.request.url,
+                  let allowedPageURL,
+                  requestedURL.standardizedFileURL == allowedPageURL.standardizedFileURL else {
+                decisionHandler(.cancel)
+                return
+            }
+
+            decisionHandler(.allow)
+        }
     }
 }
 

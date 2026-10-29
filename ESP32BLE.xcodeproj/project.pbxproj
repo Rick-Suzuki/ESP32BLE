@@ -134,6 +134,28 @@
 		1DF165E93086EACE003DFD80 /* TemplateDocument.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TemplateDocument.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		1DF5EE00309315F4003E5ACF /* Exceptions for "Help" folder in "ESP32BLE" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				"connect-mac.html",
+				css/help.css,
+			);
+			target = 1D590E282F611FB700E430E0 /* ESP32BLE */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		1DF5EDFD30931546003E5ACF /* Help */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				1DF5EE00309315F4003E5ACF /* Exceptions for "Help" folder in "ESP32BLE" target */,
+			);
+			path = Help;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
 /* Begin PBXFrameworksBuildPhase section */
 		1D590E262F611FB700E430E0 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
@@ -194,6 +216,7 @@
 			isa = PBXGroup;
 			children = (
 				1D590E552F61206100E430E0 /* ESP32BLE */,
+				1DF5EDFD30931546003E5ACF /* Help */,
 				1D590E2A2F611FB700E430E0 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -364,10 +387,14 @@
 				1D590E252F611FB700E430E0 /* Sources */,
 				1D590E262F611FB700E430E0 /* Frameworks */,
 				1D590E272F611FB700E430E0 /* Resources */,
+				1DF5EE0230931C18003E5ACF /* ShellScript */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				1DF5EDFD30931546003E5ACF /* Help */,
 			);
 			name = ESP32BLE;
 			packageProductDependencies = (
@@ -421,6 +448,33 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		1DF5EE0230931C18003E5ACF /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/Help",
+				"$(SRCROOT)/Help/connect-mac.html",
+				"$(SRCROOT)/Help/css/help.css",
+			);
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/Help/",
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/Help/connect-mac.html",
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/Help/css/help.css",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "set -eu\n\nsourceDirectory=\"${SRCROOT}/Help\"\ndestinationDirectory=\"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/Help\"\n\nif [ ! -d \"${sourceDirectory}\" ]; then\n    echo \"error: Help source directory not found: ${sourceDirectory}\"\n    exit 1\nfi\n\nrm -rf \"${destinationDirectory}\"\nditto \"${sourceDirectory}\" \"${destinationDirectory}\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		1D590E252F611FB700E430E0 /* Sources */ = {
@@ -524,7 +578,7 @@
 				DEVELOPMENT_TEAM = JH6L6AXE42;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -588,7 +642,7 @@
 				DEVELOPMENT_TEAM = JH6L6AXE42;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;

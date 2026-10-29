@@ -1,6 +1,11 @@
 
+V65.64_261029 Thu 1530
+ESP-HELP-006 Stage 2B-1 add html - complete
+
+
 V65.63_261029 Thu 1408
 C4-3: Templates Highlight Colour
+*** before returning to help
 
 V65.62_261029 Thu 1354
 C4-2: settings TEXT, SOUND and PDF Selection Highlighting

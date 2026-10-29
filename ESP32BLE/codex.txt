@@ -1,199 +1,65 @@
-Read-only probe complete. No files were modified, no build was run, and no Git state was changed.
+ESP-HELP-006E verification: PASS.
 
-A. Relevant source files and locations
+1. Latest Debug-iphoneos app product: PASS
 
-ESP32BLE/Scrns/Set_Screen/Table_Img/Set_Table.swift
+Located:
+Debug-iphoneos/ESP32BLE.app
 
-• Lines 28–30: Template row inputs:
-• templateURLs
-• selectedTemplateURL
-• templateDescription
+2. Required HTML path: PASS
 
-• Lines 135–139: Templates table construction:
-• ForEach(templateURLs, id: .path)
-• templateRow(for:)
+ESP32BLE.app/Help/connect-mac.html exists.
+Size: 781 bytes.
 
-• Lines 292–300: Template description area appears only when a template is selected.
+3. Required CSS path: PASS
 
-• Lines 786–849: templateRow(for:) implementation.
+ESP32BLE.app/Help/css/help.css exists.
+Size: 909 bytes.
 
-ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
+4. Flattened HTML duplicate absent: PASS
 
-• Lines 387–390: Settings-owned template state:
-• templateURLs
-• selectedTemplateURL
-• templateDescriptionState
-• pendingTemplateApplication
+ESP32BLE.app/connect-mac.html is absent.
 
-• Lines 1659–1692: Template state and callbacks passed into SettingsDocumentTableSection.
+5. Flattened CSS duplicate absent: PASS
 
-• Lines 1697–1701: Settings-level feedback overlay; its text is green.
+ESP32BLE.app/help.css is absent.
 
-• Lines 1742–1757: selectTemplateForDescription(_:).
+6. Required files nonempty: PASS
 
-• Lines 1759–1762: clearTemplateSelection().
+Both required files are nonempty.
 
-• Lines 1764–1778: deleteTemplate(_:).
+7. Help directory structure: PASS
 
-• Lines 1780–1823: prepareTemplateApplication(_:).
+Help/
+connect-mac.html
 
-• Lines 1825–1856: confirmed template application.
+css/
 
-• Lines 1858–1866: two-second Settings feedback helper.
+help.css
 
-• Lines 2792–2814: refreshTemplateFiles() and selection cleanup.
 
-ESP32BLE/Scrns/ContentView.swift
+8. Run Script build phase: PASS
 
-• Lines 756–775: applyTemplateToSelectedDocument(_:expectedTargetDocumentName:).
-• Lines 2911–2913: Template callbacks supplied to SettingsScreen.
+The latest build log shows:
+• Run Script executed.
+• No script errors.
+• No sandbox errors.
+• No resource-copy errors.
 
-B. Current Template selection state
+The script phase is intentionally configured to run during every build because “Based on dependency analysis” is unchecked.
 
-The selected Template is stored in SettingsScreen as:
+9. Duplicate-resource warnings: PASS
 
-selectedTemplateURL: URL?
+No duplicate Help-resource copy warning was found.
 
-Single tap calls selectTemplateForDescription(_:), which:
+10. Code-signing issues: PASS
 
-• Assigns selectedTemplateURL.
-• Loads the template configuration.
-• Loads its description, no-description state, or unavailable state.
-• Causes the description panel to update.
+The app was code signed after the Run Script phase. No code-signing failure or warning related to Help resources was found.
 
-The state is already temporary and nonpersistent.
+Existing unrelated build warnings:
 
-C. Current selected-row colour
+• Metadata extraction skipped because AppIntents.framework is not a dependency.
+• All interface orientations must be supported unless the app requires full screen.
 
-In Set_Table.swift lines 786–810:
+Neither warning is caused by Help packaging or the Run Script phase.
 
-• Selection identity uses standardized URL equality:
-selectedTemplateURL?.standardizedFileURL == templateURL.standardizedFileURL
-
-• Selected text is bold:
-.fontWeight(isSelected ? .bold : .regular)
-
-• Selected text is currently green:
-.foregroundStyle(isSelected ? Color.green : .white)
-
-• The row background remains black in both states.
-
-Therefore, the green/yellow change affects text colour only. It does not alter the row background, dimensions, separators, alignment, IDs, or scrolling.
-
-D. Current gestures
-
-The Template gesture is already exclusive:
-
-• Lines 788–800 use TapGesture(count: 2).exclusively(before: TapGesture(count: 1)).
-
-Single tap:
-
-• Plays ButtonClickFeedback.
-• Calls selectTemplate(templateURL).
-• Does not install the template.
-• Does not show a notification.
-
-Double tap:
-
-• Plays ButtonClickFeedback.
-• Calls selectTemplate(templateURL).
-• Calls applyTemplate(templateURL).
-• Does not also execute the single-tap gesture branch.
-
-Accessibility follows the same behavior:
-
-• Default accessibility action selects.
-• Named “Apply Template” action selects, then applies.
-
-E. Installation and notification path
-
-Double tap calls prepareTemplateApplication(_:), which:
-
-• Validates the template and selected target screen.
-• Saves the current screen if appropriate.
-• Creates pendingTemplateApplication.
-• Presents the existing confirmation alert.
-
-After confirmation:
-
-• applyPendingTemplate() calls the injected applyTemplate closure.
-• ContentView applies the template to the selected screen.
-• Settings reloads the selected document text.
-• Settings displays “Template applied”.
-
-The existing installation feedback is green because the Settings-level feedback overlay uses .foregroundStyle(.green) at Set_Screen.swift line 1701.
-
-Single selection has no notification. Notification styling is independent of the Template row colour.
-
-F. Smallest safe implementation
-
-A single substitution in Set_Table.swift line 806 is sufficient:
-
-Current:
-.foregroundStyle(isSelected ? Color.green : .white)
-
-Recommended:
-.foregroundStyle(isSelected ? Color.yellow : .white)
-
-This preserves:
-
-• Existing selectedTemplateURL identity.
-• Bold selected text.
-• Exclusive gesture behavior.
-• Description loading.
-• Template application and confirmation.
-• Accessibility selected trait.
-• Row IDs, swipe-to-delete, layout, and scrolling.
-• Existing notifications.
-
-No new selection state is needed.
-
-G. Selection lifecycle
-
-Current behavior already matches a temporary selection model:
-
-• Selecting another Template replaces selectedTemplateURL, so the prior row becomes white.
-• Switching away from Templates and back in the same Settings session retains selection and description.
-• Closing Settings destroys the SettingsScreen instance, so the @State selection is cleared on reopening.
-• Installing a Template leaves the selected Template selected; this is current behavior and need not change for the colour-only correction.
-• Deleting a selected Template calls refreshTemplateFiles(), which clears selection if that standardized URL no longer exists.
-• Template refresh similarly clears an unavailable selected Template at Set_Screen.swift lines 2805–2813.
-
-There is no Template rename path identified in the inspected code. If an external rename/removal is followed by template refresh, the existing unavailable-selection cleanup applies.
-
-H. Risks
-
-The colour substitution is low risk.
-
-Primary regression checks:
-
-• Verify selected Template becomes yellow, not green.
-• Verify a second single tap moves yellow selection.
-• Verify double tap still shows the existing confirmation and installs only after confirmation.
-• Verify the selected row remains bold.
-• Verify deleting a selected Template clears the description and highlight.
-• Verify SCREEN, IMAGE, TEXT, SOUND, and PDF colours remain unchanged.
-
-I. Recommended manual tests
-
-1. Open Settings → Templates and single-tap a Template.
-Confirm it is yellow and bold, with its description displayed.
-
-2. Single-tap another Template.
-Confirm the prior row becomes white and the new row becomes yellow.
-
-3. Leave Templates, visit another category, then return.
-Confirm the selected Template remains yellow during the same Settings session.
-
-4. Close and reopen Settings.
-Confirm no Template is temporarily selected.
-
-5. Double-tap a Template.
-Confirm the existing application confirmation appears and no extra single-tap behavior occurs.
-
-6. Confirm application still produces the existing green “Template applied” feedback.
-
-7. Delete the selected Template.
-Confirm the row, description, and highlight clear correctly.
-
-No unresolved design decision is required.
+The offline Help bundle structure is now correct.
