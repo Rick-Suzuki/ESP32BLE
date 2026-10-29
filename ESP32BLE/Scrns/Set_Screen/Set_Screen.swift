@@ -343,6 +343,7 @@ struct SettingsScreen: View {
     @AppStorage("settingsListMode") private var listModeRawValue = SettingsListMode.files.rawValue
     @State private var isIPhoneSettingsCategoryPopoverPresented = false
     @State private var isIPhoneSettingsImportPopoverPresented = false
+    @State private var isIPhoneSettingsExportPopoverPresented = false
     @AppStorage("settingsFilesScrollPositionID") private var fileScrollPositionIDStorage = ""
     @AppStorage("settingsTextScrollPositionID") private var textScrollPositionIDStorage = ""
     @AppStorage("settingsImagesScrollPositionID") private var imageScrollPositionIDStorage = ""
@@ -529,45 +530,7 @@ struct SettingsScreen: View {
 			//----------------------------------------
 			// export btn/menu
 			//
-				Menu {
-					Button("Export 1 Screen") {
-						ButtonClickFeedback.playIfEnabled()
-						prepareSingleFileExport()
-					}
-					.disabled(!canExportActiveScreen)
-					Button("Save as Template") {
-						ButtonClickFeedback.playIfEnabled()
-						beginSaveAsTemplate()
-					}
-					.disabled(!canSaveCurrentScreenAsTemplate)
-						Button("Create Full Backup") {
-							ButtonClickFeedback.playIfEnabled()
-							prepareArchiveExport()
-						}
-						.disabled(!hasArchiveExportContent)
-				} label: {
-				Image(systemName: "square.and.arrow.up")
-					.font(.title)
-					.foregroundStyle(.white)
-			}
-					.contentShape(.rect)
-					.accessibilityLabel("Export to iCloud")
-	            .disabled(!canUseExportMenu)
-	            .opacity(canUseExportMenu ? 1 : 0.45)
-					.alert("Save as Template", isPresented: $isSaveAsTemplateAlertPresented) {
-						TextField("Template name", text: $templateNameDraft)
-							.textInputAutocapitalization(.words)
-							.autocorrectionDisabled()
-						TextField("Description (optional)", text: $templateDescriptionDraft)
-						Button("Cancel", role: .cancel) {
-							cancelSaveAsTemplate()
-						}
-						Button("Save") {
-							saveAsTemplate()
-						}
-					} message: {
-						Text("Save the current screen's contents and settings as a reusable template.")
-					}
+                    settingsExportControl
 			
 			Spacer()
 			//
@@ -977,6 +940,7 @@ struct SettingsScreen: View {
 
     private func iphoneSettingsMenuActionRow(
         title: String,
+        isEnabled: Bool = true,
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
@@ -990,7 +954,108 @@ struct SettingsScreen: View {
                 .contentShape(.rect)
         }
         .buttonStyle(.plain)
+        .disabled(!isEnabled)
+        .opacity(isEnabled ? 1 : 0.45)
         .accessibilityLabel(title)
+    }
+
+    private var settingsExportControl: some View {
+        Group {
+            if isPad {
+                settingsExportNativeMenu
+            } else {
+                settingsIPhoneExportButton
+            }
+        }
+        .alert("Save as Template", isPresented: $isSaveAsTemplateAlertPresented) {
+            TextField("Template name", text: $templateNameDraft)
+                .textInputAutocapitalization(.words)
+                .autocorrectionDisabled()
+            TextField("Description (optional)", text: $templateDescriptionDraft)
+            Button("Cancel", role: .cancel) {
+                cancelSaveAsTemplate()
+            }
+            Button("Save") {
+                saveAsTemplate()
+            }
+        } message: {
+            Text("Save the current screen's contents and settings as a reusable template.")
+        }
+    }
+
+    private var settingsExportNativeMenu: some View {
+        Menu {
+            Button("Export 1 Screen") {
+                beginSingleScreenExport()
+            }
+            .disabled(!canExportActiveScreen)
+            Button("Save as Template") {
+                beginTemplateSave()
+            }
+            .disabled(!canSaveCurrentScreenAsTemplate)
+            Button("Create Full Backup") {
+                beginFullArchiveExport()
+            }
+            .disabled(!hasArchiveExportContent)
+        } label: {
+            settingsExportTriggerLabel
+        }
+        .contentShape(.rect)
+        .accessibilityLabel("Export to iCloud")
+        .disabled(!canUseExportMenu)
+        .opacity(canUseExportMenu ? 1 : 0.45)
+    }
+
+    private var settingsIPhoneExportButton: some View {
+        Button {
+            isIPhoneSettingsExportPopoverPresented = true
+        } label: {
+            settingsExportTriggerLabel
+        }
+        .buttonStyle(.plain)
+        .contentShape(.rect)
+        .accessibilityLabel("Export to iCloud")
+        .disabled(!canUseExportMenu)
+        .opacity(canUseExportMenu ? 1 : 0.45)
+        .popover(isPresented: $isIPhoneSettingsExportPopoverPresented) {
+            iphoneSettingsExportPopover
+                .presentationCompactAdaptation(.popover)
+        }
+    }
+
+    private var settingsExportTriggerLabel: some View {
+        Image(systemName: "square.and.arrow.up")
+            .font(.title)
+            .foregroundStyle(.white)
+    }
+
+    private var iphoneSettingsExportPopover: some View {
+        VStack(spacing: 0) {
+            iphoneSettingsMenuActionRow(
+                title: "Export 1 Screen",
+                isEnabled: canExportActiveScreen
+            ) {
+                isIPhoneSettingsExportPopoverPresented = false
+                beginSingleScreenExport()
+            }
+            iphoneSettingsMenuActionRow(
+                title: "Save as Template",
+                isEnabled: canSaveCurrentScreenAsTemplate
+            ) {
+                isIPhoneSettingsExportPopoverPresented = false
+                beginTemplateSave()
+            }
+            iphoneSettingsMenuActionRow(
+                title: "Create Full Backup",
+                isEnabled: hasArchiveExportContent
+            ) {
+                isIPhoneSettingsExportPopoverPresented = false
+                beginFullArchiveExport()
+            }
+        }
+        .frame(minWidth: 180)
+        .padding(.vertical, 4)
+        .background(.regularMaterial)
     }
 
     private func selectSettingsListMode(_ mode: SettingsListMode) {
@@ -1008,6 +1073,21 @@ struct SettingsScreen: View {
     private func beginFullBackupRestore() {
         ButtonClickFeedback.playIfEnabled()
         beginRestoreAllFiles()
+    }
+
+    private func beginSingleScreenExport() {
+        ButtonClickFeedback.playIfEnabled()
+        prepareSingleFileExport()
+    }
+
+    private func beginTemplateSave() {
+        ButtonClickFeedback.playIfEnabled()
+        beginSaveAsTemplate()
+    }
+
+    private func beginFullArchiveExport() {
+        ButtonClickFeedback.playIfEnabled()
+        prepareArchiveExport()
     }
 
     private func normalizeVisibleListMode() {

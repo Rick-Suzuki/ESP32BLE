@@ -1,3 +1,7 @@
+
+V65.54_261029 Thu 1114
+settings: all 3 iphone dropdowns, smaller
+
 V65.53_261029 Thu 1103
 settings, files,import drop downs better on phones
 
