@@ -803,7 +803,7 @@ struct SettingsDocumentTableSection: View {
             Text(templateURL.lastPathComponent)
                 .font(tableRowFont)
                 .fontWeight(isSelected ? .bold : .regular)
-                .foregroundStyle(isSelected ? Color.green : .white)
+                .foregroundStyle(isSelected ? Color.yellow : .white)
                 .multilineTextAlignment(.leading)
                 .lineLimit(1)
                 .truncationMode(.tail)

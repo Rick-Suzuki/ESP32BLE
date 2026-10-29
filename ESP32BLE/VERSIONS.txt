@@ -1,4 +1,7 @@
 
+V65.62_261029 Thu 1408
+C4-3: Templates Highlight Colour
+
 V65.62_261029 Thu 1354
 C4-2: settings TEXT, SOUND and PDF Selection Highlighting
 

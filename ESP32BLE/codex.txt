@@ -1,238 +1,199 @@
-Read-only probe complete. No files, builds, application data, UserDefaults, Git state, or branches were changed.
+Read-only probe complete. No files were modified, no build was run, and no Git state was changed.
 
-A. Relevant files and locations
+A. Relevant source files and locations
+
+ESP32BLE/Scrns/Set_Screen/Table_Img/Set_Table.swift
+
+• Lines 28–30: Template row inputs:
+• templateURLs
+• selectedTemplateURL
+• templateDescription
+
+• Lines 135–139: Templates table construction:
+• ForEach(templateURLs, id: .path)
+• templateRow(for:)
+
+• Lines 292–300: Template description area appears only when a template is selected.
+
+• Lines 786–849: templateRow(for:) implementation.
 
 ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
 
-• Lines 383–384: previewImageURL state declaration.
-• Lines 399–413: Settings lifecycle handlers.
-• Lines 401–403: onAppear restoration call.
-• Lines 404–406: selectedDocumentName change clears previewImageURL to BLACK.
-• Lines 407–412: documentDirectorySnapshot cleanup observer.
-• Lines 1461–1477: large IMAGE preview panel wiring.
-• Lines 1483–1511: Reset, Random, Previous, and Next preview controls.
-• Lines 1514–1530: preview position and button availability.
-• Lines 1533–1536: selectPreviewImage(_:).
-• Lines 1538–1540: restorePreviewFromAppliedBackground().
-• Lines 1624–1629: IMAGE table receives previewedImageURL and appliedImageURL.
-• Lines 1654–1656: table callbacks that set preview or apply a background.
-• Lines 3187–3194: applySettingsBackground(_:).
-• Lines 3286–3325: C4-D deleteImage(_:).
+• Lines 387–390: Settings-owned template state:
+• templateURLs
+• selectedTemplateURL
+• templateDescriptionState
+• pendingTemplateApplication
 
-ESP32BLE/Scrns/Set_Screen/Table_Img/Set_ImgSelectionSupport.swift
+• Lines 1659–1692: Template state and callbacks passed into SettingsDocumentTableSection.
 
-• Lines 5–14: availableImageURLs is derived from documentDirectorySnapshot and sorted alphabetically.
-• Lines 20–37: selectedImageURL resolves persisted path, filename, then one-based index.
-• Lines 63–72: persistSelectedImage(_:).
+• Lines 1697–1701: Settings-level feedback overlay; its text is green.
+
+• Lines 1742–1757: selectTemplateForDescription(_:).
+
+• Lines 1759–1762: clearTemplateSelection().
+
+• Lines 1764–1778: deleteTemplate(_:).
+
+• Lines 1780–1823: prepareTemplateApplication(_:).
+
+• Lines 1825–1856: confirmed template application.
+
+• Lines 1858–1866: two-second Settings feedback helper.
+
+• Lines 2792–2814: refreshTemplateFiles() and selection cleanup.
 
 ESP32BLE/Scrns/ContentView.swift
 
-• Lines 202–205: documentDirectorySnapshot and backgroundImageFiles begin empty.
-• Line 215: Settings is initially presented.
-• Lines 325–329: SettingsScreen is created while Settings is presented.
-• Lines 353–360: C4-P startup task.
-• Lines 550–562: refreshDocumentFiles() updates documentDirectorySnapshot.
-• Lines 573–593: refreshBackgroundImageFiles() updates ContentView’s separate backgroundImageFiles collection.
-• Lines 678–707: initial document loading and screen-background restoration.
-• Lines 1306–1371: per-screen background restoration.
-• Lines 2901–2929: SettingsScreen construction and presentation wiring.
+• Lines 756–775: applyTemplateToSelectedDocument(_:expectedTargetDocumentName:).
+• Lines 2911–2913: Template callbacks supplied to SettingsScreen.
 
-ESP32BLE/Scrns/Set_Screen/Table_Img/Set_ImgPanel.swift
+B. Current Template selection state
 
-• Lines 5–82: preview panel renders from imageURL, which is previewImageURL.
-• Lines 32–40: BLACK label appears only when imageURL is nil.
+The selected Template is stored in SettingsScreen as:
 
-B. Confirmed Settings initialization sequence
+selectedTemplateURL: URL?
 
-The initial Settings presentation is active from launch:
+Single tap calls selectTemplateForDescription(_:), which:
 
-• ContentView initializes isSettingsScreenPresented as true at line 215.
-• ContentView therefore creates SettingsScreen at lines 325–329.
-• SettingsScreen initializes previewImageURL as nil at line 383.
-• SettingsScreen onAppear calls restorePreviewFromAppliedBackground() at lines 401–403.
-• That function calls selectPreviewImage(selectedImageURL) at lines 1538–1540.
-• selectedImageURL depends on availableImageURLs.
-• availableImageURLs depends on documentDirectorySnapshot, not ContentView.backgroundImageFiles.
-• documentDirectorySnapshot begins empty at ContentView line 203.
+• Assigns selectedTemplateURL.
+• Loads the template configuration.
+• Loads its description, no-description state, or unavailable state.
+• Causes the description panel to update.
 
-C4-P corrected ContentView.backgroundImageFiles ordering, which fixes main-screen/per-screen background restoration. It does not guarantee that Settings’ separate documentDirectorySnapshot has been populated when Settings onAppear executes.
+The state is already temporary and nonpersistent.
 
-Later, ensureDefaultFunctionKeysFile() refreshes document files, causing documentDirectorySnapshot to become populated. At that point selectedImageURL can correctly resolve the applied image, so the IMAGE row becomes GREEN. However, Settings does not retry restorePreviewFromAppliedBackground() when the snapshot becomes available.
+C. Current selected-row colour
 
-This exactly matches the observed state:
+In Set_Table.swift lines 786–810:
 
-• Applied image row: GREEN, because selectedImageURL now resolves.
-• previewImageURL: nil, because it was initialized/restored before image URLs existed and never restored again.
-• BLACK row: YELLOW, because nil is a preview-only BLACK state while a different image is applied.
-• Large preview: BLACK, because it renders previewImageURL, which remains nil.
+• Selection identity uses standardized URL equality:
+selectedTemplateURL?.standardizedFileURL == templateURL.standardizedFileURL
 
-C. Document snapshot interaction
+• Selected text is bold:
+.fontWeight(isSelected ? .bold : .regular)
 
-The Settings observer is:
+• Selected text is currently green:
+.foregroundStyle(isSelected ? Color.green : .white)
 
-• Lines 407–412 in Set_Screen.swift.
+• The row background remains black in both states.
 
-Its current behavior is cleanup only:
+Therefore, the green/yellow change affects text colour only. It does not alter the row background, dimensions, separators, alignment, IDs, or scrolling.
 
-• If previewImageURL is nonnil and no longer exists in availableImageURLs, it clears previewImageURL to nil.
-• If previewImageURL is already nil, it does nothing.
-• It never retries restorePreviewFromAppliedBackground().
+D. Current gestures
 
-Therefore, after the snapshot changes from empty to populated:
+The Template gesture is already exclusive:
 
-• A valid applied image becomes resolvable as selectedImageURL.
-• The table correctly marks it GREEN.
-• The preview remains nil/BLACK.
-• No current callback repairs that initial preview state.
+• Lines 788–800 use TapGesture(count: 2).exclusively(before: TapGesture(count: 1)).
 
-The snapshot cleanup observer does not itself clear a valid image preview after the image collection has populated. Its role is valid for deletion or external removal.
+Single tap:
 
-D. Applied-background resolution
+• Plays ButtonClickFeedback.
+• Calls selectTemplate(templateURL).
+• Does not install the template.
+• Does not show a notification.
 
-selectedImageURL, in Set_ImgSelectionSupport.swift lines 20–37, resolves in this order:
+Double tap:
 
-1. Persisted complete path, if it is present in availableImageURLs.
-2. Persisted filename, case-insensitively.
-3. Persisted one-based image index.
-4. nil/BLACK if none resolve.
+• Plays ButtonClickFeedback.
+• Calls selectTemplate(templateURL).
+• Calls applyTemplate(templateURL).
+• Does not also execute the single-tap gesture branch.
 
-Because availableImageURLs derives from Settings’ documentDirectorySnapshot, selectedImageURL is temporarily nil while that snapshot is empty, even though the persisted image selection and ContentView’s own background collection may already be valid.
+Accessibility follows the same behavior:
 
-Image sorting is consistent alphabetical filename sorting. There is no evidence that sorting or path identity causes this particular BLACK preview result.
+• Default accessibility action selects.
+• Named “Apply Template” action selects, then applies.
 
-E. Every previewImageURL writer identified
+E. Installation and notification path
 
-Lifecycle and cleanup:
+Double tap calls prepareTemplateApplication(_:), which:
 
-• Settings onAppear: restorePreviewFromAppliedBackground() at lines 401–403.
-• selectedDocumentName change: direct nil assignment at lines 404–406.
-• documentDirectorySnapshot cleanup: direct nil assignment at lines 407–412.
+• Validates the template and selected target screen.
+• Saves the current screen if appropriate.
+• Creates pendingTemplateApplication.
+• Presents the existing confirmation alert.
 
-Preview controls:
+After confirmation:
 
-• Reset: selectPreviewImage(nil), lines 1487–1489.
-• Random: selectPreviewImage(...), lines 1490–1495.
-• Previous: selectPreviewImage(nil or predecessor), lines 1497–1503.
-• Next: selectPreviewImage(next image), lines 1505–1510.
-• selectPreviewImage(_:), lines 1533–1536.
+• applyPendingTemplate() calls the injected applyTemplate closure.
+• ContentView applies the template to the selected screen.
+• Settings reloads the selected document text.
+• Settings displays “Template applied”.
 
-Table/application paths:
+The existing installation feedback is green because the Settings-level feedback overlay uses .foregroundStyle(.green) at Set_Screen.swift line 1701.
 
-• IMAGE row preview callback: direct previewImageURL assignment, line 1654.
-• BLACK table row preview callback: selectPreviewImage(nil), line 1655.
-• applySettingsBackground(_:): synchronizes preview with the applied background, lines 3187–3194.
-• C4-D deleteImage(_:): synchronizes preview to the validated predecessor, lines 3311–3323.
+Single selection has no notification. Notification styling is independent of the Template row colour.
 
-The initial-restart failure is not caused by Reset, navigation, C4-D, or image decoding. It is caused by initialization occurring before Settings receives its populated document snapshot, followed by no restoration retry.
+F. Smallest safe implementation
 
-F. Selected-document interaction
+A single substitution in Set_Table.swift line 806 is sufficient:
 
-The selectedDocumentName observer at lines 404–406 unconditionally sets previewImageURL to nil.
+Current:
+.foregroundStyle(isSelected ? Color.green : .white)
 
-This can also contribute during startup if selectedDocumentName changes after Settings has appeared. It likewise does not call restorePreviewFromAppliedBackground() afterward.
-
-The empty document snapshot alone is sufficient to explain the observed result. The selected-document handler is an additional initialization-order risk because it can clear a correctly restored preview without a subsequent restore call.
-
-G. Confirmed cause
-
-Confirmed source cause:
-
-• Settings preview restoration depends on documentDirectorySnapshot.
-• The initial Settings view can restore before that snapshot contains files.
-• selectedImageURL consequently resolves to nil.
-• previewImageURL becomes nil/BLACK.
-• Snapshot population later enables the applied row to become GREEN.
-• No handler restores previewImageURL after that point.
-
-This explains the exact GREEN applied-image / YELLOW BLACK / BLACK preview combination observed after relaunch.
-
-H. Main-screen rendering remains independently unproven
-
-The green Settings row proves that Settings can now resolve the stored applied selection after document snapshot population.
-
-It does not prove that the main-screen UIImage was decoded and rendered successfully. ContentView intentionally clears loadedBackgroundImage while Settings is visible, at lines 669–676.
-
-Physical verification should therefore include:
-
-• Return to the main screen after relaunch.
-• Confirm the actual background image is rendered.
-• Then reopen Settings and confirm the same image is both GREEN and previewed.
-
-I. Smallest safe correction recommendation
-
-Only Set_Screen.swift needs to change.
-
-Recommended approach:
-
-• Treat preview restoration as pending only during Settings initialization and after a selected-document change.
-• Restore preview from selectedImageURL once documentDirectorySnapshot becomes available.
-• Do not use a blanket rule such as “if previewImageURL is nil, restore it,” because that would incorrectly overwrite an intentional user BLACK preview during a Settings session.
-
-A minimal state-aware approach would be:
-
-1. Mark initial preview restoration as pending when Settings appears.
-2. Mark it pending when selectedDocumentName changes.
-3. On documentDirectorySnapshot change:
-• If restoration is pending, call restorePreviewFromAppliedBackground() after the snapshot is available, then clear the pending flag.
-• Otherwise retain the current deletion cleanup behavior only.
-4. User actions through Reset, Random, Previous, Next, IMAGE table single-tap, and BLACK row single-tap must clear or bypass the pending-initialization condition so intentional preview-only selection is never overwritten.
+Recommended:
+.foregroundStyle(isSelected ? Color.yellow : .white)
 
 This preserves:
 
-• Valid initial applied-image preview restoration.
-• Intentional BLACK preview.
-• C4-D preview synchronization.
-• Snapshot cleanup after deletion or external file removal.
-• Existing applied/preview GREEN/YELLOW/WHITE rules.
+• Existing selectedTemplateURL identity.
+• Bold selected text.
+• Exclusive gesture behavior.
+• Description loading.
+• Template application and confirmation.
+• Accessibility selected trait.
+• Row IDs, swipe-to-delete, layout, and scrolling.
+• Existing notifications.
 
-No timer, polling, retry delay, persistent state, or changes to C4-P/C4-D are needed.
+No new selection state is needed.
 
-J. iPhone and iPad behavior
+G. Selection lifecycle
 
-Both platforms use the same SettingsScreen state, lifecycle handlers, availableImageURLs computation, and preview panel.
+Current behavior already matches a temporary selection model:
 
-There is no platform-specific preview restoration branch. The issue and correction should apply consistently to iPhone and iPad.
+• Selecting another Template replaces selectedTemplateURL, so the prior row becomes white.
+• Switching away from Templates and back in the same Settings session retains selection and description.
+• Closing Settings destroys the SettingsScreen instance, so the @State selection is cleared on reopening.
+• Installing a Template leaves the selected Template selected; this is current behavior and need not change for the colour-only correction.
+• Deleting a selected Template calls refreshTemplateFiles(), which clears selection if that standardized URL no longer exists.
+• Template refresh similarly clears an unavailable selected Template at Set_Screen.swift lines 2805–2813.
 
-K. Potential regressions to protect against
+There is no Template rename path identified in the inspected code. If an external rename/removal is followed by template refresh, the existing unavailable-selection cleanup applies.
 
-• Do not restore over a user-selected BLACK preview after Reset.
-• Do not restore over an intentionally previewed physical image after a normal file refresh.
-• Preserve C4-D behavior when deletion changes the applied or previewed image.
-• Preserve snapshot cleanup when the currently previewed physical image is deleted externally.
-• Preserve the preview-only versus applied-background distinction.
-• Preserve immediate Settings reopening behavior within a running application.
-• Do not alter C4-P startup ordering.
+H. Risks
 
-L. Recommended physical regression tests
+The colour substitution is low risk.
 
-1. Apply image A, terminate ESP, relaunch, return to main, and confirm image A is visibly rendered.
+Primary regression checks:
 
-2. Open Settings after relaunch and confirm:
-• Image A is GREEN.
-• BLACK is WHITE.
-• The large preview displays image A.
+• Verify selected Template becomes yellow, not green.
+• Verify a second single tap moves yellow selection.
+• Verify double tap still shows the existing confirmation and installs only after confirmation.
+• Verify the selected row remains bold.
+• Verify deleting a selected Template clears the description and highlight.
+• Verify SCREEN, IMAGE, TEXT, SOUND, and PDF colours remain unchanged.
 
-3. Apply BLACK, relaunch, and confirm:
-• BLACK is GREEN.
-• The large preview shows the BLACK label.
-• No physical image row is YELLOW.
+I. Recommended manual tests
 
-4. Apply image C, delete it, confirm predecessor B is applied and previewed, restart, then confirm B remains rendered on the main screen and GREEN in Settings.
+1. Open Settings → Templates and single-tap a Template.
+Confirm it is yellow and bold, with its description displayed.
 
-5. While image A is applied, press Reset in Settings:
-• BLACK becomes YELLOW.
-• Image A remains GREEN.
-• Perform a document refresh that does not remove files.
-• Confirm BLACK remains YELLOW rather than being overwritten by A.
+2. Single-tap another Template.
+Confirm the prior row becomes white and the new row becomes yellow.
 
-6. While image A is applied, single-tap image B:
-• A remains GREEN.
-• B becomes YELLOW.
-• Perform a normal snapshot refresh.
-• Confirm B remains YELLOW.
+3. Leave Templates, visit another category, then return.
+Confirm the selected Template remains yellow during the same Settings session.
 
-7. Change screens while Settings is open and confirm the newly loaded screen’s applied background becomes the preview once its file list is available.
+4. Close and reopen Settings.
+Confirm no Template is temporarily selected.
 
-8. Repeat the restart, Settings opening, BLACK preview, and intentional preview-only checks on iPhone and iPad.
+5. Double-tap a Template.
+Confirm the existing application confirmation appears and no extra single-tap behavior occurs.
 
-No implementation was performed.
+6. Confirm application still produces the existing green “Template applied” feedback.
+
+7. Delete the selected Template.
+Confirm the row, description, and highlight clear correctly.
+
+No unresolved design decision is required.
