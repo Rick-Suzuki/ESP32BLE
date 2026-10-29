@@ -1,6 +1,10 @@
 
 
-V65.57_
+V65.58_261029 Thu 1228
+C3-3: Settings IMAGE: BLACK Table Row and Preview Application
+
+
+V65.57_261029 Thu 1216
 C3-2: Settings IMAGE Table: Applied and Preview Highlight Colours
 
 V65.56_261029 Thu 1210

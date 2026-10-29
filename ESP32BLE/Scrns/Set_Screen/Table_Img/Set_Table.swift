@@ -20,6 +20,7 @@ struct SettingsDocumentTableSection: View {
     let imageURLs: [URL]
     let previewedImageURL: URL?
     let appliedImageURL: URL?
+    let backgroundChangeFeedbackID: UUID
     let soundURLs: [URL]
     let selectedSoundURL: URL?
     let pdfURLs: [URL]
@@ -44,7 +45,8 @@ struct SettingsDocumentTableSection: View {
     let duplicateDocument: (URL) -> Void
     let deleteTextFile: (URL) -> Void
     let previewImage: (URL) -> Void
-    let selectImage: (URL) -> Void
+    let previewBlackImage: () -> Void
+    let applyImageBackground: (URL?) -> Void
     let deleteImage: (URL) -> Void
     let selectSound: (URL) -> Void
     let deleteSound: (URL) -> Void
@@ -110,6 +112,7 @@ struct SettingsDocumentTableSection: View {
                         }
                         .scrollTargetLayout()
                     case .images:
+                        blackImageRow
                         ForEach(imageURLs, id: \.path) { imageURL in
                             imageRow(for: imageURL)
                         }
@@ -209,6 +212,9 @@ struct SettingsDocumentTableSection: View {
             }
         }
         .clipShape(.rect(cornerRadius: 0))
+        .onChange(of: backgroundChangeFeedbackID) {
+            showTableFeedback("changed BG")
+        }
         .onDisappear {
             refreshConfirmationTask?.cancel()
             tableFeedbackTask?.cancel()
@@ -533,9 +539,71 @@ struct SettingsDocumentTableSection: View {
 
     private func handleImageBackgroundSelection(_ imageURL: URL) {
         ButtonClickFeedback.playIfEnabled()
-        selectImage(imageURL)
-		previewImage(imageURL)
-		showTableFeedback("changed BG")
+        applyImageBackground(imageURL)
+    }
+
+    private var blackImageRow: some View {
+        let isApplied = appliedImageURL == nil
+        let isPreviewed = previewedImageURL == nil
+        let isHighlighted = isApplied || isPreviewed
+        let rowForegroundColor: Color = isApplied ? .green : (isPreviewed ? .yellow : .white)
+
+        return HStack {
+            Text("BLACK")
+                .font(tableRowFont)
+                .fontWeight(isHighlighted ? .bold : .regular)
+                .foregroundStyle(rowForegroundColor)
+                .multilineTextAlignment(.leading)
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Spacer()
+        }
+        .padding(.leading, 10)
+        .frame(maxWidth: .infinity, minHeight: filenameRowMinimumHeight, alignment: .leading)
+        .background(Color.black)
+        .overlay {
+            Rectangle()
+                .fill(Color.gray.opacity(0.6))
+                .frame(height: 1)
+                .frame(maxHeight: .infinity, alignment: .bottom)
+        }
+        .contentShape(.rect)
+        .gesture(
+            TapGesture(count: 2)
+                .exclusively(before: TapGesture(count: 1))
+                .onEnded { gesture in
+                    switch gesture {
+                    case .first:
+                        handleBlackImageBackgroundSelection()
+                    case .second:
+                        handleBlackImagePreviewSelection()
+                    }
+                }
+        )
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityAction {
+            handleBlackImagePreviewSelection()
+        }
+        .accessibilityAction(named: Text("Set as Main Screen background")) {
+            handleBlackImageBackgroundSelection()
+        }
+        .id("settings-image-black-background")
+        .listRowInsets(EdgeInsets())
+        .listRowSeparator(.hidden)
+        .listRowBackground(Color.clear)
+    }
+
+    private func handleBlackImagePreviewSelection() {
+        ButtonClickFeedback.playIfEnabled()
+        previewBlackImage()
+    }
+
+    private func handleBlackImageBackgroundSelection() {
+        ButtonClickFeedback.playIfEnabled()
+        applyImageBackground(nil)
     }
 
     private func soundRow(for soundURL: URL) -> some View {

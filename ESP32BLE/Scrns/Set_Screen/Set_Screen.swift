@@ -381,6 +381,7 @@ struct SettingsScreen: View {
     @FocusState private var isDocumentNameFieldFocused: Bool
     @State private var isCancellingDocumentNameFromOutsideTap = false
     @State private var previewImageURL: URL?
+    @State private var backgroundChangeFeedbackID = UUID()
     @State private var selectedTextFileName = ""
     @State private var templateURLs: [URL] = []
     @State private var selectedTemplateURL: URL?
@@ -1462,6 +1463,17 @@ struct SettingsScreen: View {
             imageURL: previewImageURL,
             opacitySliderValue: opacitySliderValue
         )
+        .contentShape(.rect)
+        .onTapGesture {
+            applySettingsBackground(previewImageURL)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityLabel("Background preview")
+        .accessibilityHint("Applies the displayed background")
+        .accessibilityAction {
+            applySettingsBackground(previewImageURL)
+        }
     }
 
     private var pdfPreviewSection: some View {
@@ -1614,6 +1626,7 @@ struct SettingsScreen: View {
             imageURLs: availableImageURLs,
             previewedImageURL: previewImageURL,
             appliedImageURL: selectedImageURL,
+            backgroundChangeFeedbackID: backgroundChangeFeedbackID,
             soundURLs: availableSoundURLs,
             selectedSoundURL: selectedSoundURL,
             pdfURLs: availablePDFURLs,
@@ -1638,7 +1651,8 @@ struct SettingsScreen: View {
             duplicateDocument: duplicateDocument,
             deleteTextFile: deleteTextFile,
             previewImage: { previewImageURL = $0 },
-            selectImage: selectImage,
+            previewBlackImage: { selectPreviewImage(nil) },
+            applyImageBackground: applySettingsBackground,
             deleteImage: deleteImage,
             selectSound: selectSound,
             deleteSound: deleteSound,
@@ -3169,8 +3183,14 @@ struct SettingsScreen: View {
         self.singleFileExportTemporaryURL = nil
     }
 
-    private func selectImage(_ imageURL: URL) {
+    private func applySettingsBackground(_ imageURL: URL?) {
         persistSelectedImage(imageURL)
+        if imageURL == nil {
+            selectPreviewImage(nil)
+        } else {
+            previewImageURL = imageURL
+        }
+        backgroundChangeFeedbackID = UUID()
     }
 
     private func selectSound(_ soundURL: URL) {
