@@ -57,6 +57,7 @@ struct SettingsDocumentTableSection: View {
     @State private var showsRefreshConfirmation = false
     @State private var refreshConfirmationTask: Task<Void, Never>?
     @State private var tableFeedbackMessage: String?
+    @State private var tableFeedbackColor: Color = .green
     @State private var tableFeedbackTask: Task<Void, Never>?
 
     // MARK: - BM:🅱️ IPHONE FILENAME FONT SIZE — Change 15 below to adjust all seven filename categories; leave iPad unchanged.
@@ -145,10 +146,10 @@ struct SettingsDocumentTableSection: View {
                     showRefreshConfirmation()
                 }
 				.overlay(alignment: .top) {
-					if let tableFeedbackMessage {
-						Text(tableFeedbackMessage)
-							.font(.subheadline)
-							.foregroundStyle(.green)
+                        if let tableFeedbackMessage {
+                            Text(tableFeedbackMessage)
+                                .font(.subheadline)
+                                .foregroundStyle(tableFeedbackColor)
 							.padding(.horizontal, 15)
 							.padding(.vertical, 6)
 							.background(
@@ -223,8 +224,9 @@ struct SettingsDocumentTableSection: View {
         }
     }
 
-    private func showTableFeedback(_ message: String) {
+    private func showTableFeedback(_ message: String, color: Color = .green) {
         tableFeedbackTask?.cancel()
+        tableFeedbackColor = color
         tableFeedbackMessage = message
         tableFeedbackTask = Task {
             try? await Task.sleep(nanoseconds: 2_000_000_000)
@@ -522,7 +524,7 @@ struct SettingsDocumentTableSection: View {
         handleFileSelection(imageURL) {
             previewImage(imageURL)
         }
-        showTableFeedback("copied name")
+        showTableFeedback("copied name", color: .yellow)
     }
 
     private func handleImageBackgroundSelection(_ imageURL: URL) {
@@ -748,6 +750,6 @@ struct SettingsDocumentTableSection: View {
     private func handleScreenSingleTap(_ fileURL: URL) {
         ButtonClickFeedback.playIfEnabled()
         handleFileSelection(fileURL)
-        showTableFeedback("copied name")
+        showTableFeedback("copied name", color: .yellow)
     }
 }

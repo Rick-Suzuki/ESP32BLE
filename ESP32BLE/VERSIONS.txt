@@ -1,4 +1,8 @@
 
+V65.56_261029 Thu 1210
+C3-1: Settings SCREEN and IMAGE Notification Colours
+
+
 V65.55_261029 Thu 1204
 C3-0: Exclusive Tap Gestures
 
