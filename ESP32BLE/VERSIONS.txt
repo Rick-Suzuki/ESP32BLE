@@ -1,4 +1,8 @@
 
+
+V65.57_
+C3-2: Settings IMAGE Table: Applied and Preview Highlight Colours
+
 V65.56_261029 Thu 1210
 C3-1: Settings SCREEN and IMAGE Notification Colours
 

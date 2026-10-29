@@ -18,7 +18,8 @@ struct SettingsDocumentTableSection: View {
     let textURLs: [URL]
     let selectedTextFileName: String
     let imageURLs: [URL]
-    let selectedImageURL: URL?
+    let previewedImageURL: URL?
+    let appliedImageURL: URL?
     let soundURLs: [URL]
     let selectedSoundURL: URL?
     let pdfURLs: [URL]
@@ -461,13 +462,16 @@ struct SettingsDocumentTableSection: View {
     }
 
     private func imageRow(for imageURL: URL) -> some View {
-        let isSelected = selectedImageURL?.lastPathComponent == imageURL.lastPathComponent
+        let isApplied = appliedImageURL?.path == imageURL.path
+        let isPreviewed = previewedImageURL?.path == imageURL.path
+        let isHighlighted = isApplied || isPreviewed
+        let rowForegroundColor: Color = isApplied ? .green : (isPreviewed ? .yellow : .white)
 
         return HStack {
             Text(imageURL.lastPathComponent)
                 .font(tableRowFont)
-                .fontWeight(isSelected ? .bold : .regular)
-                .foregroundStyle(isSelected ? Color.green : .white)
+                .fontWeight(isHighlighted ? .bold : .regular)
+                .foregroundStyle(rowForegroundColor)
                 .multilineTextAlignment(.leading)
                 .lineLimit(1)
                 .truncationMode(.tail)
