@@ -55,3 +55,44 @@ ol {
 li + li {
     margin-top: 0.5rem;
 }
+
+html.esp-iphone {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+}
+
+html.esp-iphone body {
+    font-size: 0.875rem;
+    line-height: 1.5;
+}
+
+html.esp-iphone h2 {
+    font-size: 1.0625rem;
+    line-height: 1.25;
+}
+
+html.esp-iphone p {
+    margin-bottom: 0.875rem;
+}
+
+html.esp-iphone li + li {
+    margin-top: 0.4rem;
+}
+
+html.esp-ipad body {
+    font-size: 0.875rem;
+    line-height: 1.5;
+}
+
+html.esp-ipad h2 {
+    font-size: 1.125rem;
+    line-height: 1.25;
+}
+
+html.esp-ipad p {
+    margin-bottom: 0.875rem;
+}
+
+html.esp-ipad li + li {
+    margin-top: 0.4rem;
+}

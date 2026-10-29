@@ -1,4 +1,8 @@
 
+V65.65_261029 Thu 1703
+1. html fix, 2. settings too big for 17 Fix
+
+
 V65.64_261029 Thu 1530
 ESP-HELP-006 Stage 2B-1 add html - complete
 

@@ -454,7 +454,10 @@ struct SettingsScreen: View {
     }
 
     private func iPhoneSettingsBody(availableWidth: CGFloat) -> some View {
+        let panelWidth = availableWidth.isFinite ? max(0, availableWidth) : 0
         let tableWidth = iPhoneDocumentTableWidth(for: availableWidth)
+        let leftRegionWidth = max(0, panelWidth - tableWidth)
+        let leftContentWidth = max(0, leftRegionWidth - 20)
 
         return HStack(alignment: .top, spacing: 0) {
             VStack(spacing: 0) {
@@ -468,7 +471,8 @@ struct SettingsScreen: View {
 
                 Spacer(minLength: 0)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .frame(width: leftContentWidth, alignment: .topLeading)
+            .frame(maxHeight: .infinity, alignment: .topLeading)
             .padding(.leading, 8)
             .padding(.trailing, 12)
             .padding(.vertical, 8)
@@ -476,7 +480,8 @@ struct SettingsScreen: View {
             documentTableSection
                 .frame(width: tableWidth)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .frame(width: panelWidth, alignment: .top)
+        .frame(maxHeight: .infinity, alignment: .top)
         .background(Color.black)
         .overlay {
             Rectangle()
@@ -6017,12 +6022,59 @@ private struct ESPHelpHTMLView: UIViewRepresentable {
     }
 
     func makeUIView(context: Context) -> WKWebView {
-        let webView = WKWebView(frame: .zero)
+        let configuration = WKWebViewConfiguration()
+        configuration.userContentController.addUserScript(
+            WKUserScript(
+                source: deviceFamilyScript,
+                injectionTime: .atDocumentStart,
+                forMainFrameOnly: true
+            )
+        )
+
+        let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.navigationDelegate = context.coordinator
         webView.allowsBackForwardNavigationGestures = false
 
         loadConnectToMacPage(in: webView, coordinator: context.coordinator)
         return webView
+    }
+
+    private var deviceFamilyScript: String {
+        let deviceFamilyClass: String
+
+        switch UIDevice.current.userInterfaceIdiom {
+        case .pad:
+            deviceFamilyClass = "esp-ipad"
+        case .phone:
+            deviceFamilyClass = "esp-iphone"
+        default:
+            deviceFamilyClass = "esp-iphone"
+        }
+
+        return """
+        (() => {
+            const applyDeviceFamilyClass = () => {
+                const root = document.documentElement;
+
+                if (root) {
+                    root.classList.add('\(deviceFamilyClass)');
+                    return true;
+                }
+
+                return false;
+            };
+
+            if (!applyDeviceFamilyClass()) {
+                const observer = new MutationObserver(() => {
+                    if (applyDeviceFamilyClass()) {
+                        observer.disconnect();
+                    }
+                });
+
+                observer.observe(document, { childList: true });
+            }
+        })();
+        """
     }
 
     func updateUIView(_ webView: WKWebView, context: Context) {

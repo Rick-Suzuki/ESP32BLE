@@ -70,7 +70,7 @@
 		1D0CCE4B309061C6006622D6 /* console_max.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = console_max.txt; sourceTree = "<group>"; };
 		1D16CD10302F1954004E330E /* ScreenConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenConfig.swift; sourceTree = "<group>"; };
 		1D16CD1230304347004E330E /* ScreenDocument.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenDocument.swift; sourceTree = "<group>"; };
-		1D23A17A3075B984003B646C /* VERSIONS.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = VERSIONS.txt; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.swift; };
+		1D23A17A3075B984003B646C /* VERSIONS.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = VERSIONS.txt; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.plist; };
 		1D23A17C3075C212003B646C /* console_17.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = console_17.txt; sourceTree = "<group>"; };
 		1D2A22AF307C69D3003CCFCF /* notes.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = notes.txt; sourceTree = "<group>"; };
 		1D2A22C2307DF60E003CCFCF /* Set_ArchiveDocuments.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Set_ArchiveDocuments.swift; sourceTree = "<group>"; };

@@ -1,21 +1,22 @@
+🐞 [ESP-SETTINGS-GEOMETRY]
+Device: iPhone
+Orientation: landscape
+ContentView available width: 750.0
+ContentView available height: 382.0
+ContentView safe leading: 62.0
+ContentView safe trailing: 62.0
+Settings presentation: minX 0.0, maxX 750.0, width 750.0
+Settings root: minX 0.0, maxX 750.0, width 750.0
+Toolbar: minX 0.0, maxX 750.0, width 750.0
+Outer panel: available width 750.0, minX 0.0, maxX 753.7, width 753.7
+Left region: minX 0.0, maxX 583.7, width 583.7
+Available devices: minX 8.0, maxX 238.0, width 230.0
+Keyboard settings: minX 252.0, maxX 571.7, width 319.7
+File table: calculated width 170.0, minX 583.7, maxX 753.7, width 170.0
+Remaining width after table reservation: 580.0
+Right-border overflow: 3.7 points
 [BLE-CONNECT-PROBE] 🐞 t=0.000s scan stop requested reason=stop() activePeripheralUUID=nil discoveredDeviceCount=0
-API MISUSE: <CBCentralManager: 0x105fd8dc0> can only accept this command while in the powered on state
+API MISUSE: <CBCentralManager: 0x15a7a0dc0> can only accept this command while in the powered on state
 [BLE-CONNECT-PROBE] 🐞 t=0.000s scanning stopped
 [BLE-CONNECT-PROBE] 🐞 t=0.000s state isConnected previous=false new=false activePeripheralUUID=nil attempt=0
-[BLE-CONNECT-PROBE] 🐞 t=0.459s scan stop requested reason=stop() activePeripheralUUID=nil discoveredDeviceCount=0
-API MISUSE: <CBCentralManager: 0x105fd8dc0> can only accept this command while in the powered on state
-[BLE-CONNECT-PROBE] 🐞 t=0.459s scanning stopped
-[BLE-CONNECT-PROBE] 🐞 t=0.459s state isConnected previous=false new=false activePeripheralUUID=nil attempt=0
 non-launching port is incompatible with service identifier "com.apple.PointerUI.pointeruid.default-service"
-🐞 [IPHONE_LAYOUT_PROBE] snapshot
-device=iPhone18,3 iOS=27.0.1 landscape=true
-geometry=(w:746.0, h:382.0, safeTop:0.0, safeBottom:20.0)
-calculated=(physicalContentHeight:402.0, gridHeight:316.0, topToolbar:44.0, topSpacing:2.0, bottomToolbarRegion:36.0, clearanceReservation:4.0, reservedBottomInset:30.0)
-frames.global=(root:(x:64.0, y:0.0, w:746.0, h:382.0), topToolbar:(x:64.0, y:0.0, w:746.0, h:44.0), grid:(x:64.0, y:46.0, w:746.0, h:316.0), bottomToolbar:(x:64.0, y:366.0, w:746.0, h:36.0))
-measured=(bottomToolbarTopY:366.0, gridBottomY:362.0, clearance:4.0, overlapDetected:false, actualBottomToolbarHeight:36.0, calculatedMinusMeasuredGridHeight:0.0, rootMinusGeometryHeight:0.0)
-[BLE-CONNECT-PROBE] 🐞 t=5.418s scan stop requested reason=stop() activePeripheralUUID=nil discoveredDeviceCount=0
-[BLE-CONNECT-PROBE] 🐞 t=5.418s scanning stopped
-[BLE-CONNECT-PROBE] 🐞 t=5.418s state isConnected previous=false new=false activePeripheralUUID=nil attempt=0
-[ESP-MAC-TX] payload="AUTH:RESPONSE:1:esp-c5ab88b08760efae5bb9e2ab8e73c802:2f8d1174edede4e15bc6224494503dc2f8874287708a84ca0e178b962c8bd7b2\n" bytes=118 values=[65,85,84,72,58,82,69,83,80,79,78,83,69,58,49,58,101,115,112,45,99,53,97,98,56,56,98,48,56,55,54,48,101,102,97,101,53,98,98,57,101,50,97,98,56,101,55,51,99,56,48,50,58,50,102,56,100,49,49,55,52,101,100,101,100,101,52,101,49,53,98,99,54,50,50,52,52,57,52,53,48,51,100,99,50,102,56,56,55,52,50,56,55,55,48,56,97,56,52,99,97,48,101,49,55,56,98,57,54,50,99,56,98,100,55,98,50,10]
-[ESP-AUTH] authentication response sent
-[ESP-AUTH] authenticated with Mac Helper
