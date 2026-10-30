@@ -1,4 +1,8 @@
 
+V65.71
+261030 Fri 1248
+extra divider added, help structure test
+
 V65.70
 261030 Fri 1214
 db_version moved to App

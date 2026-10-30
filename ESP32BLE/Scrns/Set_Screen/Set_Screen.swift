@@ -5782,6 +5782,32 @@ private enum ESPHelpTopic: CaseIterable, Hashable, Identifiable {
         }
     }
 
+    var iconColor: Color {
+        switch self {
+        case .connectToMac:
+            .green
+        case .connectToESP32BLE:
+            .cyan
+        case .usingESP:
+            .purple
+        case .troubleshooting:
+            .yellow
+        }
+    }
+
+    var pages: [ESPHelpPage] {
+        switch self {
+        case .connectToMac:
+            [
+                .html("connect-mac.html"),
+                .html("connect-mac-setup.html"),
+                .html("connect-mac-connection.html")
+            ]
+        case .connectToESP32BLE, .usingESP, .troubleshooting:
+            [.placeholder]
+        }
+    }
+
     var previous: ESPHelpTopic? {
         guard let index = Self.allCases.firstIndex(of: self), index > 0 else {
             return nil
@@ -5799,6 +5825,16 @@ private enum ESPHelpTopic: CaseIterable, Hashable, Identifiable {
     }
 }
 
+private enum ESPHelpPage: Hashable {
+    case html(String)
+    case placeholder
+}
+
+private struct ESPHelpPageLocation: Hashable {
+    let topic: ESPHelpTopic
+    let pageIndex: Int
+}
+
 private struct ESPHelpContentsView: View {
     let onClose: () -> Void
 
@@ -5813,7 +5849,8 @@ private struct ESPHelpContentsView: View {
                         NavigationLink(value: ESPHelpDestination.topic(topic)) {
                             ESPHelpContentsRow(
                                 title: topic.title,
-                                symbolName: topic.symbolName
+                                symbolName: topic.symbolName,
+                                iconColor: topic.iconColor
                             )
                         }
 
@@ -5822,10 +5859,13 @@ private struct ESPHelpContentsView: View {
                         }
                     }
 
+                    Divider()
+
                     NavigationLink(value: ESPHelpDestination.completeUserManual) {
                         ESPHelpContentsRow(
                             title: "Complete User Manual",
-                            symbolName: "book"
+                            symbolName: "book",
+                            iconColor: .primary
                         )
                     }
                 }
@@ -5848,15 +5888,16 @@ private struct ESPHelpContentsView: View {
 private struct ESPHelpContentsRow: View {
     let title: String
     let symbolName: String
+    let iconColor: Color
 
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: symbolName)
                 .frame(width: 24)
-                .foregroundStyle(Color.accentColor)
+                .foregroundStyle(iconColor)
 
             Text(title)
-                .foregroundStyle(.primary)
+                .foregroundStyle(.white)
 
             Spacer()
 
@@ -5879,6 +5920,7 @@ private struct ESPHelpTopicPager: View {
     let onClose: () -> Void
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
     @State private var currentTopic: ESPHelpTopic
+    @State private var currentPageIndex: Int
     @State private var navigationDirection: ESPHelpTopicNavigationDirection = .next
     @State private var isTransitioning = false
 
@@ -5890,31 +5932,27 @@ private struct ESPHelpTopicPager: View {
         self.onHome = onHome
         self.onClose = onClose
         _currentTopic = State(initialValue: initialTopic)
+        _currentPageIndex = State(initialValue: 0)
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             ZStack {
-                ESPHelpTopicView(topic: currentTopic)
-                    .id(currentTopic)
+                ESPHelpTopicView(topic: currentTopic, page: currentPage)
+                    .id(ESPHelpPageLocation(topic: currentTopic, pageIndex: currentPageIndex))
                     .transition(topicTransition)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .clipped()
-            .simultaneousGesture(
-                DragGesture(minimumDistance: 24)
-                    .onEnded(handleTopicSwipe),
-                including: currentTopic == .connectToMac ? .none : .all
-            )
 
             ESPHelpNavigationBar(
                 showsHome: true,
                 showsTopicNavigation: true,
-                onPrevious: currentTopic.previous.map { previousTopic in
-                    { changeTopic(to: previousTopic, direction: .previous) }
+                onPrevious: previousPageLocation.map { location in
+                    { changePage(to: location, direction: .previous) }
                 },
-                onNext: currentTopic.next.map { nextTopic in
-                    { changeTopic(to: nextTopic, direction: .next) }
+                onNext: nextPageLocation.map { location in
+                    { changePage(to: location, direction: .next) }
                 },
                 onHome: onHome,
                 onClose: onClose,
@@ -5940,18 +5978,52 @@ private struct ESPHelpTopicPager: View {
         }
     }
 
-    private func changeTopic(
-        to topic: ESPHelpTopic,
+    private var currentPage: ESPHelpPage {
+        currentTopic.pages[currentPageIndex]
+    }
+
+    private var previousPageLocation: ESPHelpPageLocation? {
+        if currentPageIndex > 0 {
+            return ESPHelpPageLocation(topic: currentTopic, pageIndex: currentPageIndex - 1)
+        }
+
+        guard let previousTopic = currentTopic.previous else {
+            return nil
+        }
+
+        return ESPHelpPageLocation(
+            topic: previousTopic,
+            pageIndex: previousTopic.pages.count - 1
+        )
+    }
+
+    private var nextPageLocation: ESPHelpPageLocation? {
+        if currentPageIndex < currentTopic.pages.count - 1 {
+            return ESPHelpPageLocation(topic: currentTopic, pageIndex: currentPageIndex + 1)
+        }
+
+        guard let nextTopic = currentTopic.next else {
+            return nil
+        }
+
+        return ESPHelpPageLocation(topic: nextTopic, pageIndex: 0)
+    }
+
+    private func changePage(
+        to location: ESPHelpPageLocation,
         direction: ESPHelpTopicNavigationDirection
     ) {
-        guard !isTransitioning, topic != currentTopic else {
+        guard !isTransitioning,
+              location.topic.pages.indices.contains(location.pageIndex),
+              location.topic != currentTopic || location.pageIndex != currentPageIndex else {
             return
         }
 
         navigationDirection = direction
 
         guard !accessibilityReduceMotion else {
-            currentTopic = topic
+            currentTopic = location.topic
+            currentPageIndex = location.pageIndex
             return
         }
 
@@ -5960,46 +6032,35 @@ private struct ESPHelpTopicPager: View {
             .easeInOut(duration: 0.25),
             completionCriteria: .logicallyComplete
         ) {
-            currentTopic = topic
+            currentTopic = location.topic
+            currentPageIndex = location.pageIndex
         } completion: {
             isTransitioning = false
         }
     }
 
-    private func handleTopicSwipe(_ value: DragGesture.Value) {
-        let horizontalDistance = value.translation.width
-        let verticalDistance = value.translation.height
-
-        guard abs(horizontalDistance) > abs(verticalDistance), abs(horizontalDistance) >= 60 else {
-            return
-        }
-
-        if horizontalDistance < 0, let nextTopic = currentTopic.next {
-            changeTopic(to: nextTopic, direction: .next)
-        } else if horizontalDistance > 0, let previousTopic = currentTopic.previous {
-            changeTopic(to: previousTopic, direction: .previous)
-        }
-    }
 }
 
 private struct ESPHelpTopicView: View {
     let topic: ESPHelpTopic
+    let page: ESPHelpPage
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             Text(topic.title)
                 .font(.title2.weight(.semibold))
 
-            if topic == .connectToMac {
-                if ESPHelpHTMLView.isConnectToMacAvailable {
-                    ESPHelpHTMLView()
+            switch page {
+            case .html(let filename):
+                if ESPHelpHTMLView.isPageAvailable(named: filename) {
+                    ESPHelpHTMLView(pageFilename: filename)
                 } else {
                     Text("This Help topic is unavailable.")
                         .font(.body)
                         .foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
-            } else {
+            case .placeholder:
                 ScrollView {
                     Text("Help content will be added in Stage 2B.")
                         .font(.body)
@@ -6348,8 +6409,10 @@ private final class ESPHelpFormSheetAnchorController: UIViewController {
 
 // MARK: - BM:🅱️ HTML Help renderer
 private struct ESPHelpHTMLView: UIViewRepresentable {
-    static var isConnectToMacAvailable: Bool {
-        connectToMacResources() != nil
+    let pageFilename: String
+
+    static func isPageAvailable(named pageFilename: String) -> Bool {
+        pageResources(named: pageFilename) != nil
     }
 
     func makeCoordinator() -> Coordinator {
@@ -6370,7 +6433,7 @@ private struct ESPHelpHTMLView: UIViewRepresentable {
         webView.navigationDelegate = context.coordinator
         webView.allowsBackForwardNavigationGestures = false
 
-        loadConnectToMacPage(in: webView, coordinator: context.coordinator)
+        loadPage(in: webView, coordinator: context.coordinator)
         return webView
     }
 
@@ -6413,14 +6476,14 @@ private struct ESPHelpHTMLView: UIViewRepresentable {
     }
 
     func updateUIView(_ webView: WKWebView, context: Context) {
-        loadConnectToMacPage(in: webView, coordinator: context.coordinator)
+        loadPage(in: webView, coordinator: context.coordinator)
     }
 
-    private func loadConnectToMacPage(
+    private func loadPage(
         in webView: WKWebView,
         coordinator: Coordinator
     ) {
-        guard let resources = Self.connectToMacResources(),
+        guard let resources = Self.pageResources(named: pageFilename),
               coordinator.lastLoadedURL != resources.pageURL else {
             return
         }
@@ -6433,7 +6496,7 @@ private struct ESPHelpHTMLView: UIViewRepresentable {
         )
     }
 
-    private static func connectToMacResources() -> (
+    private static func pageResources(named pageFilename: String) -> (
         directoryURL: URL,
         pageURL: URL
     )? {
@@ -6444,7 +6507,7 @@ private struct ESPHelpHTMLView: UIViewRepresentable {
         let directoryURL = resourceURL
             .appendingPathComponent("Help", isDirectory: true)
         let pageURL = directoryURL
-            .appendingPathComponent("connect-mac.html", isDirectory: false)
+            .appendingPathComponent(pageFilename, isDirectory: false)
 
         guard FileManager.default.fileExists(atPath: directoryURL.path),
               FileManager.default.fileExists(atPath: pageURL.path) else {
