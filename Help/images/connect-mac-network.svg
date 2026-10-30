@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 420" role="img" aria-labelledby="title description">
+    <title id="title">ESP connection to a Mac</title>
+    <desc id="description">A Mac running ESPMacHelper and an iPhone or iPad running ESP connect through a local network.</desc>
+    <style>
+        .device { fill: #f2f2f7; stroke: #636366; stroke-width: 5; }
+        .screen { fill: #ffffff; stroke: #636366; stroke-width: 5; }
+        .ink { fill: #1c1c1e; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
+        .label { font-size: 26px; font-weight: 700; }
+        .detail { font-size: 20px; }
+        .accent { fill: #00c7d9; }
+        .arrow { fill: none; stroke: #00c7d9; stroke-width: 8; stroke-linecap: round; stroke-linejoin: round; }
+    </style>
+    <rect width="720" height="420" fill="#ffffff"/>
+    <path class="arrow" d="M270 178 H414 M270 178 L294 158 M270 178 L294 198 M414 178 L390 158 M414 178 L390 198"/>
+    <text class="ink detail" x="342" y="230" text-anchor="middle">Local network</text>
+
+    <g transform="translate(-410 0)">
+        <rect class="device" x="500" y="68" width="126" height="218" rx="23"/>
+        <rect class="screen" x="514" y="94" width="98" height="164" rx="10"/>
+        <circle class="accent" cx="563" cy="176" r="20"/>
+        <circle class="device" cx="563" cy="272" r="5"/>
+        <text class="ink label" x="563" y="330" text-anchor="middle">iPhone or iPad</text>
+        <text class="ink detail" x="563" y="357" text-anchor="middle">ESP</text>
+    </g>
+
+    <g transform="translate(410 0)">
+        <rect class="device" x="58" y="64" width="210" height="146" rx="14"/>
+        <rect class="screen" x="76" y="82" width="174" height="110" rx="5"/>
+        <rect class="device" x="126" y="210" width="74" height="18" rx="5"/>
+        <path class="device" d="M94 228 H232 L252 250 H74 Z"/>
+        <circle class="accent" cx="163" cy="137" r="18"/>
+        <text class="ink label" x="163" y="286" text-anchor="middle">Mac</text>
+        <text class="ink detail" x="163" y="313" text-anchor="middle">ESPMacHelper</text>
+    </g>
+</svg>

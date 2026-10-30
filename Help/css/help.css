@@ -56,6 +56,50 @@ li + li {
     margin-top: 0.5rem;
 }
 
+.visual-help-page {
+    display: flex;
+    min-height: 100svh;
+    background: #ffffff;
+    color: #1c1c1e;
+}
+
+body.visual-help-prototype {
+    background: #ffffff;
+    color: #1c1c1e;
+}
+
+.visual-help {
+    display: grid;
+    flex: 1;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    gap: clamp(0.75rem, 3vw, 1.5rem);
+    min-height: 0;
+}
+
+.visual-help h2,
+.visual-help-summary {
+    margin: 0;
+}
+
+.visual-help-illustration {
+    display: grid;
+    place-items: center;
+    min-height: 0;
+    margin: 0;
+}
+
+.visual-help-illustration img {
+    display: block;
+    width: min(100%, 34rem);
+    height: auto;
+    max-height: min(46svh, 19rem);
+}
+
+.visual-help-summary {
+    color: #636366;
+    text-align: center;
+}
+
 html.esp-iphone {
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
@@ -81,6 +125,10 @@ html.esp-iphone p {
 
 html.esp-iphone li + li {
     margin-top: 0.4rem;
+}
+
+html.esp-iphone .visual-help-illustration img {
+    max-height: min(42svh, 15rem);
 }
 
 html.esp-ipad body {

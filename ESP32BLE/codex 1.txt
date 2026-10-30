@@ -1,101 +1,76 @@
-ESP-SETTINGS-LIVEDEBUG-01 — IMPLEMENTATION COMPLETE
+No files, settings, permissions, messages, or macros were changed.
 
-Files modified by this task:
+What could not be verified
 
-ESP32BLE/debug.swift
-ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
-ESP32BLE/Scrns/Set_Screen/Btm_Area/Set_AvailableDevices.swift
+Because there was no trusted AX client, I could not truthfully record ChatGPT’s current:
 
-Final observable store:
+• AX window tree or whether each conversation is a separate AXWindow
+• Send/Stop button roles, descriptions, titles, values, or enabled states
+• Conversation/window titles
+• Progress or streaming indicators
+• Per-window identifiers or their stability
+• Which AX notifications this specific ChatGPT build accepts
+• Whether background windows continue delivering useful AX events
 
-debug.swift:18–31
+Those are unverified, not negative findings. ChatGPT’s UI is Chromium-based, so controls may be exposed as web accessibility elements rather than native AXButtons, and labels must be discovered rather than assumed.
 
-@MainActor
-@Observable
-final class DebugVersionStore {
-var value = "V65.68"
+AXObserver viability
 
-}
+Technically viable, but unproven for this app. A trusted process can create an AXObserver for ChatGPT’s PID and attempt to register notifications. Registration itself reports whether each notification is unsupported, so that is the proper way to discover ChatGPT’s actual support.
 
-@MainActor
-let debugVersion = DebugVersionStore()
+Candidate notifications to test per application/window/control:
 
-@MainActor
-var db_version: String {
-get { debugVersion.value }
+• AXWindowCreated / AXUIElementDestroyed — window lifecycle
+• AXFocusedWindowChanged — active-window tracking
+• AXTitleChanged — window/title changes, if exposed
+• AXValueChanged — potentially a streaming/status/button-state change
+• AXLayoutComplete / AXLoadComplete — possible web-content updates
+• AXElementBusyChanged — if ChatGPT exposes busy state
+• relevant element-created/destroyed or children-changed notifications, if accepted
 
-set { debugVersion.value = newValue }
+Do not assume any event corresponds to “response completed.” The most promising signal would be a per-window transition from an observed Stop-generating control to an observed Send-ready control. AX events should trigger a fresh attribute snapshot; the event alone is not enough.
 
-}
+Apple’s relevant APIs are AXObserver and AXUIElement.
 
-Observation is explicitly imported in debug.swift.
+Recommended detection design
 
-The initial manually maintained value remains V65.68.
+Maintain a state machine independently for each AX window:
 
-Developer-facing main-actor usage is preserved:
+1. Enumerate ChatGPT AXWindows; associate each with its AX element and, if exposed, its AXWindowNumber.
+2. Discover candidate Send and Stop controls from actual roles/descriptions/actions, not visible text assumptions.
+3. Arm a window only after observing a genuine idle → generating transition.
+4. Announce exactly once on generating → idle, preferably confirmed by:
+   • Stop disappears or becomes unavailable, and
+   • Send becomes available/enabled.
+5. Disarm immediately after announcing; ignore idle-state events while not armed.
+6. Treat window destruction/cancellation as disarm-without-announcement unless a confirmed ready state follows.
+7. Track each window separately so closely spaced completions produce one announcement each.
 
-db_version = "BLE connected"
+An event-driven observer should be primary. A narrowly scoped fallback poll—only for already-armed windows, after an event or at a modest interval—may be needed because Chromium accessibility updates can omit or coalesce fine-grained events.
 
-Non-main-actor code must explicitly cross to the main actor:
+Multiple windows
 
-Task { @MainActor in
-db_version = "BLE connected"
+Inference: Separate native ChatGPT windows would normally appear as separate AXWindow elements under one application AX element, and can therefore be monitored independently. This must be verified live.
 
-}
+Use an exposed AXWindowNumber if available; it is preferable to titles, which may duplicate or change. Do not rely on an AX element’s in-memory identity across window recreation. Background-window behavior is also unverified: AX can often observe non-frontmost windows, but ChatGPT may throttle or alter its rendered accessibility tree.
 
-iPad display change:
+Limitations / false positives
 
-Set_Screen.swift:447
+• ChatGPT updates can change AX roles, labels, hierarchy, or notification support.
+• Stop may appear for actions other than ordinary answer streaming.
+• Regenerate, cancellation, network failure, tool execution, and long-running responses may create different control transitions.
+• A send button can be enabled before visual rendering has fully settled.
+• Window titles may be absent, generic, or duplicated.
+• The monitoring host—Keyboard Maestro Engine or a small companion—must have macOS Accessibility permission. The current Xcode/Codex session does not.
+• This does not establish that Keyboard Maestro itself can directly host an AXObserver; that needs a separate capability check.
 
-The existing label now directly reads:
+Smallest safe next stage
 
-Text(verbatim: debugVersion.value)
+Grant Accessibility only to the intended observer host, then run a read-only, manual observation while the user sends one normal ChatGPT prompt themselves. Log, per AX window:
 
-All existing white styling, one-line behavior, tail truncation, available-width constraint, Help button action, and overlay placement remain unchanged.
+• window attributes and identifier candidates;
+• all discovered controls with AXRole, AXDescription, AXTitle, AXValue, AXEnabled, and actions;
+• which attempted AXObserver registrations succeed;
+• timestamped control transitions from send → stop → send.
 
-iPhone display change:
-
-Set_AvailableDevices.swift:79
-
-The existing label now directly reads:
-
-Text(verbatim: debugVersion.value)
-
-All existing modifiers remain unchanged, including white text, one-line display, .minimumScaleFactor(0.5), tail truncation, leading alignment, and the available-width constraint above the four lower-left controls.
-
-Automatic refresh behavior:
-
-Both SwiftUI labels now directly read the @Observable store property. Changing debugVersion.value, including through db_version = ... from main-actor code, invalidates and redraws the labels while Settings remains visible.
-
-No logging framework, persistence, notifications, polling, timers, version lookup, Help changes, or Settings layout changes were added.
-
-Validation:
-
-• git diff --check passed with no whitespace errors.
-• Xcode diagnostics for all three modified files failed immediately with:
-IDEKit.IDEStatefulActionError error 0
-• The requested Xcode build also failed immediately with the same IDE service error.
-• No Swift compiler errors or warnings were returned.
-• Compilation remains unverified until Xcode’s build service is available.
-
-Working-tree preservation:
-
-The task modified only the three approved source files.
-
-Pre-existing unrelated working-tree modifications remain in:
-
-ESP32BLE.xcodeproj/xcuserdata/rick.xcuserdatad/xcdebugger/Breakpoints_v2.xcbkptlist
-ESP32BLE/codex 1.txt
-
-Pre-existing Help diagnostic-cleanup changes in Set_Screen.swift were preserved.
-
-Physical-device tests still required:
-
-1. Open Settings on iPhone and iPad; confirm V65.68 appears in the existing positions.
-2. From an existing temporary main-actor developer test path, assign:
-db_version = "BLE connected"
-3. Confirm the visible label changes without closing Settings.
-4. Assign a long message.
-5. Confirm iPad keeps Help fixed in place and tail-truncates the label.
-6. Confirm iPhone retains the four button positions; text may shrink to 50%, then tail-truncate.
-7. Confirm Help, BLE, Mac controls, Light appearance, and Dark appearance remain unchanged.
+No automation, typing, speaking, or macro changes are needed for that validation. Only after that trace demonstrates a repeatable per-window transition should a one-time Keyboard Maestro announcement be considered.

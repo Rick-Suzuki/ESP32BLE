@@ -1,4 +1,9 @@
 
+V65.72
+261030 Fri 1546
+extra, old, help folder removed
+
+
 V65.71
 261030 Fri 1248
 extra divider added, help structure test
