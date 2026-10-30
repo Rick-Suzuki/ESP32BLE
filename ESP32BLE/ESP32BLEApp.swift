@@ -6,6 +6,8 @@
 //
 
 import SwiftUI
+import Foundation
+import Observation
 
 @main
 struct ESP32BLEApp: App {
@@ -14,4 +16,21 @@ struct ESP32BLEApp: App {
             ContentView()
         }
     }
+}
+//
+//----------------------------------------
+//
+@MainActor
+@Observable
+final class DebugVersionStore {
+	var value = "V65.70"
+}
+
+@MainActor
+let debugVersion = DebugVersionStore()
+
+@MainActor
+var db_version: String {
+	get { debugVersion.value }
+	set { debugVersion.value = newValue }
 }

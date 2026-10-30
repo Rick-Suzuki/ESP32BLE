@@ -1,4 +1,8 @@
 
+V65.70
+261030 Fri 1214
+db_version moved to App
+
 V65.69_261030 Fri 1151
 db_version added
 

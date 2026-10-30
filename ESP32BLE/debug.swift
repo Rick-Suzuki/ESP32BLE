@@ -16,23 +16,6 @@ nonisolated let db_dbCode = true
 //
 //----------------------------------------
 //
-@MainActor
-@Observable
-final class DebugVersionStore {
-    var value = "V65.68"
-}
-
-@MainActor
-let debugVersion = DebugVersionStore()
-
-@MainActor
-var db_version: String {
-    get { debugVersion.value }
-    set { debugVersion.value = newValue }
-}
-//
-//----------------------------------------
-//
 nonisolated func getTime()->String {
 	let timestampFormatter = DateFormatter()
 	timestampFormatter.dateFormat = "yyMMdd_HHmm_SSS"

@@ -1,53 +1,42 @@
-A. File modified
+Connect to Mac Help probe — read-only
 
-ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
+1. Current content
 
-B. Exact location
+Help/connect-mac.html􀰓 is a demonstration page, not production Help. It states “HTML Help is working,” confirms offline storage, and lists three steps: open Help, select Connect to Mac, and read the page (lines 12-19).
 
-Set_Screen.swift:1920, inside the existing onSetAndTest callback.
+2. HTML structure
 
-C. Old test sequence
+A standard HTML5 document uses:
 
-Hello World! Let's go. (test) 1!2"3#4$5%6&7'8(9)
+• UTF-8 and responsive viewport metadata (lines 1-5).
+• Relative stylesheet link: css/help.css􀰓 (line 6).
+• <main> containing one labelled <section> (lines 10-20).
+• One <h2>, two paragraphs, and an ordered list.
+• No images, links, tables, or JavaScript.
 
-D. New test sequence
+3. Styling
 
-Hello World! ABC abc 123 456 aa BB 11 !! ?? -- ..
+• Uses the system body font: -apple-system-body (line 28).
+• Default body size is 1rem, line height 1.55 (lines 29-30).
+• h2 is 1.25rem with compact line height and bottom margin (lines 40-44).
+• Paragraphs have 1rem bottom spacing (lines 46-48).
+• Main content is centered, limited to 48rem, with responsive padding (lines 34-38).
+• Colors use CSS variables for background and primary text (lines 1-7, 26-27).
 
-E. One-line confirmation
+4. Light and Dark appearance
 
-The Swift string literal is one line and contains no newline, carriage return, Return/Enter command, or other control character.
+Yes. color-scheme: light dark is declared (line 2), and prefers-color-scheme: dark supplies dark background, text, secondary text, and border colors (lines 9-16).
 
-Existing BLE line framing remains unchanged, as required.
+5. iPhone/iPad considerations
 
-F. SET order preserved
+The layout is responsive and should fit both sizes: it uses a viewport tag, flexible content width, responsive padding, and separate esp-iphone[/􀰓](file:///Users/rick/00-Home/Xcode/Projects2/100_IOS%20PROJECTS/10_IN_PROG/ESP32_BLE/ESP32BLE/ESP32BLE/Scrns/Set_Screen/Set_Screen.swift-2472-%20%20%20%20)esp-ipad typography rules (lines 59-102).
 
-The callback remains:
+Obvious limitations for a real article:
 
-1. sendKeyboardTimingCommand()
-2. ble.sendString(new test sequence)
+• Only h2 is styled; no hierarchy for additional headings.
+• No styles for screenshots, links, callouts, tables, code, or troubleshooting sections.
+• overflow-x: hidden could conceal an oversized future image instead of sizing it safely.
 
-Timing is sent first.
+6. Retain for the production article
 
-G. BLE routing unchanged
-
-The existing direct BLE route remains unchanged. Nothing was added for ESPMacHelper or output-mode handling.
-
-H. UI unchanged
-
-The “set & test” label, button appearance, disabled state, layout, and action structure are unchanged.
-
-I. Build result
-
-Source verification passed:
-
-• Exact new literal present once.
-• Old literal absent.
-• git diff --check passed.
-• Only the requested line changed in Set_Screen.swift.
-
-Xcode’s build and diagnostics services failed before compilation because of an IDE state error. A fallback Simulator-SDK build was attempted but could not complete because the local Swift macro plugin service produced project-wide SwiftUIMacros.StateMacro failures, unrelated to this string change. The Simulator service was also unavailable.
-
-J. Unexpected findings
-
-No source-level issues. Existing unrelated modified files were preserved.
+Retain the document metadata, relative stylesheet reference, <main> structure, semantic section approach, system font, centered responsive content width, Light/Dark variables, and device-specific typography support. Replace all current visible demonstration content.
