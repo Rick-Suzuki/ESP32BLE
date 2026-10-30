@@ -9,19 +9,25 @@ No Previews JIT entry point found.
 Gave PreviewsInjection a chance to run and it returned, continuing with debug dylib.
 Looking for main entry point.
 Opening debug dylib with '@rpath/ESP32BLE.debug.dylib'
-Debug dylib handle: 0xb06a3e00
+Debug dylib handle: 0xb116be00
 No entry point found. Checking for alias.
 Calling provided entry point.
 #FactoryInstall Unable to query results, error: 5
 Unable to list voice folder
 Unable to list voice folder
 Unable to list voice folder
-API MISUSE: <CBCentralManager: 0x300c4a080> can only accept this command while in the powered on state
-261010_0952_909 🐞Main_Screen.swift:logESP001Test3EditorPresentation(presentation:):2675 [ESP-001-TEST3] model=iPad7,1
-261010_0952_909 🐞Main_Screen.swift:logESP001Test3EditorPresentation(presentation:):2676 [ESP-001-TEST3] isPad=true
-261010_0952_909 🐞Main_Screen.swift:logESP001Test3EditorPresentation(presentation:):2677 [ESP-001-TEST3] isIPadMini5=false
-261010_0952_910 🐞Main_Screen.swift:logESP001Test3EditorPresentation(presentation:):2678 [ESP-001-TEST3] isIPadAirM2=false
-261010_0952_910 🐞Main_Screen.swift:logESP001Test3EditorPresentation(presentation:):2679 [ESP-001-TEST3] editingSlotIndexNonNil=true
-261010_0952_910 🐞Main_Screen.swift:logESP001Test3EditorPresentation(presentation:):2680 [ESP-001-TEST3] presentation=smartView
-<0x123d0e300> Gesture: System gesture gate timed out.
-UITextView 0x125b79400 is switching to TextKit 1 compatibility mode because its layoutManager was accessed. Break on void _UITextViewEnablingCompatibilityMode(UITextView *__strong, BOOL) to debug.
+[BLE-CONNECT-PROBE] 🐞 t=0.000s scan stop requested reason=stop() activePeripheralUUID=nil discoveredDeviceCount=0
+API MISUSE: <CBCentralManager: 0x303a4dfe0> can only accept this command while in the powered on state
+[BLE-CONNECT-PROBE] 🐞 t=0.000s scanning stopped
+[BLE-CONNECT-PROBE] 🐞 t=0.000s state isConnected previous=false new=false activePeripheralUUID=nil attempt=0
+<0x10570e2e0> Gesture: System gesture gate timed out.
+🐞 [ESP-HELP-GEOMETRY] controllers=PresentationHostingController<AnyView> -> UIHostingController<ModifiedContent<AnyView, RootModifier>>
+🐞 [ESP-HELP-GEOMETRY] hostBounds=(0.0, 0.0, 872.0, 944.0) hostSafeArea=(top: 0.0, left: 0.0, bottom: 0.0, right: 0.0)
+🐞 [ESP-HELP-GEOMETRY] presentation=_UIPageSheetPresentationController containerBounds=(0.0, 0.0, 1366.0, 1024.0) presentedFrame=(247.0, 40.0, 872.0, 944.0)
+🐞 [ESP-HELP-GEOMETRY] rootFrameInHost=(56.0, 162.0, 760.0, 620.0) rootGlobal=(303.0, 202.0, 760.0, 620.0) rootSafeArea=(top: 0.0, leading: 0.0, bottom: 0.0, trailing: 0.0)
+🐞 [ESP-HELP-GEOMETRY] topicPagerGlobal=(303.0, 202.0, 760.0, 620.0) titleGlobal=(319.0, 218.0, 198.0, 31.5)
+🐞 [ESP-HELP-GEOMETRY] htmlGlobal=(319.0, 269.5, 728.0, 472.5) footerGlobal=(319.0, 762.0, 728.0, 44.0)
+🐞 [ESP-HELP-GEOMETRY] gaps hostTopToRoot=162.0 rootToTitle=16.0 titleToHTML=20.0 footerToRootBottom=16.0 rootToHostBottom=162.0
+WebContent process (0x1280180c0) took 2.308122 seconds to launch
+nw_application_id_create_self NECP_CLIENT_ACTION_GET_SIGNED_CLIENT_ID [80: Authentication error]
+Failed to resolve host network app id

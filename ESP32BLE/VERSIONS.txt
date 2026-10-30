@@ -1,4 +1,7 @@
 
+V65.67_261030 Fri 0909
+261030 Fri 0909, new help system
+
 V65.66_261029 Thu 1813
 1. html improvements, 2. set & test msg improved for esp32
 

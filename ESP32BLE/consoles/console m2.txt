@@ -1,114 +1,34 @@
-Update the Info.plist: Support for all orientations will soon be required.
-									[BLE-CONNECT-PROBE] 🐞 t=0.000s scan stop requested reason=stop() activePeripheralUUID=nil discoveredDeviceCount=0
-									API MISUSE: <CBCentralManager: 0x10b1a4640> can only accept this command while in the powered on state
-									[BLE-CONNECT-PROBE] 🐞 t=0.000s scanning stopped
-									[BLE-CONNECT-PROBE] 🐞 t=0.000s state isConnected previous=false new=false activePeripheralUUID=nil attempt=0
-									non-launching port is incompatible with service identifier "com.apple.PointerUI.pointeruid.default-service"
-									AX Safe category class 'SFBarButtonGroupContainerAccessibility' was not found!
-									cannot add handler to 0 from 0 - dropping
-									cannot add handler to 0 from 0 - dropping
-									cannot add handler to 0 from 0 - dropping
-									cannot add handler to 0 from 0 - dropping
-									cannot add handler to 0 from 0 - dropping
-									cannot add handler to 0 from 0 - dropping
-									Reading from public effective user settings.
-									cannot add handler to 0 from 0 - dropping
-									cannot add handler to 0 from 0 - dropping
-									cannot add handler to 0 from 0 - dropping
-									cannot add handler to 0 from 0 - dropping
-									autoVacuumModeStatus: Running PRAGMA auto_vacuum query to get vacuum mode
-									sandbox_extension_issue_file failed for /var/containers/Bundle/Application/68409428-2AF3-4766-AEC5-FBAFD91D4F05/ESP32BLE.app: 1 (Operation not permitted)
-									Could not create a sandbox extension for '/var/containers/Bundle/Application/68409428-2AF3-4766-AEC5-FBAFD91D4F05/ESP32BLE.app'
-									WebContent[13084] Couldn't open <private> due to No such file or directory
-									WebContent[13084] Couldn't open <private> due to No such file or directory
-									WebContent[13084] Couldn't open <private> due to Permission denied
-									WebContent[13084] Couldn't open <private> due to No such file or directory
-									WebContent[13084] Couldn't open <private> due to No such file or directory
-									WebContent[13084] Couldn't open <private> due to No such file or directory
-									WebContent[13084] Couldn't open <private> due to No such file or directory
-									WebContent[13084] Couldn't open <private> due to No such file or directory
-									WebContent[13084] Couldn't open <private> due to No such file or directory
-									cannot add handler to 0 from 0 - dropping
-									cannot add handler to 0 from 0 - dropping
-									cannot add handler to 0 from 0 - dropping
-									WebContent[13084] Could not register system wide server: -25204
-									WebContent[13084] _AXAddToElementCache was called even though the element was in the cache: <WKAccessibilityWebPageObject: 0x101499cc0>
-									WebContent[13084] Unable to hide query parameters from script (missing data)
-									WebContent[13084] AX Safe category class 'SFBarButtonGroupContainerAccessibility' was not found!
-									WebContent[13084] Service "com.apple.CARenderServer" failed bootstrap look up (1) - (os/kern) invalid address
-									WebContent[13084] Couldn't open <private> due to No such file or directory
-									WebContent[13084] Couldn't open <private> due to No such file or directory
-									WebContent[13084] Couldn't open <private> due to No such file or directory
-									WebContent[13084] Failed to initialize application enviroment context
-									WebContent[13084] Failed to load a device context.
-									cannot add handler to 0 from 0 - dropping
-									cannot add handler to 0 from 0 - dropping
-									WebContent[13084] 0x10f05c150 - [sessionID=1] WebProcess::markAllLayersVolatile: Failed to mark layers as volatile for webPageID=6
-									cannot add handler to 0 from 0 - dropping
-									cannot add handler to 0 from 0 - dropping
-									cannot add handler to 0 from 0 - dropping
-									Failed to terminate process: Error Domain=com.apple.extensionKit.errorDomain Code=18 "(null)" UserInfo={NSUnderlyingError=0x10b06a790 {Error Domain=RBSRequestErrorDomain Code=3 "No such process found" UserInfo={NSLocalizedFailureReason=No such process found}}}
-Failed to terminate process: Error Domain=com.apple.extensionKit.errorDomain Code=18 "(null)" UserInfo={NSUnderlyingError=0x10b06a160 {Error Domain=RBSRequestErrorDomain Code=3 "No such process found" UserInfo={NSLocalizedFailureReason=No such process found}}}
 cannot add handler to 0 from 0 - dropping
 cannot add handler to 0 from 0 - dropping
 cannot add handler to 0 from 0 - dropping
 cannot add handler to 0 from 0 - dropping
-WebContent[13088] Couldn't open <private> due to No such file or directory
-WebContent[13088] Couldn't open <private> due to No such file or directory
-WebContent[13088] Couldn't open <private> due to Permission denied
-WebContent[13088] Couldn't open <private> due to No such file or directory
-WebContent[13088] Couldn't open <private> due to No such file or directory
-WebContent[13088] Couldn't open <private> due to No such file or directory
-WebContent[13088] Couldn't open <private> due to No such file or directory
-WebContent[13088] Couldn't open <private> due to No such file or directory
-WebContent[13088] Couldn't open <private> due to No such file or directory
-WebContent[13088] Could not register system wide server: -25204
-WebContent[13088] _AXAddToElementCache was called even though the element was in the cache: <WKAccessibilityWebPageObject: 0x10529efc0>
-WebContent[13088] AX Safe category class 'SFBarButtonGroupContainerAccessibility' was not found!
+🐞 [ESP-HELP-GEOMETRY] controllers=UIHostingController<ESPHelpView> -> UIHostingController<ModifiedContent<LazyView<ContentView>, RootModifier>>
+🐞 [ESP-HELP-GEOMETRY] hostBounds=(0.0, 0.0, 830.0, 820.0) hostSafeArea=(top: 0.0, left: 0.0, bottom: 0.0, right: 0.0)
+🐞 [ESP-HELP-GEOMETRY] presentation=_UIFormSheetPresentationController containerBounds=(0.0, 0.0, 1590.0, 1192.0) presentedFrame=(380.0, 186.0, 830.0, 820.0)
+🐞 [ESP-HELP-GEOMETRY] rootFrameInHost=(0.0, 0.0, 830.0, 820.0) rootGlobal=(380.0, 186.0, 830.0, 820.0) rootSafeArea=(top: 0.0, leading: 0.0, bottom: 0.0, trailing: 0.0)
+🐞 [ESP-HELP-GEOMETRY] topicPagerGlobal=(380.0, 186.0, 830.0, 820.0) titleGlobal=(396.0, 202.0, 166.5, 26.5)
+🐞 [ESP-HELP-GEOMETRY] htmlGlobal=(396.0, 248.5, 798.0, 677.5) footerGlobal=(396.0, 946.0, 798.0, 44.0)
+🐞 [ESP-HELP-GEOMETRY] gaps hostTopToRoot=0.0 rootToTitle=16.0 titleToHTML=20.0 footerToRootBottom=16.0 rootToHostBottom=0.0
+WebContent[14673] Couldn't open <private> due to No such file or directory
+WebContent[14673] Couldn't open <private> due to No such file or directory
+WebContent[14673] Couldn't open <private> due to Permission denied
+WebContent[14673] Couldn't open <private> due to No such file or directory
+WebContent[14673] Couldn't open <private> due to No such file or directory
+WebContent[14673] Couldn't open <private> due to No such file or directory
+WebContent[14673] Couldn't open <private> due to No such file or directory
+WebContent[14673] Couldn't open <private> due to No such file or directory
+WebContent[14673] Couldn't open <private> due to No such file or directory
+WebContent[14673] Could not register system wide server: -25204
+WebContent[14673] _AXAddToElementCache was called even though the element was in the cache: <WKAccessibilityWebPageObject: 0x10362f500>
+WebContent[14673] AX Safe category class 'SFBarButtonGroupContainerAccessibility' was not found!
+WebContent[14673] Service "com.apple.CARenderServer" failed bootstrap look up (1) - (os/kern) invalid address
+WebContent[14673] Couldn't open <private> due to No such file or directory
+WebContent[14673] Couldn't open <private> due to No such file or directory
+WebContent[14673] Couldn't open <private> due to No such file or directory
+WebContent[14673] Failed to initialize application enviroment context
+WebContent[14673] Failed to load a device context.
 cannot add handler to 0 from 0 - dropping
 cannot add handler to 0 from 0 - dropping
 cannot add handler to 0 from 0 - dropping
-WebContent[13088] Service "com.apple.CARenderServer" failed bootstrap look up (1) - (os/kern) invalid address
-WebContent[13088] Couldn't open <private> due to No such file or directory
-WebContent[13088] Couldn't open <private> due to No such file or directory
-WebContent[13088] Couldn't open <private> due to No such file or directory
-WebContent[13088] Failed to initialize application enviroment context
-WebContent[13088] Failed to load a device context.
-cannot add handler to 0 from 0 - dropping
-cannot add handler to 0 from 0 - dropping
-cannot add handler to 0 from 0 - dropping
-cannot add handler to 0 from 0 - dropping
-cannot add handler to 0 from 0 - dropping
-WebContent[13088] 0x11205c150 - [sessionID=1] WebProcess::markAllLayersVolatile: Failed to mark layers as volatile for webPageID=19
-																														Error acquiring assertion: <Error Domain=RBSServiceErrorDomain Code=1 "((target is not running or doesn't have entitlement com.apple.developer.web-browser-engine.rendering AND target is not running or doesn't have entitlement com.apple.developer.web-browser-engine.networking AND target is not running or doesn't have entitlement com.apple.developer.web-browser-engine.webcontent))" UserInfo={NSLocalizedFailureReason=((target is not running or doesn't have entitlement com.apple.developer.web-browser-engine.rendering AND target is not running or doesn't have entitlement com.apple.developer.web-browser-engine.networking AND target is not running or doesn't have entitlement com.apple.developer.web-browser-engine.webcontent))}>
-0x121150600 - ProcessAssertion::acquireSync Failed to acquire RBS assertion 'XPCConnectionTerminationWatchdog' for process with PID=13088, error: (null)
-																													Failed to terminate process: Error Domain=com.apple.extensionKit.errorDomain Code=18 "(null)" UserInfo={NSUnderlyingError=0x10b06a370 {Error Domain=RBSRequestErrorDomain Code=3 "No such process found" UserInfo={NSLocalizedFailureReason=No such process found}}}
-Failed to terminate process: Error Domain=com.apple.extensionKit.errorDomain Code=18 "(null)" UserInfo={NSUnderlyingError=0x10b068750 {Error Domain=RBSRequestErrorDomain Code=3 "No such process found" UserInfo={NSLocalizedFailureReason=No such process found}}}
-0x1210fc200 - GPUProcessProxy::gpuProcessExited: reason=IdleExit
-Error acquiring assertion: <Error Domain=RBSAssertionErrorDomain Code=2 "Specified target process 13085 does not exist" UserInfo={NSLocalizedFailureReason=Specified target process 13085 does not exist}>
-0x121150300 - ProcessAssertion::acquireSync Failed to acquire RBS assertion 'XPCConnectionTerminationWatchdog' for process with PID=13085, error: (null)
-																													cannot add handler to 0 from 0 - dropping
-																													cannot add handler to 0 from 0 - dropping
-																													cannot add handler to 0 from 0 - dropping
-																													cannot add handler to 0 from 0 - dropping
-																													WebContent[13089] Couldn't open <private> due to No such file or directory
-																													WebContent[13089] Couldn't open <private> due to No such file or directory
-																													WebContent[13089] Couldn't open <private> due to Permission denied
-																													WebContent[13089] Couldn't open <private> due to No such file or directory
-																													WebContent[13089] Couldn't open <private> due to No such file or directory
-																													WebContent[13089] Couldn't open <private> due to No such file or directory
-																													WebContent[13089] Couldn't open <private> due to No such file or directory
-																													WebContent[13089] Couldn't open <private> due to No such file or directory
-																													WebContent[13089] Couldn't open <private> due to No such file or directory
-																													WebContent[13089] Could not register system wide server: -25204
-																													WebContent[13089] _AXAddToElementCache was called even though the element was in the cache: <WKAccessibilityWebPageObject: 0x10349f440>
-																													WebContent[13089] AX Safe category class 'SFBarButtonGroupContainerAccessibility' was not found!
-																													WebContent[13089] Service "com.apple.CARenderServer" failed bootstrap look up (1) - (os/kern) invalid address
-																													WebContent[13089] Couldn't open <private> due to No such file or directory
-																													WebContent[13089] Couldn't open <private> due to No such file or directory
-																													WebContent[13089] Couldn't open <private> due to No such file or directory
-																													WebContent[13089] Failed to initialize application enviroment context
-																													WebContent[13089] Failed to load a device context.
-																													cannot add handler to 0 from 0 - dropping
-																													cannot add handler to 0 from 0 - dropping
-																													cannot add handler to 0 from 0 - dropping
+Failed to terminate process: Error Domain=com.apple.extensionKit.errorDomain Code=18 "(null)" UserInfo={NSUnderlyingError=0x1183e8240 {Error Domain=RBSRequestErrorDomain Code=3 "No such process found" UserInfo={NSLocalizedFailureReason=No such process found}}}
+Failed to terminate process: Error Domain=com.apple.extensionKit.errorDomain Code=18 "(null)" UserInfo={NSUnderlyingError=0x1183ea8e0 {Error Domain=RBSRequestErrorDomain Code=3 "No such process found" UserInfo={NSLocalizedFailureReason=No such process found}}}

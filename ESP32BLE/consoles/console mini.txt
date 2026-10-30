@@ -1,21 +1,14 @@
-Looking up debug dylib relative path
-Found debug dylib relative path string `ESP32BLE.debug.dylib`
-Looking up debug dylib entry point name
-No debug dylib entry point name defined.
-Looking up debug dylib install name
-Found debug dylib install name string `@rpath/ESP32BLE.debug.dylib`
-Looking for Previews JIT link entry point.
-No Previews JIT entry point found.
-Gave PreviewsInjection a chance to run and it returned, continuing with debug dylib.
-Looking for main entry point.
-Opening debug dylib with '@rpath/ESP32BLE.debug.dylib'
-Debug dylib handle: 0x6d8f5010
-No entry point found. Checking for alias.
-Calling provided entry point.
-Update the Info.plist: Support for all orientations will soon be required.
-[BLE-CONNECT-PROBE] 🐞 t=0.000s scan stop requested reason=stop() activePeripheralUUID=nil discoveredDeviceCount=0
-API MISUSE: <CBCentralManager: 0x1071c0500> can only accept this command while in the powered on state
-[BLE-CONNECT-PROBE] 🐞 t=0.000s scanning stopped
-[BLE-CONNECT-PROBE] 🐞 t=0.001s state isConnected previous=false new=false activePeripheralUUID=nil attempt=0
-UITextView 0x113cd8000 is switching to TextKit 1 compatibility mode because its layoutManager was accessed. Break on void _UITextViewEnablingCompatibilityMode(UITextView *__strong, BOOL) to debug.
-<0x1071fde00> Gesture: System gesture gate timed out.
+Reading from public effective user settings.
+<0x12c231e00> Gesture: System gesture gate timed out.
+🐞 [ESP-HELP-GEOMETRY] controllers=PresentationHostingController<AnyView> -> UIHostingController<ModifiedContent<AnyView, RootModifier>>
+🐞 [ESP-HELP-GEOMETRY] hostBounds=(0.0, 0.0, 540.0, 610.0) hostSafeArea=(top: 0.0, left: 0.0, bottom: 0.0, right: 0.0)
+🐞 [ESP-HELP-GEOMETRY] presentation=_UIFormSheetPresentationController containerBounds=(0.0, 0.0, 1024.0, 768.0) presentedFrame=(242.0, 74.0, 540.0, 610.0)
+🐞 [ESP-HELP-GEOMETRY] rootFrameInHost=(0.0, 0.0, 540.0, 610.0) rootGlobal=(242.0, 74.0, 540.0, 610.0) rootSafeArea=(top: 0.0, leading: 0.0, bottom: 0.0, trailing: 0.0)
+🐞 [ESP-HELP-GEOMETRY] topicPagerGlobal=(242.0, 74.0, 540.0, 610.0) titleGlobal=(258.0, 90.0, 166.5, 26.5)
+🐞 [ESP-HELP-GEOMETRY] htmlGlobal=(258.0, 136.5, 508.0, 467.5) footerGlobal=(258.0, 624.0, 508.0, 44.0)
+🐞 [ESP-HELP-GEOMETRY] gaps hostTopToRoot=0.0 rootToTitle=16.0 titleToHTML=20.0 footerToRootBottom=16.0 rootToHostBottom=0.0
+WebContent process (0x1240840c0) took 1.754231 seconds to launch
+Could not create a sandbox extension for '/var/containers/Bundle/Application/694EBA8D-216F-480D-81B4-84D5AEBF64D9/ESP32BLE.app'
+GPU process (0x1240cc1e0) took 1.188079 seconds to launch
+Networking process (0x124100190) took 1.372803 seconds to launch
+WebContent[5541] Unable to hide query parameters from script (missing data)
