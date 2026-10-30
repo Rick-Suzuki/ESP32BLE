@@ -439,9 +439,18 @@ struct SettingsScreen: View {
                         }
                         .frame(maxHeight: .infinity, alignment: .top)
                         .overlay(alignment: .bottomLeading) {
-                            SettingsHelpButton {
-                                isHelpPresented = true
+                            HStack(spacing: 8) {
+                                SettingsHelpButton {
+                                    isHelpPresented = true
+                                }
+
+                                Text(verbatim: debugVersion.value)
+                                    .foregroundStyle(.white)
+                                    .lineLimit(1)
+                                    .truncationMode(.tail)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
                             }
+                            .frame(maxWidth: .infinity, alignment: .leading)
                             .padding()
                         }
                     } else {
@@ -5701,9 +5710,6 @@ private extension VerticalAlignment {
 private struct ESPHelpView: View {
     let onClose: () -> Void
     @State private var path: [ESPHelpDestination] = []
-    @State private var geometryFrames: [String: ESPHelpGeometryFrame] = [:]
-    @State private var hostingGeometry: ESPHelpHostingGeometry?
-    @State private var hasReportedGeometry = false
 
     var body: some View {
         ZStack {
@@ -5734,70 +5740,6 @@ private struct ESPHelpView: View {
                 path = []
             }
         }
-        .background {
-            if isPad, isDisplayingConnectToMac {
-                ZStack {
-                    ESPHelpGeometryFrameReporter(name: "helpRoot")
-                    ESPHelpHostingGeometryProbe(snapshot: $hostingGeometry)
-                }
-            }
-        }
-        .onPreferenceChange(ESPHelpGeometryFramePreferenceKey.self) { frames in
-            geometryFrames = frames
-            reportGeometryIfReady()
-        }
-        .onChange(of: hostingGeometry) {
-            reportGeometryIfReady()
-        }
-    }
-
-    private func reportGeometryIfReady() {
-        let requiredNames = ["helpRoot", "topicPager", "title", "html", "footer"]
-
-        guard isPad,
-              !hasReportedGeometry,
-              let hostingGeometry,
-              requiredNames.allSatisfy({ geometryFrames[$0] != nil }),
-              let helpRoot = geometryFrames["helpRoot"],
-              let topicPager = geometryFrames["topicPager"],
-              let title = geometryFrames["title"],
-              let html = geometryFrames["html"],
-              let footer = geometryFrames["footer"] else {
-            return
-        }
-
-        hasReportedGeometry = true
-
-        let hostTopToRoot: String
-        let rootToHostBottom: String
-
-        if let rootFrameInHost = hostingGeometry.rootFrameInHost,
-           let hostBounds = hostingGeometry.hostBounds {
-            hostTopToRoot = String(rootFrameInHost.minY - hostBounds.minY)
-            rootToHostBottom = String(hostBounds.maxY - rootFrameInHost.maxY)
-        } else {
-            hostTopToRoot = "unavailable"
-            rootToHostBottom = "unavailable"
-        }
-
-        let rootToTitle = title.globalFrame.minY - helpRoot.globalFrame.minY
-        let titleToHTML = html.globalFrame.minY - title.globalFrame.maxY
-        let footerToRootBottom = helpRoot.globalFrame.maxY - footer.globalFrame.maxY
-
-        print("🐞 [ESP-HELP-GEOMETRY] controllers=\(hostingGeometry.controllerTypes)")
-        print("🐞 [ESP-HELP-GEOMETRY] hostBounds=\(hostingGeometry.hostBounds.map { String(describing: $0) } ?? "unavailable") hostSafeArea=\(hostingGeometry.hostSafeArea)")
-        print("🐞 [ESP-HELP-GEOMETRY] presentation=\(hostingGeometry.presentationType) containerBounds=\(hostingGeometry.containerBounds) presentedFrame=\(hostingGeometry.presentedFrame)")
-        print("🐞 [ESP-HELP-GEOMETRY] rootFrameInHost=\(hostingGeometry.rootFrameInHost.map { String(describing: $0) } ?? "unavailable") rootGlobal=\(helpRoot.globalFrame) rootSafeArea=\(helpRoot.safeAreaDescription)")
-        print("🐞 [ESP-HELP-GEOMETRY] topicPagerGlobal=\(topicPager.globalFrame) titleGlobal=\(title.globalFrame)")
-        print("🐞 [ESP-HELP-GEOMETRY] htmlGlobal=\(html.globalFrame) footerGlobal=\(footer.globalFrame)")
-        print("🐞 [ESP-HELP-GEOMETRY] gaps hostTopToRoot=\(hostTopToRoot) rootToTitle=\(rootToTitle) titleToHTML=\(titleToHTML) footerToRootBottom=\(footerToRootBottom) rootToHostBottom=\(rootToHostBottom)")
-    }
-
-    private var isDisplayingConnectToMac: Bool {
-        guard case .topic(.connectToMac) = path.last else {
-            return false
-        }
-        return true
     }
 }
 
@@ -5978,19 +5920,9 @@ private struct ESPHelpTopicPager: View {
                 onClose: onClose,
                 isTopicTransitioning: isTransitioning
             )
-            .background {
-                if isPad, currentTopic == .connectToMac {
-                    ESPHelpGeometryFrameReporter(name: "footer")
-                }
-            }
         }
         .padding()
         .toolbar(.hidden, for: .navigationBar)
-        .background {
-            if isPad, currentTopic == .connectToMac {
-                ESPHelpGeometryFrameReporter(name: "topicPager")
-            }
-        }
     }
 
     private var topicTransition: AnyTransition {
@@ -6057,20 +5989,10 @@ private struct ESPHelpTopicView: View {
         VStack(alignment: .leading, spacing: 20) {
             Text(topic.title)
                 .font(.title2.weight(.semibold))
-                .background {
-                    if isPad, topic == .connectToMac {
-                        ESPHelpGeometryFrameReporter(name: "title")
-                    }
-                }
 
             if topic == .connectToMac {
                 if ESPHelpHTMLView.isConnectToMacAvailable {
                     ESPHelpHTMLView()
-                        .background {
-                            if isPad {
-                                ESPHelpGeometryFrameReporter(name: "html")
-                            }
-                        }
                 } else {
                     Text("This Help topic is unavailable.")
                         .font(.body)
@@ -6088,256 +6010,6 @@ private struct ESPHelpTopicView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-    }
-}
-
-// MARK: - BM:🅱️ Temporary Help geometry diagnostic
-private struct ESPHelpGeometryFrame: Equatable {
-    let globalFrame: CGRect
-    let safeAreaTop: CGFloat
-    let safeAreaLeading: CGFloat
-    let safeAreaBottom: CGFloat
-    let safeAreaTrailing: CGFloat
-
-    var safeAreaDescription: String {
-        "(top: \(safeAreaTop), leading: \(safeAreaLeading), bottom: \(safeAreaBottom), trailing: \(safeAreaTrailing))"
-    }
-}
-
-private struct ESPHelpGeometryFramePreferenceKey: PreferenceKey {
-    static let defaultValue: [String: ESPHelpGeometryFrame] = [:]
-
-    static func reduce(value: inout [String: ESPHelpGeometryFrame], nextValue: () -> [String: ESPHelpGeometryFrame]) {
-        value.merge(nextValue(), uniquingKeysWith: { _, newValue in newValue })
-    }
-}
-
-private struct ESPHelpGeometryFrameReporter: View {
-    let name: String
-
-    var body: some View {
-        GeometryReader { proxy in
-            Color.clear.preference(
-                key: ESPHelpGeometryFramePreferenceKey.self,
-                value: [
-                    name: ESPHelpGeometryFrame(
-                        globalFrame: proxy.frame(in: .global),
-                        safeAreaTop: proxy.safeAreaInsets.top,
-                        safeAreaLeading: proxy.safeAreaInsets.leading,
-                        safeAreaBottom: proxy.safeAreaInsets.bottom,
-                        safeAreaTrailing: proxy.safeAreaInsets.trailing
-                    )
-                ]
-            )
-        }
-    }
-}
-
-private struct ESPHelpHostingGeometry: Equatable {
-    let controllerTypes: String
-    let hostBounds: CGRect?
-    let hostSafeArea: String
-    let presentationType: String
-    let containerBounds: String
-    let presentedFrame: String
-    let rootFrameInHost: CGRect?
-}
-
-private struct ESPHelpHostingGeometryProbe: UIViewRepresentable {
-    @Binding var snapshot: ESPHelpHostingGeometry?
-
-    func makeCoordinator() -> Coordinator {
-        Coordinator()
-    }
-
-    func makeUIView(context: Context) -> UIView {
-        let view = UIView()
-        view.backgroundColor = .clear
-        view.isUserInteractionEnabled = false
-        return view
-    }
-
-    func updateUIView(_ view: UIView, context: Context) {
-        context.coordinator.captureSnapshot(from: view) { snapshot in
-            self.snapshot = snapshot
-        }
-    }
-
-    final class Coordinator {
-        private var hasScheduledSnapshots = false
-
-        func captureSnapshot(
-            from view: UIView,
-            update: @escaping (ESPHelpHostingGeometry) -> Void
-        ) {
-            guard !hasScheduledSnapshots else {
-                return
-            }
-
-            hasScheduledSnapshots = true
-
-            DispatchQueue.main.async {
-                self.capture(from: view, update: update)
-            }
-
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                self.capture(from: view, update: update)
-            }
-        }
-
-        private func capture(
-            from view: UIView,
-            update: @escaping (ESPHelpHostingGeometry) -> Void
-        ) {
-            guard view.bounds.width > 0,
-                  view.bounds.height > 0,
-                  let controller = presentedController(from: view) else {
-                return
-            }
-
-            let hostView = controller.view
-            let rootFrameInHost = hostView.map { view.convert(view.bounds, to: $0) }
-            let presentationController = controller.presentationController
-
-            update(
-                ESPHelpHostingGeometry(
-                    controllerTypes: controllerTypes(from: view),
-                    hostBounds: hostView?.bounds,
-                    hostSafeArea: hostView.map { safeAreaDescription(for: $0.safeAreaInsets) } ?? "unavailable",
-                    presentationType: presentationController.map { String(describing: type(of: $0)) } ?? "unavailable",
-                    containerBounds: presentationController?.containerView.map { String(describing: $0.bounds) } ?? "unavailable",
-                    presentedFrame: presentationController?.presentedView.map { String(describing: $0.frame) } ?? "unavailable",
-                    rootFrameInHost: rootFrameInHost
-                )
-            )
-        }
-
-        private func presentedController(from view: UIView) -> UIViewController? {
-            let controllers = controllerHierarchy(from: view)
-            return controllers.first(where: { $0.presentationController != nil || $0.presentingViewController != nil })
-                ?? controllers.first
-        }
-
-        private func controllerTypes(from view: UIView) -> String {
-            controllerHierarchy(from: view)
-                .map { String(describing: type(of: $0)) }
-                .joined(separator: " -> ")
-        }
-
-        private func controllerHierarchy(from view: UIView) -> [UIViewController] {
-            var controllers: [UIViewController] = []
-            var responder: UIResponder? = view
-
-            while let current = responder {
-                if let controller = current as? UIViewController {
-                    controllers.append(controller)
-                }
-                responder = current.next
-            }
-
-            return controllers
-        }
-
-        private func safeAreaDescription(for insets: UIEdgeInsets) -> String {
-            "(top: \(insets.top), left: \(insets.left), bottom: \(insets.bottom), right: \(insets.right))"
-        }
-    }
-}
-
-// MARK: - BM:🅱️ iPad Help sheet sizing experiment
-private struct ESPHelpSheetSizingConfigurator: UIViewRepresentable {
-    func makeCoordinator() -> Coordinator {
-        Coordinator()
-    }
-
-    func makeUIView(context: Context) -> UIView {
-        let view = UIView()
-        view.backgroundColor = .clear
-        view.isUserInteractionEnabled = false
-        return view
-    }
-
-    func updateUIView(_ view: UIView, context: Context) {
-        context.coordinator.configureIfNeeded(from: view)
-    }
-
-    final class Coordinator {
-        private weak var configuredController: UIViewController?
-        private var hasScheduledConfiguration = false
-        private var hasCompletedDeferredAttempt = false
-        private var hasReportedUnavailableController = false
-
-        func configureIfNeeded(from view: UIView) {
-            guard view.window != nil else {
-                scheduleConfiguration(from: view)
-                return
-            }
-
-            guard let controller = presentedSheetController(from: view) else {
-                if hasCompletedDeferredAttempt {
-                    reportUnavailableControllerOnce()
-                } else {
-                    scheduleConfiguration(from: view)
-                }
-                return
-            }
-
-            guard configuredController !== controller else {
-                return
-            }
-
-            controller.preferredContentSize = CGSize(width: 760, height: 620)
-
-            if #available(iOS 17.0, *) {
-                controller.sheetPresentationController?.prefersPageSizing = false
-            }
-
-            configuredController = controller
-            print("🐞 [ESP-HELP-GEOMETRY] sizingApplied controller=\(String(describing: type(of: controller))) preferredContentSize=\(controller.preferredContentSize) prefersPageSizing=false")
-        }
-
-        private func scheduleConfiguration(from view: UIView) {
-            guard !hasScheduledConfiguration else {
-                return
-            }
-
-            hasScheduledConfiguration = true
-
-            DispatchQueue.main.async { [weak self, weak view] in
-                guard let self, let view else {
-                    return
-                }
-                self.hasCompletedDeferredAttempt = true
-                self.configureIfNeeded(from: view)
-            }
-        }
-
-        private func presentedSheetController(from view: UIView) -> UIViewController? {
-            var responder: UIResponder? = view
-
-            while let current = responder {
-                if let controller = current as? UIViewController,
-                   controller.presentingViewController != nil,
-                   let presentationController = controller.presentationController,
-                   presentationController.presentedViewController === controller,
-                   controller.sheetPresentationController != nil {
-                    return controller
-                }
-
-                responder = current.next
-            }
-
-            return nil
-        }
-
-        private func reportUnavailableControllerOnce() {
-            guard !hasReportedUnavailableController else {
-                return
-            }
-
-            hasReportedUnavailableController = true
-            print("🐞 [ESP-HELP-GEOMETRY] sizingController=unavailable")
-        }
     }
 }
 
@@ -6421,7 +6093,6 @@ private struct ESPHelpFormSheetPresenter: UIViewControllerRepresentable {
         private var isPresentationInFlight = false
         private var isDismissalInFlight = false
         private var hasScheduledPresentationRetry = false
-        private var hasReportedUnavailablePresenter = false
         private var lastAvailableSize: CGSize?
 
         func synchronizePresentation(
@@ -6459,7 +6130,6 @@ private struct ESPHelpFormSheetPresenter: UIViewControllerRepresentable {
 
             lastAvailableSize = sizing.availableSize
             presentedHelpController.preferredContentSize = sizing.preferredSize
-            print("🐞 [ESP-HELP-GEOMETRY] sizingUpdated container=\(sizing.availableSize) requested=\(sizing.preferredSize) controller=\(String(describing: type(of: presentedHelpController)))")
         }
 
         func presentationControllerDidDismiss(_ presentationController: UIPresentationController) {
@@ -6487,7 +6157,6 @@ private struct ESPHelpFormSheetPresenter: UIViewControllerRepresentable {
                   !presenter.isBeingDismissed,
                   !presenter.isBeingPresented,
                   presenter.presentedViewController == nil else {
-                reportUnavailablePresenterOnce()
                 return
             }
 
@@ -6497,7 +6166,6 @@ private struct ESPHelpFormSheetPresenter: UIViewControllerRepresentable {
             }
 
             guard let sizing = helpSheetSizing(for: presenter) else {
-                reportUnavailablePresenterOnce()
                 return
             }
 
@@ -6515,7 +6183,6 @@ private struct ESPHelpFormSheetPresenter: UIViewControllerRepresentable {
             presentedHelpController = helpController
             lastAvailableSize = sizing.availableSize
             isPresentationInFlight = true
-            print("🐞 [ESP-HELP-GEOMETRY] sizingPresent container=\(sizing.availableSize) requested=\(sizing.preferredSize) presenter=\(String(describing: type(of: presenter)))")
 
             presenter.present(helpController, animated: true) { [weak self, weak helpController] in
                 guard let self, let helpController else {
@@ -6566,7 +6233,6 @@ private struct ESPHelpFormSheetPresenter: UIViewControllerRepresentable {
 
             if synchronizeState || !shouldBePresented {
                 setPresentedState?(false)
-                print("🐞 [ESP-HELP-GEOMETRY] sizingDismissed")
             } else if let anchorController {
                 DispatchQueue.main.async { [weak self, weak anchorController] in
                     guard let self, let anchorController else {
@@ -6661,14 +6327,6 @@ private struct ESPHelpFormSheetPresenter: UIViewControllerRepresentable {
             }
         }
 
-        private func reportUnavailablePresenterOnce() {
-            guard !hasReportedUnavailablePresenter else {
-                return
-            }
-
-            hasReportedUnavailablePresenter = true
-            print("🐞 [ESP-HELP-GEOMETRY] sizingPresenter=unavailable")
-        }
     }
 }
 

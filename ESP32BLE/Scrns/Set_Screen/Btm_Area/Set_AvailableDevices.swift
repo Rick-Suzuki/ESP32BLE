@@ -76,6 +76,13 @@ struct SettingsAvailableDevicesPanel: View {
 
             Spacer(minLength: 0)
 
+            Text(verbatim: debugVersion.value)
+                .foregroundStyle(.white)
+                .lineLimit(1)
+				.minimumScaleFactor(0.5)
+                .truncationMode(.tail)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
             HStack(spacing: 8) {
                 helpButton
                 buttonClickToggleButton

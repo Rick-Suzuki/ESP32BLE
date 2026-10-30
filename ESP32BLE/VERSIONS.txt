@@ -1,4 +1,8 @@
 
+V65.69_261030 Fri 1151
+db_version added
+
+
 V65.68_261030 Fri 0953
 Help system fully working
 

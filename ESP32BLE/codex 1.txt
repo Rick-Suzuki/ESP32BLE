@@ -1,295 +1,101 @@
-A. Executive summary
+ESP-SETTINGS-LIVEDEBUG-01 — IMPLEMENTATION COMPLETE
 
-CONFIRMED FROM CURRENT SOURCE: the tick callback does not set isHelpPresented to false when tapped. It only sets the coordinator’s private shouldBePresented flag to false and starts UIKit dismissal.
+Files modified by this task:
 
-The binding is changed to false only after dismissal completes.
+ESP32BLE/debug.swift
+ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
+ESP32BLE/Scrns/Set_Screen/Btm_Area/Set_AvailableDevices.swift
 
-This leaves a transition window where SwiftUI still reports isHelpPresented == true. If updateUIViewController runs during that window, synchronizePresentation sets shouldBePresented back to true. The dismissal completion then deliberately schedules a fresh presentation when shouldBePresented is true.
+Final observable store:
 
-This is the most likely source-supported explanation for the observed immediate reopen.
+debug.swift:18–31
 
-B. Current Git and source state
+@MainActor
+@Observable
+final class DebugVersionStore {
+var value = "V65.68"
 
-Branch: DEVELOPMENT.
+}
 
-Current HEAD: 4178897, “261030 Fri 0909, new help system”.
+@MainActor
+let debugVersion = DebugVersionStore()
 
-The working tree is clean.
+@MainActor
+var db_version: String {
+get { debugVersion.value }
 
-The current source includes the committed UIKit iPad form-sheet experiment, the Settings modifier-chain split, existing Help geometry diagnostics, and the old unused sizing configurator helper.
+set { debugVersion.value = newValue }
 
-C. Settings Help button action
+}
 
-isHelpPresented is declared at line 399:
+Observation is explicitly imported in debug.swift.
 
-@State private var isHelpPresented = false
+The initial manually maintained value remains V65.68.
 
-The iPad Settings Help button is at lines 441–446. Its action at line 443 is:
+Developer-facing main-actor usage is preserved:
 
-isHelpPresented = true
+db_version = "BLE connected"
 
-A second Settings control passes the same true assignment at lines 1457–1459.
+Non-main-actor code must explicitly cross to the main actor:
 
-D. All current isHelpPresented reads and writes
+Task { @MainActor in
+db_version = "BLE connected"
 
-Line 399:
-Initial state is false.
+}
 
-Line 443:
-iPad Settings Help button sets true.
+iPad display change:
 
-Lines 595–600:
-iPhone fullScreenCover reads !isPad && isHelpPresented. Its dismissal binding writes false.
+Set_Screen.swift:447
 
-Lines 603–605:
-iPhone ESPHelpView close callback writes false.
+The existing label now directly reads:
 
-Lines 607–610:
-The iPad form-sheet modifier receives $isHelpPresented.
+Text(verbatim: debugVersion.value)
 
-Lines 1457–1459:
-A second Settings Help action sets true.
+All existing white styling, one-line behavior, tail truncation, available-width constraint, Help button action, and overlay placement remain unchanged.
 
-Lines 6352–6360:
-The form-sheet modifier creates a Binding. Its getter reads isPresented. Its setter only writes false to the underlying binding.
+iPhone display change:
 
-Lines 6389–6396:
-The representable stores a closure that writes the captured Binding value when it changes.
+Set_AvailableDevices.swift:79
 
-Lines 6427–6438:
-synchronizePresentation copies the incoming SwiftUI Boolean into shouldBePresented and chooses presentation or dismissal.
+The existing label now directly reads:
 
-Lines 6566–6568:
-Dismissal completion writes false through setPresentedState only when interactive synchronization is requested or shouldBePresented is false.
+Text(verbatim: debugVersion.value)
 
-E. Complete tick callback path
+All existing modifiers remain unchanged, including white text, one-line display, .minimumScaleFactor(0.5), tail truncation, leading alignment, and the available-width constraint above the four lower-left controls.
 
-Contents, topic pages, and the user-manual placeholder each pass ESPHelpView’s onClose callback to ESPHelpNavigationBar.
+Automatic refresh behavior:
 
-The checkmark is created at lines 6898–6904:
+Both SwiftUI labels now directly read the @Observable store property. Changing debugVersion.value, including through db_version = ... from main-actor code, invalidates and redraws the labels while Settings remains visible.
 
-ESPHelpNavigationButton(
-systemName: "checkmark",
+No logging framework, persistence, notifications, polling, timers, version lookup, Help changes, or Settings layout changes were added.
 
-accessibilityLabel: "Close",
+Validation:
 
-action: onClose
+• git diff --check passed with no whitespace errors.
+• Xcode diagnostics for all three modified files failed immediately with:
+IDEKit.IDEStatefulActionError error 0
+• The requested Xcode build also failed immediately with the same IDE service error.
+• No Swift compiler errors or warnings were returned.
+• Compilation remains unverified until Xcode’s build service is available.
 
-)
+Working-tree preservation:
 
-ESPHelpNavigationButton invokes its action directly through Button(action: action) at line 6918.
+The task modified only the three approved source files.
 
-For iPad UIKit Help, ESPHelpView is created at lines 6504–6507 with this close callback:
+Pre-existing unrelated working-tree modifications remain in:
 
-coordinator?.dismissHelpFromCloseButton()
+ESP32BLE.xcodeproj/xcuserdata/rick.xcuserdatad/xcdebugger/Breakpoints_v2.xcbkptlist
+ESP32BLE/codex 1.txt
 
-dismissHelpFromCloseButton at lines 6441–6444 does:
+Pre-existing Help diagnostic-cleanup changes in Set_Screen.swift were preserved.
 
-shouldBePresented = false
-dismissHelpIfNeeded()
+Physical-device tests still required:
 
-It does not call setPresentedState?(false).
-
-dismissHelpIfNeeded at lines 6533–6550 calls:
-
-presentedHelpController.dismiss(animated: true)
-
-Its completion calls completeDismissal.
-
-F. UIKit presenter lifecycle
-
-ESPHelpFormSheetPresentationModifier is at lines 6345–6365.
-
-It attaches ESPHelpFormSheetPresenter through a background only on iPad. The presenter itself is a UIViewControllerRepresentable.
-
-makeUIViewController creates ESPHelpFormSheetAnchorController. The anchor has a clear, noninteractive UIView and reports layout only for preferred-size updates.
-
-updateUIViewController:
-
-1. Replaces the coordinator’s setPresentedState closure with the current Binding.
-2. Calls synchronizePresentation using the current isPresented value.
-
-The coordinator stores weak references to the anchor controller, presenting controller, and UIKit Help controller.
-
-G. Coordinator presentation logic
-
-synchronizePresentation at lines 6427–6438 always does:
-
-shouldBePresented = isPresented
-
-If true, it calls presentHelpIfNeeded.
-
-presentHelpIfNeeded will not present if:
-
-A Help controller is already stored.
-
-Presentation or dismissal is in progress.
-
-A valid attached presenter is unavailable.
-
-The presenter is already presenting another controller.
-
-A UIKit transition requires one deferred main-queue retry.
-
-If presentation succeeds, it stores the controller, marks isPresentationInFlight true, and calls presenter.present.
-
-The deferred retry at lines 6642–6661 checks shouldBePresented before calling presentHelpIfNeeded.
-
-H. Coordinator dismissal logic
-
-The tick path calls dismissHelpFromCloseButton.
-
-That sets only private shouldBePresented = false, then begins UIKit dismissal.
-
-The binding remains true until the programmatic dismissal completion.
-
-completeDismissal clears stored controller state and flags. It then does one of two things:
-
-If synchronizeState is true, or shouldBePresented is false:
-It writes false to the binding.
-
-Otherwise:
-It schedules presentHelpIfNeeded on the main queue.
-
-The otherwise branch is intended to support a legitimate request to reopen Help during dismissal. It is also the branch that can cause the observed undesired reopen if shouldBePresented was reset to true by a stale or intermediate SwiftUI update.
-
-I. Presentation delegate behavior
-
-The only implemented presentation delegate callback is:
-
-presentationControllerDidDismiss
-
-It is at lines 6464–6472.
-
-For a native interactive dismissal, it:
-
-1. Sets shouldBePresented = false.
-2. Calls completeDismissal with synchronizeState: true.
-3. Writes false to the SwiftUI binding.
-
-There are no presentationControllerWillDismiss or presentationControllerShouldDismiss implementations.
-
-The programmatic tick path does not rely on the delegate; it uses the dismiss completion closure. This covers programmatic dismissal even if the delegate callback is not invoked for that path.
-
-The delegate does not itself schedule presentation.
-
-J. Potential stale-state and pending-callback issue
-
-CONFIRMED FROM CURRENT SOURCE:
-
-The tick path starts dismissal before setting the SwiftUI binding false.
-
-CONFIRMED FROM CURRENT SOURCE:
-
-Every updateUIViewController call with isPresented == true overwrites shouldBePresented with true, including during dismissal.
-
-CONFIRMED FROM CURRENT SOURCE:
-
-If completeDismissal sees shouldBePresented == true, it schedules a new presentation.
-
-UNVERIFIED RUNTIME HYPOTHESIS:
-
-During the dismissal animation, SwiftUI invokes updateUIViewController with the still-true binding. That resets shouldBePresented to true before the UIKit dismissal completion. Completion then selects the re-presentation branch, producing the observed down-and-immediately-reappear behavior.
-
-No current event-specific logs establish that exact timing, but the source contains this complete re-presentation path and the user’s observation matches it.
-
-K. Potential duplicate presenter instances
-
-CONFIRMED FROM CURRENT SOURCE:
-
-Only one active iPad presentation mechanism exists. There is no active iPad SwiftUI .sheet.
-
-The iPhone fullScreenCover is gated by !isPad and cannot present on iPad.
-
-The old ESPHelpSheetSizingConfigurator remains defined at lines 6248–6342, but there is no instantiation of it in the source. It cannot execute.
-
-The form-sheet presenter is attached at a stable point in settingsScreenWithPresentations. There is no explicit .id or conditional identity change other than the stable device-family condition.
-
-UNVERIFIED RUNTIME HYPOTHESIS:
-
-SwiftUI could recreate the representable and its coordinator during a broader Settings view-tree change. Source inspection cannot prove runtime identity preservation. However, there is no source evidence of two deliberately attached presenters or two active iPad presentation systems.
-
-L. Most likely failure sequence
-
-CONFIRMED FROM CURRENT SOURCE:
-
-Tick tapped
-→ ESPHelpNavigationButton calls onClose
-→ ESPHelpView’s UIKit close closure calls dismissHelpFromCloseButton
-→ shouldBePresented becomes false
-→ dismissHelpIfNeeded starts dismiss(animated: true)
-→ isHelpPresented remains true at this point
-
-UNVERIFIED RUNTIME HYPOTHESIS, consistent with the device observation:
-
-SwiftUI updates ESPHelpFormSheetPresenter while the dismissal is animating
-→ updateUIViewController calls synchronizePresentation with true
-→ shouldBePresented becomes true again
-→ UIKit dismissal completes
-→ completeDismissal enters its else branch
-→ DispatchQueue.main.async calls presentHelpIfNeeded
-→ Help form sheet reappears
-
-M. One recommended minimal correction
-
-RECOMMENDATION:
-
-In dismissHelpFromCloseButton, synchronize the SwiftUI binding to false before starting UIKit dismissal.
-
-The future change should be limited to the coordinator at lines 6441–6444:
-
-1. Set shouldBePresented = false.
-2. Call setPresentedState?(false).
-3. Call dismissHelpIfNeeded.
-
-This makes SwiftUI’s source-of-truth state false at tick time, rather than after the dismissal animation. Subsequent representable updates should then carry false and cannot reset shouldBePresented to true without a new explicit Help-open action.
-
-Do not remove the existing programmatic dismissal completion synchronization. It remains useful as an idempotent cleanup path. Do not change sizing, presentation style, navigation, or diagnostics.
-
-N. Exact future source locations
-
-Set_Screen.swift only.
-
-Primary future change:
-ESPHelpFormSheetPresenter.Coordinator.dismissHelpFromCloseButton, lines 6441–6444.
-
-Verification review:
-synchronizePresentation, lines 6427–6438.
-
-No changes should be needed in ESPHelpNavigationBar, ESPHelpView, the sizing policy, iPhone fullScreenCover, or geometry diagnostics.
-
-O. Regression-test plan
-
-On iPad Pro, then mini and Air:
-
-1. Open Help from Settings.
-2. Press tick from Contents.
-3. Confirm the window closes and remains closed.
-4. Reopen Help.
-5. Navigate to Connect to Mac.
-6. Press tick from the HTML page.
-7. Confirm it remains closed.
-8. Reopen Help again.
-9. Test Home, Previous, and Next.
-10. Test native interactive dismissal if the form sheet supports it.
-11. Tap tick repeatedly during dismissal.
-12. Rapidly open, close, and reopen Help.
-13. Confirm no duplicate or second window appears.
-14. Confirm current form-sheet dimensions remain unchanged.
-15. Confirm geometry logs still report the expected host and root dimensions.
-
-On iPhone 17 and XS Max:
-
-1. Open and close Help.
-2. Confirm the full-screen presentation remains unchanged.
-3. Confirm navigation and typography remain unchanged.
-
-If a future implementation needs more evidence, add only bounded event logs for tick close request, binding false synchronization, dismissal completion, and presentation start. Every such print must begin with 🐞.
-
-P. Risks and remaining uncertainties
-
-The recommended change is localized and low risk because it synchronizes the existing source-of-truth binding earlier; it does not alter UIKit sizing or Help content.
-
-The exact intermediate SwiftUI update timing is not proven without runtime event logs. However, the current source demonstrably permits re-presentation after dismissal whenever shouldBePresented becomes true before completion, and the tick path currently leaves the binding true during that interval.
-
-No files were modified, no build was run, and no Git state was changed.
+1. Open Settings on iPhone and iPad; confirm V65.68 appears in the existing positions.
+2. From an existing temporary main-actor developer test path, assign:
+db_version = "BLE connected"
+3. Confirm the visible label changes without closing Settings.
+4. Assign a long message.
+5. Confirm iPad keeps Help fixed in place and tail-truncates the label.
+6. Confirm iPhone retains the four button positions; text may shrink to 50%, then tail-truncate.
+7. Confirm Help, BLE, Mac controls, Light appearance, and Dark appearance remain unchanged.

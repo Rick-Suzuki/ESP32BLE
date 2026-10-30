@@ -638,9 +638,9 @@
             filePath = "ESP32BLE/Scrns/Set_Screen/Btm_Area/Set_AvailableDevices.swift"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "142"
-            endingLineNumber = "142"
-            landmarkName = "outputModeControls"
+            startingLineNumber = "143"
+            endingLineNumber = "143"
+            landmarkName = "connectionContent"
             landmarkType = "24">
          </BreakpointContent>
       </BreakpointProxy>

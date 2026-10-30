@@ -8,12 +8,28 @@
 import SwiftUI
 import AVFoundation
 import Foundation
+import Observation
 
 // debug BT - prints
 nonisolated let db_btnCode = true
-
 nonisolated let db_dbCode = true
+//
+//----------------------------------------
+//
+@MainActor
+@Observable
+final class DebugVersionStore {
+    var value = "V65.68"
+}
 
+@MainActor
+let debugVersion = DebugVersionStore()
+
+@MainActor
+var db_version: String {
+    get { debugVersion.value }
+    set { debugVersion.value = newValue }
+}
 //
 //----------------------------------------
 //
