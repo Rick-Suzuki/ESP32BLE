@@ -6440,6 +6440,7 @@ private struct ESPHelpFormSheetPresenter: UIViewControllerRepresentable {
 
         func dismissHelpFromCloseButton() {
             shouldBePresented = false
+            setPresentedState?(false)
             dismissHelpIfNeeded()
         }
 
