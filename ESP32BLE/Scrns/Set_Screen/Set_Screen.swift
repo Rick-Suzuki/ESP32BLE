@@ -5801,7 +5801,9 @@ private enum ESPHelpTopic: CaseIterable, Hashable, Identifiable {
             [
                 .html("connect-mac.html"),
                 .html("connect-mac-setup.html"),
-                .html("connect-mac-connection.html")
+                .html("connect-mac-accessibility.html"),
+                .html("connect-mac-connection.html"),
+                .html("connect-mac-test.html")
             ]
         case .connectToESP32BLE, .usingESP, .troubleshooting:
             [.placeholder]
@@ -5872,6 +5874,7 @@ private struct ESPHelpContentsView: View {
             }
 
             ESPHelpNavigationBar(
+                topicTitle: nil,
                 showsHome: false,
                 showsTopicNavigation: false,
                 onPrevious: nil,
@@ -5936,7 +5939,14 @@ private struct ESPHelpTopicPager: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
+        // MARK: - BM:🅱️ iPhone Help bottom spacing
+        // Adjust this value to move the bottom navigation bar
+        // vertically relative to the Help content's bottom edge.
+        // 0 = no additional bottom padding.
+        // The system safe area remains respected.
+        let iPhoneHelpBottomPadding: CGFloat = 0
+
+        VStack(alignment: .leading, spacing: isPad ? 20 : 8) {
             ZStack {
                 ESPHelpTopicView(topic: currentTopic, page: currentPage)
                     .id(ESPHelpPageLocation(topic: currentTopic, pageIndex: currentPageIndex))
@@ -5946,6 +5956,7 @@ private struct ESPHelpTopicPager: View {
             .clipped()
 
             ESPHelpNavigationBar(
+                topicTitle: currentTopic.title,
                 showsHome: true,
                 showsTopicNavigation: true,
                 onPrevious: previousPageLocation.map { location in
@@ -5959,7 +5970,9 @@ private struct ESPHelpTopicPager: View {
                 isTopicTransitioning: isTransitioning
             )
         }
-        .padding()
+        .padding(.horizontal)
+        .padding(.top)
+        .padding(.bottom, isPad ? nil : iPhoneHelpBottomPadding)
         .toolbar(.hidden, for: .navigationBar)
     }
 
@@ -6046,9 +6059,11 @@ private struct ESPHelpTopicView: View {
     let page: ESPHelpPage
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            Text(topic.title)
-                .font(.title2.weight(.semibold))
+        VStack(alignment: .leading, spacing: isPad ? 20 : 0) {
+            if isPad {
+                Text(topic.title)
+                    .font(.title2.weight(.semibold))
+            }
 
             switch page {
             case .html(let filename):
@@ -6555,6 +6570,7 @@ private struct ESPHelpUserManualView: View {
             Spacer()
 
             ESPHelpNavigationBar(
+                topicTitle: nil,
                 showsHome: true,
                 showsTopicNavigation: false,
                 onPrevious: nil,
@@ -6568,8 +6584,24 @@ private struct ESPHelpUserManualView: View {
         .toolbar(.hidden, for: .navigationBar)
     }
 }
+// MARK: - BM:🅱️ iPhone Help navigation positioning
+private enum ESPHelpIPhoneToolbarLayout {
+    // Adjust titleSpacing to change the gap after Home.
+    static let titleSpacing: CGFloat = 20
+    // Adjust titleOffsetX to move the title horizontally.
+    static let titleOffsetX: CGFloat = 0
+    // Adjust arrowGroupOffsetX to move both arrows together.
+    static let arrowGroupOffsetX: CGFloat = 0
+    // Adjust arrowSpacing to change the gap between arrows.
+    static let arrowSpacing: CGFloat = 12
+    // Adjust tickToArrowSpacing to change the gap
+    // between Tick and Previous.
+    static let tickToArrowSpacing: CGFloat = 32
+}
+
 // MARK: - BM:😎 HELP Navigation bar
 private struct ESPHelpNavigationBar: View {
+    let topicTitle: String?
     let showsHome: Bool
     let showsTopicNavigation: Bool
     let onPrevious: (() -> Void)?
@@ -6579,57 +6611,147 @@ private struct ESPHelpNavigationBar: View {
     let isTopicTransitioning: Bool
 
     var body: some View {
-        HStack(spacing: 12) {
-            if showsHome, let onHome {
+        if !isPad, let topicTitle, showsHome, showsTopicNavigation, let onHome {
+            ESPHelpIPhoneTopicNavigationBar(
+                topicTitle: topicTitle,
+                onPrevious: onPrevious,
+                onNext: onNext,
+                onHome: onHome,
+                onClose: onClose,
+                isTopicTransitioning: isTopicTransitioning
+            )
+        } else {
+            HStack(spacing: 12) {
+                if showsHome, let onHome {
+                    ESPHelpNavigationButton(
+                        systemName: "house",
+                        rotation: .zero,
+                        accessibilityLabel: "Home",
+                        isEnabled: !isTopicTransitioning,
+                        action: onHome
+                    )
+                } else {
+                    Color.clear
+                        .frame(width: 1, height: 1)
+                }
+
+                Spacer(minLength: 0)
+
+                if showsTopicNavigation {
+                    HStack(spacing: 12) {
+                        ESPHelpNavigationButton(
+                            systemName: "triangle.fill",
+                            rotation: .degrees(-90),
+                            accessibilityLabel: "Previous",
+                            isEnabled: onPrevious != nil && !isTopicTransitioning,
+                            action: onPrevious ?? {}
+                        )
+
+                        ESPHelpNavigationButton(
+                            systemName: "triangle.fill",
+                            rotation: .degrees(90),
+                            accessibilityLabel: "Next",
+                            isEnabled: onNext != nil && !isTopicTransitioning,
+                            action: onNext ?? {}
+                        )
+                    }
+                }
+
+                Spacer(minLength: 0)
+
                 ESPHelpNavigationButton(
-                    systemName: "house",
+                    systemName: "checkmark",
                     rotation: .zero,
-                    accessibilityLabel: "Home",
-                    isEnabled: !isTopicTransitioning,
-                    action: onHome
+                    accessibilityLabel: "Close",
+                    isEnabled: true,
+                    action: onClose
                 )
-            } else {
-                Color.clear
-                    .frame(width: 1, height: 1)
             }
+            .frame(minHeight: 44)
+        }
+    }
+}
 
-            Spacer(minLength: 0)
+private struct ESPHelpIPhoneTopicNavigationBar: View {
+    let topicTitle: String
+    let onPrevious: (() -> Void)?
+    let onNext: (() -> Void)?
+    let onHome: () -> Void
+    let onClose: () -> Void
+    let isTopicTransitioning: Bool
 
-            if showsTopicNavigation {
-                HStack(spacing: 12) {
+    var body: some View {
+        GeometryReader { geometry in
+            let arrowGroupWidth = (ESPHelpNavigationButton.controlSize * 2)
+                + ESPHelpIPhoneToolbarLayout.arrowSpacing
+            let maximumTitleWidth = max(
+                0,
+                geometry.size.width
+                    - ESPHelpNavigationButton.controlSize
+                    - ESPHelpIPhoneToolbarLayout.titleSpacing
+                    - ESPHelpNavigationButton.controlSize
+                    - ESPHelpIPhoneToolbarLayout.tickToArrowSpacing
+                    - arrowGroupWidth
+            )
+
+            HStack(spacing: 0) {
+                HStack(spacing: ESPHelpIPhoneToolbarLayout.titleSpacing) {
                     ESPHelpNavigationButton(
-                        systemName: "triangle.fill",
-                        rotation: .degrees(-90),
-                        accessibilityLabel: "Previous",
-                        isEnabled: onPrevious != nil && !isTopicTransitioning,
-                        action: onPrevious ?? {}
+                        systemName: "house",
+                        rotation: .zero,
+                        accessibilityLabel: "Home",
+                        isEnabled: !isTopicTransitioning,
+                        action: onHome
                     )
 
+                    Text(topicTitle)
+                        .font(.subheadline.weight(.semibold))
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .frame(maxWidth: maximumTitleWidth, alignment: .leading)
+                        .offset(x: ESPHelpIPhoneToolbarLayout.titleOffsetX)
+                }
+
+                Spacer(minLength: 0)
+
+                HStack(spacing: ESPHelpIPhoneToolbarLayout.tickToArrowSpacing) {
                     ESPHelpNavigationButton(
-                        systemName: "triangle.fill",
-                        rotation: .degrees(90),
-                        accessibilityLabel: "Next",
-                        isEnabled: onNext != nil && !isTopicTransitioning,
-                        action: onNext ?? {}
+                        systemName: "checkmark",
+                        rotation: .zero,
+                        accessibilityLabel: "Close",
+                        isEnabled: true,
+                        action: onClose
                     )
+
+                    HStack(spacing: ESPHelpIPhoneToolbarLayout.arrowSpacing) {
+                        ESPHelpNavigationButton(
+                            systemName: "triangle.fill",
+                            rotation: .degrees(-90),
+                            accessibilityLabel: "Previous",
+                            isEnabled: onPrevious != nil && !isTopicTransitioning,
+                            action: onPrevious ?? {}
+                        )
+
+                        ESPHelpNavigationButton(
+                            systemName: "triangle.fill",
+                            rotation: .degrees(90),
+                            accessibilityLabel: "Next",
+                            isEnabled: onNext != nil && !isTopicTransitioning,
+                            action: onNext ?? {}
+                        )
+                    }
+                    .offset(x: ESPHelpIPhoneToolbarLayout.arrowGroupOffsetX)
                 }
             }
-
-            Spacer(minLength: 0)
-
-            ESPHelpNavigationButton(
-                systemName: "checkmark",
-                rotation: .zero,
-                accessibilityLabel: "Close",
-                isEnabled: true,
-                action: onClose
-            )
+            .frame(maxWidth: .infinity, minHeight: ESPHelpNavigationButton.controlSize)
         }
-        .frame(minHeight: 44)
+        .frame(height: ESPHelpNavigationButton.controlSize)
     }
 }
 
 private struct ESPHelpNavigationButton: View {
+    static let controlSize: CGFloat = 44
+
     let systemName: String
     let rotation: Angle
     let accessibilityLabel: String

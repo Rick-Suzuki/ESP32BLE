@@ -1,76 +1,28 @@
-No files, settings, permissions, messages, or macros were changed.
+1. Current navigation and layout lifecycle
 
-What could not be verified
+Confirmed: Contents uses NavigationLink to push a topic destination (Set_Screen.swift:5850-5857). ESPHelpView then creates ESPHelpTopicPager during NavigationStack destination resolution (5719-5728). The pager creates both the HTML area and native bottom bar together (5949-5971). The toolbar is a fixed sibling below a full-height content area; it has no direct dependency on HTML geometry (5955-5971).
 
-Because there was no trusted AX client, I could not truthfully record ChatGPT’s current:
+2. Likely cause of the jerk
 
-• AX window tree or whether each conversation is a separate AXWindow
-• Send/Stop button roles, descriptions, titles, values, or enabled states
-• Conversation/window titles
-• Progress or streaming indicators
-• Per-window identifiers or their stability
-• Which AX notifications this specific ChatGPT build accepts
-• Whether background windows continue delivering useful AX events
+Confirmed: First topic creation constructs WKWebView and immediately starts loadFileURL (6437-6452, 6501-6511). There is no prewarming, cache, loading state, or reused web view. Each page identity change can create a new HTML view (5951-5953).
 
-Those are unverified, not negative findings. ChatGPT’s UI is Chromium-based, so controls may be exposed as web accessibility elements rather than native AXButtons, and labels must be discovered rather than assumed.
+Likely, requiring measurement: cold WebKit/WebContent-process initialization overlaps the NavigationStack push and initial pager layout. That can delay or visually disrupt both the web page and toolbar because both are being introduced in the same native transition. The source does not prove a 0.5-second cost or prove toolbar movement caused by web layout.
 
-AXObserver viability
+3. Recommended native-only comparison
 
-Technically viable, but unproven for this app. A trusted process can create an AXObserver for ChatGPT’s PID and attempt to register notifications. Registration itself reports whether each notification is unsupported, so that is the proper way to discover ChatGPT’s actual support.
+Temporarily replace only ESPHelpHTMLView(pageFilename:) in the .html case (6068-6072), ideally only for Connect to Mac page 1, with a full-size native SwiftUI placeholder. Keep ESPHelpTopicPager and ESPHelpNavigationBar unchanged. If the first push becomes smooth, WebKit initialization is strongly implicated; if not, investigate destination/pager layout.
 
-Candidate notifications to test per application/window/control:
+4. Minimal timing instrumentation plan
 
-• AXWindowCreated / AXUIElementDestroyed — window lifecycle
-• AXFocusedWindowChanged — active-window tracking
-• AXTitleChanged — window/title changes, if exposed
-• AXValueChanged — potentially a streaming/status/button-state change
-• AXLayoutComplete / AXLoadComplete — possible web-content updates
-• AXElementBusyChanged — if ChatGPT exposes busy state
-• relevant element-created/destroyed or children-changed notifications, if accepted
+When authorized, timestamped “🐞” prints at:
+• path change/destination construction: 5721-5728;
+• pager init or onAppear: 5930-5939;
+• makeUIView: 6437;
+• WKNavigationDelegate didStartProvisionalNavigation;
+• WKNavigationDelegate didFinish.
 
-Do not assume any event corresponds to “response completed.” The most promising signal would be a per-window transition from an observed Stop-generating control to an observed Send-ready control. AX events should trigger a fresh attribute snapshot; the event alone is not enough.
+This is sufficient to separate SwiftUI destination construction from WebKit startup and document rendering.
 
-Apple’s relevant APIs are AXObserver and AXUIElement.
+5. Risks and limitations
 
-Recommended detection design
-
-Maintain a state machine independently for each AX window:
-
-1. Enumerate ChatGPT AXWindows; associate each with its AX element and, if exposed, its AXWindowNumber.
-2. Discover candidate Send and Stop controls from actual roles/descriptions/actions, not visible text assumptions.
-3. Arm a window only after observing a genuine idle → generating transition.
-4. Announce exactly once on generating → idle, preferably confirmed by:
-   • Stop disappears or becomes unavailable, and
-   • Send becomes available/enabled.
-5. Disarm immediately after announcing; ignore idle-state events while not armed.
-6. Treat window destruction/cancellation as disarm-without-announcement unless a confirmed ready state follows.
-7. Track each window separately so closely spaced completions produce one announcement each.
-
-An event-driven observer should be primary. A narrowly scoped fallback poll—only for already-armed windows, after an event or at a modest interval—may be needed because Chromium accessibility updates can omit or coalesce fine-grained events.
-
-Multiple windows
-
-Inference: Separate native ChatGPT windows would normally appear as separate AXWindow elements under one application AX element, and can therefore be monitored independently. This must be verified live.
-
-Use an exposed AXWindowNumber if available; it is preferable to titles, which may duplicate or change. Do not rely on an AX element’s in-memory identity across window recreation. Background-window behavior is also unverified: AX can often observe non-frontmost windows, but ChatGPT may throttle or alter its rendered accessibility tree.
-
-Limitations / false positives
-
-• ChatGPT updates can change AX roles, labels, hierarchy, or notification support.
-• Stop may appear for actions other than ordinary answer streaming.
-• Regenerate, cancellation, network failure, tool execution, and long-running responses may create different control transitions.
-• A send button can be enabled before visual rendering has fully settled.
-• Window titles may be absent, generic, or duplicated.
-• The monitoring host—Keyboard Maestro Engine or a small companion—must have macOS Accessibility permission. The current Xcode/Codex session does not.
-• This does not establish that Keyboard Maestro itself can directly host an AXObserver; that needs a separate capability check.
-
-Smallest safe next stage
-
-Grant Accessibility only to the intended observer host, then run a read-only, manual observation while the user sends one normal ChatGPT prompt themselves. Log, per AX window:
-
-• window attributes and identifier candidates;
-• all discovered controls with AXRole, AXDescription, AXTitle, AXValue, AXEnabled, and actions;
-• which attempted AXObserver registrations succeed;
-• timestamped control transitions from send → stop → send.
-
-No automation, typing, speaking, or macro changes are needed for that validation. Only after that trace demonstrates a repeatable per-window transition should a one-time Keyboard Maestro announcement be considered.
+The diagnostic must retain the same full-height frame to avoid testing a different layout. Print timing has minor overhead. Cold-start testing requires fresh app launches; source inspection alone cannot isolate WebKit, SwiftUI transition, or system scheduling.

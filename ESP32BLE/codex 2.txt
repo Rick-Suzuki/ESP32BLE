@@ -1,40 +1,56 @@
-1. Xcode reference status
+1. Relevant source
 
-No project configuration reference to:
-${SRCROOT}/ESP32BLE/Help_OLD_UNUSED
-or its former nested Help path.
+Confirmed: all Help presentation and controls are in:
+ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
 
-The only Help synchronized-folder reference is path “Help” at ${SRCROOT}/Help (project.pbxproj:149-158).
+• iPhone full-screen presentation: SettingsScreen.settingsScreenWithPresentations, lines 602-615.
+• Shared Help root: ESPHelpView, 5710-5744.
+• Topic-page vertical container: ESPHelpTopicPager, 5921-5968.
+• iPad form-sheet path: ESPHelpFormSheetPresentationModifier / Presenter, 6084-6398.
+• iPhone compact bar: ESPHelpIPhoneTopicNavigationBar, 6663-6734.
+• iPad/original bar: ESPHelpNavigationBar fallback, 6611-6659.
 
-2. Target membership / resource inclusion
+2. Current bottom-bar structure
 
-Help_OLD_UNUSED is not a synchronized target folder. Copy Bundle Resources contains only Assets.xcassets and color.png (project.pbxproj:442-452).
+Confirmed: TopicPager is a VStack:
+• Flexible HTML/topic ZStack: 5943-5949.
+• Navigation bar beneath it: 5951-5964.
+• Outer .padding() on all edges: 5966.
 
-The custom script copies only:
-${SRCROOT}/Help
-to:
-${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/Help
-(project.pbxproj:454-477).
+iPhone compact bar has fixed height 44: 6732. Its GeometryReader is also constrained to that height. It has no bottom padding or spacer.
 
-3. Built app bundle
+3. Source of bottom space
 
-The available ESP32BLE.app contains only the active Help directory:
-ESP32BLE.app/Help/connect-mac.html
-ESP32BLE.app/Help/connect-mac-setup.html
-ESP32BLE.app/Help/connect-mac-connection.html
-ESP32BLE.app/Help/css/help.css
-ESP32BLE.app/Help/images/connect-mac-network.svg
+Confirmed: there is no extra fixed-height bar container, bottom Spacer, .padding(.bottom), .safeAreaInset, or presentation detent.
 
-No Help_OLD_UNUSED path or nested ESP32BLE/Help resource exists in that bundle.
+The bar is above:
+• TopicPager’s 16-point bottom padding.
+• The hosting view’s safe-area exclusion, which varies by device/orientation.
 
-4. Source dependencies
+Therefore the visible gap below controls is not created inside the compact toolbar. It is the Help content’s bottom inset: confirmed 16-point SwiftUI padding plus runtime safe-area space.
 
-The Help viewer resolves files only from Bundle.main/Help (Set_Screen.swift:6501-6519). No source/build dependency on Help_OLD_UNUSED was found. A diagnostic text file mentions the old path, but it is not executable or packaging configuration.
+A “substantial” gap cannot be fully established statically; it may be amplified by the device’s bottom safe area or the iPad form sheet’s geometry.
 
-5. Deletion safety
+4. Horizontal controls
 
-Yes. Based on project references, resource phases, bundle contents, and the successful device run, Help_OLD_UNUSED can be safely deleted without changing the working Help system.
+Confirmed iPhone constants, lines 6578-6588:
+• titleSpacing = 20
+• titleOffsetX = 0
+• arrowGroupOffsetX = 0
+• arrowSpacing = 12
 
-6. Xcode cleanup
+They independently control title gap, title movement, arrow-group movement, and arrow separation. Home/Close remain anchored by the base HStack; arrows are centered by ZStack.
 
-None is required before deletion: no stale Xcode project reference or target membership exists.
+5. Device differences
+
+• iPhone: fullScreenCover; compact bar; normal safe-area layout.
+• All iPads: custom .formSheet; standard bar; sheet is 60% × 78% of safe presenter bounds, clamped to 650–830 by 660–800, with 32-point margins (6143-6151, 6338-6367).
+• No distinct mini/Air/12.9 or iPadOS-17 branch exists.
+
+6. Minimal correction
+
+For iPhone only, reduce the TopicPager’s outer bottom padding while retaining safe-area handling; do not alter the 44-point toolbar or iPad form-sheet code. If the gap is reported on iPad, do not apply this change first.
+
+7. Remaining uncertainty
+
+No runtime geometry was inspected. If needed, narrowly log 🐞 presenter bounds/safe-area insets in helpSheetSizing and compact-toolbar geometry before changing layout.
