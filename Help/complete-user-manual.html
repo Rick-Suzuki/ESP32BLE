@@ -1,0 +1,526 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="css/help.css">
+    <title>ESP User Manual</title>
+    <style>
+        .user-manual { background: #ffffff; color: #1c1c1e; }
+        .user-manual main { width: min(100%, 48rem); margin: 0 auto; padding: clamp(1rem, 4vw, 2rem); }
+        .user-manual h1 { font-size: clamp(1.75rem, 5vw, 2.25rem); line-height: 1.2; }
+        .user-manual h2 { margin-top: 2.5rem; padding-top: 1rem; border-top: 1px solid #d1d1d6; }
+        .user-manual h3 { margin-top: 2rem; }
+        .user-manual h4 { margin-top: 1.5rem; font-size: 1.0625rem; }
+        .user-manual .manual-toc { margin: 1.5rem 0 2rem; padding: 1rem; background: #f2f2f7; }
+        .user-manual .manual-toc h2 { margin: 0 0 0.75rem; padding: 0; border: 0; }
+        .user-manual .manual-toc ol { margin: 0.5rem 0; list-style: none; }
+        .user-manual .manual-toc > ol { padding-inline-start: 0; }
+        .user-manual .manual-page { margin: 1.25rem 0 2rem; }
+        .user-manual .manual-source .visual-help-page { display: block; min-height: 0; background: transparent; }
+        .user-manual .manual-source .visual-help,
+        .user-manual .manual-source .help-step,
+        .user-manual .manual-source .help-setup { display: block; min-height: 0; }
+        .user-manual .manual-source figure { margin: 1rem 0; }
+        .user-manual .manual-source img { max-width: 100%; height: auto; }
+    </style>
+</head>
+<body class="user-manual">
+    <main>
+        <header>
+            <h1>ESP User Manual</h1>
+            <p>ESP is an iPhone and iPad application with programmable buttons that can control supported targets through ESPMacHelper or an ESP32-S3 device.</p>
+        </header>
+        <nav class="manual-toc" aria-labelledby="contents">
+    <h2 id="contents">Contents</h2>
+    <ol>
+        <li><a href="#introduction">1. Introduction</a></li>
+        <li><a href="#chapter-connect-to-mac">2. Connect to Mac</a>
+            <ol>
+                <li><a href="#page-connect-mac">2.1. Overview</a></li>
+                <li><a href="#page-connect-mac-setup">2.2. Install and Launch</a></li>
+                <li><a href="#page-connect-mac-accessibility">2.3. Allow Accessibility</a></li>
+                <li><a href="#page-connect-mac-connection">2.4. Connection</a></li>
+                <li><a href="#page-connect-mac-test">2.5. Test Connection</a></li>
+            </ol>
+        </li>
+        <li><a href="#chapter-configure-esp32ble">3. Configure ESP32BLE</a>
+            <ol>
+                <li><a href="#page-configure-esp32ble-what-you-need">3.1. Overview</a></li>
+                <li><a href="#page-configure-esp32ble-board-usb">3.2. ESP32-S3 Board and USB Ports</a></li>
+                <li><a href="#page-configure-esp32ble-firmware">3.3. Get the Firmware</a></li>
+                <li><a href="#page-configure-esp32ble-install">3.4. Install the Firmware</a></li>
+                <li><a href="#page-configure-esp32ble-keyboard">3.5. Connect the USB Keyboard</a></li>
+            </ol>
+        </li>
+        <li><a href="#chapter-connect-ios-to-esp32ble">4. Connect Your iOS Device to ESP32BLE</a>
+            <ol>
+                <li><a href="#page-connect-esp32ble-mode">4.1. Overview</a></li>
+                <li><a href="#page-connect-esp32ble-find">4.2. Find Your ESP32</a></li>
+                <li><a href="#page-connect-esp32ble-connect">4.3. Connect</a></li>
+                <li><a href="#page-connect-esp32ble-test">4.4. Test Keyboard</a></li>
+                <li><a href="#page-connect-esp32ble-reconnect">4.5. Reconnection and Problems</a></li>
+            </ol>
+        </li>
+        <li><a href="#chapter-using-esp">5. Using ESP</a>
+            <ol>
+                <li><a href="#section-getting-started">5.1. Getting Started</a>
+                    <ol>
+                <li><a href="#page-using-esp-getting-started-overview">5.1.1. Overview</a></li>
+                <li><a href="#page-using-esp-main">5.1.2. ESP Main Screen</a></li>
+                <li><a href="#page-using-esp-screens">5.1.3. Screens and Navigation</a></li>
+                <li><a href="#page-using-esp-buttons">5.1.4. Using Buttons</a></li>
+                    </ol>
+                </li>
+                <li><a href="#section-creating-and-editing">5.2. Creating and Editing</a>
+                    <ol>
+                <li><a href="#page-using-esp-creating-editing-overview">5.2.1. Overview</a></li>
+                <li><a href="#page-using-esp-edit">5.2.2. Edit and Arrange Buttons</a></li>
+                <li><a href="#page-using-esp-soft-editor">5.2.3. Soft Editor Basics</a></li>
+                <li><a href="#page-using-esp-quick">5.2.4. Soft Editor: Quick Menus</a></li>
+                    </ol>
+                </li>
+                <li><a href="#section-commands-and-controls">5.3. Commands and Controls</a>
+                    <ol>
+                <li><a href="#page-using-esp-commands-overview">5.3.1. Overview</a></li>
+                <li><a href="#page-using-esp-keyboard">5.3.2. Keyboard Screen and Commands</a></li>
+                <li><a href="#page-using-esp-speech">5.3.3. Speech Recognition</a></li>
+                <li><a href="#page-using-esp-midi">5.3.4. MIDI</a></li>
+                <li><a href="#page-using-esp-widgets">5.3.5. Dynamic Widgets</a></li>
+                    </ol>
+                </li>
+                <li><a href="#section-media-and-appearance">5.4. Media and Appearance</a>
+                    <ol>
+                <li><a href="#page-using-esp-media-overview">5.4.1. Overview</a></li>
+                <li><a href="#page-using-esp-images">5.4.2. Images and Backgrounds</a></li>
+                <li><a href="#page-using-esp-audio">5.4.3. Audio and Media</a></li>
+                    </ol>
+                </li>
+                <li><a href="#section-files-and-settings">5.5. Files and Settings</a>
+                    <ol>
+                <li><a href="#page-using-esp-files-settings-overview">5.5.1. Overview</a></li>
+                <li><a href="#page-using-esp-import-export">5.5.2. Import and Export</a></li>
+                <li><a href="#page-using-esp-backup">5.5.3. Backup and Restore</a></li>
+                <li><a href="#page-using-esp-settings">5.5.4. Settings Overview</a></li>
+                    </ol>
+                </li>
+            </ol>
+        </li>
+        <li><a href="#chapter-troubleshooting">6. Troubleshooting</a>
+            <ol>
+                <li><a href="#page-troubleshooting-esp32-not-found">6.1. ESP32 Not Found</a></li>
+                <li><a href="#page-troubleshooting-esp32-connection">6.2. ESP32 Won&#x27;t Connect</a></li>
+                <li><a href="#page-troubleshooting-keyboard">6.3. Keyboard Not Working</a></li>
+                <li><a href="#page-troubleshooting-mac">6.4. Mac Not Connecting</a></li>
+                <li><a href="#page-troubleshooting-buttons">6.5. Buttons Not Responding</a></li>
+            </ol>
+        </li>
+    </ol>
+</nav>
+        <section class="manual-chapter" aria-labelledby="introduction">
+            <h2 id="introduction">1. Introduction</h2>
+            <p>Use this manual for the complete offline reference. Quick Help remains available in ESP for focused, step-by-step guidance.</p>
+        </section>
+        <section class="manual-chapter" aria-labelledby="chapter-connect-to-mac">
+    <h2 id="chapter-connect-to-mac">2. Connect to Mac</h2>
+    <article class="manual-page" data-source="connect-mac.html">
+    <section class="visual-help" aria-labelledby="connect-mac-introduction">
+                <h3 id="page-connect-mac" class="manual-page-title">2.1. Overview</h3>
+                <figure class="visual-help-illustration">
+                    <img src="images/connect-mac-network.svg" alt="A Mac running ESPMacHelper and an iPhone or iPad running ESP connected over a local network.">
+                </figure>
+                <p class="visual-help-summary">ESP connects to ESPMacHelper over your local network.</p>
+            </section>
+    </article>
+    <article class="manual-page" data-source="connect-mac-setup.html">
+    <section class="help-setup" aria-labelledby="connect-mac-setup">
+                <h3 id="page-connect-mac-setup" class="manual-page-title">2.2. Install and Launch</h3>
+                <ol>
+                    <li>Download ESPMacHelper and move it to your Mac's Applications folder.</li>
+                    <li>Open ESPMacHelper.</li>
+                    <li>Look for the cyan E icon in the Mac menu bar.</li>
+                    <li>Click the icon and choose “Show Status Window”.</li>
+                </ol>
+                <figure class="help-setup-screenshot">
+                    <img src="images/espmac-helper-menu.png" alt="The cyan E icon in the Mac menu bar with the ESPMacHelper menu open, showing Show Status Window.">
+                </figure>
+                <p class="help-setup-note">ESPMacHelper starts automatically when opened.</p>
+            </section>
+    </article>
+    <article class="manual-page" data-source="connect-mac-accessibility.html">
+    <section class="help-step" aria-labelledby="connect-mac-accessibility">
+                <h3 id="page-connect-mac-accessibility" class="manual-page-title">2.3. Allow Accessibility</h3>
+                <p>ESPMacHelper needs Accessibility permission to send keyboard commands to your Mac.</p>
+                <p>Open System Settings, find Accessibility, and enable ESPMacHelper.</p>
+                <p>Open Show Status Window and check that Accessibility says Allowed.</p>
+                <figure class="help-placeholder">
+                    <figcaption>macOS Accessibility Settings</figcaption>
+                </figure>
+            </section>
+    </article>
+    <article class="manual-page" data-source="connect-mac-connection.html">
+    <section class="help-step" aria-labelledby="connect-mac-connection">
+                <h3 id="page-connect-mac-connection" class="manual-page-title">2.4. Connection</h3>
+                <p>Open ESP on your iPhone or iPad.</p>
+                <p>Connect to your Mac using ESP's Mac connection controls.</p>
+                <p>Complete pairing if requested.</p>
+                <figure class="help-placeholder">
+                    <figcaption>ESP Mac Connection Screen</figcaption>
+                </figure>
+            </section>
+    </article>
+    <article class="manual-page" data-source="connect-mac-test.html">
+    <section class="help-step" aria-labelledby="connect-mac-test">
+                <h3 id="page-connect-mac-test" class="manual-page-title">2.5. Test Connection</h3>
+                <p>Open a text editor on your Mac.</p>
+                <p>Press the Set &amp; Test button.</p>
+                <p>Check that the following text appears in your editor:</p>
+                <p class="help-test-string"><code>Hello World! ABC abc 123 456 aa BB 11 !! ?? -- ..</code></p>
+                <figure class="help-placeholder">
+                    <figcaption>ESP Keyboard Test</figcaption>
+                </figure>
+            </section>
+    </article>
+</section>
+        <section class="manual-chapter" aria-labelledby="chapter-configure-esp32ble">
+    <h2 id="chapter-configure-esp32ble">3. Configure ESP32BLE</h2>
+    <article class="manual-page" data-source="configure-esp32ble-what-you-need.html">
+    <section class="help-step" aria-labelledby="configure-what-you-need">
+                <h3 id="page-configure-esp32ble-what-you-need" class="manual-page-title">3.1. Overview</h3>
+                <p>Prepare your ESP32-S3 board and the equipment required for your setup.</p>
+                <p>Instructions coming soon.</p>
+                <figure class="help-placeholder">
+                    <figcaption>ESP32BLE Setup Equipment</figcaption>
+                </figure>
+            </section>
+    </article>
+    <article class="manual-page" data-source="configure-esp32ble-board-usb.html">
+    <section class="help-step" aria-labelledby="configure-board-usb">
+                <h3 id="page-configure-esp32ble-board-usb" class="manual-page-title">3.2. ESP32-S3 Board and USB Ports</h3>
+                <p>Use the board and USB connections supplied for your ESP32BLE setup.</p>
+                <p>Instructions coming soon.</p>
+                <figure class="help-placeholder">
+                    <figcaption>ESP32-S3 Board and USB Ports</figcaption>
+                </figure>
+            </section>
+    </article>
+    <article class="manual-page" data-source="configure-esp32ble-firmware.html">
+    <section class="help-step" aria-labelledby="configure-firmware">
+                <h3 id="page-configure-esp32ble-firmware" class="manual-page-title">3.3. Get the Firmware</h3>
+                <p>Firmware download instructions are being prepared.</p>
+                <p>Instructions coming soon.</p>
+                <figure class="help-placeholder">
+                    <figcaption>Firmware Download</figcaption>
+                </figure>
+            </section>
+    </article>
+    <article class="manual-page" data-source="configure-esp32ble-install.html">
+    <section class="help-step" aria-labelledby="configure-install">
+                <h3 id="page-configure-esp32ble-install" class="manual-page-title">3.4. Install the Firmware</h3>
+                <p>Installation steps will be provided for the supported ESP32-S3 board.</p>
+                <p>Instructions coming soon.</p>
+                <figure class="help-placeholder">
+                    <figcaption>Firmware Installation Tool</figcaption>
+                </figure>
+            </section>
+    </article>
+    <article class="manual-page" data-source="configure-esp32ble-keyboard.html">
+    <section class="help-step" aria-labelledby="configure-keyboard">
+                <h3 id="page-configure-esp32ble-keyboard" class="manual-page-title">3.5. Connect the USB Keyboard</h3>
+                <p>Connect the keyboard target required by your ESP32BLE setup.</p>
+                <p>Instructions coming soon.</p>
+                <figure class="help-placeholder">
+                    <figcaption>USB Keyboard Connection</figcaption>
+                </figure>
+            </section>
+    </article>
+</section>
+        <section class="manual-chapter" aria-labelledby="chapter-connect-ios-to-esp32ble">
+    <h2 id="chapter-connect-ios-to-esp32ble">4. Connect Your iOS Device to ESP32BLE</h2>
+    <article class="manual-page" data-source="connect-esp32ble-mode.html">
+    <section class="help-step" aria-labelledby="connect-esp32ble-mode">
+                <h3 id="page-connect-esp32ble-mode" class="manual-page-title">4.1. Overview</h3>
+                <p>Open ESP Settings and select ESP32 mode.</p>
+                <p>ESP starts looking for available ESP32 devices.</p>
+                <figure class="help-placeholder">
+                    <figcaption>ESP32 Mode in ESP Settings</figcaption>
+                </figure>
+            </section>
+    </article>
+    <article class="manual-page" data-source="connect-esp32ble-find.html">
+    <section class="help-step" aria-labelledby="connect-esp32ble-find">
+                <h3 id="page-connect-esp32ble-find" class="manual-page-title">4.2. Find Your ESP32</h3>
+                <p>ESP lists discovered ESP32 devices in Settings.</p>
+                <p>Wait for your ESP32 to appear.</p>
+                <figure class="help-placeholder">
+                    <figcaption>Discovered ESP32 Devices</figcaption>
+                </figure>
+            </section>
+    </article>
+    <article class="manual-page" data-source="connect-esp32ble-connect.html">
+    <section class="help-step" aria-labelledby="connect-esp32ble-connect">
+                <h3 id="page-connect-esp32ble-connect" class="manual-page-title">4.3. Connect</h3>
+                <p>Select your discovered ESP32 in Settings.</p>
+                <p>Settings shows when ESP32 is connected.</p>
+                <figure class="help-placeholder">
+                    <figcaption>ESP32 Connected Status</figcaption>
+                </figure>
+            </section>
+    </article>
+    <article class="manual-page" data-source="connect-esp32ble-test.html">
+    <section class="help-step" aria-labelledby="connect-esp32ble-test">
+                <h3 id="page-connect-esp32ble-test" class="manual-page-title">4.4. Test Keyboard</h3>
+                <p>Open a text editor on the device connected to the ESP32-S3 USB keyboard port.</p>
+                <p>Press Set &amp; Test in ESP Settings.</p>
+                <p>Check that the following text appears:</p>
+                <p><code>Hello World! ABC abc 123 456 aa BB 11 !! ?? -- ..</code></p>
+                <figure class="help-placeholder">
+                    <figcaption>ESP32 Keyboard Test</figcaption>
+                </figure>
+            </section>
+    </article>
+    <article class="manual-page" data-source="connect-esp32ble-reconnect.html">
+    <section class="help-step" aria-labelledby="connect-esp32ble-reconnect">
+                <h3 id="page-connect-esp32ble-reconnect" class="manual-page-title">4.5. Reconnection and Problems</h3>
+                <p>Return to Settings to review the ESP32 connection status.</p>
+                <p>If your device is not listed, ESP continues searching for available ESP32 devices.</p>
+                <figure class="help-placeholder">
+                    <figcaption>ESP32 Connection Status</figcaption>
+                </figure>
+            </section>
+    </article>
+</section>
+        <section class="manual-chapter" aria-labelledby="chapter-using-esp">
+    <h2 id="chapter-using-esp">5. Using ESP</h2>
+    <section class="manual-subsection" aria-labelledby="section-getting-started">
+        <h3 id="section-getting-started">5.1. Getting Started</h3>
+        <article class="manual-page" data-source="using-esp-getting-started-overview.html">
+        <section class="help-step" aria-labelledby="using-esp-getting-started-overview">
+                    <h4 id="page-using-esp-getting-started-overview" class="manual-page-title">5.1.1. Overview</h4>
+                    <p>Get familiar with the ESP main screen, programmable buttons, and switching between screens.</p>
+                    <figure class="help-placeholder"><figcaption>Getting Started overview</figcaption></figure>
+                </section>
+        </article>
+        <article class="manual-page" data-source="using-esp-main.html">
+        <section class="help-step" aria-labelledby="using-esp-main">
+                    <h4 id="page-using-esp-main" class="manual-page-title">5.1.2. ESP Main Screen</h4>
+                    <p>ESP uses a programmable button grid with toolbars for screens, editing, and controls.</p>
+                    <figure class="help-placeholder">
+                        <figcaption>ESP main screen screenshot</figcaption>
+                    </figure>
+                </section>
+        </article>
+        <article class="manual-page" data-source="using-esp-screens.html">
+        <section class="help-step" aria-labelledby="using-esp-screens">
+                    <h4 id="page-using-esp-screens" class="manual-page-title">5.1.3. Screens and Navigation</h4>
+                    <p>Organize actions across different programmable screens. Use the screen navigation controls to move between them.</p>
+                    <figure class="help-placeholder">
+                        <figcaption>Screen navigation controls</figcaption>
+                    </figure>
+                </section>
+        </article>
+        <article class="manual-page" data-source="using-esp-buttons.html">
+        <section class="help-step" aria-labelledby="using-esp-buttons">
+                    <h4 id="page-using-esp-buttons" class="manual-page-title">5.1.4. Using Buttons</h4>
+                    <p>Tap a button to run its configured action. Buttons can send text, control media, trigger MIDI, and more.</p>
+                    <figure class="help-placeholder">
+                        <figcaption>Example button grid</figcaption>
+                    </figure>
+                </section>
+        </article>
+    </section>
+    <section class="manual-subsection" aria-labelledby="section-creating-and-editing">
+        <h3 id="section-creating-and-editing">5.2. Creating and Editing</h3>
+        <article class="manual-page" data-source="using-esp-creating-editing-overview.html">
+        <section class="help-step" aria-labelledby="using-esp-creating-editing-overview">
+                    <h4 id="page-using-esp-creating-editing-overview" class="manual-page-title">5.2.1. Overview</h4>
+                    <p>Customize buttons and use the Soft Editor to create the controls you need.</p>
+                    <figure class="help-placeholder"><figcaption>Creating and Editing overview</figcaption></figure>
+                </section>
+        </article>
+        <article class="manual-page" data-source="using-esp-edit.html">
+        <section class="help-step" aria-labelledby="using-esp-edit">
+                    <h4 id="page-using-esp-edit" class="manual-page-title">5.2.2. Edit and Arrange Buttons</h4>
+                    <p>Use Edit mode to change, move, copy, paste, resize, or delete buttons.</p>
+                    <figure class="help-placeholder">
+                        <figcaption>ESP button editing controls</figcaption>
+                    </figure>
+                </section>
+        </article>
+        <article class="manual-page" data-source="using-esp-soft-editor.html">
+        <section class="help-step" aria-labelledby="using-esp-soft-editor">
+                    <h4 id="page-using-esp-soft-editor" class="manual-page-title">5.2.3. Soft Editor Basics</h4>
+                    <p>Use the Soft Editor to set a button’s text, appearance, and actions.</p>
+                    <figure class="help-placeholder">
+                        <figcaption>Soft Editor screenshot</figcaption>
+                    </figure>
+                </section>
+        </article>
+        <article class="manual-page" data-source="using-esp-quick.html">
+        <section class="help-step" aria-labelledby="using-esp-quick">
+                    <h4 id="page-using-esp-quick" class="manual-page-title">5.2.4. Soft Editor: Quick Menus</h4>
+                    <p>Open Quick to insert Files, Time, MIDI Note, or MIDI CC actions into a button.</p>
+                    <figure class="help-placeholder">
+                        <figcaption>Soft Editor Quick menu screenshot</figcaption>
+                    </figure>
+                </section>
+        </article>
+    </section>
+    <section class="manual-subsection" aria-labelledby="section-commands-and-controls">
+        <h3 id="section-commands-and-controls">5.3. Commands and Controls</h3>
+        <article class="manual-page" data-source="using-esp-commands-overview.html">
+        <section class="help-step" aria-labelledby="using-esp-commands-overview">
+                    <h4 id="page-using-esp-commands-overview" class="manual-page-title">5.3.1. Overview</h4>
+                    <p>Use keyboard commands, speech recognition, MIDI, and dynamic widgets to control your setup.</p>
+                    <figure class="help-placeholder"><figcaption>Commands and Controls overview</figcaption></figure>
+                </section>
+        </article>
+        <article class="manual-page" data-source="using-esp-keyboard.html">
+        <section class="help-step" aria-labelledby="using-esp-keyboard">
+                    <h4 id="page-using-esp-keyboard" class="manual-page-title">5.3.2. Keyboard Screen and Commands</h4>
+                    <p>Open the Keyboard screen to send text, special keys, and keyboard shortcuts.</p>
+                    <figure class="help-placeholder">
+                        <figcaption>ESP keyboard screen</figcaption>
+                    </figure>
+                </section>
+        </article>
+        <article class="manual-page" data-source="using-esp-speech.html">
+        <section class="help-step" aria-labelledby="using-esp-speech">
+                    <h4 id="page-using-esp-speech" class="manual-page-title">5.3.3. Speech Recognition</h4>
+                    <p>Speech recognition can activate buttons by matching the names you speak.</p>
+                    <figure class="help-placeholder">
+                        <figcaption>Speech recognition controls</figcaption>
+                    </figure>
+                </section>
+        </article>
+        <article class="manual-page" data-source="using-esp-midi.html">
+        <section class="help-step" aria-labelledby="using-esp-midi">
+                    <h4 id="page-using-esp-midi" class="manual-page-title">5.3.4. MIDI</h4>
+                    <p>Use MIDI Note and MIDI CC actions to control compatible MIDI destinations.</p>
+                    <figure class="help-placeholder">
+                        <figcaption>MIDI Quick menu screenshot</figcaption>
+                    </figure>
+                </section>
+        </article>
+        <article class="manual-page" data-source="using-esp-widgets.html">
+        <section class="help-step" aria-labelledby="using-esp-widgets">
+                    <h4 id="page-using-esp-widgets" class="manual-page-title">5.3.5. Dynamic Widgets</h4>
+                    <p>Some buttons can display changing information, such as time and timers.</p>
+                    <figure class="help-placeholder">
+                        <figcaption>Example widget buttons</figcaption>
+                    </figure>
+                </section>
+        </article>
+    </section>
+    <section class="manual-subsection" aria-labelledby="section-media-and-appearance">
+        <h3 id="section-media-and-appearance">5.4. Media and Appearance</h3>
+        <article class="manual-page" data-source="using-esp-media-overview.html">
+        <section class="help-step" aria-labelledby="using-esp-media-overview">
+                    <h4 id="page-using-esp-media-overview" class="manual-page-title">5.4.1. Overview</h4>
+                    <p>Personalize ESP with images and backgrounds, then add audio and media controls.</p>
+                    <figure class="help-placeholder"><figcaption>Media and Appearance overview</figcaption></figure>
+                </section>
+        </article>
+        <article class="manual-page" data-source="using-esp-images.html">
+        <section class="help-step" aria-labelledby="using-esp-images">
+                    <h4 id="page-using-esp-images" class="manual-page-title">5.4.2. Images and Backgrounds</h4>
+                    <p>Use images on buttons and choose a background image for each screen.</p>
+                    <figure class="help-placeholder">
+                        <figcaption>ESP image and background controls</figcaption>
+                    </figure>
+                </section>
+        </article>
+        <article class="manual-page" data-source="using-esp-audio.html">
+        <section class="help-step" aria-labelledby="using-esp-audio">
+                    <h4 id="page-using-esp-audio" class="manual-page-title">5.4.3. Audio and Media</h4>
+                    <p>Buttons can play ordinary sounds or ambient audio. Use Stop Media to stop current playback.</p>
+                    <figure class="help-placeholder">
+                        <figcaption>Audio-related buttons and controls</figcaption>
+                    </figure>
+                </section>
+        </article>
+    </section>
+    <section class="manual-subsection" aria-labelledby="section-files-and-settings">
+        <h3 id="section-files-and-settings">5.5. Files and Settings</h3>
+        <article class="manual-page" data-source="using-esp-files-settings-overview.html">
+        <section class="help-step" aria-labelledby="using-esp-files-settings-overview">
+                    <h4 id="page-using-esp-files-settings-overview" class="manual-page-title">5.5.1. Overview</h4>
+                    <p>Import and export content, protect your work with backups, and explore Settings.</p>
+                    <figure class="help-placeholder"><figcaption>Files and Settings overview</figcaption></figure>
+                </section>
+        </article>
+        <article class="manual-page" data-source="using-esp-import-export.html">
+        <section class="help-step" aria-labelledby="using-esp-import-export">
+                    <h4 id="page-using-esp-import-export" class="manual-page-title">5.5.2. Import and Export</h4>
+                    <p>Use the import and export tools to share screens and supported files.</p>
+                    <figure class="help-placeholder">
+                        <figcaption>ESP import and export interface</figcaption>
+                    </figure>
+                </section>
+        </article>
+        <article class="manual-page" data-source="using-esp-backup.html">
+        <section class="help-step" aria-labelledby="using-esp-backup">
+                    <h4 id="page-using-esp-backup" class="manual-page-title">5.5.3. Backup and Restore</h4>
+                    <p>Create a complete ZIP backup of ESP content, then restore it when needed.</p>
+                    <figure class="help-placeholder">
+                        <figcaption>Backup and Restore controls</figcaption>
+                    </figure>
+                </section>
+        </article>
+        <article class="manual-page" data-source="using-esp-settings.html">
+        <section class="help-step" aria-labelledby="using-esp-settings">
+                    <h4 id="page-using-esp-settings" class="manual-page-title">5.5.4. Settings Overview</h4>
+                    <p>Settings provides access to ESP configuration, files, connection options, and other controls.</p>
+                    <figure class="help-placeholder">
+                        <figcaption>ESP Settings screenshot</figcaption>
+                    </figure>
+                </section>
+        </article>
+    </section>
+</section>
+        <section class="manual-chapter" aria-labelledby="chapter-troubleshooting">
+    <h2 id="chapter-troubleshooting">6. Troubleshooting</h2>
+    <article class="manual-page" data-source="troubleshooting-esp32-not-found.html">
+    <section class="help-step" aria-labelledby="troubleshooting-esp32-not-found">
+                <h3 id="page-troubleshooting-esp32-not-found" class="manual-page-title">6.1. ESP32 Not Found</h3>
+                <p>Check that the ESP32 is connected to power and is running compatible firmware.</p>
+                <p>Turn on Bluetooth on your iPhone or iPad, select ESP32 output mode, and look in ESP Settings. Do not look in iOS Bluetooth Settings.</p>
+                <figure class="help-placeholder"><figcaption>ESP32 discovery in ESP Settings</figcaption></figure>
+            </section>
+    </article>
+    <article class="manual-page" data-source="troubleshooting-esp32-connection.html">
+    <section class="help-step" aria-labelledby="troubleshooting-esp32-connection">
+                <h3 id="page-troubleshooting-esp32-connection" class="manual-page-title">6.2. ESP32 Won't Connect</h3>
+                <p>Check that you selected the intended device and that it is still available and powered.</p>
+                <p>Allow ESP to scan again, then try selecting the device from the refreshed list.</p>
+                <figure class="help-placeholder"><figcaption>ESP32 connection list</figcaption></figure>
+            </section>
+    </article>
+    <article class="manual-page" data-source="troubleshooting-keyboard.html">
+    <section class="help-step" aria-labelledby="troubleshooting-keyboard">
+                <h3 id="page-troubleshooting-keyboard" class="manual-page-title">6.3. Keyboard Not Working</h3>
+                <p>Confirm the active output mode and its connection. For ESP32 mode, check the ESP32 USB HID connection to the target device.</p>
+                <p>Use Set &amp; Test with a text-entry field where appropriate. Mac mode sends output through ESPMacHelper instead of the ESP32 USB keyboard connection.</p>
+                <figure class="help-placeholder"><figcaption>Keyboard test in ESP Settings</figcaption></figure>
+            </section>
+    </article>
+    <article class="manual-page" data-source="troubleshooting-mac.html">
+    <section class="help-step" aria-labelledby="troubleshooting-mac">
+                <h3 id="page-troubleshooting-mac" class="manual-page-title">6.4. Mac Not Connecting</h3>
+                <p>Make sure ESPMacHelper is running and that your iPhone or iPad and Mac can communicate over the local network.</p>
+                <p>Select Mac output mode, open the ESPMacHelper status window, and confirm its relevant macOS permissions.</p>
+                <figure class="help-placeholder"><figcaption>ESPMacHelper status window</figcaption></figure>
+            </section>
+    </article>
+    <article class="manual-page" data-source="troubleshooting-buttons.html">
+    <section class="help-step" aria-labelledby="troubleshooting-buttons">
+                <h3 id="page-troubleshooting-buttons" class="manual-page-title">6.5. Buttons Not Responding</h3>
+                <p>Confirm that the intended screen is selected and that the button has an action.</p>
+                <p>Check the active output mode and connection status, then try a simple keyboard action.</p>
+                <figure class="help-placeholder"><figcaption>ESP button action check</figcaption></figure>
+            </section>
+    </article>
+</section>
+    </main>
+</body>
+</html>

@@ -1,10 +1,17 @@
-Blocked after the required checkpoint because implementation would require a broader lifecycle change than the requested “smallest safe adjustment”:
+Files changed:
+• Help/generate_user_manual.py􀰓
+• Help/complete-user-manual.html􀰓 (regenerated)
 
-• The current .id page transition intentionally overlaps outgoing and incoming SwiftUI views.
-• A single reusable WKWebView cannot safely be attached to both UIKit parents during that overlap.
-• Making it stable requires restructuring the pager’s content/transition ownership, which risks changing page transitions, scroll behavior, and the working Connect to Mac preload path.
+The generator now derives hierarchical numbers from the existing manifest and renders periods consistently: 2., 2.1., 5.1.1.. Contents labels and matching headings use identical numbering.
 
-Baseline checkpoint created successfully:
-ee5db81a7b11aa40930791c237f3aeb229e61c90
+Generated return links and .manual-back styling were removed. The Contents remains intact; ordered-list markers are suppressed there to prevent duplicate visible numbering.
 
-No source files were modified after the checkpoint.
+Validation passed:
+• 40 Quick Help pages included once
+• 51 Contents links match 51 headings
+• Unique anchors; all internal fragments resolve
+• Local image/resource validation passed
+• No Go to Index or Back to Contents links remain
+• Generator run twice; --check passed after each run
+
+No Swift, CSS, navigation, or Quick Help source files changed. No Xcode build was required.

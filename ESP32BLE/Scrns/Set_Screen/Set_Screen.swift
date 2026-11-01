@@ -6708,10 +6708,16 @@ private final class ESPHelpFormSheetAnchorController: UIViewController {
 private struct ESPHelpHTMLView: UIViewRepresentable {
     let pageFilename: String
     let preloadedWebView: WKWebView?
+    let manualScrollController: ESPHelpManualScrollController?
 
-    init(pageFilename: String, preloadedWebView: WKWebView? = nil) {
+    init(
+        pageFilename: String,
+        preloadedWebView: WKWebView? = nil,
+        manualScrollController: ESPHelpManualScrollController? = nil
+    ) {
         self.pageFilename = pageFilename
         self.preloadedWebView = preloadedWebView
+        self.manualScrollController = manualScrollController
     }
 
     static func isPageAvailable(named pageFilename: String) -> Bool {
@@ -6724,13 +6730,16 @@ private struct ESPHelpHTMLView: UIViewRepresentable {
 
     func makeUIView(context: Context) -> WKWebView {
         if let preloadedWebView {
+            manualScrollController?.attach(to: preloadedWebView)
             return preloadedWebView
         }
 
-        return Self.makeWebView(
+        let webView = Self.makeWebView(
             pageFilename: pageFilename,
             coordinator: context.coordinator
         )
+        manualScrollController?.attach(to: webView)
+        return webView
     }
 
     private static func makeWebView(
@@ -6797,6 +6806,8 @@ private struct ESPHelpHTMLView: UIViewRepresentable {
     }
 
     func updateUIView(_ webView: WKWebView, context: Context) {
+        manualScrollController?.attach(to: webView)
+
         guard preloadedWebView == nil else {
             return
         }
@@ -6883,10 +6894,23 @@ private struct ESPHelpHTMLView: UIViewRepresentable {
             decidePolicyFor navigationAction: WKNavigationAction,
             decisionHandler: @escaping (WKNavigationActionPolicy) -> Void
         ) {
+            var requestedComponents: URLComponents?
             guard navigationAction.targetFrame?.isMainFrame == true,
                   let requestedURL = navigationAction.request.url,
                   let allowedPageURL,
-                  requestedURL.standardizedFileURL == allowedPageURL.standardizedFileURL else {
+                  requestedURL.isFileURL else {
+                decisionHandler(.cancel)
+                return
+            }
+
+            requestedComponents = URLComponents(
+                url: requestedURL,
+                resolvingAgainstBaseURL: false
+            )
+            requestedComponents?.fragment = nil
+
+            guard let requestedDocumentURL = requestedComponents?.url,
+                  requestedDocumentURL.standardizedFileURL == allowedPageURL.standardizedFileURL else {
                 decisionHandler(.cancel)
                 return
             }
@@ -6896,36 +6920,129 @@ private struct ESPHelpHTMLView: UIViewRepresentable {
     }
 }
 
+// MARK: - BM:🅱️ Complete User Manual navigation
+@MainActor
+private final class ESPHelpManualScrollController {
+    private enum Layout {
+        static let topTolerance: CGFloat = 12
+    }
+
+    private weak var webView: WKWebView?
+    private var contentOffsetObservation: NSKeyValueObservation?
+    private var draggingObservation: NSKeyValueObservation?
+    private var isScrollToTopInProgress = false
+
+    func attach(to webView: WKWebView) {
+        guard self.webView !== webView else {
+            return
+        }
+
+        contentOffsetObservation?.invalidate()
+        draggingObservation?.invalidate()
+
+        self.webView = webView
+        let scrollView = webView.scrollView
+
+        contentOffsetObservation = scrollView.observe(
+            \.contentOffset,
+            options: [.new]
+        ) { [weak self] _, _ in
+            Task { @MainActor [weak self] in
+                self?.finishScrollToTopIfNeeded()
+            }
+        }
+        draggingObservation = scrollView.observe(
+            \.isDragging,
+            options: [.new]
+        ) { [weak self] scrollView, _ in
+            if scrollView.isDragging {
+                Task { @MainActor [weak self] in
+                    self?.isScrollToTopInProgress = false
+                }
+            }
+        }
+    }
+
+    /// Returns true when Home was consumed by a scroll-to-top operation.
+    func scrollToTopIfNeeded() -> Bool {
+        guard let webView else {
+            return false
+        }
+
+        guard !isScrollToTopInProgress else {
+            return true
+        }
+
+        guard !isAtTop(webView.scrollView) else {
+            return false
+        }
+
+        isScrollToTopInProgress = true
+        let scrollView = webView.scrollView
+        let topOffset = -scrollView.adjustedContentInset.top
+        scrollView.setContentOffset(
+            CGPoint(x: scrollView.contentOffset.x, y: topOffset),
+            animated: true
+        )
+        return true
+    }
+
+    private func finishScrollToTopIfNeeded() {
+        guard let webView,
+              isScrollToTopInProgress,
+              isAtTop(webView.scrollView) else {
+            return
+        }
+
+        isScrollToTopInProgress = false
+    }
+
+    private func isAtTop(_ scrollView: UIScrollView) -> Bool {
+        scrollView.contentOffset.y <= -scrollView.adjustedContentInset.top + Layout.topTolerance
+    }
+}
+
 private struct ESPHelpUserManualView: View {
     let onReturnToContents: (ESPHelpDestination?) -> Void
     let onContentsSelection: () -> Void
     let onClose: () -> Void
+    @State private var manualScrollController = ESPHelpManualScrollController()
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            Text("Complete User Manual")
-                .font(.title2.weight(.semibold))
-
-            Text("The complete PDF user manual will be available online when ESP is released.")
-                .font(.body)
-                .foregroundStyle(.secondary)
-
-            Spacer()
+        VStack(alignment: .leading, spacing: isPad ? 20 : 8) {
+            if ESPHelpHTMLView.isPageAvailable(named: "complete-user-manual.html") {
+                ESPHelpHTMLView(
+                    pageFilename: "complete-user-manual.html",
+                    manualScrollController: manualScrollController
+                )
+            } else {
+                Text("The Complete User Manual is unavailable.")
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            }
 
             ESPHelpNavigationBar(
-                topicTitle: nil,
+                topicTitle: "Complete User Manual",
                 showsHome: true,
-                showsTopicNavigation: true,
+                showsTopicNavigation: false,
                 onPrevious: nil,
                 onNext: nil,
                 isPreviousEnabled: false,
                 isNextEnabled: false,
-                onHome: { onReturnToContents(.completeUserManual) },
+                onHome: {
+                    guard !manualScrollController.scrollToTopIfNeeded() else {
+                        return
+                    }
+
+                    onReturnToContents(.completeUserManual)
+                },
                 onClose: onClose,
                 isTopicTransitioning: false
             )
         }
-        .padding()
+        .padding(.horizontal)
+        .padding(.top)
         .toolbar(.hidden, for: .navigationBar)
         .onAppear(perform: onContentsSelection)
     }
@@ -6959,9 +7076,10 @@ private struct ESPHelpNavigationBar: View {
     let isTopicTransitioning: Bool
 
     var body: some View {
-        if !isPad, let topicTitle, showsHome, showsTopicNavigation, let onHome {
+        if !isPad, let topicTitle, showsHome, let onHome {
             ESPHelpIPhoneTopicNavigationBar(
                 topicTitle: topicTitle,
+                showsTopicNavigation: showsTopicNavigation,
                 onPrevious: onPrevious,
                 onNext: onNext,
                 isPreviousEnabled: isPreviousEnabled,
@@ -7031,6 +7149,7 @@ private struct ESPHelpNavigationBar: View {
 
 private struct ESPHelpIPhoneTopicNavigationBar: View {
     let topicTitle: String
+    let showsTopicNavigation: Bool
     let onPrevious: (() -> Void)?
     let onNext: (() -> Void)?
     let isPreviousEnabled: Bool
@@ -7082,22 +7201,29 @@ private struct ESPHelpIPhoneTopicNavigationBar: View {
                         action: onClose
                     )
 
-                    HStack(spacing: ESPHelpIPhoneToolbarLayout.arrowSpacing) {
-                        ESPHelpNavigationButton(
-                            systemName: "triangle.fill",
-                            rotation: .degrees(-90),
-                            accessibilityLabel: "Previous",
-                            isEnabled: onPrevious != nil && isPreviousEnabled && !isTopicTransitioning,
-                            action: onPrevious ?? {}
-                        )
+                    Group {
+                        if showsTopicNavigation {
+                            HStack(spacing: ESPHelpIPhoneToolbarLayout.arrowSpacing) {
+                                ESPHelpNavigationButton(
+                                    systemName: "triangle.fill",
+                                    rotation: .degrees(-90),
+                                    accessibilityLabel: "Previous",
+                                    isEnabled: onPrevious != nil && isPreviousEnabled && !isTopicTransitioning,
+                                    action: onPrevious ?? {}
+                                )
 
-                        ESPHelpNavigationButton(
-                            systemName: "triangle.fill",
-                            rotation: .degrees(90),
-                            accessibilityLabel: "Next",
-                            isEnabled: onNext != nil && isNextEnabled && !isTopicTransitioning,
-                            action: onNext ?? {}
-                        )
+                                ESPHelpNavigationButton(
+                                    systemName: "triangle.fill",
+                                    rotation: .degrees(90),
+                                    accessibilityLabel: "Next",
+                                    isEnabled: onNext != nil && isNextEnabled && !isTopicTransitioning,
+                                    action: onNext ?? {}
+                                )
+                            }
+                        } else {
+                            Color.clear
+                                .frame(width: arrowGroupWidth, height: ESPHelpNavigationButton.controlSize)
+                        }
                     }
                     .offset(x: ESPHelpIPhoneToolbarLayout.arrowGroupOffsetX)
                 }
