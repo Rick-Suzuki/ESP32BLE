@@ -5710,6 +5710,7 @@ private extension VerticalAlignment {
 private struct ESPHelpView: View {
     let onClose: () -> Void
     @State private var path: [ESPHelpDestination] = []
+    @State private var preloadedFirstPage = ESPHelpHTMLView.PreloadedFirstPage()
 
     var body: some View {
         ZStack {
@@ -5717,14 +5718,18 @@ private struct ESPHelpView: View {
                 .ignoresSafeArea()
 
             NavigationStack(path: $path) {
-                ESPHelpContentsView(onClose: onClose)
+                ESPHelpContentsView(
+                    onClose: onClose,
+                    onAppear: preloadedFirstPage.preloadIfNeeded
+                )
                     .navigationDestination(for: ESPHelpDestination.self) { destination in
                         switch destination {
                         case .topic(let topic):
                             ESPHelpTopicPager(
                                 initialTopic: topic,
                                 onHome: { path = [] },
-                                onClose: onClose
+                                onClose: onClose,
+                                preloadedFirstPage: preloadedFirstPage
                             )
 
                         case .completeUserManual:
@@ -5839,6 +5844,7 @@ private struct ESPHelpPageLocation: Hashable {
 
 private struct ESPHelpContentsView: View {
     let onClose: () -> Void
+    let onAppear: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -5885,6 +5891,7 @@ private struct ESPHelpContentsView: View {
             )
         }
         .padding()
+        .onAppear(perform: onAppear)
     }
 }
 
@@ -5921,6 +5928,7 @@ private enum ESPHelpTopicNavigationDirection {
 private struct ESPHelpTopicPager: View {
     let onHome: () -> Void
     let onClose: () -> Void
+    let preloadedFirstPage: ESPHelpHTMLView.PreloadedFirstPage
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
     @State private var currentTopic: ESPHelpTopic
     @State private var currentPageIndex: Int
@@ -5930,10 +5938,12 @@ private struct ESPHelpTopicPager: View {
     init(
         initialTopic: ESPHelpTopic,
         onHome: @escaping () -> Void,
-        onClose: @escaping () -> Void
+        onClose: @escaping () -> Void,
+        preloadedFirstPage: ESPHelpHTMLView.PreloadedFirstPage
     ) {
         self.onHome = onHome
         self.onClose = onClose
+        self.preloadedFirstPage = preloadedFirstPage
         _currentTopic = State(initialValue: initialTopic)
         _currentPageIndex = State(initialValue: 0)
     }
@@ -5948,7 +5958,11 @@ private struct ESPHelpTopicPager: View {
 
         VStack(alignment: .leading, spacing: isPad ? 20 : 8) {
             ZStack {
-                ESPHelpTopicView(topic: currentTopic, page: currentPage)
+                ESPHelpTopicView(
+                    topic: currentTopic,
+                    page: currentPage,
+                    preloadedFirstPage: preloadedFirstPage
+                )
                     .id(ESPHelpPageLocation(topic: currentTopic, pageIndex: currentPageIndex))
                     .transition(topicTransition)
             }
@@ -6057,6 +6071,7 @@ private struct ESPHelpTopicPager: View {
 private struct ESPHelpTopicView: View {
     let topic: ESPHelpTopic
     let page: ESPHelpPage
+    let preloadedFirstPage: ESPHelpHTMLView.PreloadedFirstPage
 
     var body: some View {
         VStack(alignment: .leading, spacing: isPad ? 20 : 0) {
@@ -6067,7 +6082,14 @@ private struct ESPHelpTopicView: View {
 
             switch page {
             case .html(let filename):
-                if ESPHelpHTMLView.isPageAvailable(named: filename) {
+                if topic == .connectToMac,
+                   filename == "connect-mac.html",
+                   let webView = preloadedFirstPage.webView {
+                    ESPHelpHTMLView(
+                        pageFilename: filename,
+                        preloadedWebView: webView
+                    )
+                } else if ESPHelpHTMLView.isPageAvailable(named: filename) {
                     ESPHelpHTMLView(pageFilename: filename)
                 } else {
                     Text("This Help topic is unavailable.")
@@ -6425,6 +6447,12 @@ private final class ESPHelpFormSheetAnchorController: UIViewController {
 // MARK: - BM:🅱️ HTML Help renderer
 private struct ESPHelpHTMLView: UIViewRepresentable {
     let pageFilename: String
+    let preloadedWebView: WKWebView?
+
+    init(pageFilename: String, preloadedWebView: WKWebView? = nil) {
+        self.pageFilename = pageFilename
+        self.preloadedWebView = preloadedWebView
+    }
 
     static func isPageAvailable(named pageFilename: String) -> Bool {
         pageResources(named: pageFilename) != nil
@@ -6435,6 +6463,20 @@ private struct ESPHelpHTMLView: UIViewRepresentable {
     }
 
     func makeUIView(context: Context) -> WKWebView {
+        if let preloadedWebView {
+            return preloadedWebView
+        }
+
+        return Self.makeWebView(
+            pageFilename: pageFilename,
+            coordinator: context.coordinator
+        )
+    }
+
+    private static func makeWebView(
+        pageFilename: String,
+        coordinator: Coordinator
+    ) -> WKWebView {
         let configuration = WKWebViewConfiguration()
         configuration.userContentController.addUserScript(
             WKUserScript(
@@ -6445,14 +6487,18 @@ private struct ESPHelpHTMLView: UIViewRepresentable {
         )
 
         let webView = WKWebView(frame: .zero, configuration: configuration)
-        webView.navigationDelegate = context.coordinator
+        webView.navigationDelegate = coordinator
         webView.allowsBackForwardNavigationGestures = false
 
-        loadPage(in: webView, coordinator: context.coordinator)
+        loadPage(
+            named: pageFilename,
+            in: webView,
+            coordinator: coordinator
+        )
         return webView
     }
 
-    private var deviceFamilyScript: String {
+    private static var deviceFamilyScript: String {
         let deviceFamilyClass: String
 
         switch UIDevice.current.userInterfaceIdiom {
@@ -6491,14 +6537,23 @@ private struct ESPHelpHTMLView: UIViewRepresentable {
     }
 
     func updateUIView(_ webView: WKWebView, context: Context) {
-        loadPage(in: webView, coordinator: context.coordinator)
+        guard preloadedWebView == nil else {
+            return
+        }
+
+        Self.loadPage(
+            named: pageFilename,
+            in: webView,
+            coordinator: context.coordinator
+        )
     }
 
-    private func loadPage(
+    private static func loadPage(
+        named pageFilename: String,
         in webView: WKWebView,
         coordinator: Coordinator
     ) {
-        guard let resources = Self.pageResources(named: pageFilename),
+        guard let resources = pageResources(named: pageFilename),
               coordinator.lastLoadedURL != resources.pageURL else {
             return
         }
@@ -6509,6 +6564,33 @@ private struct ESPHelpHTMLView: UIViewRepresentable {
             resources.pageURL,
             allowingReadAccessTo: resources.directoryURL
         )
+    }
+
+    // MARK: - BM:🅱️ Connect to Mac first-page preloading
+
+    // Preload the first page so WebKit initialization does not occur during
+    // the Contents-to-topic navigation transition.
+
+    @MainActor
+    final class PreloadedFirstPage {
+        private var coordinator: Coordinator?
+        private(set) var webView: WKWebView?
+
+        func preloadIfNeeded() {
+            guard webView == nil,
+                  ESPHelpHTMLView.isPageAvailable(named: "connect-mac.html") else {
+                return
+            }
+
+            let coordinator = Coordinator()
+            let webView = ESPHelpHTMLView.makeWebView(
+                pageFilename: "connect-mac.html",
+                coordinator: coordinator
+            )
+
+            self.coordinator = coordinator
+            self.webView = webView
+        }
     }
 
     private static func pageResources(named pageFilename: String) -> (

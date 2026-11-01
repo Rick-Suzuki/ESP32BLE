@@ -1,28 +1,19 @@
-1. Current navigation and layout lifecycle
+Confirmed findings
 
-Confirmed: Contents uses NavigationLink to push a topic destination (Set_Screen.swift:5850-5857). ESPHelpView then creates ESPHelpTopicPager during NavigationStack destination resolution (5719-5728). The pager creates both the HTML area and native bottom bar together (5949-5971). The toolbar is a fixed sibling below a full-height content area; it has no direct dependency on HTML geometry (5955-5971).
+The condition is correct: the switch is true, the topic is .connectToMac, and page 1 is connect-mac.html􀰓 (Set_Screen.swift:6062, 6077-6079). That branch constructs a native Text view and bypasses ESPHelpHTMLView entirely (6080-6088).
 
-2. Likely cause of the jerk
+Most likely cause
 
-Confirmed: First topic creation constructs WKWebView and immediately starts loadFileURL (6437-6452, 6501-6511). There is no prewarming, cache, loading state, or reused web view. Each page identity change can create a new HTML view (5951-5953).
+The placeholder text uses .foregroundStyle(.primary) (6081) over an explicit white background (6087). In a dark app appearance, .primary can resolve to white, making the text invisible on white. No parent foreground override, covering view, or clipping modifier is present in the inspected path.
 
-Likely, requiring measurement: cold WebKit/WebContent-process initialization overlaps the NavigationStack push and initial pager layout. That can delay or visually disrupt both the web page and toolbar because both are being introduced in the same native transition. The source does not prove a 0.5-second cost or prove toolbar movement caused by web layout.
+Relevant layout
 
-3. Recommended native-only comparison
+The placeholder receives the same available parent content region: TopicView fills its parent (6106-6107), and the pager’s content ZStack fills available space independently above the toolbar (5949-5956). The bottom toolbar is a separate VStack sibling (5958-5971).
 
-Temporarily replace only ESPHelpHTMLView(pageFilename:) in the .html case (6068-6072), ideally only for Connect to Mac page 1, with a full-size native SwiftUI placeholder. Keep ESPHelpTopicPager and ESPHelpNavigationBar unchanged. If the first push becomes smooth, WebKit initialization is strongly implicated; if not, investigate destination/pager layout.
+Smallest safe correction
 
-4. Minimal timing instrumentation plan
+Change only the placeholder foreground style to an explicit dark adaptive-safe color for its forced white background, for example .foregroundStyle(Color.black). This does not construct WebKit, alter page geometry, or change the native-versus-WebKit comparison.
 
-When authorized, timestamped “🐞” prints at:
-• path change/destination construction: 5721-5728;
-• pager init or onAppear: 5930-5939;
-• makeUIView: 6437;
-• WKNavigationDelegate didStartProvisionalNavigation;
-• WKNavigationDelegate didFinish.
+Limitations
 
-This is sufficient to separate SwiftUI destination construction from WebKit startup and document rendering.
-
-5. Risks and limitations
-
-The diagnostic must retain the same full-height frame to avoid testing a different layout. Print timing has minor overhead. Cold-start testing requires fresh app launches; source inspection alone cannot isolate WebKit, SwiftUI transition, or system scheduling.
+Device testing is still needed to confirm visible text and evaluate transition smoothness.

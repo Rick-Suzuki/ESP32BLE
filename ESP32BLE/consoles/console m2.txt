@@ -1,34 +1,42 @@
-cannot add handler to 0 from 0 - dropping
-cannot add handler to 0 from 0 - dropping
-cannot add handler to 0 from 0 - dropping
-cannot add handler to 0 from 0 - dropping
-🐞 [ESP-HELP-GEOMETRY] controllers=UIHostingController<ESPHelpView> -> UIHostingController<ModifiedContent<LazyView<ContentView>, RootModifier>>
-🐞 [ESP-HELP-GEOMETRY] hostBounds=(0.0, 0.0, 830.0, 820.0) hostSafeArea=(top: 0.0, left: 0.0, bottom: 0.0, right: 0.0)
-🐞 [ESP-HELP-GEOMETRY] presentation=_UIFormSheetPresentationController containerBounds=(0.0, 0.0, 1590.0, 1192.0) presentedFrame=(380.0, 186.0, 830.0, 820.0)
-🐞 [ESP-HELP-GEOMETRY] rootFrameInHost=(0.0, 0.0, 830.0, 820.0) rootGlobal=(380.0, 186.0, 830.0, 820.0) rootSafeArea=(top: 0.0, leading: 0.0, bottom: 0.0, trailing: 0.0)
-🐞 [ESP-HELP-GEOMETRY] topicPagerGlobal=(380.0, 186.0, 830.0, 820.0) titleGlobal=(396.0, 202.0, 166.5, 26.5)
-🐞 [ESP-HELP-GEOMETRY] htmlGlobal=(396.0, 248.5, 798.0, 677.5) footerGlobal=(396.0, 946.0, 798.0, 44.0)
-🐞 [ESP-HELP-GEOMETRY] gaps hostTopToRoot=0.0 rootToTitle=16.0 titleToHTML=20.0 footerToRootBottom=16.0 rootToHostBottom=0.0
-WebContent[14673] Couldn't open <private> due to No such file or directory
-WebContent[14673] Couldn't open <private> due to No such file or directory
-WebContent[14673] Couldn't open <private> due to Permission denied
-WebContent[14673] Couldn't open <private> due to No such file or directory
-WebContent[14673] Couldn't open <private> due to No such file or directory
-WebContent[14673] Couldn't open <private> due to No such file or directory
-WebContent[14673] Couldn't open <private> due to No such file or directory
-WebContent[14673] Couldn't open <private> due to No such file or directory
-WebContent[14673] Couldn't open <private> due to No such file or directory
-WebContent[14673] Could not register system wide server: -25204
-WebContent[14673] _AXAddToElementCache was called even though the element was in the cache: <WKAccessibilityWebPageObject: 0x10362f500>
-WebContent[14673] AX Safe category class 'SFBarButtonGroupContainerAccessibility' was not found!
-WebContent[14673] Service "com.apple.CARenderServer" failed bootstrap look up (1) - (os/kern) invalid address
-WebContent[14673] Couldn't open <private> due to No such file or directory
-WebContent[14673] Couldn't open <private> due to No such file or directory
-WebContent[14673] Couldn't open <private> due to No such file or directory
-WebContent[14673] Failed to initialize application enviroment context
-WebContent[14673] Failed to load a device context.
-cannot add handler to 0 from 0 - dropping
-cannot add handler to 0 from 0 - dropping
-cannot add handler to 0 from 0 - dropping
-Failed to terminate process: Error Domain=com.apple.extensionKit.errorDomain Code=18 "(null)" UserInfo={NSUnderlyingError=0x1183e8240 {Error Domain=RBSRequestErrorDomain Code=3 "No such process found" UserInfo={NSLocalizedFailureReason=No such process found}}}
-Failed to terminate process: Error Domain=com.apple.extensionKit.errorDomain Code=18 "(null)" UserInfo={NSUnderlyingError=0x1183ea8e0 {Error Domain=RBSRequestErrorDomain Code=3 "No such process found" UserInfo={NSLocalizedFailureReason=No such process found}}}
+Update the Info.plist: Support for all orientations will soon be required.
+									[BLE-CONNECT-PROBE] 🐞 t=0.000s scan stop requested reason=stop() activePeripheralUUID=nil discoveredDeviceCount=0
+									API MISUSE: <CBCentralManager: 0x10b5c4780> can only accept this command while in the powered on state
+									[BLE-CONNECT-PROBE] 🐞 t=0.000s scanning stopped
+									[BLE-CONNECT-PROBE] 🐞 t=0.000s state isConnected previous=false new=false activePeripheralUUID=nil attempt=0
+									non-launching port is incompatible with service identifier "com.apple.PointerUI.pointeruid.default-service"
+									The tracking window controller is unable to get the keyboard scene from <UIWindowScene: 0x101dac0f0; role: UIWindowSceneSessionRoleApplication; persistentIdentifier: 60D383A4-4FAF-4BE6-9612-E094E66A2C92; activationState: UISceneActivationStateForegroundInactive> for conversions
+																																																																												Got a keyboard will change frame notification, but keyboard was not even present.
+																																																																												Got a keyboard will hide notification, but keyboard was not even present.
+																																																																												Reading from public effective user settings.
+																																																																												cannot add handler to 0 from 0 - dropping
+																																																																												cannot add handler to 0 from 0 - dropping
+																																																																												cannot add handler to 0 from 0 - dropping
+																																																																												sandbox_extension_issue_file failed for /var/containers/Bundle/Application/DCD5630F-6C3D-45EC-A7EB-B006F636EB22/ESP32BLE.app: 1 (Operation not permitted)
+																																																																												Could not create a sandbox extension for '/var/containers/Bundle/Application/DCD5630F-6C3D-45EC-A7EB-B006F636EB22/ESP32BLE.app'
+																																																																												cannot add handler to 0 from 0 - dropping
+																																																																												cannot add handler to 0 from 0 - dropping
+																																																																												WebContent[1986] Couldn't open <private> due to No such file or directory
+																																																																												WebContent[1986] Couldn't open <private> due to No such file or directory
+																																																																												WebContent[1986] Couldn't open <private> due to Permission denied
+																																																																												WebContent[1986] Couldn't open <private> due to No such file or directory
+																																																																												WebContent[1986] Couldn't open <private> due to No such file or directory
+																																																																												WebContent[1986] Couldn't open <private> due to No such file or directory
+																																																																												WebContent[1986] Couldn't open <private> due to No such file or directory
+																																																																												WebContent[1986] Couldn't open <private> due to No such file or directory
+																																																																												WebContent[1986] Couldn't open <private> due to No such file or directory
+																																																																												WebContent[1986] Could not register system wide server: -25204
+																																																																												WebContent[1986] _AXAddToElementCache was called even though the element was in the cache: <WKAccessibilityWebPageObject: 0x100f82310>
+																																																																												WebContent[1986] Service "com.apple.CARenderServer" failed bootstrap look up (1) - (os/kern) invalid address
+																																																																												WebContent[1986] Couldn't open <private> due to No such file or directory
+																																																																												WebContent[1986] Couldn't open <private> due to No such file or directory
+																																																																												WebContent[1986] Couldn't open <private> due to No such file or directory
+																																																																												WebContent[1986] Failed to initialize application enviroment context
+																																																																												WebContent[1986] Failed to load a device context.
+																																																																												cannot add handler to 0 from 0 - dropping
+																																																																												cannot add handler to 0 from 0 - dropping
+																																																																												cannot add handler to 0 from 0 - dropping
+																																																																												cannot add handler to 0 from 0 - dropping
+																																																																												WebContent[1986] Unable to hide query parameters from script (missing data)
+																																																																												cannot add handler to 0 from 0 - dropping
+																																																																												cannot add handler to 0 from 0 - dropping
+																																																																												cannot add handler to 0 from 0 - dropping
