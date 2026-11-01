@@ -1,4 +1,8 @@
 
+V65.77
+261101 Sun 1129
+help menu system improved
+
 V65.76
 261101 Sun 1033
 setting help: ESP32BLE complete

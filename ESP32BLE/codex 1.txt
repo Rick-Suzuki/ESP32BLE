@@ -1,43 +1,20 @@
-1. Supported hardware and USB connections
+Files changed:
+ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
 
-Confirmed: the app expects an ESP32 BLE peripheral exposing UART-style service UUID 6E400001… with RX/TX/device-ID characteristics (ESP32BLE/Scrns/BLE/BLE_KB_Manager.swift􀰓).
+Added transient root-owned recommendedDestination state. Topic completion now returns to Main Contents and recommends:
 
-A matching firmware candidate exists outside the active project: ../moved out/Arduino/ESP_32_2v3.ino. It identifies itself at runtime as an “ESP32-S3 … keyboard bridge” (:649) and uses native USB HID keyboard APIs (:1-3, 53-55, 644-645). No specific commercial ESP32-S3 board, USB-UART wiring, USB-OTG wiring, boot-button procedure, or tested alternative board is documented. Its GPIO status outputs indicate custom hardware (:20-40), so other boards are unverified.
+Connect to Mac → Configure ESP32BLE
+Configure ESP32BLE → Connect your iOS device to ESP32BLE
+Connect your iOS device to ESP32BLE → Using ESP
+Using ESP → Troubleshooting
+Troubleshooting → Complete User Manual
 
-2. Firmware installation findings
+The next destination is highlighted only; it does not open automatically. Previous on a topic’s first page returns to Contents without a recommendation. Normal in-topic page navigation is unchanged.
 
-No firmware project, binary, upload script, installer, or installation guide is bundled in the active ESP project. The candidate .ino uses Arduino/ESP32 headers, but its required board package, drivers, upload port, and configuration are undocumented. No precompiled firmware was found. Firmware update steps therefore require confirmation before public instructions.
+Contents rows now support one cyan rounded outline with a subtle cyan tint. Existing white text, colored icons, dividers, and row dimensions remain intact. A ScrollViewReader uses stable destination IDs and scrolls the recommended row into view without an explicit animation.
 
-3. First-start behavior
+Recommendations clear when a destination appears after any Contents selection, when Home/Previous returns to Contents without a recommendation, when Help closes, and when Help opens again. Complete User Manual now returns to Contents with no recommendation through its navigation controls.
 
-Candidate firmware initializes USB HID, starts BLE advertising, and restarts advertising after a client disconnects (ESP_32_2v3.ino:577-610, 644-675). It defines LED patterns: brief pulse while unconnected, mostly-on when connected, fast blink after activity (:223-273). This is not confirmed as the current shipping firmware. No reset/button requirement is documented.
+Using ESP remains its existing consecutive 15-page topic; no submenu was added.
 
-4. BLE discovery and connection
-
-ESP—not iOS Settings—controls connection. Selecting ESP32 output mode starts scanning (ContentView.swift􀰓) for the service UUID (BLE_KB_Manager.swift􀰓). The Settings device list shows discovered peripheral names; tapping one selects and connects (Set_AvailableDevices.swift􀰓). The displayed name is firmware-defined; the candidate advertises “PS5 Keyboard Bridge A” (ESP_32_2v3.ino:13), while the app does not enforce a name (BLE_KB_Manager.swift􀰓). Status shows “ESP32: Connected” or “Searching…” (Set_AvailableDevices.swift􀰓). Disconnection/failure resumes scanning (BLE_KB_Manager.swift􀰓). No app pairing flow exists. Bluetooth unauthorized/off states are surfaced (:366-385); no setup guidance is present.
-
-5. Keyboard testing
-
-Connected status enables Set & Test (Set_Screen.swift􀰓). It sends timing, then:
-Hello World! ABC abc 123 456 aa BB 11 !! ?? -- ..
-
-Firmware defaults are 20 ms down/70 ms gap (ESP_32_2v3.ino:99-100); no first-install adjustment is documented. Output targets the USB HID host connected to the ESP32-S3, not the iPhone/iPad.
-
-6. Relevant troubleshooting
-
-Confirmed visible states: “No ESP32 devices found yet,” “Select an ESP32 first,” “Selected ESP32 not found,” Bluetooth off/not authorized/not supported, service/characteristic discovery failure, failed connection, and disconnected (Set_AvailableDevices.swift􀰓; BLE_KB_Manager.swift􀰓).
-
-7. Proposed Help pages
-
-1. ESP32-S3 hardware and required USB connections — real hardware photo.
-2. Install firmware — firmware-tool screenshot.
-3. Power on and identify ready state — real hardware photo.
-4. Open ESP and choose ESP32 — ESP screenshot.
-5. Select the discovered device — ESP screenshot.
-6. Confirm Connected — ESP screenshot.
-7. Test keyboard output — connection diagram plus target-device photo.
-8. Setup troubleshooting — ESP screenshots.
-
-8. Missing confirmation
-
-Confirm the shipping board model, firmware repository/version, upload workflow, USB ports/cables, boot mode, actual BLE name, LED behavior, and supported alternatives before writing public setup instructions. Connect to ESP32BLE currently has one native placeholder page; metadata is Set_Screen.swift􀰓. Add future local HTML filenames to its pages array.
+Build result: succeeded. No physical-device testing performed.

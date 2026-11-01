@@ -5727,6 +5727,7 @@ private extension VerticalAlignment {
 private struct ESPHelpView: View {
     let onClose: () -> Void
     @State private var path: [ESPHelpDestination] = []
+    @State private var recommendedDestination: ESPHelpDestination?
     @State private var preloadedFirstPage = ESPHelpHTMLView.PreloadedFirstPage()
 
     var body: some View {
@@ -5736,7 +5737,8 @@ private struct ESPHelpView: View {
 
             NavigationStack(path: $path) {
                 ESPHelpContentsView(
-                    onClose: onClose,
+                    recommendedDestination: recommendedDestination,
+                    onClose: closeHelp,
                     onAppear: preloadedFirstPage.preloadIfNeeded
                 )
                     .navigationDestination(for: ESPHelpDestination.self) { destination in
@@ -5744,15 +5746,17 @@ private struct ESPHelpView: View {
                         case .topic(let topic):
                             ESPHelpTopicPager(
                                 initialTopic: topic,
-                                onHome: { path = [] },
-                                onClose: onClose,
+                                onReturnToContents: returnToContents(recommending:),
+                                onContentsSelection: clearRecommendation,
+                                onClose: closeHelp,
                                 preloadedFirstPage: preloadedFirstPage
                             )
 
                         case .completeUserManual:
                             ESPHelpUserManualView(
-                                onHome: { path = [] },
-                                onClose: onClose
+                                onReturnToContents: returnToContents(recommending:),
+                                onContentsSelection: clearRecommendation,
+                                onClose: closeHelp
                             )
                         }
                     }
@@ -5760,8 +5764,24 @@ private struct ESPHelpView: View {
             }
             .onAppear {
                 path = []
+                recommendedDestination = nil
             }
         }
+    }
+
+    private func returnToContents(recommending destination: ESPHelpDestination?) {
+        path = []
+        recommendedDestination = destination
+    }
+
+    private func clearRecommendation() {
+        recommendedDestination = nil
+    }
+
+    private func closeHelp() {
+        path = []
+        recommendedDestination = nil
+        onClose()
     }
 }
 
@@ -5859,26 +5879,29 @@ private enum ESPHelpTopic: CaseIterable, Hashable, Identifiable {
                 .html("connect-esp32ble-test.html"),
                 .html("connect-esp32ble-reconnect.html")
             ]
-        case .usingESP, .troubleshooting:
+        case .usingESP:
+            [
+                .html("using-esp-main.html"),
+                .html("using-esp-screens.html"),
+                .html("using-esp-buttons.html"),
+                .html("using-esp-edit.html"),
+                .html("using-esp-soft-editor.html"),
+                .html("using-esp-quick.html"),
+                .html("using-esp-keyboard.html"),
+                .html("using-esp-speech.html"),
+                .html("using-esp-images.html"),
+                .html("using-esp-audio.html"),
+                .html("using-esp-midi.html"),
+                .html("using-esp-widgets.html"),
+                .html("using-esp-import-export.html"),
+                .html("using-esp-backup.html"),
+                .html("using-esp-settings.html")
+            ]
+        case .troubleshooting:
             [.placeholder]
         }
     }
 
-    var previous: ESPHelpTopic? {
-        guard let index = Self.allCases.firstIndex(of: self), index > 0 else {
-            return nil
-        }
-
-        return Self.allCases[index - 1]
-    }
-
-    var next: ESPHelpTopic? {
-        guard let index = Self.allCases.firstIndex(of: self), index < Self.allCases.count - 1 else {
-            return nil
-        }
-
-        return Self.allCases[index + 1]
-    }
 }
 
 private enum ESPHelpPage: Hashable {
@@ -5892,6 +5915,7 @@ private struct ESPHelpPageLocation: Hashable {
 }
 
 private struct ESPHelpContentsView: View {
+    let recommendedDestination: ESPHelpDestination?
     let onClose: () -> Void
     let onAppear: () -> Void
 
@@ -5900,31 +5924,45 @@ private struct ESPHelpContentsView: View {
             Text("ESP Help")
                 .font(.title2.weight(.semibold))
 
-            ScrollView {
-                VStack(spacing: 0) {
-                    ForEach(ESPHelpTopic.allCases) { topic in
-                        NavigationLink(value: ESPHelpDestination.topic(topic)) {
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(spacing: 0) {
+                        ForEach(ESPHelpTopic.allCases) { topic in
+                            let destination = ESPHelpDestination.topic(topic)
+
+                            NavigationLink(value: destination) {
+                                ESPHelpContentsRow(
+                                    title: topic.contentsTitle,
+                                    symbolName: topic.symbolName,
+                                    iconColor: topic.iconColor,
+                                    isRecommended: recommendedDestination == destination
+                                )
+                            }
+                            .id(destination)
+
+                            if topic != ESPHelpTopic.allCases.last {
+                                Divider()
+                            }
+                        }
+
+                        Divider()
+
+                        NavigationLink(value: ESPHelpDestination.completeUserManual) {
                             ESPHelpContentsRow(
-                                title: topic.contentsTitle,
-                                symbolName: topic.symbolName,
-                                iconColor: topic.iconColor
+                                title: "Complete User Manual",
+                                symbolName: "book",
+                                iconColor: .primary,
+                                isRecommended: recommendedDestination == .completeUserManual
                             )
                         }
-
-                        if topic != ESPHelpTopic.allCases.last {
-                            Divider()
-                        }
+                        .id(ESPHelpDestination.completeUserManual)
                     }
-
-                    Divider()
-
-                    NavigationLink(value: ESPHelpDestination.completeUserManual) {
-                        ESPHelpContentsRow(
-                            title: "Complete User Manual",
-                            symbolName: "book",
-                            iconColor: .primary
-                        )
-                    }
+                }
+                .onAppear {
+                    scrollToRecommendation(using: proxy)
+                }
+                .onChange(of: recommendedDestination) { _, _ in
+                    scrollToRecommendation(using: proxy)
                 }
             }
 
@@ -5934,6 +5972,8 @@ private struct ESPHelpContentsView: View {
                 showsTopicNavigation: false,
                 onPrevious: nil,
                 onNext: nil,
+                isPreviousEnabled: false,
+                isNextEnabled: false,
                 onHome: nil,
                 onClose: onClose,
                 isTopicTransitioning: false
@@ -5942,12 +5982,18 @@ private struct ESPHelpContentsView: View {
         .padding()
         .onAppear(perform: onAppear)
     }
+
+    private func scrollToRecommendation(using proxy: ScrollViewProxy) {
+        guard let recommendedDestination else { return }
+        proxy.scrollTo(recommendedDestination)
+    }
 }
 
 private struct ESPHelpContentsRow: View {
     let title: String
     let symbolName: String
     let iconColor: Color
+    let isRecommended: Bool
 
     var body: some View {
         HStack(spacing: 12) {
@@ -5966,6 +6012,18 @@ private struct ESPHelpContentsRow: View {
         }
         .padding(.vertical, 14)
         .contentShape(.rect)
+        .background {
+            if isRecommended {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(Color.cyan.opacity(0.16))
+            }
+        }
+        .overlay {
+            if isRecommended {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .stroke(Color.cyan, lineWidth: 2)
+            }
+        }
     }
 }
 
@@ -5975,7 +6033,8 @@ private enum ESPHelpTopicNavigationDirection {
 }
 
 private struct ESPHelpTopicPager: View {
-    let onHome: () -> Void
+    let onReturnToContents: (ESPHelpDestination?) -> Void
+    let onContentsSelection: () -> Void
     let onClose: () -> Void
     let preloadedFirstPage: ESPHelpHTMLView.PreloadedFirstPage
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
@@ -5986,11 +6045,13 @@ private struct ESPHelpTopicPager: View {
 
     init(
         initialTopic: ESPHelpTopic,
-        onHome: @escaping () -> Void,
+        onReturnToContents: @escaping (ESPHelpDestination?) -> Void,
+        onContentsSelection: @escaping () -> Void,
         onClose: @escaping () -> Void,
         preloadedFirstPage: ESPHelpHTMLView.PreloadedFirstPage
     ) {
-        self.onHome = onHome
+        self.onReturnToContents = onReturnToContents
+        self.onContentsSelection = onContentsSelection
         self.onClose = onClose
         self.preloadedFirstPage = preloadedFirstPage
         _currentTopic = State(initialValue: initialTopic)
@@ -6022,13 +6083,11 @@ private struct ESPHelpTopicPager: View {
                 topicTitle: currentTopic.title,
                 showsHome: true,
                 showsTopicNavigation: true,
-                onPrevious: previousPageLocation.map { location in
-                    { changePage(to: location, direction: .previous) }
-                },
-                onNext: nextPageLocation.map { location in
-                    { changePage(to: location, direction: .next) }
-                },
-                onHome: onHome,
+                onPrevious: navigatePrevious,
+                onNext: navigateNext,
+                isPreviousEnabled: previousPageLocation != nil,
+                isNextEnabled: nextPageLocation != nil,
+                onHome: { onReturnToContents(.topic(currentTopic)) },
                 onClose: onClose,
                 isTopicTransitioning: isTransitioning
             )
@@ -6037,6 +6096,7 @@ private struct ESPHelpTopicPager: View {
         .padding(.top)
         .padding(.bottom, isPad ? nil : iPhoneHelpBottomPadding)
         .toolbar(.hidden, for: .navigationBar)
+        .onAppear(perform: onContentsSelection)
     }
 
     private var topicTransition: AnyTransition {
@@ -6059,30 +6119,29 @@ private struct ESPHelpTopicPager: View {
     }
 
     private var previousPageLocation: ESPHelpPageLocation? {
-        if currentPageIndex > 0 {
-            return ESPHelpPageLocation(topic: currentTopic, pageIndex: currentPageIndex - 1)
-        }
-
-        guard let previousTopic = currentTopic.previous else {
-            return nil
-        }
-
-        return ESPHelpPageLocation(
-            topic: previousTopic,
-            pageIndex: previousTopic.pages.count - 1
-        )
+        guard currentPageIndex > 0 else { return nil }
+        return ESPHelpPageLocation(topic: currentTopic, pageIndex: currentPageIndex - 1)
     }
 
     private var nextPageLocation: ESPHelpPageLocation? {
-        if currentPageIndex < currentTopic.pages.count - 1 {
-            return ESPHelpPageLocation(topic: currentTopic, pageIndex: currentPageIndex + 1)
-        }
+        guard currentPageIndex < currentTopic.pages.count - 1 else { return nil }
+        return ESPHelpPageLocation(topic: currentTopic, pageIndex: currentPageIndex + 1)
+    }
 
-        guard let nextTopic = currentTopic.next else {
-            return nil
-        }
+    private func navigatePrevious() {
+        guard !isTransitioning else { return }
 
-        return ESPHelpPageLocation(topic: nextTopic, pageIndex: 0)
+        guard let previousPageLocation else { return }
+
+        changePage(to: previousPageLocation, direction: .previous)
+    }
+
+    private func navigateNext() {
+        guard !isTransitioning else { return }
+
+        guard let nextPageLocation else { return }
+
+        changePage(to: nextPageLocation, direction: .next)
     }
 
     private func changePage(
@@ -6686,7 +6745,8 @@ private struct ESPHelpHTMLView: UIViewRepresentable {
 }
 
 private struct ESPHelpUserManualView: View {
-    let onHome: () -> Void
+    let onReturnToContents: (ESPHelpDestination?) -> Void
+    let onContentsSelection: () -> Void
     let onClose: () -> Void
 
     var body: some View {
@@ -6703,16 +6763,19 @@ private struct ESPHelpUserManualView: View {
             ESPHelpNavigationBar(
                 topicTitle: nil,
                 showsHome: true,
-                showsTopicNavigation: false,
+                showsTopicNavigation: true,
                 onPrevious: nil,
                 onNext: nil,
-                onHome: onHome,
+                isPreviousEnabled: false,
+                isNextEnabled: false,
+                onHome: { onReturnToContents(.completeUserManual) },
                 onClose: onClose,
                 isTopicTransitioning: false
             )
         }
         .padding()
         .toolbar(.hidden, for: .navigationBar)
+        .onAppear(perform: onContentsSelection)
     }
 }
 // MARK: - BM:🅱️ iPhone Help navigation positioning
@@ -6737,6 +6800,8 @@ private struct ESPHelpNavigationBar: View {
     let showsTopicNavigation: Bool
     let onPrevious: (() -> Void)?
     let onNext: (() -> Void)?
+    let isPreviousEnabled: Bool
+    let isNextEnabled: Bool
     let onHome: (() -> Void)?
     let onClose: () -> Void
     let isTopicTransitioning: Bool
@@ -6747,6 +6812,8 @@ private struct ESPHelpNavigationBar: View {
                 topicTitle: topicTitle,
                 onPrevious: onPrevious,
                 onNext: onNext,
+                isPreviousEnabled: isPreviousEnabled,
+                isNextEnabled: isNextEnabled,
                 onHome: onHome,
                 onClose: onClose,
                 isTopicTransitioning: isTopicTransitioning
@@ -6774,7 +6841,7 @@ private struct ESPHelpNavigationBar: View {
                             systemName: "triangle.fill",
                             rotation: .degrees(-90),
                             accessibilityLabel: "Previous",
-                            isEnabled: onPrevious != nil && !isTopicTransitioning,
+                            isEnabled: onPrevious != nil && isPreviousEnabled && !isTopicTransitioning,
                             action: onPrevious ?? {}
                         )
 
@@ -6782,7 +6849,7 @@ private struct ESPHelpNavigationBar: View {
                             systemName: "triangle.fill",
                             rotation: .degrees(90),
                             accessibilityLabel: "Next",
-                            isEnabled: onNext != nil && !isTopicTransitioning,
+                            isEnabled: onNext != nil && isNextEnabled && !isTopicTransitioning,
                             action: onNext ?? {}
                         )
                     }
@@ -6807,6 +6874,8 @@ private struct ESPHelpIPhoneTopicNavigationBar: View {
     let topicTitle: String
     let onPrevious: (() -> Void)?
     let onNext: (() -> Void)?
+    let isPreviousEnabled: Bool
+    let isNextEnabled: Bool
     let onHome: () -> Void
     let onClose: () -> Void
     let isTopicTransitioning: Bool
@@ -6859,7 +6928,7 @@ private struct ESPHelpIPhoneTopicNavigationBar: View {
                             systemName: "triangle.fill",
                             rotation: .degrees(-90),
                             accessibilityLabel: "Previous",
-                            isEnabled: onPrevious != nil && !isTopicTransitioning,
+                            isEnabled: onPrevious != nil && isPreviousEnabled && !isTopicTransitioning,
                             action: onPrevious ?? {}
                         )
 
@@ -6867,7 +6936,7 @@ private struct ESPHelpIPhoneTopicNavigationBar: View {
                             systemName: "triangle.fill",
                             rotation: .degrees(90),
                             accessibilityLabel: "Next",
-                            isEnabled: onNext != nil && !isTopicTransitioning,
+                            isEnabled: onNext != nil && isNextEnabled && !isTopicTransitioning,
                             action: onNext ?? {}
                         )
                     }
