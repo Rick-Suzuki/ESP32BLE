@@ -5728,6 +5728,7 @@ private struct ESPHelpView: View {
     let onClose: () -> Void
     @State private var path: [ESPHelpDestination] = []
     @State private var recommendedDestination: ESPHelpDestination?
+    @State private var recommendedUsingESPSection: ESPHelpUsingESPSection?
     @State private var preloadedFirstPage = ESPHelpHTMLView.PreloadedFirstPage()
 
     var body: some View {
@@ -5746,8 +5747,29 @@ private struct ESPHelpView: View {
                         case .topic(let topic):
                             ESPHelpTopicPager(
                                 initialTopic: topic,
-                                onReturnToContents: returnToContents(recommending:),
+                                pages: topic.pages,
+                                title: topic.title,
+                                onHome: { returnToContents(recommending: .topic(topic)) },
                                 onContentsSelection: clearRecommendation,
+                                onClose: closeHelp,
+                                preloadedFirstPage: preloadedFirstPage
+                            )
+
+                        case .usingESPMenu:
+                            ESPHelpUsingESPMenuView(
+                                recommendedSection: recommendedUsingESPSection,
+                                onReturnToContents: { returnToContents(recommending: .topic(.usingESP)) },
+                                onContentsSelection: clearRecommendation,
+                                onClose: closeHelp
+                            )
+
+                        case .usingESPSection(let section):
+                            ESPHelpTopicPager(
+                                initialTopic: .usingESP,
+                                pages: section.pages,
+                                title: section.title,
+                                onHome: { returnToUsingESPMenu(recommending: section) },
+                                onContentsSelection: clearUsingESPSectionRecommendation,
                                 onClose: closeHelp,
                                 preloadedFirstPage: preloadedFirstPage
                             )
@@ -5765,6 +5787,7 @@ private struct ESPHelpView: View {
             .onAppear {
                 path = []
                 recommendedDestination = nil
+                recommendedUsingESPSection = nil
             }
         }
     }
@@ -5778,16 +5801,86 @@ private struct ESPHelpView: View {
         recommendedDestination = nil
     }
 
+    private func returnToUsingESPMenu(recommending section: ESPHelpUsingESPSection) {
+        recommendedUsingESPSection = section
+        guard !path.isEmpty else { return }
+        path.removeLast()
+    }
+
+    private func clearUsingESPSectionRecommendation() {
+        recommendedUsingESPSection = nil
+    }
+
     private func closeHelp() {
         path = []
         recommendedDestination = nil
+        recommendedUsingESPSection = nil
         onClose()
     }
 }
 
 private enum ESPHelpDestination: Hashable {
     case topic(ESPHelpTopic)
+    case usingESPMenu
+    case usingESPSection(ESPHelpUsingESPSection)
     case completeUserManual
+}
+
+private enum ESPHelpUsingESPSection: CaseIterable, Hashable, Identifiable {
+    case gettingStarted
+    case creatingAndEditing
+    case commandsAndControls
+    case mediaAndAppearance
+    case filesAndSettings
+
+    var id: Self { self }
+
+    var title: String {
+        switch self {
+        case .gettingStarted: "Getting Started"
+        case .creatingAndEditing: "Creating and Editing"
+        case .commandsAndControls: "Commands and Controls"
+        case .mediaAndAppearance: "Media and Appearance"
+        case .filesAndSettings: "Files and Settings"
+        }
+    }
+
+    var symbolName: String {
+        switch self {
+        case .gettingStarted: "hand.tap"
+        case .creatingAndEditing: "slider.horizontal.3"
+        case .commandsAndControls: "command"
+        case .mediaAndAppearance: "photo.on.rectangle"
+        case .filesAndSettings: "folder"
+        }
+    }
+
+    var iconColor: Color {
+        switch self {
+        case .gettingStarted: .purple
+        case .creatingAndEditing: .orange
+        case .commandsAndControls: .cyan
+        case .mediaAndAppearance: .pink
+        case .filesAndSettings: .green
+        }
+    }
+
+    var pages: [ESPHelpPage] {
+        let filenames: [String]
+        switch self {
+        case .gettingStarted:
+            filenames = ["using-esp-getting-started-overview.html", "using-esp-main.html", "using-esp-screens.html", "using-esp-buttons.html"]
+        case .creatingAndEditing:
+            filenames = ["using-esp-creating-editing-overview.html", "using-esp-edit.html", "using-esp-soft-editor.html", "using-esp-quick.html"]
+        case .commandsAndControls:
+            filenames = ["using-esp-commands-overview.html", "using-esp-keyboard.html", "using-esp-speech.html", "using-esp-midi.html", "using-esp-widgets.html"]
+        case .mediaAndAppearance:
+            filenames = ["using-esp-media-overview.html", "using-esp-images.html", "using-esp-audio.html"]
+        case .filesAndSettings:
+            filenames = ["using-esp-files-settings-overview.html", "using-esp-import-export.html", "using-esp-backup.html", "using-esp-settings.html"]
+        }
+        return filenames.map(ESPHelpPage.html)
+    }
 }
 
 private enum ESPHelpTopic: CaseIterable, Hashable, Identifiable {
@@ -5880,25 +5973,15 @@ private enum ESPHelpTopic: CaseIterable, Hashable, Identifiable {
                 .html("connect-esp32ble-reconnect.html")
             ]
         case .usingESP:
-            [
-                .html("using-esp-main.html"),
-                .html("using-esp-screens.html"),
-                .html("using-esp-buttons.html"),
-                .html("using-esp-edit.html"),
-                .html("using-esp-soft-editor.html"),
-                .html("using-esp-quick.html"),
-                .html("using-esp-keyboard.html"),
-                .html("using-esp-speech.html"),
-                .html("using-esp-images.html"),
-                .html("using-esp-audio.html"),
-                .html("using-esp-midi.html"),
-                .html("using-esp-widgets.html"),
-                .html("using-esp-import-export.html"),
-                .html("using-esp-backup.html"),
-                .html("using-esp-settings.html")
-            ]
+            ESPHelpUsingESPSection.allCases.flatMap(\.pages)
         case .troubleshooting:
-            [.placeholder]
+            [
+                .html("troubleshooting-esp32-not-found.html"),
+                .html("troubleshooting-esp32-connection.html"),
+                .html("troubleshooting-keyboard.html"),
+                .html("troubleshooting-mac.html"),
+                .html("troubleshooting-buttons.html")
+            ]
         }
     }
 
@@ -5928,14 +6011,16 @@ private struct ESPHelpContentsView: View {
                 ScrollView {
                     VStack(spacing: 0) {
                         ForEach(ESPHelpTopic.allCases) { topic in
-                            let destination = ESPHelpDestination.topic(topic)
+                            let destination: ESPHelpDestination = topic == .usingESP
+                                ? .usingESPMenu
+                                : .topic(topic)
 
                             NavigationLink(value: destination) {
                                 ESPHelpContentsRow(
                                     title: topic.contentsTitle,
                                     symbolName: topic.symbolName,
                                     iconColor: topic.iconColor,
-                                    isRecommended: recommendedDestination == destination
+                                    isRecommended: recommendedDestination == .topic(topic)
                                 )
                             }
                             .id(destination)
@@ -6027,34 +6112,101 @@ private struct ESPHelpContentsRow: View {
     }
 }
 
+private struct ESPHelpUsingESPMenuView: View {
+    let recommendedSection: ESPHelpUsingESPSection?
+    let onReturnToContents: () -> Void
+    let onContentsSelection: () -> Void
+    let onClose: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            Text("Using ESP")
+                .font(.title2.weight(.semibold))
+
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(spacing: 0) {
+                        ForEach(ESPHelpUsingESPSection.allCases) { section in
+                            NavigationLink(value: ESPHelpDestination.usingESPSection(section)) {
+                                ESPHelpContentsRow(
+                                    title: section.title,
+                                    symbolName: section.symbolName,
+                                    iconColor: section.iconColor,
+                                    isRecommended: recommendedSection == section
+                                )
+                            }
+                            .id(section)
+
+                            if section != ESPHelpUsingESPSection.allCases.last {
+                                Divider()
+                            }
+                        }
+                    }
+                }
+                .onAppear { scrollToRecommendation(using: proxy) }
+                .onChange(of: recommendedSection) { _, _ in
+                    scrollToRecommendation(using: proxy)
+                }
+            }
+
+            ESPHelpNavigationBar(
+                topicTitle: "Using ESP",
+                showsHome: true,
+                showsTopicNavigation: false,
+                onPrevious: nil,
+                onNext: nil,
+                isPreviousEnabled: false,
+                isNextEnabled: false,
+                onHome: onReturnToContents,
+                onClose: onClose,
+                isTopicTransitioning: false
+            )
+        }
+        .padding()
+        .toolbar(.hidden, for: .navigationBar)
+        .onAppear(perform: onContentsSelection)
+    }
+
+    private func scrollToRecommendation(using proxy: ScrollViewProxy) {
+        guard let recommendedSection else { return }
+        proxy.scrollTo(recommendedSection)
+    }
+}
+
 private enum ESPHelpTopicNavigationDirection {
     case previous
     case next
 }
 
 private struct ESPHelpTopicPager: View {
-    let onReturnToContents: (ESPHelpDestination?) -> Void
+    let topic: ESPHelpTopic
+    let pages: [ESPHelpPage]
+    let title: String
+    let onHome: () -> Void
     let onContentsSelection: () -> Void
     let onClose: () -> Void
     let preloadedFirstPage: ESPHelpHTMLView.PreloadedFirstPage
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
-    @State private var currentTopic: ESPHelpTopic
     @State private var currentPageIndex: Int
     @State private var navigationDirection: ESPHelpTopicNavigationDirection = .next
     @State private var isTransitioning = false
 
     init(
         initialTopic: ESPHelpTopic,
-        onReturnToContents: @escaping (ESPHelpDestination?) -> Void,
+        pages: [ESPHelpPage],
+        title: String,
+        onHome: @escaping () -> Void,
         onContentsSelection: @escaping () -> Void,
         onClose: @escaping () -> Void,
         preloadedFirstPage: ESPHelpHTMLView.PreloadedFirstPage
     ) {
-        self.onReturnToContents = onReturnToContents
+        self.topic = initialTopic
+        self.pages = pages
+        self.title = title
+        self.onHome = onHome
         self.onContentsSelection = onContentsSelection
         self.onClose = onClose
         self.preloadedFirstPage = preloadedFirstPage
-        _currentTopic = State(initialValue: initialTopic)
         _currentPageIndex = State(initialValue: 0)
     }
 
@@ -6069,25 +6221,26 @@ private struct ESPHelpTopicPager: View {
         VStack(alignment: .leading, spacing: isPad ? 20 : 8) {
             ZStack {
                 ESPHelpTopicView(
-                    topic: currentTopic,
+                    topic: topic,
+                    title: title,
                     page: currentPage,
                     preloadedFirstPage: preloadedFirstPage
                 )
-                    .id(ESPHelpPageLocation(topic: currentTopic, pageIndex: currentPageIndex))
+                    .id(ESPHelpPageLocation(topic: topic, pageIndex: currentPageIndex))
                     .transition(topicTransition)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .clipped()
 
             ESPHelpNavigationBar(
-                topicTitle: currentTopic.title,
+                topicTitle: title,
                 showsHome: true,
                 showsTopicNavigation: true,
                 onPrevious: navigatePrevious,
                 onNext: navigateNext,
                 isPreviousEnabled: previousPageLocation != nil,
                 isNextEnabled: nextPageLocation != nil,
-                onHome: { onReturnToContents(.topic(currentTopic)) },
+                onHome: onHome,
                 onClose: onClose,
                 isTopicTransitioning: isTransitioning
             )
@@ -6115,17 +6268,17 @@ private struct ESPHelpTopicPager: View {
     }
 
     private var currentPage: ESPHelpPage {
-        currentTopic.pages[currentPageIndex]
+        pages[currentPageIndex]
     }
 
     private var previousPageLocation: ESPHelpPageLocation? {
         guard currentPageIndex > 0 else { return nil }
-        return ESPHelpPageLocation(topic: currentTopic, pageIndex: currentPageIndex - 1)
+        return ESPHelpPageLocation(topic: topic, pageIndex: currentPageIndex - 1)
     }
 
     private var nextPageLocation: ESPHelpPageLocation? {
-        guard currentPageIndex < currentTopic.pages.count - 1 else { return nil }
-        return ESPHelpPageLocation(topic: currentTopic, pageIndex: currentPageIndex + 1)
+        guard currentPageIndex < pages.count - 1 else { return nil }
+        return ESPHelpPageLocation(topic: topic, pageIndex: currentPageIndex + 1)
     }
 
     private func navigatePrevious() {
@@ -6149,15 +6302,14 @@ private struct ESPHelpTopicPager: View {
         direction: ESPHelpTopicNavigationDirection
     ) {
         guard !isTransitioning,
-              location.topic.pages.indices.contains(location.pageIndex),
-              location.topic != currentTopic || location.pageIndex != currentPageIndex else {
+              pages.indices.contains(location.pageIndex),
+              location.pageIndex != currentPageIndex else {
             return
         }
 
         navigationDirection = direction
 
         guard !accessibilityReduceMotion else {
-            currentTopic = location.topic
             currentPageIndex = location.pageIndex
             return
         }
@@ -6167,7 +6319,6 @@ private struct ESPHelpTopicPager: View {
             .easeInOut(duration: 0.25),
             completionCriteria: .logicallyComplete
         ) {
-            currentTopic = location.topic
             currentPageIndex = location.pageIndex
         } completion: {
             isTransitioning = false
@@ -6178,13 +6329,14 @@ private struct ESPHelpTopicPager: View {
 
 private struct ESPHelpTopicView: View {
     let topic: ESPHelpTopic
+    let title: String
     let page: ESPHelpPage
     let preloadedFirstPage: ESPHelpHTMLView.PreloadedFirstPage
 
     var body: some View {
         VStack(alignment: .leading, spacing: isPad ? 20 : 0) {
             if isPad {
-                Text(topic.title)
+                Text(title)
                     .font(.title2.weight(.semibold))
             }
 
@@ -6831,6 +6983,13 @@ private struct ESPHelpNavigationBar: View {
                 } else {
                     Color.clear
                         .frame(width: 1, height: 1)
+                }
+
+                if let topicTitle {
+                    Text(topicTitle)
+                        .font(.subheadline.weight(.semibold))
+                        .lineLimit(1)
+                        .truncationMode(.tail)
                 }
 
                 Spacer(minLength: 0)

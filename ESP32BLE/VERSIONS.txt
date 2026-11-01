@@ -1,4 +1,9 @@
 
+
+V65.78
+261101 Sun 1203
+help menu: troubleshooting added
+
 V65.77
 261101 Sun 1129
 help menu system improved
