@@ -1,23 +1,43 @@
-1. Correct BLE connection property
+1. Supported hardware and USB connections
 
-Confirmed: use ble.isConnected. It is @Published in ESP32BLE/Scrns/BLE/BLE_KB_Manager.swift􀰓 and Settings observes ble (Set_Screen.swift􀰓), so controls update on connect/disconnect. It becomes true in didConnect (BLE_KB_Manager.swift􀰓) and false on disconnection (:525-540). It is also used by Settings device UI (Set_AvailableDevices.swift􀰓).
+Confirmed: the app expects an ESP32 BLE peripheral exposing UART-style service UUID 6E400001… with RX/TX/device-ID characteristics (ESP32BLE/Scrns/BLE/BLE_KB_Manager.swift􀰓).
 
-Caveat: it becomes true before service/characteristic discovery finishes; no published “RX ready” state exists.
+A matching firmware candidate exists outside the active project: ../moved out/Arduino/ESP_32_2v3.ino. It identifies itself at runtime as an “ESP32-S3 … keyboard bridge” (:649) and uses native USB HID keyboard APIs (:1-3, 53-55, 644-645). No specific commercial ESP32-S3 board, USB-UART wiring, USB-OTG wiring, boot-button procedure, or tested alternative board is documented. Its GPIO status outputs indicate custom hardware (:20-40), so other boards are unverified.
 
-2. Current timing control enablement
+2. Firmware installation findings
 
-Confirmed: SettingsKeyboardTimingSection independently disables ON/OFF controls with isTimingControlsEnabled (Set_KB_Timing.swift􀰓) and its button with isTestEnabled (:75-100). ESP-TEST-002 successfully separated them. Currently isCustomKeyboardTimingEnabled is only !isMacKeyboardTestMode (Set_Screen.swift􀰓), so ESP32 controls remain enabled while disconnected. REC OFF is outside that disabled group (Set_KB_Timing.swift􀰓).
+No firmware project, binary, upload script, installer, or installation guide is bundled in the active ESP project. The candidate .ino uses Arduino/ESP32 headers, but its required board package, drivers, upload port, and configuration are undocumented. No precompiled firmware was found. Firmware update steps therefore require confirmation before public instructions.
 
-3. Existing Set & Test action guards
+3. First-start behavior
 
-Mac mode rechecks macConnection.canSend before sending (Set_Screen.swift􀰓). ESP32 mode has no immediate ble.isConnected guard (:1933-1934). However, sendLine rejects sends without both peripheral and RX characteristic (BLE_KB_Manager.swift􀰓).
+Candidate firmware initializes USB HID, starts BLE advertising, and restarts advertising after a client disconnects (ESP_32_2v3.ino:577-610, 644-675). It defines LED patterns: brief pulse while unconnected, mostly-on when connected, fast blink after activity (:223-273). This is not confirmed as the current shipping firmware. No reset/button requirement is documented.
 
-4. Smallest recommended correction
+4. BLE discovery and connection
 
-Change isCustomKeyboardTimingEnabled to:
+ESP—not iOS Settings—controls connection. Selecting ESP32 output mode starts scanning (ContentView.swift􀰓) for the service UUID (BLE_KB_Manager.swift􀰓). The Settings device list shows discovered peripheral names; tapping one selects and connects (Set_AvailableDevices.swift􀰓). The displayed name is firmware-defined; the candidate advertises “PS5 Keyboard Bridge A” (ESP_32_2v3.ino:13), while the app does not enforce a name (BLE_KB_Manager.swift􀰓). Status shows “ESP32: Connected” or “Searching…” (Set_AvailableDevices.swift􀰓). Disconnection/failure resumes scanning (BLE_KB_Manager.swift􀰓). No app pairing flow exists. Bluetooth unauthorized/off states are surfaced (:366-385); no setup guidance is present.
 
-!isMacKeyboardTestMode && ble.isConnected
+5. Keyboard testing
 
-This automatically disables ESP32 ON/OFF and Set & Test, while preserving Mac Test’s macConnection.canSend behavior. Add guard ble.isConnected else { return } immediately before the ESP32 timing-command/test-string sends. Keep their existing order unchanged.
+Connected status enables Set & Test (Set_Screen.swift􀰓). It sends timing, then:
 Hello World! ABC abc 123 456 aa BB 11 !! ?? -- ..
-Hello World! ABC abc 123 456 aa BB 11 !! ?? -- ..
+
+Firmware defaults are 20 ms down/70 ms gap (ESP_32_2v3.ino:99-100); no first-install adjustment is documented. Output targets the USB HID host connected to the ESP32-S3, not the iPhone/iPad.
+
+6. Relevant troubleshooting
+
+Confirmed visible states: “No ESP32 devices found yet,” “Select an ESP32 first,” “Selected ESP32 not found,” Bluetooth off/not authorized/not supported, service/characteristic discovery failure, failed connection, and disconnected (Set_AvailableDevices.swift􀰓; BLE_KB_Manager.swift􀰓).
+
+7. Proposed Help pages
+
+1. ESP32-S3 hardware and required USB connections — real hardware photo.
+2. Install firmware — firmware-tool screenshot.
+3. Power on and identify ready state — real hardware photo.
+4. Open ESP and choose ESP32 — ESP screenshot.
+5. Select the discovered device — ESP screenshot.
+6. Confirm Connected — ESP screenshot.
+7. Test keyboard output — connection diagram plus target-device photo.
+8. Setup troubleshooting — ESP screenshots.
+
+8. Missing confirmation
+
+Confirm the shipping board model, firmware repository/version, upload workflow, USB ports/cables, boot mode, actual BLE name, LED behavior, and supported alternatives before writing public setup instructions. Connect to ESP32BLE currently has one native placeholder page; metadata is Set_Screen.swift􀰓. Add future local HTML filenames to its pages array.

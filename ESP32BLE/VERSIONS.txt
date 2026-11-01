@@ -1,4 +1,8 @@
 
+V65.76
+261101 Sun 1033
+setting help: ESP32BLE complete
+
 V65.75
 261101 Sun 0939
 settings: tester: working for esp32/mac

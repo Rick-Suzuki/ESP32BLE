@@ -5772,6 +5772,7 @@ private enum ESPHelpDestination: Hashable {
 
 private enum ESPHelpTopic: CaseIterable, Hashable, Identifiable {
     case connectToMac
+    case configureESP32BLE
     case connectToESP32BLE
     case usingESP
     case troubleshooting
@@ -5782,6 +5783,8 @@ private enum ESPHelpTopic: CaseIterable, Hashable, Identifiable {
         switch self {
         case .connectToMac:
             "Connect to Mac"
+        case .configureESP32BLE:
+            "Configure ESP32BLE"
         case .connectToESP32BLE:
             "Connect to ESP32BLE"
         case .usingESP:
@@ -5791,10 +5794,21 @@ private enum ESPHelpTopic: CaseIterable, Hashable, Identifiable {
         }
     }
 
+    var contentsTitle: String {
+        switch self {
+        case .connectToESP32BLE:
+            "Connect your iOS device to ESP32BLE"
+        default:
+            title
+        }
+    }
+
     var symbolName: String {
         switch self {
         case .connectToMac:
             "desktopcomputer"
+        case .configureESP32BLE:
+            "cpu"
         case .connectToESP32BLE:
             "antenna.radiowaves.left.and.right"
         case .usingESP:
@@ -5808,6 +5822,8 @@ private enum ESPHelpTopic: CaseIterable, Hashable, Identifiable {
         switch self {
         case .connectToMac:
             .green
+        case .configureESP32BLE:
+            .orange
         case .connectToESP32BLE:
             .cyan
         case .usingESP:
@@ -5827,7 +5843,23 @@ private enum ESPHelpTopic: CaseIterable, Hashable, Identifiable {
                 .html("connect-mac-connection.html"),
                 .html("connect-mac-test.html")
             ]
-        case .connectToESP32BLE, .usingESP, .troubleshooting:
+        case .configureESP32BLE:
+            [
+                .html("configure-esp32ble-what-you-need.html"),
+                .html("configure-esp32ble-board-usb.html"),
+                .html("configure-esp32ble-firmware.html"),
+                .html("configure-esp32ble-install.html"),
+                .html("configure-esp32ble-keyboard.html")
+            ]
+        case .connectToESP32BLE:
+            [
+                .html("connect-esp32ble-mode.html"),
+                .html("connect-esp32ble-find.html"),
+                .html("connect-esp32ble-connect.html"),
+                .html("connect-esp32ble-test.html"),
+                .html("connect-esp32ble-reconnect.html")
+            ]
+        case .usingESP, .troubleshooting:
             [.placeholder]
         }
     }
@@ -5873,7 +5905,7 @@ private struct ESPHelpContentsView: View {
                     ForEach(ESPHelpTopic.allCases) { topic in
                         NavigationLink(value: ESPHelpDestination.topic(topic)) {
                             ESPHelpContentsRow(
-                                title: topic.title,
+                                title: topic.contentsTitle,
                                 symbolName: topic.symbolName,
                                 iconColor: topic.iconColor
                             )
