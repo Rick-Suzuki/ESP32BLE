@@ -1,19 +1,23 @@
-Confirmed findings
+1. Correct BLE connection property
 
-The condition is correct: the switch is true, the topic is .connectToMac, and page 1 is connect-mac.html􀰓 (Set_Screen.swift:6062, 6077-6079). That branch constructs a native Text view and bypasses ESPHelpHTMLView entirely (6080-6088).
+Confirmed: use ble.isConnected. It is @Published in ESP32BLE/Scrns/BLE/BLE_KB_Manager.swift􀰓 and Settings observes ble (Set_Screen.swift􀰓), so controls update on connect/disconnect. It becomes true in didConnect (BLE_KB_Manager.swift􀰓) and false on disconnection (:525-540). It is also used by Settings device UI (Set_AvailableDevices.swift􀰓).
 
-Most likely cause
+Caveat: it becomes true before service/characteristic discovery finishes; no published “RX ready” state exists.
 
-The placeholder text uses .foregroundStyle(.primary) (6081) over an explicit white background (6087). In a dark app appearance, .primary can resolve to white, making the text invisible on white. No parent foreground override, covering view, or clipping modifier is present in the inspected path.
+2. Current timing control enablement
 
-Relevant layout
+Confirmed: SettingsKeyboardTimingSection independently disables ON/OFF controls with isTimingControlsEnabled (Set_KB_Timing.swift􀰓) and its button with isTestEnabled (:75-100). ESP-TEST-002 successfully separated them. Currently isCustomKeyboardTimingEnabled is only !isMacKeyboardTestMode (Set_Screen.swift􀰓), so ESP32 controls remain enabled while disconnected. REC OFF is outside that disabled group (Set_KB_Timing.swift􀰓).
 
-The placeholder receives the same available parent content region: TopicView fills its parent (6106-6107), and the pager’s content ZStack fills available space independently above the toolbar (5949-5956). The bottom toolbar is a separate VStack sibling (5958-5971).
+3. Existing Set & Test action guards
 
-Smallest safe correction
+Mac mode rechecks macConnection.canSend before sending (Set_Screen.swift􀰓). ESP32 mode has no immediate ble.isConnected guard (:1933-1934). However, sendLine rejects sends without both peripheral and RX characteristic (BLE_KB_Manager.swift􀰓).
 
-Change only the placeholder foreground style to an explicit dark adaptive-safe color for its forced white background, for example .foregroundStyle(Color.black). This does not construct WebKit, alter page geometry, or change the native-versus-WebKit comparison.
+4. Smallest recommended correction
 
-Limitations
+Change isCustomKeyboardTimingEnabled to:
 
-Device testing is still needed to confirm visible text and evaluate transition smoothness.
+!isMacKeyboardTestMode && ble.isConnected
+
+This automatically disables ESP32 ON/OFF and Set & Test, while preserving Mac Test’s macConnection.canSend behavior. Add guard ble.isConnected else { return } immediately before the ESP32 timing-command/test-string sends. Keep their existing order unchanged.
+Hello World! ABC abc 123 456 aa BB 11 !! ?? -- ..
+Hello World! ABC abc 123 456 aa BB 11 !! ?? -- ..

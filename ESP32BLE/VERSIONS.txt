@@ -1,4 +1,8 @@
 
+V65.75
+261101 Sun 0939
+settings: tester: working for esp32/mac
+
 V65.74
 261101 Sun 0914
 HTML working properly

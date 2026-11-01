@@ -9,7 +9,9 @@ struct SettingsKeyboardTimingSection: View {
     @Binding var speechRecognitionAutoOffMinutes: Int
     @Binding var opacitySliderValue: Double
     let imageControlButtons: AnyView
-    let isEnabled: Bool
+    let isMacMode: Bool
+    let isTimingControlsEnabled: Bool
+    let isTestEnabled: Bool
     let onSetAndTest: () -> Void
 
     private var bodyButtonCornerRadius: CGFloat {
@@ -48,7 +50,7 @@ struct SettingsKeyboardTimingSection: View {
     private var customKeyboardTimingControls: some View {
         VStack(alignment: .center, spacing: 5) {
             HStack(spacing: 12) {
-                Text(isPad ? "custom kb timing" : "custom\nkb timing")
+                Text(timingHeading)
                     .font(settingsCompactControlFont)
 
                 setAndTestButton
@@ -64,23 +66,24 @@ struct SettingsKeyboardTimingSection: View {
 
                 Spacer(minLength: 0)
             }
+            .disabled(!isTimingControlsEnabled)
+            .opacity(isTimingControlsEnabled ? 1 : 0.45)
         }
-        .disabled(!isEnabled)
-        .opacity(isEnabled ? 1 : 0.45)
     }
 
     @ViewBuilder
     private var setAndTestButton: some View {
         if isPad {
-            Button("set & test") {
+            Button(testButtonTitle) {
                 ButtonClickFeedback.playIfEnabled()
                 onSetAndTest()
             }
             .font(settingsCompactControlFont)
             .buttonStyle(.borderedProminent)
             .tint(Color.red.opacity(0.5))
+            .disabled(!isTestEnabled)
         } else {
-            Button("set & test") {
+            Button(testButtonTitle) {
                 ButtonClickFeedback.playIfEnabled()
                 onSetAndTest()
             }
@@ -93,7 +96,20 @@ struct SettingsKeyboardTimingSection: View {
             .frame(height: 30)
             .background(Color.red.opacity(0.5))
             .clipShape(.rect(cornerRadius: bodyButtonCornerRadius))
+            .disabled(!isTestEnabled)
         }
+    }
+
+    private var timingHeading: String {
+        if isMacMode {
+            return "test Mac"
+        }
+
+        return isPad ? "custom kb timing" : "custom\nkb timing"
+    }
+
+    private var testButtonTitle: String {
+        isMacMode ? "test" : "set & test"
     }
 
     private func sliderRow(title: String, value: Binding<Double>, range: ClosedRange<Double>) -> some View {

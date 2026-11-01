@@ -1916,16 +1916,33 @@ struct SettingsScreen: View {
             speechRecognitionAutoOffMinutes: $speechRecognitionAutoOffMinutes,
             opacitySliderValue: $opacitySliderValue,
             imageControlButtons: AnyView(imageControlButtons),
-            isEnabled: isCustomKeyboardTimingEnabled,
+            isMacMode: isMacKeyboardTestMode,
+            isTimingControlsEnabled: isCustomKeyboardTimingEnabled,
+            isTestEnabled: isMacKeyboardTestMode
+                ? macConnection.canSend
+                : isCustomKeyboardTimingEnabled,
             onSetAndTest: {
+                guard !isMacKeyboardTestMode else {
+                    guard macConnection.canSend else { return }
+                    _ = macConnection.sendKeyboardTokens(
+                        ["Hello World! ABC abc 123 456 aa BB 11 !! ?? -- .."]
+                    )
+                    return
+                }
+
+                guard ble.isConnected else { return }
                 sendKeyboardTimingCommand()
                 ble.sendString("Hello World! ABC abc 123 456 aa BB 11 !! ?? -- ..")
             }
         )
     }
 
+    private var isMacKeyboardTestMode: Bool {
+        OutputMode(persistedValue: outputModeRawValue) == .mac
+    }
+
     private var isCustomKeyboardTimingEnabled: Bool {
-        OutputMode(persistedValue: outputModeRawValue) != .mac
+        !isMacKeyboardTestMode && ble.isConnected
     }
 
     private func presentDeleteAllDataConfirmation() {
