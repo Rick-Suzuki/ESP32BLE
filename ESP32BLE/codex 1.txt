@@ -1,17 +1,84 @@
-Files changed:
-• Help/generate_user_manual.py􀰓
-• Help/complete-user-manual.html􀰓 (regenerated)
+ESP-HELP-025A — READ-ONLY REPORT
 
-The generator now derives hierarchical numbers from the existing manifest and renders periods consistently: 2., 2.1., 5.1.1.. Contents labels and matching headings use identical numbering.
+Source locations
 
-Generated return links and .manual-back styling were removed. The Contents remains intact; ordered-list markers are suppressed there to prevent duplicate visible numbering.
+Main Help Contents:
+ESP32BLE/Scrns/Set_Screen/Set_Screen.swift:6091-6181
 
-Validation passed:
-• 40 Quick Help pages included once
-• 51 Contents links match 51 headings
-• Unique anchors; all internal fragments resolve
-• Local image/resource validation passed
-• No Go to Index or Back to Contents links remain
-• Generator run twice; --check passed after each run
+Using ESP submenu:
+ESP32BLE/Scrns/Set_Screen/Set_Screen.swift:6221-6280
 
-No Swift, CSS, navigation, or Quick Help source files changed. No Xcode build was required.
+Shared menu row:
+ESP32BLE/Scrns/Set_Screen/Set_Screen.swift:6183-6219
+
+Current typography
+
+Main Contents title:
+Line 6100:
+.font(.title2.weight(.semibold))
+
+Using ESP submenu title:
+Line 6230:
+.font(.title2.weight(.semibold))
+
+Menu entry labels:
+Lines 6195-6197:
+Text(title)
+.foregroundStyle(.white)
+
+No explicit font is applied to menu labels, so they use SwiftUI’s inherited default Body text style.
+
+Chevron:
+Lines 6200-6202:
+.font(.caption.weight(.semibold))
+
+Main SF Symbol:
+Lines 6191-6193:
+No explicit font; it uses the inherited/default symbol sizing inside a fixed 24-point-wide frame.
+
+Current size behavior
+
+Both iPhone and iPad use the same SwiftUI semantic font declarations:
+
+• Section title: Title 2, approximately 22 points at the default Dynamic Type size.
+• Menu row label: Body, approximately 17 points at the default Dynamic Type size.
+• Chevron: Caption, approximately 12 points at the default Dynamic Type size.
+
+There is no Help-menu device-specific font conditional, fixed font size, Dynamic Type environment override, minimum-scale factor, or custom scaling modifier.
+
+Explanation
+
+The source does not intentionally make iPhone menu text larger. iPhone and iPad receive the same semantic font styles. The perceived difference is therefore caused by physical display size, available landscape space, device display scaling, or different user Dynamic Type settings—not an iPhone-specific Help font rule.
+
+Layout findings
+
+Both menus use the same layout:
+
+• Title-to-scroll spacing: 20 points.
+• Row vertical padding: 14 points.
+• Row icon frame width: 24 points.
+• Outer padding: default 16 points.
+
+No iPhone-specific row height, icon size, or menu spacing exists. The same ESPHelpContentsRow is used by both the six-item root Contents menu and the five-item Using ESP submenu.
+
+Recommended minimal implementation
+
+Use semantic styles, preserving Dynamic Type:
+
+• iPad: retain Title 2 for headings and Body for rows.
+• iPhone: use Title 3 for headings and Subheadline for rows.
+
+This reduces headings from approximately 22 to 20 points and row labels from approximately 17 to 15 points, while continuing to respond to the user’s Dynamic Type setting.
+
+Apply the row font at the shared ESPHelpContentsRow HStack level so the primary SF Symbol scales consistently with the text. Keep the chevron’s existing Caption font.
+
+No row-spacing or icon-frame adjustment should be necessary initially. Reducing row text modestly lowers natural row height while the existing 14-point vertical padding preserves a comfortable touch target.
+
+Affected menus
+
+• Main Help Contents
+• Using ESP submenu
+
+Quick Help page toolbars, manual presentation, navigation, HTML, CSS, and iPad appearance can remain unchanged.
+
+No files were modified, built, or launched.

@@ -8,6 +8,7 @@
     <style>
         .user-manual { background: #ffffff; color: #1c1c1e; }
         .user-manual main { width: min(100%, 48rem); margin: 0 auto; padding: clamp(1rem, 4vw, 2rem); }
+        html.esp-ipad .user-manual main { width: min(88vw, 72rem); }
         .user-manual h1 { font-size: clamp(1.75rem, 5vw, 2.25rem); line-height: 1.2; }
         .user-manual h2 { margin-top: 2.5rem; padding-top: 1rem; border-top: 1px solid #d1d1d6; }
         .user-manual h3 { margin-top: 2rem; }
@@ -127,7 +128,7 @@
     <section class="visual-help" aria-labelledby="connect-mac-introduction">
                 <h3 id="page-connect-mac" class="manual-page-title">2.1. Overview</h3>
                 <figure class="visual-help-illustration">
-                    <img src="images/connect-mac-network.svg" alt="A Mac running ESPMacHelper and an iPhone or iPad running ESP connected over a local network.">
+                    <img class="help-image help-image--diagram" src="images/connect-mac-network.svg" alt="A Mac running ESPMacHelper and an iPhone or iPad running ESP connected over a local network.">
                 </figure>
                 <p class="visual-help-summary">ESP connects to ESPMacHelper over your local network.</p>
             </section>
@@ -142,7 +143,7 @@
                     <li>Click the icon and choose “Show Status Window”.</li>
                 </ol>
                 <figure class="help-setup-screenshot">
-                    <img src="images/espmac-helper-menu.png" alt="The cyan E icon in the Mac menu bar with the ESPMacHelper menu open, showing Show Status Window.">
+                    <img class="help-image help-image--screenshot" src="images/espmac-helper-menu.png" alt="The cyan E icon in the Mac menu bar with the ESPMacHelper menu open, showing Show Status Window.">
                 </figure>
                 <p class="help-setup-note">ESPMacHelper starts automatically when opened.</p>
             </section>

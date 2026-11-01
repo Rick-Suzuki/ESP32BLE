@@ -1,4 +1,10 @@
 
+V65.82
+261102 Mon 0849
+Help: improved images, smaller iphone menu
+
+
+
 V65.81
 261101 Sun 1401
 User manual inprog

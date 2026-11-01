@@ -89,11 +89,21 @@ body.visual-help-prototype {
     margin: 0;
 }
 
-.visual-help-illustration img {
+.help-image {
     display: block;
-    width: min(100%, 34rem);
+    width: auto;
     height: auto;
-    max-height: min(46svh, 19rem);
+    max-width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.help-image--diagram {
+    width: min(100%, 34rem);
+}
+
+.help-image--screenshot {
+    max-height: 250px;
 }
 
 .visual-help-summary {
@@ -118,13 +128,6 @@ body.visual-help-prototype {
 .help-setup-screenshot {
     display: grid;
     place-items: center;
-}
-
-.help-setup-screenshot img {
-    display: block;
-    width: min(100%, 17rem);
-    height: auto;
-    max-height: min(42svh, 17rem);
 }
 
 .help-setup ol {
@@ -198,18 +201,8 @@ html.esp-iphone li + li {
     margin-top: 0.4rem;
 }
 
-/* MARK: - BM:🅱️ iPhone Help network diagram sizing
-   Adjust maximum width here.
-   Preserve height:auto to maintain aspect ratio.
-*/
-html.esp-iphone .visual-help-illustration img {
-    width: min(100%, 34rem);
-    height: auto;
-    max-height: none;
-}
-
-html.esp-iphone .help-setup-screenshot img {
-    max-height: min(38svh, 14rem);
+html.esp-iphone .help-image--screenshot {
+    max-height: 150px;
 }
 
 html.esp-ipad body {

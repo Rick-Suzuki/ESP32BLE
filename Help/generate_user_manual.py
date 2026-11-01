@@ -456,6 +456,7 @@ def render_manual() -> str:
     <style>
         .user-manual {{ background: #ffffff; color: #1c1c1e; }}
         .user-manual main {{ width: min(100%, 48rem); margin: 0 auto; padding: clamp(1rem, 4vw, 2rem); }}
+        html.esp-ipad .user-manual main {{ width: min(88vw, 72rem); }}
         .user-manual h1 {{ font-size: clamp(1.75rem, 5vw, 2.25rem); line-height: 1.2; }}
         .user-manual h2 {{ margin-top: 2.5rem; padding-top: 1rem; border-top: 1px solid #d1d1d6; }}
         .user-manual h3 {{ margin-top: 2rem; }}

@@ -397,6 +397,10 @@ struct SettingsScreen: View {
     @State private var settingsFeedbackMessage: String?
     @State private var settingsFeedbackTask: Task<Void, Never>?
     @State private var isHelpPresented = false
+    @State private var isDedicatedManualPresented = false
+    @State private var shouldPresentManualAfterHelpDismissal = false
+    @State private var shouldRestoreHelpAfterManualDismissal = false
+    @State private var helpContentsRecommendation: ESPHelpDestination?
 
     var body: some View {
         configuredSettingsScreen
@@ -613,10 +617,83 @@ struct SettingsScreen: View {
                 isHelpPresented = false
             }
         }
+        .fullScreenCover(
+            isPresented: Binding(
+                get: { isPad && isDedicatedManualPresented },
+                set: { isPresented in
+                    if !isPresented {
+                        isDedicatedManualPresented = false
+                    }
+                }
+            ),
+            onDismiss: handleDedicatedManualDismissal
+        ) {
+            ESPHelpUserManualView(
+                onReturnToContents: { _ in
+                    returnFromDedicatedManualToHelpContents()
+                },
+                onContentsSelection: {},
+                onClose: closeDedicatedManual,
+                homeScrollsToTop: true
+            )
+        }
         .modifier(ESPHelpFormSheetPresentationModifier(
             isPad: isPad,
-            isPresented: $isHelpPresented
+            isPresented: $isHelpPresented,
+            initialRecommendedDestination: helpContentsRecommendation,
+            isDedicatedManualHandoffPending: shouldPresentManualAfterHelpDismissal,
+            onRequestDedicatedManual: requestDedicatedManualPresentation,
+            onDismissed: handleHelpFormSheetDismissal
         ))
+    }
+
+    private func requestDedicatedManualPresentation() {
+        guard isPad,
+              isHelpPresented,
+              !isDedicatedManualPresented,
+              !shouldPresentManualAfterHelpDismissal else {
+            return
+        }
+
+        shouldPresentManualAfterHelpDismissal = true
+        isHelpPresented = false
+    }
+
+    private func handleHelpFormSheetDismissal() {
+        guard shouldPresentManualAfterHelpDismissal else {
+            helpContentsRecommendation = nil
+            return
+        }
+
+        shouldPresentManualAfterHelpDismissal = false
+        isDedicatedManualPresented = true
+    }
+
+    private func returnFromDedicatedManualToHelpContents() {
+        guard isDedicatedManualPresented else {
+            return
+        }
+
+        shouldRestoreHelpAfterManualDismissal = true
+        isDedicatedManualPresented = false
+    }
+
+    private func closeDedicatedManual() {
+        shouldRestoreHelpAfterManualDismissal = false
+        shouldPresentManualAfterHelpDismissal = false
+        helpContentsRecommendation = nil
+        isDedicatedManualPresented = false
+        isHelpPresented = false
+    }
+
+    private func handleDedicatedManualDismissal() {
+        guard shouldRestoreHelpAfterManualDismissal else {
+            return
+        }
+
+        shouldRestoreHelpAfterManualDismissal = false
+        helpContentsRecommendation = .completeUserManual
+        isHelpPresented = true
     }
 
     private var configuredSettingsScreen: some View {
@@ -5726,10 +5803,23 @@ private extension VerticalAlignment {
 
 private struct ESPHelpView: View {
     let onClose: () -> Void
+    let onRequestDedicatedManual: (() -> Void)?
+    let initialRecommendedDestination: ESPHelpDestination?
     @State private var path: [ESPHelpDestination] = []
     @State private var recommendedDestination: ESPHelpDestination?
     @State private var recommendedUsingESPSection: ESPHelpUsingESPSection?
     @State private var preloadedFirstPage = ESPHelpHTMLView.PreloadedFirstPage()
+
+    init(
+        initialRecommendedDestination: ESPHelpDestination? = nil,
+        onRequestDedicatedManual: (() -> Void)? = nil,
+        onClose: @escaping () -> Void
+    ) {
+        self.onClose = onClose
+        self.onRequestDedicatedManual = onRequestDedicatedManual
+        self.initialRecommendedDestination = initialRecommendedDestination
+        _recommendedDestination = State(initialValue: initialRecommendedDestination)
+    }
 
     var body: some View {
         ZStack {
@@ -5740,7 +5830,8 @@ private struct ESPHelpView: View {
                 ESPHelpContentsView(
                     recommendedDestination: recommendedDestination,
                     onClose: closeHelp,
-                    onAppear: preloadedFirstPage.preloadIfNeeded
+                    onAppear: preloadedFirstPage.preloadIfNeeded,
+                    onRequestDedicatedManual: onRequestDedicatedManual
                 )
                     .navigationDestination(for: ESPHelpDestination.self) { destination in
                         switch destination {
@@ -5786,7 +5877,7 @@ private struct ESPHelpView: View {
             }
             .onAppear {
                 path = []
-                recommendedDestination = nil
+                recommendedDestination = initialRecommendedDestination
                 recommendedUsingESPSection = nil
             }
         }
@@ -6001,11 +6092,12 @@ private struct ESPHelpContentsView: View {
     let recommendedDestination: ESPHelpDestination?
     let onClose: () -> Void
     let onAppear: () -> Void
+    let onRequestDedicatedManual: (() -> Void)?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             Text("ESP Help")
-                .font(.title2.weight(.semibold))
+                .font(isPad ? .title2.weight(.semibold) : .title3.weight(.semibold))
 
             ScrollViewReader { proxy in
                 ScrollView {
@@ -6032,15 +6124,29 @@ private struct ESPHelpContentsView: View {
 
                         Divider()
 
-                        NavigationLink(value: ESPHelpDestination.completeUserManual) {
-                            ESPHelpContentsRow(
-                                title: "Complete User Manual",
-                                symbolName: "book",
-                                iconColor: .primary,
-                                isRecommended: recommendedDestination == .completeUserManual
-                            )
+                        if let onRequestDedicatedManual {
+                            Button(action: onRequestDedicatedManual) {
+                                ESPHelpContentsRow(
+                                    title: "Complete User Manual",
+                                    symbolName: "book",
+                                    iconColor: .primary,
+                                    isRecommended: recommendedDestination == .completeUserManual
+                                )
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("Complete User Manual")
+                            .id(ESPHelpDestination.completeUserManual)
+                        } else {
+                            NavigationLink(value: ESPHelpDestination.completeUserManual) {
+                                ESPHelpContentsRow(
+                                    title: "Complete User Manual",
+                                    symbolName: "book",
+                                    iconColor: .primary,
+                                    isRecommended: recommendedDestination == .completeUserManual
+                                )
+                            }
+                            .id(ESPHelpDestination.completeUserManual)
                         }
-                        .id(ESPHelpDestination.completeUserManual)
                     }
                 }
                 .onAppear {
@@ -6095,6 +6201,7 @@ private struct ESPHelpContentsRow: View {
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.tertiary)
         }
+        .font(isPad ? .body : .subheadline)
         .padding(.vertical, 14)
         .contentShape(.rect)
         .background {
@@ -6121,7 +6228,7 @@ private struct ESPHelpUsingESPMenuView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             Text("Using ESP")
-                .font(.title2.weight(.semibold))
+                .font(isPad ? .title2.weight(.semibold) : .title3.weight(.semibold))
 
             ScrollViewReader { proxy in
                 ScrollView {
@@ -6375,6 +6482,10 @@ private struct ESPHelpTopicView: View {
 private struct ESPHelpFormSheetPresentationModifier: ViewModifier {
     let isPad: Bool
     @Binding var isPresented: Bool
+    let initialRecommendedDestination: ESPHelpDestination?
+    let isDedicatedManualHandoffPending: Bool
+    let onRequestDedicatedManual: () -> Void
+    let onDismissed: () -> Void
 
     func body(content: Content) -> some View {
         content.background {
@@ -6387,7 +6498,11 @@ private struct ESPHelpFormSheetPresentationModifier: ViewModifier {
                                 self.isPresented = false
                             }
                         }
-                    )
+                    ),
+                    initialRecommendedDestination: initialRecommendedDestination,
+                    isDedicatedManualHandoffPending: isDedicatedManualHandoffPending,
+                    onRequestDedicatedManual: onRequestDedicatedManual,
+                    onDismissed: onDismissed
                 )
             }
         }
@@ -6396,6 +6511,10 @@ private struct ESPHelpFormSheetPresentationModifier: ViewModifier {
 
 private struct ESPHelpFormSheetPresenter: UIViewControllerRepresentable {
     @Binding var isPresented: Bool
+    let initialRecommendedDestination: ESPHelpDestination?
+    let isDedicatedManualHandoffPending: Bool
+    let onRequestDedicatedManual: () -> Void
+    let onDismissed: () -> Void
 
     func makeCoordinator() -> Coordinator {
         Coordinator()
@@ -6424,6 +6543,10 @@ private struct ESPHelpFormSheetPresenter: UIViewControllerRepresentable {
 
             isPresentedBinding.wrappedValue = isPresented
         }
+        context.coordinator.initialRecommendedDestination = initialRecommendedDestination
+        context.coordinator.isDedicatedManualHandoffPending = isDedicatedManualHandoffPending
+        context.coordinator.onRequestDedicatedManual = onRequestDedicatedManual
+        context.coordinator.onDismissed = onDismissed
         context.coordinator.synchronizePresentation(
             from: uiViewController,
             isPresented: isPresented
@@ -6446,6 +6569,10 @@ private struct ESPHelpFormSheetPresenter: UIViewControllerRepresentable {
         weak var presenter: UIViewController?
         weak var presentedHelpController: UIViewController?
         var setPresentedState: ((Bool) -> Void)?
+        var initialRecommendedDestination: ESPHelpDestination?
+        var isDedicatedManualHandoffPending = false
+        var onRequestDedicatedManual: (() -> Void)?
+        var onDismissed: (() -> Void)?
 
         private var shouldBePresented = false
         private var isPresentationInFlight = false
@@ -6529,9 +6656,15 @@ private struct ESPHelpFormSheetPresenter: UIViewControllerRepresentable {
 
             let coordinator = self
             let helpController = UIHostingController(
-                rootView: ESPHelpView { [weak coordinator] in
-                    coordinator?.dismissHelpFromCloseButton()
-                }
+                rootView: ESPHelpView(
+                    initialRecommendedDestination: initialRecommendedDestination,
+                    onRequestDedicatedManual: { [weak coordinator] in
+                        coordinator?.onRequestDedicatedManual?()
+                    },
+                    onClose: { [weak coordinator] in
+                        coordinator?.dismissHelpFromCloseButton()
+                    }
+                )
             )
             helpController.modalPresentationStyle = .formSheet
             helpController.preferredContentSize = sizing.preferredSize
@@ -6588,6 +6721,7 @@ private struct ESPHelpFormSheetPresenter: UIViewControllerRepresentable {
             lastAvailableSize = nil
             isPresentationInFlight = false
             isDismissalInFlight = false
+            onDismissed?()
 
             if synchronizeState || !shouldBePresented {
                 setPresentedState?(false)
@@ -7006,7 +7140,20 @@ private struct ESPHelpUserManualView: View {
     let onReturnToContents: (ESPHelpDestination?) -> Void
     let onContentsSelection: () -> Void
     let onClose: () -> Void
+    let homeScrollsToTop: Bool
     @State private var manualScrollController = ESPHelpManualScrollController()
+
+    init(
+        onReturnToContents: @escaping (ESPHelpDestination?) -> Void,
+        onContentsSelection: @escaping () -> Void,
+        onClose: @escaping () -> Void,
+        homeScrollsToTop: Bool = true
+    ) {
+        self.onReturnToContents = onReturnToContents
+        self.onContentsSelection = onContentsSelection
+        self.onClose = onClose
+        self.homeScrollsToTop = homeScrollsToTop
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: isPad ? 20 : 8) {
@@ -7031,7 +7178,7 @@ private struct ESPHelpUserManualView: View {
                 isPreviousEnabled: false,
                 isNextEnabled: false,
                 onHome: {
-                    guard !manualScrollController.scrollToTopIfNeeded() else {
+                    guard !homeScrollsToTop || !manualScrollController.scrollToTopIfNeeded() else {
                         return
                     }
 
