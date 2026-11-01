@@ -5788,7 +5788,6 @@ private struct ESPHelpView: View {
                 path = []
                 recommendedDestination = nil
                 recommendedUsingESPSection = nil
-                ESPHelpWebKitDiagnostics.event("HELP_OPEN")
             }
         }
     }
@@ -5813,8 +5812,6 @@ private struct ESPHelpView: View {
     }
 
     private func closeHelp() {
-        ESPHelpWebKitDiagnostics.event("HELP_CLOSE")
-        ESPHelpWebKitDiagnostics.summary()
         path = []
         recommendedDestination = nil
         recommendedUsingESPSection = nil
@@ -6243,7 +6240,7 @@ private struct ESPHelpTopicPager: View {
                 onNext: navigateNext,
                 isPreviousEnabled: previousPageLocation != nil,
                 isNextEnabled: nextPageLocation != nil,
-                onHome: navigateHome,
+                onHome: onHome,
                 onClose: onClose,
                 isTopicTransitioning: isTransitioning
             )
@@ -6252,13 +6249,7 @@ private struct ESPHelpTopicPager: View {
         .padding(.top)
         .padding(.bottom, isPad ? nil : iPhoneHelpBottomPadding)
         .toolbar(.hidden, for: .navigationBar)
-        .onAppear {
-            onContentsSelection()
-            logPageOpen()
-        }
-        .onChange(of: currentPageIndex) { _, _ in
-            logPageOpen()
-        }
+        .onAppear(perform: onContentsSelection)
     }
 
     private var topicTransition: AnyTransition {
@@ -6294,7 +6285,6 @@ private struct ESPHelpTopicPager: View {
         guard !isTransitioning else { return }
 
         guard let previousPageLocation else { return }
-        ESPHelpWebKitDiagnostics.event("PAGE_PREVIOUS", details: "topic=\(title) page=\(currentPageFilename) index=\(currentPageIndex)")
 
         changePage(to: previousPageLocation, direction: .previous)
     }
@@ -6303,23 +6293,8 @@ private struct ESPHelpTopicPager: View {
         guard !isTransitioning else { return }
 
         guard let nextPageLocation else { return }
-        ESPHelpWebKitDiagnostics.event("PAGE_NEXT", details: "topic=\(title) page=\(currentPageFilename) index=\(currentPageIndex)")
 
         changePage(to: nextPageLocation, direction: .next)
-    }
-
-    private var currentPageFilename: String {
-        if case .html(let filename) = currentPage { return filename }
-        return "placeholder"
-    }
-
-    private func logPageOpen() {
-        ESPHelpWebKitDiagnostics.event("PAGE_OPEN", details: "topic=\(title) page=\(currentPageFilename) index=\(currentPageIndex)")
-    }
-
-    private func navigateHome() {
-        ESPHelpWebKitDiagnostics.event("HOME", details: "topic=\(title) page=\(currentPageFilename) index=\(currentPageIndex)")
-        onHome()
     }
 
     private func changePage(
@@ -6729,51 +6704,6 @@ private final class ESPHelpFormSheetAnchorController: UIViewController {
     }
 }
 
-// MARK: - BM:🅱️ Temporary Help WebKit Diagnostics
-private enum ESPHelpWebKitDiagnostics {
-    private static let lock = NSLock()
-    private static var nextIdentifier = 0
-    private static var webViewCreates = 0
-    private static var coordinatorInits = 0
-    private static var coordinatorDeinits = 0
-
-    static func create(page: String, preloaded: Bool) -> Int {
-        lock.lock()
-        defer { lock.unlock() }
-        nextIdentifier += 1
-        webViewCreates += 1
-        emit(preloaded ? "PRELOAD_CREATE" : "CREATE", "id=\(nextIdentifier) page=\(page)")
-        return nextIdentifier
-    }
-
-    static func coordinatorInit(id: Int, page: String) {
-        lock.lock(); defer { lock.unlock() }
-        coordinatorInits += 1
-        emit("COORDINATOR_INIT", "id=\(id) page=\(page)")
-    }
-
-    static func coordinatorDeinit(id: Int?, page: String?) {
-        lock.lock(); defer { lock.unlock() }
-        coordinatorDeinits += 1
-        emit("COORDINATOR_DEINIT", "id=\(id.map(String.init) ?? "unknown") page=\(page ?? "unknown")")
-    }
-
-    static func event(_ event: String, details: String = "") {
-        lock.lock(); defer { lock.unlock() }
-        emit(event, details)
-    }
-
-    static func summary() {
-        lock.lock(); defer { lock.unlock() }
-        emit("SUMMARY", "webViewsCreated=\(webViewCreates) coordinatorInits=\(coordinatorInits) coordinatorDeinits=\(coordinatorDeinits)")
-    }
-
-    private static func emit(_ event: String, _ details: String) {
-        let timestamp = ISO8601DateFormatter().string(from: Date())
-        print("🐞 \(timestamp) [HELP-WEBKIT] event=\(event) \(details)")
-    }
-}
-
 // MARK: - BM:🅱️ HTML Help renderer
 private struct ESPHelpHTMLView: UIViewRepresentable {
     let pageFilename: String
@@ -6799,15 +6729,13 @@ private struct ESPHelpHTMLView: UIViewRepresentable {
 
         return Self.makeWebView(
             pageFilename: pageFilename,
-            coordinator: context.coordinator,
-            isPreloaded: false
+            coordinator: context.coordinator
         )
     }
 
     private static func makeWebView(
         pageFilename: String,
-        coordinator: Coordinator,
-        isPreloaded: Bool
+        coordinator: Coordinator
     ) -> WKWebView {
         let configuration = WKWebViewConfiguration()
         configuration.userContentController.addUserScript(
@@ -6818,8 +6746,6 @@ private struct ESPHelpHTMLView: UIViewRepresentable {
             )
         )
 
-        let identifier = ESPHelpWebKitDiagnostics.create(page: pageFilename, preloaded: isPreloaded)
-        coordinator.configure(identifier: identifier, pageFilename: pageFilename)
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.navigationDelegate = coordinator
         webView.allowsBackForwardNavigationGestures = false
@@ -6910,14 +6836,6 @@ private struct ESPHelpHTMLView: UIViewRepresentable {
         private var coordinator: Coordinator?
         private(set) var webView: WKWebView?
 
-        init() {
-            ESPHelpWebKitDiagnostics.event("PRELOAD_OWNER_INIT")
-        }
-
-        deinit {
-            ESPHelpWebKitDiagnostics.event("PRELOAD_OWNER_DEINIT")
-        }
-
         func preloadIfNeeded() {
             guard webView == nil,
                   ESPHelpHTMLView.isPageAvailable(named: "connect-mac.html") else {
@@ -6927,8 +6845,7 @@ private struct ESPHelpHTMLView: UIViewRepresentable {
             let coordinator = Coordinator()
             let webView = ESPHelpHTMLView.makeWebView(
                 pageFilename: "connect-mac.html",
-                coordinator: coordinator,
-                isPreloaded: true
+                coordinator: coordinator
             )
 
             self.coordinator = coordinator
@@ -6960,30 +6877,6 @@ private struct ESPHelpHTMLView: UIViewRepresentable {
     final class Coordinator: NSObject, WKNavigationDelegate {
         var allowedPageURL: URL?
         var lastLoadedURL: URL?
-        private var identifier: Int?
-        private var pageFilename: String?
-
-        func configure(identifier: Int, pageFilename: String) {
-            self.identifier = identifier
-            self.pageFilename = pageFilename
-            ESPHelpWebKitDiagnostics.coordinatorInit(id: identifier, page: pageFilename)
-        }
-
-        deinit {
-            ESPHelpWebKitDiagnostics.coordinatorDeinit(id: identifier, page: pageFilename)
-        }
-
-        func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation?) {
-            ESPHelpWebKitDiagnostics.event("LOAD_START", details: "id=\(identifier.map(String.init) ?? "unknown") page=\(pageFilename ?? "unknown")")
-        }
-
-        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation?) {
-            ESPHelpWebKitDiagnostics.event("LOAD_FINISH", details: "id=\(identifier.map(String.init) ?? "unknown") page=\(pageFilename ?? "unknown")")
-        }
-
-        func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation?, withError error: Error) {
-            ESPHelpWebKitDiagnostics.event("LOAD_FAILURE", details: "id=\(identifier.map(String.init) ?? "unknown") page=\(pageFilename ?? "unknown") error=\(error.localizedDescription)")
-        }
 
         func webView(
             _ webView: WKWebView,

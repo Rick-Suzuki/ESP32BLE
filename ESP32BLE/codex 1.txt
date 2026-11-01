@@ -1,37 +1,10 @@
-1. Current ownership and lifecycle
+Blocked after the required checkpoint because implementation would require a broader lifecycle change than the requested “smallest safe adjustment”:
 
-Normal pages create a WKWebView in ESPHelpHTMLView.makeWebView (Set_Screen.swift). Each page change has a distinct .id ([6223–6230]), recreating the representable and its Coordinator. loadFileURL loads each local page ([6885–6901]). No normal-view cache exists.
+• The current .id page transition intentionally overlaps outgoing and incoming SwiftUI views.
+• A single reusable WKWebView cannot safely be attached to both UIKit parents during that overlap.
+• Making it stable requires restructuring the pager’s content/transition ownership, which risks changing page transitions, scroll behavior, and the working Connect to Mac preload path.
 
-2. Persistent reuse feasibility
+Baseline checkpoint created successfully:
+ee5db81a7b11aa40930791c237f3aeb229e61c90
 
-Yes, one ordinary-page WebView could be Help-scoped, owned by ESPHelpView, with one retained Coordinator. A stable representable would receive the current filename and call the existing local-file loader only when it changes. Release occurs when Help dismisses and its @State owner is released.
-
-Important risk: current page transitions retain old/new views briefly. One WebView cannot be attached to two UIKit superviews. Reuse requires keeping the WebView representable stable while updating content, rather than reusing it through the current per-page .id transition.
-
-3. Preload options
-
-A. Keep Connect to Mac Page 1 separate from one ordinary reusable WebView. Safest: preserves the tested preload path; ordinary reuse begins on Page 2 or any other page.
-
-B. Use the preloaded Page 1 WebView for all pages. Fewer instances, but higher regression risk: Page 1’s ownership, preload timing, and navigation transition become coupled to all Help content. Not recommended.
-
-4. Navigation and scroll
-
-Existing topic/section arrays already supply correct filenames and bounds. Reuse should not alter those states. A fresh document normally begins at top, but scroll reset must be verified on-device; persistent reuse could need an explicit post-load reset only if testing shows a regression.
-
-5. Rapid navigation
-
-A reusable loader needs a latest-request filename/generation. New loads may supersede unfinished loads; stale delegate callbacks must not update visible-page state. Avoid delays; rely on the latest requested filename and WebView URL.
-
-6. Diagnostic mismatch
-
-makeCoordinator runs even when Page 1 returns the preloaded WebView ([6791–6804]). That wrapper Coordinator is never configured, then deinitializes as id=unknown; hence 19 deinitializations versus 18 configured initializations. Narrow future correction: log unconfigured teardown separately and exclude it from configured Coordinator totals.
-
-7. Alternatives
-
-A. Current: lowest regression risk; repeated creation confirmed.
-B. Separate ordinary reusable view + existing preload: moderate implementation risk, likely reduces object/process churn. Recommended experiment.
-C. One universal preload: highest coupling/regression risk.
-
-8. Validation
-
-On iPad Air M2 and iPhone 17, compare A/B using [HELP-WEBKIT]: creations, configured Coordinator deinits, opening/page responsiveness, memory, blank/incorrect pages, rapid navigation, Home/submenu paths, and Connect to Mac preload.
+No source files were modified after the checkpoint.

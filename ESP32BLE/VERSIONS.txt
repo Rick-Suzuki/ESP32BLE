@@ -1,4 +1,9 @@
 
+V65.80
+261101 Sun 1249
+cleaned up app
+
+
 V65.79
 261101 Sun 1224
 before Option B experiment
