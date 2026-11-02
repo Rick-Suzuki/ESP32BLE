@@ -9,6 +9,7 @@ struct SettingsKeyboardTimingSection: View {
     @Binding var speechRecognitionAutoOffMinutes: Int
     @Binding var opacitySliderValue: Double
     let imageControlButtons: AnyView
+    let isImageControlsActive: Bool
     let isMacMode: Bool
     let isTimingControlsEnabled: Bool
     let isTestEnabled: Bool
@@ -67,7 +68,6 @@ struct SettingsKeyboardTimingSection: View {
                 Spacer(minLength: 0)
             }
             .disabled(!isTimingControlsEnabled)
-            .opacity(isTimingControlsEnabled ? 1 : 0.45)
         }
     }
 
@@ -118,6 +118,7 @@ struct SettingsKeyboardTimingSection: View {
                 .font(settingsCompactControlFont)
                 .foregroundStyle(.primary)
                 .frame(width: timingLabelWidth, alignment: .trailing)
+                .opacity(timingContentOpacity)
 
             if isPad {
                 Button {
@@ -132,6 +133,7 @@ struct SettingsKeyboardTimingSection: View {
                 .buttonStyle(.plain)
                 .foregroundStyle(.white)
                 .disabled(value.wrappedValue <= range.lowerBound)
+                .opacity(timingContentOpacity)
             }
 
 				VStack(spacing: isPad ? -10 : 0) {
@@ -139,9 +141,10 @@ struct SettingsKeyboardTimingSection: View {
                     .font(settingsCompactControlFont)
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
+                    .opacity(timingContentOpacity)
 
                 Slider(value: value, in: range, step: 10)
-                    .tint(.white)
+                    .tint(timingSliderTint)
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 2)
@@ -159,6 +162,7 @@ struct SettingsKeyboardTimingSection: View {
                 .buttonStyle(.plain)
                 .foregroundStyle(.white)
                 .disabled(value.wrappedValue >= range.upperBound)
+                .opacity(timingContentOpacity)
             }
         }
     }
@@ -223,16 +227,21 @@ struct SettingsKeyboardTimingSection: View {
 
     private var iPhoneImageControls: some View {
         HStack(spacing: 9) {
-            Text("IMAGE")
+            Text("Image")
                 .font(settingsCompactControlFont)
-                .foregroundStyle(.white)
+                .foregroundStyle(
+                    isImageControlsActive ? .white : SettingsImageControlAppearance.disabledColor
+                )
                 .frame(width: timingLabelWidth, alignment: .trailing)
 
             VStack(alignment: .leading, spacing: 6) {
                 imageControlButtons
 
                 Slider(value: $opacitySliderValue, in: 0...1)
-                    .tint(.cyan)
+                    .tint(
+                        isImageControlsActive ? .cyan : SettingsImageControlAppearance.disabledColor
+                    )
+                    .disabled(!isImageControlsActive)
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 2)
@@ -247,5 +256,13 @@ struct SettingsKeyboardTimingSection: View {
 
     private var settingsCompactControlFont: Font {
         isPad ? .headline : .system(size: 13, weight: .semibold)
+    }
+
+    private var timingContentOpacity: Double {
+        isTimingControlsEnabled ? 1 : 0.45
+    }
+
+    private var timingSliderTint: Color {
+        isTimingControlsEnabled ? .white : SettingsImageControlAppearance.disabledColor
     }
 }

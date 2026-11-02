@@ -1,3 +1,6 @@
+V65.86
+stage 4A: img controls enable/disable
+261102 Mon 1522
 
 V65.85
 stage 3: table selected item alway visible

@@ -1,6 +1,13 @@
 import SwiftUI
 
+enum SettingsImageControlAppearance {
+    static let disabledColor = Color.white.opacity(0.45)
+}
+
 struct SettingsImageControlsSection: View {
+    let isImagesActive: Bool
+    let canReset: Bool
+    let canRandom: Bool
     let canGoPrevious: Bool
     let canGoNext: Bool
     let onReset: () -> Void
@@ -13,15 +20,23 @@ struct SettingsImageControlsSection: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             if isPad {
-                Text("image")
+                Text("Image")
                     .font(settingsCompactControlFont)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(isImagesActive ? .white : SettingsImageControlAppearance.disabledColor)
                     .lineLimit(1)
             }
 
             HStack(spacing: 18) {
-                imageControlButton(systemName: "arrow.counterclockwise.circle", action: onReset)
-                imageControlButton(systemName: "shuffle.circle", action: onRandom)
+                imageControlButton(
+                    systemName: "arrow.counterclockwise.circle",
+                    isEnabled: canReset,
+                    action: onReset
+                )
+                imageControlButton(
+                    systemName: "shuffle.circle",
+                    isEnabled: canRandom,
+                    action: onRandom
+                )
                 repeatingImageControlButton(
                     systemName: "arrowshape.left.circle",
                     isEnabled: canGoPrevious,
@@ -38,6 +53,11 @@ struct SettingsImageControlsSection: View {
         .onDisappear {
             stopRepeating()
         }
+        .onChange(of: isImagesActive) { _, isActive in
+            if !isActive {
+                stopRepeating()
+            }
+        }
     }
 
     private var settingsCompactControlFont: Font {
@@ -49,17 +69,21 @@ struct SettingsImageControlsSection: View {
         isEnabled: Bool = true,
         action: @escaping () -> Void
     ) -> some View {
-        Button {
+        let isInteractable = isImagesActive && isEnabled
+
+        return Button {
+            guard isInteractable else { return }
             ButtonClickFeedback.playIfEnabled()
             action()
         } label: {
             Image(systemName: systemName)
                 .font(.system(size: 28))
-                .foregroundStyle(.cyan)
-                .opacity(isEnabled ? 1 : 0.35)
+                .foregroundStyle(controlColor)
+                .opacity(controlOpacity(isEnabled: isEnabled))
         }
         .buttonStyle(.plain)
-        .disabled(!isEnabled)
+        .allowsHitTesting(isInteractable)
+        .accessibilityHint(isInteractable ? "" : "Unavailable")
     }
 
     private func repeatingImageControlButton(
@@ -67,15 +91,19 @@ struct SettingsImageControlsSection: View {
         isEnabled: Bool = true,
         action: @escaping () -> Void
     ) -> some View {
-        Image(systemName: systemName)
+        let isInteractable = isImagesActive && isEnabled
+
+        return Image(systemName: systemName)
             .font(.system(size: 28))
-            .foregroundStyle(.cyan)
-            .opacity(isEnabled ? 1 : 0.35)
+            .foregroundStyle(controlColor)
+            .opacity(controlOpacity(isEnabled: isEnabled))
             .contentShape(Rectangle())
+            .allowsHitTesting(isInteractable)
+            .accessibilityHint(isInteractable ? "" : "Unavailable")
             .simultaneousGesture(
             DragGesture(minimumDistance: 0)
                 .onChanged { _ in
-                    guard isEnabled else {
+                    guard isImagesActive, isEnabled else {
                         return
                     }
                     startRepeating(action: action)
@@ -84,7 +112,7 @@ struct SettingsImageControlsSection: View {
                     let shouldTriggerTap = !hasRepeatedDuringCurrentPress
                     stopRepeating()
 
-                    guard isEnabled, shouldTriggerTap else {
+                    guard isImagesActive, isEnabled, shouldTriggerTap else {
                         return
                     }
 
@@ -124,5 +152,14 @@ struct SettingsImageControlsSection: View {
         repeatTask?.cancel()
         repeatTask = nil
         hasRepeatedDuringCurrentPress = false
+    }
+
+    private var controlColor: Color {
+        isImagesActive ? .cyan : SettingsImageControlAppearance.disabledColor
+    }
+
+    private func controlOpacity(isEnabled: Bool) -> Double {
+        guard isImagesActive else { return 1 }
+        return isEnabled ? 1 : 0.35
     }
 }

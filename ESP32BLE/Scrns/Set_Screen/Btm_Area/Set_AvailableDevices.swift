@@ -10,6 +10,7 @@ struct SettingsAvailableDevicesPanel: View {
     @Binding var isStatusBarVisible: Bool
     @Binding var opacitySliderValue: Double
     let imageControlButtons: AnyView
+    let isImageControlsActive: Bool
     let presentDeleteAllDataConfirmation: () -> Void
     let presentHelp: () -> Void
     @State private var macPairingButtonWidth: CGFloat = 132
@@ -46,7 +47,11 @@ struct SettingsAvailableDevicesPanel: View {
 
             VStack(spacing: 12) {
                 imageControlButtons
-                settingsPlaceholderSlider(title: "opacity: 0.5", value: $opacitySliderValue)
+                settingsPlaceholderSlider(
+                    title: "opacity: 0.5",
+                    value: $opacitySliderValue,
+                    isEnabled: isImageControlsActive
+                )
 				
 					HStack(spacing: 18) {
 							VStack(spacing:10) {
@@ -481,10 +486,15 @@ struct SettingsAvailableDevicesPanel: View {
         isPad ? 48 : 36
     }
 
-    private func settingsPlaceholderSlider(title: String, value: Binding<Double>) -> some View {
+    private func settingsPlaceholderSlider(
+        title: String,
+        value: Binding<Double>,
+        isEnabled: Bool
+    ) -> some View {
         VStack(spacing: 8) {
             Slider(value: value, in: 0...1)
-                .tint(.cyan)
+                .tint(isEnabled ? .cyan : SettingsImageControlAppearance.disabledColor)
+                .disabled(!isEnabled)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }

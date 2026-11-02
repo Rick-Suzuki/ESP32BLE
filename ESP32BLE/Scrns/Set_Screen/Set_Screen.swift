@@ -1551,6 +1551,7 @@ struct SettingsScreen: View {
             isStatusBarVisible: $isStatusBarVisible,
             opacitySliderValue: $opacitySliderValue,
             imageControlButtons: AnyView(imageControlButtons),
+            isImageControlsActive: isImagesListActive,
             presentDeleteAllDataConfirmation: presentDeleteAllDataConfirmation,
             presentHelp: {
                 isHelpPresented = true
@@ -1582,28 +1583,31 @@ struct SettingsScreen: View {
 
     private var imageControlButtons: some View {
         SettingsImageControlsSection(
+            isImagesActive: isImagesListActive,
+            canReset: !availableImageURLs.isEmpty,
+            canRandom: !availableImageURLs.isEmpty,
             canGoPrevious: canPreviewPreviousImage,
             canGoNext: canPreviewNextImage,
             onReset: {
+                guard isImagesListActive else { return }
                 guard let firstImageURL = availableImageURLs.first else { return }
                 selectPreviewImage(firstImageURL)
             },
             onRandom: {
-                let previewChoices: [URL?] = [nil] + availableImageURLs
-                let candidateURLs = previewChoices.filter { imageURL in
-                    imageURL?.path != previewImageURL?.path
+                guard isImagesListActive else { return }
+                let candidateURLs = availableImageURLs.filter { imageURL in
+                    imageURL.path != previewImageURL?.path
                 }
-                selectPreviewImage(candidateURLs.randomElement() ?? previewImageURL)
+                selectPreviewImage(candidateURLs.randomElement() ?? availableImageURLs.first)
             },
             onPrevious: {
-                guard let previewImagePosition else { return }
-                if previewImagePosition == 1 {
-                    selectPreviewImage(nil)
-                } else {
-                    selectPreviewImage(availableImageURLs[previewImagePosition - 2])
-                }
+                guard isImagesListActive,
+                      let previewImagePosition,
+                      previewImagePosition > 1 else { return }
+                selectPreviewImage(availableImageURLs[previewImagePosition - 2])
             },
             onNext: {
+                guard isImagesListActive else { return }
                 guard !availableImageURLs.isEmpty else { return }
                 let nextIndex = previewImagePosition ?? 0
                 guard availableImageURLs.indices.contains(nextIndex) else { return }
@@ -1621,8 +1625,13 @@ struct SettingsScreen: View {
         return imageIndex + 1
     }
 
+    private var isImagesListActive: Bool {
+        listMode == .images
+    }
+
     private var canPreviewPreviousImage: Bool {
-        previewImagePosition != nil
+        guard let previewImagePosition else { return false }
+        return previewImagePosition > 1
     }
 
     private var canPreviewNextImage: Bool {
@@ -2005,6 +2014,7 @@ struct SettingsScreen: View {
             speechRecognitionAutoOffMinutes: $speechRecognitionAutoOffMinutes,
             opacitySliderValue: $opacitySliderValue,
             imageControlButtons: AnyView(imageControlButtons),
+            isImageControlsActive: isImagesListActive,
             isMacMode: isMacKeyboardTestMode,
             isTimingControlsEnabled: isCustomKeyboardTimingEnabled,
             isTestEnabled: isMacKeyboardTestMode

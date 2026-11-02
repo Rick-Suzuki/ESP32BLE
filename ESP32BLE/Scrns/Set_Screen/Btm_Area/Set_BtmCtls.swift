@@ -10,6 +10,7 @@ struct SettingsBottomControlsSection: View {
     @Binding var isStatusBarVisible: Bool
     @Binding var opacitySliderValue: Double
     let imageControlButtons: AnyView
+    let isImageControlsActive: Bool
     let presentDeleteAllDataConfirmation: () -> Void
     let presentHelp: () -> Void
 
@@ -24,6 +25,7 @@ struct SettingsBottomControlsSection: View {
             isStatusBarVisible: $isStatusBarVisible,
             opacitySliderValue: $opacitySliderValue,
             imageControlButtons: imageControlButtons,
+            isImageControlsActive: isImageControlsActive,
             presentDeleteAllDataConfirmation: presentDeleteAllDataConfirmation,
             presentHelp: presentHelp
         )

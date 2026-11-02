@@ -1,41 +1,59 @@
-VERIFIED
+STAGE 4A.6 READ-ONLY REPORT
 
-Current category switch path:
-• Category selection calls selectSettingsListMode(), which changes listMode.
-• SettingsDocumentTableSection stays structurally unchanged because its only explicit identity is importRefreshID, not listMode.
-• One List and one ScrollViewReader contain a switch that swaps ForEach content by category.
-• selectionRestorationID changes with category/rows, so the existing task runs.
-• The PDF diagnostic proves the target path exists and scrollProxy.scrollTo executes.
+VERIFIED RENDERING PATHS
 
-The List has no category-specific identity. Switching Sounds to PDFs replaces the ForEach branch while retaining the same List/ScrollViewReader subtree identity.
+A. iPhone Image opacity:
+• Set_KB_Timing.swift:225-245.
+• Native Slider bound to opacitySliderValue.
+• Inactive: tint Color.white.opacity(0.45), then .disabled(true).
+• No parent opacity.
 
-INFERRED ROOT CAUSE
+B. iPad Image opacity:
+• Set_AvailableDevices.swift:48-54, 489-499.
+• Native Slider bound to the same opacitySliderValue.
+• Inactive: tint Color.white.opacity(0.45), then .disabled(true).
+• No parent opacity.
 
-The restoration task is running during the category transition before the reused native List has registered the replacement PDF rows as active scroll targets. ScrollViewProxy silently has no effective target at that instant.
+C–F. Key Down and Key Gap on iPhone and iPad:
+• Shared implementation, not device-specific: Set_KB_Timing.swift:61-72 and 116-165.
+• Both native Sliders use .tint(.white).
+• Both inherit .disabled(!isTimingControlsEnabled).
+• Their common parent also applies .opacity(0.45).
 
-Settings recreation differs because it constructs a new SettingsScreen/List subtree; by the initial restoration task, the active category’s rows are available. This matches the successful Main → Settings behavior.
+VERIFIED CAUSE
 
-The same structural risk applies to all categories. Physical failure is confirmed only for PDFs; Images are likely affected. Sounds work when reopening, not yet proven when switching categories.
+The timing sliders have a materially different hierarchy from the Image slider:
 
-RECOMMENDED MINIMAL FIX
+Image slider:
+• disabled environment
+• 45%-white tint
+• no parent opacity
 
-Give the existing ScrollViewReader subtree a category-specific identity:
+Timing slider:
+• disabled environment
+• white tint
+• parent opacity of 45%
 
-.id(listMode)
+The parent opacity attenuates the entire native slider after its platform rendering, including an already-dark unfilled track. This explains the weak tracks and contributes to dark thumbs. It also affects the ON/OFF labels, timing values, and iPad arrows.
 
-Apply it to the ScrollViewReader, not the whole Settings table. This recreates the reader and native List only when the category changes, while preserving:
-• Existing List/swipe actions
-• Stable row IDs
-• Selection state
-• Preview layout
-• Restoration task and scrollTo behavior
+The source has no iPhone/iPad-specific timing-slider wrapper. Any remaining device difference is native Slider rendering and cannot be proven further from source alone.
 
-No separate category-transition event is needed: the existing task(id: selectionRestorationID) already provides it.
+SMALLEST SAFE CORRECTION
 
-Do not add delays, retries, or new diagnostics. The existing logs are sufficient to validate the targeted change on device.
+In Set_KB_Timing.swift:
 
-COMPATIBILITY
+1. Keep the existing parent .disabled modifier.
+2. Remove only the parent .opacity(0.45).
+3. Apply opacity 0.45 individually to the existing ON/OFF labels, timing-value labels, and iPad arrows, preserving their present appearance.
+4. Give each timing Slider the same conditional tint chain as the Image slider:
+   • enabled: .white
+   • disabled: SettingsImageControlAppearance.disabledColor
+5. Do not add a Slider-specific opacity modifier.
 
-.id(_:) is supported on iPadOS 17.7.11. The primary regression risk is category switching recreating List-local transient state, which is intended here; persistent selection state already lives outside the List.
+This makes the timing Slider’s disabled environment and tint match the existing Image-opacity reference while preserving surrounding controls’ apparent brightness and all functional rules.
 
-No files were modified, built, or deployed.
+LIMITATION
+
+SwiftUI Slider does not publicly expose separate thumb, filled-track, and unfilled-track colors. Matching the modifier hierarchy is the safest native solution, but exact pixel-identical rendering cannot be guaranteed across iPadOS 17 and newer systems without a custom/UIKit slider, which is outside scope.
+
+No files were modified. No build or deployment was performed.
