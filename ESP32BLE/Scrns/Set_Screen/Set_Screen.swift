@@ -1573,7 +1573,8 @@ struct SettingsScreen: View {
             canGoPrevious: canPreviewPreviousImage,
             canGoNext: canPreviewNextImage,
             onReset: {
-                selectPreviewImage(nil)
+                guard let firstImageURL = availableImageURLs.first else { return }
+                selectPreviewImage(firstImageURL)
             },
             onRandom: {
                 let previewChoices: [URL?] = [nil] + availableImageURLs
@@ -1765,7 +1766,6 @@ struct SettingsScreen: View {
                 isImagePreviewRestorePending = false
                 previewImageURL = imageURL
             },
-            previewBlackImage: { selectPreviewImage(nil) },
             applyImageBackground: applySettingsBackground,
             deleteImage: deleteImage,
             selectSound: selectSound,

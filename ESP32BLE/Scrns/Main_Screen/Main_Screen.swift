@@ -934,6 +934,7 @@ This command requires an ESP32 connection. Not all pins will work, it will depen
     @State var documentNameDraft = ""
     @State var alertTitle = "Alert"
     @State var renameAlertMessage: String?
+    @State private var popupDismissalOverrideMessage: String?
     @State private var filenameToastText: String?
     @State private var filenameToastDismissTask: Task<Void, Never>?
     @State var isGridEditModeEnabled = false
@@ -1208,6 +1209,13 @@ Tapping a row inserts the key code at the cursor.
                 await observeKeyboardFrameChanges()
             }
             .onChange(of: renameAlertMessage) {
+                if let popupDismissalOverrideMessage,
+                   renameAlertMessage == popupDismissalOverrideMessage {
+                    self.popupDismissalOverrideMessage = nil
+                    return
+                }
+
+                popupDismissalOverrideMessage = nil
                 schedulePopupDismissIfNeeded()
             }
             .fullScreenCover(item: $presentedPreviewFile) { previewedFile in
@@ -1727,7 +1735,13 @@ Tapping a row inserts the key code at the cursor.
             selectedActionMenuIndex: mainGridActionMenuTarget?.index,
             renderedButtonFrameRefreshToken: mainGridRenderedButtonFrameRefreshToken,
             bleSendEnabled: mainGridButtonMode != .disabled,
-            onButtonClick: { ButtonClickFeedback.playIfEnabled() },
+            onButtonClick: {
+                ButtonClickFeedback.playIfEnabled()
+
+                if mainGridButtonMode == .disabled {
+                    showButtonsDisabledPopup()
+                }
+            },
             onAcceptedOrdinaryButtonTap: { entry in
                 #if DEBUG
                 printMainGridButtonActivation(entry, via: "tap")
@@ -2669,6 +2683,32 @@ Tapping a row inserts the key code at the cursor.
             await MainActor.run {
                 mainGridOperationMessageText = nil
                 mainGridOperationMessageDismissTask = nil
+            }
+        }
+    }
+
+    private func showButtonsDisabledPopup() {
+        let message = "Buttons\nDisabled"
+        popupDismissTask?.cancel()
+        alertTitle = ""
+
+        if renameAlertMessage != message {
+            popupDismissalOverrideMessage = message
+            renameAlertMessage = message
+        }
+
+        popupDismissTask = Task {
+            try? await Task.sleep(for: .seconds(1.5))
+            guard !Task.isCancelled else {
+                return
+            }
+
+            await MainActor.run {
+                guard renameAlertMessage == message else {
+                    return
+                }
+
+                renameAlertMessage = nil
             }
         }
     }

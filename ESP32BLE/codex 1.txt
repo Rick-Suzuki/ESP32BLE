@@ -1,84 +1,67 @@
-ESP-HELP-025A — READ-ONLY REPORT
+READ-ONLY PROBE COMPLETE — no files modified, built, deployed, or Git operations performed.
 
-Source locations
+A. Relevant implementation
 
-Main Help Contents:
-ESP32BLE/Scrns/Set_Screen/Set_Screen.swift:6091-6181
+Settings state and table wiring:
+• ESP32BLE/Scrns/Set_Screen/Set_Screen.swift:344-389
+• Per-table scroll-position storage: Set_Screen.swift:1193-1240
+• Image controls/actions: Set_Screen.swift:1571-1650
+• Image application and persistence: Set_Screen.swift:3317-3326
+• Template selection clearing: Set_Screen.swift:725-732, 1844-1847
+• Settings recreation on return from Main: ESP32BLE/Scrns/ContentView.swift:325-329, 2901-2929
+• Table highlights, IDs, and scrolling: ESP32BLE/Scrns/Set_Screen/Table_Img/Set_Table.swift:66-69, 107-150, 251-258
+• Image persistence/index mapping: ESP32BLE/Scrns/Set_Screen/Table_Img/Set_ImgSelectionSupport.swift:5-72
+• Image controls UI: ESP32BLE/Scrns/Set_Screen/Btm_Area/Set_ImgCtlsSection.swift:3-40
 
-Using ESP submenu:
-ESP32BLE/Scrns/Set_Screen/Set_Screen.swift:6221-6280
+B. Current selection and scrolling
 
-Shared menu row:
-ESP32BLE/Scrns/Set_Screen/Set_Screen.swift:6183-6219
+VERIFIED:
+• Each category already has an independent AppStorage scroll ID and stable path-based row identity.
+• Screens retain their loaded document selection through the parent ContentView.
+• Sounds and PDFs persist selected path/name, but their table highlight is temporary only.
+• Text and Templates use Settings-owned @State; both are lost when Settings is removed. Templates are also deliberately cleared whenever another table becomes active.
+• Temporary screen/text/sound/PDF highlights are cleared in Set_Table.swift:251-258.
+• Images use green for persisted applied image and yellow for temporary preview. The preview is Settings-local.
 
-Current typography
+C. BLACK implementation
 
-Main Contents title:
-Line 6100:
-.font(.title2.weight(.semibold))
+VERIFIED:
+• BLACK is not an image file. It is a nil image URL / persisted index 0 sentinel.
+• The Images table inserts a dedicated BLACK row at Set_Table.swift:120 and 586-648.
+• Real images use persisted indices starting at 1; index 0 means no image.
+• Screen configurations store a nil background image name for this state; backups do not require a BLACK asset.
+• The image preview panel intentionally renders black when its URL is nil: Set_ImgPanel.swift:21-40.
 
-Using ESP submenu title:
-Line 6230:
-.font(.title2.weight(.semibold))
+Safe removal: remove only the table’s BLACK row and its navigation entry points, while retaining nil/index-0 compatibility for existing screens. Existing black/no-image screens should remain black, with no green file row selected. Do not renumber real-image persistence.
 
-Menu entry labels:
-Lines 6195-6197:
-Text(title)
-.foregroundStyle(.white)
+D. Image controls
 
-No explicit font is applied to menu labels, so they use SwiftUI’s inherited default Body text style.
+VERIFIED:
+• Controls are always shown and mostly active, regardless of active table.
+• Reset selects nil/BLACK; Random includes nil; Previous can reach nil; Next starts with first real image.
+• Controls preview only; they do not apply an image.
+• Control actions update image scroll state, but table single-tap preview does not consistently do so.
 
-Chevron:
-Lines 6200-6202:
-.font(.caption.weight(.semibold))
+E. Recommended restoration approach
 
-Main SF Symbol:
-Lines 6191-6193:
-No explicit font; it uses the inherited/default symbol sizing inside a fixed 24-point-wide frame.
+Use parent-owned, session-lifetime per-table selection IDs, preferably stable file paths, passed into Settings. Retain existing persisted applied image/sound/PDF state. On category activation, validate the stored path against current files, then set that category’s existing scroll-position binding after its rows exist.
 
-Current size behavior
+For Images, on Settings return set preview equal to the applied image, clearing yellow preview; scroll to the applied green row. If none is applied, retain nil state and scroll to the top without applying an image.
 
-Both iPhone and iPad use the same SwiftUI semantic font declarations:
+F. Risks
 
-• Section title: Title 2, approximately 22 points at the default Dynamic Type size.
-• Menu row label: Body, approximately 17 points at the default Dynamic Type size.
-• Chevron: Caption, approximately 12 points at the default Dynamic Type size.
+• Removing BLACK must not convert legacy nil backgrounds to a real image.
+• Deleted/replaced files require path validation and selection clearing.
+• Avoid using array indices; imports, sorting, and deletion make them unstable.
+• Scroll restoration should use the existing iOS/iPadOS 17 scrollPosition path IDs, not timing delays.
 
-There is no Help-menu device-specific font conditional, fixed font size, Dynamic Type environment override, minimum-scale factor, or custom scaling modifier.
+G. Recommended stages
 
-Explanation
+1. Remove only the BLACK table row; retain nil persistence compatibility.
+2. Introduce independent parent-owned selection IDs; stop clearing Templates on category changes.
+3. Bind highlights and scroll restoration to those IDs.
+4. Gate image controls by Images mode; make Back select the first real image, with no automatic apply.
 
-The source does not intentionally make iPhone menu text larger. iPhone and iPad receive the same semantic font styles. The perceived difference is therefore caused by physical display size, available landscape space, device display scaling, or different user Dynamic Type settings—not an iPhone-specific Help font rule.
+H. Required decision
 
-Layout findings
-
-Both menus use the same layout:
-
-• Title-to-scroll spacing: 20 points.
-• Row vertical padding: 14 points.
-• Row icon frame width: 24 points.
-• Outer padding: default 16 points.
-
-No iPhone-specific row height, icon size, or menu spacing exists. The same ESPHelpContentsRow is used by both the six-item root Contents menu and the five-item Using ESP submenu.
-
-Recommended minimal implementation
-
-Use semantic styles, preserving Dynamic Type:
-
-• iPad: retain Title 2 for headings and Body for rows.
-• iPhone: use Title 3 for headings and Subheadline for rows.
-
-This reduces headings from approximately 22 to 20 points and row labels from approximately 17 to 15 points, while continuing to respond to the user’s Dynamic Type setting.
-
-Apply the row font at the shared ESPHelpContentsRow HStack level so the primary SF Symbol scales consistently with the text. Keep the chevron’s existing Caption font.
-
-No row-spacing or icon-frame adjustment should be necessary initially. Reducing row text modestly lowers natural row height while the existing 14-point vertical padding preserves a comfortable touch target.
-
-Affected menus
-
-• Main Help Contents
-• Using ESP submenu
-
-Quick Help page toolbars, manual presentation, navigation, HTML, CSS, and iPad appearance can remain unchanged.
-
-No files were modified, built, or launched.
+When no image is applied, should Images show no highlighted row (recommended), or should it visually select the first real image without applying it?

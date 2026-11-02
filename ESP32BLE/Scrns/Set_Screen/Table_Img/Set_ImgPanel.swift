@@ -8,8 +8,8 @@ struct SettingsImagePreviewPanel: View {
     @State private var previewImage: UIImage?
     @State private var previewRequestID = ""
 
-    // MARK: - BM:🅱 BLACK PREVIEW LABEL FONT SIZE
-    // Controls the centered two-line BLACK preview label.
+    // MARK: - BM:🅱️ NO-IMAGE PREVIEW LABEL FONT SIZE
+    // Controls the centered no-image preview label.
     private let blackPreviewLabelFont: Font = .system(size: 16, weight: .medium)
 
     var body: some View {
@@ -30,13 +30,10 @@ struct SettingsImagePreviewPanel: View {
                 }
 
                 if imageURL == nil {
-                    VStack(spacing: 2) {
-                        Text("black")
-                        Text("background")
-                    }
-                    .font(blackPreviewLabelFont)
-                    .foregroundStyle(.white)
-                    .multilineTextAlignment(.center)
+                    Text("No image selected")
+                        .font(blackPreviewLabelFont)
+                        .foregroundStyle(.white)
+                        .multilineTextAlignment(.center)
                 }
             }
             .frame(width: previewWidth, height: previewHeight)
