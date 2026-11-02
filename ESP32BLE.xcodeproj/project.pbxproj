@@ -139,7 +139,6 @@
 		1DF5EE00309315F4003E5ACF /* Exceptions for "Help" folder in "ESP32BLE" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				"connect-mac.html",
 				css/help.css,
 			);
 			target = 1D590E282F611FB700E430E0 /* ESP32BLE */;

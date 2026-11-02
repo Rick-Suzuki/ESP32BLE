@@ -20,6 +20,7 @@ from urllib.parse import urlparse
 
 
 HELP_DIRECTORY = Path(__file__).resolve().parent
+SOURCE_DIRECTORY = HELP_DIRECTORY / "html"
 OUTPUT_FILENAME = "complete-user-manual.html"
 CONTENTS_ID = "contents"
 
@@ -200,7 +201,13 @@ class MainContentExtractor(HTMLParser):
         if tag == "img":
             source = dict(attrs).get("src")
             if source:
-                self.image_sources.append(source)
+                self.image_sources.append(resolve_image_source(source, self.source_path))
+                attrs = [
+                    (name, resolve_image_source(value, self.source_path) if name == "src" and value else value)
+                    for name, value in attrs
+                ]
+                self.content.append(render_start_tag(tag, attrs))
+                return
         self.content.append(self.get_starttag_text())
 
     def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
@@ -208,7 +215,13 @@ class MainContentExtractor(HTMLParser):
             if tag == "img":
                 source = dict(attrs).get("src")
                 if source:
-                    self.image_sources.append(source)
+                    self.image_sources.append(resolve_image_source(source, self.source_path))
+                    attrs = [
+                        (name, resolve_image_source(value, self.source_path) if name == "src" and value else value)
+                        for name, value in attrs
+                    ]
+                    self.content.append(render_start_tag(tag, attrs, self_closing=True))
+                    return
             self.content.append(self.get_starttag_text())
 
     def handle_endtag(self, tag: str) -> None:
@@ -292,17 +305,36 @@ def page_identifier(filename: str) -> str:
     return f"page-{Path(filename).stem}"
 
 
-def validate_image_source(source: str, source_path: Path) -> None:
+def render_start_tag(
+    tag: str,
+    attrs: list[tuple[str, str | None]],
+    self_closing: bool = False,
+) -> str:
+    attributes = "".join(
+        f" {name}" if value is None else f' {name}="{html.escape(value, quote=True)}"'
+        for name, value in attrs
+    )
+    return f"<{tag}{attributes}{' /' if self_closing else ''}>"
+
+
+def resolve_image_source(source: str, source_path: Path) -> str:
     parsed = urlparse(source)
     if parsed.scheme or parsed.netloc or source.startswith("/"):
         raise ValueError(f"External or absolute image reference in {source_path.name}: {source}")
-    image_path = (HELP_DIRECTORY / parsed.path).resolve()
+    image_path = (source_path.parent / parsed.path).resolve()
     try:
-        image_path.relative_to(HELP_DIRECTORY.resolve())
+        relative_path = image_path.relative_to(HELP_DIRECTORY.resolve())
     except ValueError as error:
         raise ValueError(f"Image escapes Help directory in {source_path.name}: {source}") from error
     if not image_path.is_file():
         raise ValueError(f"Missing local image in {source_path.name}: {source}")
+
+    resolved_source = relative_path.as_posix()
+    if parsed.query:
+        resolved_source += f"?{parsed.query}"
+    if parsed.fragment:
+        resolved_source += f"#{parsed.fragment}"
+    return resolved_source
 
 
 def extract_page(
@@ -310,7 +342,7 @@ def extract_page(
     heading_level: int,
     heading_number: str,
 ) -> ExtractedPage:
-    source_path = HELP_DIRECTORY / definition.filename
+    source_path = SOURCE_DIRECTORY / definition.filename
     if not source_path.is_file():
         raise ValueError(f"Missing source Help page: {definition.filename}")
     identifier = page_identifier(definition.filename)
@@ -318,8 +350,6 @@ def extract_page(
     parser.feed(source_path.read_text(encoding="utf-8"))
     parser.close()
     content, title, image_sources = parser.result()
-    for source in image_sources:
-        validate_image_source(source, source_path)
     return ExtractedPage(definition.filename, title, identifier, heading_number, content)
 
 

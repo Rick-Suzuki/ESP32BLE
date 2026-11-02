@@ -7078,8 +7078,15 @@ private struct ESPHelpHTMLView: UIViewRepresentable {
 
         let directoryURL = resourceURL
             .appendingPathComponent("Help", isDirectory: true)
-        let pageURL = directoryURL
-            .appendingPathComponent(pageFilename, isDirectory: false)
+        let pageURL: URL
+        if pageFilename == "complete-user-manual.html" {
+            pageURL = directoryURL
+                .appendingPathComponent(pageFilename, isDirectory: false)
+        } else {
+            pageURL = directoryURL
+                .appendingPathComponent("html", isDirectory: true)
+                .appendingPathComponent(pageFilename, isDirectory: false)
+        }
 
         guard FileManager.default.fileExists(atPath: directoryURL.path),
               FileManager.default.fileExists(atPath: pageURL.path) else {
