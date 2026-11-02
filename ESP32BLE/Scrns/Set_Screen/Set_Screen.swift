@@ -308,6 +308,8 @@ struct SettingsScreen: View {
     let documentFiles: [URL]
     let documentDirectorySnapshot: [URL]
     let selectedDocumentName: String
+    @Binding var selectedTextSelectionPath: String?
+    @Binding var selectedTemplateSelectionPath: String?
     let refreshDocumentFiles: () -> Void
     let refreshDocumentFilesAfterDeletingAllData: () -> Void
     let loadFunctionKeys: (URL) -> Void
@@ -384,9 +386,7 @@ struct SettingsScreen: View {
     @State private var previewImageURL: URL?
     @State private var isImagePreviewRestorePending = false
     @State private var backgroundChangeFeedbackID = UUID()
-    @State private var selectedTextFileName = ""
     @State private var templateURLs: [URL] = []
-    @State private var selectedTemplateURL: URL?
     @State private var templateDescriptionState: TemplateDescriptionState?
     @State private var pendingTemplateApplication: PendingTemplateApplication?
     @State private var isTemplateApplicationAlertPresented = false
@@ -416,6 +416,7 @@ struct SettingsScreen: View {
                    !availableImageURLs.contains(previewImageURL) {
                     self.previewImageURL = nil
                 }
+                validateRememberedTableSelections()
                 restorePendingImagePreviewIfPossible()
             }
     }
@@ -723,9 +724,6 @@ struct SettingsScreen: View {
             cancelNameEditing()
         }
         .onChange(of: listModeRawValue) {
-            if listMode != .templates {
-                clearTemplateSelection()
-            }
             if saveCurrentDocumentText().allowsDocumentTransition {
                 loadSelectedDocumentText()
             }
@@ -1733,7 +1731,7 @@ struct SettingsScreen: View {
             documentFiles: availableDocumentURLs,
             loadedDocumentURL: selectedDocumentFileURL,
             textURLs: availableTextURLs,
-            selectedTextFileName: selectedTextFileName,
+            selectedTextSelectionPath: $selectedTextSelectionPath,
             imageURLs: availableImageURLs,
             previewedImageURL: previewImageURL,
             appliedImageURL: selectedImageURL,
@@ -1825,7 +1823,7 @@ struct SettingsScreen: View {
     }
 
     private func selectTemplateForDescription(_ templateURL: URL) {
-        selectedTemplateURL = templateURL
+        selectedTemplateSelectionPath = templateURL.path
 
         do {
             let configuration = try loadTemplateConfiguration(for: templateURL)
@@ -1842,7 +1840,7 @@ struct SettingsScreen: View {
     }
 
     private func clearTemplateSelection() {
-        selectedTemplateURL = nil
+        selectedTemplateSelectionPath = nil
         templateDescriptionState = nil
     }
 
@@ -2239,7 +2237,7 @@ struct SettingsScreen: View {
     }
 
     private func loadTextFile(_ fileURL: URL) {
-        selectedTextFileName = fileURL.lastPathComponent
+        selectedTextSelectionPath = fileURL.path
         isLoadingDocumentText = true
         defer { isLoadingDocumentText = false }
 
@@ -2809,11 +2807,28 @@ struct SettingsScreen: View {
     }
 
     private var selectedTextFileURL: URL? {
-        guard !selectedTextFileName.isEmpty else {
+        guard let selectedTextSelectionPath else {
             return availableTextURLs.first
         }
 
-        return availableTextURLs.first(where: { $0.lastPathComponent == selectedTextFileName }) ?? availableTextURLs.first
+        return availableTextURLs.first(where: { $0.path == selectedTextSelectionPath }) ?? availableTextURLs.first
+    }
+
+    private var selectedTextFileName: String {
+        guard let selectedTextSelectionPath,
+              let selectedTextURL = availableTextURLs.first(where: { $0.path == selectedTextSelectionPath }) else {
+            return ""
+        }
+
+        return selectedTextURL.lastPathComponent
+    }
+
+    private var selectedTemplateURL: URL? {
+        guard let selectedTemplateSelectionPath else {
+            return nil
+        }
+
+        return templateURLs.first(where: { $0.path == selectedTemplateSelectionPath })
     }
 
     private var availableDocumentURLs: [URL] {
@@ -2904,15 +2919,35 @@ struct SettingsScreen: View {
         let refreshedTemplateURLs = discoverTemplateDocumentURLs(in: documentsDirectoryURL)
         templateURLs = refreshedTemplateURLs
 
-        guard let selectedTemplateURL else { return }
-        guard refreshedTemplateURLs.contains(where: {
-            $0.standardizedFileURL == selectedTemplateURL.standardizedFileURL
+        guard let selectedTemplateSelectionPath else {
+            templateDescriptionState = nil
+            return
+        }
+        guard let selectedTemplateURL = refreshedTemplateURLs.first(where: {
+            $0.path == selectedTemplateSelectionPath
         }) else {
             clearTemplateSelection()
             return
         }
 
         selectTemplateForDescription(selectedTemplateURL)
+    }
+
+    private func validateRememberedTableSelections() {
+        if let selectedTextSelectionPath,
+           !availableTextURLs.contains(where: { $0.path == selectedTextSelectionPath }) {
+            self.selectedTextSelectionPath = nil
+        }
+
+        if !selectedSoundPath.isEmpty, selectedSoundURL == nil {
+            persistSelectedSound(nil)
+        }
+
+        if !selectedPDFPath.isEmpty, selectedPDFURL == nil {
+            persistSelectedPDF(nil)
+        }
+
+        refreshTemplateFiles()
     }
 
     private var availableAllFileURLs: [URL] {
@@ -3502,14 +3537,9 @@ struct SettingsScreen: View {
         }
 
         refreshDocumentFiles()
-        let refreshedSoundURLs = availableSoundURLs
-
         if let previousSelectedSoundURL,
-           previousSelectedSoundURL.lastPathComponent == soundURL.lastPathComponent {
-            persistSelectedSound(refreshedSoundURLs.first)
-        } else if let previousSelectedSoundURL,
-                  let refreshedSoundIndex = refreshedSoundURLs.firstIndex(where: { $0.lastPathComponent == previousSelectedSoundURL.lastPathComponent }) {
-            persistSelectedSound(refreshedSoundURLs[refreshedSoundIndex])
+           previousSelectedSoundURL.path == soundURL.path {
+            persistSelectedSound(nil)
         }
     }
 
@@ -3524,18 +3554,9 @@ struct SettingsScreen: View {
         }
 
         refreshDocumentFiles()
-        let refreshedPDFURLs = availablePDFURLs
-
         if let previousSelectedPDFURL,
-           previousSelectedPDFURL.lastPathComponent == pdfURL.lastPathComponent {
-            if let replacementURL = refreshedPDFURLs.first {
-                persistSelectedPDF(replacementURL)
-            } else {
-                persistSelectedPDF(nil)
-            }
-        } else if let previousSelectedPDFURL,
-                  let refreshedPDFIndex = refreshedPDFURLs.firstIndex(where: { $0.lastPathComponent == previousSelectedPDFURL.lastPathComponent }) {
-            persistSelectedPDF(refreshedPDFURLs[refreshedPDFIndex])
+           previousSelectedPDFURL.path == pdfURL.path {
+            persistSelectedPDF(nil)
         }
     }
 
@@ -3549,8 +3570,8 @@ struct SettingsScreen: View {
 
         markImportedContentChanged()
 
-        if selectedTextFileName == textURL.lastPathComponent {
-            selectedTextFileName = availableTextURLs.first?.lastPathComponent ?? ""
+        if selectedTextSelectionPath == textURL.path {
+            selectedTextSelectionPath = nil
         }
 
         if loadedDocumentName == textURL.lastPathComponent {
@@ -3595,7 +3616,7 @@ struct SettingsScreen: View {
         savedDocumentEditorText = ""
         loadedDocumentName = ""
         documentNameDraft = ""
-        selectedTextFileName = ""
+        selectedTextSelectionPath = nil
         isLoadingDocumentText = false
 
         persistSelectedImage(nil)

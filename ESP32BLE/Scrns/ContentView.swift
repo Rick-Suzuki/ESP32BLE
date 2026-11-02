@@ -211,6 +211,8 @@ struct ContentView: View {
     @AppStorage("documentFontSizesData") private var documentFontSizesData = ""
     @State private var documentFontSizeRefreshToken = 0
     @State private var settingsBLEText = ""
+    @State private var settingsSelectedTextPath: String?
+    @State private var settingsSelectedTemplatePath: String?
     @State private var isKeyboardScreenPresented = false
     @State private var isSettingsScreenPresented = true
     @State private var didPresentInitialSettingsScreen = false
@@ -2906,6 +2908,8 @@ struct ContentView: View {
             documentFiles: documentFiles,
             documentDirectorySnapshot: documentDirectorySnapshot,
             selectedDocumentName: selectedDocumentName,
+            selectedTextSelectionPath: $settingsSelectedTextPath,
+            selectedTemplateSelectionPath: $settingsSelectedTemplatePath,
             refreshDocumentFiles: refreshDocumentFiles,
             refreshDocumentFilesAfterDeletingAllData: refreshDocumentFilesAfterDeletingAllData,
             loadFunctionKeys: selectDocument,

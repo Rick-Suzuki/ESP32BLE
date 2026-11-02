@@ -16,7 +16,7 @@ struct SettingsDocumentTableSection: View {
     let documentFiles: [URL]
     let loadedDocumentURL: URL?
     let textURLs: [URL]
-    let selectedTextFileName: String
+    @Binding var selectedTextSelectionPath: String?
     let imageURLs: [URL]
     let previewedImageURL: URL?
     let appliedImageURL: URL?
@@ -63,9 +63,6 @@ struct SettingsDocumentTableSection: View {
     @State private var tableFeedbackColor: Color = .green
     @State private var tableFeedbackTask: Task<Void, Never>?
     @State private var temporaryScreenSelectionPath: String?
-    @State private var temporaryTextSelectionPath: String?
-    @State private var temporarySoundSelectionPath: String?
-    @State private var temporaryPDFSelectionPath: String?
 
     // MARK: - BM:🅱️ IPHONE FILENAME FONT SIZE — Change 15 below to adjust all seven filename categories; leave iPad unchanged.
     private var tableRowFont: Font? {
@@ -226,33 +223,16 @@ struct SettingsDocumentTableSection: View {
             self.temporaryScreenSelectionPath = nil
         }
         .onChange(of: textURLs.map(\.path)) { _, textPaths in
-            guard let temporaryTextSelectionPath,
-                  !textPaths.contains(temporaryTextSelectionPath) else {
+            guard let selectedTextSelectionPath,
+                  !textPaths.contains(selectedTextSelectionPath) else {
                 return
             }
-            self.temporaryTextSelectionPath = nil
-        }
-        .onChange(of: soundURLs.map(\.path)) { _, soundPaths in
-            guard let temporarySoundSelectionPath,
-                  !soundPaths.contains(temporarySoundSelectionPath) else {
-                return
-            }
-            self.temporarySoundSelectionPath = nil
-        }
-        .onChange(of: pdfURLs.map(\.path)) { _, pdfPaths in
-            guard let temporaryPDFSelectionPath,
-                  !pdfPaths.contains(temporaryPDFSelectionPath) else {
-                return
-            }
-            self.temporaryPDFSelectionPath = nil
+            self.selectedTextSelectionPath = nil
         }
         .onDisappear {
             refreshConfirmationTask?.cancel()
             tableFeedbackTask?.cancel()
             temporaryScreenSelectionPath = nil
-            temporaryTextSelectionPath = nil
-            temporarySoundSelectionPath = nil
-            temporaryPDFSelectionPath = nil
         }
     }
 
@@ -459,21 +439,20 @@ struct SettingsDocumentTableSection: View {
     }
 
     private func textRow(for textURL: URL) -> some View {
-        let isTemporarilySelected = temporaryTextSelectionPath == textURL.path
+        let isSelected = selectedTextSelectionPath == textURL.path
 
         return Button {
             ButtonClickFeedback.playIfEnabled()
             handleFileSelection(textURL) {
                 loadTextFile(textURL)
             }
-            temporaryTextSelectionPath = textURL.path
             showTableFeedback("copied name", color: .yellow)
         } label: {
             HStack {
                 Text(textURL.lastPathComponent)
                     .font(tableRowFont)
-                    .fontWeight(isTemporarilySelected ? .bold : .regular)
-                    .foregroundStyle(isTemporarilySelected ? Color.yellow : .white)
+                    .fontWeight(isSelected ? .bold : .regular)
+                    .foregroundStyle(isSelected ? Color.yellow : .white)
                     .multilineTextAlignment(.leading)
                     .lineLimit(1)
                     .truncationMode(.tail)
@@ -582,21 +561,20 @@ struct SettingsDocumentTableSection: View {
     }
 
     private func soundRow(for soundURL: URL) -> some View {
-        let isTemporarilySelected = temporarySoundSelectionPath == soundURL.path
+        let isSelected = selectedSoundURL?.path == soundURL.path
 
         return Button {
             ButtonClickFeedback.playIfEnabled()
             handleFileSelection(soundURL) {
                 selectSound(soundURL)
             }
-            temporarySoundSelectionPath = soundURL.path
             showTableFeedback("copied name", color: .yellow)
         } label: {
             HStack {
                 Text(soundURL.lastPathComponent)
                     .font(tableRowFont)
-                    .fontWeight(isTemporarilySelected ? .bold : .regular)
-                    .foregroundStyle(isTemporarilySelected ? Color.yellow : .white)
+                    .fontWeight(isSelected ? .bold : .regular)
+                    .foregroundStyle(isSelected ? Color.yellow : .white)
                     .multilineTextAlignment(.leading)
                     .lineLimit(1)
                     .truncationMode(.tail)
@@ -630,21 +608,20 @@ struct SettingsDocumentTableSection: View {
     }
 
     private func pdfRow(for pdfURL: URL) -> some View {
-        let isTemporarilySelected = temporaryPDFSelectionPath == pdfURL.path
+        let isSelected = selectedPDFURL?.path == pdfURL.path
 
         return Button {
             ButtonClickFeedback.playIfEnabled()
             handleFileSelection(pdfURL) {
                 selectPDF(pdfURL)
             }
-            temporaryPDFSelectionPath = pdfURL.path
             showTableFeedback("copied name", color: .yellow)
         } label: {
             HStack {
                 Text(pdfURL.lastPathComponent)
                     .font(tableRowFont)
-                    .fontWeight(isTemporarilySelected ? .bold : .regular)
-                    .foregroundStyle(isTemporarilySelected ? Color.yellow : .white)
+                    .fontWeight(isSelected ? .bold : .regular)
+                    .foregroundStyle(isSelected ? Color.yellow : .white)
                     .multilineTextAlignment(.leading)
                     .lineLimit(1)
                     .truncationMode(.tail)
@@ -815,23 +792,14 @@ struct SettingsDocumentTableSection: View {
     }
 
     private func handleTextFileDeletion(_ textURL: URL) {
-        if temporaryTextSelectionPath == textURL.path {
-            temporaryTextSelectionPath = nil
-        }
         deleteTextFile(textURL)
     }
 
     private func handleSoundDeletion(_ soundURL: URL) {
-        if temporarySoundSelectionPath == soundURL.path {
-            temporarySoundSelectionPath = nil
-        }
         deleteSound(soundURL)
     }
 
     private func handlePDFDeletion(_ pdfURL: URL) {
-        if temporaryPDFSelectionPath == pdfURL.path {
-            temporaryPDFSelectionPath = nil
-        }
         deletePDF(pdfURL)
     }
 }
