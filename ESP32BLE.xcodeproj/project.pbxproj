@@ -135,22 +135,9 @@
 		1DF5EE0330933A62003E5ACF /* codex 1.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "codex 1.txt"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
-/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		1DF5EE00309315F4003E5ACF /* Exceptions for "Help" folder in "ESP32BLE" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				css/help.css,
-			);
-			target = 1D590E282F611FB700E430E0 /* ESP32BLE */;
-		};
-/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
-
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		1DF5EDFD30931546003E5ACF /* Help */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				1DF5EE00309315F4003E5ACF /* Exceptions for "Help" folder in "ESP32BLE" target */,
-			);
 			path = Help;
 			sourceTree = "<group>";
 		};
@@ -394,9 +381,6 @@
 			);
 			dependencies = (
 			);
-			fileSystemSynchronizedGroups = (
-				1DF5EDFD30931546003E5ACF /* Help */,
-			);
 			name = ESP32BLE;
 			packageProductDependencies = (
 			);
@@ -461,14 +445,14 @@
 			);
 			inputPaths = (
 				"$(SRCROOT)/Help",
-				"$(SRCROOT)/Help/connect-mac.html",
+				"$(SRCROOT)/Help/html/connect-mac.html",
 				"$(SRCROOT)/Help/css/help.css",
 			);
 			outputFileListPaths = (
 			);
 			outputPaths = (
 				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/Help/",
-				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/Help/connect-mac.html",
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/Help/html/connect-mac.html",
 				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/Help/css/help.css",
 			);
 			runOnlyForDeploymentPostprocessing = 0;

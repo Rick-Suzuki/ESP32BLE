@@ -45,6 +45,12 @@ class ChapterDefinition:
     sections: tuple[SectionDefinition, ...] = ()
 
 
+@dataclass(frozen=True)
+class ImageReference:
+    source: str
+    allows_missing: bool
+
+
 def pages(*filenames: str) -> tuple[PageDefinition, ...]:
     return tuple(PageDefinition(filename) for filename in filenames)
 
@@ -175,7 +181,7 @@ class MainContentExtractor(HTMLParser):
         self.heading_prefix_pending = False
         self.heading_text: list[str] = []
         self.content: list[str] = []
-        self.image_sources: list[str] = []
+        self.image_sources: list[ImageReference] = []
 
     @property
     def title(self) -> str:
@@ -199,9 +205,15 @@ class MainContentExtractor(HTMLParser):
             self.content.append(f'<h{self.heading_level} id="{self.page_id}" class="manual-page-title">')
             return
         if tag == "img":
-            source = dict(attrs).get("src")
+            attributes_by_name = dict(attrs)
+            source = attributes_by_name.get("src")
             if source:
-                self.image_sources.append(resolve_image_source(source, self.source_path))
+                self.image_sources.append(
+                    ImageReference(
+                        resolve_image_source(source, self.source_path),
+                        attributes_by_name.get("data-planned-image") == "true",
+                    )
+                )
                 attrs = [
                     (name, resolve_image_source(value, self.source_path) if name == "src" and value else value)
                     for name, value in attrs
@@ -213,9 +225,15 @@ class MainContentExtractor(HTMLParser):
     def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         if self.main_depth:
             if tag == "img":
-                source = dict(attrs).get("src")
+                attributes_by_name = dict(attrs)
+                source = attributes_by_name.get("src")
                 if source:
-                    self.image_sources.append(resolve_image_source(source, self.source_path))
+                    self.image_sources.append(
+                        ImageReference(
+                            resolve_image_source(source, self.source_path),
+                            attributes_by_name.get("data-planned-image") == "true",
+                        )
+                    )
                     attrs = [
                         (name, resolve_image_source(value, self.source_path) if name == "src" and value else value)
                         for name, value in attrs
@@ -273,7 +291,7 @@ class MainContentExtractor(HTMLParser):
         if self.main_depth:
             self.content.append(f"<?{data}>")
 
-    def result(self) -> tuple[str, str, tuple[str, ...]]:
+    def result(self) -> tuple[str, str, tuple[ImageReference, ...]]:
         if self.main_depth:
             raise ValueError(f"Unclosed <main> in {self.source_path.name}")
         if self.main_count != 1:
@@ -326,15 +344,33 @@ def resolve_image_source(source: str, source_path: Path) -> str:
         relative_path = image_path.relative_to(HELP_DIRECTORY.resolve())
     except ValueError as error:
         raise ValueError(f"Image escapes Help directory in {source_path.name}: {source}") from error
-    if not image_path.is_file():
-        raise ValueError(f"Missing local image in {source_path.name}: {source}")
-
     resolved_source = relative_path.as_posix()
     if parsed.query:
         resolved_source += f"?{parsed.query}"
     if parsed.fragment:
         resolved_source += f"#{parsed.fragment}"
     return resolved_source
+
+
+def validate_image_references(
+    image_references: tuple[ImageReference, ...],
+    source_path: Path,
+) -> None:
+    reported_missing: set[str] = set()
+    for reference in image_references:
+        image_path = (HELP_DIRECTORY / urlparse(reference.source).path).resolve()
+        if image_path.is_file():
+            continue
+        if not reference.allows_missing:
+            raise ValueError(f"Missing local image in {source_path.name}: {reference.source}")
+        if reference.source in reported_missing:
+            continue
+        reported_missing.add(reference.source)
+        print(
+            f"Manual generation warning: Missing planned image in {source_path.name}: "
+            f"{Path(urlparse(reference.source).path).name}",
+            file=sys.stderr,
+        )
 
 
 def extract_page(
@@ -350,6 +386,7 @@ def extract_page(
     parser.feed(source_path.read_text(encoding="utf-8"))
     parser.close()
     content, title, image_sources = parser.result()
+    validate_image_references(image_sources, source_path)
     return ExtractedPage(definition.filename, title, identifier, heading_number, content)
 
 
@@ -482,6 +519,7 @@ def render_manual() -> str:
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="css/help.css">
+    <script defer src="js/help-images.js"></script>
     <title>ESP User Manual</title>
     <style>
         .user-manual {{ background: #ffffff; color: #1c1c1e; }}

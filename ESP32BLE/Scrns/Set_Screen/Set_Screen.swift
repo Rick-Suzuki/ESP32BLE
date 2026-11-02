@@ -6158,6 +6158,30 @@ private struct ESPHelpPageLocation: Hashable {
     let pageIndex: Int
 }
 
+// MARK: - BM:🅱️
+// ======================================
+// ESP HELP — EXTERNAL LINKS
+// EDIT THESE URLS HERE
+// ======================================
+//
+// Online Full User Manual
+// TODO: Insert published PDF URL.
+//
+// ESP home
+// https://mindtn.com/esp/
+//
+// Company home
+// https://mindtn.com/
+//
+// ======================================
+// END ESP HELP — EXTERNAL LINKS
+// ======================================
+private enum ESPHelpExternalLinks {
+    static let onlineFullUserManual: URL? = nil
+    static let espHome = URL(string: "https://mindtn.com/esp/")
+    static let companyHome = URL(string: "https://mindtn.com/")
+}
+
 private struct ESPHelpContentsView: View {
     let recommendedDestination: ESPHelpDestination?
     let onClose: () -> Void
@@ -6197,19 +6221,19 @@ private struct ESPHelpContentsView: View {
                         if let onRequestDedicatedManual {
                             Button(action: onRequestDedicatedManual) {
                                 ESPHelpContentsRow(
-                                    title: "Complete User Manual",
+                                    title: "ESP Help (flat)",
                                     symbolName: "book",
                                     iconColor: .primary,
                                     isRecommended: recommendedDestination == .completeUserManual
                                 )
                             }
                             .buttonStyle(.plain)
-                            .accessibilityLabel("Complete User Manual")
+                            .accessibilityLabel("ESP Help (flat)")
                             .id(ESPHelpDestination.completeUserManual)
                         } else {
                             NavigationLink(value: ESPHelpDestination.completeUserManual) {
                                 ESPHelpContentsRow(
-                                    title: "Complete User Manual",
+                                    title: "ESP Help (flat)",
                                     symbolName: "book",
                                     iconColor: .primary,
                                     isRecommended: recommendedDestination == .completeUserManual
@@ -6217,6 +6241,27 @@ private struct ESPHelpContentsView: View {
                             }
                             .id(ESPHelpDestination.completeUserManual)
                         }
+
+                        Divider()
+
+                        ESPHelpExternalLink(
+                            title: "Online Full User Manual",
+                            url: ESPHelpExternalLinks.onlineFullUserManual
+                        )
+
+                        Divider()
+
+                        ESPHelpExternalLink(
+                            title: "ESP home",
+                            url: ESPHelpExternalLinks.espHome
+                        )
+
+                        Divider()
+
+                        ESPHelpExternalLink(
+                            title: "Company home",
+                            url: ESPHelpExternalLinks.companyHome
+                        )
                     }
                 }
                 .onAppear {
@@ -6247,6 +6292,40 @@ private struct ESPHelpContentsView: View {
     private func scrollToRecommendation(using proxy: ScrollViewProxy) {
         guard let recommendedDestination else { return }
         proxy.scrollTo(recommendedDestination)
+    }
+}
+
+private struct ESPHelpExternalLink: View {
+    let title: String
+    let url: URL?
+    @Environment(\.openURL) private var openURL
+
+    var body: some View {
+        Button {
+            guard let url else { return }
+            openURL(url)
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "arrow.up.right")
+                    .frame(width: 24)
+
+                Text(title)
+                    .underline()
+
+                Spacer()
+            }
+            .foregroundStyle(.cyan)
+            .font(isPad ? .body : .subheadline)
+            .padding(.vertical, 14)
+            .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(.isLink)
+        .accessibilityHint(
+            url == nil
+                ? "Unavailable until a URL is configured."
+                : "Opens in your default web browser."
+        )
     }
 }
 

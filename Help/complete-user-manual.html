@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="css/help.css">
+    <script defer src="js/help-images.js"></script>
     <title>ESP User Manual</title>
     <style>
         .user-manual { background: #ffffff; color: #1c1c1e; }
@@ -128,7 +129,7 @@
     <section class="visual-help" aria-labelledby="connect-mac-introduction">
                 <h3 id="page-connect-mac" class="manual-page-title">2.1. Overview</h3>
                 <figure class="visual-help-illustration">
-                    <img class="help-image help-image--diagram" src="images/connect-mac-network.svg" alt="A Mac running ESPMacHelper and an iPhone or iPad running ESP connected over a local network.">
+                    <img class="help-image help-image--diagram" src="images/1_Connect_to_Mac/connect-mac-network.svg" alt="A Mac running ESPMacHelper and an iPhone or iPad running ESP connected over a local network.">
                 </figure>
                 <p class="visual-help-summary">ESP connects to ESPMacHelper over your local network.</p>
             </section>
@@ -143,7 +144,7 @@
                     <li>Click the icon and choose “Show Status Window”.</li>
                 </ol>
                 <figure class="help-setup-screenshot">
-                    <img class="help-image help-image--screenshot" src="images/espmac-helper-menu.png" alt="The cyan E icon in the Mac menu bar with the ESPMacHelper menu open, showing Show Status Window.">
+                    <img class="help-image help-image--screenshot" src="images/1_Connect_to_Mac/espmac-helper-menu.png" alt="The cyan E icon in the Mac menu bar with the ESPMacHelper menu open, showing Show Status Window.">
                 </figure>
                 <p class="help-setup-note">ESPMacHelper starts automatically when opened.</p>
             </section>
@@ -154,8 +155,8 @@
                 <p>ESPMacHelper needs Accessibility permission to send keyboard commands to your Mac.</p>
                 <p>Open System Settings, find Accessibility, and enable ESPMacHelper.</p>
                 <p>Open Show Status Window and check that Accessibility says Allowed.</p>
-                <figure class="help-placeholder">
-                    <figcaption>macOS Accessibility Settings</figcaption>
+                <figure class="help-setup-screenshot">
+                    <img class="help-image help-image--screenshot" src="images/1_Connect_to_Mac/espmac-helper-accessibility.png" alt="macOS Accessibility settings for ESPMacHelper." data-planned-image="true">
                 </figure>
             </section>
     </article>
@@ -165,8 +166,8 @@
                 <p>Open ESP on your iPhone or iPad.</p>
                 <p>Connect to your Mac using ESP's Mac connection controls.</p>
                 <p>Complete pairing if requested.</p>
-                <figure class="help-placeholder">
-                    <figcaption>ESP Mac Connection Screen</figcaption>
+                <figure class="help-setup-screenshot">
+                    <img class="help-image help-image--screenshot" src="images/1_Connect_to_Mac/esp-mac-connection.png" alt="ESP Mac connection screen." data-planned-image="true">
                 </figure>
             </section>
     </article>
@@ -177,8 +178,8 @@
                 <p>Press the Set &amp; Test button.</p>
                 <p>Check that the following text appears in your editor:</p>
                 <p class="help-test-string"><code>Hello World! ABC abc 123 456 aa BB 11 !! ?? -- ..</code></p>
-                <figure class="help-placeholder">
-                    <figcaption>ESP Keyboard Test</figcaption>
+                <figure class="help-setup-screenshot">
+                    <img class="help-image help-image--screenshot" src="images/1_Connect_to_Mac/esp-keyboard-test.png" alt="ESP keyboard test." data-planned-image="true">
                 </figure>
             </section>
     </article>
@@ -190,8 +191,8 @@
                 <h3 id="page-configure-esp32ble-what-you-need" class="manual-page-title">3.1. Overview</h3>
                 <p>Prepare your ESP32-S3 board and the equipment required for your setup.</p>
                 <p>Instructions coming soon.</p>
-                <figure class="help-placeholder">
-                    <figcaption>ESP32BLE Setup Equipment</figcaption>
+                <figure class="help-setup-screenshot">
+                    <img class="help-image help-image--diagram" src="images/2_Configure_ESP32/esp32ble-setup-equipment.png" alt="ESP32BLE setup equipment." data-planned-image="true">
                 </figure>
             </section>
     </article>
@@ -200,8 +201,8 @@
                 <h3 id="page-configure-esp32ble-board-usb" class="manual-page-title">3.2. ESP32-S3 Board and USB Ports</h3>
                 <p>Use the board and USB connections supplied for your ESP32BLE setup.</p>
                 <p>Instructions coming soon.</p>
-                <figure class="help-placeholder">
-                    <figcaption>ESP32-S3 Board and USB Ports</figcaption>
+                <figure class="help-setup-screenshot">
+                    <img class="help-image help-image--diagram" src="images/2_Configure_ESP32/esp32-s3-board-usb-ports.png" alt="ESP32-S3 board and USB ports." data-planned-image="true">
                 </figure>
             </section>
     </article>
@@ -210,8 +211,8 @@
                 <h3 id="page-configure-esp32ble-firmware" class="manual-page-title">3.3. Get the Firmware</h3>
                 <p>Firmware download instructions are being prepared.</p>
                 <p>Instructions coming soon.</p>
-                <figure class="help-placeholder">
-                    <figcaption>Firmware Download</figcaption>
+                <figure class="help-setup-screenshot">
+                    <img class="help-image help-image--screenshot" src="images/2_Configure_ESP32/esp32ble-firmware-download.png" alt="Firmware download." data-planned-image="true">
                 </figure>
             </section>
     </article>
@@ -220,8 +221,8 @@
                 <h3 id="page-configure-esp32ble-install" class="manual-page-title">3.4. Install the Firmware</h3>
                 <p>Installation steps will be provided for the supported ESP32-S3 board.</p>
                 <p>Instructions coming soon.</p>
-                <figure class="help-placeholder">
-                    <figcaption>Firmware Installation Tool</figcaption>
+                <figure class="help-setup-screenshot">
+                    <img class="help-image help-image--screenshot" src="images/2_Configure_ESP32/esp32ble-firmware-installation-tool.png" alt="Firmware installation tool." data-planned-image="true">
                 </figure>
             </section>
     </article>
@@ -230,8 +231,8 @@
                 <h3 id="page-configure-esp32ble-keyboard" class="manual-page-title">3.5. Connect the USB Keyboard</h3>
                 <p>Connect the keyboard target required by your ESP32BLE setup.</p>
                 <p>Instructions coming soon.</p>
-                <figure class="help-placeholder">
-                    <figcaption>USB Keyboard Connection</figcaption>
+                <figure class="help-setup-screenshot">
+                    <img class="help-image help-image--screenshot" src="images/2_Configure_ESP32/esp32ble-usb-keyboard-connection.png" alt="USB keyboard connection." data-planned-image="true">
                 </figure>
             </section>
     </article>
@@ -243,8 +244,8 @@
                 <h3 id="page-connect-esp32ble-mode" class="manual-page-title">4.1. Overview</h3>
                 <p>Open ESP Settings and select ESP32 mode.</p>
                 <p>ESP starts looking for available ESP32 devices.</p>
-                <figure class="help-placeholder">
-                    <figcaption>ESP32 Mode in ESP Settings</figcaption>
+                <figure class="help-setup-screenshot">
+                    <img class="help-image help-image--screenshot" src="images/3_Connect_to_ESP32/esp32-mode-settings.png" alt="ESP32 mode in ESP Settings." data-planned-image="true">
                 </figure>
             </section>
     </article>
@@ -253,8 +254,8 @@
                 <h3 id="page-connect-esp32ble-find" class="manual-page-title">4.2. Find Your ESP32</h3>
                 <p>ESP lists discovered ESP32 devices in Settings.</p>
                 <p>Wait for your ESP32 to appear.</p>
-                <figure class="help-placeholder">
-                    <figcaption>Discovered ESP32 Devices</figcaption>
+                <figure class="help-setup-screenshot">
+                    <img class="help-image help-image--screenshot" src="images/3_Connect_to_ESP32/esp32-discovered-devices.png" alt="Discovered ESP32 devices in ESP Settings." data-planned-image="true">
                 </figure>
             </section>
     </article>
@@ -263,8 +264,8 @@
                 <h3 id="page-connect-esp32ble-connect" class="manual-page-title">4.3. Connect</h3>
                 <p>Select your discovered ESP32 in Settings.</p>
                 <p>Settings shows when ESP32 is connected.</p>
-                <figure class="help-placeholder">
-                    <figcaption>ESP32 Connected Status</figcaption>
+                <figure class="help-setup-screenshot">
+                    <img class="help-image help-image--screenshot" src="images/3_Connect_to_ESP32/esp32-connected-status.png" alt="ESP32 connected status in ESP Settings." data-planned-image="true">
                 </figure>
             </section>
     </article>
@@ -275,8 +276,8 @@
                 <p>Press Set &amp; Test in ESP Settings.</p>
                 <p>Check that the following text appears:</p>
                 <p><code>Hello World! ABC abc 123 456 aa BB 11 !! ?? -- ..</code></p>
-                <figure class="help-placeholder">
-                    <figcaption>ESP32 Keyboard Test</figcaption>
+                <figure class="help-setup-screenshot">
+                    <img class="help-image help-image--screenshot" src="images/3_Connect_to_ESP32/esp32-keyboard-test.png" alt="ESP32 keyboard test." data-planned-image="true">
                 </figure>
             </section>
     </article>
@@ -285,8 +286,8 @@
                 <h3 id="page-connect-esp32ble-reconnect" class="manual-page-title">4.5. Reconnection and Problems</h3>
                 <p>Return to Settings to review the ESP32 connection status.</p>
                 <p>If your device is not listed, ESP continues searching for available ESP32 devices.</p>
-                <figure class="help-placeholder">
-                    <figcaption>ESP32 Connection Status</figcaption>
+                <figure class="help-setup-screenshot">
+                    <img class="help-image help-image--screenshot" src="images/3_Connect_to_ESP32/esp32-connection-status.png" alt="ESP32 connection status in ESP Settings." data-planned-image="true">
                 </figure>
             </section>
     </article>
@@ -299,15 +300,17 @@
         <section class="help-step" aria-labelledby="using-esp-getting-started-overview">
                     <h4 id="page-using-esp-getting-started-overview" class="manual-page-title">5.1.1. Overview</h4>
                     <p>Get familiar with the ESP main screen, programmable buttons, and switching between screens.</p>
-                    <figure class="help-placeholder"><figcaption>Getting Started overview</figcaption></figure>
+                    <figure class="help-setup-screenshot">
+                        <img class="help-image help-image--screenshot" src="images/4_Using_ESP/1_Getting_Started/esp-getting-started-overview.png" alt="Getting Started overview." data-planned-image="true">
+                    </figure>
                 </section>
         </article>
         <article class="manual-page" data-source="using-esp-main.html">
         <section class="help-step" aria-labelledby="using-esp-main">
                     <h4 id="page-using-esp-main" class="manual-page-title">5.1.2. ESP Main Screen</h4>
                     <p>ESP uses a programmable button grid with toolbars for screens, editing, and controls.</p>
-                    <figure class="help-placeholder">
-                        <figcaption>ESP main screen screenshot</figcaption>
+                    <figure class="help-setup-screenshot">
+                        <img class="help-image help-image--screenshot" src="images/4_Using_ESP/1_Getting_Started/esp-main-screen.png" alt="ESP main screen." data-planned-image="true">
                     </figure>
                 </section>
         </article>
@@ -315,8 +318,8 @@
         <section class="help-step" aria-labelledby="using-esp-screens">
                     <h4 id="page-using-esp-screens" class="manual-page-title">5.1.3. Screens and Navigation</h4>
                     <p>Organize actions across different programmable screens. Use the screen navigation controls to move between them.</p>
-                    <figure class="help-placeholder">
-                        <figcaption>Screen navigation controls</figcaption>
+                    <figure class="help-setup-screenshot">
+                        <img class="help-image help-image--screenshot" src="images/4_Using_ESP/1_Getting_Started/esp-screen-navigation-controls.png" alt="Screen navigation controls." data-planned-image="true">
                     </figure>
                 </section>
         </article>
@@ -324,8 +327,8 @@
         <section class="help-step" aria-labelledby="using-esp-buttons">
                     <h4 id="page-using-esp-buttons" class="manual-page-title">5.1.4. Using Buttons</h4>
                     <p>Tap a button to run its configured action. Buttons can send text, control media, trigger MIDI, and more.</p>
-                    <figure class="help-placeholder">
-                        <figcaption>Example button grid</figcaption>
+                    <figure class="help-setup-screenshot">
+                        <img class="help-image help-image--screenshot" src="images/4_Using_ESP/1_Getting_Started/esp-button-grid.png" alt="Example ESP button grid." data-planned-image="true">
                     </figure>
                 </section>
         </article>
@@ -336,15 +339,17 @@
         <section class="help-step" aria-labelledby="using-esp-creating-editing-overview">
                     <h4 id="page-using-esp-creating-editing-overview" class="manual-page-title">5.2.1. Overview</h4>
                     <p>Customize buttons and use the Soft Editor to create the controls you need.</p>
-                    <figure class="help-placeholder"><figcaption>Creating and Editing overview</figcaption></figure>
+                    <figure class="help-setup-screenshot">
+                        <img class="help-image help-image--screenshot" src="images/4_Using_ESP/2_Creating_Editing/esp-creating-editing-overview.png" alt="Creating and Editing overview." data-planned-image="true">
+                    </figure>
                 </section>
         </article>
         <article class="manual-page" data-source="using-esp-edit.html">
         <section class="help-step" aria-labelledby="using-esp-edit">
                     <h4 id="page-using-esp-edit" class="manual-page-title">5.2.2. Edit and Arrange Buttons</h4>
                     <p>Use Edit mode to change, move, copy, paste, resize, or delete buttons.</p>
-                    <figure class="help-placeholder">
-                        <figcaption>ESP button editing controls</figcaption>
+                    <figure class="help-setup-screenshot">
+                        <img class="help-image help-image--screenshot" src="images/4_Using_ESP/2_Creating_Editing/esp-button-editing-controls.png" alt="ESP button editing controls." data-planned-image="true">
                     </figure>
                 </section>
         </article>
@@ -352,8 +357,8 @@
         <section class="help-step" aria-labelledby="using-esp-soft-editor">
                     <h4 id="page-using-esp-soft-editor" class="manual-page-title">5.2.3. Soft Editor Basics</h4>
                     <p>Use the Soft Editor to set a button’s text, appearance, and actions.</p>
-                    <figure class="help-placeholder">
-                        <figcaption>Soft Editor screenshot</figcaption>
+                    <figure class="help-setup-screenshot">
+                        <img class="help-image help-image--screenshot" src="images/4_Using_ESP/2_Creating_Editing/esp-soft-editor.png" alt="Soft Editor." data-planned-image="true">
                     </figure>
                 </section>
         </article>
@@ -361,8 +366,8 @@
         <section class="help-step" aria-labelledby="using-esp-quick">
                     <h4 id="page-using-esp-quick" class="manual-page-title">5.2.4. Soft Editor: Quick Menus</h4>
                     <p>Open Quick to insert Files, Time, MIDI Note, or MIDI CC actions into a button.</p>
-                    <figure class="help-placeholder">
-                        <figcaption>Soft Editor Quick menu screenshot</figcaption>
+                    <figure class="help-setup-screenshot">
+                        <img class="help-image help-image--screenshot" src="images/4_Using_ESP/2_Creating_Editing/esp-soft-editor-quick-menu.png" alt="Soft Editor Quick menu." data-planned-image="true">
                     </figure>
                 </section>
         </article>
@@ -373,15 +378,17 @@
         <section class="help-step" aria-labelledby="using-esp-commands-overview">
                     <h4 id="page-using-esp-commands-overview" class="manual-page-title">5.3.1. Overview</h4>
                     <p>Use keyboard commands, speech recognition, MIDI, and dynamic widgets to control your setup.</p>
-                    <figure class="help-placeholder"><figcaption>Commands and Controls overview</figcaption></figure>
+                    <figure class="help-setup-screenshot">
+                        <img class="help-image help-image--screenshot" src="images/4_Using_ESP/3_Commands/esp-commands-controls-overview.png" alt="Commands and Controls overview." data-planned-image="true">
+                    </figure>
                 </section>
         </article>
         <article class="manual-page" data-source="using-esp-keyboard.html">
         <section class="help-step" aria-labelledby="using-esp-keyboard">
                     <h4 id="page-using-esp-keyboard" class="manual-page-title">5.3.2. Keyboard Screen and Commands</h4>
                     <p>Open the Keyboard screen to send text, special keys, and keyboard shortcuts.</p>
-                    <figure class="help-placeholder">
-                        <figcaption>ESP keyboard screen</figcaption>
+                    <figure class="help-setup-screenshot">
+                        <img class="help-image help-image--screenshot" src="images/4_Using_ESP/3_Commands/esp-keyboard-screen.png" alt="ESP keyboard screen." data-planned-image="true">
                     </figure>
                 </section>
         </article>
@@ -389,8 +396,8 @@
         <section class="help-step" aria-labelledby="using-esp-speech">
                     <h4 id="page-using-esp-speech" class="manual-page-title">5.3.3. Speech Recognition</h4>
                     <p>Speech recognition can activate buttons by matching the names you speak.</p>
-                    <figure class="help-placeholder">
-                        <figcaption>Speech recognition controls</figcaption>
+                    <figure class="help-setup-screenshot">
+                        <img class="help-image help-image--screenshot" src="images/4_Using_ESP/3_Commands/esp-speech-recognition-controls.png" alt="Speech recognition controls." data-planned-image="true">
                     </figure>
                 </section>
         </article>
@@ -398,8 +405,8 @@
         <section class="help-step" aria-labelledby="using-esp-midi">
                     <h4 id="page-using-esp-midi" class="manual-page-title">5.3.4. MIDI</h4>
                     <p>Use MIDI Note and MIDI CC actions to control compatible MIDI destinations.</p>
-                    <figure class="help-placeholder">
-                        <figcaption>MIDI Quick menu screenshot</figcaption>
+                    <figure class="help-setup-screenshot">
+                        <img class="help-image help-image--screenshot" src="images/4_Using_ESP/3_Commands/esp-midi-quick-menu.png" alt="MIDI Quick menu." data-planned-image="true">
                     </figure>
                 </section>
         </article>
@@ -407,8 +414,8 @@
         <section class="help-step" aria-labelledby="using-esp-widgets">
                     <h4 id="page-using-esp-widgets" class="manual-page-title">5.3.5. Dynamic Widgets</h4>
                     <p>Some buttons can display changing information, such as time and timers.</p>
-                    <figure class="help-placeholder">
-                        <figcaption>Example widget buttons</figcaption>
+                    <figure class="help-setup-screenshot">
+                        <img class="help-image help-image--screenshot" src="images/4_Using_ESP/3_Commands/esp-widget-buttons.png" alt="Example widget buttons." data-planned-image="true">
                     </figure>
                 </section>
         </article>
@@ -419,15 +426,17 @@
         <section class="help-step" aria-labelledby="using-esp-media-overview">
                     <h4 id="page-using-esp-media-overview" class="manual-page-title">5.4.1. Overview</h4>
                     <p>Personalize ESP with images and backgrounds, then add audio and media controls.</p>
-                    <figure class="help-placeholder"><figcaption>Media and Appearance overview</figcaption></figure>
+                    <figure class="help-setup-screenshot">
+                        <img class="help-image help-image--screenshot" src="images/4_Using_ESP/4_Media_Appearance/esp-media-appearance-overview.png" alt="Media and Appearance overview." data-planned-image="true">
+                    </figure>
                 </section>
         </article>
         <article class="manual-page" data-source="using-esp-images.html">
         <section class="help-step" aria-labelledby="using-esp-images">
                     <h4 id="page-using-esp-images" class="manual-page-title">5.4.2. Images and Backgrounds</h4>
                     <p>Use images on buttons and choose a background image for each screen.</p>
-                    <figure class="help-placeholder">
-                        <figcaption>ESP image and background controls</figcaption>
+                    <figure class="help-setup-screenshot">
+                        <img class="help-image help-image--screenshot" src="images/4_Using_ESP/4_Media_Appearance/esp-image-background-controls.png" alt="ESP image and background controls." data-planned-image="true">
                     </figure>
                 </section>
         </article>
@@ -435,8 +444,8 @@
         <section class="help-step" aria-labelledby="using-esp-audio">
                     <h4 id="page-using-esp-audio" class="manual-page-title">5.4.3. Audio and Media</h4>
                     <p>Buttons can play ordinary sounds or ambient audio. Use Stop Media to stop current playback.</p>
-                    <figure class="help-placeholder">
-                        <figcaption>Audio-related buttons and controls</figcaption>
+                    <figure class="help-setup-screenshot">
+                        <img class="help-image help-image--screenshot" src="images/4_Using_ESP/4_Media_Appearance/esp-audio-controls.png" alt="Audio-related buttons and controls." data-planned-image="true">
                     </figure>
                 </section>
         </article>
@@ -447,15 +456,17 @@
         <section class="help-step" aria-labelledby="using-esp-files-settings-overview">
                     <h4 id="page-using-esp-files-settings-overview" class="manual-page-title">5.5.1. Overview</h4>
                     <p>Import and export content, protect your work with backups, and explore Settings.</p>
-                    <figure class="help-placeholder"><figcaption>Files and Settings overview</figcaption></figure>
+                    <figure class="help-setup-screenshot">
+                        <img class="help-image help-image--screenshot" src="images/4_Using_ESP/5_Files_Settings/esp-files-settings-overview.png" alt="Files and Settings overview." data-planned-image="true">
+                    </figure>
                 </section>
         </article>
         <article class="manual-page" data-source="using-esp-import-export.html">
         <section class="help-step" aria-labelledby="using-esp-import-export">
                     <h4 id="page-using-esp-import-export" class="manual-page-title">5.5.2. Import and Export</h4>
                     <p>Use the import and export tools to share screens and supported files.</p>
-                    <figure class="help-placeholder">
-                        <figcaption>ESP import and export interface</figcaption>
+                    <figure class="help-setup-screenshot">
+                        <img class="help-image help-image--screenshot" src="images/4_Using_ESP/5_Files_Settings/esp-import-export.png" alt="ESP import and export interface." data-planned-image="true">
                     </figure>
                 </section>
         </article>
@@ -463,8 +474,8 @@
         <section class="help-step" aria-labelledby="using-esp-backup">
                     <h4 id="page-using-esp-backup" class="manual-page-title">5.5.3. Backup and Restore</h4>
                     <p>Create a complete ZIP backup of ESP content, then restore it when needed.</p>
-                    <figure class="help-placeholder">
-                        <figcaption>Backup and Restore controls</figcaption>
+                    <figure class="help-setup-screenshot">
+                        <img class="help-image help-image--screenshot" src="images/4_Using_ESP/5_Files_Settings/esp-backup-restore-controls.png" alt="Backup and Restore controls." data-planned-image="true">
                     </figure>
                 </section>
         </article>
@@ -472,8 +483,8 @@
         <section class="help-step" aria-labelledby="using-esp-settings">
                     <h4 id="page-using-esp-settings" class="manual-page-title">5.5.4. Settings Overview</h4>
                     <p>Settings provides access to ESP configuration, files, connection options, and other controls.</p>
-                    <figure class="help-placeholder">
-                        <figcaption>ESP Settings screenshot</figcaption>
+                    <figure class="help-setup-screenshot">
+                        <img class="help-image help-image--screenshot" src="images/4_Using_ESP/5_Files_Settings/esp-settings.png" alt="ESP Settings." data-planned-image="true">
                     </figure>
                 </section>
         </article>
@@ -486,7 +497,9 @@
                 <h3 id="page-troubleshooting-esp32-not-found" class="manual-page-title">6.1. ESP32 Not Found</h3>
                 <p>Check that the ESP32 is connected to power and is running compatible firmware.</p>
                 <p>Turn on Bluetooth on your iPhone or iPad, select ESP32 output mode, and look in ESP Settings. Do not look in iOS Bluetooth Settings.</p>
-                <figure class="help-placeholder"><figcaption>ESP32 discovery in ESP Settings</figcaption></figure>
+                <figure class="help-setup-screenshot">
+                    <img class="help-image help-image--screenshot" src="images/5_Troubleshooting/esp32-discovery-settings.png" alt="ESP32 discovery in ESP Settings." data-planned-image="true">
+                </figure>
             </section>
     </article>
     <article class="manual-page" data-source="troubleshooting-esp32-connection.html">
@@ -494,7 +507,9 @@
                 <h3 id="page-troubleshooting-esp32-connection" class="manual-page-title">6.2. ESP32 Won't Connect</h3>
                 <p>Check that you selected the intended device and that it is still available and powered.</p>
                 <p>Allow ESP to scan again, then try selecting the device from the refreshed list.</p>
-                <figure class="help-placeholder"><figcaption>ESP32 connection list</figcaption></figure>
+                <figure class="help-setup-screenshot">
+                    <img class="help-image help-image--screenshot" src="images/5_Troubleshooting/esp32-connection-list.png" alt="ESP32 connection list." data-planned-image="true">
+                </figure>
             </section>
     </article>
     <article class="manual-page" data-source="troubleshooting-keyboard.html">
@@ -502,7 +517,9 @@
                 <h3 id="page-troubleshooting-keyboard" class="manual-page-title">6.3. Keyboard Not Working</h3>
                 <p>Confirm the active output mode and its connection. For ESP32 mode, check the ESP32 USB HID connection to the target device.</p>
                 <p>Use Set &amp; Test with a text-entry field where appropriate. Mac mode sends output through ESPMacHelper instead of the ESP32 USB keyboard connection.</p>
-                <figure class="help-placeholder"><figcaption>Keyboard test in ESP Settings</figcaption></figure>
+                <figure class="help-setup-screenshot">
+                    <img class="help-image help-image--screenshot" src="images/5_Troubleshooting/esp-keyboard-test-settings.png" alt="Keyboard test in ESP Settings." data-planned-image="true">
+                </figure>
             </section>
     </article>
     <article class="manual-page" data-source="troubleshooting-mac.html">
@@ -510,7 +527,9 @@
                 <h3 id="page-troubleshooting-mac" class="manual-page-title">6.4. Mac Not Connecting</h3>
                 <p>Make sure ESPMacHelper is running and that your iPhone or iPad and Mac can communicate over the local network.</p>
                 <p>Select Mac output mode, open the ESPMacHelper status window, and confirm its relevant macOS permissions.</p>
-                <figure class="help-placeholder"><figcaption>ESPMacHelper status window</figcaption></figure>
+                <figure class="help-setup-screenshot">
+                    <img class="help-image help-image--screenshot" src="images/1_Connect_to_Mac/espmac-helper-status-selection.png" alt="ESPMacHelper status window.">
+                </figure>
             </section>
     </article>
     <article class="manual-page" data-source="troubleshooting-buttons.html">
@@ -518,7 +537,9 @@
                 <h3 id="page-troubleshooting-buttons" class="manual-page-title">6.5. Buttons Not Responding</h3>
                 <p>Confirm that the intended screen is selected and that the button has an action.</p>
                 <p>Check the active output mode and connection status, then try a simple keyboard action.</p>
-                <figure class="help-placeholder"><figcaption>ESP button action check</figcaption></figure>
+                <figure class="help-setup-screenshot">
+                    <img class="help-image help-image--screenshot" src="images/5_Troubleshooting/esp-button-action-check.png" alt="ESP button action check." data-planned-image="true">
+                </figure>
             </section>
     </article>
 </section>

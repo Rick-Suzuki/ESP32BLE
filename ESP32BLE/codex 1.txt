@@ -1,59 +1,243 @@
-STAGE 4A.6 READ-ONLY REPORT
+ESP-HELP-026D.1 — Read-only probe complete
 
-VERIFIED RENDERING PATHS
+No files, Xcode settings, builds, generators, launches, or deployments were changed.
 
-A. iPhone Image opacity:
-• Set_KB_Timing.swift:225-245.
-• Native Slider bound to opacitySliderValue.
-• Inactive: tint Color.white.opacity(0.45), then .disabled(true).
-• No parent opacity.
+1. Confirmed current Help project structure
 
-B. iPad Image opacity:
-• Set_AvailableDevices.swift:48-54, 489-499.
-• Native Slider bound to the same opacitySliderValue.
-• Inactive: tint Color.white.opacity(0.45), then .disabled(true).
-• No parent opacity.
+Confirmed in ESP32BLE.xcodeproj/project.pbxproj:
 
-C–F. Key Down and Key Gap on iPhone and iPad:
-• Shared implementation, not device-specific: Set_KB_Timing.swift:61-72 and 116-165.
-• Both native Sliders use .tint(.white).
-• Both inherit .disabled(!isTimingControlsEnabled).
-• Their common parent also applies .opacity(0.45).
+• Help is a PBXFileSystemSynchronizedRootGroup.
+   • Identifier: 1DF5EDFD30931546003E5ACF
+   • Path: Help
+   • sourceTree: "<group>"
 
-VERIFIED CAUSE
+• Help is visible in the Project Navigator independently of target membership.
+   • It is a child of the root PBXGroup:
+1D590E202F611FB700E430E0
 
-The timing sliders have a materially different hierarchy from the Image slider:
+• The navigator relationship is separate from the ESP32BLE target membership.
 
-Image slider:
-• disabled environment
-• 45%-white tint
-• no parent opacity
+• Help is currently an ESP32BLE target filesystem-synchronized group.
+   • Target: 1D590E282F611FB700E430E0
+   • Target field:
+fileSystemSynchronizedGroups = (
 
-Timing slider:
-• disabled environment
-• white tint
-• parent opacity of 45%
+  1DF5EDFD30931546003E5ACF /* Help */
 
-The parent opacity attenuates the entire native slider after its platform rendering, including an already-dark unfilled track. This explains the weak tracks and contributes to dark thumbs. It also affects the ON/OFF labels, timing values, and iPad arrows.
+);
 
-The source has no iPhone/iPad-specific timing-slider wrapper. Any remaining device difference is native Slider rendering and cannot be proven further from source alone.
 
-SMALLEST SAFE CORRECTION
+• The synchronized folder has one membership exception set:
+   • Identifier: 1DF5EE00309315F4003E5ACF
+   • Target: ESP32BLE
+   • Current exception: css/help.css
 
-In Set_KB_Timing.swift:
+• There are no static PBXBuildFile entries for individual Help files in the normal Copy Bundle Resources list. The normal Resources phase contains only Assets.xcassets and resources/color.png.
+• However, Xcode generates automatic resource-copy operations from the synchronized Help-folder target membership. Those operations flatten Help files into the app-bundle root.
 
-1. Keep the existing parent .disabled modifier.
-2. Remove only the parent .opacity(0.45).
-3. Apply opacity 0.45 individually to the existing ON/OFF labels, timing-value labels, and iPad arrows, preserving their present appearance.
-4. Give each timing Slider the same conditional tint chain as the Image slider:
-   • enabled: .white
-   • disabled: SettingsImageControlAppearance.disabledColor
-5. Do not add a Slider-specific opacity modifier.
+2. Confirmed current Help shell build phase
 
-This makes the timing Slider’s disabled environment and tint match the existing Image-opacity reference while preserving surrounding controls’ apparent brightness and all functional rules.
+• Build phase identifier: 1DF5EE0230931C18003E5ACF
+• Xcode display name in the build log: Run Script
+• It is attached to the ESP32BLE target.
+• Execution order:
 
-LIMITATION
+1. Sources
+2. Frameworks
+3. Resources
+4. Run Script
 
-SwiftUI Slider does not publicly expose separate thumb, filled-track, and unfilled-track colors. Matching the modifier hierarchy is the safest native solution, but exact pixel-identical rendering cannot be guaranteed across iPadOS 17 and newer systems without a custom/UIKit slider, which is outside scope.
+• The synchronized-folder automatic resource copies occur during Resources, before the Help shell script.
+• The target has no declared target dependencies.
 
-No files were modified. No build or deployment was performed.
+Current input paths:
+
+• $(SRCROOT)/Help
+• $(SRCROOT)/Help/connect-mac.html
+• $(SRCROOT)/Help/css/help.css
+
+Current output paths:
+
+• $(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/Help/
+• $(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/Help/connect-mac.html
+• $(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/Help/css/help.css
+
+Current script:
+
+set -eu
+
+sourceDirectory="${SRCROOT}/Help"
+destinationDirectory="${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/Help"
+
+if [ ! -d "${sourceDirectory}" ]; then
+echo "error: Help source directory not found: ${sourceDirectory}"
+
+exit 1
+
+fi
+
+rm -rf "${destinationDirectory}"
+ditto "${sourceDirectory}" "${destinationDirectory}"
+
+Confirmed behavior:
+
+• It deletes the prior bundled Help directory.
+• ditto recreates and recursively copies the complete source Help directory.
+• Nested paths are preserved.
+• Changed, added, and deleted source files are correctly reflected because the old destination is removed before copying.
+• It copies Help/html, Help/css, Help/images, the current root manual, and any future Help/manual directory automatically.
+• It is marked alwaysOutOfDate = 1, so it executes every build.
+
+3. Confirmed duplication mechanism
+
+A. Synchronized-folder target membership creates flattened copies at the app-bundle root.
+
+The existing build log shows:
+
+• ESP32BLE.app/connect-mac.html
+• ESP32BLE.app/complete-user-manual.html
+• ESP32BLE.app/connect-mac-network.svg
+• ESP32BLE.app/espmac-helper-menu.png
+
+B. The Run Script creates the required hierarchy:
+
+• ESP32BLE.app/Help/html/connect-mac.html
+• ESP32BLE.app/Help/images/1_Connect_to_Mac/connect-mac-network.svg
+• ESP32BLE.app/Help/images/1_Connect_to_Mac/espmac-helper-menu.png
+
+The latest available Debug-iphoneos build contains both versions of all three checked resources. Duplication is confirmed.
+
+4. Hidden dependencies and compatibility
+
+Confirmed SwiftUI/WebKit behavior:
+
+• ESPHelpHTMLView constructs its resource root as:
+Bundle.main.resourceURL/Help
+at Set_Screen.swift:7079-7080.
+• Quick Help resolves below:
+Help/html/<filename>
+at lines 7085-7088.
+• The current Complete User Manual resolves at:
+Help/complete-user-manual.html
+at lines 7082-7084.
+• WKWebView receives Help as its allowingReadAccessTo root.
+• The Connect to Mac preload retains its bare filename and uses the same centralized resolver.
+• No app code relies on flattened bundle-root Help files.
+
+No other Help-copy scripts or build phases were found.
+
+The shell-copy approach is compatible with:
+
+• Quick Help.
+• Nested image directories.
+• Connect to Mac preload.
+• Current manual behavior.
+• Future Help/manual packaging.
+• Relative HTML/CSS/image paths.
+• The existing Help-root WKWebView read scope.
+
+5. Preferred final configuration
+
+Confirmed recommendation:
+
+• Keep Help as the visible PBXFileSystemSynchronizedRootGroup in the Project Navigator.
+• Remove only Help’s ESP32BLE target membership / filesystem-synchronized group membership.
+• Keep the existing Run Script phase.
+• Continue loading from ESP32BLE.app/Help/.
+• Do not delete, convert, move, or recreate Help.
+
+This produces exactly one complete bundled hierarchy:
+
+ESP32BLE.app/Help/
+html/
+css/
+images/
+manual/   [future]
+
+It eliminates flattened root copies and duplicate resources.
+
+Removing target membership should not affect Help’s disk location, synchronized folder identity, or Navigator appearance. The PBX navigator child relationship and target’s fileSystemSynchronizedGroups relationship are separate records.
+
+6. Xcode 27.2 manual correction
+
+Recommended narrow UI change:
+
+1. In the Project Navigator, select the Help folder itself, not a file inside it.
+2. Open the File Inspector:
+View > Inspectors > Show File Inspector.
+3. Locate Target Membership.
+4. Remove the ESP32BLE target from Help’s target membership.
+5. Do not delete Help, remove it from the Navigator, or move it to Trash.
+6. Select the ESP32BLE project target.
+7. Open Build Phases.
+8. Expand the existing Run Script phase.
+9. Update the stale specific Input File entry:
+$(SRCROOT)/Help/connect-mac.html
+to:
+$(SRCROOT)/Help/html/connect-mac.html
+10. Update the matching Output File entry:
+$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/Help/connect-mac.html
+
+to:
+
+$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/Help/html/connect-mac.html
+
+11. Leave the script body unchanged.
+12. Leave the Help root input/output entries unchanged.
+
+Apple’s current Xcode documentation confirms that target membership is managed from the selected project item’s File Inspector. The exact control for this filesystem-synchronized root should be the ESP32BLE Target Membership selection; if it is unavailable in the inspector, inspect the target’s synchronized-folder configuration rather than deleting the folder.
+
+7. Shell-script changes required
+
+No script-content change is required.
+
+Two declared dependency paths are stale after Stage 026B:
+
+• Help/connect-mac.html input
+• Help/connect-mac.html output
+
+They should be updated as listed above. The script succeeds today because it is always out of date and copies the whole Help directory, but correcting those paths removes stale build metadata.
+
+8. Verification procedure
+
+After the UI change:
+
+1. Product > Clean Build Folder.
+2. Build for the intended physical-device destination.
+3. Inspect the built app package.
+
+Expected present:
+
+• Help/html/connect-mac.html
+• Help/css/help.css
+• Help/images/1_Connect_to_Mac/connect-mac-network.svg
+• Help/images/1_Connect_to_Mac/espmac-helper-menu.png
+
+Expected absent:
+
+• connect-mac.html at the app-bundle root
+• complete-user-manual.html at the app-bundle root
+• connect-mac-network.svg at the app-bundle root
+• espmac-helper-menu.png at the app-bundle root
+
+Then test Quick Help, preload, manual launch, Home, Tick, and image rendering on a physical device.
+
+9. Rollback
+
+If Help fails after removing target membership:
+
+1. Re-select Help in the Project Navigator.
+2. Re-add ESP32BLE under Target Membership.
+3. Build again.
+
+That restores the current synchronized-folder automatic copy behavior. It also restores duplicates, so it should be used only as a temporary recovery measure.
+
+10. Future Help/manual compatibility
+
+The preferred shell-copy-only configuration automatically includes a future Help/manual directory and all descendants. No additional target membership, Copy Bundle Resources entry, or per-file configuration should be needed for:
+
+• Help/manual/complete-user-manual.html
+• Help/manual/css/help.css
+• Help/manual/images/...
+
+The Help folder remains a filesystem-backed, collapsible Navigator folder throughout.

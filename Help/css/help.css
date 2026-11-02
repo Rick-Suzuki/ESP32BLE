@@ -106,6 +106,28 @@ body.visual-help-prototype {
     max-height: 250px;
 }
 
+.help-image-fallback {
+    display: grid;
+    place-items: center;
+    gap: 0.125rem;
+    width: min(100%, 34rem);
+    margin-inline: auto;
+    padding: 0.75rem 1rem;
+    border: 1px dashed var(--help-border);
+    color: var(--help-secondary-text);
+    text-align: center;
+    overflow-wrap: anywhere;
+}
+
+.help-image-fallback__message {
+    font-size: 0.9375rem;
+}
+
+.help-image-fallback__filename {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.8125rem;
+}
+
 .visual-help-summary {
     color: #636366;
     text-align: center;
@@ -151,19 +173,8 @@ body.visual-help-prototype {
 }
 
 .help-step h2,
-.help-step p,
-.help-placeholder {
+.help-step p {
     margin: 0;
-}
-
-.help-placeholder {
-    display: grid;
-    place-items: center;
-    min-height: min(30svh, 12rem);
-    padding: 1rem;
-    border: 1px dashed #aeaeb2;
-    color: #636366;
-    text-align: center;
 }
 
 .help-test-string {
