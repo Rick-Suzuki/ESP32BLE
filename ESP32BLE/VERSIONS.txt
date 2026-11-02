@@ -1,4 +1,8 @@
 
+V65.85
+stage 3: table selected item alway visible
+261102 Mon 1413
+
 V65.84
 table: stage 2: every Settings table remembers its own selected item independently
 261102 Mon 1003

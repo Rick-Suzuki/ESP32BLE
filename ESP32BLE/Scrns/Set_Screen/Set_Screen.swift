@@ -1191,49 +1191,63 @@ struct SettingsScreen: View {
     private var fileScrollPositionID: Binding<String?> {
         Binding(
             get: { fileScrollPositionIDStorage.isEmpty ? nil : fileScrollPositionIDStorage },
-            set: { fileScrollPositionIDStorage = $0 ?? "" }
+            set: { newScrollPositionID in
+                fileScrollPositionIDStorage = newScrollPositionID ?? ""
+            }
         )
     }
 
     private var textScrollPositionID: Binding<String?> {
         Binding(
             get: { textScrollPositionIDStorage.isEmpty ? nil : textScrollPositionIDStorage },
-            set: { textScrollPositionIDStorage = $0 ?? "" }
+            set: { newScrollPositionID in
+                textScrollPositionIDStorage = newScrollPositionID ?? ""
+            }
         )
     }
 
     private var imageScrollPositionID: Binding<String?> {
         Binding(
             get: { imageScrollPositionIDStorage.isEmpty ? nil : imageScrollPositionIDStorage },
-            set: { imageScrollPositionIDStorage = $0 ?? "" }
+            set: { newScrollPositionID in
+                imageScrollPositionIDStorage = newScrollPositionID ?? ""
+            }
         )
     }
 
     private var soundScrollPositionID: Binding<String?> {
         Binding(
             get: { soundScrollPositionIDStorage.isEmpty ? nil : soundScrollPositionIDStorage },
-            set: { soundScrollPositionIDStorage = $0 ?? "" }
+            set: { newScrollPositionID in
+                soundScrollPositionIDStorage = newScrollPositionID ?? ""
+            }
         )
     }
 
     private var pdfScrollPositionID: Binding<String?> {
         Binding(
             get: { pdfScrollPositionIDStorage.isEmpty ? nil : pdfScrollPositionIDStorage },
-            set: { pdfScrollPositionIDStorage = $0 ?? "" }
+            set: { newScrollPositionID in
+                pdfScrollPositionIDStorage = newScrollPositionID ?? ""
+            }
         )
     }
 
     private var allScrollPositionID: Binding<String?> {
         Binding(
             get: { allScrollPositionIDStorage.isEmpty ? nil : allScrollPositionIDStorage },
-            set: { allScrollPositionIDStorage = $0 ?? "" }
+            set: { newScrollPositionID in
+                allScrollPositionIDStorage = newScrollPositionID ?? ""
+            }
         )
     }
 
     private var templateScrollPositionID: Binding<String?> {
         Binding(
             get: { templateScrollPositionIDStorage.isEmpty ? nil : templateScrollPositionIDStorage },
-            set: { templateScrollPositionIDStorage = $0 ?? "" }
+            set: { newScrollPositionID in
+                templateScrollPositionIDStorage = newScrollPositionID ?? ""
+            }
         )
     }
 

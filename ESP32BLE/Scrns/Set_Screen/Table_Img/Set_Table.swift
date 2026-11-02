@@ -1,8 +1,9 @@
 import SwiftUI
 import UIKit
+import Foundation
 
 struct SettingsDocumentTableSection: View {
-    enum ListMode {
+    enum ListMode: Hashable {
         case files
         case text
         case images
@@ -100,55 +101,54 @@ struct SettingsDocumentTableSection: View {
             let listHeight = max(0, availableHeight - itemCountHeight - previewHeight - descriptionHeight)
 
             VStack(alignment: .leading, spacing: 0) {
-                List {
+                ScrollViewReader { scrollProxy in
+                    List {
                     switch listMode {
                     case .files:
                         ForEach(documentFiles, id: \.path) { fileURL in
                             documentRow(for: fileURL)
                         }
-                        .scrollTargetLayout()
                     case .text:
                         ForEach(textURLs, id: \.path) { textURL in
                             textRow(for: textURL)
                         }
-                        .scrollTargetLayout()
                     case .images:
                         ForEach(imageURLs, id: \.path) { imageURL in
                             imageRow(for: imageURL)
                         }
-                        .scrollTargetLayout()
                     case .sounds:
                         ForEach(soundURLs, id: \.path) { soundURL in
                             soundRow(for: soundURL)
                         }
-                        .scrollTargetLayout()
                     case .pdfs:
                         ForEach(pdfURLs, id: \.path) { pdfURL in
                             pdfRow(for: pdfURL)
                         }
-                        .scrollTargetLayout()
                     case .templates:
                         ForEach(templateURLs, id: \.path) { templateURL in
                             templateRow(for: templateURL)
                         }
-                        .scrollTargetLayout()
                     case .all:
                         ForEach(allFileURLs, id: \.path) { fileURL in
                             allFilesRow(for: fileURL)
                         }
-                        .scrollTargetLayout()
                     }
-                }
-                .listStyle(.plain)
-                .modifier(IPhoneFilenameRowMinimumHeightModifier(height: filenameRowMinimumHeight))
-                .scrollContentBackground(.hidden)
-                .scrollPosition(id: activeScrollPositionID, anchor: .top)
-                .background(.clear)
-                .frame(height: listHeight)
-                .refreshable {
-                    refreshFiles()
-                    showRefreshConfirmation()
-                }
+                    }
+                    .scrollTargetLayout()
+                    .listStyle(.plain)
+                    .modifier(IPhoneFilenameRowMinimumHeightModifier(height: filenameRowMinimumHeight))
+                    .scrollContentBackground(.hidden)
+                    .scrollPosition(id: activeScrollPositionID)
+                    .background(.clear)
+                    .frame(height: listHeight)
+                    .refreshable {
+                        refreshFiles()
+                        showRefreshConfirmation()
+                    }
+                    .task(id: selectionRestorationID) {
+                        validateActiveScrollPosition()
+                        restoreSelectedRowVisibility(using: scrollProxy)
+                    }
 				.overlay(alignment: .top) {
                         if let tableFeedbackMessage {
                             Text(tableFeedbackMessage)
@@ -184,8 +184,10 @@ struct SettingsDocumentTableSection: View {
 							.padding(.top, 8)
 							.allowsHitTesting(false)
 					}
+					}
 				}
-				
+				.id(listMode)
+
                 if descriptionHeight > 0, let templateDescription {
                     templateDescriptionSection(templateDescription)
                         .frame(height: descriptionHeight)
@@ -364,6 +366,75 @@ struct SettingsDocumentTableSection: View {
             return $templateScrollPositionID
         case .all:
             return $allScrollPositionID
+        }
+    }
+
+    private var selectionRestorationID: String {
+        let rowPaths = activeRowPaths.joined(separator: "\u{1F}")
+        return "\(listMode)-\(rowPaths)"
+    }
+
+    private var selectedRowPath: String? {
+        switch listMode {
+        case .files:
+            return loadedDocumentURL?.path
+        case .text:
+            return selectedTextSelectionPath
+        case .images:
+            return (previewedImageURL ?? appliedImageURL)?.path
+        case .sounds:
+            return selectedSoundURL?.path
+        case .pdfs:
+            return selectedPDFURL?.path
+        case .templates:
+            return selectedTemplateURL?.path
+        case .all:
+            return nil
+        }
+    }
+
+    private var activeRowPaths: [String] {
+        switch listMode {
+        case .files:
+            return documentFiles.map(\.path)
+        case .text:
+            return textURLs.map(\.path)
+        case .images:
+            return imageURLs.map(\.path)
+        case .sounds:
+            return soundURLs.map(\.path)
+        case .pdfs:
+            return pdfURLs.map(\.path)
+        case .templates:
+            return templateURLs.map(\.path)
+        case .all:
+            return allFileURLs.map(\.path)
+        }
+    }
+
+    private func validateActiveScrollPosition() {
+        let savedScrollPositionID = activeScrollPositionID.wrappedValue
+        let savedIDExistsInRows = savedScrollPositionID.map { activeRowPaths.contains($0) } ?? false
+        let willClearSavedID = !activeRowPaths.isEmpty &&
+            savedScrollPositionID != nil &&
+            !savedIDExistsInRows
+
+        if willClearSavedID {
+            activeScrollPositionID.wrappedValue = nil
+        }
+    }
+
+    private func restoreSelectedRowVisibility(using scrollProxy: ScrollViewProxy) {
+        guard let selectedRowPath,
+              activeRowPaths.contains(selectedRowPath) else {
+            return
+        }
+
+        switch listMode {
+        case .images, .pdfs:
+            scrollProxy.scrollTo(selectedRowPath, anchor: .bottom)
+        case .files, .text, .sounds, .templates, .all:
+            scrollProxy.scrollTo(selectedRowPath)
         }
     }
 

@@ -1,67 +1,41 @@
-READ-ONLY PROBE COMPLETE — no files modified, built, deployed, or Git operations performed.
+VERIFIED
 
-A. Relevant implementation
+Current category switch path:
+• Category selection calls selectSettingsListMode(), which changes listMode.
+• SettingsDocumentTableSection stays structurally unchanged because its only explicit identity is importRefreshID, not listMode.
+• One List and one ScrollViewReader contain a switch that swaps ForEach content by category.
+• selectionRestorationID changes with category/rows, so the existing task runs.
+• The PDF diagnostic proves the target path exists and scrollProxy.scrollTo executes.
 
-Settings state and table wiring:
-• ESP32BLE/Scrns/Set_Screen/Set_Screen.swift:344-389
-• Per-table scroll-position storage: Set_Screen.swift:1193-1240
-• Image controls/actions: Set_Screen.swift:1571-1650
-• Image application and persistence: Set_Screen.swift:3317-3326
-• Template selection clearing: Set_Screen.swift:725-732, 1844-1847
-• Settings recreation on return from Main: ESP32BLE/Scrns/ContentView.swift:325-329, 2901-2929
-• Table highlights, IDs, and scrolling: ESP32BLE/Scrns/Set_Screen/Table_Img/Set_Table.swift:66-69, 107-150, 251-258
-• Image persistence/index mapping: ESP32BLE/Scrns/Set_Screen/Table_Img/Set_ImgSelectionSupport.swift:5-72
-• Image controls UI: ESP32BLE/Scrns/Set_Screen/Btm_Area/Set_ImgCtlsSection.swift:3-40
+The List has no category-specific identity. Switching Sounds to PDFs replaces the ForEach branch while retaining the same List/ScrollViewReader subtree identity.
 
-B. Current selection and scrolling
+INFERRED ROOT CAUSE
 
-VERIFIED:
-• Each category already has an independent AppStorage scroll ID and stable path-based row identity.
-• Screens retain their loaded document selection through the parent ContentView.
-• Sounds and PDFs persist selected path/name, but their table highlight is temporary only.
-• Text and Templates use Settings-owned @State; both are lost when Settings is removed. Templates are also deliberately cleared whenever another table becomes active.
-• Temporary screen/text/sound/PDF highlights are cleared in Set_Table.swift:251-258.
-• Images use green for persisted applied image and yellow for temporary preview. The preview is Settings-local.
+The restoration task is running during the category transition before the reused native List has registered the replacement PDF rows as active scroll targets. ScrollViewProxy silently has no effective target at that instant.
 
-C. BLACK implementation
+Settings recreation differs because it constructs a new SettingsScreen/List subtree; by the initial restoration task, the active category’s rows are available. This matches the successful Main → Settings behavior.
 
-VERIFIED:
-• BLACK is not an image file. It is a nil image URL / persisted index 0 sentinel.
-• The Images table inserts a dedicated BLACK row at Set_Table.swift:120 and 586-648.
-• Real images use persisted indices starting at 1; index 0 means no image.
-• Screen configurations store a nil background image name for this state; backups do not require a BLACK asset.
-• The image preview panel intentionally renders black when its URL is nil: Set_ImgPanel.swift:21-40.
+The same structural risk applies to all categories. Physical failure is confirmed only for PDFs; Images are likely affected. Sounds work when reopening, not yet proven when switching categories.
 
-Safe removal: remove only the table’s BLACK row and its navigation entry points, while retaining nil/index-0 compatibility for existing screens. Existing black/no-image screens should remain black, with no green file row selected. Do not renumber real-image persistence.
+RECOMMENDED MINIMAL FIX
 
-D. Image controls
+Give the existing ScrollViewReader subtree a category-specific identity:
 
-VERIFIED:
-• Controls are always shown and mostly active, regardless of active table.
-• Reset selects nil/BLACK; Random includes nil; Previous can reach nil; Next starts with first real image.
-• Controls preview only; they do not apply an image.
-• Control actions update image scroll state, but table single-tap preview does not consistently do so.
+.id(listMode)
 
-E. Recommended restoration approach
+Apply it to the ScrollViewReader, not the whole Settings table. This recreates the reader and native List only when the category changes, while preserving:
+• Existing List/swipe actions
+• Stable row IDs
+• Selection state
+• Preview layout
+• Restoration task and scrollTo behavior
 
-Use parent-owned, session-lifetime per-table selection IDs, preferably stable file paths, passed into Settings. Retain existing persisted applied image/sound/PDF state. On category activation, validate the stored path against current files, then set that category’s existing scroll-position binding after its rows exist.
+No separate category-transition event is needed: the existing task(id: selectionRestorationID) already provides it.
 
-For Images, on Settings return set preview equal to the applied image, clearing yellow preview; scroll to the applied green row. If none is applied, retain nil state and scroll to the top without applying an image.
+Do not add delays, retries, or new diagnostics. The existing logs are sufficient to validate the targeted change on device.
 
-F. Risks
+COMPATIBILITY
 
-• Removing BLACK must not convert legacy nil backgrounds to a real image.
-• Deleted/replaced files require path validation and selection clearing.
-• Avoid using array indices; imports, sorting, and deletion make them unstable.
-• Scroll restoration should use the existing iOS/iPadOS 17 scrollPosition path IDs, not timing delays.
+.id(_:) is supported on iPadOS 17.7.11. The primary regression risk is category switching recreating List-local transient state, which is intended here; persistent selection state already lives outside the List.
 
-G. Recommended stages
-
-1. Remove only the BLACK table row; retain nil persistence compatibility.
-2. Introduce independent parent-owned selection IDs; stop clearing Templates on category changes.
-3. Bind highlights and scroll restoration to those IDs.
-4. Gate image controls by Images mode; make Back select the first real image, with no automatic apply.
-
-H. Required decision
-
-When no image is applied, should Images show no highlighted row (recommended), or should it visually select the first real image without applying it?
+No files were modified, built, or deployed.
