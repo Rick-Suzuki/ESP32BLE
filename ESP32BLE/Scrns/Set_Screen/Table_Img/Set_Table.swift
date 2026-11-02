@@ -2,6 +2,12 @@ import SwiftUI
 import UIKit
 import Foundation
 
+struct SettingsImageNavigationScrollRequest: Equatable {
+    let targetPath: String
+    let id: UUID
+    let alignsToTop: Bool
+}
+
 struct SettingsDocumentTableSection: View {
     enum ListMode: Hashable {
         case files
@@ -33,6 +39,7 @@ struct SettingsDocumentTableSection: View {
     @Binding var fileScrollPositionID: String?
     @Binding var textScrollPositionID: String?
     @Binding var imageScrollPositionID: String?
+    @Binding var imageNavigationScrollRequest: SettingsImageNavigationScrollRequest?
     @Binding var soundScrollPositionID: String?
     @Binding var pdfScrollPositionID: String?
     @Binding var templateScrollPositionID: String?
@@ -148,6 +155,9 @@ struct SettingsDocumentTableSection: View {
                     .task(id: selectionRestorationID) {
                         validateActiveScrollPosition()
                         restoreSelectedRowVisibility(using: scrollProxy)
+                    }
+                    .task(id: imageNavigationScrollRequest?.id) {
+                        handleImageNavigationScrollRequest(using: scrollProxy)
                     }
 				.overlay(alignment: .top) {
                         if let tableFeedbackMessage {
@@ -436,6 +446,27 @@ struct SettingsDocumentTableSection: View {
         case .files, .text, .sounds, .templates, .all:
             scrollProxy.scrollTo(selectedRowPath)
         }
+    }
+
+    private func handleImageNavigationScrollRequest(using scrollProxy: ScrollViewProxy) {
+        guard let imageNavigationScrollRequest else {
+            return
+        }
+
+        guard listMode == .images,
+              activeRowPaths.contains(imageNavigationScrollRequest.targetPath) else {
+            self.imageNavigationScrollRequest = nil
+            return
+        }
+
+        withAnimation(.easeInOut(duration: 0.35)) {
+            if imageNavigationScrollRequest.alignsToTop {
+                scrollProxy.scrollTo(imageNavigationScrollRequest.targetPath, anchor: .top)
+            } else {
+                scrollProxy.scrollTo(imageNavigationScrollRequest.targetPath)
+            }
+        }
+        self.imageNavigationScrollRequest = nil
     }
 
     private func documentRow(for fileURL: URL) -> some View {

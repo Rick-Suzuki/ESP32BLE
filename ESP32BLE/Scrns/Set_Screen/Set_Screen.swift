@@ -384,6 +384,7 @@ struct SettingsScreen: View {
     @FocusState private var isDocumentNameFieldFocused: Bool
     @State private var isCancellingDocumentNameFromOutsideTap = false
     @State private var previewImageURL: URL?
+    @State private var imageNavigationScrollRequest: SettingsImageNavigationScrollRequest?
     @State private var isImagePreviewRestorePending = false
     @State private var backgroundChangeFeedbackID = UUID()
     @State private var templateURLs: [URL] = []
@@ -1591,27 +1592,28 @@ struct SettingsScreen: View {
             onReset: {
                 guard isImagesListActive else { return }
                 guard let firstImageURL = availableImageURLs.first else { return }
-                selectPreviewImage(firstImageURL)
+                selectPreviewImageForNavigation(firstImageURL, alignsToTop: true, forcesScroll: true)
             },
             onRandom: {
                 guard isImagesListActive else { return }
                 let candidateURLs = availableImageURLs.filter { imageURL in
                     imageURL.path != previewImageURL?.path
                 }
-                selectPreviewImage(candidateURLs.randomElement() ?? availableImageURLs.first)
+                guard let imageURL = candidateURLs.randomElement() ?? availableImageURLs.first else { return }
+                selectPreviewImageForNavigation(imageURL)
             },
             onPrevious: {
                 guard isImagesListActive,
                       let previewImagePosition,
                       previewImagePosition > 1 else { return }
-                selectPreviewImage(availableImageURLs[previewImagePosition - 2])
+                selectPreviewImageForNavigation(availableImageURLs[previewImagePosition - 2])
             },
             onNext: {
                 guard isImagesListActive else { return }
                 guard !availableImageURLs.isEmpty else { return }
                 let nextIndex = previewImagePosition ?? 0
                 guard availableImageURLs.indices.contains(nextIndex) else { return }
-                selectPreviewImage(availableImageURLs[nextIndex])
+                selectPreviewImageForNavigation(availableImageURLs[nextIndex])
             }
         )
     }
@@ -1640,12 +1642,34 @@ struct SettingsScreen: View {
         return previewImagePosition < availableImageURLs.count
     }
 
-    private func selectPreviewImage(_ imageURL: URL?, cancelsPendingRestore: Bool = true) {
+    private func selectPreviewImage(
+        _ imageURL: URL?,
+        cancelsPendingRestore: Bool = true,
+        updatesScrollPosition: Bool = true
+    ) {
         if cancelsPendingRestore {
             isImagePreviewRestorePending = false
         }
         previewImageURL = imageURL
-        imageScrollPositionIDStorage = imageURL?.path ?? ""
+        if updatesScrollPosition {
+            imageScrollPositionIDStorage = imageURL?.path ?? ""
+        }
+    }
+
+    private func selectPreviewImageForNavigation(
+        _ imageURL: URL,
+        alignsToTop: Bool = false,
+        forcesScroll: Bool = false
+    ) {
+        let hasPreviewChanged = previewImageURL?.path != imageURL.path
+        guard hasPreviewChanged || forcesScroll else { return }
+
+        selectPreviewImage(imageURL, updatesScrollPosition: false)
+        imageNavigationScrollRequest = SettingsImageNavigationScrollRequest(
+            targetPath: imageURL.path,
+            id: UUID(),
+            alignsToTop: alignsToTop
+        )
     }
 
     private func restorePreviewFromAppliedBackground() {
@@ -1770,6 +1794,7 @@ struct SettingsScreen: View {
             fileScrollPositionID: fileScrollPositionID,
             textScrollPositionID: textScrollPositionID,
             imageScrollPositionID: imageScrollPositionID,
+            imageNavigationScrollRequest: $imageNavigationScrollRequest,
             soundScrollPositionID: soundScrollPositionID,
             pdfScrollPositionID: pdfScrollPositionID,
             templateScrollPositionID: templateScrollPositionID,
