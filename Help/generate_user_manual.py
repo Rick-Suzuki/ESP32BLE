@@ -28,6 +28,7 @@ CONTENTS_ID = "contents"
 @dataclass(frozen=True)
 class PageDefinition:
     filename: str
+    anchor_stem: str
 
 
 @dataclass(frozen=True)
@@ -51,8 +52,11 @@ class ImageReference:
     allows_missing: bool
 
 
-def pages(*filenames: str) -> tuple[PageDefinition, ...]:
-    return tuple(PageDefinition(filename) for filename in filenames)
+def pages(*page_definitions: tuple[str, str]) -> tuple[PageDefinition, ...]:
+    return tuple(
+        PageDefinition(filename, anchor_stem)
+        for filename, anchor_stem in page_definitions
+    )
 
 
 MANUAL_CHAPTERS = (
@@ -60,33 +64,33 @@ MANUAL_CHAPTERS = (
         "Connect to Mac",
         "connect-to-mac",
         pages(
-            "connect-mac.html",
-            "connect-mac-setup.html",
-            "connect-mac-accessibility.html",
-            "connect-mac-connection.html",
-            "connect-mac-test.html",
+            ("connect-mac-01.html", "connect-mac"),
+            ("connect-mac-02.html", "connect-mac-setup"),
+            ("connect-mac-03.html", "connect-mac-accessibility"),
+            ("connect-mac-04.html", "connect-mac-connection"),
+            ("connect-mac-05.html", "connect-mac-test"),
         ),
     ),
     ChapterDefinition(
         "Configure ESP32BLE",
         "configure-esp32ble",
         pages(
-            "configure-esp32ble-what-you-need.html",
-            "configure-esp32ble-board-usb.html",
-            "configure-esp32ble-firmware.html",
-            "configure-esp32ble-install.html",
-            "configure-esp32ble-keyboard.html",
+            ("configure-esp32ble-01.html", "configure-esp32ble-what-you-need"),
+            ("configure-esp32ble-02.html", "configure-esp32ble-board-usb"),
+            ("configure-esp32ble-03.html", "configure-esp32ble-firmware"),
+            ("configure-esp32ble-04.html", "configure-esp32ble-install"),
+            ("configure-esp32ble-05.html", "configure-esp32ble-keyboard"),
         ),
     ),
     ChapterDefinition(
         "Connect Your iOS Device to ESP32BLE",
         "connect-ios-to-esp32ble",
         pages(
-            "connect-esp32ble-mode.html",
-            "connect-esp32ble-find.html",
-            "connect-esp32ble-connect.html",
-            "connect-esp32ble-test.html",
-            "connect-esp32ble-reconnect.html",
+            ("connect-esp32ble-01.html", "connect-esp32ble-mode"),
+            ("connect-esp32ble-02.html", "connect-esp32ble-find"),
+            ("connect-esp32ble-03.html", "connect-esp32ble-connect"),
+            ("connect-esp32ble-04.html", "connect-esp32ble-test"),
+            ("connect-esp32ble-05.html", "connect-esp32ble-reconnect"),
         ),
     ),
     ChapterDefinition(
@@ -97,50 +101,50 @@ MANUAL_CHAPTERS = (
                 "Getting Started",
                 "getting-started",
                 pages(
-                    "using-esp-getting-started-overview.html",
-                    "using-esp-main.html",
-                    "using-esp-screens.html",
-                    "using-esp-buttons.html",
+                    ("using-esp-01.html", "using-esp-getting-started-overview"),
+                    ("using-esp-02.html", "using-esp-main"),
+                    ("using-esp-03.html", "using-esp-screens"),
+                    ("using-esp-04.html", "using-esp-buttons"),
                 ),
             ),
             SectionDefinition(
                 "Creating and Editing",
                 "creating-and-editing",
                 pages(
-                    "using-esp-creating-editing-overview.html",
-                    "using-esp-edit.html",
-                    "using-esp-soft-editor.html",
-                    "using-esp-quick.html",
+                    ("using-esp-05.html", "using-esp-creating-editing-overview"),
+                    ("using-esp-06.html", "using-esp-edit"),
+                    ("using-esp-07.html", "using-esp-soft-editor"),
+                    ("using-esp-08.html", "using-esp-quick"),
                 ),
             ),
             SectionDefinition(
                 "Commands and Controls",
                 "commands-and-controls",
                 pages(
-                    "using-esp-commands-overview.html",
-                    "using-esp-keyboard.html",
-                    "using-esp-speech.html",
-                    "using-esp-midi.html",
-                    "using-esp-widgets.html",
+                    ("using-esp-09.html", "using-esp-commands-overview"),
+                    ("using-esp-10.html", "using-esp-keyboard"),
+                    ("using-esp-11.html", "using-esp-speech"),
+                    ("using-esp-12.html", "using-esp-midi"),
+                    ("using-esp-13.html", "using-esp-widgets"),
                 ),
             ),
             SectionDefinition(
                 "Media and Appearance",
                 "media-and-appearance",
                 pages(
-                    "using-esp-media-overview.html",
-                    "using-esp-images.html",
-                    "using-esp-audio.html",
+                    ("using-esp-14.html", "using-esp-media-overview"),
+                    ("using-esp-15.html", "using-esp-images"),
+                    ("using-esp-16.html", "using-esp-audio"),
                 ),
             ),
             SectionDefinition(
                 "Files and Settings",
                 "files-and-settings",
                 pages(
-                    "using-esp-files-settings-overview.html",
-                    "using-esp-import-export.html",
-                    "using-esp-backup.html",
-                    "using-esp-settings.html",
+                    ("using-esp-17.html", "using-esp-files-settings-overview"),
+                    ("using-esp-18.html", "using-esp-import-export"),
+                    ("using-esp-19.html", "using-esp-backup"),
+                    ("using-esp-20.html", "using-esp-settings"),
                 ),
             ),
         ),
@@ -149,11 +153,11 @@ MANUAL_CHAPTERS = (
         "Troubleshooting",
         "troubleshooting",
         pages(
-            "troubleshooting-esp32-not-found.html",
-            "troubleshooting-esp32-connection.html",
-            "troubleshooting-keyboard.html",
-            "troubleshooting-mac.html",
-            "troubleshooting-buttons.html",
+            ("troubleshooting-01.html", "troubleshooting-esp32-not-found"),
+            ("troubleshooting-02.html", "troubleshooting-esp32-connection"),
+            ("troubleshooting-03.html", "troubleshooting-keyboard"),
+            ("troubleshooting-04.html", "troubleshooting-mac"),
+            ("troubleshooting-05.html", "troubleshooting-buttons"),
         ),
     ),
 )
@@ -319,8 +323,8 @@ def all_source_pages() -> tuple[PageDefinition, ...]:
     return tuple(ordered)
 
 
-def page_identifier(filename: str) -> str:
-    return f"page-{Path(filename).stem}"
+def page_identifier(anchor_stem: str) -> str:
+    return f"page-{anchor_stem}"
 
 
 def render_start_tag(
@@ -381,7 +385,7 @@ def extract_page(
     source_path = SOURCE_DIRECTORY / definition.filename
     if not source_path.is_file():
         raise ValueError(f"Missing source Help page: {definition.filename}")
-    identifier = page_identifier(definition.filename)
+    identifier = page_identifier(definition.anchor_stem)
     parser = MainContentExtractor(source_path, identifier, heading_level, heading_number)
     parser.feed(source_path.read_text(encoding="utf-8"))
     parser.close()

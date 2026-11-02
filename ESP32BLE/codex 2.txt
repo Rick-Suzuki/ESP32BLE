@@ -1,69 +1,17 @@
-ESP-HELP-026E complete.
+Stopped before edits due to a current-source conflict.
 
-Files created:
+Confirmed conflict:
+• Existing file: Help/images/1_Connect_to_Mac/espmac-helper-status.png
+• Help/html/troubleshooting-04-mac.html􀰓 still references:
+../images/1_Connect_to_Mac/espmac-helper-status-selection.png
 
-• Help/js/help-images.js
+This violates the current generator’s unplanned-missing-image validation, so the required manual generation and --check cannot succeed. ESP-HELP-029C also explicitly prohibits changing HTML contents or image filenames, so I did not resolve it speculatively.
 
-Files modified:
+Also confirmed the Xcode Help copy Run Script has two stale dependency declarations:
 
-• Help/css/help.css
-• Help/generate_user_manual.py
-• All 40 files in Help/html/
-• Help/complete-user-manual.html, regenerated
+• Input: $(SRCROOT)/Help/html/connect-mac.html
+• Output: $(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/Help/html/connect-mac.html
 
-Implementation:
+After the filename work, these must be changed in Xcode’s Build Phases UI to connect-mac-01.html; I did not edit project.pbxproj.
 
-• Added one shared, dependency-free helper at Help/js/help-images.js.
-• Every Quick Help page references it once with:
-../js/help-images.js
-• The generator injects one manual reference:
-js/help-images.js
-• The helper:
-• Registers error handling for every img element.
-• Detects cached failures using complete and naturalWidth.
-• Replaces only failed images.
-• Displays:
-Image file not found
-
-filename.ext
-
-• Extracts and decodes only the filename from src.
-• Suppresses duplicate fallbacks.
-• Preserves original alt text in the fallback accessibility label.
-• Leaves successfully loaded images unchanged.
-
-CSS:
-
-• Added narrowly scoped .help-image-fallback styles.
-• The fallback is centered, subdued, wraps long filenames, avoids horizontal overflow, and has no fixed large height.
-• Existing .help-image, diagram sizing, screenshot sizing, and iPhone/iPad height limits are unchanged.
-
-Generator:
-
-• The manual template now emits:
-<script defer src="js/help-images.js"></script>
-
-• No manual content, chapter ordering, numbering, TOC, anchors, or image URLs were changed manually.
-
-Validation:
-
-• python3 Help/generate_user_manual.py succeeded.
-• python3 Help/generate_user_manual.py --check succeeded.
-• Confirmed 40 Quick Help script references, each appearing exactly once.
-• Confirmed one generated-manual script reference.
-• Confirmed no external resource dependencies or escaping ../ resource paths in the generated manual.
-• Controlled in-memory failure tests passed for PNG, JPEG, WebP, SVG, cached failures, duplicate suppression, filename extraction, accessibility labels, and successful-image preservation.
-• Xcode physical-device-target build succeeded.
-• The built application contains:
-• Help/js/help-images.js
-• Help/html/connect-mac.html
-• Help/complete-user-manual.html
-
-No native SwiftUI, WebKit, navigation, toolbar, image file, or Xcode resource-setting changes were made.
-
-Remaining visual tests for physical devices:
-
-• Confirm fallback centering and dark-mode appearance.
-• Confirm no broken-image icon appears in WKWebView.
-• Confirm diagram and screenshot images remain visually unchanged when valid.
-• Confirm fallback vertical spacing on iPhone landscape and iPad form-sheet Help.
+No files were renamed or modified. No generator, build, app launch, Simulator, or device testing was run.

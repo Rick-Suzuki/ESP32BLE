@@ -6030,15 +6030,15 @@ private enum ESPHelpUsingESPSection: CaseIterable, Hashable, Identifiable {
         let filenames: [String]
         switch self {
         case .gettingStarted:
-            filenames = ["using-esp-getting-started-overview.html", "using-esp-main.html", "using-esp-screens.html", "using-esp-buttons.html"]
+            filenames = ["using-esp-01.html", "using-esp-02.html", "using-esp-03.html", "using-esp-04.html"]
         case .creatingAndEditing:
-            filenames = ["using-esp-creating-editing-overview.html", "using-esp-edit.html", "using-esp-soft-editor.html", "using-esp-quick.html"]
+            filenames = ["using-esp-05.html", "using-esp-06.html", "using-esp-07.html", "using-esp-08.html"]
         case .commandsAndControls:
-            filenames = ["using-esp-commands-overview.html", "using-esp-keyboard.html", "using-esp-speech.html", "using-esp-midi.html", "using-esp-widgets.html"]
+            filenames = ["using-esp-09.html", "using-esp-10.html", "using-esp-11.html", "using-esp-12.html", "using-esp-13.html"]
         case .mediaAndAppearance:
-            filenames = ["using-esp-media-overview.html", "using-esp-images.html", "using-esp-audio.html"]
+            filenames = ["using-esp-14.html", "using-esp-15.html", "using-esp-16.html"]
         case .filesAndSettings:
-            filenames = ["using-esp-files-settings-overview.html", "using-esp-import-export.html", "using-esp-backup.html", "using-esp-settings.html"]
+            filenames = ["using-esp-17.html", "using-esp-18.html", "using-esp-19.html", "using-esp-20.html"]
         }
         return filenames.map(ESPHelpPage.html)
     }
@@ -6111,37 +6111,37 @@ private enum ESPHelpTopic: CaseIterable, Hashable, Identifiable {
         switch self {
         case .connectToMac:
             [
-                .html("connect-mac.html"),
-                .html("connect-mac-setup.html"),
-                .html("connect-mac-accessibility.html"),
-                .html("connect-mac-connection.html"),
-                .html("connect-mac-test.html")
+                .html("connect-mac-01.html"),
+                .html("connect-mac-02.html"),
+                .html("connect-mac-03.html"),
+                .html("connect-mac-04.html"),
+                .html("connect-mac-05.html")
             ]
         case .configureESP32BLE:
             [
-                .html("configure-esp32ble-what-you-need.html"),
-                .html("configure-esp32ble-board-usb.html"),
-                .html("configure-esp32ble-firmware.html"),
-                .html("configure-esp32ble-install.html"),
-                .html("configure-esp32ble-keyboard.html")
+                .html("configure-esp32ble-01.html"),
+                .html("configure-esp32ble-02.html"),
+                .html("configure-esp32ble-03.html"),
+                .html("configure-esp32ble-04.html"),
+                .html("configure-esp32ble-05.html")
             ]
         case .connectToESP32BLE:
             [
-                .html("connect-esp32ble-mode.html"),
-                .html("connect-esp32ble-find.html"),
-                .html("connect-esp32ble-connect.html"),
-                .html("connect-esp32ble-test.html"),
-                .html("connect-esp32ble-reconnect.html")
+                .html("connect-esp32ble-01.html"),
+                .html("connect-esp32ble-02.html"),
+                .html("connect-esp32ble-03.html"),
+                .html("connect-esp32ble-04.html"),
+                .html("connect-esp32ble-05.html")
             ]
         case .usingESP:
             ESPHelpUsingESPSection.allCases.flatMap(\.pages)
         case .troubleshooting:
             [
-                .html("troubleshooting-esp32-not-found.html"),
-                .html("troubleshooting-esp32-connection.html"),
-                .html("troubleshooting-keyboard.html"),
-                .html("troubleshooting-mac.html"),
-                .html("troubleshooting-buttons.html")
+                .html("troubleshooting-01.html"),
+                .html("troubleshooting-02.html"),
+                .html("troubleshooting-03.html"),
+                .html("troubleshooting-04.html"),
+                .html("troubleshooting-05.html")
             ]
         }
     }
@@ -6599,7 +6599,7 @@ private struct ESPHelpTopicView: View {
             switch page {
             case .html(let filename):
                 if topic == .connectToMac,
-                   filename == "connect-mac.html",
+                   filename == "connect-mac-01.html",
                    let webView = preloadedFirstPage.webView {
                     ESPHelpHTMLView(
                         pageFilename: filename,
@@ -7132,13 +7132,13 @@ private struct ESPHelpHTMLView: UIViewRepresentable {
 
         func preloadIfNeeded() {
             guard webView == nil,
-                  ESPHelpHTMLView.isPageAvailable(named: "connect-mac.html") else {
+                  ESPHelpHTMLView.isPageAvailable(named: "connect-mac-01.html") else {
                 return
             }
 
             let coordinator = Coordinator()
             let webView = ESPHelpHTMLView.makeWebView(
-                pageFilename: "connect-mac.html",
+                pageFilename: "connect-mac-01.html",
                 coordinator: coordinator
             )
 
