@@ -319,6 +319,7 @@ struct SettingsScreen: View {
     let documentDirectorySnapshot: [URL]
     let selectedDocumentName: String
     @Binding var selectedTextSelectionPath: String?
+    @Binding var selectedMarkdownSelectionPath: String?
     @Binding var selectedTemplateSelectionPath: String?
     let refreshDocumentFiles: () -> Void
     let refreshDocumentFilesAfterDeletingAllData: () -> Void
@@ -359,6 +360,7 @@ struct SettingsScreen: View {
     @State private var isIPhoneSettingsExportPopoverPresented = false
     @AppStorage("settingsFilesScrollPositionID") private var fileScrollPositionIDStorage = ""
     @AppStorage("settingsTextScrollPositionID") private var textScrollPositionIDStorage = ""
+    @AppStorage("settingsMDsScrollPositionID") private var markdownScrollPositionIDStorage = ""
     @AppStorage("settingsImagesScrollPositionID") private var imageScrollPositionIDStorage = ""
     @AppStorage("settingsSoundsScrollPositionID") private var soundScrollPositionIDStorage = ""
     @AppStorage("settingsPDFsScrollPositionID") private var pdfScrollPositionIDStorage = ""
@@ -1217,6 +1219,15 @@ struct SettingsScreen: View {
         )
     }
 
+    private var markdownScrollPositionID: Binding<String?> {
+        Binding(
+            get: { markdownScrollPositionIDStorage.isEmpty ? nil : markdownScrollPositionIDStorage },
+            set: { newScrollPositionID in
+                markdownScrollPositionIDStorage = newScrollPositionID ?? ""
+            }
+        )
+    }
+
     private var imageScrollPositionID: Binding<String?> {
         Binding(
             get: { imageScrollPositionIDStorage.isEmpty ? nil : imageScrollPositionIDStorage },
@@ -1789,6 +1800,8 @@ struct SettingsScreen: View {
             loadedDocumentURL: selectedDocumentFileURL,
             textURLs: availableTextURLs,
             selectedTextSelectionPath: $selectedTextSelectionPath,
+            markdownURLs: availableMarkdownURLs,
+            selectedMarkdownSelectionPath: $selectedMarkdownSelectionPath,
             imageURLs: availableImageURLs,
             previewedImageURL: previewImageURL,
             appliedImageURL: selectedImageURL,
@@ -1803,6 +1816,7 @@ struct SettingsScreen: View {
             allFileURLs: availableAllFileURLs,
             fileScrollPositionID: fileScrollPositionID,
             textScrollPositionID: textScrollPositionID,
+            markdownScrollPositionID: markdownScrollPositionID,
             imageScrollPositionID: imageScrollPositionID,
             imageNavigationScrollRequest: $imageNavigationScrollRequest,
             soundScrollPositionID: soundScrollPositionID,
@@ -1815,9 +1829,11 @@ struct SettingsScreen: View {
             loadFunctionKeys: handleSettingsDocumentSelection,
             isLoadedDocument: { selectedDocumentFileURL?.path == $0.path },
             loadTextFile: loadTextFile,
+            loadMarkdownFile: loadMarkdownFile,
             deleteDocument: deleteDocument,
             duplicateDocument: duplicateDocument,
             deleteTextFile: deleteTextFile,
+            deleteMarkdownFile: deleteMarkdownFile,
             previewImage: { imageURL in
                 isImagePreviewRestorePending = false
                 previewImageURL = imageURL
@@ -2270,7 +2286,15 @@ struct SettingsScreen: View {
         isLoadingDocumentText = true
         defer { isLoadingDocumentText = false }
 
-        let fileURL = listMode == .text ? selectedTextFileURL : selectedDocumentFileURL
+        let fileURL: URL?
+        switch listMode {
+        case .text:
+            fileURL = selectedTextFileURL
+        case .markdown:
+            fileURL = selectedMarkdownFileURL
+        default:
+            fileURL = selectedDocumentFileURL
+        }
 
         guard let fileURL else {
             documentEditorText = ""
@@ -2299,6 +2323,31 @@ struct SettingsScreen: View {
 
     private func loadTextFile(_ fileURL: URL) {
         selectedTextSelectionPath = fileURL.path
+        isLoadingDocumentText = true
+        defer { isLoadingDocumentText = false }
+
+        do {
+            let loadedText = try String(contentsOf: fileURL, encoding: .utf8)
+            documentEditorText = loadedText
+            savedDocumentEditorText = loadedText
+            loadedDocumentName = fileURL.lastPathComponent
+            loadedDocumentURL = fileURL
+            blockedDocumentSaveResult = nil
+            documentNameDraft = currentTitleDisplayName
+        } catch {
+            presentDocumentSaveAlert(
+                title: "File Could Not Be Opened",
+                message: "The file could not be read. The current editor contents have been preserved."
+            )
+        }
+    }
+
+    private func loadMarkdownFile(_ fileURL: URL) {
+        guard saveCurrentDocumentText().allowsDocumentTransition else {
+            return
+        }
+
+        selectedMarkdownSelectionPath = fileURL.path
         isLoadingDocumentText = true
         defer { isLoadingDocumentText = false }
 
@@ -2875,6 +2924,14 @@ struct SettingsScreen: View {
         return availableTextURLs.first(where: { $0.path == selectedTextSelectionPath }) ?? availableTextURLs.first
     }
 
+    private var selectedMarkdownFileURL: URL? {
+        guard let selectedMarkdownSelectionPath else {
+            return availableMarkdownURLs.first
+        }
+
+        return availableMarkdownURLs.first(where: { $0.path == selectedMarkdownSelectionPath }) ?? availableMarkdownURLs.first
+    }
+
     private var selectedTextFileName: String {
         guard let selectedTextSelectionPath,
               let selectedTextURL = availableTextURLs.first(where: { $0.path == selectedTextSelectionPath }) else {
@@ -2906,6 +2963,15 @@ struct SettingsScreen: View {
             .filter { url in
                 let values = try? url.resourceValues(forKeys: [.isRegularFileKey])
                 return values?.isRegularFile == true && url.pathExtension.lowercased() == legacyScreenDocumentFileExtension
+            }
+            .sorted { $0.lastPathComponent.localizedCaseInsensitiveCompare($1.lastPathComponent) == .orderedAscending }
+    }
+
+    private var availableMarkdownURLs: [URL] {
+        return documentDirectorySnapshot
+            .filter { url in
+                let values = try? url.resourceValues(forKeys: [.isRegularFileKey])
+                return values?.isRegularFile == true && url.pathExtension.lowercased() == "md"
             }
             .sorted { $0.lastPathComponent.localizedCaseInsensitiveCompare($1.lastPathComponent) == .orderedAscending }
     }
@@ -2998,6 +3064,11 @@ struct SettingsScreen: View {
         if let selectedTextSelectionPath,
            !availableTextURLs.contains(where: { $0.path == selectedTextSelectionPath }) {
             self.selectedTextSelectionPath = nil
+        }
+
+        if let selectedMarkdownSelectionPath,
+           !availableMarkdownURLs.contains(where: { $0.path == selectedMarkdownSelectionPath }) {
+            self.selectedMarkdownSelectionPath = nil
         }
 
         if !selectedSoundPath.isEmpty, selectedSoundURL == nil {
@@ -3646,6 +3717,37 @@ struct SettingsScreen: View {
         }
     }
 
+    private func deleteMarkdownFile(_ markdownURL: URL) {
+        let wasLoaded = loadedDocumentURL?.standardizedFileURL == markdownURL.standardizedFileURL
+
+        do {
+            try FileManager.default.removeItem(at: markdownURL)
+        } catch {
+            renameAlertMessage = "Couldn't delete the Markdown file."
+            return
+        }
+
+        markImportedContentChanged()
+
+        if selectedMarkdownSelectionPath == markdownURL.path {
+            selectedMarkdownSelectionPath = nil
+        }
+
+        if markdownScrollPositionIDStorage == markdownURL.path {
+            markdownScrollPositionIDStorage = ""
+        }
+
+        guard wasLoaded else {
+            return
+        }
+
+        if listMode == .markdown {
+            loadSelectedDocumentText()
+        } else {
+            clearLoadedDocumentAfterConfirmedDeletion()
+        }
+    }
+
     private func deleteAllData() {
         guard let directoryURL = currentDocumentsDirectoryURL else {
             renameAlertMessage = "Couldn't find the Documents folder."
@@ -3682,8 +3784,12 @@ struct SettingsScreen: View {
         documentEditorText = ""
         savedDocumentEditorText = ""
         loadedDocumentName = ""
+        loadedDocumentURL = nil
+        blockedDocumentSaveResult = nil
         documentNameDraft = ""
         selectedTextSelectionPath = nil
+        selectedMarkdownSelectionPath = nil
+        markdownScrollPositionIDStorage = ""
         isLoadingDocumentText = false
 
         persistSelectedImage(nil)
@@ -3717,6 +3823,11 @@ struct SettingsScreen: View {
 
         if fileExtension == legacyScreenDocumentFileExtension {
             deleteTextFile(fileURL)
+            return
+        }
+
+        if fileExtension == "md" {
+            deleteMarkdownFile(fileURL)
             return
         }
 

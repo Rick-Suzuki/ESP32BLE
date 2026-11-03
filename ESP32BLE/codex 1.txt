@@ -1,243 +1,369 @@
-ESP-SETTINGS-MD-001A — READ-ONLY PROBE REPORT
-
-No files, project settings, user data, or build outputs were modified. No build, launch, Simulator, or device deployment was performed.
-
-1. Current Settings category architecture
-
-Primary implementation:
-• ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
-
-SettingsListMode is a private raw-string enum at lines 8-15:
-• files = screens
-• templates
-• text
-• images
-• sounds
-• pdfs
-• all = developer-only internal mode
-
-The visible Settings menu order is the visibleMenuModes array at lines 17-24:
-
-• screens
-• templates
-• text
-• images
-• sounds
-• PDFs
-
-Display labels are supplied by:
-• selectorTitle, lines 26-43
-• menuItemTitle, lines 45-52
-• selectedButtonTitle, lines 54-67
-
-The iPad native Menu is driven by visibleMenuModes at lines 903-919. Its active-category checkmark is shown by if listMode == mode at lines 909-913.
-
-The iPhone popover uses the same array at lines 943-975. Its visible checkmark uses listMode == mode at lines 951-953.
-
-The selected category is persisted in:
-• @AppStorage("settingsListMode"), line 346.
-
-Its raw value is the enum’s case name. Reordering the array does not alter a saved selected category or stored user files. Adding a new case such as markdown is also backward-compatible; existing stored raw values continue to resolve.
+The current preview is a SwiftUI full-screen cover, not a WebKit view: both .txt and .md are read as UTF-8 and placed into the same plain-text preview case. The project has no Markdown parser or HTML conversion utility; the Help WKWebView is reusable only as a security/presentation pattern, not as a drop-in Markdown renderer.ESP-MD-PREVIEW-001A — read-only findings
+
+No source files, settings, saved data, builds, deployments, or project configuration were changed.
+
+1. Current preview architecture
+
+Preview model and presentation
+
+• MainScreen.PreviewedFile is defined in:
+ESP32BLE/Scrns/Main_Screen/Main_Screen.swift:135-151
+
+• It currently has three cases:
+   • .text(filename:contents:)
+   • .image(filename:url:)
+   • .renderedImage(filename:image:)
+
+• Preview state is:
+   • presentedPreviewFile
+   • Main_Screen.swift:1054
+
+• The preview is presented through:
+   • .fullScreenCover(item: $presentedPreviewFile)
+   • Main_Screen.swift:1222-1234
+
+• Dismissal sets presentedPreviewFile = nil through the existing close callback:
+   • Main_Screen.swift:1223-1228
+
+• Main Screen disappearance also clears the preview:
+   • Main_Screen.swift:1194-1205
+
+Command activation and classification
+
+• File command classification is in:
+   • ESP32BLE/Scrns/Main_Screen/Main_ButtonBehavior.swift:350-376
+• The recognized file extensions include txt and md:
+   • Main_ButtonBehavior.swift:364-368
+• Preview filename detection is:
+   • targetPreviewFilenameForSendText(_:)
+   • Main_ButtonBehavior.swift:1726-1738
+• Supported preview extensions include:
+   • txt, md, pdf, common image extensions
+   • Main_ButtonBehavior.swift:2450-2452
+• Grid-button processing invokes:
+   • openPreviewFile(named:)
+   • Main_ButtonBehavior.swift:823-825
+• Token processing also invokes it:
+   • Main_ButtonBehavior.swift:1093-1096
+
+URL resolution and content loading
+
+• openPreviewFile(named:) is at:
+   • Main_ButtonBehavior.swift:1877-1910
+• It resolves a regular file from the app Documents directory first, then the app bundle:
+   • resolvedPreviewFileURL(named:)
+   • Main_ButtonBehavior.swift:1912-1929
+• Matching uses an exact filename first, then case-insensitive regular-file matching:
+   • matchedRegularFileURL(in:named:)
+   • Main_ButtonBehavior.swift:1931-1951
+• Any file readable as UTF-8 is currently presented as:
+   • .text(filename:contents:)
+   • Main_ButtonBehavior.swift:1889-1891
 
-There is also a private toggle(developerMode:) cycle at lines 69-86, but the only wrapper, nextListMode, at lines 1186-1190, has no current call sites. It should still be updated with the approved menu order to keep future behavior consistent.
-
-Safest requested order:
-• files
-• templates
-• images
-• markdown
-• pdfs
-• sounds
-• text
-
-This requires updating visibleMenuModes and the dormant toggle sequence, not changing existing raw identifiers.
-
-2. Existing Settings file tables
-
-Reusable table component:
-• ESP32BLE/Scrns/Set_Screen/Table_Img/Set_Table.swift
-• SettingsDocumentTableSection, lines 11-908.
+This is why .txt and .md currently behave identically after opening. Their extension is recognized before preview, but the preview model discards the file type and shows both as plain source text.
 
-It currently supports list modes:
-• files
-• text
-• images
-• sounds
-• pdfs
-• templates
-• all
+Preview view and appearance
 
-The table’s switch and data sources are at lines 113-142. All categories use ForEach(..., id: \.path). Lists receive pull-to-refresh, restored scroll positions, item count, empty List behavior, and common row geometry.
+• The full-screen SwiftUI preview is:
+   • ESP32BLE/Scrns/Main_Screen/Main_FilePreviewOverlay.swift:4-257
+• Text preview presentation is:
+   • a vertical ScrollView
+   • monospaced body font
+   • white text
+   • black background
+   • selectable text
+   • horizontal padding of 20
+   • top padding of 68
+   • safe-area-aware bottom padding
+   • Main_FilePreviewOverlay.swift:25-35
+• The close control is bottom trailing, 44 points high, and respects the safe-area bottom inset:
+   • Main_FilePreviewOverlay.swift:86-101
+• Images use a separate zoom/pan UIKit gesture surface:
+   • Main_FilePreviewOverlay.swift:36-82 and 259-362
+• PDFs are rendered to a single preview image before presentation:
+   • Main_ButtonBehavior.swift:1894-1900 and 1953 onward.
 
-Each category has its own scroll-position binding:
-• files, text, images, sounds, PDFs, templates, all
-• Set_Screen.swift lines 350-356 and Set_Table.swift lines 363-380.
+There is no existing Main Screen WKWebView, Markdown renderer, HTML converter, or attributed Markdown renderer.
 
-All discovered category lists are case-insensitively sorted by filename:
-• text: Set_Screen.swift lines 2892-2899
-• sounds: lines 2933-2942
-• PDFs: lines 2944-2951
-• templates are supplied by discoverTemplateDocumentURLs, refreshed at lines 2958-2983.
+2. Existing Help WebKit support
 
-Existing behavior:
+The Help system has a WKWebView wrapper, but it is private to Set_Screen.swift and designed for bundled Help files.
 
-• Screens:
-   • Single tap copies filename and marks a temporary selection.
-   • Double tap loads the screen.
-   • Swipe actions support delete and duplicate.
-   • Row handling: Set_Table.swift lines 864-894.
+Relevant code:
 
-• Text:
-   • Single tap loads UTF-8 content into the existing plain-text Settings editor and copies filename.
-   • Selected text row becomes yellow and bold.
-   • Leading swipe deletes.
-   • Row implementation: Set_Table.swift lines 543-588.
-   • Loading: Set_Screen.swift lines 2288-2307.
-   • Deletion: lines 3612-3629.
+• ESPHelpHTMLView:
+   • Set_Screen.swift:7120 onward
+• Help pages load from the bundle with a Help-root read scope:
+   • Set_Screen.swift:7279-7305
+• It uses loadFileURL(_:allowingReadAccessTo:):
+   • Set_Screen.swift:7246-7248
+• Its navigation delegate allows only the original local HTML document and its fragment links:
+   • Set_Screen.swift:7307-7338
 
-• Images:
-   • Single tap previews.
-   • Double tap applies as Main Screen background.
-   • Yellow means previewed; green means applied.
-   • Leading swipe deletes.
-   • Row implementation: Set_Table.swift lines 590-663.
+This is a useful security pattern, but it cannot directly render Markdown. WKWebView does not parse Markdown itself. The current Help wrapper also has a Help-specific resource model and should not be reused directly for Documents Markdown.
 
-• Sounds:
-   • Single tap selects and copies filename.
-   • Leading swipe deletes.
-   • Row implementation: Set_Table.swift lines 665-710.
+3. Renderer comparison
 
-• PDFs:
-   • Single tap selects and copies filename.
-   • The Settings table reserves a preview area for PDFs.
-   • Leading swipe deletes.
-   • Row implementation: Set_Table.swift lines 712-757.
-   • Preview routing: Set_Screen.swift lines 2022-2032.
+Approach A — SwiftUI Text with AttributedString(markdown:)
 
-• Templates:
-   • Single tap selects and displays its description.
-   • Double tap applies it.
-   • Leading swipe deletes.
-   • Row implementation: Set_Table.swift lines 799-862.
+Benefits:
 
-The Settings text editor is a raw, no-wrap UIKit-backed text editor:
-• ESP32BLE/Scrns/Set_Screen/Set_TxtEditor.swift
-• PlainDocumentEditor, beginning at line 1.
+• Native, offline, no WebKit memory cost.
+• No network or local-image loading.
+• AttributedString.MarkdownParsingOptions supports full Markdown interpretation.
+• Strong fit for bold, italic, inline code, and basic links.
+• Apple’s API has failure policies and defaults to disallowing extended attributes.
 
-3. Current Markdown handling
+Limitations:
 
-Confirmed: Settings does not currently discover .md files.
+• Full Markdown parsing does not automatically create a polished document-layout renderer in SwiftUI.
+• Headings, nested lists, blockquotes, horizontal rules, task lists, and tables need custom presentation logic to look consistently formatted.
+• GitHub-style task-list checkboxes and pipe tables are not CommonMark core features.
+• A visually correct table renderer and nested-list layout would require a custom block parser or substantial SwiftUI composition.
+• Image-reference substitution would still need preprocessing.
+• Link-opening policy must be explicitly controlled through the SwiftUI environment.
 
-availableTextURLs only accepts the legacy text extension, .txt:
-• Set_Screen.swift lines 2892-2899.
+Conclusion:
 
-There is no .md, .markdown, or Markdown-rendering implementation in Settings.
+• Good for lightweight inline formatting.
+• Not sufficient on its own for all required presentation features without effectively writing a bespoke Markdown renderer.
 
-Markdown is already partially supported elsewhere:
+Approach B — local HTML in a dedicated WKWebView
 
-• Main Screen command classification recognizes .md as a file:
-   • Main_ButtonBehavior.swift lines 357-375.
+Benefits:
 
-• Main Screen preview accepts .md:
-   • supportedPreviewExtensions, lines 2450-2452.
-   • Preview routing, lines 1726-1738 and 1877-1910.
+• CSS naturally handles headings, lists, task-checkbox presentation, horizontal rules, links, scrolling, wrapping, and basic responsive tables.
+• The existing full-screen preview geometry and close control can remain unchanged.
+• Markdown previews remain offline if HTML is generated in memory and no external assets are allowed.
+• A dedicated navigation delegate can cancel all page navigation and resource loading.
+• The required styling is concentrated in a short local CSS string rather than spread across custom SwiftUI block views.
 
-• That preview reads Markdown as UTF-8 plain text. It does not render Markdown:
-   • MainScreenFilePreviewOverlay, lines 24-35.
-   • It displays Text(contents) in a monospaced scroll view.
+Limitations:
 
-• The Soft Editor Files menu already has a combined Txt/MD category:
-   • Main_Screen.swift lines 6733-6749.
-   • It allows txt, md, and markdown.
+• WKWebView itself does not parse Markdown.
+• The project has no Markdown-to-HTML converter or third-party Markdown package.
+• Without adding a package, ESP would need a deliberately limited local converter for the requested syntax.
+• WebKit adds more memory overhead than native Text, though it is reasonable for a full-screen on-demand document preview.
+• Raw HTML from Markdown must never be passed through unsanitized.
 
-Important inconsistency:
-• The Soft Editor picker accepts .markdown.
-• Main Screen preview recognition and command classification currently explicitly recognize .md, not .markdown.
+Conclusion:
 
-No Markdown rendering engine, attributed Markdown parsing, WKWebView renderer, or dedicated Markdown preview exists.
+• Best presentation platform for the requested feature set, but only when paired with a narrow, safe local Markdown-to-HTML converter.
 
-4. Import, backup, persistence, and compatibility
+Approach C — existing project support
 
-Current Settings import UI is limited to:
-• Import Screen(s)
-• Restore Full Backup
+Confirmed findings:
 
-See Set_Screen.swift lines 977-1027 and 1300-1325.
+• No Markdown parser, CommonMark renderer, HTML converter, attributed Markdown use, or third-party Markdown library exists in current project source.
+• Existing Help HTML files and WKWebView do not supply Markdown parsing.
+• Existing NSAttributedString usage is for text-field placeholders, not document rendering.
 
-There is no standalone text or Markdown import route. plainTextImportType exists at lines 3713-3715 but has no current use.
+4. Recommended approach
 
-Full backup behavior:
-• Exports .txt resources under Text/:
-   • Set_Screen.swift lines 5535-5539.
-• Restores only .txt from the Text/ folder:
-   • lines 4812-4835.
+Recommend a dedicated, read-only local Markdown preview renderer using:
 
-Therefore:
-• A .md file is not currently retained through the supported full-backup restore workflow.
-• A backup containing an MDs folder or a .md file under Text would be rejected as unsupported.
-• Existing .screen, template, image, sound, PDF, and .txt workflows are unaffected unless archive classification is changed.
+• a small Markdown-to-safe-HTML helper;
+• a new local UIViewRepresentable WKWebView dedicated to Markdown preview;
+• a new Markdown preview branch in the existing file preview overlay.
 
-The current text selection is passed from ContentView:
-• ESP32BLE/Scrns/ContentView.swift lines 2902-2930.
-• settingsSelectedTextPath is @State, not @AppStorage, at ContentView line 214.
+This is preferable because it can meet the required readable output with less custom layout code than a native block renderer:
 
-The active Settings category itself is persisted through settingsListMode. Selection state for images, sounds, and PDFs is separately persisted through AppStorage. A dedicated MD table should use its own selection and scroll state rather than overloading text state.
+• headings;
+• bold and italic;
+• ordered and unordered lists;
+• visual read-only task-list checkboxes;
+• horizontal rules;
+• links;
+• basic horizontally scrollable tables;
+• responsive landscape layout;
+• safe long-word wrapping.
 
-The Main Screen and Soft Editor already tolerate .md as a referenced filename. Adding Settings discovery does not require changing ESP32 firmware, ESPMacHelper, Sentinel, Recall, screen document formats, or saved screen resources.
+No external package is required if the implementation is intentionally limited to the stated feature set. It should not claim full CommonMark or GitHub-Flavored Markdown compliance.
 
-5. Recommended implementation approach
+5. Image-reference filename substitution
 
-Stage A — Menu-only structure
+This must occur before Markdown-to-HTML conversion.
 
-Update only:
-• SettingsListMode in Set_Screen.swift
-• visibleMenuModes
-• labels for the new markdown case
-• toggle(developerMode:), for consistency
-• Settings table ListMode and its switch exhaustiveness
+Recommended behaviour:
 
-Use a stable raw case name such as markdown, with user-visible title MDs.
+• Scan Markdown source for image constructs beginning with ![.
+• Parse the matching alt-text closing bracket and destination parentheses with an escape-aware, balanced-parenthesis scanner.
+• Never resolve, load, inspect, or verify the referenced target.
+• Extract only the final path segment from the image destination.
+• Percent-decode the display filename when decoding succeeds.
+• Escape the resulting filename as text.
+• Emit a non-interactive filename label, not an <img> tag or link.
 
-Do not rename existing category identifiers. Do not change existing text behavior.
+Examples:
 
-Stage B — Dedicated MDs table behavior
+• ![Image](Attachments/example.jpeg) becomes example.jpeg.
+• ![Photo](example.png) becomes example.png.
+• ![Image](/private/path/Photo%20One.PNG) becomes Photo One.PNG.
 
-Add a dedicated Markdown data flow, parallel to text:
+Handling details:
 
-• availableMarkdownURLs, filtered to exact .md.
-• markdownURLs input for SettingsDocumentTableSection.
-• .markdown table case.
-• A dedicated Markdown row using the current text-row selection, filename copy, and swipe-to-delete conventions.
-• selectedMarkdownSelectionPath.
-• Dedicated Markdown scroll-position storage, for example settingsMDsScrollPositionID.
-• Dedicated selected Markdown URL/title accessors.
-• Update validation of remembered selections, editor loading, return-to-main save handling, item count, active row paths, and scroll restoration.
+• Relative and absolute paths are treated only as strings.
+• Directory segments are discarded.
+• Uppercase extensions are preserved in the shown filename.
+• Escaped parentheses and balanced parentheses must be supported in destinations.
+• Multiple images are independently replaced.
+• Malformed image syntax must remain escaped source text or harmless plain text; it must never trigger resource access.
 
-The current text table must remain .txt only.
+A regex-only implementation is not recommended because Markdown destinations can contain escaped or nested parentheses. A small scanner is safer and easier to constrain.
 
-For the requested scope, reuse the existing plain-text editor and raw UTF-8 file loading. Do not add Markdown rendering. This gives MDs the same selection and editing behavior as text while avoiding a separate preview architecture.
+6. Offline and security strategy
 
-Stage C — Import/export and backup integration
+Recommended security boundary:
 
-Add an explicit ImportedContentKind.markdown, not merely a relaxed text filter.
+• Generate HTML only from escaped Markdown text.
+• Do not allow raw HTML from the Markdown source.
+• Do not generate <img>, <script>, <iframe>, <object>, <embed>, <video>, <audio>, stylesheet, or remote-resource tags.
+• Disable JavaScript in the Markdown preview WKWebView configuration.
+• Load HTML from an in-memory string with no Documents-directory base URL.
+• Use a dedicated WKNavigationDelegate that cancels every navigation request.
+• Do not allow file:, http:, https:, data:, or custom-scheme navigation from rendered content.
+• Render links visibly, but keep them non-navigating in the first implementation.
 
-Update:
-• Full archive export to write Markdown files under a dedicated MDs/ folder.
-• Full archive restore classification to accept only .md from that folder.
-• Conflict tracking and first-import handling for Markdown.
-• Delete-all routing.
-• Any future standalone MD importer to use a Markdown UTType, rather than broadening .txt handling.
+This provides offline rendering and prevents:
 
-A separate MD category without this stage would allow files already present in Documents to be listed, but MD files would not survive the supported backup/restore process.
+• network image loading;
+• remote resource loading;
+• local file reads caused by relative image paths;
+• embedded HTML or script execution;
+• writes to the original document;
+• arbitrary navigation outside the preview.
 
-6. Regression risks
+If later requirements need active links, that should be an explicit separate policy decision: intercept only explicit user taps and route valid https URLs through the system URL opener. It should not be added automatically.
 
-• Reordering only visibleMenuModes is low risk, but the dormant toggle order should match it.
-• Reusing selectedTextSelectionPath for MDs risks clearing or cross-selecting rows because text and MD lists are different.
-• Reusing availableTextURLs would violate the requirement that .txt remain in text and .md appear only in MDs.
-• Merely allowing .md in archive Text would blur the category boundary and reduce future maintainability; use a separate archive folder/type.
-• The current Main Screen preview shows raw Markdown source, not rendered Markdown. This is compatible with the request not to implement Markdown rendering.
-• Existing backup archives must remain accepted unchanged. New MDs archive support should be additive, not require a format-version migration.
-• Physical-device validation should cover iPhone and iPad category-menu order, MD selection/deletion, editor save on return to Main Screen, backup/restore, and unchanged .txt behavior.
+7. Exact implementation touchpoints
 
-No implementation was performed.
+Primary modified file:
+
+• ESP32BLE/Scrns/Main_Screen/Main_FilePreviewOverlay.swift
+
+Recommended changes:
+
+• Keep the existing black full-screen layout, close control, safe-area handling, and image branches.
+• Detect Markdown from the existing preview filename extension.
+• Preserve .txt in the existing monospaced Text branch unchanged.
+• Add a Markdown-only preview branch that hosts the dedicated local WebKit view.
+• Add a narrow helper component in this file or a new focused Main Screen Markdown preview file:
+   • safe image-reference substitution;
+   • Markdown-to-safe-HTML conversion;
+   • CSS document template;
+   • restrictive WKWebView configuration and navigation delegate.
+
+Potentially modified file:
+
+• ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
+
+Only if a distinct preview enum case is desired. It is not required. The existing .text(filename:contents:) case retains the filename, so the overlay can classify .md from filename.pathExtension.
+
+No required changes:
+
+• Main_ButtonBehavior.swift
+• Settings Markdown editor and table files
+• Soft Editor
+• Main Screen command syntax
+• import/export
+• backup/restore
+• Help system
+• ESP32 firmware or companion applications
+
+8. Required feature support and limitations
+
+Expected support with the recommended limited converter:
+
+• Headings: supported.
+• Bold: supported.
+• Italic: supported.
+• Ordered lists: supported.
+• Unordered lists: supported.
+• Read-only task lists: supported by detecting [ ], [x], and [X].
+• Horizontal rules: supported.
+• Links: supported visually; navigation cancelled for safety.
+• Basic pipe tables: supported with horizontal overflow contained inside the preview.
+• Image references: filename label only; no image access.
+• Raw HTML: rendered as escaped text, never executed.
+• Unsupported syntax: rendered as readable escaped/plain text where possible.
+
+Features that should be explicitly out of scope for the first renderer:
+
+• Full CommonMark or GitHub-Flavored Markdown compatibility.
+• Syntax highlighting.
+• HTML passthrough.
+• Embedded media.
+• Images or attachment lookup.
+• Remote resources.
+• Interactive task editing.
+• Active in-app browser navigation.
+
+9. Edge-case handling
+
+• Empty document: show an unobtrusive blank document or “No Markdown content” message within the existing preview body.
+• Invalid UTF-8: retain current unsupported-file handling; do not lossy-decode.
+• Malformed Markdown: render safe readable text; do not fail the preview.
+• Very large documents: conversion should occur once per preview presentation, not repeatedly during SwiftUI body updates. WebKit scrolling remains efficient.
+• Long unbroken text: CSS should use overflow-wrap: anywhere and prevent horizontal page overflow.
+• Unicode, emoji, and Japanese: preserve UTF-8 and use system typography; no conversion to ASCII.
+• Repeated headings: preserve document order without generated anchors.
+• Deep nested lists: cap indentation through CSS rather than attempting complex recovery.
+• Image references in lists: replace with a filename label during preprocessing before list conversion.
+• Many links: render as visual links while navigation remains blocked.
+• Many checkboxes: render non-interactive visual checkbox glyphs or styled spans.
+
+10. Compatibility and regression risks
+
+Main risks:
+
+• A simplistic Markdown parser can misinterpret nested emphasis, code spans, escaped delimiters, or unusual list indentation.
+• Pipe tables require a deliberately limited parser and should degrade to paragraph text when malformed.
+• Existing .txt preview must remain on the current monospaced SwiftUI path.
+• The current preview state uses filename-plus-content; keeping that model avoids changes to command routing and file resolution.
+• WebKit must be configured without a Documents base URL, otherwise relative Markdown references could access local files.
+• Do not reuse the Help view directly because its read-access scope intentionally includes Help resources.
+• Markdown preview must not alter existing image, PDF, sound, .screen, or command paths.
+
+11. Recommended staging
+
+Stage A — safe formatted Markdown preview
+
+• Add Markdown filename detection inside the existing overlay.
+• Add a dedicated local, JavaScript-disabled WKWebView wrapper.
+• Add safe HTML escaping and the core renderer for headings, bold, italic, lists, rules, links, and task lists.
+• Keep .txt presentation unchanged.
+• Cancel all WebView navigation.
+
+Stage B — image reference substitution and table handling
+
+• Add the escape-aware Markdown image-reference scanner.
+• Replace every valid image reference with filename-only text.
+• Add basic pipe-table rendering and malformed-table fallback.
+• Add long-token wrapping and verify Japanese/emoji presentation.
+
+Stage C — physical-device regression testing
+
+• Test all preview types and close behaviour.
+• Correct only observed layout or parser issues.
+• Do not expand file storage, image management, Settings, or backup scope.
+
+12. Physical-device test matrix
+
+Run on iPhone 17, iPhone XS Max, iPad Air M2, iPad mini 5th generation, and iPad Pro 12.9-inch.
+
+On every device:
+
+• Open a .txt file and confirm its monospaced source preview is unchanged.
+• Open a .md file and confirm headings, bold, italic, lists, rules, links, task lists, and basic tables render.
+• Confirm task checkboxes are visual only and do not alter the file.
+• Confirm Markdown source remains editable as literal source in Settings.
+• Confirm close placement and safe-area spacing remain correct in landscape.
+• Confirm vertical scrolling, long unbroken text, Japanese, emoji, and nested lists remain readable.
+• Confirm notes.txt and notes.md preview independently.
+• Confirm malformed Markdown is readable and does not crash.
+• Confirm invalid UTF-8 remains unsupported rather than displaying corrupted text.
+• Confirm Markdown image references show only the final filename.
+• Confirm no image is loaded, regardless of whether the target exists.
+• Confirm relative paths, absolute paths, spaces, percent encoding, parentheses, and multiple image references remain safe.
+• Confirm links do not navigate, open network content, or access local files.
+• Confirm PDF, image, and other existing file previews remain unchanged.

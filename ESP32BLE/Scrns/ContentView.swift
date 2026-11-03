@@ -212,6 +212,7 @@ struct ContentView: View {
     @State private var documentFontSizeRefreshToken = 0
     @State private var settingsBLEText = ""
     @State private var settingsSelectedTextPath: String?
+    @State private var settingsSelectedMarkdownPath: String?
     @State private var settingsSelectedTemplatePath: String?
     @State private var isKeyboardScreenPresented = false
     @State private var isSettingsScreenPresented = true
@@ -2909,6 +2910,7 @@ struct ContentView: View {
             documentDirectorySnapshot: documentDirectorySnapshot,
             selectedDocumentName: selectedDocumentName,
             selectedTextSelectionPath: $settingsSelectedTextPath,
+            selectedMarkdownSelectionPath: $settingsSelectedMarkdownPath,
             selectedTemplateSelectionPath: $settingsSelectedTemplatePath,
             refreshDocumentFiles: refreshDocumentFiles,
             refreshDocumentFilesAfterDeletingAllData: refreshDocumentFilesAfterDeletingAllData,

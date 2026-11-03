@@ -25,6 +25,8 @@ struct SettingsDocumentTableSection: View {
     let loadedDocumentURL: URL?
     let textURLs: [URL]
     @Binding var selectedTextSelectionPath: String?
+    let markdownURLs: [URL]
+    @Binding var selectedMarkdownSelectionPath: String?
     let imageURLs: [URL]
     let previewedImageURL: URL?
     let appliedImageURL: URL?
@@ -39,6 +41,7 @@ struct SettingsDocumentTableSection: View {
     let allFileURLs: [URL]
     @Binding var fileScrollPositionID: String?
     @Binding var textScrollPositionID: String?
+    @Binding var markdownScrollPositionID: String?
     @Binding var imageScrollPositionID: String?
     @Binding var imageNavigationScrollRequest: SettingsImageNavigationScrollRequest?
     @Binding var soundScrollPositionID: String?
@@ -51,9 +54,11 @@ struct SettingsDocumentTableSection: View {
     let loadFunctionKeys: (URL) -> Void
     let isLoadedDocument: (URL) -> Bool
     let loadTextFile: (URL) -> Void
+    let loadMarkdownFile: (URL) -> Void
     let deleteDocument: (URL) -> Void
     let duplicateDocument: (URL) -> Void
     let deleteTextFile: (URL) -> Void
+    let deleteMarkdownFile: (URL) -> Void
     let previewImage: (URL) -> Void
     let applyImageBackground: (URL?) -> Void
     let deleteImage: (URL) -> Void
@@ -72,7 +77,6 @@ struct SettingsDocumentTableSection: View {
     @State private var tableFeedbackColor: Color = .green
     @State private var tableFeedbackTask: Task<Void, Never>?
     @State private var temporaryScreenSelectionPath: String?
-    @State private var markdownScrollPositionID: String?
 
     // MARK: - BM:🅱️ IPHONE FILENAME FONT SIZE — Change 15 below to adjust all seven filename categories; leave iPad unchanged.
     private var tableRowFont: Font? {
@@ -126,7 +130,9 @@ struct SettingsDocumentTableSection: View {
                             imageRow(for: imageURL)
                         }
                     case .markdown:
-                        EmptyView()
+                        ForEach(markdownURLs, id: \.path) { markdownURL in
+                            markdownRow(for: markdownURL)
+                        }
                     case .sounds:
                         ForEach(soundURLs, id: \.path) { soundURL in
                             soundRow(for: soundURL)
@@ -245,6 +251,13 @@ struct SettingsDocumentTableSection: View {
             }
             self.selectedTextSelectionPath = nil
         }
+        .onChange(of: markdownURLs.map(\.path)) { _, markdownPaths in
+            guard let selectedMarkdownSelectionPath,
+                  !markdownPaths.contains(selectedMarkdownSelectionPath) else {
+                return
+            }
+            self.selectedMarkdownSelectionPath = nil
+        }
         .onDisappear {
             refreshConfirmationTask?.cancel()
             tableFeedbackTask?.cancel()
@@ -354,7 +367,7 @@ struct SettingsDocumentTableSection: View {
         case .images:
             return imageURLs.count
         case .markdown:
-            return 0
+            return markdownURLs.count
         case .sounds:
             return soundURLs.count
         case .pdfs:
@@ -401,7 +414,7 @@ struct SettingsDocumentTableSection: View {
         case .images:
             return (previewedImageURL ?? appliedImageURL)?.path
         case .markdown:
-            return nil
+            return selectedMarkdownSelectionPath
         case .sounds:
             return selectedSoundURL?.path
         case .pdfs:
@@ -422,7 +435,7 @@ struct SettingsDocumentTableSection: View {
         case .images:
             return imageURLs.map(\.path)
         case .markdown:
-            return []
+            return markdownURLs.map(\.path)
         case .sounds:
             return soundURLs.map(\.path)
         case .pdfs:
@@ -593,6 +606,53 @@ struct SettingsDocumentTableSection: View {
         .swipeActions(edge: .leading, allowsFullSwipe: false) {
             Button(role: .destructive) {
                 handleTextFileDeletion(textURL)
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
+        }
+    }
+
+    private func markdownRow(for markdownURL: URL) -> some View {
+        let isSelected = selectedMarkdownSelectionPath == markdownURL.path
+
+        return Button {
+            ButtonClickFeedback.playIfEnabled()
+            handleFileSelection(markdownURL) {
+                loadMarkdownFile(markdownURL)
+            }
+            showTableFeedback("copied name", color: .yellow)
+        } label: {
+            HStack {
+                Text(markdownURL.lastPathComponent)
+                    .font(tableRowFont)
+                    .fontWeight(isSelected ? .bold : .regular)
+                    .foregroundStyle(isSelected ? Color.yellow : .white)
+                    .multilineTextAlignment(.leading)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Spacer()
+            }
+            .padding(.leading, 10)
+            .frame(maxWidth: .infinity, minHeight: filenameRowMinimumHeight, alignment: .leading)
+            .background(Color.black)
+            .overlay {
+                Rectangle()
+                    .fill(Color.gray.opacity(0.6))
+                    .frame(height: 1)
+                    .frame(maxHeight: .infinity, alignment: .bottom)
+            }
+            .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .id(markdownURL.path)
+        .listRowInsets(EdgeInsets())
+        .listRowSeparator(.hidden)
+        .listRowBackground(Color.clear)
+        .swipeActions(edge: .leading, allowsFullSwipe: false) {
+            Button(role: .destructive) {
+                handleMarkdownFileDeletion(markdownURL)
             } label: {
                 Label("Delete", systemImage: "trash")
             }
@@ -907,6 +967,10 @@ struct SettingsDocumentTableSection: View {
 
     private func handleTextFileDeletion(_ textURL: URL) {
         deleteTextFile(textURL)
+    }
+
+    private func handleMarkdownFileDeletion(_ markdownURL: URL) {
+        deleteMarkdownFile(markdownURL)
     }
 
     private func handleSoundDeletion(_ soundURL: URL) {
