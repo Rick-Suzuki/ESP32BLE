@@ -1,38 +1,138 @@
-Stage C complete.
+Read-only probe complete. No files, settings, builds, or deployments were changed.
 
-Files modified:
-• ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
+1. Source locations
 
-Backup export:
-• Markdown discovery reuses availableMarkdownURLs, which filters regular .md files case-insensitively.
-• Full backups now include Markdown files as raw bytes under MDs/.
-• Markdown-only content enables full backup export.
+Top toolbar:
+• Main_TopToolbar.swift􀰓
+   • “file”: lines 143–157
+   • “KB”: lines 284–301
+   • “edit” / “done”: lines 306–323
+   • iPad-only document name: lines 135–141
+   • No top-toolbar numeric labels exist.
 
-Restore:
-• Added explicit ImportedContentKind.markdown.
-• Restore accepts only MDs/<filename>.md, including uppercase .MD.
-• .markdown and other unsupported files in MDs/ are rejected.
-• Markdown files flow through the existing safe temporary extraction and import mechanisms.
+Bottom toolbar:
+• Main_BtmToolbar.swift􀰓
+   • Shared iPhone reference font calculation: line 320
+   • Column value “10”: lines 362–382
+   • Row value “6”: lines 385–405
+   • Font-size value “13”: lines 645–653
+   • “rec”: lines 441–459
+   • “btn active”: lines 480–491
+   • “Button”: lines 494–515
+   • Shared toggleButton typography: lines 579–612
+   • Speech-status readout: lines 461–475
 
-Conflict handling:
-• Markdown uses the existing Replace All, Skip All, and Cancel flow.
-• Markdown conflict identity is filename/path based and remains independent from .txt; notes.md cannot overwrite notes.txt.
+Associated title definitions:
+• Main_BtmRightTxt.swift􀰓
+   • “Button” display-mode title: lines 50–61
+• Main_BtmToolbar.swift􀰓
+   • “btn active” grid-button-mode title: lines 24–39
 
-Settings integration:
-• Restored files trigger the existing document snapshot refresh.
-• The MDs table updates through its existing discovery path.
-• Existing Markdown selection is validated; stale selections clear safely.
-• A currently loaded, replaced Markdown file reloads only when it is the active Markdown selection.
+Device idiom:
+• ContentView.swift:20–22
+   • isPad is UIDevice.current.userInterfaceIdiom == .pad.
 
-Compatibility and safety:
-• Existing archives without MDs/ remain valid.
-• No archive version or existing archive-folder names changed.
-• Existing path validation remains in effect: nested paths, traversal, and unsupported entries are rejected before extraction.
-• No changes to Markdown rendering, editor behavior, Help, or native preview UI.
+2. Reference typography
 
-Validation:
-• Swift diagnostics: no issues in Set_Screen.swift􀰓.
-• Xcode build: succeeded.
-• No device deployment or destructive document testing performed.
+On iPhone, both green reference controls use:
 
-No unresolved implementation issues.
+• .system(size: 14, weight: .regular)
+• No custom design specified: standard system design.
+• .minimumScaleFactor(1), so they do not reduce below 14 points.
+• They are fixed-size fonts rather than Dynamic-Type text styles.
+
+This is calculated at Main_BtmToolbar.swift􀰓:
+
+• iPad: .body
+• iPhone: 14-point regular system font
+
+“btn active” receives it through toggleButton at lines 480–491 and 594–597.
+
+“Button” receives it directly at lines 494–500.
+
+Thus, on both iPhone 17 and iPhone XS Max, the source-defined reference size is 14 points regular.
+
+3. Why the red controls are larger
+
+Top toolbar:
+• “file”, “KB”, “edit”, and “done” have no active .font modifier.
+• The commented-out .headline modifiers do nothing.
+• No parent font modifier changes them.
+• They therefore use SwiftUI’s default body typography: normally about 17 points at the default Dynamic Type size, with Dynamic Type scaling.
+
+Bottom numeric values:
+• Column count, row count, and box-font-size value all use .headline.
+• .headline is normally about 17 points, semibold, and Dynamic-Type-scaled.
+• The “13” box-font-size label additionally permits scaling down to 85% only when constrained.
+• The “10” and “6” labels do not have a minimum scale factor.
+
+Therefore the visible discrepancy is deliberate source typography:
+• Reference controls: fixed 14-point regular.
+• Top labels: default scalable body, normally approximately 17 points.
+• Numeric values: scalable headline, normally approximately 17-point semibold.
+
+It is not caused by button dimensions, icon sizes, or an inherited toolbar font.
+
+4. Other relevant controls
+
+Already matching the reference on iPhone:
+• “rec” uses the same 14-point regular bottomToolbarButtonFont.
+• Other grid-button-mode titles such as “disabled”, “speech”, and “spk/active” use the same toggleButton typography.
+• The display-mode alternatives “Command”, “Btn Text”, and “All” use the same reference font.
+
+Intentionally different:
+• The speech-recognition status text uses 12.75 points in the normal iPhone layout and 9 points in compact layout. This is a constrained readout, not a button label.
+• Icons have independent explicit sizes and should remain unchanged.
+• The stop icon uses .headline, but it is an icon, not label text.
+
+5. Recommended minimal correction
+
+Apply an iPhone-only 14-point font to:
+• “file”
+• “KB”
+• “edit” and “done”
+• column value
+• row value
+• box-font-size value
+
+Preserve the current weights:
+• Top labels can remain regular.
+• Numeric values can remain semibold, using 14-point semibold on iPhone.
+
+Do not change:
+• Any icon fonts.
+• Frames, padding, spacing, or button widths/heights.
+• Speech-status readout sizing.
+• Central programmable-grid button typography.
+• Any iPad branch.
+
+The safest implementation is narrow conditional styling: preserve the current iPad modifiers exactly, and apply the 14-point target only when !isPad. The existing bottom-toolbar reference font is local to bottomBarLayout, so reusing it directly in the top-toolbar file would require unnecessary API or shared-style restructuring.
+
+6. Minimal implementation touchpoints
+
+• Main_TopToolbar.swift􀰓
+   • Add iPhone-only font styling to the three text button labels.
+• Main_BtmToolbar.swift􀰓
+   • Change only the three numeric .headline labels to use a 14-point iPhone font while retaining existing .headline behavior on iPad.
+
+No changes should be needed in:
+• Main_Screen.swift􀰓
+• ContentView.swift􀰓
+• Main_BtmRightTxt.swift􀰓
+
+7. Regression risks and tests
+
+Main risk is tighter text within existing fixed-width controls, particularly on iPhone XS Max landscape. Since the target font is smaller than the current text, clipping risk should decrease rather than increase.
+
+Test on iPhone 17 and iPhone XS Max:
+• “file”, “KB”, “edit”, and “done” match the visual base size of “rec”, “btn active”, and “Button”.
+• Column, row, and font-size values match that base size while retaining intended emphasis.
+• Long display-mode titles retain current truncation behavior.
+• Bottom toolbar still selects all intended ViewThatFits layouts.
+• Grid size and font-size changes still update their numeric labels.
+• Edit-mode state still displays “done”.
+• Dynamic Type settings do not cause unexpected overlap.
+
+Confirm unchanged on iPad Air M2, iPad mini, and iPad Pro:
+• Existing body and headline typography remains exactly as before.
+• Existing toolbar geometry and layout selection remain unchanged.

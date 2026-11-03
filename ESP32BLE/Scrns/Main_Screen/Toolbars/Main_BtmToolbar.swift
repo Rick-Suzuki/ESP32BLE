@@ -369,7 +369,7 @@ struct MainScreenBottomBar: View {
             )
 
             Text("\(visibleGridDimensions.columns)")
-                .font(.headline)
+                .font(isPad ? .headline : .system(size: 14, weight: .semibold))
                 .foregroundStyle(.white)
                 .frame(minWidth: isCompact ? 28 : 32)
 
@@ -392,7 +392,7 @@ struct MainScreenBottomBar: View {
             )
 
             Text("\(visibleGridDimensions.rows)")
-                .font(.headline)
+                .font(isPad ? .headline : .system(size: 14, weight: .semibold))
                 .foregroundStyle(.white)
                 .frame(minWidth: isCompact ? 28 : 32)
 
@@ -644,10 +644,10 @@ struct MainScreenBottomBar: View {
 
     private func fontSizeValueLabel(isCompact: Bool) -> some View {
         Text("\(Int(boxFontSize))")
-            .font(.headline)
+            .font(isPad ? .headline : .system(size: 14, weight: .semibold))
             .foregroundStyle(.white)
             .lineLimit(1)
-            .minimumScaleFactor(0.85)
+            .minimumScaleFactor(isPad ? 0.85 : 1)
             .frame(width: isCompact ? 40 : 48, alignment: .center)
             .contentShape(.rect)
     }

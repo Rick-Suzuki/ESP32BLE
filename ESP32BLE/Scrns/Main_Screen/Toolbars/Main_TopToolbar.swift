@@ -145,6 +145,7 @@ struct MainScreenToolbarContent: View {
                     showCurrentFilename()
                 }
                 .buttonStyle(.plain)
+                .font(.system(size: 14, weight: .regular))
                 .foregroundStyle(toolbarPrincipalForegroundColor)
                 .frame(minWidth: 52, minHeight: 36)
                 .background(toolbarButtonBackgroundColor(normalBackground: normalToolbarBackgroundColor))
@@ -284,9 +285,10 @@ struct MainScreenToolbarContent: View {
 			Button("KB") {
 				ButtonClickFeedback.playIfEnabled()
 				openKeyboardScreen()
-			}
-			//.font(.headline)
-			.foregroundStyle(keyboardButtonForegroundColor)
+				}
+				//.font(.headline)
+				.modifier(IPhoneTopToolbarTextFontModifier())
+				.foregroundStyle(keyboardButtonForegroundColor)
 			.padding(.horizontal, 5)
 			.frame(minHeight: 36)
 			.frame(width: 60)
@@ -307,9 +309,10 @@ struct MainScreenToolbarContent: View {
 				ButtonClickFeedback.playIfEnabled()
 				toggleGridEditMode()
 			} label: {
-				Text(isGridEditModeEnabled ? "done" : "edit")
-					//.font(.headline)
-					.foregroundStyle(toolbarActionForegroundColor)
+					Text(isGridEditModeEnabled ? "done" : "edit")
+						//.font(.headline)
+						.modifier(IPhoneTopToolbarTextFontModifier())
+						.foregroundStyle(toolbarActionForegroundColor)
 					.frame(minWidth: topToolbarEditMinWidth, minHeight: 36)
 					.background(toolbarButtonBackgroundColor(normalBackground: editModeButtonBackgroundColor))
 					.overlay {
@@ -368,6 +371,17 @@ struct MainScreenToolbarContent: View {
 	//
     private var toolbarPrincipalForegroundColor: Color {
         isGridEditModeEnabled ? inactiveToolbarForegroundColor : .white
+    }
+}
+
+private struct IPhoneTopToolbarTextFontModifier: ViewModifier {
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if isPad {
+            content
+        } else {
+            content.font(.system(size: 14, weight: .regular))
+        }
     }
 }
 //
