@@ -158,6 +158,7 @@ struct MainScreen: View {
     // Easy-to-find styling controls for the main button grid.
     private let mainGridButtonSpacingMaximum: CGFloat = 10
     private let mainGridButtonSpacingMinimum: CGFloat = 4
+    private let iPhoneMainGridSpacingScale: CGFloat = 0.65
     private let mainGridButtonCornerRadiusMaximum: CGFloat = 20
     private let mainGridButtonCornerRadiusMinimum: CGFloat = 5
     let mainGridButtonBorderWidth: CGFloat = 2
@@ -6267,7 +6268,8 @@ Tapping a row inserts the key code at the cursor.
     var mainGridButtonSpacing: CGFloat {
         let buttonCount = max(visibleGridDimensions.columns * visibleGridDimensions.rows, 1)
         let normalizedProgress = min(max(CGFloat(buttonCount - 1) / CGFloat(144 - 1), 0), 1)
-        return mainGridButtonSpacingMaximum - ((mainGridButtonSpacingMaximum - mainGridButtonSpacingMinimum) * normalizedProgress)
+        let originalSpacing = mainGridButtonSpacingMaximum - ((mainGridButtonSpacingMaximum - mainGridButtonSpacingMinimum) * normalizedProgress)
+        return isPad ? originalSpacing : originalSpacing * iPhoneMainGridSpacingScale
     }
 
     var mainGridButtonCornerRadius: CGFloat {
