@@ -100,6 +100,7 @@ struct SettingsScreen: View {
         case document
         case config
         case text
+        case markdown
         case image
         case sound
         case pdf
@@ -184,6 +185,7 @@ struct SettingsScreen: View {
         var skipFileNameKeys: Set<String> = []
         var existingFileNames: Set<String>
         var existingTextNames: Set<String>
+        var existingMarkdownNames: Set<String>
         var existingConfigNames: Set<String>
         var existingImageNames: Set<String>
         var existingSoundNames: Set<String>
@@ -4027,6 +4029,7 @@ struct SettingsScreen: View {
             selectedConfigURLsByName: selectedConfigURLsByName,
             existingFileNames: Set(availableDocumentURLs.map { $0.lastPathComponent.lowercased() }),
             existingTextNames: Set(availableTextURLs.map { $0.lastPathComponent.lowercased() }),
+            existingMarkdownNames: Set(availableMarkdownURLs.map { $0.lastPathComponent.lowercased() }),
             existingConfigNames: existingConfigFileNames(),
             existingImageNames: Set(availableImageURLs.map { $0.lastPathComponent.lowercased() }),
             existingSoundNames: Set(availableSoundURLs.map { $0.lastPathComponent.lowercased() }),
@@ -4188,6 +4191,39 @@ struct SettingsScreen: View {
                 } catch {
                     recordImportFailure(fileName: targetFileName, error: error, session: &session)
                     db("Failed to import text file \(targetFileName): \(error.localizedDescription)")
+                }
+                continue
+            }
+
+            if pathExtension == "md" {
+                guard session.importMode == .allFiles else {
+                    continue
+                }
+
+                if session.existingMarkdownNames.contains(targetFileNameKey) ||
+                    FileManager.default.fileExists(atPath: targetURL.path) {
+                    if applyPendingImportConflictIfNeeded(
+                        sourceURL: sourceURL,
+                        targetURL: targetURL,
+                        fileName: targetFileName,
+                        contentKind: .markdown,
+                        session: &session
+                    ) {
+                        return
+                    }
+                    continue
+                }
+
+                do {
+                    try importFileData(from: sourceURL, to: targetURL)
+                    recordSuccessfulImport(
+                        targetURL: targetURL,
+                        fileNameKey: targetFileNameKey,
+                        contentKind: .markdown,
+                        session: &session
+                    )
+                } catch {
+                    recordImportFailure(fileName: targetFileName, error: error, session: &session)
                 }
                 continue
             }
@@ -4356,6 +4392,15 @@ struct SettingsScreen: View {
             session.existingTextNames.insert(fileNameKey)
             if session.firstImportedTextURL == nil {
                 session.firstImportedTextURL = targetURL
+            }
+        case .markdown:
+            session.existingMarkdownNames.insert(fileNameKey)
+            if listMode == .markdown,
+               let loadedDocumentURL,
+               let selectedMarkdownFileURL,
+               loadedDocumentURL.standardizedFileURL == targetURL.standardizedFileURL,
+               selectedMarkdownFileURL.standardizedFileURL == targetURL.standardizedFileURL {
+                loadSelectedDocumentText()
             }
         case .image:
             session.existingImageNames.insert(fileNameKey)
@@ -4831,6 +4876,7 @@ struct SettingsScreen: View {
         var configURLs: [URL] = []
         var screenURLs: [URL] = []
         var textURLs: [URL] = []
+        var markdownURLs: [URL] = []
         var imageURLs: [URL] = []
         var soundURLs: [URL] = []
         var pdfURLs: [URL] = []
@@ -4874,6 +4920,8 @@ struct SettingsScreen: View {
                 screenURLs.append(extractedURL)
             case .text:
                 textURLs.append(extractedURL)
+            case .markdown:
+                markdownURLs.append(extractedURL)
             case .image:
                 imageURLs.append(extractedURL)
             case .sound:
@@ -4911,7 +4959,7 @@ struct SettingsScreen: View {
             }
 
         return FullArchiveEntryClassification(
-            fileURLs: configURLs + screenURLs + textURLs + imageURLs + soundURLs + pdfURLs,
+            fileURLs: configURLs + screenURLs + textURLs + markdownURLs + imageURLs + soundURLs + pdfURLs,
             configURLsByName: configURLsByName,
             templatePairs: templatePairs
         )
@@ -4950,6 +4998,8 @@ struct SettingsScreen: View {
             contentKind = .document
         case "Text" where pathExtension == legacyScreenDocumentFileExtension:
             contentKind = .text
+        case "MDs" where pathExtension == "md":
+            contentKind = .markdown
         case "Images" where supportedImportedImageExtensions.contains(pathExtension):
             contentKind = .image
         case "Sounds" where supportedImportedSoundExtensions.contains(pathExtension):
@@ -5009,6 +5059,7 @@ struct SettingsScreen: View {
         hasScreensFolder: Bool,
         hasConfigsFolder: Bool,
         hasTextFolder: Bool,
+        hasMDsFolder: Bool,
         hasImagesFolder: Bool,
         hasSoundsFolder: Bool,
         hasPDFsFolder: Bool,
@@ -5019,6 +5070,7 @@ struct SettingsScreen: View {
         let hasScreensFolder = entries.contains { $0.fileName.hasPrefix("Screens/") }
         let hasConfigsFolder = entries.contains { $0.fileName.hasPrefix("Configs/") }
         let hasTextFolder = entries.contains { $0.fileName.hasPrefix("Text/") }
+        let hasMDsFolder = entries.contains { $0.fileName.hasPrefix("MDs/") }
         let hasImagesFolder = entries.contains { $0.fileName.hasPrefix("Images/") }
         let hasSoundsFolder = entries.contains { $0.fileName.hasPrefix("Sounds/") }
         let hasPDFsFolder = entries.contains { $0.fileName.hasPrefix("PDFs/") }
@@ -5026,6 +5078,7 @@ struct SettingsScreen: View {
         let hasArchiveContentFolder = hasScreensFolder ||
             hasConfigsFolder ||
             hasTextFolder ||
+            hasMDsFolder ||
             hasImagesFolder ||
             hasSoundsFolder ||
             hasPDFsFolder ||
@@ -5036,6 +5089,7 @@ struct SettingsScreen: View {
             hasScreensFolder: hasScreensFolder,
             hasConfigsFolder: hasConfigsFolder,
             hasTextFolder: hasTextFolder,
+            hasMDsFolder: hasMDsFolder,
             hasImagesFolder: hasImagesFolder,
             hasSoundsFolder: hasSoundsFolder,
             hasPDFsFolder: hasPDFsFolder,
@@ -5189,6 +5243,7 @@ struct SettingsScreen: View {
             if !FileManager.default.fileExists(atPath: candidateURL.path),
                !session.existingFileNames.contains(candidateKey),
                !session.existingTextNames.contains(candidateKey),
+               !session.existingMarkdownNames.contains(candidateKey),
                !session.existingConfigNames.contains(candidateKey),
                !session.existingImageNames.contains(candidateKey),
                !session.existingSoundNames.contains(candidateKey),
@@ -5611,6 +5666,7 @@ struct SettingsScreen: View {
     private var hasArchiveExportContent: Bool {
         !availableDocumentURLs.isEmpty ||
             !availableTextURLs.isEmpty ||
+            !availableMarkdownURLs.isEmpty ||
             !availableImageURLs.isEmpty ||
             !availableSoundURLs.isEmpty ||
             !availablePDFURLs.isEmpty ||
@@ -5664,6 +5720,11 @@ struct SettingsScreen: View {
         try appendArchiveEntries(
             from: availableTextURLs,
             folderName: "Text",
+            to: &entries
+        )
+        try appendArchiveEntries(
+            from: availableMarkdownURLs,
+            folderName: "MDs",
             to: &entries
         )
         try appendArchiveEntries(

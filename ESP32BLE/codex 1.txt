@@ -1,39 +1,38 @@
-Stage B is complete.
+Stage C complete.
 
 Files modified:
-• ESP32BLE/Scrns/Main_Screen/Main_FilePreviewOverlay.swift
+• ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
 
-Image-reference handling:
-• Valid Markdown image syntax is parsed without regex-only matching.
-• Balanced and escaped parentheses are handled.
-• URL decoding is applied before displaying the final path component.
-• Attachments/example.jpeg displays as example.jpeg.
-• /private/path/Photo%20One.PNG displays as Photo One.PNG.
-• Images/photo(1).jpg displays as photo(1).jpg.
-• Image references inside list items use the same inline renderer.
-• No <img> elements, file lookups, image loading, or filesystem access were added.
-• Malformed references remain escaped, readable text.
+Backup export:
+• Markdown discovery reuses availableMarkdownURLs, which filters regular .md files case-insensitively.
+• Full backups now include Markdown files as raw bytes under MDs/.
+• Markdown-only content enables full backup export.
 
-Tables:
-• Supports ordinary pipe tables with a header row and dash separator row.
-• Header cells are visually distinct.
-• Cells support existing inline Markdown formatting.
-• Uneven rows are safely padded or truncated to the header column count.
-• Wide tables scroll horizontally only inside their table container; the preview page remains vertically scrollable.
+Restore:
+• Added explicit ImportedContentKind.markdown.
+• Restore accepts only MDs/<filename>.md, including uppercase .MD.
+• .markdown and other unsupported files in MDs/ are rejected.
+• Markdown files flow through the existing safe temporary extraction and import mechanisms.
 
-Preserved:
-• Markdown WKWebView restrictions, JavaScript disablement, blocked navigation, and in-memory HTML generation.
-• iPhone Markdown scaling: 0.66.
-• iPad Markdown scaling: 1.00.
-• Plain-text, PDF, and image previews.
-• Preview geometry, scrolling, Close button, and other file behavior.
+Conflict handling:
+• Markdown uses the existing Replace All, Skip All, and Cancel flow.
+• Markdown conflict identity is filename/path based and remains independent from .txt; notes.md cannot overwrite notes.txt.
+
+Settings integration:
+• Restored files trigger the existing document snapshot refresh.
+• The MDs table updates through its existing discovery path.
+• Existing Markdown selection is validated; stale selections clear safely.
+• A currently loaded, replaced Markdown file reloads only when it is the active Markdown selection.
+
+Compatibility and safety:
+• Existing archives without MDs/ remain valid.
+• No archive version or existing archive-folder names changed.
+• Existing path validation remains in effect: nested paths, traversal, and unsupported entries are rejected before extraction.
+• No changes to Markdown rendering, editor behavior, Help, or native preview UI.
 
 Validation:
-• Source diagnostics: no issues.
-• Diff whitespace validation: passed.
-• Project build: succeeded.
-• No Simulator, deployment, commit, branch, push, or backup.
+• Swift diagnostics: no issues in Set_Screen.swift􀰓.
+• Xcode build: succeeded.
+• No device deployment or destructive document testing performed.
 
-Known limitations:
-• Tables are intentionally basic: no alignment syntax, column spanning, multiline cells, or nested tables.
-• Nested lists remain readable through the existing lightweight list renderer but are not converted into deeply nested HTML list structures.
+No unresolved implementation issues.
