@@ -13,6 +13,7 @@ struct SettingsDocumentTableSection: View {
         case files
         case text
         case images
+        case markdown
         case sounds
         case pdfs
         case templates
@@ -71,6 +72,7 @@ struct SettingsDocumentTableSection: View {
     @State private var tableFeedbackColor: Color = .green
     @State private var tableFeedbackTask: Task<Void, Never>?
     @State private var temporaryScreenSelectionPath: String?
+    @State private var markdownScrollPositionID: String?
 
     // MARK: - BM:🅱️ IPHONE FILENAME FONT SIZE — Change 15 below to adjust all seven filename categories; leave iPad unchanged.
     private var tableRowFont: Font? {
@@ -123,6 +125,8 @@ struct SettingsDocumentTableSection: View {
                         ForEach(imageURLs, id: \.path) { imageURL in
                             imageRow(for: imageURL)
                         }
+                    case .markdown:
+                        EmptyView()
                     case .sounds:
                         ForEach(soundURLs, id: \.path) { soundURL in
                             soundRow(for: soundURL)
@@ -349,6 +353,8 @@ struct SettingsDocumentTableSection: View {
             return textURLs.count
         case .images:
             return imageURLs.count
+        case .markdown:
+            return 0
         case .sounds:
             return soundURLs.count
         case .pdfs:
@@ -368,6 +374,8 @@ struct SettingsDocumentTableSection: View {
             return $textScrollPositionID
         case .images:
             return $imageScrollPositionID
+        case .markdown:
+            return $markdownScrollPositionID
         case .sounds:
             return $soundScrollPositionID
         case .pdfs:
@@ -392,6 +400,8 @@ struct SettingsDocumentTableSection: View {
             return selectedTextSelectionPath
         case .images:
             return (previewedImageURL ?? appliedImageURL)?.path
+        case .markdown:
+            return nil
         case .sounds:
             return selectedSoundURL?.path
         case .pdfs:
@@ -411,6 +421,8 @@ struct SettingsDocumentTableSection: View {
             return textURLs.map(\.path)
         case .images:
             return imageURLs.map(\.path)
+        case .markdown:
+            return []
         case .sounds:
             return soundURLs.map(\.path)
         case .pdfs:
@@ -443,7 +455,7 @@ struct SettingsDocumentTableSection: View {
         switch listMode {
         case .images, .pdfs:
             scrollProxy.scrollTo(selectedRowPath, anchor: .bottom)
-        case .files, .text, .sounds, .templates, .all:
+        case .files, .text, .markdown, .sounds, .templates, .all:
             scrollProxy.scrollTo(selectedRowPath)
         }
     }

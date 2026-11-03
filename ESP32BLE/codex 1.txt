@@ -1,12 +1,243 @@
-Stopped before making changes because the current source has a new broken non-planned image reference:
+ESP-SETTINGS-MD-001A — READ-ONLY PROBE REPORT
 
-• Help/html/troubleshooting-04.html references:
-../images/1_Connect_to_Mac/troubleshooting-04-01.png
-• The physical image is currently absent from Help/images/.
-• The only physical images currently present are:
-   • connect-mac-01-01.svg
-   • connect-mac-02-01.png
+No files, project settings, user data, or build outputs were modified. No build, launch, Simulator, or device deployment was performed.
 
-Because troubleshooting-04-01.png is not marked as a planned missing image, the generator validation would fail. I did not rename the other images or update the planned references, to avoid leaving this task in a partially changed state.
+1. Current Settings category architecture
 
-Please either restore the intended troubleshooting-04-01.png image or explicitly authorize converting that reference to a planned missing image.
+Primary implementation:
+• ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
+
+SettingsListMode is a private raw-string enum at lines 8-15:
+• files = screens
+• templates
+• text
+• images
+• sounds
+• pdfs
+• all = developer-only internal mode
+
+The visible Settings menu order is the visibleMenuModes array at lines 17-24:
+
+• screens
+• templates
+• text
+• images
+• sounds
+• PDFs
+
+Display labels are supplied by:
+• selectorTitle, lines 26-43
+• menuItemTitle, lines 45-52
+• selectedButtonTitle, lines 54-67
+
+The iPad native Menu is driven by visibleMenuModes at lines 903-919. Its active-category checkmark is shown by if listMode == mode at lines 909-913.
+
+The iPhone popover uses the same array at lines 943-975. Its visible checkmark uses listMode == mode at lines 951-953.
+
+The selected category is persisted in:
+• @AppStorage("settingsListMode"), line 346.
+
+Its raw value is the enum’s case name. Reordering the array does not alter a saved selected category or stored user files. Adding a new case such as markdown is also backward-compatible; existing stored raw values continue to resolve.
+
+There is also a private toggle(developerMode:) cycle at lines 69-86, but the only wrapper, nextListMode, at lines 1186-1190, has no current call sites. It should still be updated with the approved menu order to keep future behavior consistent.
+
+Safest requested order:
+• files
+• templates
+• images
+• markdown
+• pdfs
+• sounds
+• text
+
+This requires updating visibleMenuModes and the dormant toggle sequence, not changing existing raw identifiers.
+
+2. Existing Settings file tables
+
+Reusable table component:
+• ESP32BLE/Scrns/Set_Screen/Table_Img/Set_Table.swift
+• SettingsDocumentTableSection, lines 11-908.
+
+It currently supports list modes:
+• files
+• text
+• images
+• sounds
+• pdfs
+• templates
+• all
+
+The table’s switch and data sources are at lines 113-142. All categories use ForEach(..., id: \.path). Lists receive pull-to-refresh, restored scroll positions, item count, empty List behavior, and common row geometry.
+
+Each category has its own scroll-position binding:
+• files, text, images, sounds, PDFs, templates, all
+• Set_Screen.swift lines 350-356 and Set_Table.swift lines 363-380.
+
+All discovered category lists are case-insensitively sorted by filename:
+• text: Set_Screen.swift lines 2892-2899
+• sounds: lines 2933-2942
+• PDFs: lines 2944-2951
+• templates are supplied by discoverTemplateDocumentURLs, refreshed at lines 2958-2983.
+
+Existing behavior:
+
+• Screens:
+   • Single tap copies filename and marks a temporary selection.
+   • Double tap loads the screen.
+   • Swipe actions support delete and duplicate.
+   • Row handling: Set_Table.swift lines 864-894.
+
+• Text:
+   • Single tap loads UTF-8 content into the existing plain-text Settings editor and copies filename.
+   • Selected text row becomes yellow and bold.
+   • Leading swipe deletes.
+   • Row implementation: Set_Table.swift lines 543-588.
+   • Loading: Set_Screen.swift lines 2288-2307.
+   • Deletion: lines 3612-3629.
+
+• Images:
+   • Single tap previews.
+   • Double tap applies as Main Screen background.
+   • Yellow means previewed; green means applied.
+   • Leading swipe deletes.
+   • Row implementation: Set_Table.swift lines 590-663.
+
+• Sounds:
+   • Single tap selects and copies filename.
+   • Leading swipe deletes.
+   • Row implementation: Set_Table.swift lines 665-710.
+
+• PDFs:
+   • Single tap selects and copies filename.
+   • The Settings table reserves a preview area for PDFs.
+   • Leading swipe deletes.
+   • Row implementation: Set_Table.swift lines 712-757.
+   • Preview routing: Set_Screen.swift lines 2022-2032.
+
+• Templates:
+   • Single tap selects and displays its description.
+   • Double tap applies it.
+   • Leading swipe deletes.
+   • Row implementation: Set_Table.swift lines 799-862.
+
+The Settings text editor is a raw, no-wrap UIKit-backed text editor:
+• ESP32BLE/Scrns/Set_Screen/Set_TxtEditor.swift
+• PlainDocumentEditor, beginning at line 1.
+
+3. Current Markdown handling
+
+Confirmed: Settings does not currently discover .md files.
+
+availableTextURLs only accepts the legacy text extension, .txt:
+• Set_Screen.swift lines 2892-2899.
+
+There is no .md, .markdown, or Markdown-rendering implementation in Settings.
+
+Markdown is already partially supported elsewhere:
+
+• Main Screen command classification recognizes .md as a file:
+   • Main_ButtonBehavior.swift lines 357-375.
+
+• Main Screen preview accepts .md:
+   • supportedPreviewExtensions, lines 2450-2452.
+   • Preview routing, lines 1726-1738 and 1877-1910.
+
+• That preview reads Markdown as UTF-8 plain text. It does not render Markdown:
+   • MainScreenFilePreviewOverlay, lines 24-35.
+   • It displays Text(contents) in a monospaced scroll view.
+
+• The Soft Editor Files menu already has a combined Txt/MD category:
+   • Main_Screen.swift lines 6733-6749.
+   • It allows txt, md, and markdown.
+
+Important inconsistency:
+• The Soft Editor picker accepts .markdown.
+• Main Screen preview recognition and command classification currently explicitly recognize .md, not .markdown.
+
+No Markdown rendering engine, attributed Markdown parsing, WKWebView renderer, or dedicated Markdown preview exists.
+
+4. Import, backup, persistence, and compatibility
+
+Current Settings import UI is limited to:
+• Import Screen(s)
+• Restore Full Backup
+
+See Set_Screen.swift lines 977-1027 and 1300-1325.
+
+There is no standalone text or Markdown import route. plainTextImportType exists at lines 3713-3715 but has no current use.
+
+Full backup behavior:
+• Exports .txt resources under Text/:
+   • Set_Screen.swift lines 5535-5539.
+• Restores only .txt from the Text/ folder:
+   • lines 4812-4835.
+
+Therefore:
+• A .md file is not currently retained through the supported full-backup restore workflow.
+• A backup containing an MDs folder or a .md file under Text would be rejected as unsupported.
+• Existing .screen, template, image, sound, PDF, and .txt workflows are unaffected unless archive classification is changed.
+
+The current text selection is passed from ContentView:
+• ESP32BLE/Scrns/ContentView.swift lines 2902-2930.
+• settingsSelectedTextPath is @State, not @AppStorage, at ContentView line 214.
+
+The active Settings category itself is persisted through settingsListMode. Selection state for images, sounds, and PDFs is separately persisted through AppStorage. A dedicated MD table should use its own selection and scroll state rather than overloading text state.
+
+The Main Screen and Soft Editor already tolerate .md as a referenced filename. Adding Settings discovery does not require changing ESP32 firmware, ESPMacHelper, Sentinel, Recall, screen document formats, or saved screen resources.
+
+5. Recommended implementation approach
+
+Stage A — Menu-only structure
+
+Update only:
+• SettingsListMode in Set_Screen.swift
+• visibleMenuModes
+• labels for the new markdown case
+• toggle(developerMode:), for consistency
+• Settings table ListMode and its switch exhaustiveness
+
+Use a stable raw case name such as markdown, with user-visible title MDs.
+
+Do not rename existing category identifiers. Do not change existing text behavior.
+
+Stage B — Dedicated MDs table behavior
+
+Add a dedicated Markdown data flow, parallel to text:
+
+• availableMarkdownURLs, filtered to exact .md.
+• markdownURLs input for SettingsDocumentTableSection.
+• .markdown table case.
+• A dedicated Markdown row using the current text-row selection, filename copy, and swipe-to-delete conventions.
+• selectedMarkdownSelectionPath.
+• Dedicated Markdown scroll-position storage, for example settingsMDsScrollPositionID.
+• Dedicated selected Markdown URL/title accessors.
+• Update validation of remembered selections, editor loading, return-to-main save handling, item count, active row paths, and scroll restoration.
+
+The current text table must remain .txt only.
+
+For the requested scope, reuse the existing plain-text editor and raw UTF-8 file loading. Do not add Markdown rendering. This gives MDs the same selection and editing behavior as text while avoiding a separate preview architecture.
+
+Stage C — Import/export and backup integration
+
+Add an explicit ImportedContentKind.markdown, not merely a relaxed text filter.
+
+Update:
+• Full archive export to write Markdown files under a dedicated MDs/ folder.
+• Full archive restore classification to accept only .md from that folder.
+• Conflict tracking and first-import handling for Markdown.
+• Delete-all routing.
+• Any future standalone MD importer to use a Markdown UTType, rather than broadening .txt handling.
+
+A separate MD category without this stage would allow files already present in Documents to be listed, but MD files would not survive the supported backup/restore process.
+
+6. Regression risks
+
+• Reordering only visibleMenuModes is low risk, but the dormant toggle order should match it.
+• Reusing selectedTextSelectionPath for MDs risks clearing or cross-selecting rows because text and MD lists are different.
+• Reusing availableTextURLs would violate the requirement that .txt remain in text and .md appear only in MDs.
+• Merely allowing .md in archive Text would blur the category boundary and reduce future maintainability; use a separate archive folder/type.
+• The current Main Screen preview shows raw Markdown source, not rendered Markdown. This is compatible with the request not to implement Markdown rendering.
+• Existing backup archives must remain accepted unchanged. New MDs archive support should be additive, not require a format-version migration.
+• Physical-device validation should cover iPhone and iPad category-menu order, MD selection/deletion, editor save on return to Main Screen, backup/restore, and unchanged .txt behavior.
+
+No implementation was performed.

@@ -1,4 +1,9 @@
 
+V65.93
+MD table: stage A complete
+261103 Tue 1725
+
+
 V65.92
 ESP: iphones: smaller borders between btns
 261103 Tue 1522

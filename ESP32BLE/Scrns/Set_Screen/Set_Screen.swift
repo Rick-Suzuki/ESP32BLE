@@ -9,6 +9,7 @@ struct SettingsScreen: View {
         case files
         case text
         case images
+        case markdown
         case sounds
         case pdfs
         case templates
@@ -17,10 +18,11 @@ struct SettingsScreen: View {
         static let visibleMenuModes: [SettingsListMode] = [
             .files,
             .templates,
-            .text,
             .images,
+            .markdown,
+            .pdfs,
             .sounds,
-            .pdfs
+            .text
         ]
 
         var selectorTitle: String {
@@ -31,6 +33,8 @@ struct SettingsScreen: View {
                 return "text"
             case .images:
                 return "images"
+            case .markdown:
+                return "MDs"
             case .sounds:
                 return "sounds"
             case .pdfs:
@@ -46,6 +50,8 @@ struct SettingsScreen: View {
             switch self {
             case .templates:
                 return "templates"
+            case .markdown:
+                return "MDs"
             default:
                 return selectorTitle
             }
@@ -59,6 +65,8 @@ struct SettingsScreen: View {
                 return "scrns"
             case .images:
                 return "imgs"
+            case .markdown:
+                return "MDs"
             case .sounds:
                 return "snds"
             default:
@@ -69,16 +77,18 @@ struct SettingsScreen: View {
         mutating func toggle(developerMode: Bool) {
             switch self {
             case .files:
-                self = .text
-            case .text:
-                self = .images
-            case .images:
-                self = .sounds
-            case .sounds:
-                self = .pdfs
-            case .pdfs:
                 self = .templates
             case .templates:
+                self = .images
+            case .images:
+                self = .markdown
+            case .markdown:
+                self = .pdfs
+            case .pdfs:
+                self = .sounds
+            case .sounds:
+                self = .text
+            case .text:
                 self = developerMode ? .all : .files
             case .all:
                 self = .files
@@ -2008,6 +2018,8 @@ struct SettingsScreen: View {
             return .text
         case .images:
             return .images
+        case .markdown:
+            return .markdown
         case .sounds:
             return .sounds
         case .pdfs:
@@ -3081,6 +3093,8 @@ struct SettingsScreen: View {
             return selectedTextDisplayName
         case .images:
             return selectedImageDisplayName
+        case .markdown:
+            return "MDs"
         case .sounds:
             return selectedSoundDisplayName
         case .pdfs:
@@ -3100,6 +3114,8 @@ struct SettingsScreen: View {
             return false
         case .images:
             return selectedImageURL != nil
+        case .markdown:
+            return false
         case .sounds:
             return selectedSoundURL != nil
         case .pdfs:
@@ -3133,6 +3149,8 @@ struct SettingsScreen: View {
             return
         case .images:
             alertMessage = renameSelectedImage(to: proposedName)
+        case .markdown:
+            return
         case .sounds:
             alertMessage = renameSelectedSound(to: proposedName)
         case .pdfs:
