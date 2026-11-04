@@ -1,4 +1,9 @@
 
+
+V66.00
+Settings: before edit area update
+261104 Wed 1732
+
 V65.99
 Settings: table files renaming complete
 261104 Wed 1222
