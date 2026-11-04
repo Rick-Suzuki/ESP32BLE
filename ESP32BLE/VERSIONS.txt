@@ -1,7 +1,7 @@
 
 V66.02
 settings: zoom on image
-261104 Wed 2011
+261104 Wed 2012
 
 V66.01
 settings: image editor basic complete
