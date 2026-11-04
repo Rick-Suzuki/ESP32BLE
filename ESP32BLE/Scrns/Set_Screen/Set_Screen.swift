@@ -271,6 +271,13 @@ struct SettingsScreen: View {
         let height: Int
     }
 
+    private struct BackgroundImageReferenceUpdate {
+        let documentURL: URL
+        let configurationURL: URL
+        let originalConfigurationData: Data
+        let updatedConfiguration: ScreenConfig
+    }
+
     private struct PendingTemplateApplication {
         let templateURL: URL
         let templateName: String
@@ -320,6 +327,7 @@ struct SettingsScreen: View {
     let documentFiles: [URL]
     let documentDirectorySnapshot: [URL]
     let selectedDocumentName: String
+    @Binding var selectedScreenSelectionPath: String?
     @Binding var selectedTextSelectionPath: String?
     @Binding var selectedMarkdownSelectionPath: String?
     @Binding var selectedTemplateSelectionPath: String?
@@ -329,7 +337,7 @@ struct SettingsScreen: View {
     let createTemplate: (String, String?, String) throws -> TemplateCreationResult
     let applyTemplate: (URL, String) throws -> TemplateApplicationResult
     let saveSelectedDocumentAndReload: (String) -> Void
-    let renameDocument: (String) -> String?
+    let renameScreenDocument: (URL, String) -> (targetURL: URL?, errorMessage: String?)
     let deleteDocument: (URL) -> Void
     let duplicateDocument: (URL) -> Void
     let canDeleteDocuments: Bool
@@ -351,6 +359,7 @@ struct SettingsScreen: View {
     @State private var blockedDocumentSaveResult: DocumentSaveResult?
     @AppStorage("settingsBluetoothMonitorMode") private var isBluetoothMonitorMode = false
     @State private var isEditingDocumentName = false
+    @State private var screenTitleSelectionPath: String?
     @State private var documentNameDraft = ""
     @State private var renameAlertMessage: String?
     @State private var repairAlertMessage: String?
@@ -398,6 +407,7 @@ struct SettingsScreen: View {
     @FocusState private var isDocumentNameFieldFocused: Bool
     @State private var isCancellingDocumentNameFromOutsideTap = false
     @State private var previewImageURL: URL?
+    @State private var pendingImageRenameDestinationURL: URL?
     @State private var imageNavigationScrollRequest: SettingsImageNavigationScrollRequest?
     @State private var isImagePreviewRestorePending = false
     @State private var backgroundChangeFeedbackID = UUID()
@@ -427,8 +437,11 @@ struct SettingsScreen: View {
                 beginImagePreviewRestoration()
             }
             .onChange(of: documentDirectorySnapshot) {
+                reconcilePendingImageRenameSelection()
                 if let previewImageURL,
-                   !availableImageURLs.contains(previewImageURL) {
+                   !availableImageURLs.contains(where: {
+                       $0.standardizedFileURL == previewImageURL.standardizedFileURL
+                   }) {
                     self.previewImageURL = nil
                 }
                 validateRememberedTableSelections()
@@ -1203,6 +1216,16 @@ struct SettingsScreen: View {
         return nextMode
     }
 
+    private var screenSelectionPathForTable: Binding<String?> {
+        Binding(
+            get: { selectedScreenSelectionPath },
+            set: { newSelectionPath in
+                selectedScreenSelectionPath = newSelectionPath
+                screenTitleSelectionPath = newSelectionPath
+            }
+        )
+    }
+
     private var fileScrollPositionID: Binding<String?> {
         Binding(
             get: { fileScrollPositionIDStorage.isEmpty ? nil : fileScrollPositionIDStorage },
@@ -1276,9 +1299,11 @@ struct SettingsScreen: View {
     }
 
     private var settingsModeEditResetKey: String {
+        let screenPath = selectedScreenSelectionPath ?? ""
         let textPath = selectedTextSelectionPath ?? ""
         let markdownPath = selectedMarkdownSelectionPath ?? ""
-        return "\(listModeRawValue)|\(textPath)|\(markdownPath)|\(selectedImagePath)|\(selectedSoundPath)|\(selectedPDFPath)"
+        let previewPath = previewImageURL?.path ?? ""
+        return "\(listModeRawValue)|\(screenPath)|\(textPath)|\(markdownPath)|\(selectedImagePath)|\(previewPath)|\(selectedSoundPath)|\(selectedPDFPath)"
     }
 
     private var canExportActiveScreen: Bool {
@@ -1681,6 +1706,27 @@ struct SettingsScreen: View {
         }
     }
 
+    private func reconcilePendingImageRenameSelection() {
+        guard let pendingImageRenameDestinationURL else {
+            return
+        }
+
+        guard let matchingImageURL = availableImageURLs.first(where: {
+            $0.standardizedFileURL == pendingImageRenameDestinationURL.standardizedFileURL
+        }) else {
+            return
+        }
+
+        previewImageURL = matchingImageURL
+        imageScrollPositionID.wrappedValue = matchingImageURL.path
+        imageNavigationScrollRequest = SettingsImageNavigationScrollRequest(
+            targetPath: matchingImageURL.path,
+            id: UUID(),
+            alignsToTop: false
+        )
+        self.pendingImageRenameDestinationURL = nil
+    }
+
     private func selectPreviewImageForNavigation(
         _ imageURL: URL,
         alignsToTop: Bool = false,
@@ -1802,6 +1848,7 @@ struct SettingsScreen: View {
             listMode: settingsDocumentTableListMode,
             documentFiles: availableDocumentURLs,
             loadedDocumentURL: loadedDocumentURL,
+            selectedScreenSelectionPath: screenSelectionPathForTable,
             textURLs: availableTextURLs,
             selectedTextSelectionPath: $selectedTextSelectionPath,
             markdownURLs: availableMarkdownURLs,
@@ -2920,6 +2967,23 @@ struct SettingsScreen: View {
         availableDocumentURLs.first(where: { $0.lastPathComponent == selectedDocumentName })
     }
 
+    private var selectedScreenFileURL: URL? {
+        guard let selectedScreenSelectionPath else {
+            return nil
+        }
+
+        return availableDocumentURLs.first(where: { $0.path == selectedScreenSelectionPath })
+    }
+
+    private var titleScreenFileURL: URL? {
+        guard screenTitleSelectionPath == selectedScreenSelectionPath,
+              let selectedScreenFileURL else {
+            return selectedDocumentFileURL
+        }
+
+        return selectedScreenFileURL
+    }
+
     private var selectedTextFileURL: URL? {
         guard let selectedTextSelectionPath else {
             return availableTextURLs.first
@@ -3029,11 +3093,11 @@ struct SettingsScreen: View {
     }
 
     private var selectedImageDisplayName: String {
-        guard let selectedImageURL else {
+        guard let imageURL = previewImageURL ?? selectedImageURL else {
             return "black bg"
         }
 
-        return selectedImageURL.deletingPathExtension().lastPathComponent
+        return imageURL.deletingPathExtension().lastPathComponent
     }
 
     private var availableSoundURLs: [URL] {
@@ -3089,6 +3153,22 @@ struct SettingsScreen: View {
     }
 
     private func validateRememberedTableSelections() {
+        if let selectedScreenSelectionPath,
+           let matchingScreenURL = availableDocumentURLs.first(where: {
+               $0.standardizedFileURL == URL(fileURLWithPath: selectedScreenSelectionPath).standardizedFileURL
+           }) {
+            if matchingScreenURL.path != selectedScreenSelectionPath {
+                if fileScrollPositionID.wrappedValue.map({
+                    URL(fileURLWithPath: $0).standardizedFileURL == matchingScreenURL.standardizedFileURL
+                }) == true {
+                    fileScrollPositionID.wrappedValue = matchingScreenURL.path
+                }
+                self.selectedScreenSelectionPath = matchingScreenURL.path
+            }
+        } else if selectedScreenSelectionPath != nil {
+            self.selectedScreenSelectionPath = nil
+        }
+
         if let selectedTextSelectionPath,
            !availableTextURLs.contains(where: { $0.path == selectedTextSelectionPath }) {
             self.selectedTextSelectionPath = nil
@@ -3187,7 +3267,7 @@ struct SettingsScreen: View {
     private var currentTitleDisplayName: String {
         switch listMode {
         case .files:
-            return selectedDocumentDisplayName
+            return titleScreenFileURL?.deletingPathExtension().lastPathComponent ?? selectedDocumentDisplayName
         case .text:
             return selectedTextDisplayName
         case .images:
@@ -3208,11 +3288,11 @@ struct SettingsScreen: View {
     private var canEditCurrentTitle: Bool {
         switch listMode {
         case .files:
-            return selectedDocumentFileURL != nil
+            return titleScreenFileURL != nil
         case .text:
             return explicitlySelectedTextFileURL != nil
         case .images:
-            return selectedImageURL != nil
+            return previewImageURL != nil || selectedImageURL != nil
         case .markdown:
             return explicitlySelectedMarkdownFileURL != nil
         case .sounds:
@@ -3237,13 +3317,40 @@ struct SettingsScreen: View {
         )
     }
 
+    private func renameSelectedScreenFile(to proposedName: String) -> String? {
+        guard let sourceURL = titleScreenFileURL else {
+            return "Select a screen first."
+        }
+
+        let wasSelectedScreen = selectedScreenSelectionPath == sourceURL.path
+        let result = renameScreenDocument(sourceURL, proposedName)
+        if let errorMessage = result.errorMessage {
+            return errorMessage
+        }
+
+        guard let targetURL = result.targetURL else {
+            return "Couldn't rename the screen."
+        }
+
+        if wasSelectedScreen {
+            selectedScreenSelectionPath = targetURL.path
+            screenTitleSelectionPath = nil
+            fileScrollPositionID.wrappedValue = targetURL.path
+        } else if fileScrollPositionID.wrappedValue == sourceURL.path {
+            fileScrollPositionID.wrappedValue = targetURL.path
+        }
+
+        refreshDocumentFiles()
+        return nil
+    }
+
     private func commitNameEdit() {
         let proposedName = documentNameDraft
         let alertMessage: String?
 
         switch listMode {
         case .files:
-            alertMessage = renameDocument(proposedName)
+            alertMessage = renameSelectedScreenFile(to: proposedName)
         case .text:
             alertMessage = renameSelectedTextFile(to: proposedName)
         case .images:
@@ -3710,38 +3817,136 @@ struct SettingsScreen: View {
     }
 
     private func renameSelectedImage(to proposedName: String) -> String? {
-        let trimmedName = proposedName.trimmingCharacters(in: .whitespacesAndNewlines)
-
-        guard !trimmedName.isEmpty else {
-            return "Filename can't be blank."
-        }
-
-        guard let sourceURL = selectedImageURL else {
+        let fileManager = FileManager.default
+        guard let sourceURL = previewImageURL ?? selectedImageURL else {
             return "Select an image first."
         }
 
-        let fileExtension = sourceURL.pathExtension
-        let targetFileName = "\(trimmedName).\(fileExtension)"
+        guard fileManager.fileExists(atPath: sourceURL.path) else {
+            return "The selected image is no longer available."
+        }
 
-        if targetFileName.caseInsensitiveCompare(sourceURL.lastPathComponent) == .orderedSame {
+        let originalExtension = sourceURL.pathExtension
+        guard !originalExtension.isEmpty else {
+            return "The selected image has no filename extension."
+        }
+
+        let validatedName = validatedRenameFileName(
+            from: proposedName,
+            preserving: originalExtension
+        )
+        guard let targetFileName = validatedName.fileName else {
+            return validatedName.errorMessage
+        }
+
+        if targetFileName == sourceURL.lastPathComponent {
             return nil
         }
 
-        let directoryURL = sourceURL.deletingLastPathComponent()
+        let targetURL = sourceURL.deletingLastPathComponent().appendingPathComponent(targetFileName)
+        let isCaseOnlyRename = targetFileName.caseInsensitiveCompare(sourceURL.lastPathComponent) == .orderedSame
 
-        if availableImageURLs.contains(where: { $0.lastPathComponent.caseInsensitiveCompare(targetFileName) == .orderedSame }) {
-            return "a file with that name already exists."
+        if availableImageURLs.contains(where: {
+            $0.standardizedFileURL != sourceURL.standardizedFileURL &&
+                $0.lastPathComponent.caseInsensitiveCompare(targetFileName) == .orderedSame
+        }) {
+            return "A file with that name already exists."
         }
 
-        let targetURL = directoryURL.appendingPathComponent(targetFileName)
+        if !isCaseOnlyRename, fileManager.fileExists(atPath: targetURL.path) {
+            return "A file with that name already exists."
+        }
+
+        let sourceFileName = sourceURL.lastPathComponent
+        let referenceUpdates = backgroundImageReferenceUpdates(
+            replacing: sourceFileName,
+            with: targetFileName
+        )
 
         do {
-            try FileManager.default.moveItem(at: sourceURL, to: targetURL)
-            refreshDocumentFiles()
-            persistSelectedImage(targetURL)
-            return nil
+            try moveImageForRename(from: sourceURL, to: targetURL)
         } catch {
             return "Couldn't rename the image."
+        }
+
+        for update in referenceUpdates {
+            guard saveScreenConfig(update.updatedConfiguration, for: update.documentURL) else {
+                restoreBackgroundImageReferences(referenceUpdates)
+                try? moveImageForRename(from: targetURL, to: sourceURL)
+                return "Couldn't update the screen backgrounds, so the image was not renamed."
+            }
+        }
+
+        let renamedAppliedImage = selectedImageURL.map {
+            $0.standardizedFileURL == sourceURL.standardizedFileURL
+        } ?? false
+        if renamedAppliedImage {
+            persistSelectedImage(targetURL)
+        }
+
+        isImagePreviewRestorePending = false
+        previewImageURL = targetURL
+        pendingImageRenameDestinationURL = targetURL
+        imageScrollPositionID.wrappedValue = targetURL.path
+        refreshDocumentFiles()
+        return nil
+    }
+
+    private func backgroundImageReferenceUpdates(
+        replacing sourceFileName: String,
+        with targetFileName: String
+    ) -> [BackgroundImageReferenceUpdate] {
+        availableDocumentURLs.compactMap { documentURL in
+            let configurationURL = configURL(forDocumentURL: documentURL)
+            guard let originalConfigurationData = try? Data(contentsOf: configurationURL),
+                  var updatedConfiguration = try? JSONDecoder().decode(ScreenConfig.self, from: originalConfigurationData),
+                  updatedConfiguration.backgroundImageName?.caseInsensitiveCompare(sourceFileName) == .orderedSame else {
+                return nil
+            }
+
+            updatedConfiguration.backgroundImageName = targetFileName
+            return BackgroundImageReferenceUpdate(
+                documentURL: documentURL,
+                configurationURL: configurationURL,
+                originalConfigurationData: originalConfigurationData,
+                updatedConfiguration: updatedConfiguration
+            )
+        }
+    }
+
+    private func restoreBackgroundImageReferences(_ updates: [BackgroundImageReferenceUpdate]) {
+        for update in updates {
+            try? update.originalConfigurationData.write(
+                to: update.configurationURL,
+                options: [.atomic]
+            )
+        }
+    }
+
+    private func moveImageForRename(from sourceURL: URL, to targetURL: URL) throws {
+        let fileManager = FileManager.default
+        let isCaseOnlyRename = sourceURL.lastPathComponent.caseInsensitiveCompare(
+            targetURL.lastPathComponent
+        ) == .orderedSame
+
+        guard isCaseOnlyRename else {
+            try fileManager.moveItem(at: sourceURL, to: targetURL)
+            return
+        }
+
+        let temporaryURL = sourceURL
+            .deletingLastPathComponent()
+            .appendingPathComponent(".esp-image-rename-\(UUID().uuidString).\(sourceURL.pathExtension)")
+        guard !fileManager.fileExists(atPath: temporaryURL.path) else {
+            throw CocoaError(.fileWriteFileExists)
+        }
+
+        try fileManager.moveItem(at: sourceURL, to: temporaryURL)
+        do {
+            try fileManager.moveItem(at: temporaryURL, to: targetURL)
+        } catch {
+            try? fileManager.moveItem(at: temporaryURL, to: sourceURL)
+            throw error
         }
     }
 

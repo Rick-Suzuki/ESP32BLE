@@ -1,4 +1,7 @@
 
+V65.99
+Settings: table files renaming complete
+261104 Wed 1222
 
 V65.98
 table changes inprog, txt, md done

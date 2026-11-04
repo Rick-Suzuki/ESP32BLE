@@ -23,6 +23,7 @@ struct SettingsDocumentTableSection: View {
     let listMode: ListMode
     let documentFiles: [URL]
     let loadedDocumentURL: URL?
+    @Binding var selectedScreenSelectionPath: String?
     let textURLs: [URL]
     @Binding var selectedTextSelectionPath: String?
     let markdownURLs: [URL]
@@ -76,7 +77,6 @@ struct SettingsDocumentTableSection: View {
     @State private var tableFeedbackMessage: String?
     @State private var tableFeedbackColor: Color = .green
     @State private var tableFeedbackTask: Task<Void, Never>?
-    @State private var temporaryScreenSelectionPath: String?
 
     // MARK: - BM:🅱️ IPHONE FILENAME FONT SIZE — Change 15 below to adjust all seven filename categories; leave iPad unchanged.
     private var tableRowFont: Font? {
@@ -238,11 +238,7 @@ struct SettingsDocumentTableSection: View {
             showTableFeedback("changed BG")
         }
         .onChange(of: documentFiles.map(\.path)) { _, documentPaths in
-            guard let temporaryScreenSelectionPath,
-                  !documentPaths.contains(temporaryScreenSelectionPath) else {
-                return
-            }
-            self.temporaryScreenSelectionPath = nil
+            handleScreenDocumentPathsChanged(documentPaths)
         }
         .onChange(of: textURLs.map(\.path)) { _, textPaths in
             guard let selectedTextSelectionPath,
@@ -261,8 +257,39 @@ struct SettingsDocumentTableSection: View {
         .onDisappear {
             refreshConfirmationTask?.cancel()
             tableFeedbackTask?.cancel()
-            temporaryScreenSelectionPath = nil
         }
+    }
+
+    private func handleScreenDocumentPathsChanged(_ documentPaths: [String]) {
+        guard let selectedScreenSelectionPath,
+              !documentPaths.contains(selectedScreenSelectionPath) else {
+            return
+        }
+
+        if let matchingDocumentURL = documentURL(matchingStandardizedPath: selectedScreenSelectionPath) {
+            let selectedScrollPath = fileScrollPositionID
+            let scrollMatchesRenamedDocument = selectedScrollPath.map {
+                urlsRepresentSameFile(URL(fileURLWithPath: $0), matchingDocumentURL)
+            } ?? false
+            if scrollMatchesRenamedDocument {
+                fileScrollPositionID = matchingDocumentURL.path
+            }
+            self.selectedScreenSelectionPath = matchingDocumentURL.path
+            return
+        }
+
+        self.selectedScreenSelectionPath = nil
+    }
+
+    private func documentURL(matchingStandardizedPath path: String) -> URL? {
+        let selectedURL = URL(fileURLWithPath: path)
+        return documentFiles.first {
+            urlsRepresentSameFile($0, selectedURL)
+        }
+    }
+
+    private func urlsRepresentSameFile(_ lhs: URL, _ rhs: URL) -> Bool {
+        lhs.standardizedFileURL == rhs.standardizedFileURL
     }
 
     private func showRefreshConfirmation() {
@@ -408,11 +435,20 @@ struct SettingsDocumentTableSection: View {
     private var selectedRowPath: String? {
         switch listMode {
         case .files:
-            return loadedDocumentURL?.path
+            if let selectedScreenSelectionPath,
+               let matchingDocumentURL = documentURL(matchingStandardizedPath: selectedScreenSelectionPath) {
+                return matchingDocumentURL.path
+            }
+            return documentFiles.first(where: isLoadedDocument)?.path
         case .text:
             return selectedTextSelectionPath
         case .images:
-            return (previewedImageURL ?? appliedImageURL)?.path
+            guard let selectedImageURL = previewedImageURL ?? appliedImageURL else {
+                return nil
+            }
+            return imageURLs.first(where: {
+                urlsRepresentSameFile($0, selectedImageURL)
+            })?.path
         case .markdown:
             return selectedMarkdownSelectionPath
         case .sounds:
@@ -495,8 +531,10 @@ struct SettingsDocumentTableSection: View {
     }
 
     private func documentRow(for fileURL: URL) -> some View {
-        let isLoaded = loadedDocumentURL?.path == fileURL.path
-        let isTemporarilySelected = temporaryScreenSelectionPath == fileURL.path
+        let isLoaded = isLoadedDocument(fileURL)
+        let isTemporarilySelected = selectedScreenSelectionPath.map {
+            urlsRepresentSameFile(URL(fileURLWithPath: $0), fileURL)
+        } ?? false
         let isHighlighted = isLoaded || isTemporarilySelected
         let rowForegroundColor: Color = isLoaded ? .green : (isTemporarilySelected ? .yellow : .white)
 
@@ -662,8 +700,12 @@ struct SettingsDocumentTableSection: View {
     }
 
     private func imageRow(for imageURL: URL) -> some View {
-        let isApplied = appliedImageURL?.path == imageURL.path
-        let isPreviewed = previewedImageURL?.path == imageURL.path
+        let isApplied = appliedImageURL.map {
+            urlsRepresentSameFile($0, imageURL)
+        } ?? false
+        let isPreviewed = previewedImageURL.map {
+            urlsRepresentSameFile($0, imageURL)
+        } ?? false
         let isHighlighted = isApplied || isPreviewed
         let rowForegroundColor: Color = isApplied ? .green : (isPreviewed ? .yellow : .white)
 
@@ -945,9 +987,9 @@ struct SettingsDocumentTableSection: View {
 
         Task { @MainActor in
             await Task.yield()
-            if temporaryScreenSelectionPath == fileURL.path,
+            if selectedScreenSelectionPath == fileURL.path,
                isLoadedDocument(fileURL) {
-                temporaryScreenSelectionPath = nil
+                selectedScreenSelectionPath = nil
             }
             showTableFeedback("changed screen")
         }
@@ -956,13 +998,13 @@ struct SettingsDocumentTableSection: View {
     private func handleScreenSingleTap(_ fileURL: URL) {
         ButtonClickFeedback.playIfEnabled()
         handleFileSelection(fileURL)
-        temporaryScreenSelectionPath = fileURL.path
+        selectedScreenSelectionPath = fileURL.path
         showTableFeedback("copied name", color: .yellow)
     }
 
     private func handleDocumentDeletion(_ fileURL: URL) {
-        if temporaryScreenSelectionPath == fileURL.path {
-            temporaryScreenSelectionPath = nil
+        if selectedScreenSelectionPath == fileURL.path {
+            selectedScreenSelectionPath = nil
         }
         deleteDocument(fileURL)
     }

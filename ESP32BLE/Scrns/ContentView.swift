@@ -211,6 +211,7 @@ struct ContentView: View {
     @AppStorage("documentFontSizesData") private var documentFontSizesData = ""
     @State private var documentFontSizeRefreshToken = 0
     @State private var settingsBLEText = ""
+    @State private var settingsSelectedScreenPath: String?
     @State private var settingsSelectedTextPath: String?
     @State private var settingsSelectedMarkdownPath: String?
     @State private var settingsSelectedTemplatePath: String?
@@ -2909,6 +2910,7 @@ struct ContentView: View {
             documentFiles: documentFiles,
             documentDirectorySnapshot: documentDirectorySnapshot,
             selectedDocumentName: selectedDocumentName,
+            selectedScreenSelectionPath: $settingsSelectedScreenPath,
             selectedTextSelectionPath: $settingsSelectedTextPath,
             selectedMarkdownSelectionPath: $settingsSelectedMarkdownPath,
             selectedTemplateSelectionPath: $settingsSelectedTemplatePath,
@@ -2918,7 +2920,7 @@ struct ContentView: View {
             createTemplate: createTemplateFromSelectedDocument,
             applyTemplate: applyTemplateToSelectedDocument,
             saveSelectedDocumentAndReload: saveSelectedDocumentAndReload,
-            renameDocument: renameSelectedDocument,
+            renameScreenDocument: renameScreenDocument,
             deleteDocument: deleteDocument,
             duplicateDocument: duplicateDocument,
             canDeleteDocuments: documentFiles.count > 1,
@@ -3027,6 +3029,136 @@ struct ContentView: View {
             requiredBoxCount: requiredBoxCount
         )
         _ = saveScreenConfig(config, for: targetDocumentURL)
+    }
+
+    private func moveItemForScreenRename(from sourceURL: URL, to targetURL: URL) throws {
+        let fileManager = FileManager.default
+        guard sourceURL.path != targetURL.path else {
+            return
+        }
+
+        let needsCaseOnlyMove = sourceURL.lastPathComponent.caseInsensitiveCompare(targetURL.lastPathComponent) == .orderedSame
+        guard needsCaseOnlyMove else {
+            try fileManager.moveItem(at: sourceURL, to: targetURL)
+            return
+        }
+
+        let temporaryURL = sourceURL
+            .deletingLastPathComponent()
+            .appendingPathComponent(".esp-screen-rename-\(UUID().uuidString)")
+
+        try fileManager.moveItem(at: sourceURL, to: temporaryURL)
+        do {
+            try fileManager.moveItem(at: temporaryURL, to: targetURL)
+        } catch {
+            try? fileManager.moveItem(at: temporaryURL, to: sourceURL)
+            throw error
+        }
+    }
+
+    private func renameScreenDocument(
+        _ sourceURL: URL,
+        _ proposedBaseName: String
+    ) -> (targetURL: URL?, errorMessage: String?) {
+        let fileManager = FileManager.default
+        let sourceURL = sourceURL.standardizedFileURL
+
+        guard let documentsDirectoryURL = documentsDirectoryURL()?.standardizedFileURL,
+              sourceURL.deletingLastPathComponent().standardizedFileURL == documentsDirectoryURL,
+              fileManager.fileExists(atPath: sourceURL.path),
+              isScreenDocumentURL(sourceURL) else {
+            return (nil, "The selected screen is no longer available.")
+        }
+
+        var baseName = proposedBaseName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let fileExtension = sourceURL.pathExtension
+        let trailingExtension = ".\(fileExtension)"
+        if baseName.count > trailingExtension.count,
+           baseName.lowercased().hasSuffix(trailingExtension.lowercased()) {
+            baseName.removeLast(trailingExtension.count)
+        }
+
+        guard !baseName.isEmpty else {
+            return (nil, "Filename can't be blank.")
+        }
+
+        guard baseName != ".", baseName != "..",
+              !baseName.contains("/"),
+              !baseName.contains("\\"),
+              !baseName.contains("\0"),
+              URL(fileURLWithPath: baseName).lastPathComponent == baseName else {
+            return (nil, "Enter a valid filename.")
+        }
+
+        let targetFileName = "\(baseName).\(fileExtension)"
+        if targetFileName == sourceURL.lastPathComponent {
+            return (sourceURL, nil)
+        }
+
+        let targetURL = documentsDirectoryURL.appendingPathComponent(targetFileName)
+        let isCaseOnlyRename = targetFileName.caseInsensitiveCompare(sourceURL.lastPathComponent) == .orderedSame
+
+        if documentFiles.contains(where: {
+            $0.path != sourceURL.path &&
+            $0.lastPathComponent.caseInsensitiveCompare(targetFileName) == .orderedSame
+        }) {
+            return (nil, "A file with that name already exists.")
+        }
+
+        if !isCaseOnlyRename && fileManager.fileExists(atPath: targetURL.path) {
+            return (nil, "A file with that name already exists.")
+        }
+
+        let sourceConfigURL = configURL(forDocumentURL: sourceURL)
+        let targetConfigURL = configURL(forDocumentURL: targetURL)
+        let hasSourceConfig = fileManager.fileExists(atPath: sourceConfigURL.path)
+
+        if !isCaseOnlyRename,
+           fileManager.fileExists(atPath: targetConfigURL.path) {
+            return (nil, "A screen configuration with that name already exists.")
+        }
+
+        do {
+            try moveItemForScreenRename(from: sourceURL, to: targetURL)
+
+            if hasSourceConfig {
+                do {
+                    try moveItemForScreenRename(from: sourceConfigURL, to: targetConfigURL)
+                } catch {
+                    try? moveItemForScreenRename(from: targetURL, to: sourceURL)
+                    throw error
+                }
+            }
+
+            var updatedFontSizes = loadDocumentFontSizes()
+            if let fontSize = updatedFontSizes.removeValue(forKey: sourceURL.lastPathComponent) {
+                updatedFontSizes[targetFileName] = fontSize
+                saveDocumentFontSizes(updatedFontSizes)
+            }
+
+            var updatedGridDimensions = loadDocumentGridDimensions()
+            if let gridDimensions = updatedGridDimensions.removeValue(forKey: sourceURL.lastPathComponent) {
+                updatedGridDimensions[targetFileName] = gridDimensions
+                saveDocumentGridDimensions(updatedGridDimensions)
+            }
+
+            documentNavigationHistory = documentNavigationHistory.map {
+                $0 == sourceURL.lastPathComponent ? targetFileName : $0
+            }
+            documentForwardNavigationHistory = documentForwardNavigationHistory.map {
+                $0 == sourceURL.lastPathComponent ? targetFileName : $0
+            }
+
+            if selectedDocumentName == sourceURL.lastPathComponent {
+                loadFunctionKeys(from: targetURL)
+            }
+
+            return (targetURL, nil)
+        } catch {
+            let threadName = Thread.isMainThread ? "main" : "background"
+            db("ERROR ContentView.renameScreenDocument failed source=\(sourceURL.lastPathComponent) target=\(targetFileName) error=\(String(describing: error)) thread=\(threadName)")
+            return (nil, "Couldn't rename the screen.")
+        }
     }
 
     private func renameSelectedDocument(to proposedName: String) -> String? {

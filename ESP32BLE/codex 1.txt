@@ -1,59 +1,45 @@
-Read-only probe complete. No files changed, no build run.
+ESP-SETTINGS-RENAME-002G complete.
 
-Exact cause
+Files modified:
 
-SettingsDocumentTableSection.loadedDocumentURL is not receiving the editor’s actual loadedDocumentURL.
+• ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
+• ESP32BLE/Scrns/Set_Screen/Table_Img/Set_Table.swift
 
-At Set_Screen.swift:1804, the table is constructed with:
+URL identity reconciliation:
 
-loadedDocumentURL: selectedDocumentFileURL
+• Screen paths are still stored using the table row’s exact fileURL.path.
+• When raw paths differ, standardizedFileURL equality identifies the equivalent screen.
+• Validation reconciles the selected path to the refreshed table row’s exact path instead of clearing it.
+• The screen scroll ID is reconciled to that same exact table-row path.
 
-selectedDocumentFileURL is the active .screen URL, not the Settings editor’s @State private var loadedDocumentURL.
+Yellow selection:
 
-Therefore, after selecting notes.txt or notes.md:
+• Screen-row temporary selection now recognizes standardized URL equivalence.
+• Green active-screen precedence is unchanged.
+• Once the refreshed row is found, selectedScreenSelectionPath is rewritten to the row’s actual path, so normal raw row identity also becomes true.
 
-• the selection path correctly changes to that file;
-• the editor’s real loadedDocumentURL correctly changes to that file;
-• but the table still receives the active screen URL;
-• the row comparison fails, so no row becomes green.
+Scrolling:
 
-Affected current conditions:
+• selectedRowPath resolves an equivalent selected screen to the actual refreshed row ID.
+• This prevents fallback to the active green screen when the selected renamed screen exists under the /private/var/mobile/... representation.
+• The existing ScrollViewReader restoration mechanism remains unchanged.
 
-• Set_Table.swift:568 text row:
-selectedTextSelectionPath == textURL.path && loadedDocumentURL == textURL
+Stale-selection safety:
 
-• Set_Table.swift:616 Markdown row:
-selectedMarkdownSelectionPath == markdownURL.path && loadedDocumentURL == markdownURL
+• If neither a raw nor standardized matching row exists, the existing selection-clearing behavior remains in place.
+• Deletion safety is not weakened.
 
-The URL comparisons themselves are correct: both use standardizedFileURL.
+Diagnostics:
 
-Actual state flow
+• Existing 🐞 [SCREEN-RENAME] logging remains in place for physical-device verification.
+• It will report reconciliation, row colour, and scroll-target results.
 
-1. A text-row tap calls loadTextFile(textURL) at Set_Table.swift:574.
+Validation:
 
-2. loadTextFile sets selectedTextSelectionPath and, after successful UTF-8 loading, sets the real editor loadedDocumentURL at Set_Screen.swift:2328.
+• Project build succeeded.
+• No deployment was performed.
 
-3. Markdown follows the same pattern at Set_Screen.swift:2349.
+Remaining physical-device check:
 
-4. SwiftUI correctly observes those @State changes, but the child table receives selectedDocumentFileURL instead of the state value. This is the failure point.
-
-There is no missing binding, stale row identity, or timing issue. The child table has proper bindings for selected paths; the wrong value is supplied for its separate loaded-document input.
-
-Recommended minimal correction
-
-Change only the table-construction argument at Set_Screen.swift line 1804 from:
-
-loadedDocumentURL: selectedDocumentFileURL
-
-to:
-
-loadedDocumentURL: loadedDocumentURL
-
-This preserves the existing two-part green condition:
-
-• selected path identifies the category’s selected row;
-• actual editor URL proves that exact document loaded successfully.
-
-It does not weaken save protection. The editor’s save guard remains based on loadedDocumentURL plus loadedDocumentName at Set_Screen.swift:2561.
-
-The existing .files behavior should remain valid: on switching to the screens category, the existing list-mode change flow loads the selected active screen into the editor, making the actual loaded URL again match that screen.
+• Rename Games.screen to Games2.screen, then Games2.screen to ZZZ.screen.
+• Expected diagnostics: standardized match true, final raw row match true after reconciliation, yellow row colour, valid scroll target, and no selection clear.
