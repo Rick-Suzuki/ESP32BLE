@@ -10,10 +10,20 @@ struct SettingsImagePreviewPanel: View {
     @Environment(\.displayScale) private var displayScale
     @State private var previewImage: UIImage?
     @State private var previewRequestID = ""
+    @State private var zoomScale: CGFloat = 1
+    @State private var panOffset: CGSize = .zero
+    @GestureState private var activeMagnification: CGFloat = 1
+    @GestureState private var activeDragTranslation: CGSize = .zero
+    @GestureState private var isMagnifying = false
 
     // MARK: - BM:🅱️ NO-IMAGE PREVIEW LABEL FONT SIZE
     // Controls the centered no-image preview label.
     private let blackPreviewLabelFont: Font = .system(size: 16, weight: .medium)
+
+    // MARK: - BM:🅱️ IMAGE EDITOR MAXIMUM ZOOM
+    // 🐞 USER ADJUSTABLE: Maximum image editor zoom.
+    // Change 5.0 to your preferred maximum zoom level.
+    private let maximumImageZoom: CGFloat = 5.0
 
     var body: some View {
         GeometryReader { geometry in
@@ -25,17 +35,10 @@ struct SettingsImagePreviewPanel: View {
                 Color.black
 
                 if let previewImage {
-                    if usesAspectFill {
-                        Image(uiImage: previewImage)
-                            .resizable()
-                            .scaledToFill()
-                            .frame(width: previewWidth, height: previewHeight)
-                    } else {
-                        Image(uiImage: previewImage)
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: previewWidth, height: previewHeight)
-                    }
+                    zoomablePreviewImage(
+                        previewImage,
+                        viewportSize: geometry.size
+                    )
                 }
 
                 if imageURL == nil {
@@ -54,7 +57,124 @@ struct SettingsImagePreviewPanel: View {
             .task(id: previewImageTaskID(maxPixelDimension: previewMaxPixelDimension)) {
                 await loadPreviewImage(maxPixelDimension: previewMaxPixelDimension)
             }
+            .onChange(of: imageURL?.path) { _, _ in
+                resetImageGestureState()
+            }
         }
+    }
+
+    // MARK: - BM:🅱️ IMAGE PREVIEW ZOOM AND PAN
+
+    private func zoomablePreviewImage(
+        _ image: UIImage,
+        viewportSize: CGSize
+    ) -> some View {
+        let effectiveScale = effectiveZoomScale
+        let renderedOffset = clampedPanOffset(
+            offsetByAdding(panOffset, isMagnifying ? .zero : activeDragTranslation),
+            imageSize: image.size,
+            viewportSize: viewportSize,
+            zoomScale: effectiveScale
+        )
+
+        return Image(uiImage: image)
+            .resizable()
+            .aspectRatio(contentMode: usesAspectFill ? .fill : .fit)
+            .frame(width: viewportSize.width, height: viewportSize.height)
+            .scaleEffect(effectiveScale, anchor: .center)
+            .offset(renderedOffset)
+            .contentShape(.rect)
+            .simultaneousGesture(magnificationGesture(imageSize: image.size, viewportSize: viewportSize))
+            .simultaneousGesture(panGesture(imageSize: image.size, viewportSize: viewportSize))
+    }
+
+    private var effectiveZoomScale: CGFloat {
+        min(maximumImageZoom, max(1, zoomScale * activeMagnification))
+    }
+
+    private func magnificationGesture(
+        imageSize: CGSize,
+        viewportSize: CGSize
+    ) -> some Gesture {
+        MagnifyGesture()
+            .updating($activeMagnification) { value, magnification, _ in
+                magnification = value.magnification
+            }
+            .updating($isMagnifying) { _, isMagnifying, _ in
+                isMagnifying = true
+            }
+            .onEnded { value in
+                zoomScale = min(maximumImageZoom, max(1, zoomScale * value.magnification))
+                panOffset = clampedPanOffset(
+                    panOffset,
+                    imageSize: imageSize,
+                    viewportSize: viewportSize,
+                    zoomScale: zoomScale
+                )
+            }
+    }
+
+    private func panGesture(
+        imageSize: CGSize,
+        viewportSize: CGSize
+    ) -> some Gesture {
+        DragGesture(minimumDistance: 0)
+            .updating($activeDragTranslation) { value, translation, _ in
+                translation = isMagnifying ? .zero : value.translation
+            }
+            .onEnded { value in
+                guard !isMagnifying else {
+                    return
+                }
+
+                panOffset = clampedPanOffset(
+                    offsetByAdding(panOffset, value.translation),
+                    imageSize: imageSize,
+                    viewportSize: viewportSize,
+                    zoomScale: effectiveZoomScale
+                )
+            }
+    }
+
+    private func clampedPanOffset(
+        _ offset: CGSize,
+        imageSize: CGSize,
+        viewportSize: CGSize,
+        zoomScale: CGFloat
+    ) -> CGSize {
+        guard imageSize.width > 0,
+              imageSize.height > 0,
+              viewportSize.width > 0,
+              viewportSize.height > 0 else {
+            return .zero
+        }
+
+        let horizontalScale = viewportSize.width / imageSize.width
+        let verticalScale = viewportSize.height / imageSize.height
+        let baseFactor = usesAspectFill
+            ? max(horizontalScale, verticalScale)
+            : min(horizontalScale, verticalScale)
+        let scaledWidth = imageSize.width * baseFactor * zoomScale
+        let scaledHeight = imageSize.height * baseFactor * zoomScale
+        let maximumPanX = max(0, (scaledWidth - viewportSize.width) / 2)
+        let maximumPanY = max(0, (scaledHeight - viewportSize.height) / 2)
+
+        return CGSize(
+            width: min(max(offset.width, -maximumPanX), maximumPanX),
+            height: min(max(offset.height, -maximumPanY), maximumPanY)
+        )
+    }
+
+    private func resetImageGestureState() {
+        zoomScale = 1
+        panOffset = .zero
+    }
+
+    private func offsetByAdding(_ lhs: CGSize, _ rhs: CGSize) -> CGSize {
+        CGSize(
+            width: lhs.width + rhs.width,
+            height: lhs.height + rhs.height
+        )
     }
 
     private func previewImageTaskID(maxPixelDimension: CGFloat) -> String {
@@ -64,6 +184,7 @@ struct SettingsImagePreviewPanel: View {
     private func loadPreviewImage(maxPixelDimension: CGFloat) async {
         guard let imageURL else {
             previewImage = nil
+            resetImageGestureState()
             return
         }
 
@@ -83,6 +204,9 @@ struct SettingsImagePreviewPanel: View {
         }
 
         previewImage = decodedImage
+        if decodedImage == nil {
+            resetImageGestureState()
+        }
     }
 }
 
