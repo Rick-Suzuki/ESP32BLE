@@ -1,45 +1,312 @@
-ESP-SETTINGS-RENAME-002G complete.
+Read-only probe complete. No files changed, no build, deployment, commit, or push.
 
-Files modified:
+1. Relevant files and lines
 
-• ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
-• ESP32BLE/Scrns/Set_Screen/Table_Img/Set_Table.swift
+ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
+• 455–500: Settings root and iPad/iPhone branch.
+• 504–535: iPhone parent layout, left controls area, right keyboard-controls area, and file table.
+• 1600–1620: passes iPhone editor layout values into the bottom-controls hierarchy.
+• 1623–1640: creates the shared image preview; iPhone selects one-pixel border and aspect-fill.
 
-URL identity reconciliation:
+ESP32BLE/Scrns/Set_Screen/Btm_Area/Set_BtmCtls.swift
+• 3–40: transparent pass-through wrapper to SettingsAvailableDevicesPanel.
 
-• Screen paths are still stored using the table row’s exact fileURL.path.
-• When raw paths differ, standardizedFileURL equality identifies the equivalent screen.
-• Validation reconciles the selected path to the refreshed table row’s exact path instead of clearing it.
-• The screen scroll ID is reconciled to that same exact table-row path.
+ESP32BLE/Scrns/Set_Screen/Btm_Area/Set_AvailableDevices.swift
+• 81–89: iPhone versus iPad layout branch.
+• 110–128: iPhone editor body, top row, editor viewport, and bottom controls.
+• 131–147: bottom button row and current editor-width expression.
+• 350–412: Sleep and Delete button fixed frames.
+• 492–510: Button Off fixed frame.
+• 512–514 and 550–565: Help button; it has no fixed 72-point width.
+• 524–534: iPhone action-button dimensions.
 
-Yellow selection:
+ESP32BLE/Scrns/Set_Screen/Table_Img/Set_ImgPanel.swift
+• 18–57: image viewport GeometryReader, black background, aspect-fill image, clipping, and border.
 
-• Screen-row temporary selection now recognizes standardized URL equivalence.
-• Green active-screen precedence is unchanged.
-• Once the refreshed row is found, selectedScreenSelectionPath is rewritten to the row’s actual path, so normal raw row identity also becomes true.
+2. Current iPhone hierarchy
 
-Scrolling:
+Settings screen GeometryReader
+-> iPhoneSettingsBody
+ -> outer HStack
 
-• selectedRowPath resolves an equivalent selected screen to the actual refreshed row ID.
-• This prevents fallback to the active green screen when the selected renamed screen exists under the /private/var/mobile/... representation.
-• The existing ScrollViewReader restoration mechanism remains unchanged.
+    -> left Settings content
 
-Stale-selection safety:
+       -> inner HStack, spacing 14
 
-• If neither a raw nor standardized matching row exists, the existing selection-clearing behavior remains in place.
-• Deletion safety is not weakened.
+          -> availableDevicesContent, fixed width 230
 
-Diagnostics:
+             -> SettingsBottomControlsSection
 
-• Existing 🐞 [SCREEN-RENAME] logging remains in place for physical-device verification.
-• It will report reconciliation, row colour, and scroll-target results.
+                -> SettingsAvailableDevicesPanel
 
-Validation:
+                   -> iPhoneImageEditorBody
 
-• Project build succeeded.
-• No deployment was performed.
+                      -> VStack, spacing 4
 
-Remaining physical-device check:
+                         -> top HStack: ESP32 / Mac / Spacer / Close
 
-• Rename Games.screen to Games2.screen, then Games2.screen to ZZZ.screen.
-• Expected diagnostics: standardized match true, final raw row match true after reconciliation, yellow row colour, valid scroll target, and no selection clear.
+                         -> image editor viewport
+
+                         -> bottom HStack: Help / Button Off / Sleep / Delete
+
+          -> keyboardSettingsContent
+
+    -> documentTableSection
+
+
+The outer left content has:
+• Leading padding: 8 points, Set_Screen.swift:521.
+• Trailing padding: 12 points, Set_Screen.swift:522.
+• Internal left/right-column spacing: 14 points, Set_Screen.swift:512.
+• Devices-column nominal width: 230 points, Set_Screen.swift:514.
+
+3. Current editor width calculation
+
+Current expressions in Set_AvailableDevices.swift:
+
+Editor width:
+• iPhoneEditorViewportWidth, lines 141–143:
+iPhoneBottomControlsWidth
+
+Nominal bottom-row width:
+• iPhoneBottomControlsWidth, lines 145–147:
+settingsActionButtonWidth * 4 + 8 * 3
+
+On iPhone:
+• settingsActionButtonWidth is 72, lines 524–526.
+• Therefore the editor is explicitly given 312 points:
+72 * 4 + 8 * 3 = 312.
+
+Editor placement:
+• Explicit editor frame: line 123.
+• Negative leading padding: line 124:
+.padding(.leading, -iPhoneEditorLeadingInset)
+• iPhoneEditorLeadingInset is the parent’s 8-point leading inset, passed from Set_Screen.swift:505, 513, and 521.
+
+The editor and Delete button are not measured in the same coordinate space. The editor uses a manually calculated width plus a negative placement adjustment. Delete is laid out as one child of a real HStack whose size is determined by its children and the parentRead-only probe complete. No files were modified, built, deployed, committed, or pushed.
+
+1. Relevant files and lines
+
+• Scrns/Set_Screen/Set_Screen.swift
+   • 454-500: top-level Settings geometry and iPad/iPhone branch.
+   • 504-535: iPhone Settings container, columns, padding, and file table.
+   • 1600-1620: passes iPhone editor values into the bottom-controls view.
+   • 1623-1640: shared image-preview configuration and iPhone preview wrapper.
+
+• Scrns/Set_Screen/Btm_Area/Set_BtmCtls.swift
+   • 3-40: forwards editor values to SettingsAvailableDevicesPanel.
+
+• Scrns/Set_Screen/Btm_Area/Set_AvailableDevices.swift
+   • 81-129: iPhone editor hierarchy.
+   • 131-147: bottom-button row and current editor-width expression.
+   • 350-365, 397-411, 492-510: fixed-width Sleep, Delete, and Button Off controls.
+   • 512-525: Help button and action-button-width definitions.
+   • 550-565: Help button has no fixed width.
+
+• Scrns/Set_Screen/Table_Img/Set_ImgPanel.swift
+   • 18-57: GeometryReader-based viewport, aspect-fill image, clipping, and border.
+
+2. Current view hierarchy
+
+SettingsScreenBase
+GeometryReader
+iPhoneSettingsBody
+
+  HStack
+
+    Left content area
+
+      HStack, spacing 14
+
+        SettingsAvailableDevicesPanel, fixed width 230
+
+          iPhoneImageEditorBody
+
+            VStack, spacing 4
+
+              Header HStack
+
+                ESP32/Mac buttons
+
+                Spacer
+
+                Close button
+
+              Image editor viewport
+
+              Bottom button HStack
+
+                Help / Button Off / Sleep / Delete
+
+        Keyboard timing/image-controls column
+
+    Document table, width 170...190
+
+
+The outer iPhone left content area has:
+• Leading padding: 8 points, Set_Screen.swift:521.
+• Trailing padding: 12 points, Set_Screen.swift:522.
+• Vertical padding: 8 points, Set_Screen.swift:523.
+• Between-column HStack spacing: 14 points, Set_Screen.swift:512.
+
+3. Current editor width expression
+
+Set_AvailableDevices.swift:122-125:
+
+iPhoneImageEditor
+.frame(width: iPhoneEditorViewportWidth, alignment: .leading)
+
+.padding(.leading, -iPhoneEditorLeadingInset)
+
+.frame(maxHeight: .infinity, alignment: .leading)
+
+
+Set_AvailableDevices.swift:141-146:
+
+iPhoneEditorViewportWidth
+= iPhoneBottomControlsWidth
+
+iPhoneBottomControlsWidth
+= settingsActionButtonWidth * 4 + 8 * 3
+
+For iPhone, settingsActionButtonWidth is 72 points at lines 524-525.
+
+Therefore the assumed editor width is:
+
+72 × 4 + 8 × 3 = 312 points.
+
+The leading inset passed from Set_Screen is 8 points at Set_Screen.swift:505 and applied as negative leading padding at Set_AvailableDevices.swift:124.
+
+4. Bottom-button row geometry
+
+The bottom row is:
+
+HStack(spacing: 8) {
+helpButton
+
+buttonClickToggleButton
+
+sleepWakeButton
+
+compactDeleteAllDataButton
+
+}
+
+Confirmed fixed-width buttons:
+• Button Off: 72 points, line 507.
+• Sleep: 72 points, line 362.
+• Delete: 72 points, line 408.
+
+Confirmed non-fixed-width button:
+• Help has no .frame(width:) modifier.
+• Its visible size is the intrinsic size of a title-sized questionmark-circle image, Set_AvailableDevices.swift:550-565.
+
+Therefore the current 312-point formula is not the actual bottom-row width. It incorrectly treats Help as a 72-point button.
+
+The nominal row is actually:
+
+intrinsic Help width + 72 + 72 + 72 + 24 points of HStack gaps.
+
+That is materially narrower than 312 points under normal rendering.
+
+Also, the row is wrapped in:
+
+.frame(maxWidth: .infinity, alignment: .leading)
+
+at line 138. That can give the row a parent-relative layout frame while its visible contents retain their own HStack geometry. The code does not measure the actual rendered trailing edge of Delete.
+
+5. Confirmed cause of the excessive editor width
+
+Confirmed cause: the editor and Delete button do not share a measured layout constraint.
+
+The editor uses an independently reconstructed width:
+• Four assumed 72-point buttons.
+• Three assumed 8-point gaps.
+
+The actual bottom row instead contains:
+• One intrinsic-width Help control.
+• Three 72-point controls.
+• Three 8-point gaps.
+• A parent-relative max-width frame.
+
+This overestimates the visible row’s trailing edge, making the white editor viewport wider than Delete.
+
+The negative leading padding is a separate placement adjustment. It does not establish a shared trailing coordinate with Delete.
+
+6. Viewport versus image content
+
+The excessive visible width is the editor viewport/border, not the aspect-fill image.
+
+Evidence:
+• The editor’s white border is rendered by the Rectangle stroke in Set_ImgPanel.swift:50-53.
+• That stroke uses the GeometryReader’s assigned width and height.
+• The aspect-fill image is framed to exactly those same dimensions at lines 29-32.
+• Clipping occurs at line 49 before the border overlay.
+
+Therefore:
+• The image may overflow internally because of scaledToFill.
+• That overflow is clipped correctly.
+• It cannot extend the white border.
+• If the border reaches beyond Delete, the allocated editor container width is oversized.
+
+7. iPhone 17 versus XS Max
+
+Confirmed source findings:
+• There is no iPhone 17-specific or XS Max-specific branch.
+• Both use the same non-iPad path because isPad is based only on user-interface idiom.
+• No safe-area inset is explicitly read or applied in this hierarchy.
+• No offset, geometry, or padding is conditional on a particular iPhone model.
+
+Device-dependent inputs:
+• Available screen width from SettingsScreenBase’s GeometryReader.
+• File-table width:
+min(max(availableWidth × 0.2, 170), 190)
+at Set_Screen.swift:1400-1402.
+• Resulting left content width and any SwiftUI compression/overflow caused by the fixed 230-point devices column plus its oversized children.
+
+Conclusion: the differing visual result is not caused by an explicit device path. It is most plausibly exposed differently by each device’s available width and SwiftUI’s handling of the fixed-width editor versus the bottom row’s intrinsic Help width. The incorrect independent width formula exists on both devices.
+
+8. Recommended minimal correction
+
+Do not continue calculating editor width from four nominal button widths.
+
+Modify only:
+• Scrns/Set_Screen/Btm_Area/Set_AvailableDevices.swift
+
+Recommended layout relationship:
+• Measure the actual rendered bottom-row control content width, including the intrinsic Help button and current HStack spacing.
+• Make the editor viewport use that measured width and the same leading alignment origin as the bottom row.
+• Remove the separate reconstructed iPhoneEditorViewportWidth formula.
+• Keep the existing vertical stack, top header, Close button, and image-preview component unchanged.
+
+A small preference-key measurement for the bottom HStack’s rendered content bounds is the least invasive approach. The editor should consume that actual width after layout, rather than inferring it from component constants. This shares the same visible trailing boundary as Delete on either phone size and avoids device-specific offsets.
+
+Risk to watch:
+• The measured value must describe the HStack’s visible content bounds, not only its enclosing maxWidth frame. Measuring the wrong modifier level would reproduce the current mismatch.
+• Initial layout should use a safe provisional width until the measured width is available.
+
+9. iPad protection
+
+iPad is protected by two separate paths:
+
+• Set_Screen.swift:461 selects the iPad layout branch and never calls iPhoneSettingsBody.
+• SettingsAvailableDevicesPanel.swift:33 selects iPadBody rather than iPhoneBody.
+• The proposed correction is confined to iPhoneImageEditorBody and iPhoneBottomControls within the non-iPad branch.
+• Set_ImgPanel.swift already switches image fitting with usesAspectFill: !isPad. The approved iPad aspect-fit behavior remains isolated.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

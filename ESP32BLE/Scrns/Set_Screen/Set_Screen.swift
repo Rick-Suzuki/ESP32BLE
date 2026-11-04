@@ -407,6 +407,7 @@ struct SettingsScreen: View {
     @FocusState private var isDocumentNameFieldFocused: Bool
     @State private var isCancellingDocumentNameFromOutsideTap = false
     @State private var previewImageURL: URL?
+    @State private var isIPhoneImagePreviewPresented = false
     @State private var pendingImageRenameDestinationURL: URL?
     @State private var imageNavigationScrollRequest: SettingsImageNavigationScrollRequest?
     @State private var isImagePreviewRestorePending = false
@@ -434,6 +435,7 @@ struct SettingsScreen: View {
             }
             .onChange(of: selectedDocumentName) {
                 previewImageURL = nil
+                isIPhoneImagePreviewPresented = false
                 beginImagePreviewRestoration()
             }
             .onChange(of: documentDirectorySnapshot) {
@@ -459,7 +461,11 @@ struct SettingsScreen: View {
                     if isPad {
                         HStack(alignment: .top, spacing: 0) {
                             VStack(spacing: 0) {
-                                editableDocumentSection
+                                if isImagesListActive {
+                                    largeImagePreviewSection
+                                } else {
+                                    editableDocumentSection
+                                }
 
                                 if !isDocumentEditorFocused {
                                     combinedBottomPanelSection
@@ -496,26 +502,23 @@ struct SettingsScreen: View {
     }
 
     private func iPhoneSettingsBody(availableWidth: CGFloat) -> some View {
+        let contentLeadingInset: CGFloat = 8
         let panelWidth = availableWidth.isFinite ? max(0, availableWidth) : 0
         let tableWidth = iPhoneDocumentTableWidth(for: availableWidth)
         let leftRegionWidth = max(0, panelWidth - tableWidth)
         let leftContentWidth = max(0, leftRegionWidth - 20)
 
         return HStack(alignment: .top, spacing: 0) {
-            VStack(spacing: 0) {
-                HStack(alignment: .top, spacing: 14) {
-                    availableDevicesContent
-                        .frame(width: 230, alignment: .topLeading)
+            HStack(alignment: .top, spacing: 14) {
+                availableDevicesContent(iPhoneEditorLeadingInset: contentLeadingInset)
+                    .frame(width: 230, alignment: .topLeading)
 
-                    keyboardSettingsContent
-                        .frame(maxWidth: .infinity, alignment: .topLeading)
-                }
-
-                Spacer(minLength: 0)
+                keyboardSettingsContent
+                    .frame(maxWidth: .infinity, alignment: .topLeading)
             }
             .frame(width: leftContentWidth, alignment: .topLeading)
             .frame(maxHeight: .infinity, alignment: .topLeading)
-            .padding(.leading, 8)
+            .padding(.leading, contentLeadingInset)
             .padding(.trailing, 12)
             .padding(.vertical, 8)
 
@@ -754,6 +757,9 @@ struct SettingsScreen: View {
         .onChange(of: listModeRawValue) {
             if saveCurrentDocumentText().allowsDocumentTransition {
                 loadSelectedDocumentText()
+            }
+            if !isImagesListActive {
+                isIPhoneImagePreviewPresented = false
             }
         }
         .onChange(of: documentEditorText) {
@@ -1591,7 +1597,7 @@ struct SettingsScreen: View {
         .padding(.leading, 4)
     }
 
-    private var availableDevicesContent: some View {
+    private func availableDevicesContent(iPhoneEditorLeadingInset: CGFloat = 0) -> some View {
         SettingsBottomControlsSection(
             ble: ble,
             macConnection: macConnection,
@@ -1603,6 +1609,10 @@ struct SettingsScreen: View {
             opacitySliderValue: $opacitySliderValue,
             imageControlButtons: AnyView(imageControlButtons),
             isImageControlsActive: isImagesListActive,
+            isIPhoneImageEditorPresented: isImagesListActive && isIPhoneImagePreviewPresented,
+            iPhoneEditorLeadingInset: iPhoneEditorLeadingInset,
+            iPhoneImageEditor: AnyView(iPhoneLargeImagePreview),
+            iPhoneImageEditorCloseButton: AnyView(iPhoneImagePreviewCloseButton),
             presentDeleteAllDataConfirmation: presentDeleteAllDataConfirmation,
             presentHelp: {
                 isHelpPresented = true
@@ -1613,19 +1623,34 @@ struct SettingsScreen: View {
     private var imagePreviewSection: some View {
         SettingsImagePreviewPanel(
             imageURL: previewImageURL,
-            opacitySliderValue: opacitySliderValue
+            opacitySliderValue: opacitySliderValue,
+            usesSinglePixelBorder: !isPad,
+            usesAspectFill: !isPad
         )
-        .contentShape(.rect)
-        .onTapGesture {
-            applySettingsBackground(previewImageURL)
+    }
+
+    private var largeImagePreviewSection: some View {
+        imagePreviewSection
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var iPhoneLargeImagePreview: some View {
+        imagePreviewSection
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var iPhoneImagePreviewCloseButton: some View {
+        Button {
+            isIPhoneImagePreviewPresented = false
+        } label: {
+            Image(systemName: "xmark")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(.white)
+                .frame(width: 28, height: 28)
+                .background(.black.opacity(0.7), in: .circle)
         }
-        .accessibilityElement(children: .combine)
-        .accessibilityAddTraits(.isButton)
-        .accessibilityLabel("Background preview")
-        .accessibilityHint("Applies the displayed background")
-        .accessibilityAction {
-            applySettingsBackground(previewImageURL)
-        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Close image preview")
     }
 
     private var pdfPreviewSection: some View {
@@ -1736,6 +1761,9 @@ struct SettingsScreen: View {
         guard hasPreviewChanged || forcesScroll else { return }
 
         selectPreviewImage(imageURL, updatesScrollPosition: false)
+        if !isPad {
+            isIPhoneImagePreviewPresented = true
+        }
         imageNavigationScrollRequest = SettingsImageNavigationScrollRequest(
             targetPath: imageURL.path,
             id: UUID(),
@@ -1803,7 +1831,7 @@ struct SettingsScreen: View {
     private var combinedBottomPanelSection: some View {
 		VStack(spacing:0) {
 			HStack(alignment: .top, spacing: 20) {
-				availableDevicesContent
+				availableDevicesContent()
 					.frame(maxWidth: .infinity, alignment: .topLeading)
 
 				keyboardSettingsContent
@@ -1888,6 +1916,7 @@ struct SettingsScreen: View {
             previewImage: { imageURL in
                 isImagePreviewRestorePending = false
                 previewImageURL = imageURL
+                isIPhoneImagePreviewPresented = !isPad
             },
             applyImageBackground: applySettingsBackground,
             deleteImage: deleteImage,

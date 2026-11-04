@@ -1,4 +1,7 @@
 
+V66.01
+settings: image editor basic complete
+261104 Wed 1854
 
 V66.00
 Settings: before edit area update

@@ -11,6 +11,10 @@ struct SettingsBottomControlsSection: View {
     @Binding var opacitySliderValue: Double
     let imageControlButtons: AnyView
     let isImageControlsActive: Bool
+    let isIPhoneImageEditorPresented: Bool
+    let iPhoneEditorLeadingInset: CGFloat
+    let iPhoneImageEditor: AnyView
+    let iPhoneImageEditorCloseButton: AnyView
     let presentDeleteAllDataConfirmation: () -> Void
     let presentHelp: () -> Void
 
@@ -26,6 +30,10 @@ struct SettingsBottomControlsSection: View {
             opacitySliderValue: $opacitySliderValue,
             imageControlButtons: imageControlButtons,
             isImageControlsActive: isImageControlsActive,
+            isIPhoneImageEditorPresented: isIPhoneImageEditorPresented,
+            iPhoneEditorLeadingInset: iPhoneEditorLeadingInset,
+            iPhoneImageEditor: iPhoneImageEditor,
+            iPhoneImageEditorCloseButton: iPhoneImageEditorCloseButton,
             presentDeleteAllDataConfirmation: presentDeleteAllDataConfirmation,
             presentHelp: presentHelp
         )

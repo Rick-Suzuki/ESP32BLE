@@ -216,8 +216,10 @@ struct SettingsDocumentTableSection: View {
                 itemCountBox
                     .frame(height: itemCountHeight)
 
-                imagePreviewSection
-                    .frame(height: previewHeight)
+                if listMode == .pdfs {
+                    imagePreviewSection
+                        .frame(height: previewHeight)
+                }
             }
         }
         .frame(maxHeight: .infinity, alignment: .top)
@@ -318,7 +320,7 @@ struct SettingsDocumentTableSection: View {
     }
 
     private func previewReservedHeight(for width: CGFloat) -> CGFloat {
-        guard listMode == .images || listMode == .pdfs else { return 0 }
+        guard listMode == .pdfs else { return 0 }
         let safeWidth = width.isFinite ? max(0, width) : 0
         return safeWidth / 1.3
     }

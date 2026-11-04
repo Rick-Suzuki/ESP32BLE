@@ -11,9 +11,14 @@ struct SettingsAvailableDevicesPanel: View {
     @Binding var opacitySliderValue: Double
     let imageControlButtons: AnyView
     let isImageControlsActive: Bool
+    let isIPhoneImageEditorPresented: Bool
+    let iPhoneEditorLeadingInset: CGFloat
+    let iPhoneImageEditor: AnyView
+    let iPhoneImageEditorCloseButton: AnyView
     let presentDeleteAllDataConfirmation: () -> Void
     let presentHelp: () -> Void
     @State private var macPairingButtonWidth: CGFloat = 132
+    @State private var iPhoneBottomControlsContentWidth: CGFloat = 0
     @AppStorage(MIDIChannelSettings.storageKey) private var midiDefaultChannel = MIDIChannelSettings.defaultChannel
 
     private var bodyButtonCornerRadius: CGFloat {
@@ -75,6 +80,17 @@ struct SettingsAvailableDevicesPanel: View {
     }
 
     private var iPhoneBody: some View {
+        Group {
+            if isIPhoneImageEditorPresented {
+                iPhoneImageEditorBody
+            } else {
+                iPhoneStandardBody
+            }
+        }
+        .frame(maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    private var iPhoneStandardBody: some View {
         VStack(alignment: .leading, spacing: 12) {
             connectionContent
                 .frame(maxWidth: .infinity, alignment: .topLeading)
@@ -88,15 +104,58 @@ struct SettingsAvailableDevicesPanel: View {
                 .truncationMode(.tail)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-            HStack(spacing: 8) {
-                helpButton
-                buttonClickToggleButton
-                sleepWakeButton
-                compactDeleteAllDataButton
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            iPhoneBottomControls
         }
-        .frame(maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    private var iPhoneImageEditorBody: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(alignment: .top, spacing: 8) {
+                HStack(spacing: 8) {
+                    outputModeButton(.esp32)
+                    outputModeButton(.mac)
+                }
+
+                Spacer(minLength: 0)
+                iPhoneImageEditorCloseButton
+            }
+
+            if iPhoneBottomControlsContentWidth > 0 {
+                iPhoneImageEditor
+                    .frame(width: iPhoneBottomControlsContentWidth, alignment: .leading)
+                    .frame(maxHeight: .infinity, alignment: .leading)
+            } else {
+                Color.clear
+                    .frame(maxHeight: .infinity)
+            }
+
+            iPhoneBottomControls
+        }
+    }
+
+    private var iPhoneBottomControls: some View {
+        HStack(spacing: 8) {
+            helpButton
+            buttonClickToggleButton
+            sleepWakeButton
+            compactDeleteAllDataButton
+        }
+        .background {
+            GeometryReader { geometry in
+                Color.clear.preference(
+                    key: IPhoneBottomControlsContentWidthPreferenceKey.self,
+                    value: geometry.size.width
+                )
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .onPreferenceChange(IPhoneBottomControlsContentWidthPreferenceKey.self) { width in
+            guard width > 0,
+                  abs(width - iPhoneBottomControlsContentWidth) > 0.5 else {
+                return
+            }
+            iPhoneBottomControlsContentWidth = width
+        }
     }
 
     private var connectionContent: some View {
@@ -520,6 +579,14 @@ struct SettingsHelpButton: View {
 
 private struct MacPairingButtonWidthPreferenceKey: PreferenceKey {
     static var defaultValue: CGFloat = 132
+
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
+    }
+}
+
+private struct IPhoneBottomControlsContentWidthPreferenceKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
 
     static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
         value = nextValue()

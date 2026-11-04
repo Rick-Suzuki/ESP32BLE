@@ -5,6 +5,9 @@ import PDFKit
 struct SettingsImagePreviewPanel: View {
     let imageURL: URL?
     let opacitySliderValue: Double
+    let usesSinglePixelBorder: Bool
+    let usesAspectFill: Bool
+    @Environment(\.displayScale) private var displayScale
     @State private var previewImage: UIImage?
     @State private var previewRequestID = ""
 
@@ -15,18 +18,24 @@ struct SettingsImagePreviewPanel: View {
     var body: some View {
         GeometryReader { geometry in
             let previewWidth = geometry.size.width
-            let previewHeight = previewWidth / 1.3
+            let previewHeight = geometry.size.height
             let previewMaxPixelDimension = max(previewWidth, previewHeight) * UIScreen.main.scale
 
             ZStack {
                 Color.black
 
                 if let previewImage {
-                    Image(uiImage: previewImage)
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: previewWidth, height: previewHeight)
-                        .opacity(opacitySliderValue)
+                    if usesAspectFill {
+                        Image(uiImage: previewImage)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: previewWidth, height: previewHeight)
+                    } else {
+                        Image(uiImage: previewImage)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: previewWidth, height: previewHeight)
+                    }
                 }
 
                 if imageURL == nil {
@@ -40,13 +49,12 @@ struct SettingsImagePreviewPanel: View {
             .clipped()
             .overlay {
                 Rectangle()
-                    .stroke(Color.white, lineWidth: 2)
+                    .stroke(Color.white, lineWidth: usesSinglePixelBorder ? 1 / displayScale : 2)
             }
             .task(id: previewImageTaskID(maxPixelDimension: previewMaxPixelDimension)) {
                 await loadPreviewImage(maxPixelDimension: previewMaxPixelDimension)
             }
         }
-        .aspectRatio(1.3, contentMode: .fit)
     }
 
     private func previewImageTaskID(maxPixelDimension: CGFloat) -> String {
