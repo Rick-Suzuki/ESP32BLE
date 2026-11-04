@@ -1,4 +1,9 @@
 
+
+V65.98
+table changes inprog, txt, md done
+261104 Wed 1040
+
 V65.97
 iphone main screen fonts
 261104 Wed 0847

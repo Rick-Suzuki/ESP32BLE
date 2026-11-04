@@ -1,138 +1,59 @@
-Read-only probe complete. No files, settings, builds, or deployments were changed.
+Read-only probe complete. No files changed, no build run.
 
-1. Source locations
+Exact cause
 
-Top toolbar:
-• Main_TopToolbar.swift􀰓
-   • “file”: lines 143–157
-   • “KB”: lines 284–301
-   • “edit” / “done”: lines 306–323
-   • iPad-only document name: lines 135–141
-   • No top-toolbar numeric labels exist.
+SettingsDocumentTableSection.loadedDocumentURL is not receiving the editor’s actual loadedDocumentURL.
 
-Bottom toolbar:
-• Main_BtmToolbar.swift􀰓
-   • Shared iPhone reference font calculation: line 320
-   • Column value “10”: lines 362–382
-   • Row value “6”: lines 385–405
-   • Font-size value “13”: lines 645–653
-   • “rec”: lines 441–459
-   • “btn active”: lines 480–491
-   • “Button”: lines 494–515
-   • Shared toggleButton typography: lines 579–612
-   • Speech-status readout: lines 461–475
+At Set_Screen.swift:1804, the table is constructed with:
 
-Associated title definitions:
-• Main_BtmRightTxt.swift􀰓
-   • “Button” display-mode title: lines 50–61
-• Main_BtmToolbar.swift􀰓
-   • “btn active” grid-button-mode title: lines 24–39
+loadedDocumentURL: selectedDocumentFileURL
 
-Device idiom:
-• ContentView.swift:20–22
-   • isPad is UIDevice.current.userInterfaceIdiom == .pad.
+selectedDocumentFileURL is the active .screen URL, not the Settings editor’s @State private var loadedDocumentURL.
 
-2. Reference typography
+Therefore, after selecting notes.txt or notes.md:
 
-On iPhone, both green reference controls use:
+• the selection path correctly changes to that file;
+• the editor’s real loadedDocumentURL correctly changes to that file;
+• but the table still receives the active screen URL;
+• the row comparison fails, so no row becomes green.
 
-• .system(size: 14, weight: .regular)
-• No custom design specified: standard system design.
-• .minimumScaleFactor(1), so they do not reduce below 14 points.
-• They are fixed-size fonts rather than Dynamic-Type text styles.
+Affected current conditions:
 
-This is calculated at Main_BtmToolbar.swift􀰓:
+• Set_Table.swift:568 text row:
+selectedTextSelectionPath == textURL.path && loadedDocumentURL == textURL
 
-• iPad: .body
-• iPhone: 14-point regular system font
+• Set_Table.swift:616 Markdown row:
+selectedMarkdownSelectionPath == markdownURL.path && loadedDocumentURL == markdownURL
 
-“btn active” receives it through toggleButton at lines 480–491 and 594–597.
+The URL comparisons themselves are correct: both use standardizedFileURL.
 
-“Button” receives it directly at lines 494–500.
+Actual state flow
 
-Thus, on both iPhone 17 and iPhone XS Max, the source-defined reference size is 14 points regular.
+1. A text-row tap calls loadTextFile(textURL) at Set_Table.swift:574.
 
-3. Why the red controls are larger
+2. loadTextFile sets selectedTextSelectionPath and, after successful UTF-8 loading, sets the real editor loadedDocumentURL at Set_Screen.swift:2328.
 
-Top toolbar:
-• “file”, “KB”, “edit”, and “done” have no active .font modifier.
-• The commented-out .headline modifiers do nothing.
-• No parent font modifier changes them.
-• They therefore use SwiftUI’s default body typography: normally about 17 points at the default Dynamic Type size, with Dynamic Type scaling.
+3. Markdown follows the same pattern at Set_Screen.swift:2349.
 
-Bottom numeric values:
-• Column count, row count, and box-font-size value all use .headline.
-• .headline is normally about 17 points, semibold, and Dynamic-Type-scaled.
-• The “13” box-font-size label additionally permits scaling down to 85% only when constrained.
-• The “10” and “6” labels do not have a minimum scale factor.
+4. SwiftUI correctly observes those @State changes, but the child table receives selectedDocumentFileURL instead of the state value. This is the failure point.
 
-Therefore the visible discrepancy is deliberate source typography:
-• Reference controls: fixed 14-point regular.
-• Top labels: default scalable body, normally approximately 17 points.
-• Numeric values: scalable headline, normally approximately 17-point semibold.
+There is no missing binding, stale row identity, or timing issue. The child table has proper bindings for selected paths; the wrong value is supplied for its separate loaded-document input.
 
-It is not caused by button dimensions, icon sizes, or an inherited toolbar font.
+Recommended minimal correction
 
-4. Other relevant controls
+Change only the table-construction argument at Set_Screen.swift line 1804 from:
 
-Already matching the reference on iPhone:
-• “rec” uses the same 14-point regular bottomToolbarButtonFont.
-• Other grid-button-mode titles such as “disabled”, “speech”, and “spk/active” use the same toggleButton typography.
-• The display-mode alternatives “Command”, “Btn Text”, and “All” use the same reference font.
+loadedDocumentURL: selectedDocumentFileURL
 
-Intentionally different:
-• The speech-recognition status text uses 12.75 points in the normal iPhone layout and 9 points in compact layout. This is a constrained readout, not a button label.
-• Icons have independent explicit sizes and should remain unchanged.
-• The stop icon uses .headline, but it is an icon, not label text.
+to:
 
-5. Recommended minimal correction
+loadedDocumentURL: loadedDocumentURL
 
-Apply an iPhone-only 14-point font to:
-• “file”
-• “KB”
-• “edit” and “done”
-• column value
-• row value
-• box-font-size value
+This preserves the existing two-part green condition:
 
-Preserve the current weights:
-• Top labels can remain regular.
-• Numeric values can remain semibold, using 14-point semibold on iPhone.
+• selected path identifies the category’s selected row;
+• actual editor URL proves that exact document loaded successfully.
 
-Do not change:
-• Any icon fonts.
-• Frames, padding, spacing, or button widths/heights.
-• Speech-status readout sizing.
-• Central programmable-grid button typography.
-• Any iPad branch.
+It does not weaken save protection. The editor’s save guard remains based on loadedDocumentURL plus loadedDocumentName at Set_Screen.swift:2561.
 
-The safest implementation is narrow conditional styling: preserve the current iPad modifiers exactly, and apply the 14-point target only when !isPad. The existing bottom-toolbar reference font is local to bottomBarLayout, so reusing it directly in the top-toolbar file would require unnecessary API or shared-style restructuring.
-
-6. Minimal implementation touchpoints
-
-• Main_TopToolbar.swift􀰓
-   • Add iPhone-only font styling to the three text button labels.
-• Main_BtmToolbar.swift􀰓
-   • Change only the three numeric .headline labels to use a 14-point iPhone font while retaining existing .headline behavior on iPad.
-
-No changes should be needed in:
-• Main_Screen.swift􀰓
-• ContentView.swift􀰓
-• Main_BtmRightTxt.swift􀰓
-
-7. Regression risks and tests
-
-Main risk is tighter text within existing fixed-width controls, particularly on iPhone XS Max landscape. Since the target font is smaller than the current text, clipping risk should decrease rather than increase.
-
-Test on iPhone 17 and iPhone XS Max:
-• “file”, “KB”, “edit”, and “done” match the visual base size of “rec”, “btn active”, and “Button”.
-• Column, row, and font-size values match that base size while retaining intended emphasis.
-• Long display-mode titles retain current truncation behavior.
-• Bottom toolbar still selects all intended ViewThatFits layouts.
-• Grid size and font-size changes still update their numeric labels.
-• Edit-mode state still displays “done”.
-• Dynamic Type settings do not cause unexpected overlap.
-
-Confirm unchanged on iPad Air M2, iPad mini, and iPad Pro:
-• Existing body and headline typography remains exactly as before.
-• Existing toolbar geometry and layout selection remain unchanged.
+The existing .files behavior should remain valid: on switching to the screens category, the existing list-mode change flow loads the selected active screen into the editor, making the actual loaded URL again match that screen.

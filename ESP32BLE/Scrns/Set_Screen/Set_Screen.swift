@@ -1276,7 +1276,9 @@ struct SettingsScreen: View {
     }
 
     private var settingsModeEditResetKey: String {
-        "\(listModeRawValue)|\(selectedTextFileName)|\(selectedImagePath)|\(selectedSoundPath)|\(selectedPDFPath)"
+        let textPath = selectedTextSelectionPath ?? ""
+        let markdownPath = selectedMarkdownSelectionPath ?? ""
+        return "\(listModeRawValue)|\(textPath)|\(markdownPath)|\(selectedImagePath)|\(selectedSoundPath)|\(selectedPDFPath)"
     }
 
     private var canExportActiveScreen: Bool {
@@ -1799,7 +1801,7 @@ struct SettingsScreen: View {
         SettingsDocumentTableSection(
             listMode: settingsDocumentTableListMode,
             documentFiles: availableDocumentURLs,
-            loadedDocumentURL: selectedDocumentFileURL,
+            loadedDocumentURL: loadedDocumentURL,
             textURLs: availableTextURLs,
             selectedTextSelectionPath: $selectedTextSelectionPath,
             markdownURLs: availableMarkdownURLs,
@@ -2926,12 +2928,28 @@ struct SettingsScreen: View {
         return availableTextURLs.first(where: { $0.path == selectedTextSelectionPath }) ?? availableTextURLs.first
     }
 
+    private var explicitlySelectedTextFileURL: URL? {
+        guard let selectedTextSelectionPath else {
+            return nil
+        }
+
+        return availableTextURLs.first(where: { $0.path == selectedTextSelectionPath })
+    }
+
     private var selectedMarkdownFileURL: URL? {
         guard let selectedMarkdownSelectionPath else {
             return availableMarkdownURLs.first
         }
 
         return availableMarkdownURLs.first(where: { $0.path == selectedMarkdownSelectionPath }) ?? availableMarkdownURLs.first
+    }
+
+    private var explicitlySelectedMarkdownFileURL: URL? {
+        guard let selectedMarkdownSelectionPath else {
+            return nil
+        }
+
+        return availableMarkdownURLs.first(where: { $0.path == selectedMarkdownSelectionPath })
     }
 
     private var selectedTextFileName: String {
@@ -2983,11 +3001,19 @@ struct SettingsScreen: View {
     }
 
     private var selectedTextDisplayName: String {
-        guard let selectedTextFileURL else {
+        guard let explicitlySelectedTextFileURL else {
             return "text"
         }
 
-        return selectedTextFileURL.deletingPathExtension().lastPathComponent
+        return explicitlySelectedTextFileURL.deletingPathExtension().lastPathComponent
+    }
+
+    private var selectedMarkdownDisplayName: String {
+        guard let explicitlySelectedMarkdownFileURL else {
+            return "MDs"
+        }
+
+        return explicitlySelectedMarkdownFileURL.deletingPathExtension().lastPathComponent
     }
 
     private var singleFileExportDisplayName: String {
@@ -3167,7 +3193,7 @@ struct SettingsScreen: View {
         case .images:
             return selectedImageDisplayName
         case .markdown:
-            return "MDs"
+            return selectedMarkdownDisplayName
         case .sounds:
             return selectedSoundDisplayName
         case .pdfs:
@@ -3184,11 +3210,11 @@ struct SettingsScreen: View {
         case .files:
             return selectedDocumentFileURL != nil
         case .text:
-            return false
+            return explicitlySelectedTextFileURL != nil
         case .images:
             return selectedImageURL != nil
         case .markdown:
-            return false
+            return explicitlySelectedMarkdownFileURL != nil
         case .sounds:
             return selectedSoundURL != nil
         case .pdfs:
@@ -3219,11 +3245,11 @@ struct SettingsScreen: View {
         case .files:
             alertMessage = renameDocument(proposedName)
         case .text:
-            return
+            alertMessage = renameSelectedTextFile(to: proposedName)
         case .images:
             alertMessage = renameSelectedImage(to: proposedName)
         case .markdown:
-            return
+            alertMessage = renameSelectedMarkdownFile(to: proposedName)
         case .sounds:
             alertMessage = renameSelectedSound(to: proposedName)
         case .pdfs:
@@ -3521,6 +3547,166 @@ struct SettingsScreen: View {
         } catch {
             soundPreviewPlayer = nil
         }
+    }
+
+    private enum RenameableDocumentKind {
+        case text
+        case markdown
+
+        var displayName: String {
+            switch self {
+            case .text:
+                return "text file"
+            case .markdown:
+                return "Markdown file"
+            }
+        }
+    }
+
+    private func renameSelectedTextFile(to proposedName: String) -> String? {
+        guard let sourceURL = explicitlySelectedTextFileURL else {
+            return "Select a text file first."
+        }
+
+        return renameSelectedDocumentFile(sourceURL, to: proposedName, kind: .text)
+    }
+
+    private func renameSelectedMarkdownFile(to proposedName: String) -> String? {
+        guard let sourceURL = explicitlySelectedMarkdownFileURL else {
+            return "Select a Markdown file first."
+        }
+
+        return renameSelectedDocumentFile(sourceURL, to: proposedName, kind: .markdown)
+    }
+
+    private func renameSelectedDocumentFile(
+        _ sourceURL: URL,
+        to proposedName: String,
+        kind: RenameableDocumentKind
+    ) -> String? {
+        let fileManager = FileManager.default
+
+        guard fileManager.fileExists(atPath: sourceURL.path) else {
+            return "The selected \(kind.displayName) is no longer available."
+        }
+
+        let originalExtension = sourceURL.pathExtension
+        guard !originalExtension.isEmpty else {
+            return "The selected \(kind.displayName) has no filename extension."
+        }
+
+        let validatedName = validatedRenameFileName(
+            from: proposedName,
+            preserving: originalExtension
+        )
+        guard let targetFileName = validatedName.fileName else {
+            return validatedName.errorMessage
+        }
+
+        if targetFileName == sourceURL.lastPathComponent {
+            return nil
+        }
+
+        let targetURL = sourceURL.deletingLastPathComponent().appendingPathComponent(targetFileName)
+        let isCaseOnlyRename = targetFileName.caseInsensitiveCompare(sourceURL.lastPathComponent) == .orderedSame
+        let categoryURLs = kind == .text ? availableTextURLs : availableMarkdownURLs
+
+        if categoryURLs.contains(where: {
+            $0.standardizedFileURL != sourceURL.standardizedFileURL &&
+                $0.lastPathComponent.caseInsensitiveCompare(targetFileName) == .orderedSame
+        }) {
+            return "A file with that name already exists."
+        }
+
+        if !isCaseOnlyRename, fileManager.fileExists(atPath: targetURL.path) {
+            return "A file with that name already exists."
+        }
+
+        let wasLoaded = loadedDocumentURL?.standardizedFileURL == sourceURL.standardizedFileURL
+        if wasLoaded {
+            switch saveCurrentDocumentText() {
+            case .unchanged, .saved, .reloadedFromDisk:
+                break
+            case .conflict, .missing, .failed:
+                return "The \(kind.displayName) could not be saved, so it was not renamed."
+            }
+        }
+
+        do {
+            if isCaseOnlyRename {
+                let temporaryURL = sourceURL
+                    .deletingLastPathComponent()
+                    .appendingPathComponent(".esp-rename-\(UUID().uuidString).\(originalExtension)")
+
+                guard !fileManager.fileExists(atPath: temporaryURL.path) else {
+                    return "Couldn't prepare the \(kind.displayName) for renaming."
+                }
+
+                try fileManager.moveItem(at: sourceURL, to: temporaryURL)
+                do {
+                    try fileManager.moveItem(at: temporaryURL, to: targetURL)
+                } catch {
+                    try? fileManager.moveItem(at: temporaryURL, to: sourceURL)
+                    throw error
+                }
+            } else {
+                try fileManager.moveItem(at: sourceURL, to: targetURL)
+            }
+        } catch {
+            return "Couldn't rename the \(kind.displayName)."
+        }
+
+        switch kind {
+        case .text:
+            selectedTextSelectionPath = targetURL.path
+            if textScrollPositionIDStorage == sourceURL.path {
+                textScrollPositionIDStorage = targetURL.path
+            }
+        case .markdown:
+            selectedMarkdownSelectionPath = targetURL.path
+            if markdownScrollPositionIDStorage == sourceURL.path {
+                markdownScrollPositionIDStorage = targetURL.path
+            }
+        }
+
+        if wasLoaded {
+            loadedDocumentURL = targetURL
+            loadedDocumentName = targetURL.lastPathComponent
+            blockedDocumentSaveResult = nil
+        }
+
+        markImportedContentChanged()
+        return nil
+    }
+
+    private func validatedRenameFileName(
+        from proposedName: String,
+        preserving fileExtension: String
+    ) -> (fileName: String?, errorMessage: String?) {
+        var baseName = proposedName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let extensionSuffix = ".\(fileExtension)"
+
+        if baseName.lowercased().hasSuffix(extensionSuffix.lowercased()) {
+            baseName = String(baseName.dropLast(extensionSuffix.count))
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+
+        guard !baseName.isEmpty else {
+            return (nil, "Filename can't be blank.")
+        }
+
+        guard baseName != ".", baseName != ".." else {
+            return (nil, "Filename isn't valid.")
+        }
+
+        guard !baseName.contains("/"),
+              !baseName.contains("\\\\"),
+              !baseName.unicodeScalars.contains(where: { $0.value == 0 }),
+              URL(fileURLWithPath: baseName).lastPathComponent == baseName else {
+            return (nil, "Filename isn't valid.")
+        }
+
+        return ("\(baseName).\(fileExtension)", nil)
     }
 
     private func renameSelectedImage(to proposedName: String) -> String? {

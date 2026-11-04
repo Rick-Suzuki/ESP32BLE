@@ -566,7 +566,8 @@ struct SettingsDocumentTableSection: View {
     }
 
     private func textRow(for textURL: URL) -> some View {
-        let isSelected = selectedTextSelectionPath == textURL.path
+        let isLoaded = selectedTextSelectionPath == textURL.path &&
+            loadedDocumentURL?.standardizedFileURL == textURL.standardizedFileURL
 
         return Button {
             ButtonClickFeedback.playIfEnabled()
@@ -578,8 +579,8 @@ struct SettingsDocumentTableSection: View {
             HStack {
                 Text(textURL.lastPathComponent)
                     .font(tableRowFont)
-                    .fontWeight(isSelected ? .bold : .regular)
-                    .foregroundStyle(isSelected ? Color.yellow : .white)
+                    .fontWeight(isLoaded ? .bold : .regular)
+                    .foregroundStyle(isLoaded ? Color.green : .white)
                     .multilineTextAlignment(.leading)
                     .lineLimit(1)
                     .truncationMode(.tail)
@@ -613,7 +614,8 @@ struct SettingsDocumentTableSection: View {
     }
 
     private func markdownRow(for markdownURL: URL) -> some View {
-        let isSelected = selectedMarkdownSelectionPath == markdownURL.path
+        let isLoaded = selectedMarkdownSelectionPath == markdownURL.path &&
+            loadedDocumentURL?.standardizedFileURL == markdownURL.standardizedFileURL
 
         return Button {
             ButtonClickFeedback.playIfEnabled()
@@ -625,8 +627,8 @@ struct SettingsDocumentTableSection: View {
             HStack {
                 Text(markdownURL.lastPathComponent)
                     .font(tableRowFont)
-                    .fontWeight(isSelected ? .bold : .regular)
-                    .foregroundStyle(isSelected ? Color.yellow : .white)
+                    .fontWeight(isLoaded ? .bold : .regular)
+                    .foregroundStyle(isLoaded ? Color.green : .white)
                     .multilineTextAlignment(.leading)
                     .lineLimit(1)
                     .truncationMode(.tail)
