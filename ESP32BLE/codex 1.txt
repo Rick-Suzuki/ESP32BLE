@@ -1,43 +1,143 @@
-Implemented Stage 6C.5.
+Read-only probe complete. No files were modified, built, deployed, committed, or pushed.
 
-Files modified:
-• ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
-• ESP32BLE/Scrns/Set_Screen/Table_Img/Set_Table.swift
+1. Confirmed Screen-specific bottleneck
 
-Cause addressed:
-• Rapid Screen/Text/MD navigation created successive UUID-based scroll requests.
-• Each could start a 0.35-second table-scroll animation, while SwiftUI still had intermediate editor updates pending.
+The strongest confirmed issue is in the Screen table’s green-state check:
 
-Latest-request identity:
-• Reuses the existing SettingsDocumentNavigationScrollRequest.id.
-• The request UUID is now logged when created.
-• The document table captures that exact request, yields once, then verifies it is still current before scrolling.
+• Set_Table.swift:610 calls isLoadedDocument(fileURL) for every Screen row.
+• Set_Screen.swift:2363 supplies that closure as:
+selectedDocumentFileURL?.path == $0.path
+• Set_Screen.swift:3524 calculates selectedDocumentFileURL by rebuilding availableDocumentURLs.
+• Set_Screen.swift:3594–3600 rebuilds that collection by checking resource values for every directory entry, filtering, then sorting.
 
-Obsolete scroll prevention:
-• A cancelled or stale task logs 🐞 and does not scroll.
-• The handler verifies the current bound request ID both before validation and immediately before scrolling.
-• A stale task cannot clear or consume a newer request.
-• Processed request IDs are tracked locally by the table, so an already-handled request is not replayed.
+Therefore, every Screen-row render can rescan and sort the whole document snapshot. A Screen selection invalidates the Screen rows because their yellow/green/bold styling depends on selectedScreenSelectionPath, so rapid navigation can cause repeated main-thread directory-metadata filtering and sorting before SwiftUI reaches PlainDocumentEditor.updateUIView.
 
-Animations:
-• Document navigation scrolling is now immediate rather than using the prior 0.35-second animation.
-• This prevents document navigation animations from stacking during rapid presses.
-• Image and PDF navigation animations are unchanged.
+Text and Markdown do not do this per row:
 
-Editor changes:
-• No PlainDocumentEditor or editor-state changes were necessary.
-• File transitions remain synchronous and preserve save-before-switch, conflict detection, atomic writes, selected text, saved baseline, loaded URL/name, and Screen yellow/green separation.
+• Text row: Set_Table.swift:683–684 compares selectedTextSelectionPath and loadedDocumentURL directly.
+• Markdown row: Set_Table.swift:731–732 uses the same direct comparison pattern.
 
-Shared behavior:
-• The coalesced document-scroll path applies equally to Screens, Text, and MDs.
-• Images and PDFs are untouched.
+This is the meaningful Screen-versus-Text difference found in the active source.
 
-Diagnostics:
-• Existing Stage 6C.3 timing diagnostics remain.
-• Added concise 🐞 messages for created, superseded, ignored, and accepted document scroll requests.
+2. Relevant state dependencies
 
-Build result:
-• ESP32BLE built successfully for the active physical-device destination in 21.8 seconds.
+selectedScreenSelectionPath is owned at the ContentView level:
 
-Remaining limitation:
-• This safely removes stale table-scroll work, but it does not independently cancel already-queued SwiftUI text-render passes. Physical testing should confirm whether eliminating stacked document scroll animations gives the expected prompt latest-selection presentation.
+• ContentView.swift:214
+• Passed into SettingsScreen at ContentView.swift:2913.
+
+Within Settings it affects:
+
+• Set_Screen.swift:1284–1292: screenSelectionPathForTable binding; table-originated writes also update screenTitleSelectionPath.
+• Set_Screen.swift:1366–1372: settingsModeEditResetKey includes the Screen selection path.
+• Set_Screen.swift:830–832: changing that key invokes cancelNameEditing().
+• Set_Screen.swift:2326–2365: table construction and Screen selection bindings.
+• Set_Screen.swift:3528–3543: selected Screen/title URL resolution.
+• Set_Table.swift:609–680: Screen row color, boldness, gestures, swipe actions, and active-state evaluation.
+
+Normal Screen navigation does not apply the Screen or refresh the Screen collection:
+
+• Set_Screen.swift:2194–2203 routes Screen navigation to previewScreenDocument.
+• Set_Screen.swift:2849–2884 changes yellow selection and editor state only.
+• The Main Screen apply callback is separate: Set_Screen.swift:2361 and Set_Table.swift:639–658.
+• validateRememberedTableSelections runs only after documentDirectorySnapshot changes: Set_Screen.swift:494–503.
+• The table’s document-path reconciliation runs only when documentFiles changes: Set_Table.swift:269–270.
+
+Thus, normal navigation preserves the green active Screen and does not trigger Main Screen configuration loading.
+
+3. Screen versus Text rendering differences
+
+Screen rows are more expensive than Text rows in two ways:
+
+• Each Screen row performs the expensive isLoadedDocument closure described above.
+• Each Screen row also contains a two-tap exclusive gesture plus duplicate and delete swipe-action branches: Set_Table.swift:639–679.
+
+Text rows use a direct Boolean calculation and a normal Button: Set_Table.swift:682–727.
+
+The unique per-row directory rebuild is the most likely substantial source of the measured difference. It is structurally O(number of Screen rows × document snapshot work) for a Screen-table refresh, whereas Text uses direct URL/path comparisons.
+
+4. Editor lifecycle
+
+The editor itself remains shared and inexpensive:
+
+• SettingsEditorSectionView: Set_TxtEditor.swift:386–420.
+• PlainDocumentEditor.updateUIView: Set_TxtEditor.swift:65–116.
+
+The recorded 1–4 ms UIKit work is consistent with this code. PlainDocumentEditor is not recreated by Screen navigation; it receives the changed text through the same binding used by Text and Markdown.
+
+The delay occurs before updateUIView because SwiftUI must first process the invalidated Settings/table hierarchy. The Screen-row active-state computation is on that path.
+
+5. Observers and warnings
+
+Two String-based observers are relevant:
+
+• Set_Screen.swift:820–823 observes documentEditorText. During a navigation assignment, it normally receives the new text after previewScreenDocument has completed. Its loading guard may no longer be true by then, so it can call saveCurrentDocumentText(). This behavior is shared by Screen, Text, and Markdown and does not explain the Screen-only difference.
+• Set_Screen.swift:830–832 observes settingsModeEditResetKey. A Screen selection changes that computed String, then cancelNameEditing() writes title/focus-related state at Set_Screen.swift:3940–3944. Text and Markdown selections also change this key, so it is a possible contributor to transaction churn but is not Screen-specific.
+
+The source does not contain a direct onChange(of: Optional<UUID>) in the Settings navigation path. The closest matching mechanism is:
+
+• Set_Table.swift:191–202: task(id: documentNavigationRequest?.id).
+
+Stage 6C.6 bypasses creation of that request for Screen navigation at Set_Screen.swift:2209–2213. Therefore it should not be the continuing cause during the enabled Screen-scroll isolation test. The warning cannot be conclusively attributed from its generic SwiftUI console text alone.
+
+6. Animation, scroll, and geometry findings
+
+The current Screen isolation switch prevents document scroll requests:
+
+• Set_Screen.swift:311–315: disableScreenNavigationScroll is true.
+• Set_Screen.swift:2209–2213 exits before creating a request.
+
+The table’s 0.35-second animations are only in Image/PDF handlers:
+
+• Set_Table.swift:578–585.
+• Set_Table.swift:599–606.
+
+The Screen document scroll handler uses no animation after Stage 6C.5. The table’s GeometryReader and root Settings GeometryReaders read layout only:
+
+• Set_Table.swift:124–130.
+• Set_Screen.swift:509–556.
+
+There is no Settings PreferenceKey or geometry feedback loop found that writes layout state during Screen navigation.
+
+The approximately 180–230 ms cadence is not represented by a matching explicit timer or delay in the inspected Screen code. It is consistent with repeated main-thread SwiftUI transactions performing the expensive Screen-row active-state work, but source inspection alone cannot prove the exact scheduler cadence.
+
+7. Recommended controlled A/B experiment
+
+Use one temporary, reversible visual-only switch in Set_Screen.swift at the SettingsDocumentTableSection construction near line 2363.
+
+For Screen navigation only, temporarily make the isLoadedDocument closure return false while retaining:
+
+• selectedScreenSelectionPath updates,
+• yellow row highlighting,
+• documentEditorText assignment,
+• loadedDocumentURL,
+• save-before-switch logic,
+• green active Screen state itself.
+
+This removes the per-row selectedDocumentFileURL → availableDocumentURLs rebuild while leaving the Screen List, yellow selection invalidation, editor transition, and navigation controls active.
+
+Expected interpretation:
+
+• If Screen editor updates become prompt, the per-row active-green calculation is confirmed as the bottleneck.
+• If the delay remains materially unchanged, the next target is broader Screen table view construction or ancestor presentation scheduling, not file loading or table scrolling.
+
+The test will temporarily hide the green active-row appearance in the Screen table only; it must be removed after measurement. It does not alter active Screen state or file-saving behavior.
+
+8. Recommended smallest production correction after the A/B result
+
+Pass a precomputed active Screen path or active Screen URL into SettingsDocumentTableSection once, rather than passing the per-row isLoadedDocument closure.
+
+Then documentRow should compare the current row directly with that already-resolved value. It should use the documentFiles collection already passed to the table, rather than recomputing availableDocumentURLs per row.
+
+Likely implementation files:
+
+• Set_Screen.swift: documentTableSection around lines 2326–2365.
+• Set_Table.swift: documentRow around lines 609–615.
+
+This retains yellow preview versus green active Screen behavior, existing row gestures, saving safeguards, and selection semantics.
+
+9. Risks and integrity notes
+
+• Do not cache Screen selection independently from loadedDocumentURL or selectedDocumentName.
+• Do not defer documentEditorText or loadedDocumentURL updates; their current ordering protects file-specific autosave.
+• The Stage 6C.6 scroll isolation switch should remain enabled until the A/B measurement is complete, then be restored so normal Screen navigation scrolling can be tested with the actual correction.

@@ -1,4 +1,7 @@
 
+V66.08
+setings: txt.md.screens OK, font todo
+261105 Thu 1428
 
 V66.07
 settings: slow loading rnd screens: in prog
