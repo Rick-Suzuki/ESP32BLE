@@ -11,6 +11,7 @@ struct SettingsAvailableDevicesPanel: View {
     @Binding var opacitySliderValue: Double
     let imageControlButtons: AnyView
     let isImageControlsActive: Bool
+    let onImageOpacityEditingChanged: (Bool) -> Void
     let isIPhoneImageEditorPresented: Bool
     let iPhoneEditorLeadingInset: CGFloat
     let iPhoneImageEditor: AnyView
@@ -55,7 +56,8 @@ struct SettingsAvailableDevicesPanel: View {
                 settingsPlaceholderSlider(
                     title: "opacity: 0.5",
                     value: $opacitySliderValue,
-                    isEnabled: isImageControlsActive
+                    isEnabled: isImageControlsActive,
+                    onEditingChanged: onImageOpacityEditingChanged
                 )
 				
 					HStack(spacing: 18) {
@@ -548,10 +550,15 @@ struct SettingsAvailableDevicesPanel: View {
     private func settingsPlaceholderSlider(
         title: String,
         value: Binding<Double>,
-        isEnabled: Bool
+        isEnabled: Bool,
+        onEditingChanged: @escaping (Bool) -> Void
     ) -> some View {
         VStack(spacing: 8) {
-            Slider(value: value, in: 0...1)
+            Slider(
+                value: value,
+                in: 0...1,
+                onEditingChanged: onEditingChanged
+            )
                 .tint(isEnabled ? .cyan : SettingsImageControlAppearance.disabledColor)
                 .disabled(!isEnabled)
         }

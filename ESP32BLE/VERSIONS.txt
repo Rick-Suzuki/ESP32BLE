@@ -1,4 +1,8 @@
 
+V66.03
+settings: simple images done
+261105 Thu 0902
+
 V66.02
 settings: zoom on image
 261104 Wed 2012

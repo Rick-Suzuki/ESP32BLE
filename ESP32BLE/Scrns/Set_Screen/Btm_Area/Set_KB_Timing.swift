@@ -10,6 +10,7 @@ struct SettingsKeyboardTimingSection: View {
     @Binding var opacitySliderValue: Double
     let imageControlButtons: AnyView
     let isImageControlsActive: Bool
+    let onImageOpacityEditingChanged: (Bool) -> Void
     let isMacMode: Bool
     let isTimingControlsEnabled: Bool
     let isTestEnabled: Bool
@@ -237,7 +238,11 @@ struct SettingsKeyboardTimingSection: View {
             VStack(alignment: .leading, spacing: 6) {
                 imageControlButtons
 
-                Slider(value: $opacitySliderValue, in: 0...1)
+                Slider(
+                    value: $opacitySliderValue,
+                    in: 0...1,
+                    onEditingChanged: onImageOpacityEditingChanged
+                )
                     .tint(
                         isImageControlsActive ? .cyan : SettingsImageControlAppearance.disabledColor
                     )

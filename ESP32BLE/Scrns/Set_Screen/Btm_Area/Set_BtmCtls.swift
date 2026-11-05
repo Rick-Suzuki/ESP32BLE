@@ -11,6 +11,7 @@ struct SettingsBottomControlsSection: View {
     @Binding var opacitySliderValue: Double
     let imageControlButtons: AnyView
     let isImageControlsActive: Bool
+    let onImageOpacityEditingChanged: (Bool) -> Void
     let isIPhoneImageEditorPresented: Bool
     let iPhoneEditorLeadingInset: CGFloat
     let iPhoneImageEditor: AnyView
@@ -30,6 +31,7 @@ struct SettingsBottomControlsSection: View {
             opacitySliderValue: $opacitySliderValue,
             imageControlButtons: imageControlButtons,
             isImageControlsActive: isImageControlsActive,
+            onImageOpacityEditingChanged: onImageOpacityEditingChanged,
             isIPhoneImageEditorPresented: isIPhoneImageEditorPresented,
             iPhoneEditorLeadingInset: iPhoneEditorLeadingInset,
             iPhoneImageEditor: iPhoneImageEditor,

@@ -412,6 +412,12 @@ struct SettingsScreen: View {
     @State private var imageNavigationScrollRequest: SettingsImageNavigationScrollRequest?
     @State private var isImagePreviewRestorePending = false
     @State private var backgroundChangeFeedbackID = UUID()
+    @State private var imageOpacitySliderPosition = 0.5
+    @State private var imageOpacityPreviewValue = 0.5
+    @State private var isImageOpacitySliderEditing = false
+    @State private var imageOpacityPreviewTask: Task<Void, Never>?
+    @State private var imageOpacityPreviewSessionID = UUID()
+    @State private var lastImageOpacityPreviewUpdate = Date.distantPast
     @State private var templateURLs: [URL] = []
     @State private var templateDescriptionState: TemplateDescriptionState?
     @State private var pendingTemplateApplication: PendingTemplateApplication?
@@ -428,15 +434,40 @@ struct SettingsScreen: View {
     @State private var shouldRestoreHelpAfterManualDismissal = false
     @State private var helpContentsRecommendation: ESPHelpDestination?
 
+    // MARK: - BM:🅱️ IMAGE OPACITY PREVIEW THROTTLING
+    // 🐞 USER ADJUSTABLE:
+    // Minimum seconds between image opacity
+    // preview updates while dragging.
+    private let imageOpacityPreviewInterval: TimeInterval = 0.25
+
     var body: some View {
         configuredSettingsScreen
             .onAppear {
                 beginImagePreviewRestoration()
+                synchronizeImageOpacityPresentation()
+            }
+            .onDisappear {
+                cancelImageOpacityPreviewUpdate()
+                isImageOpacitySliderEditing = false
+                synchronizeImageOpacityPresentation()
             }
             .onChange(of: selectedDocumentName) {
+                cancelImageOpacityPreviewUpdate()
+                isImageOpacitySliderEditing = false
+                synchronizeImageOpacityPresentation()
                 previewImageURL = nil
                 isIPhoneImagePreviewPresented = false
                 beginImagePreviewRestoration()
+            }
+            .onChange(of: opacitySliderValue) { _, _ in
+                guard !isImageOpacitySliderEditing else { return }
+                synchronizeImageOpacityPresentation()
+            }
+            .onChange(of: listMode) { _, _ in
+                guard !isImagesListActive else { return }
+                cancelImageOpacityPreviewUpdate()
+                isImageOpacitySliderEditing = false
+                synchronizeImageOpacityPresentation()
             }
             .onChange(of: documentDirectorySnapshot) {
                 reconcilePendingImageRenameSelection()
@@ -1606,9 +1637,10 @@ struct SettingsScreen: View {
             isButtonClickEnabled: $isButtonClickEnabled,
             isBluetoothMonitorMode: $isBluetoothMonitorMode,
             isStatusBarVisible: $isStatusBarVisible,
-            opacitySliderValue: $opacitySliderValue,
+            opacitySliderValue: imageOpacitySliderBinding,
             imageControlButtons: AnyView(imageControlButtons),
             isImageControlsActive: isImagesListActive,
+            onImageOpacityEditingChanged: handleImageOpacityEditingChanged,
             isIPhoneImageEditorPresented: isImagesListActive && isIPhoneImagePreviewPresented,
             iPhoneEditorLeadingInset: iPhoneEditorLeadingInset,
             iPhoneImageEditor: AnyView(iPhoneLargeImagePreview),
@@ -1623,10 +1655,96 @@ struct SettingsScreen: View {
     private var imagePreviewSection: some View {
         SettingsImagePreviewPanel(
             imageURL: previewImageURL,
-            opacitySliderValue: opacitySliderValue,
+            opacitySliderValue: imageOpacityPreviewValue,
             usesSinglePixelBorder: !isPad,
             usesAspectFill: !isPad
         )
+    }
+
+    // MARK: - BM:🅱️ IMAGE OPACITY PREVIEW PRESENTATION
+
+    private var imageOpacitySliderBinding: Binding<Double> {
+        Binding(
+            get: {
+                imageOpacitySliderPosition
+            },
+            set: { newValue in
+                imageOpacitySliderPosition = clampedImageOpacity(newValue)
+                updateImageOpacityPreviewWhileDragging()
+            }
+        )
+    }
+
+    private func handleImageOpacityEditingChanged(_ isEditing: Bool) {
+        if isEditing {
+            isImageOpacitySliderEditing = true
+            cancelImageOpacityPreviewUpdate()
+            imageOpacitySliderPosition = clampedImageOpacity(opacitySliderValue)
+            imageOpacityPreviewValue = imageOpacitySliderPosition
+            lastImageOpacityPreviewUpdate = Date()
+            return
+        }
+
+        let finalOpacity = clampedImageOpacity(imageOpacitySliderPosition)
+        cancelImageOpacityPreviewUpdate()
+        isImageOpacitySliderEditing = false
+        imageOpacityPreviewValue = finalOpacity
+        opacitySliderValue = finalOpacity
+    }
+
+    private func updateImageOpacityPreviewWhileDragging() {
+        guard isImageOpacitySliderEditing else {
+            imageOpacityPreviewValue = imageOpacitySliderPosition
+            return
+        }
+
+        let elapsed = Date().timeIntervalSince(lastImageOpacityPreviewUpdate)
+        guard elapsed < imageOpacityPreviewInterval else {
+            cancelImageOpacityPreviewUpdate()
+            imageOpacityPreviewValue = imageOpacitySliderPosition
+            lastImageOpacityPreviewUpdate = Date()
+            return
+        }
+
+        guard imageOpacityPreviewTask == nil else {
+            return
+        }
+
+        let remainingInterval = imageOpacityPreviewInterval - elapsed
+        let sessionID = imageOpacityPreviewSessionID
+        imageOpacityPreviewTask = Task { @MainActor in
+            do {
+                try await Task.sleep(for: .seconds(remainingInterval))
+            } catch {
+                return
+            }
+
+            guard !Task.isCancelled,
+                  sessionID == imageOpacityPreviewSessionID,
+                  isImageOpacitySliderEditing else {
+                return
+            }
+
+            imageOpacityPreviewTask = nil
+            imageOpacityPreviewValue = imageOpacitySliderPosition
+            lastImageOpacityPreviewUpdate = Date()
+        }
+    }
+
+    private func synchronizeImageOpacityPresentation() {
+        let persistedOpacity = clampedImageOpacity(opacitySliderValue)
+        imageOpacitySliderPosition = persistedOpacity
+        imageOpacityPreviewValue = persistedOpacity
+    }
+
+    private func cancelImageOpacityPreviewUpdate() {
+        imageOpacityPreviewTask?.cancel()
+        imageOpacityPreviewTask = nil
+        imageOpacityPreviewSessionID = UUID()
+    }
+
+    private func clampedImageOpacity(_ value: Double) -> Double {
+        min(max(value, 0), 1)
     }
 
     private var largeImagePreviewSection: some View {
@@ -2145,9 +2263,10 @@ struct SettingsScreen: View {
             keyboardTimingOnMs: $keyboardTimingOnMs,
             keyboardTimingOffMs: $keyboardTimingOffMs,
             speechRecognitionAutoOffMinutes: $speechRecognitionAutoOffMinutes,
-            opacitySliderValue: $opacitySliderValue,
+            opacitySliderValue: imageOpacitySliderBinding,
             imageControlButtons: AnyView(imageControlButtons),
             isImageControlsActive: isImagesListActive,
+            onImageOpacityEditingChanged: handleImageOpacityEditingChanged,
             isMacMode: isMacKeyboardTestMode,
             isTimingControlsEnabled: isCustomKeyboardTimingEnabled,
             isTestEnabled: isMacKeyboardTestMode

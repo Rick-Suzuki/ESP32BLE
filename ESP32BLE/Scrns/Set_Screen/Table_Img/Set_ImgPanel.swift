@@ -83,6 +83,7 @@ struct SettingsImagePreviewPanel: View {
             .frame(width: viewportSize.width, height: viewportSize.height)
             .scaleEffect(effectiveScale, anchor: .center)
             .offset(renderedOffset)
+            .opacity(opacitySliderValue)
             .contentShape(.rect)
             .simultaneousGesture(magnificationGesture(imageSize: image.size, viewportSize: viewportSize))
             .simultaneousGesture(panGesture(imageSize: image.size, viewportSize: viewportSize))

@@ -1,252 +1,166 @@
-Stage 2A probe complete. No files, project settings, builds, deployments, or Git state were changed.
+Stage 3A probe complete. No files, settings, builds, deployments, commits, or pushes were changed.
 
-1. Relevant current files and line numbers
+Confirmed findings
 
-• ESP32BLE/ESP32BLE/Scrns/Set_Screen/Table_Img/Set_ImgPanel.swift
-   • SettingsImagePreviewPanel: lines 5–87
-   • Fixed viewport GeometryReader: lines 19–57
-   • Aspect-fill/aspect-fit selection: lines 27–38
-   • Clipping and border: lines 48–53
-   • Async preview task: lines 54–56
-   • Detached downsample decoder: lines 89–112
+1. Slider location and range
 
-• ESP32BLE/ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
-   • iPad/iPhone Settings split: lines 455–500
-   • iPhone left Settings region and table layout: lines 504–535
-   • Shared preview construction and iPhone/iPad rendering options: lines 1623–1640
-   • iPhone Close button: lines 1642–1654
-   • Navigation actions: lines 1660–1693
-   • Preview selection/navigation updates: lines 1720–1772
-   • Image-table single-tap preview callback: lines 1916–1920
-   • Rename updates preview URL: lines 3848–3918
-   • Delete preview replacement/clearing: lines 4021–4048
+iPhone:
+• File: Scrns/Set_Screen/Btm_Area/Set_KB_Timing.swift
+• View: SettingsKeyboardTimingSection.iPhoneImageControls
+• Slider: lines 228–248; actual Slider at line 240.
+• Binding: $opacitySliderValue.
+• Range: 0.0...1.0.
+• Enabled only when isImageControlsActive, which SettingsScreen supplies as isImagesListActive. Therefore it is enabled only for the Images category.
+• The iPhone presentation has an “Image” label but no numeric or percentage display.
 
-• ESP32BLE/ESP32BLE/Scrns/Set_Screen/Btm_Area/Set_AvailableDevices.swift
-   • Separate iPad/iPhone paths: lines 32–40
-   • iPhone editor presentation path: lines 82–134
-   • Fixed editor container supplied by iPhoneImageEditor: lines 111–132
-   • Actual bottom-control measurement used for iPhone editor width: lines 136–158
+iPad:
+• File: Scrns/Set_Screen/Btm_Area/Set_AvailableDevices.swift
+• View: SettingsAvailableDevicesPanel.iPadBody.
+• Slider invocation: lines 53–59.
+• Slider implementation: settingsPlaceholderSlider, lines 548–559.
+• Binding: $opacitySliderValue.
+• Range: 0.0...1.0.
+• Enabled only when isImageControlsActive.
+• The passed title is “opacity: 0.5”, but the helper does not render its title parameter. Therefore no live value, fixed value, or percentage is currently displayed on iPad either.
 
-2. Current viewport hierarchy
+Both platforms use the same state key and range; only their control placement differs.
 
-Confirmed:
+2. Binding and state owner
 
-• SettingsScreenBase selects a separate iPad or iPhone layout.
-• On iPad, Images replaces the upper left editor area with largeImagePreviewSection. Bottom Settings controls remain below it.
-• On iPhone, the fixed-width available-devices column hosts iPhoneImageEditor only while the local iPhone presentation state is active.
-• SettingsImagePreviewPanel owns the black image viewport, clipping, border, image rendering, and asynchronous image load.
-• The iPhone Close button is outside the preview panel and is a sibling in the top control row.
-• The file table and image-navigation controls are outside the preview panel.
+SettingsScreen owns:
 
-This is a good boundary for gestures: the gesture layer can be added inside SettingsImagePreviewPanel without changing any approved editor geometry.
+• File: Scrns/Set_Screen/Set_Screen.swift
+• Line 395:
+@AppStorage("backgroundImageOpacity") private var opacitySliderValue = 0.5
 
-3. Current fitting and clipping behavior
+It is passed to:
 
-Confirmed:
+• SettingsAvailableDevicesPanel through SettingsBottomControlsSection: Set_Screen.swift lines 1600–1620.
+• SettingsKeyboardTimingSection: Set_Screen.swift lines 2142–2169.
+• SettingsImagePreviewPanel: Set_Screen.swift lines 1623–1629.
 
-• iPhone passes usesAspectFill: true, so its initial image is scaledToFill.
-• iPad passes usesAspectFill: false, so its initial image is scaledToFit.
-• The preview ZStack has a fixed GeometryReader-derived frame, then .clipped(), then the border overlay.
-• The iPhone border is one physical pixel: 1 / displayScale.
-• At scale 1.0, the current visual behavior is already exactly the required minimum zoom state.
+The large preview already receives opacitySliderValue as a plain Double at Set_ImgPanel.swift line 7, but does not presently use it.
 
-A future zoom transform must be applied to the image content inside this existing clipped ZStack. It must not be applied to the GeometryReader, the outer panel, or the border.
+There is no conversion callback, computed binding, or local normalization in Settings. The slider writes its Double value directly to the shared AppStorage key.
 
-4. Recommended gesture implementation
+3. Current behavior when moved
 
-Use native SwiftUI gestures in SettingsImagePreviewPanel:
+The Settings slider changes the UserDefaults/AppStorage value for backgroundImageOpacity.
 
-• MagnifyGesture for pinch zoom.
-• DragGesture for one-finger pan.
-• Attach both only to the image viewport content.
-• Use simultaneous gestures, but suppress drag updates while a magnification gesture is actively changing. This avoids a two-finger pinch also being interpreted as a pan.
-• Do not attach either gesture to the Settings parent, table, navigation controls, or Close button.
-• Keep the existing clipping and border outside the transformed image.
+The same key is also owned by:
 
-The project deployment target is iOS 17.6, so MagnifyGesture is available on the supported iPhone and iPad population. Apple’s current SwiftUI documentation confirms MagnifyGesture supplies a relative magnification value and is intended to be combined with transient gesture state.
+• ContentView: ContentView.swift line 186.
+• MainScreen: Main_Screen.swift line 1060.
 
-For Stage 2B, use center-based scaling. This is the smallest robust change and preserves the approved scale-1 rendering exactly.
+ContentView observes its backgroundImageOpacity at lines 393–397. Unless restoration is in progress, it saves the changed value to the selected screen’s ScreenConfig.
 
-Focal-point zoom is better deferred to Stage 2C. It needs careful anchor-to-viewport coordinate conversion and offset correction; it should not be a dependency of basic bounded zoom and pan.
+Therefore the slider is not preview-only. It is the existing per-screen Main Screen background-opacity control, exposed from Settings through shared AppStorage.
 
-5. Recommended state ownership
+4. Existing Main Screen opacity behavior
 
-Keep all temporary interaction state private to SettingsImagePreviewPanel:
+Confirmed Main Screen rendering:
 
-• committedZoomScale: persistent only during the panel’s current lifetime; starts at 1.0.
-• activeMagnification: @GestureState holding the in-progress pinch multiplier; starts at 1.0.
-• committedPanOffset: @State CGSize; starts at .zero.
-• activeDragTranslation: @GestureState CGSize; starts at .zero.
-• isMagnifying: transient state used to prevent pinch and drag competing.
-• Current viewport size: derive directly from the existing GeometryReader.
-• Current image aspect ratio: derive from the already decoded previewImage.
+• Main background:
+Scrns/Main_Screen/Main_BG_img.swift lines 39–52.
+The image uses:
+Image(uiImage: mainBackgroundImage)
+.scaledToFill()
+.opacity(backgroundImageOpacity)
 
-None of this belongs in screen configuration, selectedImageURL, previewImageURL, background persistence, or saved screens.
+• ContentView’s loaded Main Screen background:
+ContentView.swift lines 2959–2972.
+It also uses:
+.scaledToFill()
+.opacity(backgroundImageOpacity)
 
-6. Pan-boundary calculation
+• Smart-button background preview:
+Main_Screen.swift lines 5044–5055.
+It applies:
+.opacity(backgroundImageOpacity)
 
-Let:
+The opacity is applied to the image layer, not to the entire Main Screen, controls, grid, or surrounding UI.
 
-• Vw, Vh = viewport width and height.
-• Iw, Ih = decoded image dimensions.
-• S = effective zoom scale, clamped to at least 1.0.
-• B = the image’s rendered size at its existing scale-1 presentation.
+5. Persistence and restoration
 
-For iPhone aspect fill:
+Opacity is persisted per screen document:
 
-• baseFactor = max(Vw / Iw, Vh / Ih)
+• ScreenConfig contains backgroundOpacity: ScreenConfig.swift lines 19–39.
+• The value is encoded and decoded with the screen config JSON: lines 53–81.
+• ContentView saves the changed value into the selected screen config: ContentView.swift lines 1260–1271.
+• On screen selection/restoration, ContentView restores backgroundImageOpacity from that screen config: lines 1273–1293 and 1317–1327.
+• Config writes are atomic: ScreenConfig.swift lines 112–129.
 
-For iPad aspect fit:
+The AppStorage key is global as the live/current value and fallback, but the established saved behavior is per-screen, not per-image.
 
-• baseFactor = min(Vw / Iw, Vh / Ih)
+6. Selection-state implications
 
-Then:
+The slider does not select or apply an image.
 
-• baseWidth = Iw × baseFactor
-• baseHeight = Ih × baseFactor
-• scaledWidth = baseWidth × S
-• scaledHeight = baseHeight × S
+Its existing semantics are:
 
-The permitted pan ranges are:
+• It controls the selected screen’s persisted applied-background opacity.
+• It is independent of yellow preview selection and green applied-background selection.
+• Moving it while a yellow preview differs from the green applied image still changes the selected screen’s background-opacity setting.
 
-• maxPanX = max(0, (scaledWidth - Vw) / 2)
-• maxPanY = max(0, (scaledHeight - Vh) / 2)
+Connecting the slider to the large preview would make the preview accurately show the current screen’s background opacity for whichever image is being previewed. It would not require changing image selection, double-tap application, or persistence logic.
 
-Clamp the rendered offset independently:
+7. Editor integration point
 
-• x: -maxPanX...maxPanX
-• y: -maxPanY...maxPanY
+Correct future integration point:
 
-Important rules:
+• File: Scrns/Set_Screen/Table_Img/Set_ImgPanel.swift
+• View: SettingsImagePreviewPanel
+• Rendered image: zoomablePreviewImage, currently lines 80–88.
 
-• At scale 1.0, force offset to .zero and ignore drag input.
-• This preserves iPhone’s existing cropped aspect-fill view.
-• This also preserves iPad’s intentional black space for an aspect-fit image.
-• Pan becomes available only when zoom actually creates movable overflow in that axis.
-• The transformed content stays centered and cannot be dragged fully out of the viewport.
+Apply:
 
-7. Minimum and recommended maximum zoom
+opacity(opacitySliderValue)
 
-Minimum zoom: exactly 1.0.
+to the rendered Image layer only, after its frame/scale/offset transform and before or after the gesture modifiers.
 
-This means the current image presentation, not source-image pixel size:
+Do not apply opacity to:
 
-• iPhone: current aspect fill.
-• iPad: current aspect fit.
+• Color.black
+• The clipped ZStack
+• The border overlay
+• The GeometryReader
+• The Close button or Settings controls
 
-Recommended Stage 2B maximum: 2.0x.
+This preserves zoom, pan, gestures, clipping, border visibility, and fixed viewport geometry. Slider movement would not reset zoom or pan because neither gesture state nor preview identity changes.
 
-Reasoning:
+8. Black-background result
 
-• The present decoder targets only the viewport’s largest pixel dimension.
-• At 2.0x, quality can soften because the already-downsampled bitmap is being enlarged, but memory use remains stable.
-• A 3x or 4x cap without decoder work would make softness more visible.
-• Increasing the decode target to support 3x or 4x also multiplies decoded pixel memory substantially, especially on iPad Pro and older iPad mini hardware.
+The preview viewport’s black background is at Set_ImgPanel.swift line 35.
 
-A later Stage 2C can evaluate a higher cap after physical-device testing and decoder tuning.
+Reducing image opacity over it will progressively blend the image toward black. It will not reveal checkerboard transparency or the underlying Settings UI.
 
-8. Image identity and reset recommendation
+This matches the Main Screen’s actual composition: Main_BG_img.swift places Color.black behind the image before applying background-image opacity.
 
-Recommended predictable behavior:
+Recommendation: retain the black editor background. It provides the closest visual representation of the Main Screen background at reduced opacity. A different background would be a separate design decision and would no longer represent the current Main Screen result.
 
-• Selecting a different image: reset zoom to 1.0 and pan to center.
-• Reset, Random, Previous, and Next: reset zoom and pan because they replace previewImageURL.
-• Image deletion: reset when the preview is cleared or replaced through the existing selection logic.
-• iPhone Close/reopen: reset naturally. The conditional iPhone editor is removed from the view hierarchy when closed, so preview-local state is recreated at its default values on reopen.
-• Leaving Images or leaving Settings: reset naturally when SettingsImagePreviewPanel leaves the hierarchy.
-• Rename: preserve the current zoom and pan where practical.
+9. Recommended narrow implementation stage
 
-The current preview identity is URL-path based. A rename changes previewImageURL to the renamed URL, even though it remains the same file content. Therefore, a basic Stage 2B URL-change reset would reset after a rename.
+Modify one file only:
 
-For Stage 2B, that is safe and simple. For Stage 2C, preserve rename state by tracking a stable file resource identifier when available, with standardized URL fallback. That avoids conflating a renamed image with a newly selected image.
+• Scrns/Set_Screen/Table_Img/Set_ImgPanel.swift
 
-9. Image loading, downsampling, and memory findings
+Change:
 
-Confirmed:
+• Apply .opacity(opacitySliderValue) to the zoomable rendered Image in zoomablePreviewImage.
 
-• The current preview task identity includes the image path and viewport pixel dimension.
-• The image is downsampled off the main actor in a detached task.
-• The decoder creates a CGImageSource thumbnail, preserving orientation transforms.
-• Stale results are rejected using previewRequestID.
-• Gesture changes will not trigger reloads because zoom and pan do not alter the existing task identifier.
+No other parameter, binding, layout, image-loading, persistence, slider, or state change is required because:
 
-Current decode target:
+• SettingsImagePreviewPanel already receives the current value.
+• The slider already writes the shared existing background-opacity state.
+• Existing persistence already records it per screen.
+• The main rendering already uses the same opacity model over black.
 
-• max(viewport width, viewport height) × UIScreen.main.scale
+10. Risks and unresolved design decision
 
-This is correct for the approved scale-1 rendering. It is deliberately conservative for memory, but it does not provide source-resolution detail at high zoom.
+Low implementation risk:
+• .opacity affects only visual compositing; it does not alter layout, image decoding, pan limits, zoom scale, clipping, or gesture recognition.
 
-Recommendation:
+Behavioral consideration:
+• If a yellow preview image differs from the green applied background image, changing the slider changes the selected screen’s persisted applied-background opacity while simultaneously previewing that opacity on the yellow image. This is consistent with the existing shared slider state, but it should be accepted as the intended UX before implementation.
 
-• Stage 2B: leave the loader unchanged. Do not reload during pinch or drag.
-• Stage 2C: if testing shows unacceptable softness, decode once for the selected image at a capped target suitable for the maximum permitted zoom. Keep the current background decode and stale-request safeguards.
-• Do not decode full-resolution photographs just because an image is zoomable.
-• Keep at most the current preview bitmap unless physical testing demonstrates a small, bounded cache is necessary.
-
-10. Gesture interaction risks
-
-Low-risk areas:
-
-• The image table is a sibling, not an ancestor or child of the image viewport, so an image-only gesture does not need to affect table scrolling.
-• Image application is currently invoked from table double-tap behavior, not from the preview panel.
-• Navigation and Close are sibling controls, outside the clipped viewport.
-
-Risks to control in implementation:
-
-• Do not use a parent-level gesture modifier.
-• Do not use high-priority gestures that could capture touches intended for controls.
-• Do not add a tap or double-tap gesture to the preview.
-• Ensure the transformed image remains inside the existing clipped ZStack.
-• Re-clamp pan when zoom changes, viewport size changes, or the preview image changes.
-• Avoid animation while fingers are moving; optional settling animation can be considered only after testing.
-
-11. Device compatibility
-
-The proposed Stage 2B approach is compatible with:
-
-• iPhone 17
-• iPhone XS Max
-• iPad Air M2
-• iPad mini
-• iPad Pro
-
-The project’s iOS 17.6 deployment target supports MagnifyGesture and DragGesture. No simulator-specific behavior is required. The implementation remains responsive because all geometry is taken from the existing preview GeometryReader rather than device-specific coordinates.
-
-12. Exact Stage 2B implementation scope
-
-Modify only:
-
-• ESP32BLE/ESP32BLE/Scrns/Set_Screen/Table_Img/Set_ImgPanel.swift
-
-Implement:
-
-1. Add preview-local zoom and pan state to SettingsImagePreviewPanel.
-2. Compute the current base rendered image size from:
-   • previewImage dimensions,
-   • GeometryReader viewport size,
-   • usesAspectFill.
-3. Preserve the current image modifiers exactly at effective scale 1.0.
-4. Apply scale and bounded offset only to the rendered Image.
-5. Keep Color.black, .clipped(), and the border unchanged and outside the transform.
-6. Add MagnifyGesture with:
-   • minimum scale 1.0,
-   • maximum scale 2.0,
-   • center-based scaling,
-   • no zoom-out below the current presentation.
-7. Add one-finger DragGesture only when effective scale exceeds 1.0.
-8. Reset zoom and pan when the selected preview identity changes or becomes unavailable.
-9. Do not change Set_Screen.swift, Set_AvailableDevices.swift, table behavior, navigation actions, loaders, persistence, or iPad layout geometry.
-
-13. Proposed Stage 2C scope
-
-Only after Stage 2B device testing:
-
-• Add focal-point-preserving pinch behavior if it materially improves use.
-• Preserve zoom/pan through rename using stable file identity where available.
-• Revisit maximum zoom and downsample target after memory and image-quality testing.
-• Add optional settling behavior only if needed.
-• Do not add double-tap zoom, opacity tools, or persistent zoom state unless separately approved.
-
-Decision requiring user input:
-
-• None is required for Stage 2B if the recommended conservative 2.0x maximum zoom is accepted. If you want deeper inspection of photographs before Stage 2C, choose whether the eventual target should prioritize 2x clarity and lower memory use, or a higher 3x–4x zoom with a stricter downsampling/memory policy.
+No iPhone/iPad compatibility issue was found. Both paths share the same 0...1 AppStorage state, and .opacity is supported across the project’s iOS 17.6 deployment target.
