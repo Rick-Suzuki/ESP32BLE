@@ -18,7 +18,6 @@ struct SettingsDocumentNavigationScrollRequest: Equatable {
     let targetPath: String
     let id: UUID
     let alignsToTop: Bool
-    let diagnostic: DocumentNavigationDiagnostic?
 }
 
 struct SettingsDocumentTableSection: View {
@@ -35,6 +34,7 @@ struct SettingsDocumentTableSection: View {
 
     let listMode: ListMode
     let documentFiles: [URL]
+    let activeScreenURL: URL?
     let loadedDocumentURL: URL?
     @Binding var selectedScreenSelectionPath: String?
     let textURLs: [URL]
@@ -68,7 +68,6 @@ struct SettingsDocumentTableSection: View {
     let canDeleteDocuments: Bool
     let loadFunctionKeys: (URL) -> Void
     let previewScreenDocument: (URL) -> Void
-    let isLoadedDocument: (URL) -> Bool
     let loadTextFile: (URL) -> Void
     let loadMarkdownFile: (URL) -> Void
     let deleteDocument: (URL) -> Void
@@ -191,10 +190,7 @@ struct SettingsDocumentTableSection: View {
                     .task(id: documentNavigationRequest?.id) {
                         guard let documentNavigationRequest else { return }
                         await Task.yield()
-                        guard !Task.isCancelled else {
-                            documentNavigationRequest.diagnostic?.log("scroll request superseded")
-                            return
-                        }
+                        guard !Task.isCancelled else { return }
                         handleDocumentNavigationScrollRequest(
                             documentNavigationRequest,
                             using: scrollProxy
@@ -326,7 +322,6 @@ struct SettingsDocumentTableSection: View {
         using scrollProxy: ScrollViewProxy
     ) {
         guard documentNavigationScrollRequest?.id == request.id else {
-            request.diagnostic?.log("scroll request ignored as stale")
             return
         }
 
@@ -334,13 +329,10 @@ struct SettingsDocumentTableSection: View {
 
         guard listMode == .files || listMode == .text || listMode == .markdown,
               activeRowPaths.contains(request.targetPath) else {
-            request.diagnostic?.log("scroll request ignored outside active category")
             return
         }
 
-        let scrollStart = ProcessInfo.processInfo.systemUptime
         guard documentNavigationScrollRequest?.id == request.id else {
-            request.diagnostic?.log("scroll request superseded")
             return
         }
 
@@ -350,7 +342,6 @@ struct SettingsDocumentTableSection: View {
             scrollProxy.scrollTo(request.targetPath)
         }
         handledDocumentNavigationRequestID = request.id
-        request.diagnostic?.log("scroll request accepted", durationSince: scrollStart)
     }
 
     private func showRefreshConfirmation() {
@@ -494,7 +485,7 @@ struct SettingsDocumentTableSection: View {
                let matchingDocumentURL = documentURL(matchingStandardizedPath: selectedScreenSelectionPath) {
                 return matchingDocumentURL.path
             }
-            return documentFiles.first(where: isLoadedDocument)?.path
+            return documentFiles.first(where: isActiveScreen)?.path
         case .text:
             return selectedTextSelectionPath
         case .images:
@@ -607,7 +598,7 @@ struct SettingsDocumentTableSection: View {
     }
 
     private func documentRow(for fileURL: URL) -> some View {
-        let isLoaded = isLoadedDocument(fileURL)
+        let isLoaded = isActiveScreen(fileURL)
         let isTemporarilySelected = selectedScreenSelectionPath.map {
             urlsRepresentSameFile(URL(fileURLWithPath: $0), fileURL)
         } ?? false
@@ -1064,11 +1055,19 @@ struct SettingsDocumentTableSection: View {
         Task { @MainActor in
             await Task.yield()
             if selectedScreenSelectionPath == fileURL.path,
-               isLoadedDocument(fileURL) {
+               isActiveScreen(fileURL) {
                 selectedScreenSelectionPath = nil
             }
             showTableFeedback("changed screen")
         }
+    }
+
+    private func isActiveScreen(_ fileURL: URL) -> Bool {
+        guard let activeScreenURL else {
+            return false
+        }
+
+        return urlsRepresentSameFile(activeScreenURL, fileURL)
     }
 
     private func handleScreenSingleTap(_ fileURL: URL) {

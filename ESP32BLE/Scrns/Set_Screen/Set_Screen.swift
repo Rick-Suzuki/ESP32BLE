@@ -347,7 +347,6 @@ struct SettingsScreen: View {
     @State private var documentEditorText = ""
     @State private var documentEditorFontSize: CGFloat = 18
     @State private var isLoadingDocumentText = false
-    @State private var documentNavigationDiagnostic: DocumentNavigationDiagnostic?
     @State private var isDocumentEditorFocused = false
     @State private var speechSynthesizer = AVSpeechSynthesizer()
     @State private var soundPreviewPlayer: AVAudioPlayer?
@@ -1459,7 +1458,6 @@ struct SettingsScreen: View {
                 text: $documentEditorText,
                 fontSize: $documentEditorFontSize,
                 isFocused: $isDocumentEditorFocused,
-                navigationDiagnostic: documentNavigationDiagnostic,
                 savedText: savedDocumentEditorText,
                 onUndo: { documentEditorText = savedDocumentEditorText }
             )
@@ -1850,13 +1848,9 @@ struct SettingsScreen: View {
                     guard let firstPDFURL = availablePDFURLs.first else { return }
                     selectPDFForNavigation(firstPDFURL, alignsToTop: true)
                 } else {
-                    let diagnostic = beginDocumentNavigationDiagnostic(operation: "Start")
-                    let collectionStart = ProcessInfo.processInfo.systemUptime
                     let fileURLs = navigationFileURLs
-                    diagnostic.log("available file collection resolved", durationSince: collectionStart)
                     guard let firstDocumentURL = fileURLs.first else { return }
-                    diagnostic.log("target selected")
-                    selectDocumentForNavigation(firstDocumentURL, alignsToTop: true, diagnostic: diagnostic)
+                    selectDocumentForNavigation(firstDocumentURL, alignsToTop: true)
                 }
             },
             onRandom: {
@@ -1874,19 +1868,13 @@ struct SettingsScreen: View {
                     guard let pdfURL = candidateURLs.randomElement() ?? availablePDFURLs.first else { return }
                     selectPDFForNavigation(pdfURL)
                 } else {
-                    let diagnostic = beginDocumentNavigationDiagnostic(operation: "Random")
-                    let collectionStart = ProcessInfo.processInfo.systemUptime
                     let fileURLs = navigationFileURLs
-                    diagnostic.log("available file collection resolved", durationSince: collectionStart)
-                    let selectionStart = ProcessInfo.processInfo.systemUptime
                     let selectedURL = selectedNavigationFileURL(in: fileURLs)
-                    diagnostic.log("current selection resolved", durationSince: selectionStart)
                     let candidateURLs = fileURLs.filter {
                         $0.standardizedFileURL != selectedURL?.standardizedFileURL
                     }
                     guard let documentURL = candidateURLs.randomElement() ?? fileURLs.first else { return }
-                    diagnostic.log("target selected")
-                    selectDocumentForNavigation(documentURL, diagnostic: diagnostic)
+                    selectDocumentForNavigation(documentURL)
                 }
             },
             onPrevious: {
@@ -1899,17 +1887,11 @@ struct SettingsScreen: View {
                           previewPDFPosition > 1 else { return }
                     selectPDFForNavigation(availablePDFURLs[previewPDFPosition - 2])
                 } else {
-                    let diagnostic = beginDocumentNavigationDiagnostic(operation: "Previous")
-                    let selectionStart = ProcessInfo.processInfo.systemUptime
                     guard let navigationFilePosition,
                           navigationFilePosition > 1 else { return }
-                    diagnostic.log("current selection resolved", durationSince: selectionStart)
-                    let collectionStart = ProcessInfo.processInfo.systemUptime
                     let fileURLs = navigationFileURLs
-                    diagnostic.log("available file collection resolved", durationSince: collectionStart)
                     let documentURL = fileURLs[navigationFilePosition - 2]
-                    diagnostic.log("target selected")
-                    selectDocumentForNavigation(documentURL, diagnostic: diagnostic)
+                    selectDocumentForNavigation(documentURL)
                 }
             },
             onNext: {
@@ -1924,16 +1906,10 @@ struct SettingsScreen: View {
                     guard availablePDFURLs.indices.contains(nextIndex) else { return }
                     selectPDFForNavigation(availablePDFURLs[nextIndex])
                 } else {
-                    let diagnostic = beginDocumentNavigationDiagnostic(operation: "Next")
-                    let selectionStart = ProcessInfo.processInfo.systemUptime
                     let nextIndex = navigationFilePosition ?? 0
-                    diagnostic.log("current selection resolved", durationSince: selectionStart)
-                    let collectionStart = ProcessInfo.processInfo.systemUptime
                     let fileURLs = navigationFileURLs
-                    diagnostic.log("available file collection resolved", durationSince: collectionStart)
                     guard fileURLs.indices.contains(nextIndex) else { return }
-                    diagnostic.log("target selected")
-                    selectDocumentForNavigation(fileURLs[nextIndex], diagnostic: diagnostic)
+                    selectDocumentForNavigation(fileURLs[nextIndex])
                 }
             }
         )
@@ -1998,13 +1974,6 @@ struct SettingsScreen: View {
 
     private var selectedNavigationFileURL: URL? {
         selectedNavigationFileURL(in: navigationFileURLs)
-    }
-
-    private func beginDocumentNavigationDiagnostic(operation: String) -> DocumentNavigationDiagnostic {
-        let diagnostic = DocumentNavigationDiagnostic(category: navigationControlsTitle, operation: operation)
-        documentNavigationDiagnostic = diagnostic
-        diagnostic.log("navigation action begins")
-        return diagnostic
     }
 
     private func selectedNavigationFileURL(in fileURLs: [URL]) -> URL? {
@@ -2170,10 +2139,8 @@ struct SettingsScreen: View {
 
     private func selectDocumentForNavigation(
         _ fileURL: URL,
-        alignsToTop: Bool = false,
-        diagnostic: DocumentNavigationDiagnostic
+        alignsToTop: Bool = false
     ) {
-        diagnostic.log("file-selection callback begins")
         guard let matchingURL = navigationFileURLs.first(where: {
             $0.standardizedFileURL == fileURL.standardizedFileURL
         }) else {
@@ -2182,11 +2149,11 @@ struct SettingsScreen: View {
 
         switch listMode {
         case .files:
-            previewScreenDocument(matchingURL, diagnostic: diagnostic)
+            previewScreenDocument(matchingURL)
         case .text:
-            selectTextFileForEditing(matchingURL, diagnostic: diagnostic)
+            selectTextFileForEditing(matchingURL)
         case .markdown:
-            selectMarkdownFileForEditing(matchingURL, diagnostic: diagnostic)
+            selectMarkdownFileForEditing(matchingURL)
         default:
             return
         }
@@ -2198,12 +2165,9 @@ struct SettingsScreen: View {
         let scrollRequest = SettingsDocumentNavigationScrollRequest(
             targetPath: matchingURL.path,
             id: UUID(),
-            alignsToTop: alignsToTop,
-            diagnostic: diagnostic
+            alignsToTop: alignsToTop
         )
         documentNavigationScrollRequest = scrollRequest
-        diagnostic.log("scroll request created id=\(scrollRequest.id.uuidString.prefix(8))")
-        diagnostic.log("file-selection callback completes")
     }
 
     private func restorePreviewFromAppliedBackground() {
@@ -2307,9 +2271,15 @@ struct SettingsScreen: View {
     }
 
     private var documentTableSection: some View {
-        SettingsDocumentTableSection(
+        let screenFiles = availableDocumentURLs
+        let activeScreenURL = screenFiles.first {
+            $0.lastPathComponent == selectedDocumentName
+        }
+
+        return SettingsDocumentTableSection(
             listMode: settingsDocumentTableListMode,
-            documentFiles: availableDocumentURLs,
+            documentFiles: screenFiles,
+            activeScreenURL: activeScreenURL,
             loadedDocumentURL: loadedDocumentURL,
             selectedScreenSelectionPath: screenSelectionPathForTable,
             textURLs: availableTextURLs,
@@ -2343,7 +2313,6 @@ struct SettingsScreen: View {
             canDeleteDocuments: canDeleteDocuments,
             loadFunctionKeys: handleSettingsDocumentSelection,
             previewScreenDocument: { previewScreenDocument($0) },
-            isLoadedDocument: { selectedDocumentFileURL?.path == $0.path },
             loadTextFile: { selectTextFileForEditing($0) },
             loadMarkdownFile: { selectMarkdownFileForEditing($0) },
             deleteDocument: deleteDocument,
@@ -2829,24 +2798,16 @@ struct SettingsScreen: View {
         }
     }
 
-    private func previewScreenDocument(_ fileURL: URL, diagnostic: DocumentNavigationDiagnostic? = nil) {
-        if diagnostic == nil { documentNavigationDiagnostic = nil }
-        let transitionStart = ProcessInfo.processInfo.systemUptime
-        let saveStart = ProcessInfo.processInfo.systemUptime
+    private func previewScreenDocument(_ fileURL: URL) {
         guard saveCurrentDocumentText().allowsDocumentTransition else {
-            diagnostic?.log("save validation blocked transition", durationSince: saveStart)
             return
         }
-        diagnostic?.log("save validation complete", durationSince: saveStart)
 
         isLoadingDocumentText = true
         defer { isLoadingDocumentText = false }
 
         do {
-            let readStart = ProcessInfo.processInfo.systemUptime
             let loadedText = try String(contentsOf: fileURL, encoding: .utf8)
-            diagnostic?.log("target file read", durationSince: readStart, characterCount: loadedText.count)
-            let assignmentStart = ProcessInfo.processInfo.systemUptime
             selectedScreenSelectionPath = fileURL.path
             documentEditorText = loadedText
             savedDocumentEditorText = loadedText
@@ -2857,8 +2818,6 @@ struct SettingsScreen: View {
             if !isPad {
                 isIPhoneDocumentEditorPresented = true
             }
-            diagnostic?.log("editor state assignment", durationSince: assignmentStart, characterCount: loadedText.count)
-            diagnostic?.log("Screen transition complete", durationSince: transitionStart, characterCount: loadedText.count)
         } catch {
             presentDocumentSaveAlert(
                 title: "File Could Not Be Opened",
@@ -2867,17 +2826,12 @@ struct SettingsScreen: View {
         }
     }
 
-    private func selectTextFileForEditing(_ fileURL: URL, diagnostic: DocumentNavigationDiagnostic? = nil) {
-        if diagnostic == nil { documentNavigationDiagnostic = nil }
-        let transitionStart = ProcessInfo.processInfo.systemUptime
-        let saveStart = ProcessInfo.processInfo.systemUptime
+    private func selectTextFileForEditing(_ fileURL: URL) {
         guard saveCurrentDocumentText().allowsDocumentTransition else {
-            diagnostic?.log("save validation blocked transition", durationSince: saveStart)
             return
         }
-        diagnostic?.log("save validation complete", durationSince: saveStart)
 
-        loadTextFile(fileURL, diagnostic: diagnostic)
+        loadTextFile(fileURL)
         guard loadedDocumentURL?.standardizedFileURL == fileURL.standardizedFileURL else {
             return
         }
@@ -2885,13 +2839,10 @@ struct SettingsScreen: View {
         if !isPad {
             isIPhoneDocumentEditorPresented = true
         }
-        diagnostic?.log("Text transition complete", durationSince: transitionStart)
     }
 
-    private func selectMarkdownFileForEditing(_ fileURL: URL, diagnostic: DocumentNavigationDiagnostic? = nil) {
-        if diagnostic == nil { documentNavigationDiagnostic = nil }
-        let transitionStart = ProcessInfo.processInfo.systemUptime
-        loadMarkdownFile(fileURL, diagnostic: diagnostic)
+    private func selectMarkdownFileForEditing(_ fileURL: URL) {
+        loadMarkdownFile(fileURL)
         guard loadedDocumentURL?.standardizedFileURL == fileURL.standardizedFileURL else {
             return
         }
@@ -2899,26 +2850,21 @@ struct SettingsScreen: View {
         if !isPad {
             isIPhoneDocumentEditorPresented = true
         }
-        diagnostic?.log("MD transition complete", durationSince: transitionStart)
     }
 
-    private func loadTextFile(_ fileURL: URL, diagnostic: DocumentNavigationDiagnostic? = nil) {
+    private func loadTextFile(_ fileURL: URL) {
         selectedTextSelectionPath = fileURL.path
         isLoadingDocumentText = true
         defer { isLoadingDocumentText = false }
 
         do {
-            let readStart = ProcessInfo.processInfo.systemUptime
             let loadedText = try String(contentsOf: fileURL, encoding: .utf8)
-            diagnostic?.log("target file read", durationSince: readStart, characterCount: loadedText.count)
-            let assignmentStart = ProcessInfo.processInfo.systemUptime
             documentEditorText = loadedText
             savedDocumentEditorText = loadedText
             loadedDocumentName = fileURL.lastPathComponent
             loadedDocumentURL = fileURL
             blockedDocumentSaveResult = nil
             documentNameDraft = currentTitleDisplayName
-            diagnostic?.log("editor state assignment", durationSince: assignmentStart, characterCount: loadedText.count)
         } catch {
             presentDocumentSaveAlert(
                 title: "File Could Not Be Opened",
@@ -2927,30 +2873,23 @@ struct SettingsScreen: View {
         }
     }
 
-    private func loadMarkdownFile(_ fileURL: URL, diagnostic: DocumentNavigationDiagnostic? = nil) {
-        let saveStart = ProcessInfo.processInfo.systemUptime
+    private func loadMarkdownFile(_ fileURL: URL) {
         guard saveCurrentDocumentText().allowsDocumentTransition else {
-            diagnostic?.log("save validation blocked transition", durationSince: saveStart)
             return
         }
-        diagnostic?.log("save validation complete", durationSince: saveStart)
 
         selectedMarkdownSelectionPath = fileURL.path
         isLoadingDocumentText = true
         defer { isLoadingDocumentText = false }
 
         do {
-            let readStart = ProcessInfo.processInfo.systemUptime
             let loadedText = try String(contentsOf: fileURL, encoding: .utf8)
-            diagnostic?.log("target file read", durationSince: readStart, characterCount: loadedText.count)
-            let assignmentStart = ProcessInfo.processInfo.systemUptime
             documentEditorText = loadedText
             savedDocumentEditorText = loadedText
             loadedDocumentName = fileURL.lastPathComponent
             loadedDocumentURL = fileURL
             blockedDocumentSaveResult = nil
             documentNameDraft = currentTitleDisplayName
-            diagnostic?.log("editor state assignment", durationSince: assignmentStart, characterCount: loadedText.count)
         } catch {
             presentDocumentSaveAlert(
                 title: "File Could Not Be Opened",

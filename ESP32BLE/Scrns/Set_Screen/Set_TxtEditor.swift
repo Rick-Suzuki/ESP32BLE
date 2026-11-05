@@ -1,24 +1,6 @@
 import SwiftUI
 import UIKit
 
-struct DocumentNavigationDiagnostic: Equatable {
-    let id = UUID()
-    let category: String
-    let operation: String
-    let startedUptime = ProcessInfo.processInfo.systemUptime
-
-    func log(_ stage: String, durationSince startUptime: TimeInterval? = nil, characterCount: Int? = nil) {
-        let now = ProcessInfo.processInfo.systemUptime
-        let duration = (now - (startUptime ?? self.startedUptime)) * 1_000
-        let characterCountText = characterCount.map { " characters=\($0)" } ?? ""
-        print(
-            "🐞 nav=\(id.uuidString.prefix(8)) category=\(category) operation=\(operation) " +
-            "stage=\(stage) uptime=\(String(format: "%.3f", now)) " +
-            "durationMs=\(String(format: "%.1f", duration))\(characterCountText)"
-        )
-    }
-}
-
 enum SettingsFocusField: Hashable {
     case sendText
 }
@@ -27,7 +9,6 @@ struct PlainDocumentEditor: UIViewRepresentable {
     @Binding var text: String
     @Binding var fontSize: CGFloat
     @Binding var isFocused: Bool
-    let navigationDiagnostic: DocumentNavigationDiagnostic?
 
     func makeCoordinator() -> Coordinator {
         Coordinator(text: $text, isFocused: $isFocused)
@@ -69,12 +50,7 @@ struct PlainDocumentEditor: UIViewRepresentable {
         var didChangeContent = false
 
         if textView.text != text {
-            let contentUpdateStart = ProcessInfo.processInfo.systemUptime
-            navigationDiagnostic?.log("editor content update begins", characterCount: text.count)
-
-            let textAssignmentStart = ProcessInfo.processInfo.systemUptime
             textView.text = text
-            navigationDiagnostic?.log("UITextView text assignment", durationSince: textAssignmentStart, characterCount: text.count)
             shouldRestoreOffset = true
             didChangeContent = true
             let currentSize = textView.font?.pointSize ?? fontSize
@@ -84,11 +60,7 @@ struct PlainDocumentEditor: UIViewRepresentable {
             }
 
             textView.layoutIfNeeded()
-            navigationDiagnostic?.log("UITextView layout", durationSince: contentUpdateStart, characterCount: text.count)
-
-            let contentSizeStart = ProcessInfo.processInfo.systemUptime
             textView.refreshNoWrapContentSize()
-            navigationDiagnostic?.log("UITextView no-wrap measurement", durationSince: contentSizeStart, characterCount: text.count)
             let targetOffset: CGPoint
             if didChangeContent, !textView.hasUserAdjustedHorizontalOffset {
                 targetOffset = .zero
@@ -96,7 +68,6 @@ struct PlainDocumentEditor: UIViewRepresentable {
                 targetOffset = textView.clampedContentOffset(for: previousOffset)
             }
             textView.setContentOffset(targetOffset, animated: false)
-            navigationDiagnostic?.log("editor content update complete", durationSince: contentUpdateStart, characterCount: text.count)
         } else {
             let currentSize = textView.font?.pointSize ?? fontSize
             if abs(currentSize - fontSize) > 0.25 {
@@ -122,8 +93,7 @@ struct PlainDocumentEditor: UIViewRepresentable {
             self.parent = PlainDocumentEditor(
                 text: text,
                 fontSize: .constant(18),
-                isFocused: isFocused,
-                navigationDiagnostic: nil
+                isFocused: isFocused
             )
         }
 
@@ -387,7 +357,6 @@ struct SettingsEditorSectionView: View {
     @Binding var text: String
     @Binding var fontSize: CGFloat
     @Binding var isFocused: Bool
-    let navigationDiagnostic: DocumentNavigationDiagnostic?
     let savedText: String
     let onUndo: () -> Void
     @State private var clipboardStatusMessage: String?
@@ -398,8 +367,7 @@ struct SettingsEditorSectionView: View {
             PlainDocumentEditor(
                 text: $text,
                 fontSize: $fontSize,
-                isFocused: $isFocused,
-                navigationDiagnostic: navigationDiagnostic
+                isFocused: $isFocused
             )
 
             clipboardStatusOverlay
