@@ -238,36 +238,60 @@ nonisolated private func settingsPreviewDownsampledUIImage(at url: URL, maxPixel
 
 struct SettingsPDFPreviewPanel: View {
     let pdfURL: URL?
+    let usesSinglePixelBorder: Bool
+    let usesWidthFit: Bool
+    @Environment(\.displayScale) private var displayScale
 
     var body: some View {
         GeometryReader { geometry in
-            let previewWidth = geometry.size.width
-            let previewHeight = previewWidth / 1.3
-
             ZStack {
                 Color.black
 
-                SettingsPDFPreviewView(pdfURL: pdfURL)
-                    .frame(width: previewWidth, height: previewHeight)
+                SettingsPDFPreviewView(
+                    pdfURL: pdfURL,
+                    fitsPageWidth: usesWidthFit
+                )
+                    .frame(width: geometry.size.width, height: geometry.size.height)
+
+                if pdfURL == nil {
+                    Text("No PDF selected")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundStyle(.white)
+                        .multilineTextAlignment(.center)
+                }
             }
-            .frame(width: previewWidth, height: previewHeight)
+            .frame(width: geometry.size.width, height: geometry.size.height)
             .clipped()
             .overlay {
                 Rectangle()
-                    .stroke(Color.white, lineWidth: 2)
+                    .stroke(Color.white, lineWidth: usesSinglePixelBorder ? 1 / displayScale : 2)
             }
         }
-        .aspectRatio(1.3, contentMode: .fit)
     }
 }
 
 private struct SettingsPDFPreviewView: UIViewRepresentable {
     let pdfURL: URL?
+    let fitsPageWidth: Bool
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator()
+    }
 
     func makeUIView(context: Context) -> PDFView {
-        let pdfView = PDFView()
+        let pdfView: PDFView
+        if fitsPageWidth {
+            let widthFittingPDFView = SettingsWidthFittingPDFView()
+            widthFittingPDFView.onLayout = { [weak coordinator = context.coordinator] pdfView in
+                coordinator?.applyWidthFitIfNeeded(to: pdfView)
+            }
+            pdfView = widthFittingPDFView
+        } else {
+            pdfView = PDFView()
+        }
+
         pdfView.backgroundColor = .black
-        pdfView.autoScales = true
+        pdfView.autoScales = !fitsPageWidth
         pdfView.displayMode = .singlePage
         pdfView.displayDirection = .vertical
         pdfView.displaysPageBreaks = false
@@ -279,13 +303,77 @@ private struct SettingsPDFPreviewView: UIViewRepresentable {
     func updateUIView(_ pdfView: PDFView, context: Context) {
         guard let pdfURL else {
             pdfView.document = nil
+            context.coordinator.resetWidthFit()
             return
         }
 
         if pdfView.document?.documentURL != pdfURL {
             pdfView.document = PDFDocument(url: pdfURL)
+            context.coordinator.resetWidthFit()
         }
 
-        pdfView.scaleFactor = pdfView.scaleFactorForSizeToFit
+        if fitsPageWidth {
+            context.coordinator.applyWidthFitIfNeeded(to: pdfView)
+        } else {
+            pdfView.scaleFactor = pdfView.scaleFactorForSizeToFit
+        }
+    }
+
+    final class Coordinator {
+        private var fittedDocumentURL: URL?
+        private var fittedViewportSize = CGSize.zero
+
+        func resetWidthFit() {
+            fittedDocumentURL = nil
+            fittedViewportSize = .zero
+        }
+
+        // MARK: - BM:🅱️ IPHONE PDF INITIAL WIDTH FIT
+        func applyWidthFitIfNeeded(to pdfView: PDFView) {
+            guard let document = pdfView.document,
+                  let firstPage = document.page(at: 0) else {
+                return
+            }
+
+            let viewportSize = pdfView.bounds.size
+            guard viewportSize.width > 0,
+                  viewportSize.height > 0 else {
+                return
+            }
+
+            let documentURL = document.documentURL
+            guard fittedDocumentURL != documentURL || fittedViewportSize != viewportSize else {
+                return
+            }
+
+            let pageBounds = firstPage.bounds(for: pdfView.displayBox)
+            let normalizedRotation = ((firstPage.rotation % 360) + 360) % 360
+            let pageWidth = normalizedRotation.isMultiple(of: 180)
+                ? pageBounds.width
+                : pageBounds.height
+            guard pageWidth > 0 else {
+                return
+            }
+
+            let widthFitScale = viewportSize.width / pageWidth
+            guard widthFitScale.isFinite, widthFitScale > 0 else {
+                return
+            }
+
+            if abs(pdfView.scaleFactor - widthFitScale) > .ulpOfOne {
+                pdfView.scaleFactor = widthFitScale
+            }
+            fittedDocumentURL = documentURL
+            fittedViewportSize = viewportSize
+        }
+    }
+}
+
+private final class SettingsWidthFittingPDFView: PDFView {
+    var onLayout: ((PDFView) -> Void)?
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        onLayout?(self)
     }
 }

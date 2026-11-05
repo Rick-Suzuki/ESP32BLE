@@ -408,6 +408,7 @@ struct SettingsScreen: View {
     @State private var isCancellingDocumentNameFromOutsideTap = false
     @State private var previewImageURL: URL?
     @State private var isIPhoneImagePreviewPresented = false
+    @State private var isIPhonePDFPreviewPresented = false
     @State private var pendingImageRenameDestinationURL: URL?
     @State private var imageNavigationScrollRequest: SettingsImageNavigationScrollRequest?
     @State private var isImagePreviewRestorePending = false
@@ -457,6 +458,7 @@ struct SettingsScreen: View {
                 synchronizeImageOpacityPresentation()
                 previewImageURL = nil
                 isIPhoneImagePreviewPresented = false
+                isIPhonePDFPreviewPresented = false
                 beginImagePreviewRestoration()
             }
             .onChange(of: opacitySliderValue) { _, _ in
@@ -464,10 +466,15 @@ struct SettingsScreen: View {
                 synchronizeImageOpacityPresentation()
             }
             .onChange(of: listMode) { _, _ in
-                guard !isImagesListActive else { return }
-                cancelImageOpacityPreviewUpdate()
-                isImageOpacitySliderEditing = false
-                synchronizeImageOpacityPresentation()
+                if !isImagesListActive {
+                    cancelImageOpacityPreviewUpdate()
+                    isImageOpacitySliderEditing = false
+                    synchronizeImageOpacityPresentation()
+                }
+
+                if !isPDFsListActive {
+                    isIPhonePDFPreviewPresented = false
+                }
             }
             .onChange(of: documentDirectorySnapshot) {
                 reconcilePendingImageRenameSelection()
@@ -494,6 +501,8 @@ struct SettingsScreen: View {
                             VStack(spacing: 0) {
                                 if isImagesListActive {
                                     largeImagePreviewSection
+                                } else if isPDFsListActive {
+                                    largePDFPreviewSection
                                 } else {
                                     editableDocumentSection
                                 }
@@ -1641,9 +1650,9 @@ struct SettingsScreen: View {
             imageControlButtons: AnyView(imageControlButtons),
             isImageControlsActive: isImagesListActive,
             onImageOpacityEditingChanged: handleImageOpacityEditingChanged,
-            isIPhoneImageEditorPresented: isImagesListActive && isIPhoneImagePreviewPresented,
+            isIPhoneImageEditorPresented: isIPhoneContentPreviewPresented,
             iPhoneEditorLeadingInset: iPhoneEditorLeadingInset,
-            iPhoneImageEditor: AnyView(iPhoneLargeImagePreview),
+            iPhoneImageEditor: AnyView(iPhoneLargeContentPreview),
             iPhoneImageEditorCloseButton: AnyView(iPhoneImagePreviewCloseButton),
             presentDeleteAllDataConfirmation: presentDeleteAllDataConfirmation,
             presentHelp: {
@@ -1752,14 +1761,42 @@ struct SettingsScreen: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
+    private var largePDFPreviewSection: some View {
+        pdfPreviewSection
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
     private var iPhoneLargeImagePreview: some View {
         imagePreviewSection
             .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
+    private var iPhoneLargePDFPreview: some View {
+        pdfPreviewSection
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    @ViewBuilder
+    private var iPhoneLargeContentPreview: some View {
+        if isPDFsListActive {
+            iPhoneLargePDFPreview
+        } else {
+            iPhoneLargeImagePreview
+        }
+    }
+
+    private var isIPhoneContentPreviewPresented: Bool {
+        (isImagesListActive && isIPhoneImagePreviewPresented) ||
+            (isPDFsListActive && isIPhonePDFPreviewPresented)
+    }
+
     private var iPhoneImagePreviewCloseButton: some View {
         Button {
-            isIPhoneImagePreviewPresented = false
+            if isPDFsListActive {
+                isIPhonePDFPreviewPresented = false
+            } else {
+                isIPhoneImagePreviewPresented = false
+            }
         } label: {
             Image(systemName: "xmark")
                 .font(.caption.weight(.bold))
@@ -1768,11 +1805,15 @@ struct SettingsScreen: View {
                 .background(.black.opacity(0.7), in: .circle)
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("Close image preview")
+        .accessibilityLabel(isPDFsListActive ? "Close PDF preview" : "Close image preview")
     }
 
     private var pdfPreviewSection: some View {
-        SettingsPDFPreviewPanel(pdfURL: selectedPDFURL)
+        SettingsPDFPreviewPanel(
+            pdfURL: selectedPDFURL,
+            usesSinglePixelBorder: !isPad,
+            usesWidthFit: !isPad
+        )
     }
 
     private var imageControlButtons: some View {
@@ -1822,6 +1863,10 @@ struct SettingsScreen: View {
 
     private var isImagesListActive: Bool {
         listMode == .images
+    }
+
+    private var isPDFsListActive: Bool {
+        listMode == .pdfs
     }
 
     private var canPreviewPreviousImage: Bool {
@@ -2022,7 +2067,6 @@ struct SettingsScreen: View {
             allScrollPositionID: allScrollPositionID,
             refreshFiles: refreshSettingsFileCollections,
             canDeleteDocuments: canDeleteDocuments,
-            imagePreviewSection: settingsTablePreviewSection,
             loadFunctionKeys: handleSettingsDocumentSelection,
             isLoadedDocument: { selectedDocumentFileURL?.path == $0.path },
             loadTextFile: loadTextFile,
@@ -2243,18 +2287,6 @@ struct SettingsScreen: View {
         case .all:
             return .all
         }
-    }
-
-    private var settingsTablePreviewSection: AnyView {
-        if listMode == .images {
-            return AnyView(imagePreviewSection)
-        }
-
-        if listMode == .pdfs {
-            return AnyView(pdfPreviewSection)
-        }
-
-        return AnyView(EmptyView())
     }
 
     private var customKeyboardTimingSection: some View {
@@ -3788,6 +3820,7 @@ struct SettingsScreen: View {
 
     private func selectPDF(_ pdfURL: URL) {
         persistSelectedPDF(pdfURL)
+        isIPhonePDFPreviewPresented = true
     }
 
     private func playSelectedSoundPreview(from soundURL: URL) {

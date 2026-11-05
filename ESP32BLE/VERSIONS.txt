@@ -1,4 +1,8 @@
 
+V66.04
+settings: PDFs inprog 1: STAGE 4B.2
+261105 Thu 0931
+
 V66.03
 settings: simple images done
 261105 Thu 0902

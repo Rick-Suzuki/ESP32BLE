@@ -1,166 +1,250 @@
-Stage 3A probe complete. No files, settings, builds, deployments, commits, or pushes were changed.
+Read-only probe complete. No files were modified, built, deployed, committed, or pushed.
 
-Confirmed findings
+Confirmed current implementation
 
-1. Slider location and range
+Relevant files and lines
 
-iPhone:
-• File: Scrns/Set_Screen/Btm_Area/Set_KB_Timing.swift
-• View: SettingsKeyboardTimingSection.iPhoneImageControls
-• Slider: lines 228–248; actual Slider at line 240.
-• Binding: $opacitySliderValue.
-• Range: 0.0...1.0.
-• Enabled only when isImageControlsActive, which SettingsScreen supplies as isImagesListActive. Therefore it is enabled only for the Images category.
-• The iPhone presentation has an “Image” label but no numeric or percentage display.
+• ESP32BLE/Scrns/Set_Screen/Table_Img/Set_ImgPanel.swift
+   • Lines 239-261: small SettingsPDFPreviewPanel layout.
+   • Lines 264-291: PDFKit SettingsPDFPreviewView renderer.
 
-iPad:
-• File: Scrns/Set_Screen/Btm_Area/Set_AvailableDevices.swift
-• View: SettingsAvailableDevicesPanel.iPadBody.
-• Slider invocation: lines 53–59.
-• Slider implementation: settingsPlaceholderSlider, lines 548–559.
-• Binding: $opacitySliderValue.
-• Range: 0.0...1.0.
-• Enabled only when isImageControlsActive.
-• The passed title is “opacity: 0.5”, but the helper does not render its title parameter. Therefore no live value, fixed value, or percentage is currently displayed on iPad either.
+• ESP32BLE/Scrns/Set_Screen/Table_Img/Set_Table.swift
+   • Lines 108-114: table height calculation.
+   • Lines 219-222: PDF preview rendered beneath the table.
+   • Lines 322-326: PDF preview reserved height is table width / 1.3.
+   • Lines 437-485: PDF selected-row and row-path handling.
+   • Lines 500-533: selected PDF restoration scrolling; navigation scrolling is currently Images-only.
+   • Lines 830-875: PDF table row selection, highlight, and deletion gesture.
 
-Both platforms use the same state key and range; only their control placement differs.
+• ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
+   • Lines 455-482: Settings lifecycle and file-list reconciliation.
+   • Lines 486-528: iPad Settings hierarchy; only Images currently use the large editor area.
+   • Lines 535-567: approved iPhone left region, controls column, and table layout.
+   • Lines 1631-1653: existing injection of the iPhone editor and external Close button.
+   • Lines 1750-1776: large Image preview, iPhone Image preview, Close button, and PDF preview source.
+   • Lines 1778-1836: current Image navigation-control configuration.
+   • Lines 1960-2025: document-table construction.
+   • Lines 3262-3269: PDF discovery and alphabetical sorting.
+   • Lines 3303-3338: selection validation after file refresh.
+   • Lines 3373-3397: persisted PDF path/name resolution.
+   • Lines 3789-3791: PDF selection.
+   • Lines 4101-4129: PDF rename.
+   • Lines 4225-4240: PDF delete.
+   • Lines 4838-4869: PDF import.
+   • Lines 5243-5246: first imported PDF is selected when appropriate.
 
-2. Binding and state owner
+• ESP32BLE/Scrns/Set_Screen/Btm_Area/Set_AvailableDevices.swift
+   • Lines 84-160: iPhone editor container, external Close row, and measured bottom-control width.
+   • Lines 43-80: iPad image-navigation and opacity-control placement.
 
-SettingsScreen owns:
+• ESP32BLE/Scrns/Set_Screen/Btm_Area/Set_KB_Timing.swift
+   • Lines 3-49: iPhone keyboard controls followed by the Image navigation/opacity area.
+   • Lines 229-253: “Image” heading, four controls, and disabled-state opacity slider.
 
-• File: Scrns/Set_Screen/Set_Screen.swift
-• Line 395:
-@AppStorage("backgroundImageOpacity") private var opacitySliderValue = 0.5
+• ESP32BLE/Scrns/Set_Screen/Btm_Area/Set_ImgCtlsSection.swift
+   • Lines 7-165: reusable four-button Image control component, including repeat-on-hold Previous/Next behavior.
 
-It is passed to:
+• ESP32BLE/Scrns/Set_Screen/Btm_Area/Set_BtmCtls.swift
+   • Lines 3-44: forwarding layer into SettingsAvailableDevicesPanel.
 
-• SettingsAvailableDevicesPanel through SettingsBottomControlsSection: Set_Screen.swift lines 1600–1620.
-• SettingsKeyboardTimingSection: Set_Screen.swift lines 2142–2169.
-• SettingsImagePreviewPanel: Set_Screen.swift lines 1623–1629.
+Current PDF renderer and hierarchy
 
-The large preview already receives opacitySliderValue as a plain Double at Set_ImgPanel.swift line 7, but does not presently use it.
+Confirmed:
 
-There is no conversion callback, computed binding, or local normalization in Settings. The slider writes its Double value directly to the shared AppStorage key.
+• PDFKit is already in use: import PDFKit at Set_ImgPanel.swift line 3.
+• The preview is a SwiftUI SettingsPDFPreviewPanel containing a UIKit PDFView through UIViewRepresentable.
+• The panel is black, has a 2-point white border, and forces a 1.3 width-to-height preview ratio.
+• The table supplies this panel below the PDF list.
+• PDFView uses:
+   • autoScales = true
+   • .singlePage
+   • vertical direction
+   • no page breaks
+   • no page-view controller
+   • isUserInteractionEnabled = false
+• updateUIView resets the PDF scale to scaleFactorForSizeToFit.
 
-3. Current behavior when moved
+Therefore the existing preview is first-page-oriented and display-only. PDFKit can represent multi-page documents, but current settings do not expose page movement because the view is single-page and interaction is disabled.
 
-The Settings slider changes the UserDefaults/AppStorage value for backgroundImageOpacity.
+Current PDF table geometry
 
-The same key is also owned by:
+Confirmed:
 
-• ContentView: ContentView.swift line 186.
-• MainScreen: Main_Screen.swift line 1060.
+• The PDF list height is:
+available height
+• item-count height
+• PDF preview height
+• template-description height.
 
-ContentView observes its backgroundImageOpacity at lines 393–397. Unless restoration is in progress, it saves the changed value to the selected screen’s ScreenConfig.
+• PDF preview height is tableWidth / 1.3.
+• The item count remains above the preview.
+• Images already reclaim their former preview area because only PDFs currently reserve and render a lower preview.
+• PDF rows use pdfURL.path as their row identity and scroll-position identifier.
+• The selected PDF row is bold yellow; there is no Image-style independent yellow/green state model.
 
-Therefore the slider is not preview-only. It is the existing per-screen Main Screen background-opacity control, exposed from Settings through shared AppStorage.
+PDF selection, restoration, file operations
 
-4. Existing Main Screen opacity behavior
+Confirmed:
 
-Confirmed Main Screen rendering:
+• A PDF table tap calls selectPDF, persists its path and filename in AppStorage, and copies its filename to the pasteboard.
+• Re-selecting the same PDF still invokes selection; there is no current local editor-presentation state.
+• The selected PDF is restored by resolving the persisted path first, then filename case-insensitively.
+• A missing persisted PDF selection is cleared during document-directory reconciliation.
+• The table restores visibility of the selected PDF row using ScrollViewReader.
+• Rename moves the file, refreshes documents, and persists the target URL.
+• Deleting the selected PDF clears its persisted selection.
+• PDF import is supported through all-files import; after import, the first imported PDF becomes selected when PDFs were the import category or no PDF was previously selected.
+• There is no existing PDF-specific “preview restoration” state like Images, and no existing iPhone PDF Close behavior.
 
-• Main background:
-Scrns/Main_Screen/Main_BG_img.swift lines 39–52.
-The image uses:
-Image(uiImage: mainBackgroundImage)
-.scaledToFill()
-.opacity(backgroundImageOpacity)
+Recommended large PDF editor
 
-• ContentView’s loaded Main Screen background:
-ContentView.swift lines 2959–2972.
-It also uses:
-.scaledToFill()
-.opacity(backgroundImageOpacity)
+Recommendation:
 
-• Smart-button background preview:
-Main_Screen.swift lines 5044–5055.
-It applies:
-.opacity(backgroundImageOpacity)
+• Reuse the approved outer Image-editor placement exactly.
+• Do not create another iPhone width, height, padding, or bottom-control measurement.
+• Replace only the content supplied to the existing editor slot when the active category is PDFs.
+• On iPad, route PDFs through the same left content-area branch currently used by Images, while leaving the Images branch untouched.
+• On iPhone, reuse the existing SettingsAvailableDevicesPanel editor slot, external Close row, measured editor width, and lower controls. Supply a PDF editor view instead of an image editor view when PDFs are active.
 
-The opacity is applied to the image layer, not to the entire Main Screen, controls, grid, or surrounding UI.
+The PDF viewport should be a revised SettingsPDFPreviewPanel that fills the parent-provided editor space rather than imposing its current 1.3 aspect ratio. It should retain the black background and use the established platform border treatment: one physical pixel on iPhone and the approved iPad border appearance.
 
-5. Persistence and restoration
+A “No PDF selected” message is recommended for the new large editor, matching the explicit empty-state handling used by Images.
 
-Opacity is persisted per screen document:
+Multi-page recommendation
 
-• ScreenConfig contains backgroundOpacity: ScreenConfig.swift lines 19–39.
-• The value is encoded and decoded with the screen config JSON: lines 53–81.
-• ContentView saves the changed value into the selected screen config: ContentView.swift lines 1260–1271.
-• On screen selection/restoration, ContentView restores backgroundImageOpacity from that screen config: lines 1273–1293 and 1317–1327.
-• Config writes are atomic: ScreenConfig.swift lines 112–129.
+Recommended Stage 4D behavior:
 
-The AppStorage key is global as the live/current value and fallback, but the established saved behavior is per-screen, not per-image.
+• Keep the four existing controls for PDF-file navigation only.
+• Use native PDFKit interaction for pages within the selected file.
+• Configure PDFView for continuous vertical pages so users can move through a multi-page PDF with native scrolling when at minimum scale.
+• Use PDFKit’s own magnification and pan handling rather than layering SwiftUI MagnifyGesture and DragGesture over PDFView.
+• When a new PDF is selected, assign the new document, move to its first page, and restore the fit scale.
+• A renamed PDF should reload from its new URL without altering the selected-file semantics.
+• Deleting or clearing a PDF should set pdfView.document = nil.
 
-6. Selection-state implications
+This avoids competing SwiftUI and UIKit gestures and lets PDFKit manage page metrics, mixed page sizes, bounds, rendering, and pan limits.
 
-The slider does not select or apply an image.
+Zoom and pan recommendation
 
-Its existing semantics are:
+For Stage 4D:
 
-• It controls the selected screen’s persisted applied-background opacity.
-• It is independent of yellow preview selection and green applied-background selection.
-• Moving it while a yellow preview differs from the green applied image still changes the selected screen’s background-opacity setting.
+• Keep the editor viewport fixed.
+• Use PDFKit’s native pinch and pan.
+• After the document and view size are established:
+   • Fit scale = pdfView.scaleFactorForSizeToFit
+   • Minimum scale = fit scale
+   • Maximum scale = fit scale × 5.0
+   • Initial scale = fit scale
+• Disable autoScales once the explicit limits are set so later SwiftUI updates do not reset a user zoom.
+• Do not apply the Image zoom/pan implementation to PDF content.
+• Do not rasterize pages into images.
 
-Connecting the slider to the large preview would make the preview accurately show the current screen’s background opacity for whichever image is being previewed. It would not require changing image selection, double-tap application, or persistence logic.
+This gives the requested equivalent of 1x through 5x while preserving a PDF page’s native rendering quality.
 
-7. Editor integration point
+PDF file navigation controls
 
-Correct future integration point:
+Confirmed limitation:
 
-• File: Scrns/Set_Screen/Table_Img/Set_ImgPanel.swift
-• View: SettingsImagePreviewPanel
-• Rendered image: zoomablePreviewImage, currently lines 80–88.
+• SettingsImageControlsSection is currently Image-specific in naming, active-state gating, title text, and image callbacks.
+• SettingsDocumentTableSection only accepts SettingsImageNavigationScrollRequest; PDF selection restoration exists, but animated navigation-triggered scrolling does not.
 
-Apply:
+Recommended Stage 4C:
 
-opacity(opacitySliderValue)
+• Parameterize the existing four-button component with:
+   • visible heading: “Image” or “PDF”
+   • active state
+   • existing button availability
+   • existing action closures
+• Preserve all existing Image closures and scrolling behavior unchanged.
+• Add a separate PDF navigation scroll request, mirroring the current Image request, rather than altering the established Image request behavior.
+• Use the already-sorted availablePDFURLs.
+• Reset selects the first PDF and scrolls it to the top.
+• Random chooses a different PDF when possible.
+• Previous and Next follow the existing Image boundary behavior and retain the repeat-on-hold interaction.
+• Each action calls selectPDF, updates the persistent PDF selection, and requests the selected table row scroll into view.
 
-to the rendered Image layer only, after its frame/scale/offset transform and before or after the gesture modifiers.
+Opacity slider
 
-Do not apply opacity to:
+Confirmed:
 
-• Color.black
-• The clipped ZStack
-• The border overlay
-• The GeometryReader
-• The Close button or Settings controls
+• On iPhone, the slider is disabled whenever isImageControlsActive is false.
+• On iPad, the same disabled state is passed to settingsPlaceholderSlider.
+• Therefore PDFs already leave the current slider disabled if the current Image-only active flag remains Image-only.
 
-This preserves zoom, pan, gestures, clipping, border visibility, and fixed viewport geometry. Slider movement would not reset zoom or pan because neither gesture state nor preview identity changes.
+Recommended Stage 4C:
 
-8. Black-background result
+• Separate “file-navigation controls active” from “image opacity enabled.”
+• For PDFs:
+   • File-navigation buttons are enabled.
+   • Heading is “PDF.”
+   • Existing opacity slider stays visible but disabled and grey.
+   • The throttled opacity presentation callback must not start.
+• For Images:
+   • Preserve the current Image heading, enabled slider, throttling, persistence, and preview opacity behavior exactly.
 
-The preview viewport’s black background is at Set_ImgPanel.swift line 35.
+Performance and compatibility
 
-Reducing image opacity over it will progressively blend the image toward black. It will not reveal checkerboard transparency or the underlying Settings UI.
+Confirmed:
 
-This matches the Main Screen’s actual composition: Main_BG_img.swift places Color.black behind the image before applying background-image opacity.
+• Current PDF rendering is delegated to PDFKit.
+• There is no full-document rasterization or image-style async decoding.
+• Current PDFDocument(url:) construction occurs in updateUIView; large PDFs may have an initial load cost.
 
-Recommendation: retain the black editor background. It provides the closest visual representation of the Main Screen background at reduced opacity. A different background would be a separate design decision and would no longer represent the current Main Screen result.
+Recommendations:
 
-9. Recommended narrow implementation stage
+• Keep rendering in PDFKit.
+• Do not decode pages per gesture update.
+• Do not retain a custom full-document page-image cache.
+• Test large image-heavy and multi-page PDFs on the iPad mini before adding caching or document reuse.
+• PDFKit and PDFView are compatible with the project’s iOS 17.6 deployment target and the five physical devices listed.
 
-Modify one file only:
+Exact recommended Stage 4B scope
 
-• Scrns/Set_Screen/Table_Img/Set_ImgPanel.swift
+Modify only:
 
-Change:
+• Set_Screen.swift
+   • Add PDF-active routing to the already-approved editor placement.
+   • Add local, nonpersistent iPhone PDF editor visibility state.
+   • Reopen that editor on PDF selection, including repeat selection.
+   • Close only the PDF editor on the existing external Close button.
+   • Keep Image routes and behavior unchanged.
 
-• Apply .opacity(opacitySliderValue) to the zoomable rendered Image in zoomablePreviewImage.
+• Set_Table.swift
+   • Remove only the PDF lower-preview rendering.
+   • Make PDF reserved preview height zero.
+   • Preserve the item count and allow the PDF list to use the reclaimed height.
+   • Preserve all non-PDF layout behavior.
 
-No other parameter, binding, layout, image-loading, persistence, slider, or state change is required because:
+• Set_ImgPanel.swift
+   • Convert the existing PDF preview panel from its table-specific 1.3-ratio panel into a parent-sized large PDF viewport.
+   • Retain PDFKit, black background, fitting behavior, and noninteractive initial state.
+   • Add a safe no-selection empty state.
+   • Do not add zoom, pan, or page navigation in Stage 4B.
 
-• SettingsImagePreviewPanel already receives the current value.
-• The slider already writes the shared existing background-opacity state.
-• Existing persistence already records it per screen.
-• The main rendering already uses the same opacity model over black.
+Recommended stage boundaries
 
-10. Risks and unresolved design decision
+Stage 4B:
+• Large PDF preview in approved Image-editor placement.
+• Remove lower PDF preview and reclaim its table height.
+• Preserve PDF selection, rename, delete, import, and restoration.
+• No PDF file-navigation controls or PDF gestures yet.
 
-Low implementation risk:
-• .opacity affects only visual compositing; it does not alter layout, image decoding, pan limits, zoom scale, clipping, or gesture recognition.
+Stage 4C:
+• Reuse the four file-navigation controls for PDFs.
+• Show “PDF.”
+• Add PDF table navigation-scroll synchronization.
+• Keep Image opacity enabled only for Images; keep the visible PDF slider disabled.
 
-Behavioral consideration:
-• If a yellow preview image differs from the green applied background image, changing the slider changes the selected screen’s persisted applied-background opacity while simultaneously previewing that opacity on the yellow image. This is consistent with the existing shared slider state, but it should be accepted as the intended UX before implementation.
+Stage 4D:
+• Enable native PDFKit zoom, bounded pan, and multi-page continuous scrolling.
+• Set fit scale as minimum and fit scale × 5 as maximum.
+• Verify behavior on all five physical devices.
 
-No iPhone/iPad compatibility issue was found. Both paths share the same 0...1 AppStorage state, and .opacity is supported across the project’s iOS 17.6 deployment target.
+Decision needed before Stage 4D
+
+Choose the desired multi-page minimum-zoom behavior:
+
+• Recommended: continuous vertical page scrolling at fit scale, with native PDFKit pinch/pan.
+• Alternative: single-page presentation with an additional page-navigation design later.
+
+The recommended continuous approach requires no new page controls and keeps the four existing controls exclusively for choosing PDF files.

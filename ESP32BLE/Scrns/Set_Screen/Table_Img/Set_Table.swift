@@ -51,7 +51,6 @@ struct SettingsDocumentTableSection: View {
     @Binding var allScrollPositionID: String?
     let refreshFiles: () -> Void
     let canDeleteDocuments: Bool
-    let imagePreviewSection: AnyView
     let loadFunctionKeys: (URL) -> Void
     let isLoadedDocument: (URL) -> Bool
     let loadTextFile: (URL) -> Void
@@ -109,9 +108,8 @@ struct SettingsDocumentTableSection: View {
         GeometryReader { geometry in
             let availableHeight = safeHeight(geometry.size.height)
             let itemCountHeight = itemCountReservedHeight
-            let previewHeight = previewReservedHeight(for: geometry.size.width)
             let descriptionHeight = templateDescriptionReservedHeight(for: availableHeight)
-            let listHeight = max(0, availableHeight - itemCountHeight - previewHeight - descriptionHeight)
+            let listHeight = max(0, availableHeight - itemCountHeight - descriptionHeight)
 
             VStack(alignment: .leading, spacing: 0) {
                 ScrollViewReader { scrollProxy in
@@ -216,10 +214,6 @@ struct SettingsDocumentTableSection: View {
                 itemCountBox
                     .frame(height: itemCountHeight)
 
-                if listMode == .pdfs {
-                    imagePreviewSection
-                        .frame(height: previewHeight)
-                }
             }
         }
         .frame(maxHeight: .infinity, alignment: .top)
@@ -317,12 +311,6 @@ struct SettingsDocumentTableSection: View {
 
     private func safeHeight(_ height: CGFloat) -> CGFloat {
         height.isFinite ? max(0, height) : 0
-    }
-
-    private func previewReservedHeight(for width: CGFloat) -> CGFloat {
-        guard listMode == .pdfs else { return 0 }
-        let safeWidth = width.isFinite ? max(0, width) : 0
-        return safeWidth / 1.3
     }
 
     private func templateDescriptionReservedHeight(for availableHeight: CGFloat) -> CGFloat {
