@@ -9,6 +9,9 @@ struct PlainDocumentEditor: UIViewRepresentable {
     @Binding var text: String
     @Binding var fontSize: CGFloat
     @Binding var isFocused: Bool
+    let isReadOnly: Bool
+    let onReadOnlyTap: (() -> Void)?
+    let focusRequestID: UUID?
 
     func makeCoordinator() -> Coordinator {
         Coordinator(text: $text, isFocused: $isFocused)
@@ -26,8 +29,8 @@ struct PlainDocumentEditor: UIViewRepresentable {
         textView.smartQuotesType = .no
         textView.smartDashesType = .no
         textView.smartInsertDeleteType = .no
-        textView.isEditable = true
-        textView.isSelectable = true
+        textView.isEditable = !isReadOnly
+        textView.isSelectable = !isReadOnly
         textView.isScrollEnabled = true
         textView.alwaysBounceHorizontal = true
         textView.alwaysBounceVertical = true
@@ -40,11 +43,34 @@ struct PlainDocumentEditor: UIViewRepresentable {
         textView.textContainer.size = CGSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
         textView.font = .systemFont(ofSize: fontSize)
         textView.text = text
+        let pinchGestureRecognizer = UIPinchGestureRecognizer(
+            target: context.coordinator,
+            action: #selector(Coordinator.handlePinch(_:))
+        )
+        pinchGestureRecognizer.delegate = context.coordinator
+        pinchGestureRecognizer.cancelsTouchesInView = false
+        textView.addGestureRecognizer(pinchGestureRecognizer)
+        let tapGestureRecognizer = UITapGestureRecognizer(
+            target: context.coordinator,
+            action: #selector(Coordinator.handleReadOnlyTap(_:))
+        )
+        tapGestureRecognizer.delegate = context.coordinator
+        tapGestureRecognizer.cancelsTouchesInView = false
+        textView.addGestureRecognizer(tapGestureRecognizer)
         return textView
     }
 
     func updateUIView(_ textView: NoWrapDocumentTextView, context: Context) {
         context.coordinator.parent = self
+        if isReadOnly, textView.isFirstResponder {
+            textView.resignFirstResponder()
+        }
+        textView.isEditable = !isReadOnly
+        textView.isSelectable = !isReadOnly
+        context.coordinator.requestFocusIfNeeded(
+            focusRequestID,
+            on: textView
+        )
         let previousOffset = textView.contentOffset
         var shouldRestoreOffset = false
         var didChangeContent = false
@@ -86,14 +112,19 @@ struct PlainDocumentEditor: UIViewRepresentable {
         }
     }
 
-    final class Coordinator: NSObject, UITextViewDelegate {
+    final class Coordinator: NSObject, UITextViewDelegate, UIGestureRecognizerDelegate {
         var parent: PlainDocumentEditor
+        private var pinchStartingFontSize: CGFloat?
+        private var handledFocusRequestID: UUID?
 
         init(text: Binding<String>, isFocused: Binding<Bool>) {
             self.parent = PlainDocumentEditor(
                 text: text,
                 fontSize: .constant(18),
-                isFocused: isFocused
+                isFocused: isFocused,
+                isReadOnly: false,
+                onReadOnlyTap: nil,
+                focusRequestID: nil
             )
         }
 
@@ -126,19 +157,436 @@ struct PlainDocumentEditor: UIViewRepresentable {
             guard parent.isFocused else { return }
             parent.isFocused = false
         }
+
+        @objc func handlePinch(_ gestureRecognizer: UIPinchGestureRecognizer) {
+            guard parent.isReadOnly else { return }
+
+            switch gestureRecognizer.state {
+            case .began:
+                pinchStartingFontSize = parent.fontSize
+            case .changed:
+                guard let pinchStartingFontSize else { return }
+                let updatedFontSize = min(
+                    max((pinchStartingFontSize * gestureRecognizer.scale).rounded(), 10),
+                    72
+                )
+                guard parent.fontSize != updatedFontSize else { return }
+                parent.fontSize = updatedFontSize
+            case .ended, .cancelled, .failed:
+                pinchStartingFontSize = nil
+            default:
+                break
+            }
+        }
+
+        func gestureRecognizer(
+            _ gestureRecognizer: UIGestureRecognizer,
+            shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
+        ) -> Bool {
+            guard parent.isReadOnly else { return false }
+            return gestureRecognizer is UIPinchGestureRecognizer || otherGestureRecognizer is UIPinchGestureRecognizer
+        }
+
+        func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+            if gestureRecognizer is UIPinchGestureRecognizer {
+                return parent.isReadOnly
+            }
+
+            if gestureRecognizer is UITapGestureRecognizer {
+                return parent.isReadOnly && parent.onReadOnlyTap != nil
+            }
+
+            return true
+        }
+
+        @objc func handleReadOnlyTap(_ gestureRecognizer: UITapGestureRecognizer) {
+            guard gestureRecognizer.state == .ended,
+                  parent.isReadOnly else {
+                return
+            }
+
+            parent.onReadOnlyTap?()
+        }
+
+        func requestFocusIfNeeded(
+            _ focusRequestID: UUID?,
+            on textView: NoWrapDocumentTextView
+        ) {
+            guard let focusRequestID,
+                  handledFocusRequestID != focusRequestID,
+                  !parent.isReadOnly else {
+                return
+            }
+
+            handledFocusRequestID = focusRequestID
+            textView.focusWhenAvailable()
+        }
+    }
+}
+
+struct DedicatedDocumentEditorView: View {
+    @Binding var text: String
+    @Binding var fontSize: CGFloat
+    @Binding var isFocused: Bool
+    let focusRequestID: UUID?
+    let onSaveAndClose: () -> Void
+    @State private var dockedKeyboardHeight: CGFloat = 0
+
+    var body: some View {
+        ZStack {
+            Color.black
+                .ignoresSafeArea()
+
+            GeometryReader { proxy in
+                ZStack(alignment: .bottomTrailing) {
+                    PlainDocumentEditor(
+                        text: $text,
+                        fontSize: $fontSize,
+                        isFocused: $isFocused,
+                        isReadOnly: false,
+                        onReadOnlyTap: nil,
+                        focusRequestID: focusRequestID
+                    )
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+                    if isPad {
+                        dedicatedDocumentEditorCloseButton
+                            .padding(
+                                .trailing,
+                                max(6, proxy.safeAreaInsets.trailing + 2)
+                            )
+                            .padding(
+                                .bottom,
+                                max(8, proxy.safeAreaInsets.bottom + 2)
+                            )
+                    }
+                }
+                .frame(
+                    width: proxy.size.width,
+                    height: max(0, proxy.size.height - dockedKeyboardHeight),
+                    alignment: .topLeading
+                )
+                .overlay {
+                    if !isPad {
+                        DedicatedDocumentEditorIPhoneCloseButtonLayer(
+                            onSaveAndClose: onSaveAndClose
+                        )
+                        .frame(width: 0, height: 0)
+                        .allowsHitTesting(false)
+                    }
+                }
+            }
+
+            DedicatedDocumentEditorKeyboardObserver(
+                dockedKeyboardHeight: $dockedKeyboardHeight
+            )
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .allowsHitTesting(false)
+        }
+    }
+
+    private var dedicatedDocumentEditorCloseButton: some View {
+        Button(action: onSaveAndClose) {
+            Image(systemName: "xmark.circle.fill")
+                .font(.system(size: isPad ? 32 : 28, weight: .semibold))
+                .foregroundStyle(.cyan)
+                .frame(width: 44, height: 44)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Save and Close")
+    }
+}
+
+private struct DedicatedDocumentEditorIPhoneCloseButtonLayer: UIViewRepresentable {
+    let onSaveAndClose: () -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onSaveAndClose: onSaveAndClose)
+    }
+
+    func makeUIView(context: Context) -> AnchorView {
+        let view = AnchorView()
+        view.isUserInteractionEnabled = false
+        view.windowDidChange = { [weak coordinator = context.coordinator] window in
+            coordinator?.install(in: window)
+        }
+        return view
+    }
+
+    func updateUIView(_ view: AnchorView, context: Context) {
+        context.coordinator.onSaveAndClose = onSaveAndClose
+        context.coordinator.install(in: view.window)
+    }
+
+    static func dismantleUIView(_ view: AnchorView, coordinator: Coordinator) {
+        coordinator.removeOverlay()
+    }
+
+    final class Coordinator {
+        var onSaveAndClose: () -> Void
+        private weak var window: UIWindow?
+        private var overlay: PassthroughCloseButtonOverlayView?
+        private var overlayConstraints: [NSLayoutConstraint] = []
+
+        init(onSaveAndClose: @escaping () -> Void) {
+            self.onSaveAndClose = onSaveAndClose
+        }
+
+        func install(in newWindow: UIWindow?) {
+            guard let newWindow else { return }
+
+            guard window !== newWindow || overlay == nil else {
+                overlay?.onSaveAndClose = onSaveAndClose
+                return
+            }
+
+            removeOverlay()
+
+            let overlay = PassthroughCloseButtonOverlayView(onSaveAndClose: onSaveAndClose)
+            overlay.translatesAutoresizingMaskIntoConstraints = false
+            newWindow.addSubview(overlay)
+
+            overlayConstraints = [
+                overlay.leadingAnchor.constraint(equalTo: newWindow.leadingAnchor),
+                overlay.trailingAnchor.constraint(equalTo: newWindow.trailingAnchor),
+                overlay.topAnchor.constraint(equalTo: newWindow.topAnchor),
+                overlay.bottomAnchor.constraint(equalTo: newWindow.bottomAnchor)
+            ]
+            NSLayoutConstraint.activate(overlayConstraints)
+
+            self.window = newWindow
+            self.overlay = overlay
+        }
+
+        func removeOverlay() {
+            NSLayoutConstraint.deactivate(overlayConstraints)
+            overlayConstraints.removeAll()
+            overlay?.removeFromSuperview()
+            overlay = nil
+            window = nil
+        }
+    }
+
+    final class AnchorView: UIView {
+        var windowDidChange: ((UIWindow?) -> Void)?
+
+        override func didMoveToWindow() {
+            super.didMoveToWindow()
+            windowDidChange?(window)
+        }
+    }
+}
+
+private final class PassthroughCloseButtonOverlayView: UIView {
+    var onSaveAndClose: () -> Void {
+        didSet {
+            closeButtonAction = onSaveAndClose
+        }
+    }
+
+    private var closeButtonAction: () -> Void
+    private let closeButton = UIButton(type: .system)
+
+    init(onSaveAndClose: @escaping () -> Void) {
+        self.onSaveAndClose = onSaveAndClose
+        self.closeButtonAction = onSaveAndClose
+        super.init(frame: .zero)
+
+        backgroundColor = .clear
+        isOpaque = false
+        closeButton.translatesAutoresizingMaskIntoConstraints = false
+        closeButton.tintColor = .cyan
+        closeButton.accessibilityLabel = "Save and Close"
+        closeButton.setImage(
+            UIImage(
+                systemName: "xmark.circle.fill",
+                withConfiguration: UIImage.SymbolConfiguration(
+                    pointSize: 28,
+                    weight: .semibold
+                )
+            ),
+            for: .normal
+        )
+        closeButton.addAction(
+            UIAction { [weak self] _ in
+                self?.closeButtonAction()
+            },
+            for: .touchUpInside
+        )
+        addSubview(closeButton)
+
+        NSLayoutConstraint.activate([
+            closeButton.widthAnchor.constraint(equalToConstant: 44),
+            closeButton.heightAnchor.constraint(equalToConstant: 44),
+            closeButton.trailingAnchor.constraint(
+                equalTo: safeAreaLayoutGuide.trailingAnchor,
+                constant: -10
+            ),
+            closeButton.bottomAnchor.constraint(
+                equalTo: keyboardLayoutGuide.topAnchor,
+                constant: -10
+            )
+        ])
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
+        closeButton.frame.contains(point)
+    }
+}
+
+private struct DedicatedDocumentEditorKeyboardObserver: UIViewRepresentable {
+    @Binding var dockedKeyboardHeight: CGFloat
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(dockedKeyboardHeight: $dockedKeyboardHeight)
+    }
+
+    func makeUIView(context: Context) -> KeyboardGeometryView {
+        let view = KeyboardGeometryView()
+        view.isUserInteractionEnabled = false
+        view.layoutDidChange = { [weak coordinator = context.coordinator] view in
+            coordinator?.updateKeyboardHeight(for: view)
+        }
+        context.coordinator.observeKeyboard()
+        return view
+    }
+
+    func updateUIView(_ view: KeyboardGeometryView, context: Context) {
+        context.coordinator.dockedKeyboardHeight = $dockedKeyboardHeight
+        context.coordinator.updateKeyboardHeight(for: view)
+    }
+
+    final class Coordinator {
+        var dockedKeyboardHeight: Binding<CGFloat>
+        private weak var observerView: KeyboardGeometryView?
+        private var keyboardFrameInScreen: CGRect?
+        private var notificationObservers: [NSObjectProtocol] = []
+
+        init(dockedKeyboardHeight: Binding<CGFloat>) {
+            self.dockedKeyboardHeight = dockedKeyboardHeight
+        }
+
+        deinit {
+            notificationObservers.forEach(NotificationCenter.default.removeObserver)
+        }
+
+        func observeKeyboard() {
+            guard notificationObservers.isEmpty else { return }
+
+            let center = NotificationCenter.default
+            notificationObservers = [
+                center.addObserver(
+                    forName: UIResponder.keyboardWillChangeFrameNotification,
+                    object: nil,
+                    queue: .main
+                ) { [weak self] notification in
+                    self?.handleKeyboard(notification)
+                },
+                center.addObserver(
+                    forName: UIResponder.keyboardWillHideNotification,
+                    object: nil,
+                    queue: .main
+                ) { [weak self] _ in
+                    self?.keyboardFrameInScreen = nil
+                    self?.updateKeyboardHeight()
+                }
+            ]
+        }
+
+        func updateKeyboardHeight(for view: KeyboardGeometryView? = nil) {
+            if let view {
+                observerView = view
+            }
+
+            guard let observerView,
+                  let window = observerView.window,
+                  let keyboardFrameInScreen else {
+                setDockedKeyboardHeight(0)
+                return
+            }
+
+            let keyboardFrame = observerView.convert(keyboardFrameInScreen, from: nil)
+            let visibleBounds = observerView.bounds
+            let overlapsFullWidth = keyboardFrame.width >= visibleBounds.width - 1
+            let keyboardFrameInWindow = window.convert(keyboardFrameInScreen, from: nil)
+            let isDockedAtBottom = abs(keyboardFrameInWindow.maxY - window.bounds.maxY) <= 1
+            let keyboardHeight = max(0, visibleBounds.maxY - keyboardFrame.minY)
+
+            setDockedKeyboardHeight(
+                overlapsFullWidth && isDockedAtBottom ? keyboardHeight : 0
+            )
+        }
+
+        private func handleKeyboard(_ notification: Notification) {
+            guard let keyboardFrame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect else {
+                return
+            }
+
+            keyboardFrameInScreen = keyboardFrame
+            updateKeyboardHeight()
+        }
+
+        private func setDockedKeyboardHeight(_ height: CGFloat) {
+            guard abs(dockedKeyboardHeight.wrappedValue - height) > 0.5 else { return }
+            dockedKeyboardHeight.wrappedValue = height
+        }
+    }
+
+    final class KeyboardGeometryView: UIView {
+        var layoutDidChange: ((KeyboardGeometryView) -> Void)?
+
+        override func layoutSubviews() {
+            super.layoutSubviews()
+            layoutDidChange?(self)
+        }
     }
 }
 
 final class NoWrapDocumentTextView: UITextView {
     var hasUserAdjustedHorizontalOffset = false
+    private var shouldFocusWhenAttached = false
+    private var lastViewportSize: CGSize?
+
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+
+        guard shouldFocusWhenAttached, window != nil else { return }
+        shouldFocusWhenAttached = false
+        becomeFirstResponder()
+    }
+
+    func focusWhenAvailable() {
+        guard window != nil else {
+            shouldFocusWhenAttached = true
+            return
+        }
+
+        becomeFirstResponder()
+    }
 
     override func layoutSubviews() {
         super.layoutSubviews()
+        let viewportSize = bounds.size
+        let didViewportSizeChange = lastViewportSize != viewportSize
+        lastViewportSize = viewportSize
+
         textContainer.size = CGSize(
             width: CGFloat.greatestFiniteMagnitude,
             height: CGFloat.greatestFiniteMagnitude
         )
         refreshNoWrapContentSize()
+
+        if isFirstResponder,
+           didViewportSizeChange,
+           viewportSize.width > 0,
+           viewportSize.height > 0 {
+            ensureCaretVisible()
+        }
     }
 
     override var contentOffset: CGPoint {
@@ -357,6 +805,8 @@ struct SettingsEditorSectionView: View {
     @Binding var text: String
     @Binding var fontSize: CGFloat
     @Binding var isFocused: Bool
+    let isReadOnly: Bool
+    let onReadOnlyTap: (() -> Void)?
     let savedText: String
     let onUndo: () -> Void
     @State private var clipboardStatusMessage: String?
@@ -367,18 +817,23 @@ struct SettingsEditorSectionView: View {
             PlainDocumentEditor(
                 text: $text,
                 fontSize: $fontSize,
-                isFocused: $isFocused
+                isFocused: $isFocused,
+                isReadOnly: isReadOnly,
+                onReadOnlyTap: onReadOnlyTap,
+                focusRequestID: nil
             )
 
             clipboardStatusOverlay
 
-            HStack(spacing: 10) {
-                undoButton
-                cpyToCbButton
-                pasteButton
+            if !isReadOnly {
+                HStack(spacing: isPad ? 10 : 6) {
+                    undoButton
+                    cpyToCbButton
+                    pasteButton
+                }
+                .padding(.trailing, 8)
+                .padding(.bottom, 8)
             }
-            .padding(.trailing, 8)
-            .padding(.bottom, 8)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .overlay {
@@ -388,53 +843,77 @@ struct SettingsEditorSectionView: View {
     }
 
     private var undoButton: some View {
-        Button("undo") {
+        editorActionButton(
+            systemName: "arrow.counterclockwise.circle",
+            color: .cyan,
+            accessibilityLabel: "Undo",
+            isEnabled: text != savedText
+        ) {
             ButtonClickFeedback.playIfEnabled()
             onUndo()
         }
-        .buttonStyle(.plain)
-        .font(.headline)
-        .foregroundStyle(.white)
-        .padding(.horizontal, 12)
-        .frame(minHeight: 44)
-        .background(Color.gray.opacity(0.25))
-        .clipShape(.rect(cornerRadius: 12))
-        .disabled(text == savedText)
-        .opacity(text == savedText ? 0.5 : 1)
     }
 
     private var cpyToCbButton: some View {
-        Button("cpy all") {
+        editorActionButton(
+            systemName: "doc.on.doc",
+            color: .yellow,
+            accessibilityLabel: "Copy All"
+        ) {
             ButtonClickFeedback.playIfEnabled()
             UIPasteboard.general.string = text
             showClipboardStatus("text copied\nto clipboard")
         }
-        .buttonStyle(.plain)
-        .font(.headline)
-        .foregroundStyle(.white)
-        .padding(.horizontal, 12)
-        .frame(minHeight: 44)
-        .background(Color.gray.opacity(0.25))
-        .clipShape(.rect(cornerRadius: 12))
-        .opacity(1)
     }
 
     private var pasteButton: some View {
-        Button("paste all") {
+        editorActionButton(
+            systemName: "doc.on.clipboard",
+            color: .red,
+            accessibilityLabel: "Paste All"
+        ) {
             ButtonClickFeedback.playIfEnabled()
             if let clipboardText = UIPasteboard.general.string {
                 text = clipboardText
                 showClipboardStatus("text pasted\nfrom clipboard")
             }
         }
+    }
+
+    private func editorActionButton(
+        systemName: String,
+        color: Color,
+        accessibilityLabel: String,
+        isEnabled: Bool = true,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button {
+            guard isEnabled else { return }
+            action()
+        } label: {
+            ZStack {
+                RoundedRectangle(cornerRadius: editorActionButtonCornerRadius)
+                    .fill(Color.black)
+
+                Image(systemName: systemName)
+                    .font(.system(size: isPad ? 22 : 18, weight: .semibold))
+                    .foregroundStyle(color)
+                    .opacity(isEnabled ? 1 : 0.35)
+            }
+            .frame(width: editorActionButtonSize, height: editorActionButtonSize)
+        }
         .buttonStyle(.plain)
-        .font(.headline)
-        .foregroundStyle(.white)
-        .padding(.horizontal, 12)
-        .frame(minHeight: 44)
-        .background(Color.gray.opacity(0.25))
-        .clipShape(.rect(cornerRadius: 12))
-        .opacity(1)
+        .allowsHitTesting(isEnabled)
+        .accessibilityLabel(accessibilityLabel)
+        .accessibilityHint(isEnabled ? "" : "Unavailable")
+    }
+
+    private var editorActionButtonSize: CGFloat {
+        isPad ? 44 : 34
+    }
+
+    private var editorActionButtonCornerRadius: CGFloat {
+        isPad ? 10 : 8
     }
 
 

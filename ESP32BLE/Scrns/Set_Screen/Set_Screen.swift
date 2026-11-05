@@ -410,6 +410,8 @@ struct SettingsScreen: View {
     @State private var isIPhoneImagePreviewPresented = false
     @State private var isIPhonePDFPreviewPresented = false
     @State private var isIPhoneDocumentEditorPresented = false
+    @State private var isDedicatedDocumentEditorPresented = false
+    @State private var dedicatedDocumentEditorFocusRequestID: UUID?
     @State private var pendingImageRenameDestinationURL: URL?
     @State private var imageNavigationScrollRequest: SettingsImageNavigationScrollRequest?
     @State private var pdfNavigationScrollRequest: SettingsPDFNavigationScrollRequest?
@@ -660,6 +662,17 @@ struct SettingsScreen: View {
                 .onTapGesture {
                     handleSettingsBackgroundTap()
                 }
+        }
+        .overlay {
+            if isDedicatedDocumentEditorPresented {
+                DedicatedDocumentEditorView(
+                    text: $documentEditorText,
+                    fontSize: $documentEditorFontSize,
+                    isFocused: $isDocumentEditorFocused,
+                    focusRequestID: dedicatedDocumentEditorFocusRequestID,
+                    onSaveAndClose: closeDedicatedDocumentEditor
+                )
+            }
         }
         .sheet(
             isPresented: Binding(
@@ -1458,10 +1471,43 @@ struct SettingsScreen: View {
                 text: $documentEditorText,
                 fontSize: $documentEditorFontSize,
                 isFocused: $isDocumentEditorFocused,
+                isReadOnly: isDocumentEditorListActive,
+                onReadOnlyTap: documentViewerTapAction,
                 savedText: savedDocumentEditorText,
                 onUndo: { documentEditorText = savedDocumentEditorText }
             )
         }
+    }
+
+    private var documentViewerTapAction: (() -> Void)? {
+        guard isDocumentEditorListActive else { return nil }
+        return { presentDedicatedDocumentEditor() }
+    }
+
+    private func presentDedicatedDocumentEditor() {
+        guard isDocumentEditorListActive,
+              loadedDocumentURL != nil else {
+            return
+        }
+
+        dedicatedDocumentEditorFocusRequestID = UUID()
+        isDedicatedDocumentEditorPresented = true
+    }
+
+    private func closeDedicatedDocumentEditor() {
+        guard saveCurrentDocumentText().allowsDocumentTransition else {
+            return
+        }
+
+        isDocumentEditorFocused = false
+        UIApplication.shared.sendAction(
+            #selector(UIResponder.resignFirstResponder),
+            to: nil,
+            from: nil,
+            for: nil
+        )
+        dedicatedDocumentEditorFocusRequestID = nil
+        isDedicatedDocumentEditorPresented = false
     }
 
     @ViewBuilder
