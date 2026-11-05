@@ -1,129 +1,43 @@
-Read-only probe complete. No files were modified, built, deployed, committed, or pushed.
+Implemented Stage 6C.5.
 
-1. Main Screen call chain
+Files modified:
+• ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
+• ESP32BLE/Scrns/Set_Screen/Table_Img/Set_Table.swift
 
-• Main_ButtonBehavior.swift􀰓 — a programmable button finds its first preview-supported filename and calls openPreviewFile.
-• Main_ButtonBehavior.swift􀰓 — a preview command is a filename whose extension is in the supported set.
-• Main_ButtonBehavior.swift􀰓 — resolves the file and routes it to text, PDF rendering, or image preview.
-• Main_Screen.swift􀰓 — presents the resulting preview as a full-screen cover.
-• Main_FilePreviewOverlay.swift􀰓 — renders the preview and supplies the bottom-right Close button.
+Cause addressed:
+• Rapid Screen/Text/MD navigation created successive UUID-based scroll requests.
+• Each could start a 0.35-second table-scroll animation, while SwiftUI still had intermediate editor updates pending.
 
-2. Current PDF technology
+Latest-request identity:
+• Reuses the existing SettingsDocumentNavigationScrollRequest.id.
+• The request UUID is now logged when created.
+• The document table captures that exact request, yields once, then verifies it is still current before scrolling.
 
-The Main Screen does not use PDFView, Quick Look, or WebKit for PDFs.
+Obsolete scroll prevention:
+• A cancelled or stale task logs 🐞 and does not scroll.
+• The handler verifies the current bound request ID both before validation and immediately before scrolling.
+• A stale task cannot clear or consume a newer request.
+• Processed request IDs are tracked locally by the table, so an already-handled request is not replayed.
 
-It uses PDFKit only to load and rasterize a PDF page into a UIImage:
+Animations:
+• Document navigation scrolling is now immediate rather than using the prior 0.35-second animation.
+• This prevents document navigation animations from stacking during rapid presses.
+• Image and PDF navigation animations are unchanged.
 
-• Main_ButtonBehavior.swift􀰓
+Editor changes:
+• No PlainDocumentEditor or editor-state changes were necessary.
+• File transitions remain synchronous and preserve save-before-switch, conflict detection, atomic writes, selected text, saved baseline, loaded URL/name, and Screen yellow/green separation.
 
-That rendered image is sent to the existing image-preview overlay as .renderedImage.
+Shared behavior:
+• The coalesced document-scroll path applies equally to Screens, Text, and MDs.
+• Images and PDFs are untouched.
 
-The overlay provides:
-• Full-screen black background.
-• Bottom-right Close button at Main_FilePreviewOverlay.swift􀰓.
-• Custom UIKit pinch, one-finger pan, and double-tap reset gestures at 791-883.
-• SwiftUI image scaling and offset handling at 56-103 and 155-260.
+Diagnostics:
+• Existing Stage 6C.3 timing diagnostics remain.
+• Added concise 🐞 messages for created, superseded, ignored, and accepted document scroll requests.
 
-3. Confirmed failure cause
+Build result:
+• ESP32BLE built successfully for the active physical-device destination in 21.8 seconds.
 
-Multi-page PDFs are explicitly rejected.
-
-renderedSinglePagePDFPreviewImage requires:
-
-• A valid PDFDocument.
-• pdfDocument.pageCount == 1.
-• A valid first page.
-• Nonzero media-box dimensions.
-
-The page-count condition is at Main_ButtonBehavior.swift􀰓.
-
-For a multi-page PDF, rendering returns nil. The code then attempts UIImage(contentsOfFile:); that also fails because a PDF is not an image. ESP then sets:
-
-• Title: Unsupported File
-• Message: Couldn't preview <filename>.
-
-This is application-generated at Main_ButtonBehavior.swift􀰓, not a framework error.
-
-4. Page count involvement
-
-Confirmed: a two-page or larger PDF will fail solely because pageCount == 1 is required.
-
-Other possible causes that follow the same failure path:
-• PDFDocument(url:) cannot load the file.
-• The document has no accessible first page.
-• The first page has zero media-box width or height.
-• A malformed, encrypted, or permission-restricted PDF prevents page access.
-
-There is no code checking PDF version, file size, embedded images, filename encoding, or page dimensions beyond the first-page media box.
-
-5. File references and commands
-
-Buttons store a filename command, not an absolute URL.
-
-• Supported preview extensions: txt, md, pdf, png, jpg, jpeg, gif, heic, webp at Main_ButtonBehavior.swift􀰓.
-• Resolution searches the app Documents directory first, then bundled resources, at 1912-1929.
-• Matching is exact first, then case-insensitive among regular files, at 1931-1950.
-• Spaces are retained because the filename is treated as one trimmed string; no command syntax change is needed.
-• Renaming a PDF can invalidate an existing button filename reference because there is no persistent file identity mapping.
-
-Settings resolves selected files independently through its Settings file collections; it does not share the Main Screen preview overlay.
-
-6. Current PDF interaction and limits
-
-Current single-page PDF behavior:
-• First page is rasterized at its full media-box image size.
-• The overlay aspect-fits and centers it.
-• Pinch zoom has a minimum of 1x and no explicit maximum.
-• One-finger pan is allowed only above 1x.
-• Double tap resets the image transform.
-• Closing dismisses the full-screen cover and returns to Main Screen.
-
-There is no vertical page scrolling, page navigation, or access to later PDF pages. Multi-page content is not loaded into the overlay at all.
-
-7. Difference from Settings
-
-Settings uses an actual native PDFView in Set_ImgPanel.swift􀰓:
-• .singlePageContinuous
-• vertical display direction
-• native pinch/pan
-• min/max PDFKit scale factors
-• first-page positioning with PDFDestination
-
-Main Screen uses a rasterized first-page UIImage with custom gestures. The Settings component cannot be reused directly because it is private and has Settings-specific fitting/lifecycle behavior, but its PDFKit configuration pattern is appropriate.
-
-8. Recommended minimum correction
-
-A single narrow Main Screen implementation stage is feasible.
-
-Modify only:
-
-• Main_ButtonBehavior.swift􀰓
-• Main_Screen.swift􀰓
-• Main_FilePreviewOverlay.swift􀰓
-
-Change scope:
-
-• Add a PDF URL case to MainScreen.PreviewedFile.
-• In openPreviewFile, route any resolved .pdf directly to that PDF case instead of calling renderedSinglePagePDFPreviewImage.
-• Add a PDFKit-backed content branch to the existing full-screen overlay.
-• Preserve the existing full-screen container, black background, and Close button.
-• Configure that PDFView for .singlePageContinuous and .vertical.
-• Set a first-page initial fit and top position once after valid bounds are available.
-• Use native PDFKit zoom, panning, and vertical page scrolling.
-• Leave text and image preview routes unchanged.
-
-The old single-page rasterization helper can then be removed or left unused only if required temporarily during the focused implementation.
-
-9. Performance and compatibility
-
-Using PDFKit avoids rasterizing every page into large images and is safer for multi-page/image-heavy PDFs. PDFKit performs native page rendering and supports continuous scrolling without an app-managed page cache.
-
-Physical testing should cover:
-• Large/image-heavy PDFs.
-• Password-protected or malformed PDFs.
-• Portrait, landscape, rotated, and mixed-size pages.
-• iPad mini memory and responsiveness.
-• Reopen after Close.
-• Button references after PDF rename or deletion.
-
-The confirmed fix is PDF preview routing plus a native PDFView branch; no programmable-button command change is needed.
+Remaining limitation:
+• This safely removes stale table-scroll work, but it does not independently cancel already-queued SwiftUI text-render passes. Physical testing should confirm whether eliminating stacked document scroll animations gives the expected prompt latest-selection presentation.

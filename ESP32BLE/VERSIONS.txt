@@ -1,6 +1,12 @@
 
+
+V66.07
+settings: slow loading rnd screens: in prog
+261105 Thu 1251
+
 V66.06
 settings: PDFs complete
+261105 Thu 1130
 
 V66.05
 settings: PDFs: Nav controls: STAGE 4C

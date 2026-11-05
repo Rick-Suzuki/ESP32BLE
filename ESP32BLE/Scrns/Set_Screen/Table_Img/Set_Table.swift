@@ -14,6 +14,13 @@ struct SettingsPDFNavigationScrollRequest: Equatable {
     let alignsToTop: Bool
 }
 
+struct SettingsDocumentNavigationScrollRequest: Equatable {
+    let targetPath: String
+    let id: UUID
+    let alignsToTop: Bool
+    let diagnostic: DocumentNavigationDiagnostic?
+}
+
 struct SettingsDocumentTableSection: View {
     enum ListMode: Hashable {
         case files
@@ -52,6 +59,7 @@ struct SettingsDocumentTableSection: View {
     @Binding var imageScrollPositionID: String?
     @Binding var imageNavigationScrollRequest: SettingsImageNavigationScrollRequest?
     @Binding var pdfNavigationScrollRequest: SettingsPDFNavigationScrollRequest?
+    @Binding var documentNavigationScrollRequest: SettingsDocumentNavigationScrollRequest?
     @Binding var soundScrollPositionID: String?
     @Binding var pdfScrollPositionID: String?
     @Binding var templateScrollPositionID: String?
@@ -59,6 +67,7 @@ struct SettingsDocumentTableSection: View {
     let refreshFiles: () -> Void
     let canDeleteDocuments: Bool
     let loadFunctionKeys: (URL) -> Void
+    let previewScreenDocument: (URL) -> Void
     let isLoadedDocument: (URL) -> Bool
     let loadTextFile: (URL) -> Void
     let loadMarkdownFile: (URL) -> Void
@@ -83,6 +92,7 @@ struct SettingsDocumentTableSection: View {
     @State private var tableFeedbackMessage: String?
     @State private var tableFeedbackColor: Color = .green
     @State private var tableFeedbackTask: Task<Void, Never>?
+    @State private var handledDocumentNavigationRequestID: UUID?
 
     // MARK: - BM:🅱️ IPHONE FILENAME FONT SIZE — Change 15 below to adjust all seven filename categories; leave iPad unchanged.
     private var tableRowFont: Font? {
@@ -117,6 +127,7 @@ struct SettingsDocumentTableSection: View {
             let itemCountHeight = itemCountReservedHeight
             let descriptionHeight = templateDescriptionReservedHeight(for: availableHeight)
             let listHeight = max(0, availableHeight - itemCountHeight - descriptionHeight)
+            let documentNavigationRequest = documentNavigationScrollRequest
 
             VStack(alignment: .leading, spacing: 0) {
                 ScrollViewReader { scrollProxy in
@@ -176,6 +187,18 @@ struct SettingsDocumentTableSection: View {
                     }
                     .task(id: pdfNavigationScrollRequest?.id) {
                         handlePDFNavigationScrollRequest(using: scrollProxy)
+                    }
+                    .task(id: documentNavigationRequest?.id) {
+                        guard let documentNavigationRequest else { return }
+                        await Task.yield()
+                        guard !Task.isCancelled else {
+                            documentNavigationRequest.diagnostic?.log("scroll request superseded")
+                            return
+                        }
+                        handleDocumentNavigationScrollRequest(
+                            documentNavigationRequest,
+                            using: scrollProxy
+                        )
                     }
 				.overlay(alignment: .top) {
                         if let tableFeedbackMessage {
@@ -296,6 +319,38 @@ struct SettingsDocumentTableSection: View {
 
     private func urlsRepresentSameFile(_ lhs: URL, _ rhs: URL) -> Bool {
         lhs.standardizedFileURL == rhs.standardizedFileURL
+    }
+
+    private func handleDocumentNavigationScrollRequest(
+        _ request: SettingsDocumentNavigationScrollRequest,
+        using scrollProxy: ScrollViewProxy
+    ) {
+        guard documentNavigationScrollRequest?.id == request.id else {
+            request.diagnostic?.log("scroll request ignored as stale")
+            return
+        }
+
+        guard handledDocumentNavigationRequestID != request.id else { return }
+
+        guard listMode == .files || listMode == .text || listMode == .markdown,
+              activeRowPaths.contains(request.targetPath) else {
+            request.diagnostic?.log("scroll request ignored outside active category")
+            return
+        }
+
+        let scrollStart = ProcessInfo.processInfo.systemUptime
+        guard documentNavigationScrollRequest?.id == request.id else {
+            request.diagnostic?.log("scroll request superseded")
+            return
+        }
+
+        if request.alignsToTop {
+            scrollProxy.scrollTo(request.targetPath, anchor: .top)
+        } else {
+            scrollProxy.scrollTo(request.targetPath)
+        }
+        handledDocumentNavigationRequestID = request.id
+        request.diagnostic?.log("scroll request accepted", durationSince: scrollStart)
     }
 
     private func showRefreshConfirmation() {
@@ -1018,7 +1073,9 @@ struct SettingsDocumentTableSection: View {
 
     private func handleScreenSingleTap(_ fileURL: URL) {
         ButtonClickFeedback.playIfEnabled()
-        handleFileSelection(fileURL)
+        handleFileSelection(fileURL) {
+            previewScreenDocument(fileURL)
+        }
         selectedScreenSelectionPath = fileURL.path
         showTableFeedback("copied name", color: .yellow)
     }

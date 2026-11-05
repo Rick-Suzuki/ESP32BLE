@@ -347,6 +347,7 @@ struct SettingsScreen: View {
     @State private var documentEditorText = ""
     @State private var documentEditorFontSize: CGFloat = 18
     @State private var isLoadingDocumentText = false
+    @State private var documentNavigationDiagnostic: DocumentNavigationDiagnostic?
     @State private var isDocumentEditorFocused = false
     @State private var speechSynthesizer = AVSpeechSynthesizer()
     @State private var soundPreviewPlayer: AVAudioPlayer?
@@ -409,9 +410,11 @@ struct SettingsScreen: View {
     @State private var previewImageURL: URL?
     @State private var isIPhoneImagePreviewPresented = false
     @State private var isIPhonePDFPreviewPresented = false
+    @State private var isIPhoneDocumentEditorPresented = false
     @State private var pendingImageRenameDestinationURL: URL?
     @State private var imageNavigationScrollRequest: SettingsImageNavigationScrollRequest?
     @State private var pdfNavigationScrollRequest: SettingsPDFNavigationScrollRequest?
+    @State private var documentNavigationScrollRequest: SettingsDocumentNavigationScrollRequest?
     @State private var isImagePreviewRestorePending = false
     @State private var backgroundChangeFeedbackID = UUID()
     @State private var imageOpacitySliderPosition = 0.5
@@ -475,6 +478,10 @@ struct SettingsScreen: View {
 
                 if !isPDFsListActive {
                     isIPhonePDFPreviewPresented = false
+                }
+
+                if !isDocumentEditorListActive {
+                    isIPhoneDocumentEditorPresented = false
                 }
             }
             .onChange(of: documentDirectorySnapshot) {
@@ -1452,6 +1459,7 @@ struct SettingsScreen: View {
                 text: $documentEditorText,
                 fontSize: $documentEditorFontSize,
                 isFocused: $isDocumentEditorFocused,
+                navigationDiagnostic: documentNavigationDiagnostic,
                 savedText: savedDocumentEditorText,
                 onUndo: { documentEditorText = savedDocumentEditorText }
             )
@@ -1781,22 +1789,27 @@ struct SettingsScreen: View {
     private var iPhoneLargeContentPreview: some View {
         if isPDFsListActive {
             iPhoneLargePDFPreview
-        } else {
+        } else if isImagesListActive {
             iPhoneLargeImagePreview
+        } else {
+            editableDocumentSection
         }
     }
 
     private var isIPhoneContentPreviewPresented: Bool {
         (isImagesListActive && isIPhoneImagePreviewPresented) ||
-            (isPDFsListActive && isIPhonePDFPreviewPresented)
+            (isPDFsListActive && isIPhonePDFPreviewPresented) ||
+            (isDocumentEditorListActive && isIPhoneDocumentEditorPresented)
     }
 
     private var iPhoneImagePreviewCloseButton: some View {
         Button {
             if isPDFsListActive {
                 isIPhonePDFPreviewPresented = false
-            } else {
+            } else if isImagesListActive {
                 isIPhoneImagePreviewPresented = false
+            } else {
+                isIPhoneDocumentEditorPresented = false
             }
         } label: {
             Image(systemName: "xmark")
@@ -1806,7 +1819,11 @@ struct SettingsScreen: View {
                 .background(.black.opacity(0.7), in: .circle)
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(isPDFsListActive ? "Close PDF preview" : "Close image preview")
+        .accessibilityLabel(
+            isPDFsListActive
+                ? "Close PDF preview"
+                : (isImagesListActive ? "Close image preview" : "Close editor")
+        )
     }
 
     private var pdfPreviewSection: some View {
@@ -1821,10 +1838,10 @@ struct SettingsScreen: View {
         SettingsImageControlsSection(
             title: navigationControlsTitle,
             isControlsActive: isFileNavigationControlsActive,
-            canReset: isPDFsListActive ? !availablePDFURLs.isEmpty : !availableImageURLs.isEmpty,
-            canRandom: isPDFsListActive ? !availablePDFURLs.isEmpty : !availableImageURLs.isEmpty,
-            canGoPrevious: isPDFsListActive ? canPreviewPreviousPDF : canPreviewPreviousImage,
-            canGoNext: isPDFsListActive ? canPreviewNextPDF : canPreviewNextImage,
+            canReset: !navigationFileURLs.isEmpty,
+            canRandom: !navigationFileURLs.isEmpty,
+            canGoPrevious: canNavigateToPreviousFile,
+            canGoNext: canNavigateToNextFile,
             onReset: {
                 if isImagesListActive {
                     guard let firstImageURL = availableImageURLs.first else { return }
@@ -1832,6 +1849,14 @@ struct SettingsScreen: View {
                 } else if isPDFsListActive {
                     guard let firstPDFURL = availablePDFURLs.first else { return }
                     selectPDFForNavigation(firstPDFURL, alignsToTop: true)
+                } else {
+                    let diagnostic = beginDocumentNavigationDiagnostic(operation: "Start")
+                    let collectionStart = ProcessInfo.processInfo.systemUptime
+                    let fileURLs = navigationFileURLs
+                    diagnostic.log("available file collection resolved", durationSince: collectionStart)
+                    guard let firstDocumentURL = fileURLs.first else { return }
+                    diagnostic.log("target selected")
+                    selectDocumentForNavigation(firstDocumentURL, alignsToTop: true, diagnostic: diagnostic)
                 }
             },
             onRandom: {
@@ -1848,6 +1873,20 @@ struct SettingsScreen: View {
                     }
                     guard let pdfURL = candidateURLs.randomElement() ?? availablePDFURLs.first else { return }
                     selectPDFForNavigation(pdfURL)
+                } else {
+                    let diagnostic = beginDocumentNavigationDiagnostic(operation: "Random")
+                    let collectionStart = ProcessInfo.processInfo.systemUptime
+                    let fileURLs = navigationFileURLs
+                    diagnostic.log("available file collection resolved", durationSince: collectionStart)
+                    let selectionStart = ProcessInfo.processInfo.systemUptime
+                    let selectedURL = selectedNavigationFileURL(in: fileURLs)
+                    diagnostic.log("current selection resolved", durationSince: selectionStart)
+                    let candidateURLs = fileURLs.filter {
+                        $0.standardizedFileURL != selectedURL?.standardizedFileURL
+                    }
+                    guard let documentURL = candidateURLs.randomElement() ?? fileURLs.first else { return }
+                    diagnostic.log("target selected")
+                    selectDocumentForNavigation(documentURL, diagnostic: diagnostic)
                 }
             },
             onPrevious: {
@@ -1859,6 +1898,18 @@ struct SettingsScreen: View {
                     guard let previewPDFPosition,
                           previewPDFPosition > 1 else { return }
                     selectPDFForNavigation(availablePDFURLs[previewPDFPosition - 2])
+                } else {
+                    let diagnostic = beginDocumentNavigationDiagnostic(operation: "Previous")
+                    let selectionStart = ProcessInfo.processInfo.systemUptime
+                    guard let navigationFilePosition,
+                          navigationFilePosition > 1 else { return }
+                    diagnostic.log("current selection resolved", durationSince: selectionStart)
+                    let collectionStart = ProcessInfo.processInfo.systemUptime
+                    let fileURLs = navigationFileURLs
+                    diagnostic.log("available file collection resolved", durationSince: collectionStart)
+                    let documentURL = fileURLs[navigationFilePosition - 2]
+                    diagnostic.log("target selected")
+                    selectDocumentForNavigation(documentURL, diagnostic: diagnostic)
                 }
             },
             onNext: {
@@ -1872,6 +1923,17 @@ struct SettingsScreen: View {
                     let nextIndex = previewPDFPosition ?? 0
                     guard availablePDFURLs.indices.contains(nextIndex) else { return }
                     selectPDFForNavigation(availablePDFURLs[nextIndex])
+                } else {
+                    let diagnostic = beginDocumentNavigationDiagnostic(operation: "Next")
+                    let selectionStart = ProcessInfo.processInfo.systemUptime
+                    let nextIndex = navigationFilePosition ?? 0
+                    diagnostic.log("current selection resolved", durationSince: selectionStart)
+                    let collectionStart = ProcessInfo.processInfo.systemUptime
+                    let fileURLs = navigationFileURLs
+                    diagnostic.log("available file collection resolved", durationSince: collectionStart)
+                    guard fileURLs.indices.contains(nextIndex) else { return }
+                    diagnostic.log("target selected")
+                    selectDocumentForNavigation(fileURLs[nextIndex], diagnostic: diagnostic)
                 }
             }
         )
@@ -1894,12 +1956,111 @@ struct SettingsScreen: View {
         listMode == .pdfs
     }
 
+    private var isDocumentEditorListActive: Bool {
+        listMode == .files || listMode == .text || listMode == .markdown
+    }
+
     private var navigationControlsTitle: String {
-        isPDFsListActive ? "PDF" : "Image"
+        switch listMode {
+        case .files:
+            "Screen"
+        case .text:
+            "Text"
+        case .markdown:
+            "MD"
+        case .pdfs:
+            "PDF"
+        default:
+            "Image"
+        }
     }
 
     private var isFileNavigationControlsActive: Bool {
-        isImagesListActive || isPDFsListActive
+        isImagesListActive || isPDFsListActive || isDocumentEditorListActive
+    }
+
+    private var navigationFileURLs: [URL] {
+        switch listMode {
+        case .files:
+            availableDocumentURLs
+        case .text:
+            availableTextURLs
+        case .markdown:
+            availableMarkdownURLs
+        case .images:
+            availableImageURLs
+        case .pdfs:
+            availablePDFURLs
+        default:
+            []
+        }
+    }
+
+    private var selectedNavigationFileURL: URL? {
+        selectedNavigationFileURL(in: navigationFileURLs)
+    }
+
+    private func beginDocumentNavigationDiagnostic(operation: String) -> DocumentNavigationDiagnostic {
+        let diagnostic = DocumentNavigationDiagnostic(category: navigationControlsTitle, operation: operation)
+        documentNavigationDiagnostic = diagnostic
+        diagnostic.log("navigation action begins")
+        return diagnostic
+    }
+
+    private func selectedNavigationFileURL(in fileURLs: [URL]) -> URL? {
+        switch listMode {
+        case .files:
+            guard let selectedScreenSelectionPath else { return nil }
+            return fileURLs.first {
+                $0.standardizedFileURL == URL(fileURLWithPath: selectedScreenSelectionPath).standardizedFileURL
+            }
+        case .text:
+            guard let selectedTextSelectionPath else { return nil }
+            return fileURLs.first { $0.path == selectedTextSelectionPath }
+        case .markdown:
+            guard let selectedMarkdownSelectionPath else { return nil }
+            return fileURLs.first { $0.path == selectedMarkdownSelectionPath }
+        case .images:
+            return previewImageURL
+        case .pdfs:
+            return selectedPDFURL
+        default:
+            return nil
+        }
+    }
+
+    private var navigationFilePosition: Int? {
+        guard let selectedNavigationFileURL,
+              let index = navigationFileURLs.firstIndex(where: {
+                  $0.standardizedFileURL == selectedNavigationFileURL.standardizedFileURL
+              }) else {
+            return nil
+        }
+
+        return index + 1
+    }
+
+    private var canNavigateToPreviousFile: Bool {
+        if isImagesListActive {
+            return canPreviewPreviousImage
+        }
+        if isPDFsListActive {
+            return canPreviewPreviousPDF
+        }
+        guard let navigationFilePosition else { return false }
+        return navigationFilePosition > 1
+    }
+
+    private var canNavigateToNextFile: Bool {
+        if isImagesListActive {
+            return canPreviewNextImage
+        }
+        if isPDFsListActive {
+            return canPreviewNextPDF
+        }
+        guard !navigationFileURLs.isEmpty else { return false }
+        guard let navigationFilePosition else { return true }
+        return navigationFilePosition < navigationFileURLs.count
     }
 
     private var canPreviewPreviousImage: Bool {
@@ -2005,6 +2166,44 @@ struct SettingsScreen: View {
             id: UUID(),
             alignsToTop: alignsToTop
         )
+    }
+
+    private func selectDocumentForNavigation(
+        _ fileURL: URL,
+        alignsToTop: Bool = false,
+        diagnostic: DocumentNavigationDiagnostic
+    ) {
+        diagnostic.log("file-selection callback begins")
+        guard let matchingURL = navigationFileURLs.first(where: {
+            $0.standardizedFileURL == fileURL.standardizedFileURL
+        }) else {
+            return
+        }
+
+        switch listMode {
+        case .files:
+            previewScreenDocument(matchingURL, diagnostic: diagnostic)
+        case .text:
+            selectTextFileForEditing(matchingURL, diagnostic: diagnostic)
+        case .markdown:
+            selectMarkdownFileForEditing(matchingURL, diagnostic: diagnostic)
+        default:
+            return
+        }
+
+        guard loadedDocumentURL?.standardizedFileURL == matchingURL.standardizedFileURL else {
+            return
+        }
+
+        let scrollRequest = SettingsDocumentNavigationScrollRequest(
+            targetPath: matchingURL.path,
+            id: UUID(),
+            alignsToTop: alignsToTop,
+            diagnostic: diagnostic
+        )
+        documentNavigationScrollRequest = scrollRequest
+        diagnostic.log("scroll request created id=\(scrollRequest.id.uuidString.prefix(8))")
+        diagnostic.log("file-selection callback completes")
     }
 
     private func restorePreviewFromAppliedBackground() {
@@ -2135,6 +2334,7 @@ struct SettingsScreen: View {
             imageScrollPositionID: imageScrollPositionID,
             imageNavigationScrollRequest: $imageNavigationScrollRequest,
             pdfNavigationScrollRequest: $pdfNavigationScrollRequest,
+            documentNavigationScrollRequest: $documentNavigationScrollRequest,
             soundScrollPositionID: soundScrollPositionID,
             pdfScrollPositionID: pdfScrollPositionID,
             templateScrollPositionID: templateScrollPositionID,
@@ -2142,9 +2342,10 @@ struct SettingsScreen: View {
             refreshFiles: refreshSettingsFileCollections,
             canDeleteDocuments: canDeleteDocuments,
             loadFunctionKeys: handleSettingsDocumentSelection,
+            previewScreenDocument: { previewScreenDocument($0) },
             isLoadedDocument: { selectedDocumentFileURL?.path == $0.path },
-            loadTextFile: loadTextFile,
-            loadMarkdownFile: loadMarkdownFile,
+            loadTextFile: { selectTextFileForEditing($0) },
+            loadMarkdownFile: { selectMarkdownFileForEditing($0) },
             deleteDocument: deleteDocument,
             duplicateDocument: duplicateDocument,
             deleteTextFile: deleteTextFile,
@@ -2628,19 +2829,36 @@ struct SettingsScreen: View {
         }
     }
 
-    private func loadTextFile(_ fileURL: URL) {
-        selectedTextSelectionPath = fileURL.path
+    private func previewScreenDocument(_ fileURL: URL, diagnostic: DocumentNavigationDiagnostic? = nil) {
+        if diagnostic == nil { documentNavigationDiagnostic = nil }
+        let transitionStart = ProcessInfo.processInfo.systemUptime
+        let saveStart = ProcessInfo.processInfo.systemUptime
+        guard saveCurrentDocumentText().allowsDocumentTransition else {
+            diagnostic?.log("save validation blocked transition", durationSince: saveStart)
+            return
+        }
+        diagnostic?.log("save validation complete", durationSince: saveStart)
+
         isLoadingDocumentText = true
         defer { isLoadingDocumentText = false }
 
         do {
+            let readStart = ProcessInfo.processInfo.systemUptime
             let loadedText = try String(contentsOf: fileURL, encoding: .utf8)
+            diagnostic?.log("target file read", durationSince: readStart, characterCount: loadedText.count)
+            let assignmentStart = ProcessInfo.processInfo.systemUptime
+            selectedScreenSelectionPath = fileURL.path
             documentEditorText = loadedText
             savedDocumentEditorText = loadedText
             loadedDocumentName = fileURL.lastPathComponent
             loadedDocumentURL = fileURL
             blockedDocumentSaveResult = nil
-            documentNameDraft = currentTitleDisplayName
+            documentNameDraft = fileURL.deletingPathExtension().lastPathComponent
+            if !isPad {
+                isIPhoneDocumentEditorPresented = true
+            }
+            diagnostic?.log("editor state assignment", durationSince: assignmentStart, characterCount: loadedText.count)
+            diagnostic?.log("Screen transition complete", durationSince: transitionStart, characterCount: loadedText.count)
         } catch {
             presentDocumentSaveAlert(
                 title: "File Could Not Be Opened",
@@ -2649,23 +2867,90 @@ struct SettingsScreen: View {
         }
     }
 
-    private func loadMarkdownFile(_ fileURL: URL) {
+    private func selectTextFileForEditing(_ fileURL: URL, diagnostic: DocumentNavigationDiagnostic? = nil) {
+        if diagnostic == nil { documentNavigationDiagnostic = nil }
+        let transitionStart = ProcessInfo.processInfo.systemUptime
+        let saveStart = ProcessInfo.processInfo.systemUptime
         guard saveCurrentDocumentText().allowsDocumentTransition else {
+            diagnostic?.log("save validation blocked transition", durationSince: saveStart)
+            return
+        }
+        diagnostic?.log("save validation complete", durationSince: saveStart)
+
+        loadTextFile(fileURL, diagnostic: diagnostic)
+        guard loadedDocumentURL?.standardizedFileURL == fileURL.standardizedFileURL else {
             return
         }
 
-        selectedMarkdownSelectionPath = fileURL.path
+        if !isPad {
+            isIPhoneDocumentEditorPresented = true
+        }
+        diagnostic?.log("Text transition complete", durationSince: transitionStart)
+    }
+
+    private func selectMarkdownFileForEditing(_ fileURL: URL, diagnostic: DocumentNavigationDiagnostic? = nil) {
+        if diagnostic == nil { documentNavigationDiagnostic = nil }
+        let transitionStart = ProcessInfo.processInfo.systemUptime
+        loadMarkdownFile(fileURL, diagnostic: diagnostic)
+        guard loadedDocumentURL?.standardizedFileURL == fileURL.standardizedFileURL else {
+            return
+        }
+
+        if !isPad {
+            isIPhoneDocumentEditorPresented = true
+        }
+        diagnostic?.log("MD transition complete", durationSince: transitionStart)
+    }
+
+    private func loadTextFile(_ fileURL: URL, diagnostic: DocumentNavigationDiagnostic? = nil) {
+        selectedTextSelectionPath = fileURL.path
         isLoadingDocumentText = true
         defer { isLoadingDocumentText = false }
 
         do {
+            let readStart = ProcessInfo.processInfo.systemUptime
             let loadedText = try String(contentsOf: fileURL, encoding: .utf8)
+            diagnostic?.log("target file read", durationSince: readStart, characterCount: loadedText.count)
+            let assignmentStart = ProcessInfo.processInfo.systemUptime
             documentEditorText = loadedText
             savedDocumentEditorText = loadedText
             loadedDocumentName = fileURL.lastPathComponent
             loadedDocumentURL = fileURL
             blockedDocumentSaveResult = nil
             documentNameDraft = currentTitleDisplayName
+            diagnostic?.log("editor state assignment", durationSince: assignmentStart, characterCount: loadedText.count)
+        } catch {
+            presentDocumentSaveAlert(
+                title: "File Could Not Be Opened",
+                message: "The file could not be read. The current editor contents have been preserved."
+            )
+        }
+    }
+
+    private func loadMarkdownFile(_ fileURL: URL, diagnostic: DocumentNavigationDiagnostic? = nil) {
+        let saveStart = ProcessInfo.processInfo.systemUptime
+        guard saveCurrentDocumentText().allowsDocumentTransition else {
+            diagnostic?.log("save validation blocked transition", durationSince: saveStart)
+            return
+        }
+        diagnostic?.log("save validation complete", durationSince: saveStart)
+
+        selectedMarkdownSelectionPath = fileURL.path
+        isLoadingDocumentText = true
+        defer { isLoadingDocumentText = false }
+
+        do {
+            let readStart = ProcessInfo.processInfo.systemUptime
+            let loadedText = try String(contentsOf: fileURL, encoding: .utf8)
+            diagnostic?.log("target file read", durationSince: readStart, characterCount: loadedText.count)
+            let assignmentStart = ProcessInfo.processInfo.systemUptime
+            documentEditorText = loadedText
+            savedDocumentEditorText = loadedText
+            loadedDocumentName = fileURL.lastPathComponent
+            loadedDocumentURL = fileURL
+            blockedDocumentSaveResult = nil
+            documentNameDraft = currentTitleDisplayName
+            diagnostic?.log("editor state assignment", durationSince: assignmentStart, characterCount: loadedText.count)
         } catch {
             presentDocumentSaveAlert(
                 title: "File Could Not Be Opened",
