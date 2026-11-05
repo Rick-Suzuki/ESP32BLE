@@ -137,6 +137,7 @@ struct MainScreen: View {
         case text(filename: String, contents: String)
         case image(filename: String, url: URL)
         case renderedImage(filename: String, image: UIImage)
+        case pdf(filename: String, url: URL)
 
         var id: String {
             switch self {
@@ -146,6 +147,8 @@ struct MainScreen: View {
                 return "image:\(filename)"
             case let .renderedImage(filename, _):
                 return "rendered-image:\(filename)"
+            case let .pdf(filename, _):
+                return "pdf:\(filename)"
             }
         }
     }

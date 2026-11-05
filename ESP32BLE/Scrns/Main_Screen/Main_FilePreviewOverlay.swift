@@ -2,6 +2,7 @@ import SwiftUI
 import UIKit
 import WebKit
 import Foundation
+import PDFKit
 
 struct MainScreenFilePreviewOverlay: View {
     let previewedFile: MainScreen.PreviewedFile
@@ -53,6 +54,8 @@ struct MainScreenFilePreviewOverlay: View {
                                     .padding(.bottom, safeBottomInset + 20)
                             }
                         }
+                    case let .pdf(_, url):
+                        MainScreenPDFPreviewView(pdfURL: url)
                     case .image, .renderedImage:
                         GeometryReader { imageGeometry in
                             Group {
@@ -135,6 +138,8 @@ struct MainScreenFilePreviewOverlay: View {
             return "\(filename):\(Int(maxPixelDimension.rounded(.up)))"
         case let .renderedImage(filename, _):
             return "\(filename):rendered"
+        case let .pdf(filename, _):
+            return "\(filename):pdf"
         }
     }
 
@@ -273,6 +278,129 @@ struct MainScreenFilePreviewOverlay: View {
             width: imageSize.width * fitScale,
             height: imageSize.height * fitScale
         )
+    }
+}
+
+private struct MainScreenPDFPreviewView: UIViewRepresentable {
+    let pdfURL: URL
+
+    // MARK: - BM:🅱️ MAIN SCREEN PDF ZOOM
+    // 🐞 USER ADJUSTABLE:
+    // Maximum Main Screen PDF zoom multiplier.
+    private let maximumMainPDFZoom: CGFloat = 5.0
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator()
+    }
+
+    func makeUIView(context: Context) -> PDFView {
+        let pdfView = MainScreenConfigurablePDFView()
+        pdfView.onLayout = { [weak coordinator = context.coordinator] pdfView in
+            coordinator?.applyInitialConfigurationIfNeeded(
+                to: pdfView,
+                maximumZoomMultiplier: self.maximumMainPDFZoom
+            )
+        }
+        pdfView.backgroundColor = .black
+        pdfView.autoScales = false
+        pdfView.displayMode = .singlePageContinuous
+        pdfView.displayDirection = .vertical
+        pdfView.displaysPageBreaks = false
+        pdfView.usePageViewController(false)
+        pdfView.isUserInteractionEnabled = true
+        return pdfView
+    }
+
+    func updateUIView(_ pdfView: PDFView, context: Context) {
+        guard pdfView.document?.documentURL != pdfURL else {
+            return
+        }
+
+        pdfView.document = PDFDocument(url: pdfURL)
+        context.coordinator.resetInitialConfiguration()
+        pdfView.setNeedsLayout()
+    }
+
+    final class Coordinator {
+        private var configuredDocumentURL: URL?
+        private var configuredViewportSize = CGSize.zero
+        private var hasPositionedInitialDocument = false
+
+        func resetInitialConfiguration() {
+            configuredDocumentURL = nil
+            configuredViewportSize = .zero
+            hasPositionedInitialDocument = false
+        }
+
+        func applyInitialConfigurationIfNeeded(
+            to pdfView: PDFView,
+            maximumZoomMultiplier: CGFloat
+        ) {
+            guard let document = pdfView.document,
+                  let firstPage = document.page(at: 0) else {
+                return
+            }
+
+            let viewportSize = pdfView.bounds.size
+            guard viewportSize.width > 0,
+                  viewportSize.height > 0 else {
+                return
+            }
+
+            let documentURL = document.documentURL
+            guard configuredDocumentURL != documentURL || configuredViewportSize != viewportSize else {
+                return
+            }
+
+            let pageBounds = firstPage.bounds(for: pdfView.displayBox)
+            let normalizedRotation = ((firstPage.rotation % 360) + 360) % 360
+            let pageWidth = normalizedRotation.isMultiple(of: 180)
+                ? pageBounds.width
+                : pageBounds.height
+            guard pageWidth > 0 else {
+                return
+            }
+
+            let initialScale = viewportSize.width / pageWidth
+            let maximumScale = initialScale * maximumZoomMultiplier
+            guard initialScale.isFinite,
+                  initialScale > 0,
+                  maximumScale.isFinite,
+                  maximumScale >= initialScale else {
+                return
+            }
+
+            pdfView.autoScales = false
+            pdfView.maxScaleFactor = maximumScale
+            pdfView.minScaleFactor = initialScale
+            pdfView.scaleFactor = initialScale
+            configuredDocumentURL = documentURL
+            configuredViewportSize = viewportSize
+            positionFirstPageAtTopIfNeeded(in: pdfView, page: firstPage)
+        }
+
+        private func positionFirstPageAtTopIfNeeded(in pdfView: PDFView, page: PDFPage) {
+            guard !hasPositionedInitialDocument else {
+                return
+            }
+
+            let pageBounds = page.bounds(for: pdfView.displayBox)
+            let destination = PDFDestination(
+                page: page,
+                at: CGPoint(x: pageBounds.midX, y: pageBounds.maxY)
+            )
+            pdfView.go(to: destination)
+            hasPositionedInitialDocument = true
+        }
+    }
+}
+
+private final class MainScreenConfigurablePDFView: PDFView {
+    var onLayout: ((PDFView) -> Void)?
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        onLayout?(self)
     }
 }
 

@@ -274,64 +274,70 @@ private struct SettingsPDFPreviewView: UIViewRepresentable {
     let pdfURL: URL?
     let fitsPageWidth: Bool
 
+    // MARK: - BM:🅱️ PDF ZOOM
+    // 🐞 USER ADJUSTABLE:
+    // Maximum PDF zoom relative to initial fit.
+    // Change 5.0 to the desired maximum zoom.
+    private let maximumPDFZoomMultiplier: CGFloat = 5.0
+
     func makeCoordinator() -> Coordinator {
         Coordinator()
     }
 
     func makeUIView(context: Context) -> PDFView {
-        let pdfView: PDFView
-        if fitsPageWidth {
-            let widthFittingPDFView = SettingsWidthFittingPDFView()
-            widthFittingPDFView.onLayout = { [weak coordinator = context.coordinator] pdfView in
-                coordinator?.applyWidthFitIfNeeded(to: pdfView)
-            }
-            pdfView = widthFittingPDFView
-        } else {
-            pdfView = PDFView()
+        let pdfView = SettingsConfigurablePDFView()
+        pdfView.onLayout = { [weak coordinator = context.coordinator] pdfView in
+            coordinator?.applyInitialConfigurationIfNeeded(
+                to: pdfView,
+                fitsPageWidth: self.fitsPageWidth,
+                maximumZoomMultiplier: self.maximumPDFZoomMultiplier
+            )
         }
 
         pdfView.backgroundColor = .black
         pdfView.autoScales = !fitsPageWidth
-        pdfView.displayMode = .singlePage
+        pdfView.displayMode = .singlePageContinuous
         pdfView.displayDirection = .vertical
         pdfView.displaysPageBreaks = false
         pdfView.usePageViewController(false)
-        pdfView.isUserInteractionEnabled = false
+        pdfView.isUserInteractionEnabled = true
         return pdfView
     }
 
     func updateUIView(_ pdfView: PDFView, context: Context) {
         guard let pdfURL else {
-            pdfView.document = nil
-            context.coordinator.resetWidthFit()
+            if pdfView.document != nil {
+                pdfView.document = nil
+                context.coordinator.resetWidthFit()
+                pdfView.setNeedsLayout()
+            }
             return
         }
 
         if pdfView.document?.documentURL != pdfURL {
             pdfView.document = PDFDocument(url: pdfURL)
             context.coordinator.resetWidthFit()
-        }
-
-        if fitsPageWidth {
-            context.coordinator.applyWidthFitIfNeeded(to: pdfView)
-        } else {
-            pdfView.scaleFactor = pdfView.scaleFactorForSizeToFit
+            pdfView.setNeedsLayout()
         }
     }
 
     final class Coordinator {
-        private var fittedDocumentURL: URL?
-        private var fittedViewportSize = CGSize.zero
+        private var configuredDocumentURL: URL?
+        private var configuredViewportSize = CGSize.zero
         private var hasPositionedInitialDocument = false
 
         func resetWidthFit() {
-            fittedDocumentURL = nil
-            fittedViewportSize = .zero
+            configuredDocumentURL = nil
+            configuredViewportSize = .zero
             hasPositionedInitialDocument = false
         }
 
         // MARK: - BM:🅱️ IPHONE PDF INITIAL WIDTH FIT
-        func applyWidthFitIfNeeded(to pdfView: PDFView) {
+        func applyInitialConfigurationIfNeeded(
+            to pdfView: PDFView,
+            fitsPageWidth: Bool,
+            maximumZoomMultiplier: CGFloat
+        ) {
             guard let document = pdfView.document,
                   let firstPage = document.page(at: 0) else {
                 return
@@ -344,8 +350,47 @@ private struct SettingsPDFPreviewView: UIViewRepresentable {
             }
 
             let documentURL = document.documentURL
-            guard fittedDocumentURL != documentURL || fittedViewportSize != viewportSize else {
+            guard configuredDocumentURL != documentURL || configuredViewportSize != viewportSize else {
                 return
+            }
+
+            guard let initialScale = initialScale(
+                for: firstPage,
+                in: pdfView,
+                fitsPageWidth: fitsPageWidth
+            ) else {
+                return
+            }
+
+            let maximumScale = initialScale * maximumZoomMultiplier
+            guard maximumScale.isFinite, maximumScale >= initialScale else {
+                return
+            }
+
+            pdfView.autoScales = false
+            pdfView.maxScaleFactor = maximumScale
+            pdfView.minScaleFactor = initialScale
+            pdfView.scaleFactor = initialScale
+            configuredDocumentURL = documentURL
+            configuredViewportSize = viewportSize
+
+            positionFirstPageAtTopIfNeeded(
+                in: pdfView,
+                page: firstPage
+            )
+        }
+
+        private func initialScale(
+            for firstPage: PDFPage,
+            in pdfView: PDFView,
+            fitsPageWidth: Bool
+        ) -> CGFloat? {
+            if !fitsPageWidth {
+                let sizeToFitScale = pdfView.scaleFactorForSizeToFit
+                guard sizeToFitScale.isFinite, sizeToFitScale > 0 else {
+                    return nil
+                }
+                return sizeToFitScale
             }
 
             let pageBounds = firstPage.bounds(for: pdfView.displayBox)
@@ -354,24 +399,14 @@ private struct SettingsPDFPreviewView: UIViewRepresentable {
                 ? pageBounds.width
                 : pageBounds.height
             guard pageWidth > 0 else {
-                return
+                return nil
             }
 
-            let widthFitScale = viewportSize.width / pageWidth
+            let widthFitScale = pdfView.bounds.width / pageWidth
             guard widthFitScale.isFinite, widthFitScale > 0 else {
-                return
+                return nil
             }
-
-            if abs(pdfView.scaleFactor - widthFitScale) > .ulpOfOne {
-                pdfView.scaleFactor = widthFitScale
-            }
-            fittedDocumentURL = documentURL
-            fittedViewportSize = viewportSize
-
-            positionFirstPageAtTopIfNeeded(
-                in: pdfView,
-                page: firstPage
-            )
+            return widthFitScale
         }
 
         private func positionFirstPageAtTopIfNeeded(
@@ -393,7 +428,7 @@ private struct SettingsPDFPreviewView: UIViewRepresentable {
     }
 }
 
-private final class SettingsWidthFittingPDFView: PDFView {
+private final class SettingsConfigurablePDFView: PDFView {
     var onLayout: ((PDFView) -> Void)?
 
     override func layoutSubviews() {

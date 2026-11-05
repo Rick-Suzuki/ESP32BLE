@@ -1,250 +1,129 @@
 Read-only probe complete. No files were modified, built, deployed, committed, or pushed.
 
-Confirmed current implementation
+1. Main Screen call chain
 
-Relevant files and lines
+• Main_ButtonBehavior.swift􀰓 — a programmable button finds its first preview-supported filename and calls openPreviewFile.
+• Main_ButtonBehavior.swift􀰓 — a preview command is a filename whose extension is in the supported set.
+• Main_ButtonBehavior.swift􀰓 — resolves the file and routes it to text, PDF rendering, or image preview.
+• Main_Screen.swift􀰓 — presents the resulting preview as a full-screen cover.
+• Main_FilePreviewOverlay.swift􀰓 — renders the preview and supplies the bottom-right Close button.
 
-• ESP32BLE/Scrns/Set_Screen/Table_Img/Set_ImgPanel.swift
-   • Lines 239-261: small SettingsPDFPreviewPanel layout.
-   • Lines 264-291: PDFKit SettingsPDFPreviewView renderer.
+2. Current PDF technology
 
-• ESP32BLE/Scrns/Set_Screen/Table_Img/Set_Table.swift
-   • Lines 108-114: table height calculation.
-   • Lines 219-222: PDF preview rendered beneath the table.
-   • Lines 322-326: PDF preview reserved height is table width / 1.3.
-   • Lines 437-485: PDF selected-row and row-path handling.
-   • Lines 500-533: selected PDF restoration scrolling; navigation scrolling is currently Images-only.
-   • Lines 830-875: PDF table row selection, highlight, and deletion gesture.
+The Main Screen does not use PDFView, Quick Look, or WebKit for PDFs.
 
-• ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
-   • Lines 455-482: Settings lifecycle and file-list reconciliation.
-   • Lines 486-528: iPad Settings hierarchy; only Images currently use the large editor area.
-   • Lines 535-567: approved iPhone left region, controls column, and table layout.
-   • Lines 1631-1653: existing injection of the iPhone editor and external Close button.
-   • Lines 1750-1776: large Image preview, iPhone Image preview, Close button, and PDF preview source.
-   • Lines 1778-1836: current Image navigation-control configuration.
-   • Lines 1960-2025: document-table construction.
-   • Lines 3262-3269: PDF discovery and alphabetical sorting.
-   • Lines 3303-3338: selection validation after file refresh.
-   • Lines 3373-3397: persisted PDF path/name resolution.
-   • Lines 3789-3791: PDF selection.
-   • Lines 4101-4129: PDF rename.
-   • Lines 4225-4240: PDF delete.
-   • Lines 4838-4869: PDF import.
-   • Lines 5243-5246: first imported PDF is selected when appropriate.
+It uses PDFKit only to load and rasterize a PDF page into a UIImage:
 
-• ESP32BLE/Scrns/Set_Screen/Btm_Area/Set_AvailableDevices.swift
-   • Lines 84-160: iPhone editor container, external Close row, and measured bottom-control width.
-   • Lines 43-80: iPad image-navigation and opacity-control placement.
+• Main_ButtonBehavior.swift􀰓
 
-• ESP32BLE/Scrns/Set_Screen/Btm_Area/Set_KB_Timing.swift
-   • Lines 3-49: iPhone keyboard controls followed by the Image navigation/opacity area.
-   • Lines 229-253: “Image” heading, four controls, and disabled-state opacity slider.
+That rendered image is sent to the existing image-preview overlay as .renderedImage.
 
-• ESP32BLE/Scrns/Set_Screen/Btm_Area/Set_ImgCtlsSection.swift
-   • Lines 7-165: reusable four-button Image control component, including repeat-on-hold Previous/Next behavior.
+The overlay provides:
+• Full-screen black background.
+• Bottom-right Close button at Main_FilePreviewOverlay.swift􀰓.
+• Custom UIKit pinch, one-finger pan, and double-tap reset gestures at 791-883.
+• SwiftUI image scaling and offset handling at 56-103 and 155-260.
 
-• ESP32BLE/Scrns/Set_Screen/Btm_Area/Set_BtmCtls.swift
-   • Lines 3-44: forwarding layer into SettingsAvailableDevicesPanel.
+3. Confirmed failure cause
 
-Current PDF renderer and hierarchy
+Multi-page PDFs are explicitly rejected.
 
-Confirmed:
+renderedSinglePagePDFPreviewImage requires:
 
-• PDFKit is already in use: import PDFKit at Set_ImgPanel.swift line 3.
-• The preview is a SwiftUI SettingsPDFPreviewPanel containing a UIKit PDFView through UIViewRepresentable.
-• The panel is black, has a 2-point white border, and forces a 1.3 width-to-height preview ratio.
-• The table supplies this panel below the PDF list.
-• PDFView uses:
-   • autoScales = true
-   • .singlePage
-   • vertical direction
-   • no page breaks
-   • no page-view controller
-   • isUserInteractionEnabled = false
-• updateUIView resets the PDF scale to scaleFactorForSizeToFit.
+• A valid PDFDocument.
+• pdfDocument.pageCount == 1.
+• A valid first page.
+• Nonzero media-box dimensions.
 
-Therefore the existing preview is first-page-oriented and display-only. PDFKit can represent multi-page documents, but current settings do not expose page movement because the view is single-page and interaction is disabled.
+The page-count condition is at Main_ButtonBehavior.swift􀰓.
 
-Current PDF table geometry
+For a multi-page PDF, rendering returns nil. The code then attempts UIImage(contentsOfFile:); that also fails because a PDF is not an image. ESP then sets:
 
-Confirmed:
+• Title: Unsupported File
+• Message: Couldn't preview <filename>.
 
-• The PDF list height is:
-available height
-• item-count height
-• PDF preview height
-• template-description height.
+This is application-generated at Main_ButtonBehavior.swift􀰓, not a framework error.
 
-• PDF preview height is tableWidth / 1.3.
-• The item count remains above the preview.
-• Images already reclaim their former preview area because only PDFs currently reserve and render a lower preview.
-• PDF rows use pdfURL.path as their row identity and scroll-position identifier.
-• The selected PDF row is bold yellow; there is no Image-style independent yellow/green state model.
+4. Page count involvement
 
-PDF selection, restoration, file operations
+Confirmed: a two-page or larger PDF will fail solely because pageCount == 1 is required.
 
-Confirmed:
+Other possible causes that follow the same failure path:
+• PDFDocument(url:) cannot load the file.
+• The document has no accessible first page.
+• The first page has zero media-box width or height.
+• A malformed, encrypted, or permission-restricted PDF prevents page access.
 
-• A PDF table tap calls selectPDF, persists its path and filename in AppStorage, and copies its filename to the pasteboard.
-• Re-selecting the same PDF still invokes selection; there is no current local editor-presentation state.
-• The selected PDF is restored by resolving the persisted path first, then filename case-insensitively.
-• A missing persisted PDF selection is cleared during document-directory reconciliation.
-• The table restores visibility of the selected PDF row using ScrollViewReader.
-• Rename moves the file, refreshes documents, and persists the target URL.
-• Deleting the selected PDF clears its persisted selection.
-• PDF import is supported through all-files import; after import, the first imported PDF becomes selected when PDFs were the import category or no PDF was previously selected.
-• There is no existing PDF-specific “preview restoration” state like Images, and no existing iPhone PDF Close behavior.
+There is no code checking PDF version, file size, embedded images, filename encoding, or page dimensions beyond the first-page media box.
 
-Recommended large PDF editor
+5. File references and commands
 
-Recommendation:
+Buttons store a filename command, not an absolute URL.
 
-• Reuse the approved outer Image-editor placement exactly.
-• Do not create another iPhone width, height, padding, or bottom-control measurement.
-• Replace only the content supplied to the existing editor slot when the active category is PDFs.
-• On iPad, route PDFs through the same left content-area branch currently used by Images, while leaving the Images branch untouched.
-• On iPhone, reuse the existing SettingsAvailableDevicesPanel editor slot, external Close row, measured editor width, and lower controls. Supply a PDF editor view instead of an image editor view when PDFs are active.
+• Supported preview extensions: txt, md, pdf, png, jpg, jpeg, gif, heic, webp at Main_ButtonBehavior.swift􀰓.
+• Resolution searches the app Documents directory first, then bundled resources, at 1912-1929.
+• Matching is exact first, then case-insensitive among regular files, at 1931-1950.
+• Spaces are retained because the filename is treated as one trimmed string; no command syntax change is needed.
+• Renaming a PDF can invalidate an existing button filename reference because there is no persistent file identity mapping.
 
-The PDF viewport should be a revised SettingsPDFPreviewPanel that fills the parent-provided editor space rather than imposing its current 1.3 aspect ratio. It should retain the black background and use the established platform border treatment: one physical pixel on iPhone and the approved iPad border appearance.
+Settings resolves selected files independently through its Settings file collections; it does not share the Main Screen preview overlay.
 
-A “No PDF selected” message is recommended for the new large editor, matching the explicit empty-state handling used by Images.
+6. Current PDF interaction and limits
 
-Multi-page recommendation
+Current single-page PDF behavior:
+• First page is rasterized at its full media-box image size.
+• The overlay aspect-fits and centers it.
+• Pinch zoom has a minimum of 1x and no explicit maximum.
+• One-finger pan is allowed only above 1x.
+• Double tap resets the image transform.
+• Closing dismisses the full-screen cover and returns to Main Screen.
 
-Recommended Stage 4D behavior:
+There is no vertical page scrolling, page navigation, or access to later PDF pages. Multi-page content is not loaded into the overlay at all.
 
-• Keep the four existing controls for PDF-file navigation only.
-• Use native PDFKit interaction for pages within the selected file.
-• Configure PDFView for continuous vertical pages so users can move through a multi-page PDF with native scrolling when at minimum scale.
-• Use PDFKit’s own magnification and pan handling rather than layering SwiftUI MagnifyGesture and DragGesture over PDFView.
-• When a new PDF is selected, assign the new document, move to its first page, and restore the fit scale.
-• A renamed PDF should reload from its new URL without altering the selected-file semantics.
-• Deleting or clearing a PDF should set pdfView.document = nil.
+7. Difference from Settings
 
-This avoids competing SwiftUI and UIKit gestures and lets PDFKit manage page metrics, mixed page sizes, bounds, rendering, and pan limits.
+Settings uses an actual native PDFView in Set_ImgPanel.swift􀰓:
+• .singlePageContinuous
+• vertical display direction
+• native pinch/pan
+• min/max PDFKit scale factors
+• first-page positioning with PDFDestination
 
-Zoom and pan recommendation
+Main Screen uses a rasterized first-page UIImage with custom gestures. The Settings component cannot be reused directly because it is private and has Settings-specific fitting/lifecycle behavior, but its PDFKit configuration pattern is appropriate.
 
-For Stage 4D:
+8. Recommended minimum correction
 
-• Keep the editor viewport fixed.
-• Use PDFKit’s native pinch and pan.
-• After the document and view size are established:
-   • Fit scale = pdfView.scaleFactorForSizeToFit
-   • Minimum scale = fit scale
-   • Maximum scale = fit scale × 5.0
-   • Initial scale = fit scale
-• Disable autoScales once the explicit limits are set so later SwiftUI updates do not reset a user zoom.
-• Do not apply the Image zoom/pan implementation to PDF content.
-• Do not rasterize pages into images.
-
-This gives the requested equivalent of 1x through 5x while preserving a PDF page’s native rendering quality.
-
-PDF file navigation controls
-
-Confirmed limitation:
-
-• SettingsImageControlsSection is currently Image-specific in naming, active-state gating, title text, and image callbacks.
-• SettingsDocumentTableSection only accepts SettingsImageNavigationScrollRequest; PDF selection restoration exists, but animated navigation-triggered scrolling does not.
-
-Recommended Stage 4C:
-
-• Parameterize the existing four-button component with:
-   • visible heading: “Image” or “PDF”
-   • active state
-   • existing button availability
-   • existing action closures
-• Preserve all existing Image closures and scrolling behavior unchanged.
-• Add a separate PDF navigation scroll request, mirroring the current Image request, rather than altering the established Image request behavior.
-• Use the already-sorted availablePDFURLs.
-• Reset selects the first PDF and scrolls it to the top.
-• Random chooses a different PDF when possible.
-• Previous and Next follow the existing Image boundary behavior and retain the repeat-on-hold interaction.
-• Each action calls selectPDF, updates the persistent PDF selection, and requests the selected table row scroll into view.
-
-Opacity slider
-
-Confirmed:
-
-• On iPhone, the slider is disabled whenever isImageControlsActive is false.
-• On iPad, the same disabled state is passed to settingsPlaceholderSlider.
-• Therefore PDFs already leave the current slider disabled if the current Image-only active flag remains Image-only.
-
-Recommended Stage 4C:
-
-• Separate “file-navigation controls active” from “image opacity enabled.”
-• For PDFs:
-   • File-navigation buttons are enabled.
-   • Heading is “PDF.”
-   • Existing opacity slider stays visible but disabled and grey.
-   • The throttled opacity presentation callback must not start.
-• For Images:
-   • Preserve the current Image heading, enabled slider, throttling, persistence, and preview opacity behavior exactly.
-
-Performance and compatibility
-
-Confirmed:
-
-• Current PDF rendering is delegated to PDFKit.
-• There is no full-document rasterization or image-style async decoding.
-• Current PDFDocument(url:) construction occurs in updateUIView; large PDFs may have an initial load cost.
-
-Recommendations:
-
-• Keep rendering in PDFKit.
-• Do not decode pages per gesture update.
-• Do not retain a custom full-document page-image cache.
-• Test large image-heavy and multi-page PDFs on the iPad mini before adding caching or document reuse.
-• PDFKit and PDFView are compatible with the project’s iOS 17.6 deployment target and the five physical devices listed.
-
-Exact recommended Stage 4B scope
+A single narrow Main Screen implementation stage is feasible.
 
 Modify only:
 
-• Set_Screen.swift
-   • Add PDF-active routing to the already-approved editor placement.
-   • Add local, nonpersistent iPhone PDF editor visibility state.
-   • Reopen that editor on PDF selection, including repeat selection.
-   • Close only the PDF editor on the existing external Close button.
-   • Keep Image routes and behavior unchanged.
+• Main_ButtonBehavior.swift􀰓
+• Main_Screen.swift􀰓
+• Main_FilePreviewOverlay.swift􀰓
 
-• Set_Table.swift
-   • Remove only the PDF lower-preview rendering.
-   • Make PDF reserved preview height zero.
-   • Preserve the item count and allow the PDF list to use the reclaimed height.
-   • Preserve all non-PDF layout behavior.
+Change scope:
 
-• Set_ImgPanel.swift
-   • Convert the existing PDF preview panel from its table-specific 1.3-ratio panel into a parent-sized large PDF viewport.
-   • Retain PDFKit, black background, fitting behavior, and noninteractive initial state.
-   • Add a safe no-selection empty state.
-   • Do not add zoom, pan, or page navigation in Stage 4B.
+• Add a PDF URL case to MainScreen.PreviewedFile.
+• In openPreviewFile, route any resolved .pdf directly to that PDF case instead of calling renderedSinglePagePDFPreviewImage.
+• Add a PDFKit-backed content branch to the existing full-screen overlay.
+• Preserve the existing full-screen container, black background, and Close button.
+• Configure that PDFView for .singlePageContinuous and .vertical.
+• Set a first-page initial fit and top position once after valid bounds are available.
+• Use native PDFKit zoom, panning, and vertical page scrolling.
+• Leave text and image preview routes unchanged.
 
-Recommended stage boundaries
+The old single-page rasterization helper can then be removed or left unused only if required temporarily during the focused implementation.
 
-Stage 4B:
-• Large PDF preview in approved Image-editor placement.
-• Remove lower PDF preview and reclaim its table height.
-• Preserve PDF selection, rename, delete, import, and restoration.
-• No PDF file-navigation controls or PDF gestures yet.
+9. Performance and compatibility
 
-Stage 4C:
-• Reuse the four file-navigation controls for PDFs.
-• Show “PDF.”
-• Add PDF table navigation-scroll synchronization.
-• Keep Image opacity enabled only for Images; keep the visible PDF slider disabled.
+Using PDFKit avoids rasterizing every page into large images and is safer for multi-page/image-heavy PDFs. PDFKit performs native page rendering and supports continuous scrolling without an app-managed page cache.
 
-Stage 4D:
-• Enable native PDFKit zoom, bounded pan, and multi-page continuous scrolling.
-• Set fit scale as minimum and fit scale × 5 as maximum.
-• Verify behavior on all five physical devices.
+Physical testing should cover:
+• Large/image-heavy PDFs.
+• Password-protected or malformed PDFs.
+• Portrait, landscape, rotated, and mixed-size pages.
+• iPad mini memory and responsiveness.
+• Reopen after Close.
+• Button references after PDF rename or deletion.
 
-Decision needed before Stage 4D
-
-Choose the desired multi-page minimum-zoom behavior:
-
-• Recommended: continuous vertical page scrolling at fit scale, with native PDFKit pinch/pan.
-• Alternative: single-page presentation with an additional page-navigation design later.
-
-The recommended continuous approach requires no new page controls and keeps the four existing controls exclusively for choosing PDF files.
+The confirmed fix is PDF preview routing plus a native PDFView branch; no programmable-button command change is needed.

@@ -1,4 +1,7 @@
 
+V66.06
+settings: PDFs complete
+
 V66.05
 settings: PDFs: Nav controls: STAGE 4C
 261105 Thu 0948
