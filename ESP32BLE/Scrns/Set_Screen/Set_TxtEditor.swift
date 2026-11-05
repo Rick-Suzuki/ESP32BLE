@@ -1,6 +1,26 @@
 import SwiftUI
 import UIKit
 
+enum SettingsDocumentEditorAnimationGeometry {
+    static let coordinateSpaceName = "SettingsDocumentEditorAnimationCoordinateSpace"
+}
+
+struct SettingsEditorPreviewFramePreferenceKey: PreferenceKey {
+    static var defaultValue: CGRect = .zero
+
+    static func reduce(value: inout CGRect, nextValue: () -> CGRect) {
+        let nextFrame = nextValue()
+        guard nextFrame.width > 0, nextFrame.height > 0 else { return }
+        value = nextFrame
+    }
+}
+
+struct DedicatedDocumentEditorKeyboardLayout: Equatable {
+    let frameInWindow: CGRect
+    let dockedHeight: CGFloat
+    let isDocked: Bool
+}
+
 enum SettingsFocusField: Hashable {
     case sendText
 }
@@ -12,6 +32,8 @@ struct PlainDocumentEditor: UIViewRepresentable {
     let isReadOnly: Bool
     let onReadOnlyTap: (() -> Void)?
     let focusRequestID: UUID?
+    let initialScrollResetID: UUID?
+    let onEditingBegan: (() -> Void)?
 
     func makeCoordinator() -> Coordinator {
         Coordinator(text: $text, isFocused: $isFocused)
@@ -110,12 +132,18 @@ struct PlainDocumentEditor: UIViewRepresentable {
                 )
             }
         }
+
+        context.coordinator.resetInitialScrollPositionIfNeeded(
+            initialScrollResetID,
+            on: textView
+        )
     }
 
     final class Coordinator: NSObject, UITextViewDelegate, UIGestureRecognizerDelegate {
         var parent: PlainDocumentEditor
         private var pinchStartingFontSize: CGFloat?
         private var handledFocusRequestID: UUID?
+        private var handledInitialScrollResetID: UUID?
 
         init(text: Binding<String>, isFocused: Binding<Bool>) {
             self.parent = PlainDocumentEditor(
@@ -124,7 +152,9 @@ struct PlainDocumentEditor: UIViewRepresentable {
                 isFocused: isFocused,
                 isReadOnly: false,
                 onReadOnlyTap: nil,
-                focusRequestID: nil
+                focusRequestID: nil,
+                initialScrollResetID: nil,
+                onEditingBegan: nil
             )
         }
 
@@ -149,8 +179,10 @@ struct PlainDocumentEditor: UIViewRepresentable {
         }
 
         func textViewDidBeginEditing(_ textView: UITextView) {
-            guard !parent.isFocused else { return }
-            parent.isFocused = true
+            if !parent.isFocused {
+                parent.isFocused = true
+            }
+            parent.onEditingBegan?()
         }
 
         func textViewDidEndEditing(_ textView: UITextView) {
@@ -221,6 +253,22 @@ struct PlainDocumentEditor: UIViewRepresentable {
             handledFocusRequestID = focusRequestID
             textView.focusWhenAvailable()
         }
+
+        func resetInitialScrollPositionIfNeeded(
+            _ initialScrollResetID: UUID?,
+            on textView: NoWrapDocumentTextView
+        ) {
+            guard let initialScrollResetID,
+                  handledInitialScrollResetID != initialScrollResetID else {
+                return
+            }
+
+            handledInitialScrollResetID = initialScrollResetID
+            textView.layoutIfNeeded()
+            textView.refreshNoWrapContentSize()
+            textView.selectedRange = NSRange(location: 0, length: 0)
+            textView.setContentOffset(.zero, animated: false)
+        }
     }
 }
 
@@ -229,8 +277,18 @@ struct DedicatedDocumentEditorView: View {
     @Binding var fontSize: CGFloat
     @Binding var isFocused: Bool
     let focusRequestID: UUID?
+    let hidesTextDuringOpening: Bool
+    let showsCloseButton: Bool
+    let initialScrollResetID: UUID?
+    let onEditingBegan: () -> Void
+    let onKeyboardFrameReceived: (DedicatedDocumentEditorKeyboardLayout) -> Void
+    let onKeyboardLayoutReady: (DedicatedDocumentEditorKeyboardLayout) -> Void
     let onSaveAndClose: () -> Void
     @State private var dockedKeyboardHeight: CGFloat = 0
+    @State private var latestKeyboardLayout: DedicatedDocumentEditorKeyboardLayout?
+    @State private var editorViewportSize: CGSize = .zero
+    @State private var editorPresentationSize: CGSize = .zero
+    @State private var lastReportedKeyboardLayout: DedicatedDocumentEditorKeyboardLayout?
 
     var body: some View {
         ZStack {
@@ -245,11 +303,14 @@ struct DedicatedDocumentEditorView: View {
                         isFocused: $isFocused,
                         isReadOnly: false,
                         onReadOnlyTap: nil,
-                        focusRequestID: focusRequestID
+                        focusRequestID: focusRequestID,
+                        initialScrollResetID: initialScrollResetID,
+                        onEditingBegan: onEditingBegan
                     )
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .opacity(hidesTextDuringOpening ? 0 : 1)
 
-                    if isPad {
+                    if isPad && showsCloseButton {
                         dedicatedDocumentEditorCloseButton
                             .padding(
                                 .trailing,
@@ -266,8 +327,25 @@ struct DedicatedDocumentEditorView: View {
                     height: max(0, proxy.size.height - dockedKeyboardHeight),
                     alignment: .topLeading
                 )
+                .background {
+                    GeometryReader { viewportProxy in
+                        Color.clear
+                            .onAppear {
+                                updateEditorViewport(
+                                    viewportProxy.size,
+                                    presentationSize: proxy.size
+                                )
+                            }
+                            .onChange(of: viewportProxy.size) { _, newSize in
+                                updateEditorViewport(
+                                    newSize,
+                                    presentationSize: proxy.size
+                                )
+                            }
+                    }
+                }
                 .overlay {
-                    if !isPad {
+                    if !isPad && showsCloseButton {
                         DedicatedDocumentEditorIPhoneCloseButtonLayer(
                             onSaveAndClose: onSaveAndClose
                         )
@@ -278,11 +356,38 @@ struct DedicatedDocumentEditorView: View {
             }
 
             DedicatedDocumentEditorKeyboardObserver(
-                dockedKeyboardHeight: $dockedKeyboardHeight
+                dockedKeyboardHeight: $dockedKeyboardHeight,
+                onKeyboardFrameReceived: { layout in
+                    latestKeyboardLayout = layout
+                    onKeyboardFrameReceived(layout)
+                    reportKeyboardLayoutIfViewportIsReady()
+                }
             )
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .allowsHitTesting(false)
         }
+    }
+
+    private func updateEditorViewport(_ size: CGSize, presentationSize: CGSize) {
+        guard size.width > 0, size.height >= 0 else { return }
+        editorViewportSize = size
+        editorPresentationSize = presentationSize
+        reportKeyboardLayoutIfViewportIsReady()
+    }
+
+    private func reportKeyboardLayoutIfViewportIsReady() {
+        guard let latestKeyboardLayout,
+              latestKeyboardLayout != lastReportedKeyboardLayout,
+              editorPresentationSize.width > 0,
+              editorPresentationSize.height >= 0 else {
+            return
+        }
+
+        let expectedHeight = max(0, editorPresentationSize.height - latestKeyboardLayout.dockedHeight)
+        guard abs(editorViewportSize.height - expectedHeight) <= 1 else { return }
+
+        lastReportedKeyboardLayout = latestKeyboardLayout
+        onKeyboardLayoutReady(latestKeyboardLayout)
     }
 
     private var dedicatedDocumentEditorCloseButton: some View {
@@ -441,9 +546,13 @@ private final class PassthroughCloseButtonOverlayView: UIView {
 
 private struct DedicatedDocumentEditorKeyboardObserver: UIViewRepresentable {
     @Binding var dockedKeyboardHeight: CGFloat
+    let onKeyboardFrameReceived: (DedicatedDocumentEditorKeyboardLayout) -> Void
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(dockedKeyboardHeight: $dockedKeyboardHeight)
+        Coordinator(
+            dockedKeyboardHeight: $dockedKeyboardHeight,
+            onKeyboardFrameReceived: onKeyboardFrameReceived
+        )
     }
 
     func makeUIView(context: Context) -> KeyboardGeometryView {
@@ -458,17 +567,23 @@ private struct DedicatedDocumentEditorKeyboardObserver: UIViewRepresentable {
 
     func updateUIView(_ view: KeyboardGeometryView, context: Context) {
         context.coordinator.dockedKeyboardHeight = $dockedKeyboardHeight
+        context.coordinator.onKeyboardFrameReceived = onKeyboardFrameReceived
         context.coordinator.updateKeyboardHeight(for: view)
     }
 
     final class Coordinator {
         var dockedKeyboardHeight: Binding<CGFloat>
+        var onKeyboardFrameReceived: (DedicatedDocumentEditorKeyboardLayout) -> Void
         private weak var observerView: KeyboardGeometryView?
         private var keyboardFrameInScreen: CGRect?
         private var notificationObservers: [NSObjectProtocol] = []
 
-        init(dockedKeyboardHeight: Binding<CGFloat>) {
+        init(
+            dockedKeyboardHeight: Binding<CGFloat>,
+            onKeyboardFrameReceived: @escaping (DedicatedDocumentEditorKeyboardLayout) -> Void
+        ) {
             self.dockedKeyboardHeight = dockedKeyboardHeight
+            self.onKeyboardFrameReceived = onKeyboardFrameReceived
         }
 
         deinit {
@@ -485,7 +600,14 @@ private struct DedicatedDocumentEditorKeyboardObserver: UIViewRepresentable {
                     object: nil,
                     queue: .main
                 ) { [weak self] notification in
-                    self?.handleKeyboard(notification)
+                    self?.handleKeyboard(notification, reportsSettledFrame: false)
+                },
+                center.addObserver(
+                    forName: UIResponder.keyboardDidChangeFrameNotification,
+                    object: nil,
+                    queue: .main
+                ) { [weak self] notification in
+                    self?.handleKeyboard(notification, reportsSettledFrame: true)
                 },
                 center.addObserver(
                     forName: UIResponder.keyboardWillHideNotification,
@@ -494,11 +616,23 @@ private struct DedicatedDocumentEditorKeyboardObserver: UIViewRepresentable {
                 ) { [weak self] _ in
                     self?.keyboardFrameInScreen = nil
                     self?.updateKeyboardHeight()
+                },
+                center.addObserver(
+                    forName: UIResponder.keyboardDidHideNotification,
+                    object: nil,
+                    queue: .main
+                ) { [weak self] _ in
+                    self?.keyboardFrameInScreen = nil
+                    self?.updateKeyboardHeight()
+                    self?.reportHiddenKeyboardLayout()
                 }
             ]
         }
 
-        func updateKeyboardHeight(for view: KeyboardGeometryView? = nil) {
+        @discardableResult
+        func updateKeyboardHeight(
+            for view: KeyboardGeometryView? = nil
+        ) -> DedicatedDocumentEditorKeyboardLayout? {
             if let view {
                 observerView = view
             }
@@ -507,7 +641,7 @@ private struct DedicatedDocumentEditorKeyboardObserver: UIViewRepresentable {
                   let window = observerView.window,
                   let keyboardFrameInScreen else {
                 setDockedKeyboardHeight(0)
-                return
+                return nil
             }
 
             let keyboardFrame = observerView.convert(keyboardFrameInScreen, from: nil)
@@ -517,18 +651,42 @@ private struct DedicatedDocumentEditorKeyboardObserver: UIViewRepresentable {
             let isDockedAtBottom = abs(keyboardFrameInWindow.maxY - window.bounds.maxY) <= 1
             let keyboardHeight = max(0, visibleBounds.maxY - keyboardFrame.minY)
 
-            setDockedKeyboardHeight(
-                overlapsFullWidth && isDockedAtBottom ? keyboardHeight : 0
+            let isDocked = overlapsFullWidth && isDockedAtBottom
+            let dockedHeight = isDocked ? keyboardHeight : 0
+            setDockedKeyboardHeight(dockedHeight)
+            return DedicatedDocumentEditorKeyboardLayout(
+                frameInWindow: keyboardFrameInWindow,
+                dockedHeight: dockedHeight,
+                isDocked: isDocked
             )
         }
 
-        private func handleKeyboard(_ notification: Notification) {
+        private func handleKeyboard(
+            _ notification: Notification,
+            reportsSettledFrame: Bool
+        ) {
             guard let keyboardFrame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect else {
                 return
             }
 
             keyboardFrameInScreen = keyboardFrame
-            updateKeyboardHeight()
+            guard reportsSettledFrame,
+                  let layout = updateKeyboardHeight() else {
+                updateKeyboardHeight()
+                return
+            }
+
+            onKeyboardFrameReceived(layout)
+        }
+
+        private func reportHiddenKeyboardLayout() {
+            onKeyboardFrameReceived(
+                DedicatedDocumentEditorKeyboardLayout(
+                    frameInWindow: .zero,
+                    dockedHeight: 0,
+                    isDocked: false
+                )
+            )
         }
 
         private func setDockedKeyboardHeight(_ height: CGFloat) {
@@ -820,7 +978,9 @@ struct SettingsEditorSectionView: View {
                 isFocused: $isFocused,
                 isReadOnly: isReadOnly,
                 onReadOnlyTap: onReadOnlyTap,
-                focusRequestID: nil
+                focusRequestID: nil,
+                initialScrollResetID: nil,
+                onEditingBegan: nil
             )
 
             clipboardStatusOverlay
@@ -836,6 +996,20 @@ struct SettingsEditorSectionView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background {
+            if isReadOnly {
+                GeometryReader { proxy in
+                    Color.clear.preference(
+                        key: SettingsEditorPreviewFramePreferenceKey.self,
+                        value: proxy.frame(
+                            in: .named(
+                                SettingsDocumentEditorAnimationGeometry.coordinateSpaceName
+                            )
+                        )
+                    )
+                }
+            }
+        }
         .overlay {
             Rectangle()
                 .stroke(Color.white, lineWidth: 1)

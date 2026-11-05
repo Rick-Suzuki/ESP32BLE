@@ -301,6 +301,38 @@ struct SettingsScreen: View {
         }
     }
 
+    private enum DedicatedDocumentEditorPresentationState {
+        case viewing
+        case opening
+        case editing
+    }
+
+    // MARK: - BM:🅱️
+    // ========================================
+    // SETTINGS EDITOR OPENING ANIMATION
+    // USER-ADJUSTABLE PARAMETERS
+    // ========================================
+    // MARK: - BM:🅱️ Fractions are relative insets of the presentation bounds; timings are seconds.
+    private enum SettingsEditorOpeningAnimation {
+        static let iPhoneDestinationTopInsetFraction: CGFloat = 0
+        static let iPhoneDestinationBottomInsetFraction: CGFloat = 0.48
+        static let iPhoneDestinationLeadingInsetFraction: CGFloat = 0
+        static let iPhoneDestinationTrailingInsetFraction: CGFloat = 0
+        static let iPadDestinationTopInsetFraction: CGFloat = 0
+        static let iPadDestinationBottomInsetFraction: CGFloat = 0.44
+        static let iPadDestinationLeadingInsetFraction: CGFloat = 0
+        static let iPadDestinationTrailingInsetFraction: CGFloat = 0
+        
+		
+		static let previewFadeOutDuration: TimeInterval = 0.25
+		static let rectangleFadeInDuration: TimeInterval = 0.1
+		static let rectangleMovementDuration: TimeInterval = 0.25
+		static let finalSizeAdjustmentDuration: TimeInterval = 0.1
+		static let rectangleFadeOutDuration: TimeInterval = 0.11
+        
+		static let keyboardActivationDelay: TimeInterval = 0.05
+    }
+
     private let ttsControlColor = Color(red: 0.0, green: 0.2, blue: 0.45)
     private let defaultTextToSpeechRate = Double(AVSpeechUtteranceDefaultSpeechRate)
     private let minimumTextToSpeechPercentage = 40.0
@@ -344,6 +376,7 @@ struct SettingsScreen: View {
     let isSettingsScreenPresented: Bool
     @Binding var bleTextToSend: String
     let returnToMain: () -> Void
+    @Environment(\.scenePhase) private var scenePhase
     @State private var documentEditorText = ""
     @State private var documentEditorFontSize: CGFloat = 18
     @State private var isLoadingDocumentText = false
@@ -412,6 +445,21 @@ struct SettingsScreen: View {
     @State private var isIPhoneDocumentEditorPresented = false
     @State private var isDedicatedDocumentEditorPresented = false
     @State private var dedicatedDocumentEditorFocusRequestID: UUID?
+    @State private var dedicatedDocumentEditorPresentationState: DedicatedDocumentEditorPresentationState = .viewing
+    @State private var dedicatedDocumentEditorPreviewFrame: CGRect = .zero
+    @State private var dedicatedDocumentEditorTransitionFrame: CGRect = .zero
+    @State private var dedicatedDocumentEditorPresentationFrame: CGRect = .zero
+    @State private var dedicatedDocumentEditorDestinationFrame: CGRect = .zero
+    @State private var dedicatedDocumentEditorRectangleOpacity: Double = 0
+    @State private var dedicatedDocumentEditorOpacity: Double = 0
+    @State private var hidesDedicatedDocumentEditorText = true
+    @State private var dedicatedDocumentEditorInitialScrollResetID: UUID?
+    @State private var isDedicatedDocumentEditorOpeningAnimationComplete = false
+    @State private var isDedicatedDocumentEditorKeyboardLayoutReady = false
+    @State private var hasDedicatedDocumentEditorKeyboardFrame = false
+    @State private var hasDedicatedDocumentEditorTextInputFocus = false
+    @State private var dedicatedDocumentEditorOpeningID = UUID()
+    @State private var dedicatedDocumentEditorKeyboardFocusTask: Task<Void, Never>?
     @State private var pendingImageRenameDestinationURL: URL?
     @State private var imageNavigationScrollRequest: SettingsImageNavigationScrollRequest?
     @State private var pdfNavigationScrollRequest: SettingsPDFNavigationScrollRequest?
@@ -457,7 +505,12 @@ struct SettingsScreen: View {
                 isImageOpacitySliderEditing = false
                 synchronizeImageOpacityPresentation()
             }
+            .onChange(of: scenePhase) { _, newScenePhase in
+                guard newScenePhase != .active else { return }
+                cancelDedicatedDocumentEditorOpeningIfNeeded()
+            }
             .onChange(of: selectedDocumentName) {
+                cancelDedicatedDocumentEditorOpeningIfNeeded()
                 cancelImageOpacityPreviewUpdate()
                 isImageOpacitySliderEditing = false
                 synchronizeImageOpacityPresentation()
@@ -663,16 +716,12 @@ struct SettingsScreen: View {
                     handleSettingsBackgroundTap()
                 }
         }
-        .overlay {
-            if isDedicatedDocumentEditorPresented {
-                DedicatedDocumentEditorView(
-                    text: $documentEditorText,
-                    fontSize: $documentEditorFontSize,
-                    isFocused: $isDocumentEditorFocused,
-                    focusRequestID: dedicatedDocumentEditorFocusRequestID,
-                    onSaveAndClose: closeDedicatedDocumentEditor
-                )
-            }
+        .overlay { dedicatedDocumentEditorPresentationOverlay }
+        .coordinateSpace(
+            name: SettingsDocumentEditorAnimationGeometry.coordinateSpaceName
+        )
+        .onPreferenceChange(SettingsEditorPreviewFramePreferenceKey.self) { frame in
+            updateDedicatedDocumentEditorPreviewFrame(frame)
         }
         .sheet(
             isPresented: Binding(
@@ -739,6 +788,68 @@ struct SettingsScreen: View {
         ))
     }
 
+    private var dedicatedDocumentEditorPresentationOverlay: some View {
+        GeometryReader { proxy in
+            let presentationFrame = proxy.frame(
+                in: .named(SettingsDocumentEditorAnimationGeometry.coordinateSpaceName)
+            )
+
+            ZStack {
+                if isDedicatedDocumentEditorPresented {
+                    DedicatedDocumentEditorView(
+                        text: $documentEditorText,
+                        fontSize: $documentEditorFontSize,
+                        isFocused: $isDocumentEditorFocused,
+                        focusRequestID: dedicatedDocumentEditorFocusRequestID,
+                        hidesTextDuringOpening: hidesDedicatedDocumentEditorText,
+                        showsCloseButton: true,
+                        initialScrollResetID: dedicatedDocumentEditorInitialScrollResetID,
+                        onEditingBegan: dedicatedDocumentEditorDidBeginEditing,
+                        onKeyboardFrameReceived: dedicatedDocumentEditorReceivedKeyboardFrame,
+                        onKeyboardLayoutReady: dedicatedDocumentEditorKeyboardLayoutBecameReady,
+                        onSaveAndClose: dedicatedDocumentEditorSaveAndCloseAction
+                    )
+                    .opacity(dedicatedDocumentEditorOpacity)
+                    .onAppear {
+                        logEditorTextReveal("Editor presented")
+                        logEditorTextReveal("Text initially hidden")
+                    }
+                }
+
+                if dedicatedDocumentEditorPresentationState == .opening {
+                    Rectangle()
+                        .fill(Color.black.opacity(0.001))
+                        .contentShape(Rectangle())
+                        .onTapGesture { }
+                        .accessibilityHidden(true)
+
+                    Rectangle()
+                        .fill(Color.black)
+                        .frame(
+                            width: dedicatedDocumentEditorTransitionFrame.width,
+                            height: dedicatedDocumentEditorTransitionFrame.height
+                        )
+                        .overlay {
+                            Rectangle()
+                                .stroke(Color.white, lineWidth: 1)
+                        }
+                        .position(
+                            x: dedicatedDocumentEditorTransitionFrame.midX,
+                            y: dedicatedDocumentEditorTransitionFrame.midY
+                        )
+                        .opacity(dedicatedDocumentEditorRectangleOpacity)
+                        .accessibilityHidden(true)
+                }
+            }
+            .onAppear {
+                updateDedicatedDocumentEditorPresentationFrame(presentationFrame)
+            }
+            .onChange(of: proxy.size) { _, _ in
+                updateDedicatedDocumentEditorPresentationFrame(presentationFrame)
+            }
+        }
+    }
+
     private func requestDedicatedManualPresentation() {
         guard isPad,
               isHelpPresented,
@@ -786,6 +897,10 @@ struct SettingsScreen: View {
         shouldRestoreHelpAfterManualDismissal = false
         helpContentsRecommendation = .completeUserManual
         isHelpPresented = true
+    }
+
+    private var dedicatedDocumentEditorSaveAndCloseAction: () -> Void {
+        return { closeDedicatedDocumentEditor() }
     }
 
     private var configuredSettingsScreen: some View {
@@ -1481,17 +1596,54 @@ struct SettingsScreen: View {
 
     private var documentViewerTapAction: (() -> Void)? {
         guard isDocumentEditorListActive else { return nil }
-        return { presentDedicatedDocumentEditor() }
+        return {
+            presentDedicatedDocumentEditor()
+        }
     }
 
     private func presentDedicatedDocumentEditor() {
-        guard isDocumentEditorListActive,
-              loadedDocumentURL != nil else {
+        guard dedicatedDocumentEditorPresentationState == .viewing,
+              isDocumentEditorListActive,
+              loadedDocumentURL != nil,
+              isValidDedicatedDocumentEditorAnimationFrame(dedicatedDocumentEditorPreviewFrame),
+              isValidDedicatedDocumentEditorAnimationFrame(dedicatedDocumentEditorPresentationFrame) else {
             return
         }
 
-        dedicatedDocumentEditorFocusRequestID = UUID()
-        isDedicatedDocumentEditorPresented = true
+        let sourceFrame = dedicatedDocumentEditorPreviewFrame
+        let destinationFrame = openingAnimationDestinationFrame(
+            in: dedicatedDocumentEditorPresentationFrame
+        )
+        guard isValidDedicatedDocumentEditorAnimationFrame(destinationFrame) else {
+            return
+        }
+
+        dedicatedDocumentEditorKeyboardFocusTask?.cancel()
+        let openingID = UUID()
+
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) {
+            isDocumentEditorFocused = false
+            dedicatedDocumentEditorFocusRequestID = nil
+            dedicatedDocumentEditorOpeningID = openingID
+            dedicatedDocumentEditorTransitionFrame = sourceFrame
+            dedicatedDocumentEditorDestinationFrame = destinationFrame
+            dedicatedDocumentEditorRectangleOpacity = 0
+            dedicatedDocumentEditorOpacity = 0
+            hidesDedicatedDocumentEditorText = true
+            dedicatedDocumentEditorInitialScrollResetID = nil
+            isDedicatedDocumentEditorOpeningAnimationComplete = false
+            isDedicatedDocumentEditorKeyboardLayoutReady = false
+            hasDedicatedDocumentEditorKeyboardFrame = false
+            hasDedicatedDocumentEditorTextInputFocus = false
+            isDedicatedDocumentEditorPresented = true
+            dedicatedDocumentEditorPresentationState = .opening
+        }
+        logEditorOpeningAnimation("Preview tapped")
+        logEditorOpeningAnimation("Source rectangle captured source=\(sourceFrame)")
+        logEditorOpeningAnimation("Destination calculated destination=\(destinationFrame)")
+        beginDedicatedDocumentEditorOpeningFadeIn(openingID)
     }
 
     private func closeDedicatedDocumentEditor() {
@@ -1499,6 +1651,11 @@ struct SettingsScreen: View {
             return
         }
 
+        logEditorOpeningAnimation("Close requested")
+        logEditorTextReveal("Close requested")
+        dedicatedDocumentEditorKeyboardFocusTask?.cancel()
+        dedicatedDocumentEditorKeyboardFocusTask = nil
+        dedicatedDocumentEditorOpeningID = UUID()
         isDocumentEditorFocused = false
         UIApplication.shared.sendAction(
             #selector(UIResponder.resignFirstResponder),
@@ -1508,6 +1665,570 @@ struct SettingsScreen: View {
         )
         dedicatedDocumentEditorFocusRequestID = nil
         isDedicatedDocumentEditorPresented = false
+        dedicatedDocumentEditorPresentationState = .viewing
+        dedicatedDocumentEditorTransitionFrame = .zero
+        dedicatedDocumentEditorDestinationFrame = .zero
+        dedicatedDocumentEditorRectangleOpacity = 0
+        dedicatedDocumentEditorOpacity = 0
+        hidesDedicatedDocumentEditorText = true
+        dedicatedDocumentEditorInitialScrollResetID = nil
+        isDedicatedDocumentEditorOpeningAnimationComplete = false
+        isDedicatedDocumentEditorKeyboardLayoutReady = false
+        hasDedicatedDocumentEditorKeyboardFrame = false
+        hasDedicatedDocumentEditorTextInputFocus = false
+    }
+
+    #if false
+    private func dismissDedicatedDocumentEditorDestinationDiagnostic() {
+        guard dedicatedDocumentEditorPresentationState == .destinationPreview else {
+            return
+        }
+
+        logDedicatedDocumentEditorRectangleDiagnostic(
+            category: "close",
+            message: "diagnostic Close requested"
+        )
+
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) {
+            isDocumentEditorFocused = false
+            UIApplication.shared.sendAction(
+                #selector(UIResponder.resignFirstResponder),
+                to: nil,
+                from: nil,
+                for: nil
+            )
+            dedicatedDocumentEditorFocusRequestID = nil
+            isDedicatedDocumentEditorPresented = false
+            dedicatedDocumentEditorDestinationSurfaceFrame = .zero
+            dedicatedDocumentEditorDestinationRectangleFrame = .zero
+            dedicatedDocumentEditorKeyboardMeasurement = .unavailable
+            hasLoggedDedicatedDocumentEditorDestinationGeometry = false
+            hasLoggedMissingDedicatedDocumentEditorDestinationSurfaceFrame = false
+            hasLoggedMissingDedicatedDocumentEditorDestinationRectangleFrame = false
+            dedicatedDocumentEditorPresentationState = .viewing
+        }
+    }
+
+    private func updateDedicatedDocumentEditorPreviewFrame(_ frame: CGRect) {
+        guard isValidDedicatedDocumentEditorAnimationFrame(frame),
+              dedicatedDocumentEditorPreviewFrame != frame else {
+            return
+        }
+
+        dedicatedDocumentEditorPreviewFrame = frame
+    }
+
+    private func updateDedicatedDocumentEditorDestinationSurfaceFrame(_ frame: CGRect) {
+        guard dedicatedDocumentEditorPresentationState == .destinationPreview else {
+            return
+        }
+
+        guard isValidDedicatedDocumentEditorAnimationFrame(frame) else {
+            logDedicatedDocumentEditorDestinationGeometryAvailability()
+            return
+        }
+
+        dedicatedDocumentEditorDestinationSurfaceFrame = frame
+        logDedicatedDocumentEditorDestinationGeometryAvailability()
+        logDedicatedDocumentEditorDestinationGeometryIfReady()
+    }
+
+    private func updateDedicatedDocumentEditorDestinationRectangleFrame(_ frame: CGRect) {
+        guard dedicatedDocumentEditorPresentationState == .destinationPreview else {
+            return
+        }
+
+        guard isValidDedicatedDocumentEditorAnimationFrame(frame) else {
+            logDedicatedDocumentEditorDestinationGeometryAvailability()
+            return
+        }
+
+        dedicatedDocumentEditorDestinationRectangleFrame = frame
+        logDedicatedDocumentEditorDestinationGeometryAvailability()
+        logDedicatedDocumentEditorDestinationGeometryIfReady()
+    }
+
+    private func updateDedicatedDocumentEditorKeyboardMeasurement(
+        _ measurement: SettingsDedicatedDocumentEditorKeyboardMeasurement
+    ) {
+        guard dedicatedDocumentEditorPresentationState == .destinationPreview,
+              dedicatedDocumentEditorKeyboardMeasurement != measurement else {
+            return
+        }
+
+        dedicatedDocumentEditorKeyboardMeasurement = measurement
+        hasLoggedDedicatedDocumentEditorDestinationGeometry = false
+        logDedicatedDocumentEditorDestinationGeometryAvailability()
+        logDedicatedDocumentEditorDestinationGeometryIfReady()
+    }
+
+    private func logDedicatedDocumentEditorDestinationGeometryAvailability() {
+        guard dedicatedDocumentEditorPresentationState == .destinationPreview else {
+            return
+        }
+
+        if !isValidDedicatedDocumentEditorAnimationFrame(dedicatedDocumentEditorDestinationSurfaceFrame),
+           !hasLoggedMissingDedicatedDocumentEditorDestinationSurfaceFrame {
+            logDedicatedDocumentEditorRectangleDiagnostic(
+                category: "destination-availability",
+                message: "missing destinationSurfaceFrameNamed=\(dedicatedDocumentEditorDestinationSurfaceFrame) " +
+                    "coordinateSpace=\(SettingsDocumentEditorAnimationGeometry.coordinateSpaceName)"
+            )
+            hasLoggedMissingDedicatedDocumentEditorDestinationSurfaceFrame = true
+        }
+
+        if !isValidDedicatedDocumentEditorAnimationFrame(dedicatedDocumentEditorDestinationRectangleFrame),
+           !hasLoggedMissingDedicatedDocumentEditorDestinationRectangleFrame {
+            logDedicatedDocumentEditorRectangleDiagnostic(
+                category: "destination-availability",
+                message: "missing destinationRectangleFrameNamed=\(dedicatedDocumentEditorDestinationRectangleFrame) " +
+                    "coordinateSpace=\(SettingsDocumentEditorAnimationGeometry.coordinateSpaceName) " +
+                    "keyboardBoundary=waitingForValidatedGeometry"
+            )
+            hasLoggedMissingDedicatedDocumentEditorDestinationRectangleFrame = true
+        }
+    }
+
+    private func logDedicatedDocumentEditorDestinationGeometryIfReady() {
+        guard !hasLoggedDedicatedDocumentEditorDestinationGeometry,
+              dedicatedDocumentEditorPresentationState == .destinationPreview,
+              isValidDedicatedDocumentEditorAnimationFrame(dedicatedDocumentEditorDestinationSurfaceFrame),
+              isValidDedicatedDocumentEditorAnimationFrame(dedicatedDocumentEditorDestinationRectangleFrame),
+              let keyboardFrame = dedicatedDocumentEditorKeyboardMeasurement.frameInWindow,
+              let windowBounds = dedicatedDocumentEditorKeyboardMeasurement.windowBounds,
+              let keyboardTop = dedicatedDocumentEditorKeyboardMeasurement.keyboardTopInObserver else {
+            return
+        }
+
+        let surface = dedicatedDocumentEditorDestinationSurfaceFrame
+        let rectangle = dedicatedDocumentEditorDestinationRectangleFrame
+        let idiom = UIDevice.current.userInterfaceIdiom == .pad ? "iPad" : "iPhone"
+        logDedicatedDocumentEditorRectangleDiagnostic(
+            category: "destination-geometry",
+            message: "idiom=\(idiom) windowBounds=\(windowBounds) " +
+                "editorSurfaceFrameNamed=\(surface) " +
+                "destinationRectangleFrameNamed=\(rectangle) " +
+                "coordinateSpace=\(SettingsDocumentEditorAnimationGeometry.coordinateSpaceName) " +
+                "keyboardFrameInWindow=\(keyboardFrame) " +
+                "keyboardBoundary=\(dedicatedDocumentEditorKeyboardMeasurement.source) " +
+                "keyboardVisible=\(dedicatedDocumentEditorKeyboardMeasurement.source == .live) " +
+                "keyboardTopNamed=\(rectangle.maxY) " +
+                "keyboardTopInObserver=\(keyboardTop) " +
+                "deltaMinX=\(rectangle.minX - surface.minX) " +
+                "deltaMaxX=\(rectangle.maxX - surface.maxX) " +
+                "deltaWidth=\(rectangle.width - surface.width) " +
+                "deltaMidX=\(rectangle.midX - surface.midX) " +
+                "deltaMinY=\(rectangle.minY - surface.minY) " +
+                "deltaMaxY=\(rectangle.maxY - surface.maxY) " +
+                "deltaHeight=\(rectangle.height - surface.height) " +
+                "deltaMidY=\(rectangle.midY - surface.midY) " +
+                "topAlignmentDelta=\(rectangle.minY - surface.minY) " +
+                "bottomBoundaryDelta=0.0"
+        )
+        hasLoggedDedicatedDocumentEditorDestinationGeometry = true
+    }
+
+    private func updateDedicatedDocumentEditorDisplayedRectangleFrame(_ frame: CGRect) {
+        guard dedicatedDocumentEditorPresentationState == .opening else {
+            return
+        }
+
+        guard isValidDedicatedDocumentEditorAnimationFrame(frame) else {
+            logDedicatedDocumentEditorRectangleGeometryAvailability()
+            return
+        }
+
+        dedicatedDocumentEditorDisplayedRectangleFrame = frame
+        logDedicatedDocumentEditorRectangleGeometryAvailability()
+        logDedicatedDocumentEditorRectangleGeometryIfReady()
+    }
+
+    private func updateDedicatedDocumentEditorPresentationGeometry(
+        frame: CGRect,
+        safeAreaInsets: EdgeInsets
+    ) {
+        guard isValidDedicatedDocumentEditorAnimationFrame(frame) else {
+            logDedicatedDocumentEditorRectangleGeometryAvailability()
+            return
+        }
+
+        dedicatedDocumentEditorPresentationFrame = frame
+        dedicatedDocumentEditorPresentationSafeAreaInsets = safeAreaInsets
+        logDedicatedDocumentEditorRectangleGeometryAvailability()
+        logDedicatedDocumentEditorRectangleGeometryIfReady()
+    }
+
+    private func logDedicatedDocumentEditorRectangleGeometryAvailability() {
+        guard dedicatedDocumentEditorPresentationState == .opening else { return }
+
+        if !isValidDedicatedDocumentEditorAnimationFrame(dedicatedDocumentEditorPreviewFrame),
+           !hasLoggedMissingDedicatedDocumentEditorPreviewFrame {
+            logDedicatedDocumentEditorRectangleDiagnostic(
+                category: "availability",
+                message: "missing previewFrameNamed=\(dedicatedDocumentEditorPreviewFrame) " +
+                    "coordinateSpace=\(SettingsDocumentEditorAnimationGeometry.coordinateSpaceName)"
+            )
+            hasLoggedMissingDedicatedDocumentEditorPreviewFrame = true
+        }
+
+        if !isValidDedicatedDocumentEditorAnimationFrame(dedicatedDocumentEditorDisplayedRectangleFrame),
+           !hasLoggedMissingDedicatedDocumentEditorRectangleFrame {
+            logDedicatedDocumentEditorRectangleDiagnostic(
+                category: "availability",
+                message: "missing greyFrameNamed=\(dedicatedDocumentEditorDisplayedRectangleFrame) " +
+                    "coordinateSpace=\(SettingsDocumentEditorAnimationGeometry.coordinateSpaceName)"
+            )
+            hasLoggedMissingDedicatedDocumentEditorRectangleFrame = true
+        }
+
+        if !isValidDedicatedDocumentEditorAnimationFrame(dedicatedDocumentEditorPresentationFrame),
+           !hasLoggedMissingDedicatedDocumentEditorPresentationFrame {
+            logDedicatedDocumentEditorRectangleDiagnostic(
+                category: "availability",
+                message: "missing presentationFrameNamed=\(dedicatedDocumentEditorPresentationFrame) " +
+                    "coordinateSpace=\(SettingsDocumentEditorAnimationGeometry.coordinateSpaceName)"
+            )
+            hasLoggedMissingDedicatedDocumentEditorPresentationFrame = true
+        }
+    }
+
+    private func logDedicatedDocumentEditorRectangleDiagnostic(
+        category: String,
+        message: String
+    ) {
+        print(
+            "🐞 [EDITOR-ANIMATION-RECT] timestamp=\(Date().timeIntervalSince1970) " +
+                "category=\(category) \(message)"
+        )
+    }
+
+    private func logDedicatedDocumentEditorRectangleGeometryIfReady() {
+        guard !hasLoggedDedicatedDocumentEditorRectangleGeometry,
+              dedicatedDocumentEditorPresentationState == .opening,
+              isValidDedicatedDocumentEditorAnimationFrame(dedicatedDocumentEditorPreviewFrame),
+              isValidDedicatedDocumentEditorAnimationFrame(dedicatedDocumentEditorDisplayedRectangleFrame),
+              isValidDedicatedDocumentEditorAnimationFrame(dedicatedDocumentEditorPresentationFrame) else {
+            return
+        }
+
+        let preview = dedicatedDocumentEditorPreviewFrame
+        let rectangle = dedicatedDocumentEditorDisplayedRectangleFrame
+        let window = UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .flatMap { $0.windows }
+            .first { $0.isKeyWindow }
+        let idiom = UIDevice.current.userInterfaceIdiom == .pad ? "iPad" : "iPhone"
+        let windowBounds = window.map { String(describing: $0.bounds) } ?? "unavailable"
+        let windowSafeAreaInsets = window.map { String(describing: $0.safeAreaInsets) } ?? "unavailable"
+
+        logDedicatedDocumentEditorRectangleDiagnostic(
+            category: "geometry",
+            message: "device=\(UIDevice.current.name) idiom=\(idiom) " +
+            "windowBounds=\(windowBounds) " +
+            "windowSafeArea=\(windowSafeAreaInsets) " +
+            "presentationFrameNamed=\(dedicatedDocumentEditorPresentationFrame) " +
+            "presentationSafeArea=\(dedicatedDocumentEditorPresentationSafeAreaInsets) " +
+            "previewFrameNamed=\(preview) greyFrameNamed=\(rectangle) " +
+            "deltaMinX=\(rectangle.minX - preview.minX) " +
+            "deltaMaxX=\(rectangle.maxX - preview.maxX) " +
+            "deltaWidth=\(rectangle.width - preview.width) " +
+            "deltaMidX=\(rectangle.midX - preview.midX) " +
+            "deltaMinY=\(rectangle.minY - preview.minY) " +
+            "deltaMaxY=\(rectangle.maxY - preview.maxY) " +
+            "deltaHeight=\(rectangle.height - preview.height) " +
+            "deltaMidY=\(rectangle.midY - preview.midY)"
+        )
+        hasLoggedDedicatedDocumentEditorRectangleGeometry = true
+    }
+
+    private func cancelDedicatedDocumentEditorOpeningIfNeeded() {
+        guard dedicatedDocumentEditorPresentationState == .opening else { return }
+
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) {
+            dedicatedDocumentEditorTransitionFrame = .zero
+            dedicatedDocumentEditorDisplayedRectangleFrame = .zero
+            hasLoggedDedicatedDocumentEditorRectangleGeometry = false
+            hasLoggedMissingDedicatedDocumentEditorPreviewFrame = false
+            hasLoggedMissingDedicatedDocumentEditorRectangleFrame = false
+            hasLoggedMissingDedicatedDocumentEditorPresentationFrame = false
+            dedicatedDocumentEditorFocusRequestID = nil
+            isDedicatedDocumentEditorPresented = false
+            dedicatedDocumentEditorPresentationState = .viewing
+        }
+    }
+
+    #endif
+
+    private func openingAnimationDestinationFrame(in presentationFrame: CGRect) -> CGRect {
+        let topInset = isPad
+            ? SettingsEditorOpeningAnimation.iPadDestinationTopInsetFraction
+            : SettingsEditorOpeningAnimation.iPhoneDestinationTopInsetFraction
+        let bottomInset = isPad
+            ? SettingsEditorOpeningAnimation.iPadDestinationBottomInsetFraction
+            : SettingsEditorOpeningAnimation.iPhoneDestinationBottomInsetFraction
+        let leadingInset = isPad
+            ? SettingsEditorOpeningAnimation.iPadDestinationLeadingInsetFraction
+            : SettingsEditorOpeningAnimation.iPhoneDestinationLeadingInsetFraction
+        let trailingInset = isPad
+            ? SettingsEditorOpeningAnimation.iPadDestinationTrailingInsetFraction
+            : SettingsEditorOpeningAnimation.iPhoneDestinationTrailingInsetFraction
+        let width = presentationFrame.width * max(0, 1 - leadingInset - trailingInset)
+        let height = presentationFrame.height * max(0, 1 - topInset - bottomInset)
+
+        return CGRect(
+            x: presentationFrame.minX + (presentationFrame.width * leadingInset),
+            y: presentationFrame.minY + (presentationFrame.height * topInset),
+            width: width,
+            height: height
+        )
+    }
+
+    private func beginDedicatedDocumentEditorOpeningFadeIn(_ openingID: UUID) {
+        guard dedicatedDocumentEditorPresentationState == .opening,
+              dedicatedDocumentEditorOpeningID == openingID else {
+            return
+        }
+
+        logEditorOpeningAnimation("Fade-in started")
+        scheduleDedicatedDocumentEditorKeyboardFocus(openingID)
+        withAnimation(.easeInOut(duration: SettingsEditorOpeningAnimation.previewFadeOutDuration)) {
+            dedicatedDocumentEditorOpacity = 1
+        }
+        withAnimation(.easeInOut(duration: SettingsEditorOpeningAnimation.rectangleFadeInDuration)) {
+            dedicatedDocumentEditorRectangleOpacity = 1
+        } completion: {
+            beginDedicatedDocumentEditorExpansion(openingID)
+        }
+    }
+
+    private func beginDedicatedDocumentEditorExpansion(_ openingID: UUID) {
+        guard dedicatedDocumentEditorPresentationState == .opening,
+              dedicatedDocumentEditorOpeningID == openingID else {
+            return
+        }
+
+        logEditorOpeningAnimation("Expansion started")
+        withAnimation(.easeInOut(duration: SettingsEditorOpeningAnimation.rectangleMovementDuration)) {
+            dedicatedDocumentEditorTransitionFrame = dedicatedDocumentEditorDestinationFrame
+        } completion: {
+            beginDedicatedDocumentEditorFinalAdjustment(openingID)
+        }
+    }
+
+    private func beginDedicatedDocumentEditorFinalAdjustment(_ openingID: UUID) {
+        guard dedicatedDocumentEditorPresentationState == .opening,
+              dedicatedDocumentEditorOpeningID == openingID else {
+            return
+        }
+
+        logEditorOpeningAnimation("Final adjustment started")
+        guard SettingsEditorOpeningAnimation.finalSizeAdjustmentDuration > 0 else {
+            beginDedicatedDocumentEditorFadeOut(openingID)
+            return
+        }
+
+        withAnimation(
+            .easeInOut(duration: SettingsEditorOpeningAnimation.finalSizeAdjustmentDuration)
+        ) {
+            dedicatedDocumentEditorTransitionFrame = dedicatedDocumentEditorDestinationFrame
+        } completion: {
+            beginDedicatedDocumentEditorFadeOut(openingID)
+        }
+    }
+
+    private func beginDedicatedDocumentEditorFadeOut(_ openingID: UUID) {
+        guard dedicatedDocumentEditorPresentationState == .opening,
+              dedicatedDocumentEditorOpeningID == openingID else {
+            return
+        }
+
+        logEditorOpeningAnimation("Fade-out started")
+        withAnimation(.easeInOut(duration: SettingsEditorOpeningAnimation.rectangleFadeOutDuration)) {
+            dedicatedDocumentEditorRectangleOpacity = 0
+        } completion: {
+            completeDedicatedDocumentEditorOpening(openingID)
+        }
+    }
+
+    private func completeDedicatedDocumentEditorOpening(_ openingID: UUID) {
+        guard dedicatedDocumentEditorPresentationState == .opening,
+              dedicatedDocumentEditorOpeningID == openingID else {
+            return
+        }
+
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) {
+            dedicatedDocumentEditorTransitionFrame = .zero
+            dedicatedDocumentEditorDestinationFrame = .zero
+            dedicatedDocumentEditorRectangleOpacity = 0
+            dedicatedDocumentEditorPresentationState = .editing
+            isDedicatedDocumentEditorOpeningAnimationComplete = true
+        }
+        logEditorOpeningAnimation("Animation completed")
+        logEditorOpeningAnimation("Overlay removed")
+        logEditorTextReveal("Opening animation completed")
+        logEditorTextReveal("Grey overlay removed")
+        revealDedicatedDocumentEditorTextIfReady()
+    }
+
+    private func scheduleDedicatedDocumentEditorKeyboardFocus(_ openingID: UUID) {
+        dedicatedDocumentEditorKeyboardFocusTask?.cancel()
+        dedicatedDocumentEditorKeyboardFocusTask = Task { @MainActor in
+            if SettingsEditorOpeningAnimation.keyboardActivationDelay > 0 {
+                try? await Task.sleep(
+                    for: .seconds(SettingsEditorOpeningAnimation.keyboardActivationDelay)
+                )
+            }
+
+            guard !Task.isCancelled,
+                  dedicatedDocumentEditorPresentationState == .opening,
+                  dedicatedDocumentEditorOpeningID == openingID,
+                  isDedicatedDocumentEditorPresented else {
+                return
+            }
+
+            logEditorOpeningAnimation("Keyboard focus requested")
+            logEditorTextReveal("Keyboard focus requested")
+            dedicatedDocumentEditorFocusRequestID = UUID()
+            dedicatedDocumentEditorKeyboardFocusTask = nil
+        }
+    }
+
+    private func updateDedicatedDocumentEditorPreviewFrame(_ frame: CGRect) {
+        guard isValidDedicatedDocumentEditorAnimationFrame(frame),
+              dedicatedDocumentEditorPreviewFrame != frame else {
+            return
+        }
+
+        dedicatedDocumentEditorPreviewFrame = frame
+    }
+
+    private func updateDedicatedDocumentEditorPresentationFrame(_ frame: CGRect) {
+        guard isValidDedicatedDocumentEditorAnimationFrame(frame),
+              dedicatedDocumentEditorPresentationFrame != frame else {
+            return
+        }
+
+        dedicatedDocumentEditorPresentationFrame = frame
+    }
+
+    private func cancelDedicatedDocumentEditorOpeningIfNeeded() {
+        guard dedicatedDocumentEditorPresentationState == .opening else { return }
+
+        dedicatedDocumentEditorKeyboardFocusTask?.cancel()
+        dedicatedDocumentEditorKeyboardFocusTask = nil
+        dedicatedDocumentEditorOpeningID = UUID()
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) {
+            isDocumentEditorFocused = false
+            dedicatedDocumentEditorFocusRequestID = nil
+            dedicatedDocumentEditorTransitionFrame = .zero
+            dedicatedDocumentEditorDestinationFrame = .zero
+            dedicatedDocumentEditorRectangleOpacity = 0
+            dedicatedDocumentEditorOpacity = 0
+            hidesDedicatedDocumentEditorText = true
+            dedicatedDocumentEditorInitialScrollResetID = nil
+            isDedicatedDocumentEditorOpeningAnimationComplete = false
+            isDedicatedDocumentEditorKeyboardLayoutReady = false
+            hasDedicatedDocumentEditorKeyboardFrame = false
+            hasDedicatedDocumentEditorTextInputFocus = false
+            isDedicatedDocumentEditorPresented = false
+            dedicatedDocumentEditorPresentationState = .viewing
+        }
+    }
+
+    private func dedicatedDocumentEditorDidBeginEditing() {
+        guard isDedicatedDocumentEditorPresented,
+              dedicatedDocumentEditorPresentationState != .viewing else {
+            return
+        }
+
+        hasDedicatedDocumentEditorTextInputFocus = true
+        revealDedicatedDocumentEditorTextIfReady()
+    }
+
+    private func dedicatedDocumentEditorReceivedKeyboardFrame(
+        _ layout: DedicatedDocumentEditorKeyboardLayout
+    ) {
+        guard isDedicatedDocumentEditorPresented,
+              dedicatedDocumentEditorPresentationState != .viewing else {
+            return
+        }
+
+        hasDedicatedDocumentEditorKeyboardFrame = true
+        logEditorTextReveal(
+            "Keyboard frame received frame=\(layout.frameInWindow) docked=\(layout.isDocked)"
+        )
+    }
+
+    private func dedicatedDocumentEditorKeyboardLayoutBecameReady(
+        _ layout: DedicatedDocumentEditorKeyboardLayout
+    ) {
+        guard isDedicatedDocumentEditorPresented,
+              dedicatedDocumentEditorPresentationState != .viewing else {
+            return
+        }
+
+        isDedicatedDocumentEditorKeyboardLayoutReady = true
+        logEditorTextReveal(
+            "Keyboard layout adjustment observed frame=\(layout.frameInWindow) dockedHeight=\(layout.dockedHeight)"
+        )
+        logEditorTextReveal("Keyboard layout ready")
+        revealDedicatedDocumentEditorTextIfReady()
+    }
+
+    private func revealDedicatedDocumentEditorTextIfReady() {
+        guard isDedicatedDocumentEditorPresented,
+              dedicatedDocumentEditorPresentationState == .editing,
+              isDedicatedDocumentEditorOpeningAnimationComplete,
+              hidesDedicatedDocumentEditorText else {
+            return
+        }
+
+        if isDedicatedDocumentEditorKeyboardLayoutReady {
+            dedicatedDocumentEditorInitialScrollResetID = UUID()
+            hidesDedicatedDocumentEditorText = false
+            logEditorTextReveal("Text revealed")
+            return
+        }
+
+        guard hasDedicatedDocumentEditorTextInputFocus,
+              !hasDedicatedDocumentEditorKeyboardFrame else {
+            return
+        }
+
+        // MARK: - BM:🅱️ A first-responder callback is the event-driven fallback for hardware keyboards.
+        dedicatedDocumentEditorInitialScrollResetID = UUID()
+        hidesDedicatedDocumentEditorText = false
+        logEditorTextReveal("Fallback used: first responder active without a software keyboard frame")
+        logEditorTextReveal("Text revealed")
+    }
+
+    private func logEditorTextReveal(_ message: String) {
+        print(
+            "🐞 [EDITOR-TEXT-REVEAL] timestamp=\(Date().timeIntervalSince1970) \(message)"
+        )
+    }
+
+    private func logEditorOpeningAnimation(_ message: String) {
+        print(
+            "🐞 [EDITOR-OPEN-ANIMATION] timestamp=\(Date().timeIntervalSince1970) \(message)"
+        )
+    }
+
+    private func isValidDedicatedDocumentEditorAnimationFrame(_ frame: CGRect) -> Bool {
+        frame.origin.x.isFinite &&
+            frame.origin.y.isFinite &&
+            frame.width.isFinite &&
+            frame.height.isFinite &&
+            frame.width > 0 &&
+            frame.height > 0
     }
 
     @ViewBuilder

@@ -1,22 +1,8 @@
-🐞 [ESP-SETTINGS-GEOMETRY]
-Device: iPhone
-Orientation: landscape
-ContentView available width: 750.0
-ContentView available height: 382.0
-ContentView safe leading: 62.0
-ContentView safe trailing: 62.0
-Settings presentation: minX 0.0, maxX 750.0, width 750.0
-Settings root: minX 0.0, maxX 750.0, width 750.0
-Toolbar: minX 0.0, maxX 750.0, width 750.0
-Outer panel: available width 750.0, minX 0.0, maxX 753.7, width 753.7
-Left region: minX 0.0, maxX 583.7, width 583.7
-Available devices: minX 8.0, maxX 238.0, width 230.0
-Keyboard settings: minX 252.0, maxX 571.7, width 319.7
-File table: calculated width 170.0, minX 583.7, maxX 753.7, width 170.0
-Remaining width after table reservation: 580.0
-Right-border overflow: 3.7 points
 [BLE-CONNECT-PROBE] 🐞 t=0.000s scan stop requested reason=stop() activePeripheralUUID=nil discoveredDeviceCount=0
-API MISUSE: <CBCentralManager: 0x15a7a0dc0> can only accept this command while in the powered on state
+API MISUSE: <CBCentralManager: 0x1037488c0> can only accept this command while in the powered on state
 [BLE-CONNECT-PROBE] 🐞 t=0.000s scanning stopped
 [BLE-CONNECT-PROBE] 🐞 t=0.000s state isConnected previous=false new=false activePeripheralUUID=nil attempt=0
 non-launching port is incompatible with service identifier "com.apple.PointerUI.pointeruid.default-service"
+🐞 [EDITOR-ANIMATION-RECT] timestamp=1793874991.42023 category=tap tap received
+🐞 [EDITOR-ANIMATION-RECT] timestamp=1793874991.54732 category=destination-availability missing destinationSurfaceFrameNamed=(0.0, 0.0, 0.0, 0.0) coordinateSpace=SettingsDocumentEditorAnimationCoordinateSpace
+🐞 [EDITOR-ANIMATION-RECT] timestamp=1793874991.5473452 category=destination-geometry idiom=iPhone destinationSurfaceFrameNamed=(0.0, 0.0, 750.0, 382.0) destinationRectangleFrameNamed=(0.0, 0.0, 750.0, 382.0) coordinateSpace=SettingsDocumentEditorAnimationCoordinateSpace deltaMinX=0.0 deltaMaxX=0.0 deltaWidth=0.0 deltaMidX=0.0 deltaMinY=0.0 deltaMaxY=0.0 deltaHeight=0.0 deltaMidY=0.0
