@@ -8,10 +8,12 @@ struct SettingsKeyboardTimingSection: View {
     @Binding var keyboardTimingOffMs: Double
     @Binding var speechRecognitionAutoOffMinutes: Int
     @Binding var opacitySliderValue: Double
+    @Binding var documentEditorFontSize: CGFloat
     let imageControlButtons: AnyView
     let navigationControlsTitle: String
     let isNavigationControlsActive: Bool
     let isImageControlsActive: Bool
+    let isDocumentEditorControlsActive: Bool
     let onImageOpacityEditingChanged: (Bool) -> Void
     let isMacMode: Bool
     let isTimingControlsEnabled: Bool
@@ -240,18 +242,28 @@ struct SettingsKeyboardTimingSection: View {
             VStack(alignment: .leading, spacing: 6) {
                 imageControlButtons
 
-                Slider(
-                    value: $opacitySliderValue,
-                    in: 0...1,
-                    onEditingChanged: onImageOpacityEditingChanged
-                )
-                    .tint(
-                        isImageControlsActive ? .cyan : SettingsImageControlAppearance.disabledColor
-                    )
-                    .disabled(!isImageControlsActive)
+                navigationSlider
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 2)
+        }
+    }
+
+    @ViewBuilder
+    private var navigationSlider: some View {
+        if isDocumentEditorControlsActive {
+            Slider(value: $documentEditorFontSize, in: 10...72, step: 1)
+                .tint(.cyan)
+        } else {
+            Slider(
+                value: $opacitySliderValue,
+                in: 0...1,
+                onEditingChanged: onImageOpacityEditingChanged
+            )
+                .tint(
+                    isImageControlsActive ? .cyan : SettingsImageControlAppearance.disabledColor
+                )
+                .disabled(!isImageControlsActive)
         }
     }
 

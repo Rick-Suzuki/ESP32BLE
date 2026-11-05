@@ -1,4 +1,8 @@
 
+V66.09
+settings: font slider working
+261105 Thu 1438
+
 V66.08
 setings: txt.md.screens OK, font todo
 261105 Thu 1428

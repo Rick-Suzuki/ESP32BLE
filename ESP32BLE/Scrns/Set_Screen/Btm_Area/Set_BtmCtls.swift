@@ -9,8 +9,10 @@ struct SettingsBottomControlsSection: View {
     @Binding var isBluetoothMonitorMode: Bool
     @Binding var isStatusBarVisible: Bool
     @Binding var opacitySliderValue: Double
+    @Binding var documentEditorFontSize: CGFloat
     let imageControlButtons: AnyView
     let isImageControlsActive: Bool
+    let isDocumentEditorControlsActive: Bool
     let onImageOpacityEditingChanged: (Bool) -> Void
     let isIPhoneImageEditorPresented: Bool
     let iPhoneEditorLeadingInset: CGFloat
@@ -29,8 +31,10 @@ struct SettingsBottomControlsSection: View {
             isBluetoothMonitorMode: $isBluetoothMonitorMode,
             isStatusBarVisible: $isStatusBarVisible,
             opacitySliderValue: $opacitySliderValue,
+            documentEditorFontSize: $documentEditorFontSize,
             imageControlButtons: imageControlButtons,
             isImageControlsActive: isImageControlsActive,
+            isDocumentEditorControlsActive: isDocumentEditorControlsActive,
             onImageOpacityEditingChanged: onImageOpacityEditingChanged,
             isIPhoneImageEditorPresented: isIPhoneImageEditorPresented,
             iPhoneEditorLeadingInset: iPhoneEditorLeadingInset,

@@ -9,8 +9,10 @@ struct SettingsAvailableDevicesPanel: View {
     @Binding var isBluetoothMonitorMode: Bool
     @Binding var isStatusBarVisible: Bool
     @Binding var opacitySliderValue: Double
+    @Binding var documentEditorFontSize: CGFloat
     let imageControlButtons: AnyView
     let isImageControlsActive: Bool
+    let isDocumentEditorControlsActive: Bool
     let onImageOpacityEditingChanged: (Bool) -> Void
     let isIPhoneImageEditorPresented: Bool
     let iPhoneEditorLeadingInset: CGFloat
@@ -53,12 +55,7 @@ struct SettingsAvailableDevicesPanel: View {
 
             VStack(spacing: 12) {
                 imageControlButtons
-                settingsPlaceholderSlider(
-                    title: "opacity: 0.5",
-                    value: $opacitySliderValue,
-                    isEnabled: isImageControlsActive,
-                    onEditingChanged: onImageOpacityEditingChanged
-                )
+                navigationSlider
 				
 					HStack(spacing: 18) {
 							VStack(spacing:10) {
@@ -547,20 +544,23 @@ struct SettingsAvailableDevicesPanel: View {
         isPad ? 48 : 36
     }
 
-    private func settingsPlaceholderSlider(
-        title: String,
-        value: Binding<Double>,
-        isEnabled: Bool,
-        onEditingChanged: @escaping (Bool) -> Void
-    ) -> some View {
+    @ViewBuilder
+    private var navigationSlider: some View {
         VStack(spacing: 8) {
-            Slider(
-                value: value,
-                in: 0...1,
-                onEditingChanged: onEditingChanged
-            )
-                .tint(isEnabled ? .cyan : SettingsImageControlAppearance.disabledColor)
-                .disabled(!isEnabled)
+            if isDocumentEditorControlsActive {
+                Slider(value: $documentEditorFontSize, in: 10...72, step: 1)
+                    .tint(.cyan)
+            } else {
+                Slider(
+                    value: $opacitySliderValue,
+                    in: 0...1,
+                    onEditingChanged: onImageOpacityEditingChanged
+                )
+                    .tint(
+                        isImageControlsActive ? .cyan : SettingsImageControlAppearance.disabledColor
+                    )
+                    .disabled(!isImageControlsActive)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
