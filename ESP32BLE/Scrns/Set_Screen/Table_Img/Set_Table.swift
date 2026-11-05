@@ -8,6 +8,12 @@ struct SettingsImageNavigationScrollRequest: Equatable {
     let alignsToTop: Bool
 }
 
+struct SettingsPDFNavigationScrollRequest: Equatable {
+    let targetPath: String
+    let id: UUID
+    let alignsToTop: Bool
+}
+
 struct SettingsDocumentTableSection: View {
     enum ListMode: Hashable {
         case files
@@ -45,6 +51,7 @@ struct SettingsDocumentTableSection: View {
     @Binding var markdownScrollPositionID: String?
     @Binding var imageScrollPositionID: String?
     @Binding var imageNavigationScrollRequest: SettingsImageNavigationScrollRequest?
+    @Binding var pdfNavigationScrollRequest: SettingsPDFNavigationScrollRequest?
     @Binding var soundScrollPositionID: String?
     @Binding var pdfScrollPositionID: String?
     @Binding var templateScrollPositionID: String?
@@ -166,6 +173,9 @@ struct SettingsDocumentTableSection: View {
                     }
                     .task(id: imageNavigationScrollRequest?.id) {
                         handleImageNavigationScrollRequest(using: scrollProxy)
+                    }
+                    .task(id: pdfNavigationScrollRequest?.id) {
+                        handlePDFNavigationScrollRequest(using: scrollProxy)
                     }
 				.overlay(alignment: .top) {
                         if let tableFeedbackMessage {
@@ -518,6 +528,27 @@ struct SettingsDocumentTableSection: View {
             }
         }
         self.imageNavigationScrollRequest = nil
+    }
+
+    private func handlePDFNavigationScrollRequest(using scrollProxy: ScrollViewProxy) {
+        guard let pdfNavigationScrollRequest else {
+            return
+        }
+
+        guard listMode == .pdfs,
+              activeRowPaths.contains(pdfNavigationScrollRequest.targetPath) else {
+            self.pdfNavigationScrollRequest = nil
+            return
+        }
+
+        withAnimation(.easeInOut(duration: 0.35)) {
+            if pdfNavigationScrollRequest.alignsToTop {
+                scrollProxy.scrollTo(pdfNavigationScrollRequest.targetPath, anchor: .top)
+            } else {
+                scrollProxy.scrollTo(pdfNavigationScrollRequest.targetPath)
+            }
+        }
+        self.pdfNavigationScrollRequest = nil
     }
 
     private func documentRow(for fileURL: URL) -> some View {

@@ -322,10 +322,12 @@ private struct SettingsPDFPreviewView: UIViewRepresentable {
     final class Coordinator {
         private var fittedDocumentURL: URL?
         private var fittedViewportSize = CGSize.zero
+        private var hasPositionedInitialDocument = false
 
         func resetWidthFit() {
             fittedDocumentURL = nil
             fittedViewportSize = .zero
+            hasPositionedInitialDocument = false
         }
 
         // MARK: - BM:🅱️ IPHONE PDF INITIAL WIDTH FIT
@@ -365,6 +367,28 @@ private struct SettingsPDFPreviewView: UIViewRepresentable {
             }
             fittedDocumentURL = documentURL
             fittedViewportSize = viewportSize
+
+            positionFirstPageAtTopIfNeeded(
+                in: pdfView,
+                page: firstPage
+            )
+        }
+
+        private func positionFirstPageAtTopIfNeeded(
+            in pdfView: PDFView,
+            page: PDFPage
+        ) {
+            guard !hasPositionedInitialDocument else {
+                return
+            }
+
+            let pageBounds = page.bounds(for: pdfView.displayBox)
+            let destination = PDFDestination(
+                page: page,
+                at: CGPoint(x: pageBounds.midX, y: pageBounds.maxY)
+            )
+            pdfView.go(to: destination)
+            hasPositionedInitialDocument = true
         }
     }
 }

@@ -9,6 +9,8 @@ struct SettingsKeyboardTimingSection: View {
     @Binding var speechRecognitionAutoOffMinutes: Int
     @Binding var opacitySliderValue: Double
     let imageControlButtons: AnyView
+    let navigationControlsTitle: String
+    let isNavigationControlsActive: Bool
     let isImageControlsActive: Bool
     let onImageOpacityEditingChanged: (Bool) -> Void
     let isMacMode: Bool
@@ -228,10 +230,10 @@ struct SettingsKeyboardTimingSection: View {
 
     private var iPhoneImageControls: some View {
         HStack(spacing: 9) {
-            Text("Image")
+            Text(navigationControlsTitle)
                 .font(settingsCompactControlFont)
                 .foregroundStyle(
-                    isImageControlsActive ? .white : SettingsImageControlAppearance.disabledColor
+                    isNavigationControlsActive ? .white : SettingsImageControlAppearance.disabledColor
                 )
                 .frame(width: timingLabelWidth, alignment: .trailing)
 

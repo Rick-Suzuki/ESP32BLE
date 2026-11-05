@@ -5,7 +5,8 @@ enum SettingsImageControlAppearance {
 }
 
 struct SettingsImageControlsSection: View {
-    let isImagesActive: Bool
+    let title: String
+    let isControlsActive: Bool
     let canReset: Bool
     let canRandom: Bool
     let canGoPrevious: Bool
@@ -20,9 +21,9 @@ struct SettingsImageControlsSection: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             if isPad {
-                Text("Image")
+                Text(title)
                     .font(settingsCompactControlFont)
-                    .foregroundStyle(isImagesActive ? .white : SettingsImageControlAppearance.disabledColor)
+                    .foregroundStyle(isControlsActive ? .white : SettingsImageControlAppearance.disabledColor)
                     .lineLimit(1)
             }
 
@@ -53,7 +54,7 @@ struct SettingsImageControlsSection: View {
         .onDisappear {
             stopRepeating()
         }
-        .onChange(of: isImagesActive) { _, isActive in
+        .onChange(of: isControlsActive) { _, isActive in
             if !isActive {
                 stopRepeating()
             }
@@ -69,7 +70,7 @@ struct SettingsImageControlsSection: View {
         isEnabled: Bool = true,
         action: @escaping () -> Void
     ) -> some View {
-        let isInteractable = isImagesActive && isEnabled
+        let isInteractable = isControlsActive && isEnabled
 
         return Button {
             guard isInteractable else { return }
@@ -91,7 +92,7 @@ struct SettingsImageControlsSection: View {
         isEnabled: Bool = true,
         action: @escaping () -> Void
     ) -> some View {
-        let isInteractable = isImagesActive && isEnabled
+        let isInteractable = isControlsActive && isEnabled
 
         return Image(systemName: systemName)
             .font(.system(size: 28))
@@ -103,7 +104,7 @@ struct SettingsImageControlsSection: View {
             .simultaneousGesture(
             DragGesture(minimumDistance: 0)
                 .onChanged { _ in
-                    guard isImagesActive, isEnabled else {
+                    guard isControlsActive, isEnabled else {
                         return
                     }
                     startRepeating(action: action)
@@ -112,7 +113,7 @@ struct SettingsImageControlsSection: View {
                     let shouldTriggerTap = !hasRepeatedDuringCurrentPress
                     stopRepeating()
 
-                    guard isImagesActive, isEnabled, shouldTriggerTap else {
+                    guard isControlsActive, isEnabled, shouldTriggerTap else {
                         return
                     }
 
@@ -155,11 +156,11 @@ struct SettingsImageControlsSection: View {
     }
 
     private var controlColor: Color {
-        isImagesActive ? .cyan : SettingsImageControlAppearance.disabledColor
+        isControlsActive ? .cyan : SettingsImageControlAppearance.disabledColor
     }
 
     private func controlOpacity(isEnabled: Bool) -> Double {
-        guard isImagesActive else { return 1 }
+        guard isControlsActive else { return 1 }
         return isEnabled ? 1 : 0.35
     }
 }

@@ -1,4 +1,8 @@
 
+V66.05
+settings: PDFs: Nav controls: STAGE 4C
+261105 Thu 0948
+
 V66.04
 settings: PDFs inprog 1: STAGE 4B.2
 261105 Thu 0931

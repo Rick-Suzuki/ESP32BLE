@@ -411,6 +411,7 @@ struct SettingsScreen: View {
     @State private var isIPhonePDFPreviewPresented = false
     @State private var pendingImageRenameDestinationURL: URL?
     @State private var imageNavigationScrollRequest: SettingsImageNavigationScrollRequest?
+    @State private var pdfNavigationScrollRequest: SettingsPDFNavigationScrollRequest?
     @State private var isImagePreviewRestorePending = false
     @State private var backgroundChangeFeedbackID = UUID()
     @State private var imageOpacitySliderPosition = 0.5
@@ -1818,36 +1819,60 @@ struct SettingsScreen: View {
 
     private var imageControlButtons: some View {
         SettingsImageControlsSection(
-            isImagesActive: isImagesListActive,
-            canReset: !availableImageURLs.isEmpty,
-            canRandom: !availableImageURLs.isEmpty,
-            canGoPrevious: canPreviewPreviousImage,
-            canGoNext: canPreviewNextImage,
+            title: navigationControlsTitle,
+            isControlsActive: isFileNavigationControlsActive,
+            canReset: isPDFsListActive ? !availablePDFURLs.isEmpty : !availableImageURLs.isEmpty,
+            canRandom: isPDFsListActive ? !availablePDFURLs.isEmpty : !availableImageURLs.isEmpty,
+            canGoPrevious: isPDFsListActive ? canPreviewPreviousPDF : canPreviewPreviousImage,
+            canGoNext: isPDFsListActive ? canPreviewNextPDF : canPreviewNextImage,
             onReset: {
-                guard isImagesListActive else { return }
-                guard let firstImageURL = availableImageURLs.first else { return }
-                selectPreviewImageForNavigation(firstImageURL, alignsToTop: true, forcesScroll: true)
+                if isImagesListActive {
+                    guard let firstImageURL = availableImageURLs.first else { return }
+                    selectPreviewImageForNavigation(firstImageURL, alignsToTop: true, forcesScroll: true)
+                } else if isPDFsListActive {
+                    guard let firstPDFURL = availablePDFURLs.first else { return }
+                    selectPDFForNavigation(firstPDFURL, alignsToTop: true)
+                }
             },
             onRandom: {
-                guard isImagesListActive else { return }
-                let candidateURLs = availableImageURLs.filter { imageURL in
-                    imageURL.path != previewImageURL?.path
+                if isImagesListActive {
+                    let candidateURLs = availableImageURLs.filter { imageURL in
+                        imageURL.path != previewImageURL?.path
+                    }
+                    guard let imageURL = candidateURLs.randomElement() ?? availableImageURLs.first else { return }
+                    selectPreviewImageForNavigation(imageURL)
+                } else if isPDFsListActive {
+                    let candidateURLs = availablePDFURLs.filter { pdfURL in
+                        guard let selectedPDFURL else { return true }
+                        return pdfURL.standardizedFileURL != selectedPDFURL.standardizedFileURL
+                    }
+                    guard let pdfURL = candidateURLs.randomElement() ?? availablePDFURLs.first else { return }
+                    selectPDFForNavigation(pdfURL)
                 }
-                guard let imageURL = candidateURLs.randomElement() ?? availableImageURLs.first else { return }
-                selectPreviewImageForNavigation(imageURL)
             },
             onPrevious: {
-                guard isImagesListActive,
-                      let previewImagePosition,
-                      previewImagePosition > 1 else { return }
-                selectPreviewImageForNavigation(availableImageURLs[previewImagePosition - 2])
+                if isImagesListActive {
+                    guard let previewImagePosition,
+                          previewImagePosition > 1 else { return }
+                    selectPreviewImageForNavigation(availableImageURLs[previewImagePosition - 2])
+                } else if isPDFsListActive {
+                    guard let previewPDFPosition,
+                          previewPDFPosition > 1 else { return }
+                    selectPDFForNavigation(availablePDFURLs[previewPDFPosition - 2])
+                }
             },
             onNext: {
-                guard isImagesListActive else { return }
-                guard !availableImageURLs.isEmpty else { return }
-                let nextIndex = previewImagePosition ?? 0
-                guard availableImageURLs.indices.contains(nextIndex) else { return }
-                selectPreviewImageForNavigation(availableImageURLs[nextIndex])
+                if isImagesListActive {
+                    guard !availableImageURLs.isEmpty else { return }
+                    let nextIndex = previewImagePosition ?? 0
+                    guard availableImageURLs.indices.contains(nextIndex) else { return }
+                    selectPreviewImageForNavigation(availableImageURLs[nextIndex])
+                } else if isPDFsListActive {
+                    guard !availablePDFURLs.isEmpty else { return }
+                    let nextIndex = previewPDFPosition ?? 0
+                    guard availablePDFURLs.indices.contains(nextIndex) else { return }
+                    selectPDFForNavigation(availablePDFURLs[nextIndex])
+                }
             }
         )
     }
@@ -1869,6 +1894,14 @@ struct SettingsScreen: View {
         listMode == .pdfs
     }
 
+    private var navigationControlsTitle: String {
+        isPDFsListActive ? "PDF" : "Image"
+    }
+
+    private var isFileNavigationControlsActive: Bool {
+        isImagesListActive || isPDFsListActive
+    }
+
     private var canPreviewPreviousImage: Bool {
         guard let previewImagePosition else { return false }
         return previewImagePosition > 1
@@ -1878,6 +1911,28 @@ struct SettingsScreen: View {
         guard !availableImageURLs.isEmpty else { return false }
         guard let previewImagePosition else { return true }
         return previewImagePosition < availableImageURLs.count
+    }
+
+    private var previewPDFPosition: Int? {
+        guard let selectedPDFURL,
+              let pdfIndex = availablePDFURLs.firstIndex(where: {
+                  $0.standardizedFileURL == selectedPDFURL.standardizedFileURL
+              }) else {
+            return nil
+        }
+
+        return pdfIndex + 1
+    }
+
+    private var canPreviewPreviousPDF: Bool {
+        guard let previewPDFPosition else { return false }
+        return previewPDFPosition > 1
+    }
+
+    private var canPreviewNextPDF: Bool {
+        guard !availablePDFURLs.isEmpty else { return false }
+        guard let previewPDFPosition else { return true }
+        return previewPDFPosition < availablePDFURLs.count
     }
 
     private func selectPreviewImage(
@@ -1929,6 +1984,24 @@ struct SettingsScreen: View {
         }
         imageNavigationScrollRequest = SettingsImageNavigationScrollRequest(
             targetPath: imageURL.path,
+            id: UUID(),
+            alignsToTop: alignsToTop
+        )
+    }
+
+    private func selectPDFForNavigation(
+        _ pdfURL: URL,
+        alignsToTop: Bool = false
+    ) {
+        guard let matchingPDFURL = availablePDFURLs.first(where: {
+            $0.standardizedFileURL == pdfURL.standardizedFileURL
+        }) else {
+            return
+        }
+
+        selectPDF(matchingPDFURL)
+        pdfNavigationScrollRequest = SettingsPDFNavigationScrollRequest(
+            targetPath: matchingPDFURL.path,
             id: UUID(),
             alignsToTop: alignsToTop
         )
@@ -2061,6 +2134,7 @@ struct SettingsScreen: View {
             markdownScrollPositionID: markdownScrollPositionID,
             imageScrollPositionID: imageScrollPositionID,
             imageNavigationScrollRequest: $imageNavigationScrollRequest,
+            pdfNavigationScrollRequest: $pdfNavigationScrollRequest,
             soundScrollPositionID: soundScrollPositionID,
             pdfScrollPositionID: pdfScrollPositionID,
             templateScrollPositionID: templateScrollPositionID,
@@ -2297,6 +2371,8 @@ struct SettingsScreen: View {
             speechRecognitionAutoOffMinutes: $speechRecognitionAutoOffMinutes,
             opacitySliderValue: imageOpacitySliderBinding,
             imageControlButtons: AnyView(imageControlButtons),
+            navigationControlsTitle: navigationControlsTitle,
+            isNavigationControlsActive: isFileNavigationControlsActive,
             isImageControlsActive: isImagesListActive,
             onImageOpacityEditingChanged: handleImageOpacityEditingChanged,
             isMacMode: isMacKeyboardTestMode,
