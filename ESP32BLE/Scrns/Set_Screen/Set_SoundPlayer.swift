@@ -82,6 +82,7 @@ struct SettingsSoundPlayerView: View {
                     startPoint: .top,
                     endPoint: .bottom
                 )
+                .allowsHitTesting(false)
 
                 VStack(spacing: 8) {
                     Text(title)
@@ -160,8 +161,10 @@ struct SettingsSoundPlayerView: View {
                 .scaledToFill()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .clipped()
+                .allowsHitTesting(false)
         } else {
             Color.black
+                .allowsHitTesting(false)
         }
     }
 

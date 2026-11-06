@@ -1,4 +1,8 @@
 
+V66.14
+ipad player blocks top toolbar btns
+261106 Fri 1549
+
 V66.13
 ipad player almost complete
 261106 Fri 1330

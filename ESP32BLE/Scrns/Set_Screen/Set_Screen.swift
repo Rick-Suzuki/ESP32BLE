@@ -405,6 +405,9 @@ struct SettingsScreen: View {
     @State private var soundPlaybackDuration: TimeInterval = 0
     @State private var isSoundPreviewPlaying = false
     @State private var soundProgressTask: Task<Void, Never>?
+    @State private var soundPreparationTask: Task<Void, Never>?
+    @State private var soundPreparationRequestID = UUID()
+    @State private var soundPreparationURLPath: String?
     @State private var soundPreviewDelegate: SoundPreviewCompletionDelegate?
     @State private var soundPlaybackID: UUID?
     @State private var completedSoundPlaybackID: UUID?
@@ -557,7 +560,11 @@ struct SettingsScreen: View {
                 guard !isImageOpacitySliderEditing else { return }
                 synchronizeImageOpacityPresentation()
             }
-            .onChange(of: listMode) { _, _ in
+            .onChange(of: listMode) { previousMode, newMode in
+                if newMode == .sounds {
+                    print("🐞 \(ISO8601DateFormatter().string(from: Date())) SETTINGS ENTER SOUNDS previous=\(previousMode.rawValue)")
+                }
+
                 if !isImagesListActive {
                     cancelImageOpacityPreviewUpdate()
                     isImageOpacitySliderEditing = false
@@ -682,7 +689,9 @@ struct SettingsScreen: View {
 		//
 				HStack(spacing: 8) {
 					SettingsToolbarButton(title: "main", backgroundColor: Color.gray.opacity(0.45), minWidth: isPad ? 92 : 70, isEnabled: true) {
+				print("🐞 \(ISO8601DateFormatter().string(from: Date())) SETTINGS TOOLBAR MAIN TAP mode=\(listMode.rawValue)")
 				saveAndReturnToMain()
+				print("🐞 \(ISO8601DateFormatter().string(from: Date())) SETTINGS TOOLBAR MAIN ACTION INVOKED")
 			}
 				//
 			//----------------------------------------
@@ -1399,8 +1408,10 @@ struct SettingsScreen: View {
     }
 
     private func selectSettingsListMode(_ mode: SettingsListMode) {
+        print("🐞 \(ISO8601DateFormatter().string(from: Date())) SETTINGS TOOLBAR CATEGORY TAP current=\(listMode.rawValue) requested=\(mode.rawValue)")
         ButtonClickFeedback.playIfEnabled()
         listMode = mode
+        print("🐞 \(ISO8601DateFormatter().string(from: Date())) SETTINGS TOOLBAR CATEGORY APPLIED mode=\(listMode.rawValue)")
     }
 
     private func beginScreenImport() {
@@ -4990,11 +5001,7 @@ struct SettingsScreen: View {
 
     private func selectSound(_ soundURL: URL, shouldStartPlayback: Bool = true) {
         persistSelectedSound(soundURL)
-        guard prepareSoundPreview(from: soundURL) else { return }
-
-        if shouldStartPlayback {
-            startPreparedSoundPreview()
-        }
+        prepareSoundPreview(from: soundURL, shouldStartPlayback: shouldStartPlayback)
     }
 
     private func selectPDF(_ pdfURL: URL) {
@@ -5021,40 +5028,65 @@ struct SettingsScreen: View {
             return
         }
 
-        prepareSoundPreview(from: selectedSoundURL)
+        guard soundPreparationURLPath != selectedSoundURL.path else {
+            return
+        }
+
+        prepareSoundPreview(from: selectedSoundURL, shouldStartPlayback: false)
     }
 
-    @discardableResult
-    private func prepareSoundPreview(from soundURL: URL) -> Bool {
-        stopSoundPreviewPlayback()
+    private func prepareSoundPreview(from soundURL: URL, shouldStartPlayback: Bool) {
+        let requestID = UUID()
+        soundPreparationTask?.cancel()
+        soundPreparationTask = nil
+        soundPreparationRequestID = requestID
+        soundPreparationURLPath = soundURL.path
+        stopSoundPreviewPlayback(cancellingPendingPreparation: false)
 
-        do {
-            let player = try AVAudioPlayer(contentsOf: soundURL)
-            let playbackID = UUID()
-            let completionDelegate = SoundPreviewCompletionDelegate(
-                playbackID: playbackID,
-                completedPlaybackID: $completedSoundPlaybackID
-            )
-            player.prepareToPlay()
-            player.delegate = completionDelegate
-            soundPreviewPlayer = player
-            soundPreviewDelegate = completionDelegate
-            soundPlaybackID = playbackID
-            soundPlaybackDuration = max(player.duration, 0)
-            soundPlaybackPosition = 0
-            isSoundPreviewPlaying = false
-            hasSoundPreviewCompleted = false
-            return isSoundPreviewPrepared
-        } catch {
-            soundPreviewPlayer = nil
-            soundPreviewDelegate = nil
-            soundPlaybackID = nil
-            completedSoundPlaybackID = nil
-            soundPlaybackPosition = 0
-            soundPlaybackDuration = 0
-            isSoundPreviewPlaying = false
-            hasSoundPreviewCompleted = false
-            return false
+        print("🐞 \(ISO8601DateFormatter().string(from: Date())) SETTINGS SOUND PREPARATION REQUESTED id=\(requestID.uuidString.prefix(8)) file=\(soundURL.lastPathComponent) play=\(shouldStartPlayback)")
+
+        soundPreparationTask = Task { @MainActor [soundURL, requestID, shouldStartPlayback] in
+            do {
+                let player = try await AudioSessionOperationCoordinator.shared.prepareSettingsSoundPlayer(at: soundURL)
+
+                guard !Task.isCancelled,
+                      soundPreparationRequestID == requestID,
+                      selectedSoundURL?.standardizedFileURL == soundURL.standardizedFileURL else {
+                    print("🐞 \(ISO8601DateFormatter().string(from: Date())) SETTINGS SOUND PREPARATION SUPERSEDED id=\(requestID.uuidString.prefix(8)) file=\(soundURL.lastPathComponent)")
+                    return
+                }
+
+                let playbackID = UUID()
+                let completionDelegate = SoundPreviewCompletionDelegate(
+                    playbackID: playbackID,
+                    completedPlaybackID: $completedSoundPlaybackID
+                )
+                player.delegate = completionDelegate
+                soundPreviewPlayer = player
+                soundPreviewDelegate = completionDelegate
+                soundPlaybackID = playbackID
+                soundPlaybackDuration = max(player.duration, 0)
+                soundPlaybackPosition = 0
+                isSoundPreviewPlaying = false
+                hasSoundPreviewCompleted = false
+                soundPreparationURLPath = nil
+                soundPreparationTask = nil
+
+                print("🐞 \(ISO8601DateFormatter().string(from: Date())) SETTINGS SOUND PREPARATION INSTALLED id=\(requestID.uuidString.prefix(8)) file=\(soundURL.lastPathComponent)")
+
+                if shouldStartPlayback {
+                    startPreparedSoundPreview()
+                }
+            } catch {
+                guard soundPreparationRequestID == requestID else {
+                    print("🐞 \(ISO8601DateFormatter().string(from: Date())) SETTINGS SOUND PREPARATION SUPERSEDED id=\(requestID.uuidString.prefix(8)) file=\(soundURL.lastPathComponent)")
+                    return
+                }
+
+                soundPreparationURLPath = nil
+                soundPreparationTask = nil
+                print("🐞 \(ISO8601DateFormatter().string(from: Date())) SETTINGS SOUND PREPARATION FAILED id=\(requestID.uuidString.prefix(8)) file=\(soundURL.lastPathComponent)")
+            }
         }
     }
 
@@ -5180,7 +5212,14 @@ struct SettingsScreen: View {
         soundProgressTask = nil
     }
 
-    private func stopSoundPreviewPlayback() {
+    private func stopSoundPreviewPlayback(cancellingPendingPreparation: Bool = true) {
+        if cancellingPendingPreparation {
+            soundPreparationTask?.cancel()
+            soundPreparationTask = nil
+            soundPreparationRequestID = UUID()
+            soundPreparationURLPath = nil
+        }
+
         stopSoundProgressUpdates()
         soundPreviewPlayer?.delegate = nil
         soundPreviewPlayer?.stop()

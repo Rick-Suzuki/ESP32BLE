@@ -1,24 +1,226 @@
-Stopped before editing because the current source conflicts with the stated Stage 8B.10 starting point.
+A. Current relevant source locations
 
-Verified current state:
-• Set_SoundPlayer.swift􀰓 has Auto Start and Random only; no Repeat control or Repeat input exists.
-• The iPad left group is currently:
-   • Auto Start
-   • Random
-at lines 232-257.
-• The iPad row remains the earlier ZStack layout:
-   • left controls and time in an HStack;
-   • transport controls overlaid at centre;
-at lines 191-205.
-• The time formatter is still m:ss.hh, not the requested two-digit-minute format:
-   • lines 391-398.
-• The working tree already contains uncommitted changes in:
-   • ESP32BLE/Scrns/Set_Screen/Set_Screen.swift􀰓
-   • ESP32BLE/Scrns/Set_Screen/Set_SoundPlayer.swift􀰓
-   • ESP32BLE/codex 1.txt
+• Set_Screen.swift
+   • Completion delegate: lines 8–23.
+   • Sounds entry/restoration preparation triggers: lines 979–990 and 1005–1010.
+   • Sound selection and async preparation: lines 5002–5091.
+   • Main-actor start/restart: lines 5093–5107.
+   • Previous/Next navigation: lines 5132–5157.
+   • Play/Pause and seeking: lines 5159–5178.
+   • Progress updates: lines 5180–5208.
+   • Stop/teardown: lines 5215–5234.
+   • Natural-completion state machine: lines 5236–5255.
 
-Because the requested layout assumes an existing Repeat control and independent left/centre/Random/time regions, but the authoritative current source does not contain that Stage 8B.10 UI, I did not risk reconstructing or overwriting uncommitted work.
+• Set_SoundPlayer.swift
+   • iPad Auto Start, Repeat, transport, and Random control closures: lines 197–265.
+   • Repeat and Auto Start controls only invoke their supplied closures; they do not call AVAudioPlayer or AVAudioSession directly.
 
-No files were modified. No build, deployment, commit, or push occurred.
+• SR_Manager.swift
+   • AudioSessionOperationCoordinator: lines 198–322.
+   • Async Settings player preparation: lines 230–248.
+   • Playback-session configuration: lines 206–228.
+   • Recording-session configuration/deactivation: lines 250–290.
 
-Please confirm whether the Stage 8B.10 Repeat implementation is expected to be present in this workspace, or provide the intended current source state before I apply Stage 8B.11.
+B. Repeat + Auto Start execution trace
+
+A. Natural completion, Repeat ON, Auto Start ON
+
+1. AVAudioPlayer invokes SoundPreviewCompletionDelegate.audioPlayerDidFinishPlaying at Set_Screen.swift:17.
+2. The delegate schedules the completed playback ID onto MainActor at lines 20–22.
+3. The view’s completedSoundPlaybackID observer invokes handleNaturalSoundPlaybackCompletion at lines 545–548.
+4. The handler verifies the playback UUID, marks playback complete, and sets the displayed position to duration at lines 5236–5243.
+5. Repeat wins before Auto Start is checked:
+   • lines 5244–5246 call startPreparedSoundPreview().
+6. startPreparedSoundPreview resets currentTime to zero and calls soundPreviewPlayer.play() on MainActor at lines 5096–5105.
+
+Auto Start has no effect in this branch because Repeat returns before the Auto Start test.
+
+B. Natural completion, Repeat ON, Auto Start OFF
+
+This is the identical path. Repeat takes priority, so Auto Start is never evaluated.
+
+C. Pressing Repeat during playback
+
+The iPad Repeat button invokes onToggleRepeat at Set_SoundPlayer.swift:248–255. Its Settings host closure toggles the persisted Boolean only. No AVAudioPlayer method, preparation request, or AVAudioSession operation occurs directly from the Repeat tap.
+
+D. Pressing Play while Repeat is ON
+
+Play/Pause calls toggleSoundPreviewPlayback at Set_Screen.swift:5159–5170.
+
+• If playing: pause() runs on MainActor at line 5163.
+• If stopped or paused: startPreparedSoundPreview() runs.
+• If the track had naturally completed, hasSoundPreviewCompleted is true, so currentTime is reset and play() is called on MainActor at lines 5096–5103.
+
+Repeat being enabled does not itself change the Play button path. The relevant factor is whether the player has completed.
+
+E. Previous/Next with Auto Start ON
+
+Previous/Next call selectNavigatedSound, which selects the next URL using current ordering or Random mode, then calls selectSound with shouldStartPlayback equal to Auto Start at lines 5132–5156.
+
+With Auto Start ON:
+
+1. The selected URL is persisted.
+2. prepareSoundPreview starts a new identified request at lines 5038–5048.
+3. The coordinator creates and prepares the AVAudioPlayer off the main thread.
+4. The result is installed on MainActor only if the request and selected URL still match.
+5. The installed, already-prepared player is started at lines 5077–5079.
+
+C. Natural-completion callback behavior
+
+Verified:
+
+• Completion is accepted only for successful AVAudioPlayer completion.
+• The delegate carries a playback UUID.
+• The MainActor completion handler rejects stale callbacks whose ID no longer matches soundPlaybackID at line 5237.
+• Replacing/stopping a player clears its delegate before stop() at lines 5223–5228.
+• Completion does not itself create a second player.
+• Repeat restarts the existing completed player directly.
+• Without Repeat, Auto Start ON selects/prepares/plays the next track; Auto Start OFF leaves the completed player stopped.
+
+The completion callback is not known to be delivered on MainActor by AVFoundation. The project explicitly transfers its state handling to MainActor.
+
+D. AVAudioPlayer methods and expected execution
+
+Settings player:
+
+• prepareToPlay()
+   • SR_Manager.swift:239.
+   • Called on AudioSessionOperationCoordinator.blockingQueue, not MainActor.
+   • This is verified by the explicit queue dispatch and current diagnostic.
+
+• play()
+   • Set_Screen.swift:5103.
+   • Called by a MainActor-owned SettingsScreen path.
+   • Used for normal start, resume, completed-track restart, Repeat restart, and post-preparation Auto Start.
+
+• pause()
+   • Set_Screen.swift:5163.
+   • MainActor path.
+
+• stop()
+   • Set_Screen.swift:5225.
+   • MainActor path when replacing/removing the Settings player.
+
+• currentTime assignment
+   • Restart completed track: line 5097.
+   • Seeking: line 5175.
+   • MainActor paths.
+
+Apple’s AVAudioPlayer documentation states that:
+
+• prepareToPlay() performs setup including audio-session activation.
+• Letting a sound finish or calling stop() undoes that setup.
+• play() implicitly calls prepareToPlay() if the player is no longer prepared.
+
+This makes the completed-player play() at line 5103 the strongest remaining main-thread activation candidate.
+
+E. Audio-session coordinator interactions
+
+Verified:
+
+• AudioSessionOperationCoordinator is an actor and serializes its public operations.
+• It uses one serial blocking queue for Settings preparation and pre-iOS-27 synchronous session operations.
+• Settings preparation is serialized with the coordinator’s playback and recording configuration/deactivation operations.
+• Settings preparation itself does not directly call setCategory, setMode, or setActive. It creates AVAudioPlayer and calls prepareToPlay on the coordinator queue.
+• Settings playback start, pause, stop, seek, and natural-completion restart bypass the coordinator.
+
+Explicit AVAudioSession calls:
+
+• configurePlaybackSession:
+   • setCategory: SR_Manager.swift:215.
+   • iOS 27+ async activate: line 220.
+   • Older-iOS queued setActive(true): line 223.
+
+• configureRecordingSession:
+   • setCategory: line 259.
+   • iOS 27+ async activate: line 264.
+   • Older-iOS queued setActive(true): line 267.
+
+• deactivateRecordingSession:
+   • iOS 27+ async deactivate: line 285.
+   • Older-iOS queued setActive(false): line 288.
+
+Speech-recognition operations use this same coordinator. Settings preparation is therefore serialized with those explicit transitions, but direct Settings player.play() calls are not.
+
+F. Stage 8B.21 asynchronous preparation verification
+
+Verified:
+
+• prepareSoundPreview creates a unique request ID, cancels the previous task, records the in-flight URL, and stops/detaches the prior player at lines 5038–5045.
+• The request awaits AudioSessionOperationCoordinator.shared.prepareSettingsSoundPlayer at line 5050.
+• The coordinator dispatches AVAudioPlayer construction and prepareToPlay to its blocking queue at SR_Manager.swift:234–246.
+• The prepared player is installed on MainActor only after:
+   • cancellation check,
+   • request-ID check,
+   • current selected-URL check.
+• Superseded preparation results are not installed and do not receive a delegate.
+• The start intent remains associated with the request through shouldStartPlayback.
+• Sounds-category entry and selected-sound changes call prepareSelectedSoundPreviewIfNeeded at Set_Screen.swift:979–990 and 1005–1010.
+• Existing valid prepared players are reused; the method exits when the selected URL matches and duration is valid at lines 5024–5029.
+
+G. Possible warning sources, ranked
+
+1. High confidence: completed-player restart on MainActor.
+
+At natural completion, Repeat calls startPreparedSoundPreview, which directly calls play() on the completed player. Apple documents that completion undoes preparation and play() implicitly prepares an unprepared player. That implicit preparation can activate AVAudioSession on MainActor.
+
+This path matches the observed Repeat correlation and remains after Stage 8B.21 moved explicit preparation off-main.
+
+2. Medium confidence: manual Play after natural completion.
+
+The same startPreparedSoundPreview path is used when the user presses Play after a completed track. It has the same implicit-preparation risk, even with Repeat OFF.
+
+3. Lower confidence: audio-session state changing between background preparation and main-actor play.
+
+A newly prepared player should not need implicit preparation when play() follows immediately. However, speech recording, interruptions, or another audio subsystem could change session state in between. Source inspection does not establish that this is occurring.
+
+4. Lower confidence: MainActor stop() during player replacement.
+
+stop() is called on MainActor at line 5225. Apple documents that stop undoes preparation, but source inspection does not prove it is the direct source of the reported activation/deactivation warning.
+
+5. Low confidence: explicit coordinator activation/deactivation.
+
+Those calls are either iOS 27+ asynchronous APIs or older-iOS calls dispatched onto the blocking queue. Settings does not invoke them directly. They remain possible sources elsewhere in the app, but the supplied Repeat evidence does not point to them.
+
+H. Can the warning be attributed to Repeat with certainty?
+
+No.
+
+Repeat does not directly activate the audio session. It only exposes the completed-player restart path more frequently. The strongest supported conclusion is that Repeat causes the existing completed-player play() path to run repeatedly, and that play() may implicitly prepare/activate on MainActor after completion.
+
+A runtime backtrace is still required to attribute the exact warning to a particular AVFoundation call with certainty.
+
+I. Smallest recommended correction
+
+Do not change it in this probe.
+
+The smallest safe implementation would be to alter only the completed-track branch of startPreparedSoundPreview():
+
+• When hasSoundPreviewCompleted is true, do not reset currentTime and call play() directly.
+• Instead, reuse prepareSoundPreview for the currently selected URL with shouldStartPlayback: true.
+• Let the existing asynchronous coordinator preparation complete, install the new prepared player on MainActor, then call play() only after installation.
+
+That single shared branch covers both:
+
+• Repeat’s natural-completion restart.
+• Manual Play after a completed track.
+
+It preserves Repeat priority, Auto Start behavior, UUID protection, the single Settings-owned player model, and the Stage 8B.21 request-generation safeguards. It also avoids adding session ownership or changing session category/mode policy.
+
+For definitive confirmation before changing behavior, set symbolic breakpoints on:
+
+• -[AVAudioPlayer prepareToPlay]
+• -[AVAudioSession setActive:withOptions:error:]
+• -[AVAudioSession setActive:error:]
+
+Capture the backtrace when the warning occurs during a Repeat completion. If temporary source diagnostics are preferred, place one timestamped 🐞 print immediately before line 5103 identifying whether the start is a normal start, resume, or completed-track restart. Do not add continuous logging.
+
+J. Risks and older-iOS considerations
+
+• Repreparing a repeating track introduces a small asynchronous gap between iterations; this is the expected tradeoff for avoiding main-thread preparation.
+• If the selected file is deleted or becomes unreadable after completion, repeat should fail safely rather than starting another file.
+• The proposed correction reuses the existing coordinator fallback, so iOS 17.x remains supported without requiring iOS 27 APIs.
+• Do not modify the coordinator’s existing recording/session policy; speech-recognition ordering remains protected by its serialized gate.
+• A cancelled queued preparation can still finish its queue work, but current request-ID and selected-URL checks prevent it from installing, retaining a delegate, or starting obsolete playback.
+
+No files were modified. No build, launch, deployment, or Git operation was performed.

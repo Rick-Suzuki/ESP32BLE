@@ -227,6 +227,26 @@ actor AudioSessionOperationCoordinator {
         sessionGeneration &+= 1
     }
 
+    func prepareSettingsSoundPlayer(at soundURL: URL) async throws -> AVAudioPlayer {
+        await acquireOperation()
+        defer { releaseOperation() }
+
+        return try await withCheckedThrowingContinuation { continuation in
+            Self.blockingQueue.async {
+                do {
+                    print("🐞 \(ISO8601DateFormatter().string(from: Date())) SETTINGS SOUND PREPARATION STARTED OFF MAIN THREAD file=\(soundURL.lastPathComponent)")
+                    let player = try AVAudioPlayer(contentsOf: soundURL)
+                    guard player.prepareToPlay() else {
+                        throw AudioSessionOperationError.soundPlayerPreparationFailed
+                    }
+                    continuation.resume(returning: player)
+                } catch {
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
+    }
+
     func configureRecordingSession() async throws -> UInt64 {
         await acquireOperation()
         defer { releaseOperation() }
@@ -299,6 +319,10 @@ actor AudioSessionOperationCoordinator {
             }
         }
     }
+}
+
+private enum AudioSessionOperationError: Error {
+    case soundPlayerPreparationFailed
 }
 
 @MainActor
