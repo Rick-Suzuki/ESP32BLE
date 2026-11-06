@@ -1,4 +1,8 @@
 
+V66.12
+ipad player almost working
+261106 Fri 1304
+
 V66.11
 Basic sound player working - ipad
 261106 Fri 1152

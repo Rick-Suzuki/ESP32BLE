@@ -1,65 +1,24 @@
-1. Files modified
+Stopped before editing because the current source conflicts with the stated Stage 8B.10 starting point.
 
-• ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
-• ESP32BLE/Scrns/Set_Screen/Set_SoundPlayer.swift
+Verified current state:
+• Set_SoundPlayer.swift􀰓 has Auto Start and Random only; no Repeat control or Repeat input exists.
+• The iPad left group is currently:
+   • Auto Start
+   • Random
+at lines 232-257.
+• The iPad row remains the earlier ZStack layout:
+   • left controls and time in an HStack;
+   • transport controls overlaid at centre;
+at lines 191-205.
+• The time formatter is still m:ss.hh, not the requested two-digit-minute format:
+   • lines 391-398.
+• The working tree already contains uncommitted changes in:
+   • ESP32BLE/Scrns/Set_Screen/Set_Screen.swift􀰓
+   • ESP32BLE/Scrns/Set_Screen/Set_SoundPlayer.swift􀰓
+   • ESP32BLE/codex 1.txt
 
-2. Restored iPad Settings geometry
+Because the requested layout assumes an existing Repeat control and independent left/centre/Random/time regions, but the authoritative current source does not contain that Stage 8B.10 UI, I did not risk reconstructing or overwriting uncommitted work.
 
-The iPad left column now uses the original upper/lower sibling structure:
+No files were modified. No build, deployment, commit, or push occurred.
 
-• Sounds selects largeSoundPlayerSection as the upper content view.
-• combinedBottomPanelSection remains below it exactly once.
-• The Sound-only iPadSoundPlayerAndBottomControlsSection and its vertical .fixedSize(...) constraint were removed.
-
-This restores the pre-Sounds flexible relationship between the upper editing region and lower Settings controls. The outer HStack, toolbar, file table, and table-width logic are unchanged.
-
-3. Vertical sizing behavior
-
-Previously, Sounds forced the lower panel to intrinsic vertical sizing, changing the parent allocation.
-
-Now, Sounds follows the same flexible parent contract as Screens, Templates, MDs, Text, Images, and PDFs. The player fills only the upper area allocated by the existing Settings layout.
-
-4. Background image
-
-The iPad player uses a black base with the saved selected image as an overlay:
-
-• Aspect Fill via scaledToFill()
-• Centered crop
-• Clipped to the player rectangle
-• No image-derived frame or geometry calculation
-• Black remains when no saved image exists
-
-The existing saved-image selection and persistence are unchanged.
-
-5. Internal iPad controls
-
-The compact bottom group now contains:
-
-• Full filename with extension, centered above slider
-• Functional position slider
-• Right-aligned combined time, e.g. 0:03 of 0:09
-• Previous / Play-Pause / Next with wider 48-point spacing
-• Disabled Auto Start at lower left
-• Disabled shuffle-symbol Random button centered beneath Play/Pause
-
-The group is internally bottom-aligned and does not participate in parent sizing.
-
-6. iPhone isolation
-
-iPhone hosting geometry was not changed.
-
-usesCompactLayout == true retains the prior compact GeometryReader/ZStack presentation, spacing, controls, separate time labels, and hosting path. The new iPad arrangement is used only for usesCompactLayout == false.
-
-7. Cross-category protection
-
-Only the .sounds upper-content branch changed. All non-Sounds categories continue through their existing upper view plus the unchanged combinedBottomPanelSection.
-
-8. Build result
-
-Build succeeded for the active physical destination: iPad Air M2, iOS 27.2.
-
-No installation, launch, commit, or push was performed.
-
-9. Remaining physical-device check
-
-A visual check on iPad Air M2 is still needed to confirm final optical spacing and that the compact control stack has comfortable room on iPad mini. The code now preserves the original Settings allocation, so any remaining adjustment should be limited to internal iPad player spacing rather than parent Settings geometry.
+Please confirm whether the Stage 8B.10 Repeat implementation is expected to be present in this workspace, or provide the intended current source state before I apply Stage 8B.11.

@@ -196,7 +196,17 @@ struct SettingsDocumentTableSection: View {
                             using: scrollProxy
                         )
                     }
-				.overlay(alignment: .top) {
+                    .onChange(of: selectedSoundURL?.path) { previousPath, selectedPath in
+                        guard listMode == .sounds,
+                              selectedPath != previousPath,
+                              let selectedPath,
+                              activeRowPaths.contains(selectedPath) else {
+                            return
+                        }
+
+                        scrollProxy.scrollTo(selectedPath)
+                    }
+					.overlay(alignment: .top) {
                         if let tableFeedbackMessage {
                             Text(tableFeedbackMessage)
                                 .font(.subheadline)

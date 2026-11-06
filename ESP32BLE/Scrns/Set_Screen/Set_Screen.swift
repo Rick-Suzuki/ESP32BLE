@@ -5,6 +5,24 @@ import UniformTypeIdentifiers
 import WebKit
 
 struct SettingsScreen: View {
+    private final class SoundPreviewCompletionDelegate: NSObject, AVAudioPlayerDelegate {
+        let playbackID: UUID
+        let completedPlaybackID: Binding<UUID?>
+
+        init(playbackID: UUID, completedPlaybackID: Binding<UUID?>) {
+            self.playbackID = playbackID
+            self.completedPlaybackID = completedPlaybackID
+        }
+
+        func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
+            guard flag else { return }
+
+            Task { @MainActor [playbackID, completedPlaybackID] in
+                completedPlaybackID.wrappedValue = playbackID
+            }
+        }
+    }
+
     private enum SettingsListMode: String {
         case files
         case text
@@ -387,6 +405,10 @@ struct SettingsScreen: View {
     @State private var soundPlaybackDuration: TimeInterval = 0
     @State private var isSoundPreviewPlaying = false
     @State private var soundProgressTask: Task<Void, Never>?
+    @State private var soundPreviewDelegate: SoundPreviewCompletionDelegate?
+    @State private var soundPlaybackID: UUID?
+    @State private var completedSoundPlaybackID: UUID?
+    @State private var hasSoundPreviewCompleted = false
     @State private var loadedDocumentName = ""
     @State private var loadedDocumentURL: URL?
     @State private var savedDocumentEditorText = ""
@@ -435,6 +457,9 @@ struct SettingsScreen: View {
     @AppStorage("selectedBackgroundImagePath") var selectedImagePath = ""
     @AppStorage("selectedSoundName") var selectedSoundName = ""
     @AppStorage("selectedSoundPath") var selectedSoundPath = ""
+    @AppStorage("settingsSoundAutoStartEnabled") private var isSoundAutoStartEnabled = false
+    @AppStorage("settingsSoundRepeatEnabled") private var isSoundRepeatEnabled = false
+    @AppStorage("settingsSoundRandomEnabled") private var isSoundRandomEnabled = false
     @AppStorage("selectedPDFName") var selectedPDFName = ""
     @AppStorage("selectedPDFPath") var selectedPDFPath = ""
     @AppStorage("documentGridDimensionsData") private var documentGridDimensionsData = ""
@@ -513,6 +538,10 @@ struct SettingsScreen: View {
             .onChange(of: scenePhase) { _, newScenePhase in
                 guard newScenePhase != .active else { return }
                 cancelDedicatedDocumentEditorOpeningIfNeeded()
+            }
+            .onChange(of: completedSoundPlaybackID) { _, playbackID in
+                guard let playbackID else { return }
+                handleNaturalSoundPlaybackCompletion(playbackID: playbackID)
             }
             .onChange(of: selectedDocumentName) {
                 cancelDedicatedDocumentEditorOpeningIfNeeded()
@@ -1613,10 +1642,17 @@ struct SettingsScreen: View {
             canGoNext: canSelectNextSound,
             backgroundImageURL: selectedImageURL,
             usesCompactLayout: false,
+            isPlaybackPrepared: isSoundPreviewPrepared,
+            isAutoStartEnabled: isSoundAutoStartEnabled,
+            isRepeatEnabled: isSoundRepeatEnabled,
+            isRandomEnabled: isSoundRandomEnabled,
             onSeek: seekSoundPreview,
             onPrevious: selectPreviousSound,
             onTogglePlayback: toggleSoundPreviewPlayback,
-            onNext: selectNextSound
+            onNext: selectNextSound,
+            onSetAutoStart: { isSoundAutoStartEnabled = $0 },
+            onToggleRepeat: { isSoundRepeatEnabled.toggle() },
+            onToggleRandom: { isSoundRandomEnabled.toggle() }
         )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -1631,10 +1667,17 @@ struct SettingsScreen: View {
             canGoNext: canSelectNextSound,
             backgroundImageURL: selectedImageURL,
             usesCompactLayout: true,
+            isPlaybackPrepared: isSoundPreviewPrepared,
+            isAutoStartEnabled: isSoundAutoStartEnabled,
+            isRepeatEnabled: isSoundRepeatEnabled,
+            isRandomEnabled: isSoundRandomEnabled,
             onSeek: seekSoundPreview,
             onPrevious: selectPreviousSound,
             onTogglePlayback: toggleSoundPreviewPlayback,
-            onNext: selectNextSound
+            onNext: selectNextSound,
+            onSetAutoStart: { isSoundAutoStartEnabled = $0 },
+            onToggleRepeat: { isSoundRepeatEnabled.toggle() },
+            onToggleRandom: { isSoundRandomEnabled.toggle() }
         )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -3146,7 +3189,7 @@ struct SettingsScreen: View {
             },
             applyImageBackground: applySettingsBackground,
             deleteImage: deleteImage,
-            selectSound: selectSound,
+            selectSound: { selectSound($0) },
             deleteSound: deleteSound,
             selectPDF: selectPDF,
             deletePDF: deletePDF,
@@ -4939,9 +4982,13 @@ struct SettingsScreen: View {
         backgroundChangeFeedbackID = UUID()
     }
 
-    private func selectSound(_ soundURL: URL) {
+    private func selectSound(_ soundURL: URL, shouldStartPlayback: Bool = true) {
         persistSelectedSound(soundURL)
-        playSelectedSoundPreview(from: soundURL)
+        guard prepareSoundPreview(from: soundURL) else { return }
+
+        if shouldStartPlayback {
+            startPreparedSoundPreview()
+        }
     }
 
     private func selectPDF(_ pdfURL: URL) {
@@ -4949,22 +4996,58 @@ struct SettingsScreen: View {
         isIPhonePDFPreviewPresented = true
     }
 
-    private func playSelectedSoundPreview(from soundURL: URL) {
+    private var isSoundPreviewPrepared: Bool {
+        guard let soundPreviewPlayer else { return false }
+        return soundPreviewPlayer.duration.isFinite && soundPreviewPlayer.duration > 0
+    }
+
+    @discardableResult
+    private func prepareSoundPreview(from soundURL: URL) -> Bool {
         stopSoundPreviewPlayback()
 
         do {
             let player = try AVAudioPlayer(contentsOf: soundURL)
+            let playbackID = UUID()
+            let completionDelegate = SoundPreviewCompletionDelegate(
+                playbackID: playbackID,
+                completedPlaybackID: $completedSoundPlaybackID
+            )
             player.prepareToPlay()
+            player.delegate = completionDelegate
             soundPreviewPlayer = player
+            soundPreviewDelegate = completionDelegate
+            soundPlaybackID = playbackID
             soundPlaybackDuration = max(player.duration, 0)
             soundPlaybackPosition = 0
-            isSoundPreviewPlaying = player.play()
-            startSoundProgressUpdates()
+            isSoundPreviewPlaying = false
+            hasSoundPreviewCompleted = false
+            return isSoundPreviewPrepared
         } catch {
             soundPreviewPlayer = nil
+            soundPreviewDelegate = nil
+            soundPlaybackID = nil
+            completedSoundPlaybackID = nil
             soundPlaybackPosition = 0
             soundPlaybackDuration = 0
             isSoundPreviewPlaying = false
+            hasSoundPreviewCompleted = false
+            return false
+        }
+    }
+
+    private func startPreparedSoundPreview() {
+        guard let soundPreviewPlayer else { return }
+
+        if hasSoundPreviewCompleted {
+            soundPreviewPlayer.currentTime = 0
+            soundPlaybackPosition = 0
+            hasSoundPreviewCompleted = false
+            completedSoundPlaybackID = nil
+        }
+
+        isSoundPreviewPlaying = soundPreviewPlayer.play()
+        if isSoundPreviewPlaying {
+            startSoundProgressUpdates()
         }
     }
 
@@ -4974,29 +5057,48 @@ struct SettingsScreen: View {
     }
 
     private var canSelectPreviousSound: Bool {
+        if isSoundRandomEnabled {
+            return !availableSoundURLs.isEmpty
+        }
+
         guard let selectedSoundIndex else { return false }
         return selectedSoundIndex > availableSoundURLs.startIndex
     }
 
     private var canSelectNextSound: Bool {
+        if isSoundRandomEnabled {
+            return !availableSoundURLs.isEmpty
+        }
+
         guard let selectedSoundIndex else { return false }
         return selectedSoundIndex < availableSoundURLs.index(before: availableSoundURLs.endIndex)
     }
 
     private func selectPreviousSound() {
-        guard let selectedSoundIndex,
-              selectedSoundIndex > availableSoundURLs.startIndex else {
-            return
-        }
-        selectSound(availableSoundURLs[selectedSoundIndex - 1])
+        selectNavigatedSound(direction: -1)
     }
 
     private func selectNextSound() {
-        guard let selectedSoundIndex,
-              selectedSoundIndex < availableSoundURLs.index(before: availableSoundURLs.endIndex) else {
-            return
+        selectNavigatedSound(direction: 1)
+    }
+
+    private func selectNavigatedSound(direction: Int) {
+        guard let soundURL = navigationSoundURL(direction: direction) else { return }
+        selectSound(soundURL, shouldStartPlayback: isSoundAutoStartEnabled)
+    }
+
+    private func navigationSoundURL(direction: Int) -> URL? {
+        guard !availableSoundURLs.isEmpty else { return nil }
+
+        if isSoundRandomEnabled {
+            let candidates = availableSoundURLs.filter { $0.path != selectedSoundURL?.path }
+            return (candidates.isEmpty ? availableSoundURLs : candidates).randomElement()
         }
-        selectSound(availableSoundURLs[selectedSoundIndex + 1])
+
+        guard let selectedSoundIndex else { return nil }
+        let targetIndex = selectedSoundIndex + direction
+        guard availableSoundURLs.indices.contains(targetIndex) else { return nil }
+        return availableSoundURLs[targetIndex]
     }
 
     private func toggleSoundPreviewPlayback() {
@@ -5009,11 +5111,7 @@ struct SettingsScreen: View {
             return
         }
 
-        if soundPreviewPlayer.currentTime >= soundPreviewPlayer.duration {
-            soundPreviewPlayer.currentTime = 0
-        }
-        isSoundPreviewPlaying = soundPreviewPlayer.play()
-        startSoundProgressUpdates()
+        startPreparedSoundPreview()
     }
 
     private func seekSoundPreview(to position: TimeInterval) {
@@ -5021,6 +5119,7 @@ struct SettingsScreen: View {
         let clampedPosition = min(max(position, 0), max(soundPreviewPlayer.duration, 0))
         soundPreviewPlayer.currentTime = clampedPosition
         soundPlaybackPosition = clampedPosition
+        hasSoundPreviewCompleted = false
     }
 
     private func startSoundProgressUpdates() {
@@ -5032,7 +5131,7 @@ struct SettingsScreen: View {
                 guard soundPreviewPlayer != nil else { break }
 
                 do {
-                    try await Task.sleep(for: .milliseconds(250))
+                    try await Task.sleep(for: .milliseconds(100))
                 } catch {
                     break
                 }
@@ -5060,11 +5159,37 @@ struct SettingsScreen: View {
 
     private func stopSoundPreviewPlayback() {
         stopSoundProgressUpdates()
+        soundPreviewPlayer?.delegate = nil
         soundPreviewPlayer?.stop()
         soundPreviewPlayer = nil
+        soundPreviewDelegate = nil
+        soundPlaybackID = nil
+        completedSoundPlaybackID = nil
         soundPlaybackPosition = 0
         soundPlaybackDuration = 0
         isSoundPreviewPlaying = false
+        hasSoundPreviewCompleted = false
+    }
+
+    private func handleNaturalSoundPlaybackCompletion(playbackID: UUID) {
+        guard playbackID == soundPlaybackID else { return }
+
+        stopSoundProgressUpdates()
+        isSoundPreviewPlaying = false
+        soundPlaybackPosition = soundPlaybackDuration
+        hasSoundPreviewCompleted = true
+
+        if isSoundRepeatEnabled, isSoundPreviewPrepared {
+            startPreparedSoundPreview()
+            return
+        }
+
+        guard isSoundAutoStartEnabled,
+              let nextSoundURL = navigationSoundURL(direction: 1) else {
+            return
+        }
+
+        selectSound(nextSoundURL, shouldStartPlayback: true)
     }
 
     private enum RenameableDocumentKind {

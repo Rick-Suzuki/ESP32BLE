@@ -10,10 +10,17 @@ struct SettingsSoundPlayerView: View {
     let canGoNext: Bool
     let backgroundImageURL: URL?
     let usesCompactLayout: Bool
+    let isPlaybackPrepared: Bool
+    let isAutoStartEnabled: Bool
+    let isRepeatEnabled: Bool
+    let isRandomEnabled: Bool
     let onSeek: (TimeInterval) -> Void
     let onPrevious: () -> Void
     let onTogglePlayback: () -> Void
     let onNext: () -> Void
+    let onSetAutoStart: (Bool) -> Void
+    let onToggleRepeat: () -> Void
+    let onToggleRandom: () -> Void
 
     @State private var sliderPosition: TimeInterval = 0
     @State private var isSeeking = false
@@ -36,7 +43,7 @@ struct SettingsSoundPlayerView: View {
     }
 
     private var canControlPlayback: Bool {
-        safeDuration > 0
+        isPlaybackPrepared && safeDuration > 0
     }
 
     var body: some View {
@@ -134,10 +141,15 @@ struct SettingsSoundPlayerView: View {
                 .allowsHitTesting(false)
             }
             .overlay(alignment: .bottom) {
-                playerControls
+                iPadPlayerControls
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .clipped()
+            .overlay {
+                Rectangle()
+                    .stroke(Color.white, lineWidth: 1)
+                    .allowsHitTesting(false)
+            }
     }
 
     @ViewBuilder
@@ -151,11 +163,6 @@ struct SettingsSoundPlayerView: View {
         } else {
             Color.black
         }
-    }
-
-    @ViewBuilder
-    private var playerControls: some View {
-        iPadPlayerControls
     }
 
     private var iPadPlayerControls: some View {
@@ -177,25 +184,162 @@ struct SettingsSoundPlayerView: View {
             .accessibilityLabel("Playback position")
             .accessibilityValue("\(formattedTime(sliderPosition)) of \(formattedTime(safeDuration))")
 
-            Text("\(formattedTime(sliderPosition)) of \(formattedTime(safeDuration))")
-                .font(timeFont)
-                .foregroundStyle(.white.opacity(0.9))
-                .frame(maxWidth: .infinity, alignment: .trailing)
-
-            transportControls(spacing: 48)
-
-            ZStack {
-                HStack {
-                    disabledFeatureButton(title: "Auto Start", systemName: "arrow.right.circle")
-                    Spacer(minLength: 0)
-                }
-
-                disabledRandomButton
-            }
+            iPadControlRow
         }
         .padding(.horizontal, 22)
         .padding(.top, 12)
         .padding(.bottom, 14)
+    }
+
+    private var iPadControlRow: some View {
+        GeometryReader { geometry in
+            let metrics = iPadControlMetrics(for: geometry.size.width)
+            let sideWidth = max(
+                0,
+                (geometry.size.width - metrics.transportWidth - metrics.transportClearance) / 2
+            )
+
+            ZStack {
+                HStack(spacing: 0) {
+                    iPadAutoStartControl(metrics: metrics)
+                        .frame(width: sideWidth, alignment: .leading)
+
+                    Color.clear
+                        .frame(width: metrics.transportWidth + metrics.transportClearance)
+
+                    iPadRightControls(metrics: metrics)
+                        .frame(width: sideWidth, alignment: .trailing)
+                }
+
+                HStack {
+                    iPadRepeatControl(metrics: metrics)
+                        .frame(width: sideWidth, alignment: .trailing)
+                    Spacer(minLength: 0)
+                }
+
+                iPadTransportControls(metrics: metrics)
+            }
+        }
+        .frame(height: controlSize * 1.28)
+    }
+
+    private func iPadTransportControls(metrics: IPadControlMetrics) -> some View {
+        HStack(spacing: metrics.transportSpacing) {
+            iPadTransportButton(
+                systemName: "backward.end.fill",
+                accessibilityLabel: "Previous sound",
+                isEnabled: canGoPrevious,
+                size: metrics.transportButtonSize,
+                action: onPrevious
+            )
+
+            iPadTransportButton(
+                systemName: isPlaying ? "pause.fill" : "play.fill",
+                accessibilityLabel: isPlaying ? "Pause" : "Play",
+                isEnabled: canControlPlayback,
+                size: metrics.transportButtonSize,
+                action: onTogglePlayback
+            )
+
+            iPadTransportButton(
+                systemName: "forward.end.fill",
+                accessibilityLabel: "Next sound",
+                isEnabled: canGoNext,
+                size: metrics.transportButtonSize,
+                action: onNext
+            )
+        }
+    }
+
+    private func iPadAutoStartControl(metrics: IPadControlMetrics) -> some View {
+        HStack(spacing: 6) {
+            Text("Auto Start")
+                .font(metrics.modeLabelFont)
+                .foregroundStyle(.white.opacity(0.9))
+
+            Toggle("Auto Start", isOn: Binding(
+                get: { isAutoStartEnabled },
+                set: onSetAutoStart
+            ))
+            .labelsHidden()
+            .toggleStyle(.switch)
+            .tint(.cyan)
+            .scaleEffect(metrics.autoStartScale)
+            .accessibilityLabel("Auto Start")
+        }
+    }
+
+    private func iPadRepeatControl(metrics: IPadControlMetrics) -> some View {
+        iPadModeButton(
+            systemName: "repeat",
+            accessibilityLabel: "Repeat playback",
+            isEnabled: isRepeatEnabled,
+            size: metrics.transportButtonSize,
+            action: onToggleRepeat
+        )
+    }
+
+    private func iPadRightControls(metrics: IPadControlMetrics) -> some View {
+        HStack(spacing: metrics.randomTimeSpacing) {
+            iPadModeButton(
+                systemName: "shuffle",
+                accessibilityLabel: "Random playback",
+                isEnabled: isRandomEnabled,
+                size: metrics.transportButtonSize,
+                action: onToggleRandom
+            )
+
+            Text("\(formattedTimeWithHundredths(sliderPosition)) of \(formattedTimeWithHundredths(safeDuration))")
+                .font(.system(size: 18, weight: .medium, design: .monospaced))
+                .foregroundStyle(.white.opacity(0.9))
+                .lineLimit(1)
+                .minimumScaleFactor(0.65)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+        }
+    }
+
+    private func iPadModeButton(
+        systemName: String,
+        accessibilityLabel: String,
+        isEnabled: Bool,
+        size: CGFloat,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Image(systemName: systemName)
+                .font(.system(size: size * 0.4, weight: .semibold))
+                .foregroundStyle(isEnabled ? Color.black : Color.white.opacity(0.85))
+                .frame(width: size, height: size)
+                .background(
+                    isEnabled ? Color.cyan : Color.black.opacity(0.42),
+                    in: Circle()
+                )
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(accessibilityLabel)
+        .accessibilityValue(isEnabled ? "On" : "Off")
+    }
+
+    private func iPadTransportButton(
+        systemName: String,
+        accessibilityLabel: String,
+        isEnabled: Bool,
+        size: CGFloat,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button {
+            guard isEnabled else { return }
+            action()
+        } label: {
+            Image(systemName: systemName)
+                .font(.system(size: size * 0.4, weight: .semibold))
+                .foregroundStyle(isEnabled ? Color.white : Color.white.opacity(0.35))
+                .frame(width: size, height: size)
+                .background(Color.white.opacity(0.16), in: Circle())
+        }
+        .buttonStyle(.plain)
+        .disabled(!isEnabled)
+        .accessibilityLabel(accessibilityLabel)
     }
 
     private func transportControls(spacing: CGFloat) -> some View {
@@ -306,5 +450,49 @@ struct SettingsSoundPlayerView: View {
         guard time.isFinite, time > 0 else { return "0:00" }
         let totalSeconds = Int(time.rounded(.down))
         return String(format: "%d:%02d", totalSeconds / 60, totalSeconds % 60)
+    }
+
+    private func formattedTimeWithHundredths(_ time: TimeInterval) -> String {
+        guard time.isFinite, time > 0 else { return "00:00.00" }
+        let totalHundredths = Int((time * 100).rounded(.down))
+        let minutes = totalHundredths / 6_000
+        let seconds = (totalHundredths / 100) % 60
+        let hundredths = totalHundredths % 100
+        return String(format: "%02d:%02d.%02d", minutes, seconds, hundredths)
+    }
+
+    private struct IPadControlMetrics {
+        let autoStartScale: CGFloat
+        let modeLabelFont: Font
+        let transportButtonSize: CGFloat
+        let transportSpacing: CGFloat
+        let transportClearance: CGFloat
+        let randomTimeSpacing: CGFloat
+
+        var transportWidth: CGFloat {
+            (transportButtonSize * 3) + (transportSpacing * 2)
+        }
+    }
+
+    private func iPadControlMetrics(for width: CGFloat) -> IPadControlMetrics {
+        if width < 640 {
+            return IPadControlMetrics(
+                autoStartScale: 0.9,
+                modeLabelFont: .caption.weight(.medium),
+                transportButtonSize: 42,
+                transportSpacing: 10,
+                transportClearance: 28,
+                randomTimeSpacing: 6
+            )
+        }
+
+        return IPadControlMetrics(
+            autoStartScale: 1.0,
+            modeLabelFont: .callout.weight(.medium),
+            transportButtonSize: 48,
+            transportSpacing: 14,
+            transportClearance: 36,
+            randomTimeSpacing: 10
+        )
     }
 }
