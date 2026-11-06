@@ -1,4 +1,7 @@
 
+V66.16
+sound player stops when main or another catagory
+
 V66.15
 sound player, warning msgs
 261106 Fri 1556

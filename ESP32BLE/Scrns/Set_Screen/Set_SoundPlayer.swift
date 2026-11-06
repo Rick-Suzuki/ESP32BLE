@@ -1,11 +1,18 @@
 import SwiftUI
 import UIKit
+import Observation
+
+@Observable
+@MainActor
+final class SettingsSoundPlaybackPresentation {
+    var position: TimeInterval = 0
+    var duration: TimeInterval = 0
+    var isPlaying = false
+}
 
 struct SettingsSoundPlayerView: View {
     let title: String
-    let playbackPosition: TimeInterval
-    let duration: TimeInterval
-    let isPlaying: Bool
+    let playbackPresentation: SettingsSoundPlaybackPresentation
     let canGoPrevious: Bool
     let canGoNext: Bool
     let backgroundImageURL: URL?
@@ -39,7 +46,7 @@ struct SettingsSoundPlayerView: View {
     }
 
     private var safeDuration: TimeInterval {
-        duration.isFinite && duration > 0 ? duration : 0
+        playbackPresentation.duration.isFinite && playbackPresentation.duration > 0 ? playbackPresentation.duration : 0
     }
 
     private var canControlPlayback: Bool {
@@ -58,9 +65,9 @@ struct SettingsSoundPlayerView: View {
             backgroundImage = backgroundImageURL.flatMap { UIImage(contentsOfFile: $0.path) }
         }
         .onAppear {
-            sliderPosition = clampedPosition(playbackPosition)
+            sliderPosition = clampedPosition(playbackPresentation.position)
         }
-        .onChange(of: playbackPosition) { _, newPosition in
+        .onChange(of: playbackPresentation.position) { _, newPosition in
             guard !isSeeking else { return }
             sliderPosition = clampedPosition(newPosition)
         }
@@ -220,8 +227,8 @@ struct SettingsSoundPlayerView: View {
             )
 
             iPadTransportButton(
-                systemName: isPlaying ? "pause.fill" : "play.fill",
-                accessibilityLabel: isPlaying ? "Pause" : "Play",
+                systemName: playbackPresentation.isPlaying ? "pause.fill" : "play.fill",
+                accessibilityLabel: playbackPresentation.isPlaying ? "Pause" : "Play",
                 isEnabled: canControlPlayback,
                 size: metrics.transportButtonSize,
                 action: onTogglePlayback
@@ -327,8 +334,8 @@ struct SettingsSoundPlayerView: View {
             )
 
             playerButton(
-                systemName: isPlaying ? "pause.fill" : "play.fill",
-                accessibilityLabel: isPlaying ? "Pause" : "Play",
+                systemName: playbackPresentation.isPlaying ? "pause.fill" : "play.fill",
+                accessibilityLabel: playbackPresentation.isPlaying ? "Pause" : "Play",
                 isEnabled: canControlPlayback,
                 isPrimary: true,
                 action: onTogglePlayback

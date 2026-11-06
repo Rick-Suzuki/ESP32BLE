@@ -1,27 +1,35 @@
-No source changes made.
-
-The current implementation already attaches the diagnostic rectangle directly to the destination PlainDocumentEditor in Set_TxtEditor.swift.
-
-Confirmed source facts:
-
-• DedicatedDocumentEditorView creates the dedicated editor at lines 271–323.
-• Its available editor region is explicitly sized to the full presentation viewport at lines 301–305.
-• The destination diagnostic PlainDocumentEditor is explicitly expanded with .frame(maxWidth: .infinity, maxHeight: .infinity) at line 336.
-• The grey overlay is attached directly to that same view at lines 349–368.
-• The normal editor uses the same full-size expansion at line 379.
-• The only existing bordered “editor box” is the read-only SettingsEditorSectionView at lines 899–952; it is not used by the dedicated editor.
-
-This exactly explains the iPhone 17 runtime values:
-
-• destination surface: (0, 0, 750, 382)
-• destination rectangle: (0, 0, 750, 382)
-
-The rectangle is correctly inheriting its immediate view’s geometry. There is no smaller dedicated text-editor box “near the top” defined in the current source to attach it to.
-
-Changing the diagnostic rectangle alone cannot produce the requested smaller rectangle without inventing a new destination frame or changing the dedicated editor’s layout, both of which the stage explicitly prohibits. I therefore did not add a guessed frame, offset, safe-area adjustment, or a second coordinate system.
-
-The verified source rectangle and its coordinate-space correction remain untouched. The iPhone UIKit Close button, iPad Close button, keyboard suppression in diagnostic mode, saving, scrolling, and normal editor geometry remain unchanged.
-
-Build result: successful for the active physical-device scheme.
-								
-								To continue safely, I need authorization to define the intended dedicated editor-box bounds (or a visual reference identifying its four edges).
+Decomposition of 'bounds' was requested on layer (delegate UIViewInProcessLayerAnimationCoordinator) while a composite animation is already running on it. Enable decomposition for all
+animations running simultaneously on this layer.
+Decomposition of 'position' was requested on layer (delegate UIViewInProcessLayerAnimationCoordinator) while a composite animation is already running on it. Enable decomposition for all
+animations running simultaneously on this layer.
+Decomposition of 'bounds' was requested on layer (delegate UIViewInProcessLayerAnimationCoordinator) while a composite animation is already running on it. Enable decomposition for all
+animations running simultaneously on this layer.
+Decomposition of 'position' was requested on layer (delegate UIViewInProcessLayerAnimationCoordinator) while a composite animation is already running on it. Enable decomposition for all
+animations running simultaneously on this layer.
+🐞 2026-11-06T07:21:42Z SETTINGS TOOLBAR CATEGORY TAP current=images requested=sounds
+🐞 2026-11-06T07:21:42Z SETTINGS TOOLBAR CATEGORY APPLIED mode=sounds
+Decomposition of 'bounds' was requested on layer (delegate UIViewInProcessLayerAnimationCoordinator) while a composite animation is already running on it. Enable decomposition for all
+animations running simultaneously on this layer.
+Decomposition of 'position' was requested on layer (delegate UIViewInProcessLayerAnimationCoordinator) while a composite animation is already running on it. Enable decomposition for all
+animations running simultaneously on this layer.
+Decomposition of 'bounds' was requested on layer (delegate UIViewInProcessLayerAnimationCoordinator) while a composite animation is already running on it. Enable decomposition for all
+animations running simultaneously on this layer.
+Decomposition of 'position' was requested on layer (delegate UIViewInProcessLayerAnimationCoordinator) while a composite animation is already running on it. Enable decomposition for all
+animations running simultaneously on this layer.
+🐞 2026-11-06T07:21:42Z SETTINGS SOUND PREPARATION REQUESTED id=4430DBA1 file=forest.mp3 play=false
+🐞 2026-11-06T07:21:42Z SETTINGS ENTER SOUNDS previous=images
+🐞 2026-11-06T07:21:42Z SETTINGS SOUND PREPARATION STARTED OFF MAIN THREAD file=forest.mp3
+🐞 2026-11-06T07:21:42Z SETTINGS SOUND PREPARATION INSTALLED id=4430DBA1 file=forest.mp3
+Decomposition of 'bounds' was requested on layer (delegate UIViewInProcessLayerAnimationCoordinator) while a composite animation is already running on it. Enable decomposition for all
+animations running simultaneously on this layer.
+Decomposition of 'position' was requested on layer (delegate UIViewInProcessLayerAnimationCoordinator) while a composite animation is already running on it. Enable decomposition for all
+animations running simultaneously on this layer.
+Decomposition of 'bounds' was requested on layer (delegate UIViewInProcessLayerAnimationCoordinator) while a composite animation is already running on it. Enable decomposition for all
+animations running simultaneously on this layer.
+Decomposition of 'position' was requested on layer (delegate UIViewInProcessLayerAnimationCoordinator) while a composite animation is already running on it. Enable decomposition for all
+animations running simultaneously on this layer.
+<0x101c74640> Gesture: System gesture gate timed out.
+<0x101c74640> Gesture: System gesture gate timed out.
+<0x101c74640> Gesture: System gesture gate timed out.
+<0x101c74640> Gesture: System gesture gate timed out.
+<0x101c74640> Gesture: System gesture gate timed out.

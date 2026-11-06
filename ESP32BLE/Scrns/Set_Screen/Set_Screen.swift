@@ -401,9 +401,7 @@ struct SettingsScreen: View {
     @State private var isDocumentEditorFocused = false
     @State private var speechSynthesizer = AVSpeechSynthesizer()
     @State private var soundPreviewPlayer: AVAudioPlayer?
-    @State private var soundPlaybackPosition: TimeInterval = 0
-    @State private var soundPlaybackDuration: TimeInterval = 0
-    @State private var isSoundPreviewPlaying = false
+    @State private var soundPlaybackPresentation = SettingsSoundPlaybackPresentation()
     @State private var soundProgressTask: Task<Void, Never>?
     @State private var soundPreparationTask: Task<Void, Never>?
     @State private var soundPreparationRequestID = UUID()
@@ -536,7 +534,7 @@ struct SettingsScreen: View {
                 cancelImageOpacityPreviewUpdate()
                 isImageOpacitySliderEditing = false
                 synchronizeImageOpacityPresentation()
-                stopSoundProgressUpdates()
+                stopSoundPreviewPlayback()
             }
             .onChange(of: scenePhase) { _, newScenePhase in
                 guard newScenePhase != .active else { return }
@@ -1410,6 +1408,9 @@ struct SettingsScreen: View {
     private func selectSettingsListMode(_ mode: SettingsListMode) {
         print("🐞 \(ISO8601DateFormatter().string(from: Date())) SETTINGS TOOLBAR CATEGORY TAP current=\(listMode.rawValue) requested=\(mode.rawValue)")
         ButtonClickFeedback.playIfEnabled()
+        if isSoundsListActive, mode != .sounds {
+            stopSoundPreviewPlayback()
+        }
         listMode = mode
         print("🐞 \(ISO8601DateFormatter().string(from: Date())) SETTINGS TOOLBAR CATEGORY APPLIED mode=\(listMode.rawValue)")
     }
@@ -1652,9 +1653,7 @@ struct SettingsScreen: View {
     private var largeSoundPlayerSection: some View {
         SettingsSoundPlayerView(
             title: selectedSoundFileName,
-            playbackPosition: soundPlaybackPosition,
-            duration: soundPlaybackDuration,
-            isPlaying: isSoundPreviewPlaying,
+            playbackPresentation: soundPlaybackPresentation,
             canGoPrevious: canSelectPreviousSound,
             canGoNext: canSelectNextSound,
             backgroundImageURL: selectedImageURL,
@@ -1677,9 +1676,7 @@ struct SettingsScreen: View {
     private var iPhoneSoundPlayerSection: some View {
         SettingsSoundPlayerView(
             title: selectedSoundDisplayName,
-            playbackPosition: soundPlaybackPosition,
-            duration: soundPlaybackDuration,
-            isPlaying: isSoundPreviewPlaying,
+            playbackPresentation: soundPlaybackPresentation,
             canGoPrevious: canSelectPreviousSound,
             canGoNext: canSelectNextSound,
             backgroundImageURL: selectedImageURL,
@@ -3844,6 +3841,7 @@ struct SettingsScreen: View {
             return
         }
 
+        stopSoundPreviewPlayback()
         returnToMain()
     }
 
@@ -5065,9 +5063,9 @@ struct SettingsScreen: View {
                 soundPreviewPlayer = player
                 soundPreviewDelegate = completionDelegate
                 soundPlaybackID = playbackID
-                soundPlaybackDuration = max(player.duration, 0)
-                soundPlaybackPosition = 0
-                isSoundPreviewPlaying = false
+                soundPlaybackPresentation.duration = max(player.duration, 0)
+                soundPlaybackPresentation.position = 0
+                soundPlaybackPresentation.isPlaying = false
                 hasSoundPreviewCompleted = false
                 soundPreparationURLPath = nil
                 soundPreparationTask = nil
@@ -5101,8 +5099,8 @@ struct SettingsScreen: View {
             return
         }
 
-        isSoundPreviewPlaying = soundPreviewPlayer.play()
-        if isSoundPreviewPlaying {
+        soundPlaybackPresentation.isPlaying = soundPreviewPlayer.play()
+        if soundPlaybackPresentation.isPlaying {
             startSoundProgressUpdates()
         }
     }
@@ -5162,8 +5160,8 @@ struct SettingsScreen: View {
 
         if soundPreviewPlayer.isPlaying {
             soundPreviewPlayer.pause()
-            isSoundPreviewPlaying = false
-            soundPlaybackPosition = soundPreviewPlayer.currentTime
+            soundPlaybackPresentation.isPlaying = false
+            soundPlaybackPresentation.position = soundPreviewPlayer.currentTime
             return
         }
 
@@ -5174,7 +5172,7 @@ struct SettingsScreen: View {
         guard let soundPreviewPlayer else { return }
         let clampedPosition = min(max(position, 0), max(soundPreviewPlayer.duration, 0))
         soundPreviewPlayer.currentTime = clampedPosition
-        soundPlaybackPosition = clampedPosition
+        soundPlaybackPresentation.position = clampedPosition
         hasSoundPreviewCompleted = false
     }
 
@@ -5197,15 +5195,18 @@ struct SettingsScreen: View {
 
     private func updateSoundPlaybackProgress() {
         guard let soundPreviewPlayer else {
-            soundPlaybackPosition = 0
-            soundPlaybackDuration = 0
-            isSoundPreviewPlaying = false
+            soundPlaybackPresentation.position = 0
+            soundPlaybackPresentation.duration = 0
+            soundPlaybackPresentation.isPlaying = false
             return
         }
 
-        soundPlaybackDuration = max(soundPreviewPlayer.duration, 0)
-        soundPlaybackPosition = min(max(soundPreviewPlayer.currentTime, 0), soundPlaybackDuration)
-        isSoundPreviewPlaying = soundPreviewPlayer.isPlaying
+        soundPlaybackPresentation.duration = max(soundPreviewPlayer.duration, 0)
+        soundPlaybackPresentation.position = min(
+            max(soundPreviewPlayer.currentTime, 0),
+            soundPlaybackPresentation.duration
+        )
+        soundPlaybackPresentation.isPlaying = soundPreviewPlayer.isPlaying
     }
 
     private func stopSoundProgressUpdates() {
@@ -5228,9 +5229,9 @@ struct SettingsScreen: View {
         soundPreviewDelegate = nil
         soundPlaybackID = nil
         completedSoundPlaybackID = nil
-        soundPlaybackPosition = 0
-        soundPlaybackDuration = 0
-        isSoundPreviewPlaying = false
+        soundPlaybackPresentation.position = 0
+        soundPlaybackPresentation.duration = 0
+        soundPlaybackPresentation.isPlaying = false
         hasSoundPreviewCompleted = false
     }
 
@@ -5238,8 +5239,8 @@ struct SettingsScreen: View {
         guard playbackID == soundPlaybackID else { return }
 
         stopSoundProgressUpdates()
-        isSoundPreviewPlaying = false
-        soundPlaybackPosition = soundPlaybackDuration
+        soundPlaybackPresentation.isPlaying = false
+        soundPlaybackPresentation.position = soundPlaybackPresentation.duration
         hasSoundPreviewCompleted = true
 
         if isSoundRepeatEnabled, isSoundPreviewPrepared {
