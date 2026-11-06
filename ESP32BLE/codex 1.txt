@@ -1,174 +1,48 @@
-1. Exact source locations
-
-Set_Screen.swift:
-
-• Toolbar construction: lines 685–754.
-• iPad native category Menu: lines 1164–1180.
-• Menu row action: lines 1166–1169.
-• listMode AppStorage-backed state: lines 1106–1122.
-• Category action: lines 1410–1418.
-• listMode change observer: lines 979–988.
-• Initial mode normalization: lines 960–964 and 1447–1450.
-• Stage 8B.21D Sounds-exit teardown: lines 1413–1415.
-• Playback progress task: lines 5185–5199.
-• Progress state writes: lines 5202–5213.
-• Playback teardown: lines 5220–5239.
-
-2. SwiftUI Menu action structure
-
-The iPad category selector is a native SwiftUI Menu:
-
-• A ForEach creates one Button per visible category.
-• Each Button directly calls selectSettingsListMode(mode).
-• There is no disabled modifier, gesture guard, conditional action, or playback-specific condition on these buttons.
-
-The action is synchronous:
-
-1. Print CATEGORY TAP.
-2. Play button feedback.
-3. If leaving Sounds, call stopSoundPreviewPlayback().
-4. Assign listMode = mode.
-5. Print CATEGORY APPLIED.
-
-There is no await, Task, dispatch, early return, or guard in this action after the initial print.
-
-3. Category-state ownership
-
-listMode is a computed wrapper around:
-
-@AppStorage("settingsListMode") private var listModeRawValue
-
-The setter writes the requested raw value directly, except .all, which is normalized to .files.
-
-The visible content, toolbar label, native Menu checkmark, and Sounds-active condition all derive from this same listMode value:
-
-• Checkmark: if listMode == mode at lines 1170–1174.
-• Toolbar label: listMode.selectedButtonTitle at line 1184.
-• Sounds presentation: listMode == .sounds at lines 2814–2815.
-
-Therefore, the checkmark and visible Settings category cannot disagree through normal source behavior.
-
-4. Can selection be reset to Sounds?
-
-No in-project code path was found that writes listMode back to .sounds.
-
-The only direct assignment is in selectSettingsListMode. The only other raw-value writer is normalizeVisibleListMode, which changes obsolete .all to .files, never to Sounds.
-
-The listModeRawValue observer does not alter category state. It reloads document state, dismisses an iPhone image preview when appropriate, and invokes sound preparation only if Sounds is active.
-
-5. Interaction with playback updates
-
-While playing, startSoundProgressUpdates creates a MainActor task that runs every 100 ms.
-
-Each tick reads:
-
-• player.duration
-• player.currentTime
-• player.isPlaying
-
-It then assigns all three corresponding SettingsScreen @State values, unconditionally.
-
-While actively playing, soundPlaybackPosition changes every tick. This causes recurring SwiftUI state invalidation and view updates approximately ten times per second.
-
-When paused:
-
-• The progress task is not explicitly cancelled by pause.
-• However, currentTime, duration, and isPlaying are stable.
-• The recurring assignments have stable values rather than a continuously changing playback position.
-
-This is the strongest source-level difference matching the confirmed device behavior: active playback produces frequent changing parent-view state, while paused playback does not.
-
-Verified limits:
-
-• The progress task does not write listMode.
-• It does not invoke category selection.
-• It does not directly block with synchronous audio preparation.
-• It does not invoke Repeat or Auto Start during ordinary playback.
-
-6. Interaction with Stage 8B.21D teardown ordering
-
-Stage 8B.21D added:
-
-if isSoundsListActive, mode != .sounds {
-stopSoundPreviewPlayback()
-
-}
-listMode = mode
-
-The teardown changes substantial @State, stops the player, clears IDs, and cancels the progress task before listMode is assigned.
-
-However, the category action itself is synchronous and contains no suspension point. If the Menu row action begins executing normally, it should reach listMode = mode after teardown.
-
-Therefore:
-
-• The teardown ordering can cause a SwiftUI state update before the listMode assignment.
-• It is a plausible contributor to native Menu reconstruction behavior.
-• It is not sufficient evidence that it can cancel the remainder of the synchronous closure.
-• If CATEGORY APPLIED is printed, this ordering did not prevent assignment.
-
-7. Existing diagnostics: interpretation
-
-A. Neither CATEGORY TAP nor CATEGORY APPLIED appears
-
-The Menu row Button action was not entered. The visible flash is native Menu touch feedback, but source-level selection code did not run.
-
-This would support the active progress-update/Menu-reconstruction hypothesis more than a state-reset hypothesis.
-
-B. CATEGORY TAP appears, but CATEGORY APPLIED does not
-
-The only intervening source operations are ButtonClickFeedback.playIfEnabled() and, when leaving Sounds, stopSoundPreviewPlayback().
-
-Because there is no explicit early exit, this would indicate a runtime stall, trap, or unusual reentrant framework behavior between those prints. It would warrant a main-thread stack capture.
-
-C. Both messages appear with the requested category, but Sounds remains selected
-
-The assignment occurred. No in-project writer was found that restores Sounds. This would require investigation of an external AppStorage/UserDefaults write, a second SettingsScreen instance, or a runtime state-observation issue.
-
-D. Both messages appear, then a later change restores Sounds
-
-No source path currently explains that. Add targeted logging only after proving this case.
-
-8. Menu identity and view reconstruction
-
-No .id, dynamic identity, transaction override, or playback-specific conditional construction exists on the native category Menu or toolbar.
-
-However, the Menu is built from SettingsScreen’s body tree. Active playback changes parent @State every 100 ms, so the tree containing the Menu is repeatedly re-evaluated while the native menu is open.
-
-This does not prove the Menu loses its selection action, but it is the best-supported explanation for the playing-only behavior.
-
-9. Most likely cause
-
-Most likely: continuous changing playback-position state from the MainActor progress task repeatedly invalidates the SettingsScreen SwiftUI tree while the native iPad Menu is open. A menu-row tap can visually register but fail to reach its Button action if the native Menu interaction is replaced or dismissed during an update.
-
-Supporting evidence:
-
-• The failure occurs only while active playback changes position.
-• Paused playback permits category selection.
-• The progress task runs every 100 ms on MainActor.
-• No category-action guard, disablement, reset-to-Sounds writer, or explicit playback/category coupling exists.
-• The Menu can open and display all items, excluding a broad hit-testing failure.
-
-This remains a strong hypothesis, not a proven runtime cause.
-
-10. Smallest recommended correction
-
-Do not change code until the existing diagnostics identify which case occurs.
-
-If neither category diagnostic appears during a failed active-playback tap, the smallest focused correction should be to reduce unnecessary parent-level progress state invalidations while preserving visible progress updates. The correction should be limited to the progress-update path, not the Menu or audio architecture.
-
-The implementation should first establish whether updateSoundPlaybackProgress can avoid assigning unchanged values and whether playback-position presentation can be isolated from the toolbar/Menu subtree. Do not change timer frequency, replace the Menu, or add a gesture overlay without confirming action-entry failure.
-
-If CATEGORY TAP and CATEGORY APPLIED both appear, do not change progress handling. Instead investigate AppStorage writes or multiple SettingsScreen instances.
-
-11. Missing runtime evidence
-
-The decisive missing evidence is the console output from one failed active-playback category selection:
-
-• Are CATEGORY TAP and CATEGORY APPLIED printed?
-• If only TAP appears, does the main thread stall in ButtonClickFeedback or teardown?
-• If both appear, is there a later listModeRawValue change?
-• Does the failure still occur when selecting a category after stopping playback but before the player view is removed?
-
-A symbolic breakpoint or one-time state-change diagnostic would only be needed after this existing logging result is known.
-
-No files were changed. No build, deployment, formatting, or Git operation was performed.
+Files modified:
+ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
+
+New Sound image persistence:
+• Replaced Sound-specific path/name storage with:
+settingsSoundBackgroundImageIndex
+• It is an independent @AppStorage Int with default value 0.
+• Sound opacity remains independently stored in settingsSoundBackgroundOpacity.
+
+Obsolete Sound path/name code removed:
+• Removed settingsSoundBackgroundImagePath.
+• Removed settingsSoundBackgroundImageName.
+• Removed path/name URL resolution and URL-based Sound selection persistence.
+• Existing Main Screen selectedBackgroundImagePath, selectedBackgroundImageName, and selectedBackgroundImageIndex were not modified.
+
+Index clamping:
+• selectedSoundBackgroundImageURL resolves the existing sorted availableImageURLs list.
+• Empty list returns nil, so the Sound player uses its existing black fallback.
+• Nonempty lists clamp the stored index to 0...(count - 1).
+• The index is normalized on Settings appearance and document-directory snapshot changes.
+• Empty lists normalize the saved Sound index to 0.
+
+Navigation:
+• Back selects index 0.
+• Previous selects index - 1 and stops at zero.
+• Next selects index + 1 and stops at the final index.
+• Random uses one local image-list snapshot and index mapping to choose a different image whenever multiple images exist.
+• Each action uses the shared Sound index-selection helper and does not repeatedly enumerate the image directory during that action.
+• Existing feedback and press-and-hold behavior remain unchanged.
+
+Image-loader integration:
+• The player continues to receive the URL resolved from the clamped Sound index.
+• The existing ImageIO worker, one-active-decode policy, latest pending request, intermediate presentation, target-size checks, and final-image safeguards were not changed.
+
+Opacity:
+• Selecting an image only changes the Sound index.
+• Sound opacity remains independent and persists unchanged.
+• At zero opacity, the selected index remains saved while the player appears black.
+
+Validation:
+• Xcode diagnostics: no issues in Set_Screen.swift or Set_SoundPlayer.swift.
+• ESP32BLE active-scheme build: successful.
+• No install, launch, commit, or push performed.
+
+Remaining risks:
+• Adding, renaming, or deleting images can intentionally change which sorted-list image occupies the saved index.
+• Legacy Sound path/name UserDefaults values are no longer read; the new index starts at zero for existing installs.
+• Physical-device testing is still required before confirming behavior on iPad Air M2.

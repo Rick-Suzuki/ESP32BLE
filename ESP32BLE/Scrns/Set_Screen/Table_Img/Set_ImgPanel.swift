@@ -211,7 +211,7 @@ struct SettingsImagePreviewPanel: View {
     }
 }
 
-nonisolated private func settingsPreviewDownsampledUIImage(at url: URL, maxPixelDimension: CGFloat) -> UIImage? {
+nonisolated func settingsPreviewDownsampledUIImage(at url: URL, maxPixelDimension: CGFloat) -> UIImage? {
     guard maxPixelDimension > 0 else {
         return UIImage(contentsOfFile: url.path)
     }

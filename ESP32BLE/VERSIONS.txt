@@ -1,4 +1,8 @@
 
+V66.17
+sound player BG iamges working
+261106 Fri 2003
+
 V66.16
 sound player stops when main or another catagory
 

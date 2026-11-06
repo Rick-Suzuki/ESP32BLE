@@ -456,6 +456,8 @@ struct SettingsScreen: View {
     @AppStorage("selectedBackgroundImageIndex") var selectedImageIndex = 0
     @AppStorage("selectedBackgroundImageName") var selectedImageName = ""
     @AppStorage("selectedBackgroundImagePath") var selectedImagePath = ""
+    @AppStorage("settingsSoundBackgroundImageIndex") private var settingsSoundBackgroundImageIndex = 0
+    @AppStorage("settingsSoundBackgroundOpacity") private var settingsSoundBackgroundOpacity = 1.0
     @AppStorage("selectedSoundName") var selectedSoundName = ""
     @AppStorage("selectedSoundPath") var selectedSoundPath = ""
     @AppStorage("settingsSoundAutoStartEnabled") private var isSoundAutoStartEnabled = false
@@ -529,6 +531,7 @@ struct SettingsScreen: View {
             .onAppear {
                 beginImagePreviewRestoration()
                 synchronizeImageOpacityPresentation()
+                normalizeSoundBackgroundImageIndex()
             }
             .onDisappear {
                 cancelImageOpacityPreviewUpdate()
@@ -555,7 +558,13 @@ struct SettingsScreen: View {
                 beginImagePreviewRestoration()
             }
             .onChange(of: opacitySliderValue) { _, _ in
-                guard !isImageOpacitySliderEditing else { return }
+                guard !isSoundsListActive,
+                      !isImageOpacitySliderEditing else { return }
+                synchronizeImageOpacityPresentation()
+            }
+            .onChange(of: settingsSoundBackgroundOpacity) { _, _ in
+                guard isSoundsListActive,
+                      !isImageOpacitySliderEditing else { return }
                 synchronizeImageOpacityPresentation()
             }
             .onChange(of: listMode) { previousMode, newMode in
@@ -566,6 +575,8 @@ struct SettingsScreen: View {
                 if !isImagesListActive {
                     cancelImageOpacityPreviewUpdate()
                     isImageOpacitySliderEditing = false
+                    synchronizeImageOpacityPresentation()
+                } else if previousMode == .sounds {
                     synchronizeImageOpacityPresentation()
                 }
 
@@ -579,6 +590,7 @@ struct SettingsScreen: View {
             }
             .onChange(of: documentDirectorySnapshot) {
                 reconcilePendingImageRenameSelection()
+                normalizeSoundBackgroundImageIndex()
                 if let previewImageURL,
                    !availableImageURLs.contains(where: {
                        $0.standardizedFileURL == previewImageURL.standardizedFileURL
@@ -1656,7 +1668,8 @@ struct SettingsScreen: View {
             playbackPresentation: soundPlaybackPresentation,
             canGoPrevious: canSelectPreviousSound,
             canGoNext: canSelectNextSound,
-            backgroundImageURL: selectedImageURL,
+            backgroundImageURL: selectedSoundBackgroundImageURL,
+            backgroundImageOpacity: soundBackgroundOpacity,
             usesCompactLayout: false,
             isPlaybackPrepared: isSoundPreviewPrepared,
             isAutoStartEnabled: isSoundAutoStartEnabled,
@@ -1679,7 +1692,8 @@ struct SettingsScreen: View {
             playbackPresentation: soundPlaybackPresentation,
             canGoPrevious: canSelectPreviousSound,
             canGoNext: canSelectNextSound,
-            backgroundImageURL: selectedImageURL,
+            backgroundImageURL: selectedSoundBackgroundImageURL,
+            backgroundImageOpacity: soundBackgroundOpacity,
             usesCompactLayout: true,
             isPlaybackPrepared: isSoundPreviewPrepared,
             isAutoStartEnabled: isSoundAutoStartEnabled,
@@ -1694,6 +1708,43 @@ struct SettingsScreen: View {
             onToggleRandom: { isSoundRandomEnabled.toggle() }
         )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var selectedSoundBackgroundImageURL: URL? {
+        let imageURLs = availableImageURLs
+        guard let imageIndex = resolvedSoundBackgroundImageIndex(in: imageURLs) else {
+            return nil
+        }
+
+        return imageURLs[imageIndex]
+    }
+
+    private func resolvedSoundBackgroundImageIndex(in imageURLs: [URL]) -> Int? {
+        guard !imageURLs.isEmpty else { return nil }
+        return min(max(settingsSoundBackgroundImageIndex, 0), imageURLs.count - 1)
+    }
+
+    private var soundBackgroundOpacity: Double {
+        min(max(settingsSoundBackgroundOpacity, 0), 1)
+    }
+
+    private func selectSoundBackgroundImage(at imageIndex: Int, from imageURLs: [URL]? = nil) {
+        let availableURLs = imageURLs ?? availableImageURLs
+        guard !availableURLs.isEmpty else { return }
+
+        settingsSoundBackgroundImageIndex = min(max(imageIndex, 0), availableURLs.count - 1)
+    }
+
+    private func normalizeSoundBackgroundImageIndex() {
+        let imageURLs = availableImageURLs
+        guard let imageIndex = resolvedSoundBackgroundImageIndex(in: imageURLs) else {
+            settingsSoundBackgroundImageIndex = 0
+            return
+        }
+
+        if settingsSoundBackgroundImageIndex != imageIndex {
+            settingsSoundBackgroundImageIndex = imageIndex
+        }
     }
 
     private var documentViewerTapAction: (() -> Void)? {
@@ -2525,7 +2576,7 @@ struct SettingsScreen: View {
             opacitySliderValue: imageOpacitySliderBinding,
             documentEditorFontSize: $documentEditorFontSize,
             imageControlButtons: AnyView(imageControlButtons),
-            isImageControlsActive: isImagesListActive,
+            isImageControlsActive: isBackgroundImageControlsActive,
             isDocumentEditorControlsActive: isDocumentEditorListActive,
             onImageOpacityEditingChanged: handleImageOpacityEditingChanged,
             isIPhoneImageEditorPresented: isIPhoneContentPreviewPresented,
@@ -2568,7 +2619,7 @@ struct SettingsScreen: View {
         if isEditing {
             isImageOpacitySliderEditing = true
             cancelImageOpacityPreviewUpdate()
-            imageOpacitySliderPosition = clampedImageOpacity(opacitySliderValue)
+            imageOpacitySliderPosition = activeBackgroundOpacity
             imageOpacityPreviewValue = imageOpacitySliderPosition
             lastImageOpacityPreviewUpdate = Date()
             return
@@ -2578,19 +2629,23 @@ struct SettingsScreen: View {
         cancelImageOpacityPreviewUpdate()
         isImageOpacitySliderEditing = false
         imageOpacityPreviewValue = finalOpacity
-        opacitySliderValue = finalOpacity
+        if isSoundsListActive {
+            settingsSoundBackgroundOpacity = finalOpacity
+        } else {
+            opacitySliderValue = finalOpacity
+        }
     }
 
     private func updateImageOpacityPreviewWhileDragging() {
         guard isImageOpacitySliderEditing else {
-            imageOpacityPreviewValue = imageOpacitySliderPosition
+            applyImageOpacityPreview(imageOpacitySliderPosition)
             return
         }
 
         let elapsed = Date().timeIntervalSince(lastImageOpacityPreviewUpdate)
         guard elapsed < imageOpacityPreviewInterval else {
             cancelImageOpacityPreviewUpdate()
-            imageOpacityPreviewValue = imageOpacitySliderPosition
+            applyImageOpacityPreview(imageOpacitySliderPosition)
             lastImageOpacityPreviewUpdate = Date()
             return
         }
@@ -2615,15 +2670,32 @@ struct SettingsScreen: View {
             }
 
             imageOpacityPreviewTask = nil
-            imageOpacityPreviewValue = imageOpacitySliderPosition
+            applyImageOpacityPreview(imageOpacitySliderPosition)
             lastImageOpacityPreviewUpdate = Date()
         }
     }
 
+    private func applyImageOpacityPreview(_ opacity: Double) {
+        let clampedOpacity = clampedImageOpacity(opacity)
+        imageOpacityPreviewValue = clampedOpacity
+
+        if isSoundsListActive {
+            settingsSoundBackgroundOpacity = clampedOpacity
+        }
+    }
+
     private func synchronizeImageOpacityPresentation() {
-        let persistedOpacity = clampedImageOpacity(opacitySliderValue)
+        let persistedOpacity = activeBackgroundOpacity
         imageOpacitySliderPosition = persistedOpacity
         imageOpacityPreviewValue = persistedOpacity
+    }
+
+    private var activeBackgroundOpacity: Double {
+        if isSoundsListActive {
+            return soundBackgroundOpacity
+        }
+
+        return clampedImageOpacity(opacitySliderValue)
     }
 
     private func cancelImageOpacityPreviewUpdate() {
@@ -2709,12 +2781,16 @@ struct SettingsScreen: View {
         SettingsImageControlsSection(
             title: navigationControlsTitle,
             isControlsActive: isFileNavigationControlsActive,
-            canReset: !navigationFileURLs.isEmpty,
-            canRandom: !navigationFileURLs.isEmpty,
-            canGoPrevious: canNavigateToPreviousFile,
-            canGoNext: canNavigateToNextFile,
+            canReset: isSoundsListActive ? canSelectFirstSoundBackgroundImage : !navigationFileURLs.isEmpty,
+            canRandom: isSoundsListActive ? !availableImageURLs.isEmpty : !navigationFileURLs.isEmpty,
+            canGoPrevious: isSoundsListActive ? canSelectPreviousSoundBackgroundImage : canNavigateToPreviousFile,
+            canGoNext: isSoundsListActive ? canSelectNextSoundBackgroundImage : canNavigateToNextFile,
             onReset: {
-                if isImagesListActive {
+                if isSoundsListActive {
+                    let imageURLs = availableImageURLs
+                    guard !imageURLs.isEmpty else { return }
+                    selectSoundBackgroundImage(at: 0, from: imageURLs)
+                } else if isImagesListActive {
                     guard let firstImageURL = availableImageURLs.first else { return }
                     selectPreviewImageForNavigation(firstImageURL, alignsToTop: true, forcesScroll: true)
                 } else if isPDFsListActive {
@@ -2727,7 +2803,25 @@ struct SettingsScreen: View {
                 }
             },
             onRandom: {
-                if isImagesListActive {
+                if isSoundsListActive {
+                    let actionStart = Date()
+                    let imageURLs = availableImageURLs
+                    guard !imageURLs.isEmpty else { return }
+                    let currentIndex = resolvedSoundBackgroundImageIndex(in: imageURLs)
+                    let imageIndex: Int
+                    if imageURLs.count == 1 {
+                        imageIndex = 0
+                    } else if let currentIndex {
+                        let randomIndex = Int.random(in: 0..<(imageURLs.count - 1))
+                        imageIndex = randomIndex >= currentIndex ? randomIndex + 1 : randomIndex
+                    } else {
+                        imageIndex = Int.random(in: 0..<imageURLs.count)
+                    }
+                    selectSoundBackgroundImage(at: imageIndex, from: imageURLs)
+                    let elapsedMilliseconds = Int(Date().timeIntervalSince(actionStart) * 1_000)
+                    let candidateCount = currentIndex == nil ? imageURLs.count : max(0, imageURLs.count - 1)
+                    print("🐞 \(ISO8601DateFormatter().string(from: Date())) SOUND IMAGE RANDOM SELECTED filename=\(imageURLs[imageIndex].lastPathComponent) candidates=\(candidateCount) elapsedMs=\(elapsedMilliseconds)")
+                } else if isImagesListActive {
                     let candidateURLs = availableImageURLs.filter { imageURL in
                         imageURL.path != previewImageURL?.path
                     }
@@ -2751,7 +2845,12 @@ struct SettingsScreen: View {
                 }
             },
             onPrevious: {
-                if isImagesListActive {
+                if isSoundsListActive {
+                    let imageURLs = availableImageURLs
+                    guard let imageIndex = resolvedSoundBackgroundImageIndex(in: imageURLs),
+                          imageIndex > 0 else { return }
+                    selectSoundBackgroundImage(at: imageIndex - 1, from: imageURLs)
+                } else if isImagesListActive {
                     guard let previewImagePosition,
                           previewImagePosition > 1 else { return }
                     selectPreviewImageForNavigation(availableImageURLs[previewImagePosition - 2])
@@ -2768,7 +2867,12 @@ struct SettingsScreen: View {
                 }
             },
             onNext: {
-                if isImagesListActive {
+                if isSoundsListActive {
+                    let imageURLs = availableImageURLs
+                    guard let imageIndex = resolvedSoundBackgroundImageIndex(in: imageURLs),
+                          imageIndex < imageURLs.count - 1 else { return }
+                    selectSoundBackgroundImage(at: imageIndex + 1, from: imageURLs)
+                } else if isImagesListActive {
                     guard !availableImageURLs.isEmpty else { return }
                     let nextIndex = previewImagePosition ?? 0
                     guard availableImageURLs.indices.contains(nextIndex) else { return }
@@ -2797,6 +2901,26 @@ struct SettingsScreen: View {
         return imageIndex + 1
     }
 
+    private var soundBackgroundImagePosition: Int? {
+        resolvedSoundBackgroundImageIndex(in: availableImageURLs).map { $0 + 1 }
+    }
+
+    private var canSelectFirstSoundBackgroundImage: Bool {
+        guard let soundBackgroundImagePosition else { return false }
+        return soundBackgroundImagePosition > 1
+    }
+
+    private var canSelectPreviousSoundBackgroundImage: Bool {
+        guard let soundBackgroundImagePosition else { return false }
+        return soundBackgroundImagePosition > 1
+    }
+
+    private var canSelectNextSoundBackgroundImage: Bool {
+        guard !availableImageURLs.isEmpty else { return false }
+        guard let soundBackgroundImagePosition else { return true }
+        return soundBackgroundImagePosition < availableImageURLs.count
+    }
+
     private var isImagesListActive: Bool {
         listMode == .images
     }
@@ -2823,13 +2947,19 @@ struct SettingsScreen: View {
             "MD"
         case .pdfs:
             "PDF"
+        case .sounds:
+            "Back"
         default:
             "Image"
         }
     }
 
     private var isFileNavigationControlsActive: Bool {
-        isImagesListActive || isPDFsListActive || isDocumentEditorListActive
+        isImagesListActive || isSoundsListActive || isPDFsListActive || isDocumentEditorListActive
+    }
+
+    private var isBackgroundImageControlsActive: Bool {
+        isImagesListActive || isSoundsListActive
     }
 
     private var navigationFileURLs: [URL] {
@@ -3421,7 +3551,7 @@ struct SettingsScreen: View {
             imageControlButtons: AnyView(imageControlButtons),
             navigationControlsTitle: navigationControlsTitle,
             isNavigationControlsActive: isFileNavigationControlsActive,
-            isImageControlsActive: isImagesListActive,
+            isImageControlsActive: isBackgroundImageControlsActive,
             isDocumentEditorControlsActive: isDocumentEditorListActive,
             onImageOpacityEditingChanged: handleImageOpacityEditingChanged,
             isMacMode: isMacKeyboardTestMode,

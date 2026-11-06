@@ -1,17 +1,30 @@
-Stopped before edits due to a current-source conflict.
-
-Confirmed conflict:
-• Existing file: Help/images/1_Connect_to_Mac/espmac-helper-status.png
-• Help/html/troubleshooting-04-mac.html􀰓 still references:
-../images/1_Connect_to_Mac/espmac-helper-status-selection.png
-
-This violates the current generator’s unplanned-missing-image validation, so the required manual generation and --check cannot succeed. ESP-HELP-029C also explicitly prohibits changing HTML contents or image filenames, so I did not resolve it speculatively.
-
-Also confirmed the Xcode Help copy Run Script has two stale dependency declarations:
-
-• Input: $(SRCROOT)/Help/html/connect-mac.html
-• Output: $(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/Help/html/connect-mac.html
-
-After the filename work, these must be changed in Xcode’s Build Phases UI to connect-mac-01.html; I did not edit project.pbxproj.
-
-No files were renamed or modified. No generator, build, app launch, Simulator, or device testing was run.
+🐞 2026-11-06T10:24:43Z SOUND IMAGE RANDOM SELECTED filename=scribables.jpg candidates=116 elapsedMs=65
+🐞 2026-11-06T10:24:43Z SOUND IMAGE DECODE START request=/private/var/mobile/Containers/Data/Application/0C139C71-8588-4477-8EDE-3CE54ACCE63F/Documents/scribables.jpg:2660 filename=scribables.jpg targetPx=2660
+🐞 2026-11-06T10:24:43Z SOUND IMAGE RANDOM SELECTED filename=pale rider.jpg candidates=116 elapsedMs=38
+🐞 2026-11-06T10:24:43Z SOUND IMAGE DECODE FINISH request=/private/var/mobile/Containers/Data/Application/0C139C71-8588-4477-8EDE-3CE54ACCE63F/Documents/scribables.jpg:2660 success=true elapsedMs=228
+🐞 2026-11-06T10:24:43Z SOUND IMAGE SUPERSEDED request=/private/var/mobile/Containers/Data/Application/0C139C71-8588-4477-8EDE-3CE54ACCE63F/Documents/scribables.jpg:2660 reason=generation-changed
+🐞 2026-11-06T10:24:43Z SOUND IMAGE DECODE START request=/private/var/mobile/Containers/Data/Application/0C139C71-8588-4477-8EDE-3CE54ACCE63F/Documents/pale rider.jpg:2660 filename=pale rider.jpg targetPx=2660
+🐞 2026-11-06T10:24:43Z SOUND IMAGE RANDOM SELECTED filename=Sunset Over Wildflower Meadow.jpg candidates=116 elapsedMs=43
+🐞 2026-11-06T10:24:44Z SOUND IMAGE DECODE FINISH request=/private/var/mobile/Containers/Data/Application/0C139C71-8588-4477-8EDE-3CE54ACCE63F/Documents/pale rider.jpg:2660 success=true elapsedMs=252
+🐞 2026-11-06T10:24:44Z SOUND IMAGE SUPERSEDED request=/private/var/mobile/Containers/Data/Application/0C139C71-8588-4477-8EDE-3CE54ACCE63F/Documents/pale rider.jpg:2660 reason=generation-changed
+🐞 2026-11-06T10:24:44Z SOUND IMAGE DECODE START request=/private/var/mobile/Containers/Data/Application/0C139C71-8588-4477-8EDE-3CE54ACCE63F/Documents/Sunset Over Wildflower Meadow.jpg:2660 filename=Sunset Over Wildflower Meadow.jpg targetPx=2660
+🐞 2026-11-06T10:24:44Z SOUND IMAGE RANDOM SELECTED filename=swirls.jpg candidates=116 elapsedMs=43
+🐞 2026-11-06T10:24:44Z SOUND IMAGE DECODE FINISH request=/private/var/mobile/Containers/Data/Application/0C139C71-8588-4477-8EDE-3CE54ACCE63F/Documents/Sunset Over Wildflower Meadow.jpg:2660 success=true elapsedMs=267
+🐞 2026-11-06T10:24:44Z SOUND IMAGE SUPERSEDED request=/private/var/mobile/Containers/Data/Application/0C139C71-8588-4477-8EDE-3CE54ACCE63F/Documents/Sunset Over Wildflower Meadow.jpg:2660 reason=generation-changed
+🐞 2026-11-06T10:24:44Z SOUND IMAGE DECODE START request=/private/var/mobile/Containers/Data/Application/0C139C71-8588-4477-8EDE-3CE54ACCE63F/Documents/swirls.jpg:2660 filename=swirls.jpg targetPx=2660
+🐞 2026-11-06T10:24:44Z SOUND IMAGE RANDOM SELECTED filename=Lone tree in sunlight.jpg candidates=116 elapsedMs=34
+🐞 2026-11-06T10:24:44Z SOUND IMAGE RANDOM SELECTED filename=Riverside city night lights.jpg candidates=116 elapsedMs=32
+🐞 2026-11-06T10:24:44Z SOUND IMAGE DECODE FINISH request=/private/var/mobile/Containers/Data/Application/0C139C71-8588-4477-8EDE-3CE54ACCE63F/Documents/swirls.jpg:2660 success=true elapsedMs=445
+🐞 2026-11-06T10:24:44Z SOUND IMAGE SUPERSEDED request=/private/var/mobile/Containers/Data/Application/0C139C71-8588-4477-8EDE-3CE54ACCE63F/Documents/swirls.jpg:2660 reason=generation-changed
+🐞 2026-11-06T10:24:44Z SOUND IMAGE DECODE START request=/private/var/mobile/Containers/Data/Application/0C139C71-8588-4477-8EDE-3CE54ACCE63F/Documents/Riverside city night lights.jpg:2660 filename=Riverside city night lights.jpg targetPx=2660
+🐞 2026-11-06T10:24:44Z SOUND IMAGE RANDOM SELECTED filename=blue circle.jpg candidates=116 elapsedMs=28
+🐞 2026-11-06T10:24:44Z SOUND IMAGE RANDOM SELECTED filename=green lake.jpg candidates=116 elapsedMs=24
+🐞 2026-11-06T10:24:45Z SOUND IMAGE DECODE FINISH request=/private/var/mobile/Containers/Data/Application/0C139C71-8588-4477-8EDE-3CE54ACCE63F/Documents/Riverside city night lights.jpg:2660 success=true elapsedMs=394
+🐞 2026-11-06T10:24:45Z SOUND IMAGE SUPERSEDED request=/private/var/mobile/Containers/Data/Application/0C139C71-8588-4477-8EDE-3CE54ACCE63F/Documents/Riverside city night lights.jpg:2660 reason=generation-changed
+🐞 2026-11-06T10:24:45Z SOUND IMAGE DECODE START request=/private/var/mobile/Containers/Data/Application/0C139C71-8588-4477-8EDE-3CE54ACCE63F/Documents/green lake.jpg:2660 filename=green lake.jpg targetPx=2660
+🐞 2026-11-06T10:24:45Z SOUND IMAGE RANDOM SELECTED filename=Waterfall Mountains Alien Sky.jpg candidates=116 elapsedMs=44
+🐞 2026-11-06T10:24:45Z SOUND IMAGE DECODE FINISH request=/private/var/mobile/Containers/Data/Application/0C139C71-8588-4477-8EDE-3CE54ACCE63F/Documents/green lake.jpg:2660 success=true elapsedMs=244
+🐞 2026-11-06T10:24:45Z SOUND IMAGE SUPERSEDED request=/private/var/mobile/Containers/Data/Application/0C139C71-8588-4477-8EDE-3CE54ACCE63F/Documents/green lake.jpg:2660 reason=generation-changed
+🐞 2026-11-06T10:24:45Z SOUND IMAGE DECODE START request=/private/var/mobile/Containers/Data/Application/0C139C71-8588-4477-8EDE-3CE54ACCE63F/Documents/Waterfall Mountains Alien Sky.jpg:2660 filename=Waterfall Mountains Alien Sky.jpg targetPx=2660
+🐞 2026-11-06T10:24:45Z SOUND IMAGE DECODE FINISH request=/private/var/mobile/Containers/Data/Application/0C139C71-8588-4477-8EDE-3CE54ACCE63F/Documents/Waterfall Mountains Alien Sky.jpg:2660 success=true elapsedMs=5
+🐞 2026-11-06T10:24:45Z SOUND IMAGE INSTALLED request=/private/var/mobile/Containers/Data/Application/0C139C71-8588-4477-8EDE-3CE54ACCE63F/Documents/Waterfall Mountains Alien Sky.jpg:2660 filename=Waterfall Mountains Alien Sky.jpg

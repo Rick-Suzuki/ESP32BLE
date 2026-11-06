@@ -11,11 +11,19 @@ final class SettingsSoundPlaybackPresentation {
 }
 
 struct SettingsSoundPlayerView: View {
+    private struct BackgroundImageRequest {
+        let id: String
+        let generation: UUID
+        let url: URL
+        let targetPixelDimension: Int
+    }
+
     let title: String
     let playbackPresentation: SettingsSoundPlaybackPresentation
     let canGoPrevious: Bool
     let canGoNext: Bool
     let backgroundImageURL: URL?
+    let backgroundImageOpacity: Double
     let usesCompactLayout: Bool
     let isPlaybackPrepared: Bool
     let isAutoStartEnabled: Bool
@@ -29,9 +37,15 @@ struct SettingsSoundPlayerView: View {
     let onToggleRepeat: () -> Void
     let onToggleRandom: () -> Void
 
+    @Environment(\.displayScale) private var displayScale
     @State private var sliderPosition: TimeInterval = 0
     @State private var isSeeking = false
     @State private var backgroundImage: UIImage?
+    @State private var pendingBackgroundImageRequest: BackgroundImageRequest?
+    @State private var backgroundImageLoadingTask: Task<Void, Never>?
+    @State private var backgroundImageLoadingWorkerID: UUID?
+    @State private var backgroundImageRequestGeneration = UUID()
+    @State private var backgroundImageTargetPixelDimension = 0
 
     private var controlSize: CGFloat {
         usesCompactLayout ? 32 : 46
@@ -53,6 +67,10 @@ struct SettingsSoundPlayerView: View {
         isPlaybackPrepared && safeDuration > 0
     }
 
+    private var clampedBackgroundImageOpacity: Double {
+        min(max(backgroundImageOpacity, 0), 1)
+    }
+
     var body: some View {
         Group {
             if usesCompactLayout {
@@ -60,9 +78,6 @@ struct SettingsSoundPlayerView: View {
             } else {
                 iPadPlayerBody
             }
-        }
-        .task(id: backgroundImageURL?.path) {
-            backgroundImage = backgroundImageURL.flatMap { UIImage(contentsOfFile: $0.path) }
         }
         .onAppear {
             sliderPosition = clampedPosition(playbackPresentation.position)
@@ -74,22 +89,18 @@ struct SettingsSoundPlayerView: View {
         .onChange(of: safeDuration) { _, _ in
             sliderPosition = clampedPosition(sliderPosition)
         }
+        .onDisappear {
+            backgroundImageLoadingTask?.cancel()
+            backgroundImageLoadingTask = nil
+            backgroundImageLoadingWorkerID = nil
+            pendingBackgroundImageRequest = nil
+        }
     }
 
     private var compactPlayerBody: some View {
         GeometryReader { geometry in
             ZStack {
                 playerBackground
-
-                LinearGradient(
-                    colors: [
-                        Color.black.opacity(0.22),
-                        Color.black.opacity(0.82)
-                    ],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .allowsHitTesting(false)
 
                 VStack(spacing: 8) {
                     Text(title)
@@ -137,17 +148,6 @@ struct SettingsSoundPlayerView: View {
     private var iPadPlayerBody: some View {
         Color.black
             .overlay { playerBackground }
-            .overlay {
-                LinearGradient(
-                    colors: [
-                        Color.black.opacity(0.22),
-                        Color.black.opacity(0.82)
-                    ],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .allowsHitTesting(false)
-            }
             .overlay(alignment: .bottom) {
                 iPadPlayerControls
             }
@@ -162,16 +162,130 @@ struct SettingsSoundPlayerView: View {
 
     @ViewBuilder
     private var playerBackground: some View {
-        if let backgroundImage {
-            Image(uiImage: backgroundImage)
-                .resizable()
-                .scaledToFill()
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .clipped()
-                .allowsHitTesting(false)
-        } else {
-            Color.black
-                .allowsHitTesting(false)
+        GeometryReader { geometry in
+            let targetPixelDimension = max(geometry.size.width, geometry.size.height) * displayScale
+            let requestID = backgroundImageRequestID(maxPixelDimension: targetPixelDimension)
+
+            Group {
+                if let backgroundImage {
+                    Image(uiImage: backgroundImage)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: geometry.size.width, height: geometry.size.height)
+                        .clipped()
+                        .opacity(clampedBackgroundImageOpacity)
+                } else {
+                    Color.black
+                }
+            }
+            .frame(width: geometry.size.width, height: geometry.size.height)
+            .clipped()
+            .task(id: requestID) {
+                await loadBackgroundImage(maxPixelDimension: targetPixelDimension)
+            }
+        }
+        .allowsHitTesting(false)
+    }
+
+    private func backgroundImageRequestID(maxPixelDimension: CGFloat) -> String {
+        "\(backgroundImageURL?.path ?? "none"):\(Int(maxPixelDimension.rounded(.up)))"
+    }
+
+    private func loadBackgroundImage(maxPixelDimension: CGFloat) async {
+        let targetPixelDimension = Int(maxPixelDimension.rounded(.up))
+        let requestID = backgroundImageRequestID(maxPixelDimension: maxPixelDimension)
+        let requestGeneration = UUID()
+
+        backgroundImageRequestGeneration = requestGeneration
+        backgroundImageTargetPixelDimension = targetPixelDimension
+
+        guard let backgroundImageURL, targetPixelDimension > 0 else {
+            pendingBackgroundImageRequest = nil
+            backgroundImageLoadingTask?.cancel()
+            backgroundImageLoadingTask = nil
+            backgroundImageLoadingWorkerID = nil
+            backgroundImage = nil
+            print("🐞 \(ISO8601DateFormatter().string(from: Date())) SOUND IMAGE SUPERSEDED request=\(requestID) reason=no-selected-image-or-zero-target")
+            return
+        }
+
+        pendingBackgroundImageRequest = BackgroundImageRequest(
+            id: requestID,
+            generation: requestGeneration,
+            url: backgroundImageURL.standardizedFileURL,
+            targetPixelDimension: targetPixelDimension
+        )
+        startBackgroundImageLoadingWorkerIfNeeded()
+    }
+
+    private func startBackgroundImageLoadingWorkerIfNeeded() {
+        guard backgroundImageLoadingTask == nil else { return }
+
+        let workerID = UUID()
+        backgroundImageLoadingWorkerID = workerID
+        backgroundImageLoadingTask = Task { @MainActor in
+            await processPendingBackgroundImageRequests(workerID: workerID)
+        }
+    }
+
+    private func processPendingBackgroundImageRequests(workerID: UUID) async {
+        defer {
+            if backgroundImageLoadingWorkerID == workerID {
+                backgroundImageLoadingTask = nil
+                backgroundImageLoadingWorkerID = nil
+            }
+        }
+
+        while !Task.isCancelled, let request = pendingBackgroundImageRequest {
+            pendingBackgroundImageRequest = nil
+            let decodeStart = Date()
+            print("🐞 \(ISO8601DateFormatter().string(from: decodeStart)) SOUND IMAGE DECODE START request=\(request.id) filename=\(request.url.lastPathComponent) targetPx=\(request.targetPixelDimension)")
+            let decodeTask = Task.detached(priority: .userInitiated) {
+                settingsPreviewDownsampledUIImage(
+                    at: request.url,
+                    maxPixelDimension: CGFloat(request.targetPixelDimension)
+                )
+            }
+            let decodedImage = await withTaskCancellationHandler(operation: {
+                await decodeTask.value
+            }, onCancel: {
+                decodeTask.cancel()
+            })
+            let decodeElapsedMilliseconds = Int(Date().timeIntervalSince(decodeStart) * 1_000)
+            print("🐞 \(ISO8601DateFormatter().string(from: Date())) SOUND IMAGE DECODE FINISH request=\(request.id) success=\(decodedImage != nil) elapsedMs=\(decodeElapsedMilliseconds)")
+
+            guard !Task.isCancelled else {
+                print("🐞 \(ISO8601DateFormatter().string(from: Date())) SOUND IMAGE SUPERSEDED request=\(request.id) reason=worker-cancelled")
+                return
+            }
+
+            guard backgroundImageTargetPixelDimension == request.targetPixelDimension else {
+                print("🐞 \(ISO8601DateFormatter().string(from: Date())) SOUND IMAGE SUPERSEDED request=\(request.id) reason=target-size-changed")
+                continue
+            }
+
+            guard let decodedImage else {
+                print("🐞 \(ISO8601DateFormatter().string(from: Date())) SOUND IMAGE FAILED request=\(request.id) reason=decode-returned-nil")
+                continue
+            }
+
+            if backgroundImageRequestGeneration != request.generation {
+                guard let pendingRequest = pendingBackgroundImageRequest,
+                      pendingRequest.generation == backgroundImageRequestGeneration,
+                      pendingRequest.targetPixelDimension == request.targetPixelDimension,
+                      backgroundImageLoadingWorkerID == workerID,
+                      backgroundImageLoadingTask != nil else {
+                    print("🐞 \(ISO8601DateFormatter().string(from: Date())) SOUND IMAGE SUPERSEDED request=\(request.id) reason=generation-changed-without-valid-pending-request")
+                    continue
+                }
+
+                backgroundImage = decodedImage
+                print("🐞 \(ISO8601DateFormatter().string(from: Date())) SOUND IMAGE INTERMEDIATE INSTALLED request=\(request.id) filename=\(request.url.lastPathComponent) generation=\(request.generation.uuidString)")
+                continue
+            }
+
+            backgroundImage = decodedImage
+            print("🐞 \(ISO8601DateFormatter().string(from: Date())) SOUND IMAGE FINAL INSTALLED request=\(request.id) filename=\(request.url.lastPathComponent) generation=\(request.generation.uuidString)")
         }
     }
 
