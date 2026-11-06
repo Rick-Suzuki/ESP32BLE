@@ -18,6 +18,8 @@ struct SettingsAvailableDevicesPanel: View {
     let iPhoneEditorLeadingInset: CGFloat
     let iPhoneImageEditor: AnyView
     let iPhoneImageEditorCloseButton: AnyView
+    let isIPhoneSoundPlayerPresented: Bool
+    let iPhoneSoundPlayer: AnyView
     let presentDeleteAllDataConfirmation: () -> Void
     let presentHelp: () -> Void
     @State private var macPairingButtonWidth: CGFloat = 132
@@ -82,6 +84,8 @@ struct SettingsAvailableDevicesPanel: View {
         Group {
             if isIPhoneImageEditorPresented {
                 iPhoneImageEditorBody
+            } else if isIPhoneSoundPlayerPresented {
+                iPhoneSoundPlayerBody
             } else {
                 iPhoneStandardBody
             }
@@ -125,6 +129,24 @@ struct SettingsAvailableDevicesPanel: View {
                     .frame(maxHeight: .infinity, alignment: .leading)
             } else {
                 Color.clear
+                    .frame(maxHeight: .infinity)
+            }
+
+            iPhoneBottomControls
+        }
+    }
+
+    private var iPhoneSoundPlayerBody: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            connectionContent
+                .frame(maxWidth: .infinity, alignment: .topLeading)
+
+            if iPhoneBottomControlsContentWidth > 0 {
+                iPhoneSoundPlayer
+                    .frame(width: iPhoneBottomControlsContentWidth, alignment: .leading)
+                    .frame(maxHeight: .infinity, alignment: .leading)
+            } else {
+                Color.black
                     .frame(maxHeight: .infinity)
             }
 

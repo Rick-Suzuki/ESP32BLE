@@ -1,8 +1,65 @@
-[BLE-CONNECT-PROBE] 🐞 t=0.000s scan stop requested reason=stop() activePeripheralUUID=nil discoveredDeviceCount=0
-API MISUSE: <CBCentralManager: 0x1037488c0> can only accept this command while in the powered on state
-[BLE-CONNECT-PROBE] 🐞 t=0.000s scanning stopped
-[BLE-CONNECT-PROBE] 🐞 t=0.000s state isConnected previous=false new=false activePeripheralUUID=nil attempt=0
-non-launching port is incompatible with service identifier "com.apple.PointerUI.pointeruid.default-service"
-🐞 [EDITOR-ANIMATION-RECT] timestamp=1793874991.42023 category=tap tap received
-🐞 [EDITOR-ANIMATION-RECT] timestamp=1793874991.54732 category=destination-availability missing destinationSurfaceFrameNamed=(0.0, 0.0, 0.0, 0.0) coordinateSpace=SettingsDocumentEditorAnimationCoordinateSpace
-🐞 [EDITOR-ANIMATION-RECT] timestamp=1793874991.5473452 category=destination-geometry idiom=iPhone destinationSurfaceFrameNamed=(0.0, 0.0, 750.0, 382.0) destinationRectangleFrameNamed=(0.0, 0.0, 750.0, 382.0) coordinateSpace=SettingsDocumentEditorAnimationCoordinateSpace deltaMinX=0.0 deltaMaxX=0.0 deltaWidth=0.0 deltaMidX=0.0 deltaMinY=0.0 deltaMaxY=0.0 deltaHeight=0.0 deltaMidY=0.0
+1. Files modified
+
+• ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
+• ESP32BLE/Scrns/Set_Screen/Set_SoundPlayer.swift
+
+2. Restored iPad Settings geometry
+
+The iPad left column now uses the original upper/lower sibling structure:
+
+• Sounds selects largeSoundPlayerSection as the upper content view.
+• combinedBottomPanelSection remains below it exactly once.
+• The Sound-only iPadSoundPlayerAndBottomControlsSection and its vertical .fixedSize(...) constraint were removed.
+
+This restores the pre-Sounds flexible relationship between the upper editing region and lower Settings controls. The outer HStack, toolbar, file table, and table-width logic are unchanged.
+
+3. Vertical sizing behavior
+
+Previously, Sounds forced the lower panel to intrinsic vertical sizing, changing the parent allocation.
+
+Now, Sounds follows the same flexible parent contract as Screens, Templates, MDs, Text, Images, and PDFs. The player fills only the upper area allocated by the existing Settings layout.
+
+4. Background image
+
+The iPad player uses a black base with the saved selected image as an overlay:
+
+• Aspect Fill via scaledToFill()
+• Centered crop
+• Clipped to the player rectangle
+• No image-derived frame or geometry calculation
+• Black remains when no saved image exists
+
+The existing saved-image selection and persistence are unchanged.
+
+5. Internal iPad controls
+
+The compact bottom group now contains:
+
+• Full filename with extension, centered above slider
+• Functional position slider
+• Right-aligned combined time, e.g. 0:03 of 0:09
+• Previous / Play-Pause / Next with wider 48-point spacing
+• Disabled Auto Start at lower left
+• Disabled shuffle-symbol Random button centered beneath Play/Pause
+
+The group is internally bottom-aligned and does not participate in parent sizing.
+
+6. iPhone isolation
+
+iPhone hosting geometry was not changed.
+
+usesCompactLayout == true retains the prior compact GeometryReader/ZStack presentation, spacing, controls, separate time labels, and hosting path. The new iPad arrangement is used only for usesCompactLayout == false.
+
+7. Cross-category protection
+
+Only the .sounds upper-content branch changed. All non-Sounds categories continue through their existing upper view plus the unchanged combinedBottomPanelSection.
+
+8. Build result
+
+Build succeeded for the active physical destination: iPad Air M2, iOS 27.2.
+
+No installation, launch, commit, or push was performed.
+
+9. Remaining physical-device check
+
+A visual check on iPad Air M2 is still needed to confirm final optical spacing and that the compact control stack has comfortable room on iPad mini. The code now preserves the original Settings allocation, so any remaining adjustment should be limited to internal iPad player spacing rather than parent Settings geometry.

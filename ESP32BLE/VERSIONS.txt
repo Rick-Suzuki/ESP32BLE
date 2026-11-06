@@ -1,8 +1,11 @@
 
+V66.11
+Basic sound player working - ipad
+261106 Fri 1152
+
 V66.10
 Text Editor/animations working
 261105 Thu 2126
-
 
 V66.09
 settings: font slider working

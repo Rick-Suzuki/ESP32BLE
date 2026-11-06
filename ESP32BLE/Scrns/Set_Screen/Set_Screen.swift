@@ -383,6 +383,10 @@ struct SettingsScreen: View {
     @State private var isDocumentEditorFocused = false
     @State private var speechSynthesizer = AVSpeechSynthesizer()
     @State private var soundPreviewPlayer: AVAudioPlayer?
+    @State private var soundPlaybackPosition: TimeInterval = 0
+    @State private var soundPlaybackDuration: TimeInterval = 0
+    @State private var isSoundPreviewPlaying = false
+    @State private var soundProgressTask: Task<Void, Never>?
     @State private var loadedDocumentName = ""
     @State private var loadedDocumentURL: URL?
     @State private var savedDocumentEditorText = ""
@@ -504,6 +508,7 @@ struct SettingsScreen: View {
                 cancelImageOpacityPreviewUpdate()
                 isImageOpacitySliderEditing = false
                 synchronizeImageOpacityPresentation()
+                stopSoundProgressUpdates()
             }
             .onChange(of: scenePhase) { _, newScenePhase in
                 guard newScenePhase != .active else { return }
@@ -561,12 +566,16 @@ struct SettingsScreen: View {
                     if isPad {
                         HStack(alignment: .top, spacing: 0) {
                             VStack(spacing: 0) {
-                                if isImagesListActive {
-                                    largeImagePreviewSection
-                                } else if isPDFsListActive {
-                                    largePDFPreviewSection
+                                if isSoundsListActive {
+                                    largeSoundPlayerSection
                                 } else {
-                                    editableDocumentSection
+                                    if isImagesListActive {
+                                        largeImagePreviewSection
+                                    } else if isPDFsListActive {
+                                        largePDFPreviewSection
+                                    } else {
+                                        editableDocumentSection
+                                    }
                                 }
 
                                 if !isDocumentEditorFocused {
@@ -1594,6 +1603,42 @@ struct SettingsScreen: View {
         }
     }
 
+    private var largeSoundPlayerSection: some View {
+        SettingsSoundPlayerView(
+            title: selectedSoundFileName,
+            playbackPosition: soundPlaybackPosition,
+            duration: soundPlaybackDuration,
+            isPlaying: isSoundPreviewPlaying,
+            canGoPrevious: canSelectPreviousSound,
+            canGoNext: canSelectNextSound,
+            backgroundImageURL: selectedImageURL,
+            usesCompactLayout: false,
+            onSeek: seekSoundPreview,
+            onPrevious: selectPreviousSound,
+            onTogglePlayback: toggleSoundPreviewPlayback,
+            onNext: selectNextSound
+        )
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var iPhoneSoundPlayerSection: some View {
+        SettingsSoundPlayerView(
+            title: selectedSoundDisplayName,
+            playbackPosition: soundPlaybackPosition,
+            duration: soundPlaybackDuration,
+            isPlaying: isSoundPreviewPlaying,
+            canGoPrevious: canSelectPreviousSound,
+            canGoNext: canSelectNextSound,
+            backgroundImageURL: selectedImageURL,
+            usesCompactLayout: true,
+            onSeek: seekSoundPreview,
+            onPrevious: selectPreviousSound,
+            onTogglePlayback: toggleSoundPreviewPlayback,
+            onNext: selectNextSound
+        )
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
     private var documentViewerTapAction: (() -> Void)? {
         guard isDocumentEditorListActive else { return nil }
         return {
@@ -2430,6 +2475,8 @@ struct SettingsScreen: View {
             iPhoneEditorLeadingInset: iPhoneEditorLeadingInset,
             iPhoneImageEditor: AnyView(iPhoneLargeContentPreview),
             iPhoneImageEditorCloseButton: AnyView(iPhoneImagePreviewCloseButton),
+            isIPhoneSoundPlayerPresented: isSoundsListActive,
+            iPhoneSoundPlayer: AnyView(iPhoneSoundPlayerSection),
             presentDeleteAllDataConfirmation: presentDeleteAllDataConfirmation,
             presentHelp: {
                 isHelpPresented = true
@@ -2699,6 +2746,10 @@ struct SettingsScreen: View {
 
     private var isPDFsListActive: Bool {
         listMode == .pdfs
+    }
+
+    private var isSoundsListActive: Bool {
+        listMode == .sounds
     }
 
     private var isDocumentEditorListActive: Bool {
@@ -4507,6 +4558,10 @@ struct SettingsScreen: View {
         return selectedSoundURL.deletingPathExtension().lastPathComponent
     }
 
+    private var selectedSoundFileName: String {
+        selectedSoundURL?.lastPathComponent ?? "sound"
+    }
+
     private var selectedPDFDisplayName: String {
         guard let selectedPDFURL else {
             return "pdf"
@@ -4895,17 +4950,121 @@ struct SettingsScreen: View {
     }
 
     private func playSelectedSoundPreview(from soundURL: URL) {
-        soundPreviewPlayer?.stop()
-        soundPreviewPlayer = nil
+        stopSoundPreviewPlayback()
 
         do {
             let player = try AVAudioPlayer(contentsOf: soundURL)
             player.prepareToPlay()
-            player.play()
             soundPreviewPlayer = player
+            soundPlaybackDuration = max(player.duration, 0)
+            soundPlaybackPosition = 0
+            isSoundPreviewPlaying = player.play()
+            startSoundProgressUpdates()
         } catch {
             soundPreviewPlayer = nil
+            soundPlaybackPosition = 0
+            soundPlaybackDuration = 0
+            isSoundPreviewPlaying = false
         }
+    }
+
+    private var selectedSoundIndex: Int? {
+        guard let selectedSoundURL else { return nil }
+        return availableSoundURLs.firstIndex { $0.path == selectedSoundURL.path }
+    }
+
+    private var canSelectPreviousSound: Bool {
+        guard let selectedSoundIndex else { return false }
+        return selectedSoundIndex > availableSoundURLs.startIndex
+    }
+
+    private var canSelectNextSound: Bool {
+        guard let selectedSoundIndex else { return false }
+        return selectedSoundIndex < availableSoundURLs.index(before: availableSoundURLs.endIndex)
+    }
+
+    private func selectPreviousSound() {
+        guard let selectedSoundIndex,
+              selectedSoundIndex > availableSoundURLs.startIndex else {
+            return
+        }
+        selectSound(availableSoundURLs[selectedSoundIndex - 1])
+    }
+
+    private func selectNextSound() {
+        guard let selectedSoundIndex,
+              selectedSoundIndex < availableSoundURLs.index(before: availableSoundURLs.endIndex) else {
+            return
+        }
+        selectSound(availableSoundURLs[selectedSoundIndex + 1])
+    }
+
+    private func toggleSoundPreviewPlayback() {
+        guard let soundPreviewPlayer else { return }
+
+        if soundPreviewPlayer.isPlaying {
+            soundPreviewPlayer.pause()
+            isSoundPreviewPlaying = false
+            soundPlaybackPosition = soundPreviewPlayer.currentTime
+            return
+        }
+
+        if soundPreviewPlayer.currentTime >= soundPreviewPlayer.duration {
+            soundPreviewPlayer.currentTime = 0
+        }
+        isSoundPreviewPlaying = soundPreviewPlayer.play()
+        startSoundProgressUpdates()
+    }
+
+    private func seekSoundPreview(to position: TimeInterval) {
+        guard let soundPreviewPlayer else { return }
+        let clampedPosition = min(max(position, 0), max(soundPreviewPlayer.duration, 0))
+        soundPreviewPlayer.currentTime = clampedPosition
+        soundPlaybackPosition = clampedPosition
+    }
+
+    private func startSoundProgressUpdates() {
+        guard soundProgressTask == nil else { return }
+
+        soundProgressTask = Task { @MainActor in
+            while !Task.isCancelled {
+                updateSoundPlaybackProgress()
+                guard soundPreviewPlayer != nil else { break }
+
+                do {
+                    try await Task.sleep(for: .milliseconds(250))
+                } catch {
+                    break
+                }
+            }
+        }
+    }
+
+    private func updateSoundPlaybackProgress() {
+        guard let soundPreviewPlayer else {
+            soundPlaybackPosition = 0
+            soundPlaybackDuration = 0
+            isSoundPreviewPlaying = false
+            return
+        }
+
+        soundPlaybackDuration = max(soundPreviewPlayer.duration, 0)
+        soundPlaybackPosition = min(max(soundPreviewPlayer.currentTime, 0), soundPlaybackDuration)
+        isSoundPreviewPlaying = soundPreviewPlayer.isPlaying
+    }
+
+    private func stopSoundProgressUpdates() {
+        soundProgressTask?.cancel()
+        soundProgressTask = nil
+    }
+
+    private func stopSoundPreviewPlayback() {
+        stopSoundProgressUpdates()
+        soundPreviewPlayer?.stop()
+        soundPreviewPlayer = nil
+        soundPlaybackPosition = 0
+        soundPlaybackDuration = 0
+        isSoundPreviewPlaying = false
     }
 
     private enum RenameableDocumentKind {
@@ -5311,6 +5470,7 @@ struct SettingsScreen: View {
 
     private func deleteSound(_ soundURL: URL) {
         let previousSelectedSoundURL = selectedSoundURL
+        let isPreviewingDeletedSound = previousSelectedSoundURL?.path == soundURL.path
 
         do {
             try FileManager.default.removeItem(at: soundURL)
@@ -5320,6 +5480,9 @@ struct SettingsScreen: View {
         }
 
         refreshDocumentFiles()
+        if isPreviewingDeletedSound {
+            stopSoundPreviewPlayback()
+        }
         if let previousSelectedSoundURL,
            previousSelectedSoundURL.path == soundURL.path {
             persistSelectedSound(nil)

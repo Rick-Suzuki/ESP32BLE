@@ -18,6 +18,8 @@ struct SettingsBottomControlsSection: View {
     let iPhoneEditorLeadingInset: CGFloat
     let iPhoneImageEditor: AnyView
     let iPhoneImageEditorCloseButton: AnyView
+    let isIPhoneSoundPlayerPresented: Bool
+    let iPhoneSoundPlayer: AnyView
     let presentDeleteAllDataConfirmation: () -> Void
     let presentHelp: () -> Void
 
@@ -40,6 +42,8 @@ struct SettingsBottomControlsSection: View {
             iPhoneEditorLeadingInset: iPhoneEditorLeadingInset,
             iPhoneImageEditor: iPhoneImageEditor,
             iPhoneImageEditorCloseButton: iPhoneImageEditorCloseButton,
+            isIPhoneSoundPlayerPresented: isIPhoneSoundPlayerPresented,
+            iPhoneSoundPlayer: iPhoneSoundPlayer,
             presentDeleteAllDataConfirmation: presentDeleteAllDataConfirmation,
             presentHelp: presentHelp
         )
