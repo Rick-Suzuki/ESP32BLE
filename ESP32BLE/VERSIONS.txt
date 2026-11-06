@@ -1,4 +1,8 @@
 
+V66.13
+ipad player almost complete
+261106 Fri 1330
+
 V66.12
 ipad player almost working
 261106 Fri 1304

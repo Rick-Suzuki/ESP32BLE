@@ -974,6 +974,11 @@ struct SettingsScreen: View {
             if !isImagesListActive {
                 isIPhoneImagePreviewPresented = false
             }
+
+            prepareSelectedSoundPreviewIfNeeded()
+        }
+        .onChange(of: selectedSoundURL?.path) {
+            prepareSelectedSoundPreviewIfNeeded()
         }
         .onChange(of: documentEditorText) {
             guard !isLoadingDocumentText else { return }
@@ -992,6 +997,7 @@ struct SettingsScreen: View {
             UIApplication.shared.isIdleTimerDisabled = keepScreenAwake
             documentNameDraft = currentTitleDisplayName
             loadSpeechVoicesIfNeeded()
+            prepareSelectedSoundPreviewIfNeeded()
         }
         .onChange(of: keepScreenAwake) {
             UIApplication.shared.isIdleTimerDisabled = keepScreenAwake
@@ -4999,6 +5005,23 @@ struct SettingsScreen: View {
     private var isSoundPreviewPrepared: Bool {
         guard let soundPreviewPlayer else { return false }
         return soundPreviewPlayer.duration.isFinite && soundPreviewPlayer.duration > 0
+    }
+
+    private func prepareSelectedSoundPreviewIfNeeded() {
+        guard isSoundsListActive,
+              let selectedSoundURL,
+              FileManager.default.fileExists(atPath: selectedSoundURL.path) else {
+            return
+        }
+
+        if let soundPreviewPlayer,
+           let preparedSoundURL = soundPreviewPlayer.url,
+           preparedSoundURL.standardizedFileURL == selectedSoundURL.standardizedFileURL,
+           isSoundPreviewPrepared {
+            return
+        }
+
+        prepareSoundPreview(from: selectedSoundURL)
     }
 
     @discardableResult

@@ -194,30 +194,13 @@ struct SettingsSoundPlayerView: View {
     private var iPadControlRow: some View {
         GeometryReader { geometry in
             let metrics = iPadControlMetrics(for: geometry.size.width)
-            let sideWidth = max(
-                0,
-                (geometry.size.width - metrics.transportWidth - metrics.transportClearance) / 2
-            )
 
-            ZStack {
-                HStack(spacing: 0) {
-                    iPadAutoStartControl(metrics: metrics)
-                        .frame(width: sideWidth, alignment: .leading)
-
-                    Color.clear
-                        .frame(width: metrics.transportWidth + metrics.transportClearance)
-
-                    iPadRightControls(metrics: metrics)
-                        .frame(width: sideWidth, alignment: .trailing)
-                }
-
-                HStack {
-                    iPadRepeatControl(metrics: metrics)
-                        .frame(width: sideWidth, alignment: .trailing)
-                    Spacer(minLength: 0)
-                }
-
+            IPadControlRowLayout(minimumGap: metrics.sideControlGap) {
+                iPadAutoStartControl(metrics: metrics)
+                iPadRepeatControl(metrics: metrics)
                 iPadTransportControls(metrics: metrics)
+                iPadRandomControl(metrics: metrics)
+                iPadTimeDisplay
             }
         }
         .frame(height: controlSize * 1.28)
@@ -252,21 +235,11 @@ struct SettingsSoundPlayerView: View {
     }
 
     private func iPadAutoStartControl(metrics: IPadControlMetrics) -> some View {
-        HStack(spacing: 6) {
-            Text("Auto Start")
-                .font(metrics.modeLabelFont)
-                .foregroundStyle(.white.opacity(0.9))
-
-            Toggle("Auto Start", isOn: Binding(
-                get: { isAutoStartEnabled },
-                set: onSetAutoStart
-            ))
-            .labelsHidden()
-            .toggleStyle(.switch)
-            .tint(.cyan)
-            .scaleEffect(metrics.autoStartScale)
-            .accessibilityLabel("Auto Start")
-        }
+        SettingsAutoStartButton(
+            isEnabled: isAutoStartEnabled,
+            size: metrics.transportButtonSize,
+            action: { onSetAutoStart(!isAutoStartEnabled) }
+        )
     }
 
     private func iPadRepeatControl(metrics: IPadControlMetrics) -> some View {
@@ -279,23 +252,22 @@ struct SettingsSoundPlayerView: View {
         )
     }
 
-    private func iPadRightControls(metrics: IPadControlMetrics) -> some View {
-        HStack(spacing: metrics.randomTimeSpacing) {
-            iPadModeButton(
-                systemName: "shuffle",
-                accessibilityLabel: "Random playback",
-                isEnabled: isRandomEnabled,
-                size: metrics.transportButtonSize,
-                action: onToggleRandom
-            )
+    private func iPadRandomControl(metrics: IPadControlMetrics) -> some View {
+        iPadModeButton(
+            systemName: "shuffle",
+            accessibilityLabel: "Random playback",
+            isEnabled: isRandomEnabled,
+            size: metrics.transportButtonSize,
+            action: onToggleRandom
+        )
+    }
 
-            Text("\(formattedTimeWithHundredths(sliderPosition)) of \(formattedTimeWithHundredths(safeDuration))")
-                .font(.system(size: 18, weight: .medium, design: .monospaced))
-                .foregroundStyle(.white.opacity(0.9))
-                .lineLimit(1)
-                .minimumScaleFactor(0.65)
-                .frame(maxWidth: .infinity, alignment: .trailing)
-        }
+    private var iPadTimeDisplay: some View {
+        Text("\(formattedTimeWithHundredths(sliderPosition)) of \(formattedTimeWithHundredths(safeDuration))")
+            .font(.system(size: 18, weight: .medium, design: .monospaced))
+            .foregroundStyle(.white.opacity(0.9))
+            .lineLimit(1)
+            .minimumScaleFactor(0.65)
     }
 
     private func iPadModeButton(
@@ -462,12 +434,9 @@ struct SettingsSoundPlayerView: View {
     }
 
     private struct IPadControlMetrics {
-        let autoStartScale: CGFloat
-        let modeLabelFont: Font
         let transportButtonSize: CGFloat
         let transportSpacing: CGFloat
-        let transportClearance: CGFloat
-        let randomTimeSpacing: CGFloat
+        let sideControlGap: CGFloat
 
         var transportWidth: CGFloat {
             (transportButtonSize * 3) + (transportSpacing * 2)
@@ -477,22 +446,120 @@ struct SettingsSoundPlayerView: View {
     private func iPadControlMetrics(for width: CGFloat) -> IPadControlMetrics {
         if width < 640 {
             return IPadControlMetrics(
-                autoStartScale: 0.9,
-                modeLabelFont: .caption.weight(.medium),
                 transportButtonSize: 42,
                 transportSpacing: 10,
-                transportClearance: 28,
-                randomTimeSpacing: 6
+                sideControlGap: 6
             )
         }
 
         return IPadControlMetrics(
-            autoStartScale: 1.0,
-            modeLabelFont: .callout.weight(.medium),
             transportButtonSize: 48,
             transportSpacing: 14,
-            transportClearance: 36,
-            randomTimeSpacing: 10
+            sideControlGap: 10
+        )
+    }
+}
+
+private struct SettingsAutoStartButton: View {
+    let isEnabled: Bool
+    let size: CGFloat
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 0) {
+                Text("Auto")
+                Text("Start")
+            }
+            .font(.system(size: size * 0.3, weight: .semibold))
+            .foregroundStyle(.black)
+            .multilineTextAlignment(.center)
+			.frame(width: size*1.5, height: size)
+            .background(
+                isEnabled ? Color.cyan : Color.gray.opacity(0.72),
+                in: RoundedRectangle(cornerRadius: size * 0.18, style: .continuous)
+            )
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Auto Start")
+        .accessibilityValue(isEnabled ? "On" : "Off")
+    }
+}
+
+private struct IPadControlRowLayout: Layout {
+    let minimumGap: CGFloat
+
+    func sizeThatFits(
+        proposal: ProposedViewSize,
+        subviews: Subviews,
+        cache: inout ()
+    ) -> CGSize {
+        let sizes = subviews.map { $0.sizeThatFits(.unspecified) }
+        let idealWidth = sizes.reduce(CGFloat.zero) { $0 + $1.width }
+        let idealHeight = sizes.map(\.height).max() ?? 0
+
+        return CGSize(
+            width: proposal.width ?? idealWidth,
+            height: proposal.height ?? idealHeight
+        )
+    }
+
+    func placeSubviews(
+        in bounds: CGRect,
+        proposal: ProposedViewSize,
+        subviews: Subviews,
+        cache: inout ()
+    ) {
+        guard subviews.count == 5 else { return }
+
+        let autoStart = subviews[0]
+        let repeatButton = subviews[1]
+        let transport = subviews[2]
+        let randomButton = subviews[3]
+        let time = subviews[4]
+        let verticalProposal = ProposedViewSize(width: nil, height: bounds.height)
+        let autoStartSize = autoStart.sizeThatFits(verticalProposal)
+        let repeatSize = repeatButton.sizeThatFits(verticalProposal)
+        let transportSize = transport.sizeThatFits(verticalProposal)
+        let randomSize = randomButton.sizeThatFits(verticalProposal)
+
+        let transportLeading = bounds.midX - (transportSize.width / 2)
+        let nextTrailing = transportLeading + transportSize.width
+        let availableTimeWidth = max(
+            0,
+            bounds.maxX - nextTrailing - randomSize.width - (minimumGap * 2)
+        )
+        let intrinsicTimeSize = time.sizeThatFits(verticalProposal)
+        let timeWidth = min(intrinsicTimeSize.width, availableTimeWidth)
+        let timeLeading = bounds.maxX - timeWidth
+
+        let repeatCenter = (bounds.minX + autoStartSize.width + transportLeading) / 2
+        let randomCenter = (nextTrailing + timeLeading) / 2
+
+        autoStart.place(
+            at: CGPoint(x: bounds.minX, y: bounds.midY),
+            anchor: .leading,
+            proposal: ProposedViewSize(width: autoStartSize.width, height: bounds.height)
+        )
+        repeatButton.place(
+            at: CGPoint(x: repeatCenter, y: bounds.midY),
+            anchor: .center,
+            proposal: ProposedViewSize(width: repeatSize.width, height: bounds.height)
+        )
+        transport.place(
+            at: CGPoint(x: bounds.midX, y: bounds.midY),
+            anchor: .center,
+            proposal: ProposedViewSize(width: transportSize.width, height: bounds.height)
+        )
+        randomButton.place(
+            at: CGPoint(x: randomCenter, y: bounds.midY),
+            anchor: .center,
+            proposal: ProposedViewSize(width: randomSize.width, height: bounds.height)
+        )
+        time.place(
+            at: CGPoint(x: bounds.maxX, y: bounds.midY),
+            anchor: .trailing,
+            proposal: ProposedViewSize(width: timeWidth, height: bounds.height)
         )
     }
 }
