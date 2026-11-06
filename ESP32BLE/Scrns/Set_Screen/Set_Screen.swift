@@ -5094,10 +5094,11 @@ struct SettingsScreen: View {
         guard let soundPreviewPlayer else { return }
 
         if hasSoundPreviewCompleted {
-            soundPreviewPlayer.currentTime = 0
-            soundPlaybackPosition = 0
-            hasSoundPreviewCompleted = false
-            completedSoundPlaybackID = nil
+            guard let selectedSoundURL else { return }
+
+            print("🐞 \(ISO8601DateFormatter().string(from: Date())) SETTINGS SOUND COMPLETED REPREPARATION file=\(selectedSoundURL.lastPathComponent)")
+            prepareSoundPreview(from: selectedSoundURL, shouldStartPlayback: true)
+            return
         }
 
         isSoundPreviewPlaying = soundPreviewPlayer.play()
