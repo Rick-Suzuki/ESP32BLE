@@ -1,131 +1,34 @@
-STAGE 8B.24A COMPLETE
+STAGE 8B.24B.1 COMPLETE
 
 Files modified:
 
-• ESP32BLE/ESP32BLE/Scrns/TemplateDocument.swift
 • ESP32BLE/ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
+• ESP32BLE/ESP32BLE/Scrns/Set_Screen/Set_TxtEditor.swift
 
-No UI, layout, iPhone-specific behavior, Sound player code, existing editor implementation, template format, navigation, import/export, backup/restore, create/apply/delete paths, project settings, or data were changed.
+Changes made:
 
-1. New editing-session state
+• Removed the iPad Templates viewer panel gap with HStack(spacing: 0).
+• Preserved the 64% template / 36% description split.
+• Replaced individual panel borders with one viewer outer border and one 1-point shared vertical divider, preventing a double-width center border.
+• Added configurable wrapsText and textInsets options to PlainDocumentEditor.
+   • Defaults preserve all existing no-wrap behavior and 8-point insets.
+   • Existing Screens, Text, Markdown, and dedicated editor call sites remain on the default behavior.
+• Added corresponding UIKit updates in NoWrapDocumentTextView:
+   • Wrapped mode tracks text-view width.
+   • Uses normal word wrapping.
+   • Disables horizontal bounce and horizontal indicator in wrapped mode.
+   • Retains normal vertical scrolling.
+   • Continues to preserve the existing no-wrap/horizontal-scroll path by default.
+• Enabled wrapping only for the iPad Templates Description pane.
+   • Uses 10-point internal insets on all sides.
+   • Preserves explicit line breaks.
+   • Uses independent vertical UIKit scrolling.
+• Kept the Template pane non-wrapping with its existing horizontal and vertical scrolling configuration.
 
-Added private Templates-only TemplateEditingSession state in Set_Screen.swift􀰓.
+Validation:
 
-It keeps separate from the existing Screens/Text/Markdown editor:
-
-• Original template URL.
-• Original template and configuration file data snapshots.
-• Original template contents and description.
-• Independent template-contents and description drafts.
-• Saved status and session validity.
-• Separate template load/save error state.
-
-It does not use documentEditorText, loadedDocumentURL, or saveCurrentDocumentText().
-
-2. Session loading
-
-Added prepareTemplateEditingSession(for:).
-
-It:
-
-• Confirms the URL belongs to the current Templates collection.
-• Confirms the template exists.
-• Reads UTF-8 template contents.
-• Reads and validates the companion configuration.
-• Preserves ScreenConfig.
-• Initializes independent drafts only after complete successful loading.
-• Presents the existing Settings alert on failure.
-• Does not create a partial or empty fallback session.
-
-3. Paired-file update
-
-Added updateTemplateDocument(...) in TemplateDocument.swift􀰓.
-
-It preserves the existing two-file format:
-
-• Name.template
-• Name.template.config.json
-
-The helper:
-
-• Verifies both files are regular files.
-• Verifies original file snapshots match the editing session.
-• Validates original template UTF-8 and configuration JSON.
-• Preserves the existing ScreenConfig.
-• Normalizes whitespace-only descriptions to nil.
-• Preserves nonempty description text, including Unicode and line breaks.
-• Encodes and decodes replacement JSON before publication.
-• Creates staged replacement files in the template directory.
-• Verifies staged UTF-8 and JSON data.
-• Creates and verifies recoverable on-disk backups before publishing either replacement.
-• Publishes config and template replacements as a coordinated pair.
-• Verifies both final files after publication.
-• Removes temporary staging/backups only after the operation completes.
-
-4. Validation and rollback
-
-Before publication, the helper validates:
-
-• Template identity and existence.
-• Companion config existence.
-• UTF-8 template encoding.
-• Existing JSON configuration.
-• Button count against maxFunctionKeyCount.
-• Existing grid capacity against the edited template.
-• Replacement JSON encoding/decoding.
-• Staged file contents.
-
-If either publication step fails, it restores both files from verified backups. A rollback failure is surfaced explicitly as a critical error.
-
-5. Stale-session safeguards
-
-saveTemplateEditingSession() rejects saving when:
-
-• No valid editing session exists.
-• The selected template changed.
-• The edited template is no longer in the Templates collection.
-• Template contents changed externally since loading.
-• Companion configuration changed externally since loading.
-
-The drafts remain in memory after a failed load/save attempt for correction or retry; there is no automatic redirect to another selected template.
-
-6. Post-save refresh
-
-After both files are saved and reloaded successfully:
-
-• The session snapshots are replaced with the verified saved files.
-• The session is marked saved.
-• The selected path remains the edited template.
-• refreshTemplateFiles() reloads the Templates collection and description state.
-
-No editor presentation or dismissal is triggered; that remains for Stage 8B.24B.
-
-7. Error handling
-
-Failures use the existing presentDocumentSaveAlert style. The new update error type covers missing files, invalid UTF-8/JSON, stale source data, invalid template/grid content, staging, backup, publication, and rollback failure.
-
-8. Diagnostics added
-
-Added timestamped 🐞 diagnostics for:
-
-• Editing-session initialization.
-• Session loading failure.
-• Save begin.
-• Selection/unavailable save rejection.
-• Save failure/success.
-• Rollback attempt, success, and failure.
-
-No template or description contents are logged.
-
-9. Validation performed
-
-Source diagnostics completed successfully:
-
-• TemplateDocument.swift: no issues.
 • Set_Screen.swift: no issues.
+• Set_TxtEditor.swift: no new errors. The only reported diagnostics are two existing UIButton contentEdgeInsets deprecation warnings, unrelated to this change.
+• git diff --check: passed.
 
-No build, deployment, Simulator test, physical-device test, commit, or push was performed.
-
-10. Unresolved risk before Stage 8B.24B
-
-The storage foundation is ready. Stage 8B.24B must connect the currently private session preparation/save methods to the new iPad read-only viewer and dual-pane editor without reusing the shared single-document editor state.
+No iPhone Templates UI, storage, selection, application, deletion, import/export, backup/restore, Sound player, Main Screen, build, deployment, Simulator use, commit, or push was performed.

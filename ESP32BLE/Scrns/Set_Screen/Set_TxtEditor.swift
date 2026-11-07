@@ -34,6 +34,32 @@ struct PlainDocumentEditor: UIViewRepresentable {
     let focusRequestID: UUID?
     let initialScrollResetID: UUID?
     let onEditingBegan: (() -> Void)?
+    let wrapsText: Bool
+    let textInsets: UIEdgeInsets
+
+    init(
+        text: Binding<String>,
+        fontSize: Binding<CGFloat>,
+        isFocused: Binding<Bool>,
+        isReadOnly: Bool,
+        onReadOnlyTap: (() -> Void)?,
+        focusRequestID: UUID?,
+        initialScrollResetID: UUID?,
+        onEditingBegan: (() -> Void)?,
+        wrapsText: Bool = false,
+        textInsets: UIEdgeInsets = UIEdgeInsets(top: 8, left: 8, bottom: 8, right: 8)
+    ) {
+        _text = text
+        _fontSize = fontSize
+        _isFocused = isFocused
+        self.isReadOnly = isReadOnly
+        self.onReadOnlyTap = onReadOnlyTap
+        self.focusRequestID = focusRequestID
+        self.initialScrollResetID = initialScrollResetID
+        self.onEditingBegan = onEditingBegan
+        self.wrapsText = wrapsText
+        self.textInsets = textInsets
+    }
 
     func makeCoordinator() -> Coordinator {
         Coordinator(text: $text, isFocused: $isFocused)
@@ -54,15 +80,19 @@ struct PlainDocumentEditor: UIViewRepresentable {
         textView.isEditable = !isReadOnly
         textView.isSelectable = !isReadOnly
         textView.isScrollEnabled = true
-        textView.alwaysBounceHorizontal = true
+        textView.wrapsText = wrapsText
+        textView.alwaysBounceHorizontal = !wrapsText
         textView.alwaysBounceVertical = true
-        textView.showsHorizontalScrollIndicator = true
+        textView.showsHorizontalScrollIndicator = !wrapsText
         textView.showsVerticalScrollIndicator = true
-        textView.textContainerInset = UIEdgeInsets(top: 8, left: 8, bottom: 8, right: 8)
+        textView.textContainerInset = textInsets
         textView.textContainer.lineFragmentPadding = 0
-        textView.textContainer.lineBreakMode = .byClipping
-        textView.textContainer.widthTracksTextView = false
-        textView.textContainer.size = CGSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
+        textView.textContainer.lineBreakMode = wrapsText ? .byWordWrapping : .byClipping
+        textView.textContainer.widthTracksTextView = wrapsText
+        textView.textContainer.size = CGSize(
+            width: wrapsText ? 0 : CGFloat.greatestFiniteMagnitude,
+            height: CGFloat.greatestFiniteMagnitude
+        )
         textView.font = .systemFont(ofSize: fontSize)
         textView.text = text
         let pinchGestureRecognizer = UIPinchGestureRecognizer(
@@ -89,12 +119,19 @@ struct PlainDocumentEditor: UIViewRepresentable {
         }
         textView.isEditable = !isReadOnly
         textView.isSelectable = !isReadOnly
+        let didChangeWrapping = textView.wrapsText != wrapsText
+        textView.wrapsText = wrapsText
+        textView.alwaysBounceHorizontal = !wrapsText
+        textView.showsHorizontalScrollIndicator = !wrapsText
+        textView.textContainerInset = textInsets
+        textView.textContainer.lineBreakMode = wrapsText ? .byWordWrapping : .byClipping
+        textView.textContainer.widthTracksTextView = wrapsText
         context.coordinator.requestFocusIfNeeded(
             focusRequestID,
             on: textView
         )
         let previousOffset = textView.contentOffset
-        var shouldRestoreOffset = false
+        var shouldRestoreOffset = didChangeWrapping
         var didChangeContent = false
 
         if textView.text != text {
@@ -707,6 +744,7 @@ private struct DedicatedDocumentEditorKeyboardObserver: UIViewRepresentable {
 
 final class NoWrapDocumentTextView: UITextView {
     var hasUserAdjustedHorizontalOffset = false
+    var wrapsText = false
     private var shouldFocusWhenAttached = false
     private var lastViewportSize: CGSize?
 
@@ -733,11 +771,12 @@ final class NoWrapDocumentTextView: UITextView {
         let didViewportSizeChange = lastViewportSize != viewportSize
         lastViewportSize = viewportSize
 
+        textContainer.widthTracksTextView = wrapsText
         textContainer.size = CGSize(
-            width: CGFloat.greatestFiniteMagnitude,
+            width: wrapsText ? 0 : CGFloat.greatestFiniteMagnitude,
             height: CGFloat.greatestFiniteMagnitude
         )
-        refreshNoWrapContentSize()
+        refreshDocumentContentSize()
 
         if isFirstResponder,
            didViewportSizeChange,
@@ -764,6 +803,21 @@ final class NoWrapDocumentTextView: UITextView {
     }
 
     func refreshNoWrapContentSize() {
+        refreshDocumentContentSize()
+    }
+
+    func refreshDocumentContentSize() {
+        if wrapsText {
+            let measuredSize = sizeThatFits(
+                CGSize(width: max(0, bounds.width), height: CGFloat.greatestFiniteMagnitude)
+            )
+            contentSize = CGSize(
+                width: max(bounds.width, ceil(measuredSize.width)),
+                height: max(bounds.height + 1, ceil(measuredSize.height))
+            )
+            return
+        }
+
         let measuredSize = sizeThatFits(
             CGSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
         )

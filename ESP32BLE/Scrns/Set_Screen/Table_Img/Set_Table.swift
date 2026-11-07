@@ -380,7 +380,8 @@ struct SettingsDocumentTableSection: View {
     }
 
     private func templateDescriptionReservedHeight(for availableHeight: CGFloat) -> CGFloat {
-        guard listMode == .templates,
+        guard !isPad,
+              listMode == .templates,
               selectedTemplateURL != nil,
               templateDescription != nil else {
             return 0

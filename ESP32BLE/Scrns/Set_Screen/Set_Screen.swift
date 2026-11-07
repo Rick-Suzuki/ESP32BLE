@@ -336,6 +336,11 @@ struct SettingsScreen: View {
         }
     }
 
+    private enum TemplateViewerTapTarget {
+        case contents
+        case description
+    }
+
     private enum DedicatedDocumentEditorPresentationState {
         case viewing
         case opening
@@ -525,6 +530,13 @@ struct SettingsScreen: View {
     @State private var lastImageOpacityPreviewUpdate = Date.distantPast
     @State private var templateURLs: [URL] = []
     @State private var templateDescriptionState: TemplateDescriptionState?
+    @State private var templateViewerContents = "Select a template to view its contents."
+    @State private var templateViewerDescription = "Select a template to view its description."
+    @State private var templateViewerContentsScrollResetID = UUID()
+    @State private var templateViewerDescriptionScrollResetID = UUID()
+    @State private var templateViewerTapTarget: TemplateViewerTapTarget?
+    @State private var isTemplateViewerContentsFocused = false
+    @State private var isTemplateViewerDescriptionFocused = false
     @State private var templateEditingSession: TemplateEditingSession?
     @State private var templateEditingLoadError: String?
     @State private var templateEditingSaveError: String?
@@ -644,6 +656,8 @@ struct SettingsScreen: View {
                                         largeImagePreviewSection
                                     } else if isPDFsListActive {
                                         largePDFPreviewSection
+                                    } else if isTemplatesListActive {
+                                        iPadTemplateViewerSection
                                     } else {
                                         editableDocumentSection
                                     }
@@ -1683,6 +1697,87 @@ struct SettingsScreen: View {
                 onReadOnlyTap: documentViewerTapAction,
                 savedText: savedDocumentEditorText,
                 onUndo: { documentEditorText = savedDocumentEditorText }
+            )
+        }
+    }
+
+    // MARK: - BM:🅱️ IPAD TEMPLATE VIEWER
+
+    private var iPadTemplateViewerSection: some View {
+        GeometryReader { proxy in
+            let contentsWidth = max(0, proxy.size.width * 0.64)
+            let descriptionWidth = max(0, proxy.size.width * 0.36)
+
+            HStack(spacing: 0) {
+                templateViewerPanel(
+                    title: "Template",
+                    text: $templateViewerContents,
+                    isFocused: $isTemplateViewerContentsFocused,
+                    initialScrollResetID: templateViewerContentsScrollResetID,
+                    wrapsText: false,
+                    textInsets: UIEdgeInsets(top: 8, left: 8, bottom: 8, right: 8),
+                    onTap: {
+                        templateViewerTapTarget = .contents
+                    }
+                )
+                .frame(width: contentsWidth)
+
+                templateViewerPanel(
+                    title: "Description",
+                    text: $templateViewerDescription,
+                    isFocused: $isTemplateViewerDescriptionFocused,
+                    initialScrollResetID: templateViewerDescriptionScrollResetID,
+                    wrapsText: true,
+                    textInsets: UIEdgeInsets(top: 10, left: 10, bottom: 10, right: 10),
+                    onTap: {
+                        templateViewerTapTarget = .description
+                    }
+                )
+                .frame(width: descriptionWidth)
+            }
+            .frame(width: proxy.size.width, height: proxy.size.height, alignment: .topLeading)
+            .background(Color.black)
+            .overlay {
+                Rectangle()
+                    .stroke(Color.white, lineWidth: 1)
+            }
+            .overlay(alignment: .leading) {
+                Rectangle()
+                    .fill(Color.white)
+                    .frame(width: 1)
+                    .padding(.leading, contentsWidth)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    private func templateViewerPanel(
+        title: String,
+        text: Binding<String>,
+        isFocused: Binding<Bool>,
+        initialScrollResetID: UUID,
+        wrapsText: Bool,
+        textInsets: UIEdgeInsets,
+        onTap: @escaping () -> Void
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text(title)
+                .font(.headline)
+                .foregroundStyle(.white)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+
+            PlainDocumentEditor(
+                text: text,
+                fontSize: $documentEditorFontSize,
+                isFocused: isFocused,
+                isReadOnly: true,
+                onReadOnlyTap: onTap,
+                focusRequestID: nil,
+                initialScrollResetID: initialScrollResetID,
+                onEditingBegan: nil,
+                wrapsText: wrapsText,
+                textInsets: textInsets
             )
         }
     }
@@ -2954,6 +3049,10 @@ struct SettingsScreen: View {
         listMode == .sounds
     }
 
+    private var isTemplatesListActive: Bool {
+        listMode == .templates
+    }
+
     private var isDocumentEditorListActive: Bool {
         listMode == .files || listMode == .text || listMode == .markdown
     }
@@ -3416,10 +3515,15 @@ struct SettingsScreen: View {
     }
 
     private func selectTemplateForDescription(_ templateURL: URL) {
-        selectedTemplateSelectionPath = templateURL.path
+        let normalizedTemplateURL = templateURL.standardizedFileURL
+        selectedTemplateSelectionPath = normalizedTemplateURL.path
 
         do {
-            let configuration = try loadTemplateConfiguration(for: templateURL)
+            let templateData = try Data(contentsOf: normalizedTemplateURL)
+            guard let templateContents = String(data: templateData, encoding: .utf8) else {
+                throw TemplateUpdateError.invalidTemplateUTF8(normalizedTemplateURL)
+            }
+            let configuration = try loadTemplateConfiguration(for: normalizedTemplateURL)
             let description = configuration.description?
                 .trimmingCharacters(in: .whitespacesAndNewlines)
             if let description, !description.isEmpty {
@@ -3427,14 +3531,29 @@ struct SettingsScreen: View {
             } else {
                 templateDescriptionState = .noDescription
             }
+            templateViewerContents = templateContents
+            templateViewerDescription = description ?? "No description"
+            templateViewerContentsScrollResetID = UUID()
+            templateViewerDescriptionScrollResetID = UUID()
+            print("🐞 \(ISO8601DateFormatter().string(from: Date())) TEMPLATE VIEWER LOADED template=\(normalizedTemplateURL.lastPathComponent)")
         } catch {
             templateDescriptionState = .unavailable
+            let message = error.localizedDescription
+            templateViewerContents = "Template unavailable\n\(message)"
+            templateViewerDescription = "Description unavailable\n\(message)"
+            templateViewerContentsScrollResetID = UUID()
+            templateViewerDescriptionScrollResetID = UUID()
+            print("🐞 \(ISO8601DateFormatter().string(from: Date())) TEMPLATE VIEWER LOAD FAILED template=\(normalizedTemplateURL.lastPathComponent) error=\(message)")
         }
     }
 
     private func clearTemplateSelection() {
         selectedTemplateSelectionPath = nil
         templateDescriptionState = nil
+        templateViewerContents = "Select a template to view its contents."
+        templateViewerDescription = "Select a template to view its description."
+        templateViewerContentsScrollResetID = UUID()
+        templateViewerDescriptionScrollResetID = UUID()
     }
 
     private func prepareTemplateEditingSession(for templateURL: URL) {
