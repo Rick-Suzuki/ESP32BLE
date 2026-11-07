@@ -1,4 +1,8 @@
 
+V66.33
+settings: EOD: export as template improved
+261107 Sat 2008
+
 V66.32
 settings: editing template improvements
 261107 Sat 1945

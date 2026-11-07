@@ -1555,7 +1555,7 @@ struct SettingsScreen: View {
                 beginSingleScreenExport()
             }
             .disabled(!canExportActiveScreen)
-            Button("Save as Template") {
+            Button("Save Current Screen as Template") {
                 beginTemplateSave()
             }
             .disabled(!canSaveCurrentScreenAsTemplate)
@@ -1605,7 +1605,7 @@ struct SettingsScreen: View {
                 beginSingleScreenExport()
             }
             iphoneSettingsMenuActionRow(
-                title: "Save as Template",
+                title: "Save Current Screen as Template",
                 isEnabled: canSaveCurrentScreenAsTemplate
             ) {
                 isIPhoneSettingsExportPopoverPresented = false
