@@ -17,9 +17,9 @@ struct SettingsAvailableDevicesPanel: View {
     let isIPhoneImageEditorPresented: Bool
     let iPhoneEditorLeadingInset: CGFloat
     let iPhoneImageEditor: AnyView
-    let iPhoneImageEditorCloseButton: AnyView
     let isIPhoneSoundPlayerPresented: Bool
     let iPhoneSoundPlayer: AnyView
+    let onHideIPhonePreview: () -> Void
     let presentDeleteAllDataConfirmation: () -> Void
     let presentHelp: () -> Void
     @State private var macPairingButtonWidth: CGFloat = 132
@@ -120,7 +120,6 @@ struct SettingsAvailableDevicesPanel: View {
                 }
 
                 Spacer(minLength: 0)
-                iPhoneImageEditorCloseButton
             }
 
             if iPhoneBottomControlsContentWidth > 0 {
@@ -137,9 +136,11 @@ struct SettingsAvailableDevicesPanel: View {
     }
 
     private var iPhoneSoundPlayerBody: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            connectionContent
-                .frame(maxWidth: .infinity, alignment: .topLeading)
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 8) {
+                outputModeButton(.esp32)
+                outputModeButton(.mac)
+            }
 
             if iPhoneBottomControlsContentWidth > 0 {
                 iPhoneSoundPlayer
@@ -331,6 +332,9 @@ struct SettingsAvailableDevicesPanel: View {
     private func outputModeButton(_ mode: OutputMode) -> some View {
         Button(mode.title) {
             ButtonClickFeedback.playIfEnabled()
+            if !isPad {
+                onHideIPhonePreview()
+            }
             selectOutputMode(mode)
         }
         .buttonStyle(.plain)

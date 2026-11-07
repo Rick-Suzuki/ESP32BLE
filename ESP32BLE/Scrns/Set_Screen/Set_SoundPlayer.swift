@@ -101,51 +101,193 @@ struct SettingsSoundPlayerView: View {
 
     private var compactPlayerBody: some View {
         GeometryReader { geometry in
+            let metrics = iPhonePlayerMetrics(for: geometry.size)
+
             ZStack {
                 playerBackground
 
-                VStack(spacing: 8) {
-                    Text(title)
-                        .font(titleFont)
-                        .foregroundStyle(.white)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                        .frame(maxWidth: .infinity, alignment: .center)
+                VStack(spacing: metrics.rowSpacing) {
+                    HStack(spacing: metrics.topControlSpacing) {
+                        SettingsAutoStartButton(
+                            isEnabled: isAutoStartEnabled,
+                            size: metrics.modeButtonSize,
+                            action: { onSetAutoStart(!isAutoStartEnabled) }
+                        )
+
+                        iPhoneModeButton(
+                            systemName: "shuffle",
+                            accessibilityLabel: "Random playback",
+                            isEnabled: isRandomEnabled,
+                            size: metrics.modeButtonSize,
+                            action: onToggleRandom
+                        )
+
+                        iPhoneModeButton(
+                            systemName: "photo.artframe",
+                            accessibilityLabel: "Automatic random background",
+                            isEnabled: isAutoRandomBackgroundEnabled,
+                            size: metrics.modeButtonSize,
+                            action: onToggleAutoRandomBackground
+                        )
+
+                        Text(backgroundImageURL?.lastPathComponent ?? "No image")
+                            .font(.system(size: metrics.filenameFontSize, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.65)
+                            .truncationMode(.tail)
+                            .frame(maxWidth: .infinity, alignment: .trailing)
+                    }
 
                     Spacer(minLength: 0)
 
-                    Slider(
-                        value: $sliderPosition,
-                        in: 0...max(safeDuration, 1),
-                        onEditingChanged: handleSliderEditingChanged
-                    )
-                    .tint(.cyan)
-                    .disabled(!canControlPlayback)
-                    .accessibilityLabel("Playback position")
-                    .accessibilityValue("\(formattedTime(sliderPosition)) of \(formattedTime(safeDuration))")
+                    HStack(spacing: metrics.timeSpacing) {
+                        Slider(
+                            value: $sliderPosition,
+                            in: 0...max(safeDuration, 1),
+                            onEditingChanged: handleSliderEditingChanged
+                        )
+                        .tint(.cyan)
+                        .disabled(!canControlPlayback)
+                        .accessibilityLabel("Playback position")
+                        .accessibilityValue("\(formattedTime(sliderPosition)) of \(formattedTime(safeDuration))")
 
-                    HStack {
-                        Text(formattedTime(sliderPosition))
-                        Spacer()
-                        Text(formattedTime(safeDuration))
+                        Text("\(formattedTime(sliderPosition)) / \(formattedTime(safeDuration))")
+                            .font(.system(size: metrics.timeFontSize, design: .monospaced))
+                            .foregroundStyle(.white.opacity(0.9))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+                            .frame(width: metrics.timeWidth, alignment: .trailing)
                     }
-                    .font(timeFont)
-                    .foregroundStyle(.white.opacity(0.9))
 
-                    transportControls(spacing: 13)
+                    HStack(spacing: metrics.transportSpacing) {
+                        iPhoneTransportButton(
+                            systemName: "backward.end.fill",
+                            accessibilityLabel: "Previous sound",
+                            isEnabled: canGoPrevious,
+                            size: metrics.modeButtonSize,
+                            action: onPrevious
+                        )
 
-                    HStack(spacing: 8) {
-                        compactAutoRandomBackgroundControl
-                        disabledFeatureLabel(title: "Auto Start", systemName: "arrow.right.circle")
-                        disabledFeatureLabel(title: "Random", systemName: "shuffle")
+                        iPhoneTransportButton(
+                            systemName: playbackPresentation.isPlaying ? "pause.fill" : "play.fill",
+                            accessibilityLabel: playbackPresentation.isPlaying ? "Pause" : "Play",
+                            isEnabled: canControlPlayback,
+                            size: metrics.modeButtonSize,
+                            isPrimary: true,
+                            action: onTogglePlayback
+                        )
+
+                        iPhoneTransportButton(
+                            systemName: "forward.end.fill",
+                            accessibilityLabel: "Next sound",
+                            isEnabled: canGoNext,
+                            size: metrics.modeButtonSize,
+                            action: onNext
+                        )
+
+                        Spacer(minLength: 0)
+
+                        iPhoneModeButton(
+                            systemName: "repeat",
+                            accessibilityLabel: "Repeat playback",
+                            isEnabled: isRepeatEnabled,
+                            size: metrics.modeButtonSize,
+                            action: onToggleRepeat
+                        )
                     }
                 }
-                .padding(14)
-                .frame(maxWidth: .infinity, alignment: .center)
+                .padding(metrics.padding)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             }
             .frame(width: geometry.size.width, height: geometry.size.height)
         }
         .background(Color.black)
+        .overlay {
+            Rectangle()
+                .stroke(Color.white, lineWidth: 1)
+                .allowsHitTesting(false)
+        }
+    }
+
+    private struct IPhonePlayerMetrics {
+        let padding: CGFloat
+        let rowSpacing: CGFloat
+        let topControlSpacing: CGFloat
+        let modeButtonSize: CGFloat
+        let transportSpacing: CGFloat
+        let timeSpacing: CGFloat
+        let timeWidth: CGFloat
+        let filenameFontSize: CGFloat
+        let timeFontSize: CGFloat
+    }
+
+    private func iPhonePlayerMetrics(for size: CGSize) -> IPhonePlayerMetrics {
+        let safeWidth = max(size.width, 0)
+        let safeHeight = max(size.height, 0)
+        let modeButtonSize = min(max(min(safeWidth * 0.13, safeHeight * 0.22), 28), 40)
+
+        return IPhonePlayerMetrics(
+            padding: min(max(safeHeight * 0.06, 6), 12),
+            rowSpacing: min(max(safeHeight * 0.05, 5), 10),
+            topControlSpacing: min(max(safeWidth * 0.025, 4), 8),
+            modeButtonSize: modeButtonSize,
+            transportSpacing: min(max(safeWidth * 0.035, 7), 14),
+            timeSpacing: min(max(safeWidth * 0.02, 5), 10),
+            timeWidth: min(max(safeWidth * 0.31, 66), 92),
+            filenameFontSize: min(max(safeHeight * 0.075, 11), 15),
+            timeFontSize: min(max(safeHeight * 0.065, 10), 13)
+        )
+    }
+
+    private func iPhoneModeButton(
+        systemName: String,
+        accessibilityLabel: String,
+        isEnabled: Bool,
+        size: CGFloat,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Image(systemName: systemName)
+                .font(.system(size: size * 0.4, weight: .semibold))
+                .foregroundStyle(isEnabled ? Color.black : Color.white.opacity(0.85))
+                .frame(width: size, height: size)
+                .background(
+                    isEnabled ? Color.cyan : Color.gray.opacity(0.72),
+                    in: Circle()
+                )
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(accessibilityLabel)
+        .accessibilityValue(isEnabled ? "On" : "Off")
+    }
+
+    private func iPhoneTransportButton(
+        systemName: String,
+        accessibilityLabel: String,
+        isEnabled: Bool,
+        size: CGFloat,
+        isPrimary: Bool = false,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button {
+            guard isEnabled else { return }
+            action()
+        } label: {
+            Image(systemName: systemName)
+                .font(.system(size: size * (isPrimary ? 0.47 : 0.4), weight: .semibold))
+                .foregroundStyle(isEnabled ? Color.white : Color.white.opacity(0.35))
+                .frame(width: size, height: size)
+                .background(
+                    isPrimary
+                        ? Color.cyan.opacity(isEnabled ? 0.76 : 0.25)
+                        : Color.white.opacity(0.16),
+                    in: Circle()
+                )
+        }
+        .buttonStyle(.plain)
+        .disabled(!isEnabled)
+        .accessibilityLabel(accessibilityLabel)
     }
 
     private var iPadPlayerBody: some View {

@@ -476,6 +476,7 @@ struct SettingsScreen: View {
     @State private var isIPhoneImagePreviewPresented = false
     @State private var isIPhonePDFPreviewPresented = false
     @State private var isIPhoneDocumentEditorPresented = false
+    @State private var isIPhoneSoundPlayerPresented = true
     @State private var isDedicatedDocumentEditorPresented = false
     @State private var dedicatedDocumentEditorFocusRequestID: UUID?
     @State private var dedicatedDocumentEditorPresentationState: DedicatedDocumentEditorPresentationState = .viewing
@@ -570,6 +571,9 @@ struct SettingsScreen: View {
             }
             .onChange(of: listMode) { previousMode, newMode in
                 if newMode == .sounds {
+                    if !isPad {
+                        isIPhoneSoundPlayerPresented = true
+                    }
                     print("🐞 \(ISO8601DateFormatter().string(from: Date())) SETTINGS ENTER SOUNDS previous=\(previousMode.rawValue)")
                 }
 
@@ -2599,9 +2603,9 @@ struct SettingsScreen: View {
             isIPhoneImageEditorPresented: isIPhoneContentPreviewPresented,
             iPhoneEditorLeadingInset: iPhoneEditorLeadingInset,
             iPhoneImageEditor: AnyView(iPhoneLargeContentPreview),
-            iPhoneImageEditorCloseButton: AnyView(iPhoneImagePreviewCloseButton),
-            isIPhoneSoundPlayerPresented: isSoundsListActive,
+            isIPhoneSoundPlayerPresented: isSoundsListActive && isIPhoneSoundPlayerPresented,
             iPhoneSoundPlayer: AnyView(iPhoneSoundPlayerSection),
+            onHideIPhonePreview: hideIPhonePreview,
             presentDeleteAllDataConfirmation: presentDeleteAllDataConfirmation,
             presentHelp: {
                 isHelpPresented = true
@@ -2762,28 +2766,18 @@ struct SettingsScreen: View {
             (isDocumentEditorListActive && isIPhoneDocumentEditorPresented)
     }
 
-    private var iPhoneImagePreviewCloseButton: some View {
-        Button {
-            if isPDFsListActive {
-                isIPhonePDFPreviewPresented = false
-            } else if isImagesListActive {
-                isIPhoneImagePreviewPresented = false
-            } else {
-                isIPhoneDocumentEditorPresented = false
-            }
-        } label: {
-            Image(systemName: "xmark")
-                .font(.caption.weight(.bold))
-                .foregroundStyle(.white)
-                .frame(width: 28, height: 28)
-                .background(.black.opacity(0.7), in: .circle)
+    private func hideIPhonePreview() {
+        guard !isPad else { return }
+
+        if isSoundsListActive {
+            isIPhoneSoundPlayerPresented = false
+        } else if isPDFsListActive {
+            isIPhonePDFPreviewPresented = false
+        } else if isImagesListActive {
+            isIPhoneImagePreviewPresented = false
+        } else if isDocumentEditorListActive {
+            isIPhoneDocumentEditorPresented = false
         }
-        .buttonStyle(.plain)
-        .accessibilityLabel(
-            isPDFsListActive
-                ? "Close PDF preview"
-                : (isImagesListActive ? "Close image preview" : "Close editor")
-        )
     }
 
     private var pdfPreviewSection: some View {
@@ -3340,7 +3334,12 @@ struct SettingsScreen: View {
             },
             applyImageBackground: applySettingsBackground,
             deleteImage: deleteImage,
-            selectSound: { selectSound($0) },
+            selectSound: { soundURL in
+                if !isPad {
+                    isIPhoneSoundPlayerPresented = true
+                }
+                selectSound(soundURL)
+            },
             deleteSound: deleteSound,
             selectPDF: selectPDF,
             deletePDF: deletePDF,

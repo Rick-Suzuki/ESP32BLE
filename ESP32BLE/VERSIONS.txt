@@ -1,4 +1,8 @@
 
+V66.19
+Settings: iPhone audio player, nearly there
+261107 Sat 1056
+
 V66.18
 settings: iPad audio player complete
 261107 Sat 0928
