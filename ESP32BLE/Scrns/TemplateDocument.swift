@@ -14,9 +14,7 @@ func isTemplateDocumentFileName(_ fileName: String) -> Bool {
 func preferredTemplateDocumentURLs(from urls: [URL]) -> [URL] {
     urls
         .filter(isTemplateDocumentURL)
-        .sorted {
-            $0.lastPathComponent.localizedCaseInsensitiveCompare($1.lastPathComponent) == .orderedAscending
-        }
+        .sorted(by: naturalFileURLAscending)
 }
 
 func discoverTemplateDocumentURLs(
@@ -979,6 +977,7 @@ func updateTemplateDocument(
     description: String,
     maximumButtonCount: Int,
     effectiveButtonLineCount: (String) -> Int,
+    proposedGrid: ScreenConfig.Grid? = nil,
     fileManager: FileManager = .default
 ) throws -> TemplateUpdateResult {
     guard isTemplateDocumentURL(templateURL) else {
@@ -1032,16 +1031,25 @@ func updateTemplateDocument(
         throw TemplateUpdateError.invalidConfiguration(configurationURL, error)
     }
 
+    var updatedScreenConfig = currentConfiguration.screenConfig
+    if let proposedGrid {
+        updatedScreenConfig.grid = proposedGrid
+    }
+
     let buttonCount = effectiveButtonLineCount(templateContents)
     guard maximumButtonCount > 0,
           buttonCount >= 0,
           buttonCount <= maximumButtonCount else {
         throw TemplateUpdateError.invalidButtonCount(buttonCount, maximum: maximumButtonCount)
     }
-    let grid = currentConfiguration.screenConfig.grid
+    let grid = updatedScreenConfig.grid
     let (gridCapacity, gridOverflow) = grid.rows.multipliedReportingOverflow(by: grid.columns)
     guard grid.rows > 0,
           grid.columns > 0,
+          proposedGrid == nil || (
+            grid.rows <= maxGridDimension &&
+            grid.columns <= maxGridDimension
+          ),
           !gridOverflow,
           gridCapacity >= max(buttonCount, 1),
           gridCapacity <= maximumButtonCount else {
@@ -1055,7 +1063,7 @@ func updateTemplateDocument(
 
     let normalizedDescription = description.trimmingCharacters(in: .whitespacesAndNewlines)
     let updatedConfiguration = TemplateConfiguration(
-        screenConfig: currentConfiguration.screenConfig,
+        screenConfig: updatedScreenConfig,
         description: normalizedDescription.isEmpty ? nil : description
     )
     let replacementTemplateData = Data(templateContents.utf8)

@@ -348,6 +348,68 @@ struct SettingsScreen: View {
         }
     }
 
+    private enum TemplateGridExpansionDirection {
+        case rows
+        case columns
+
+        var diagnosticName: String {
+            switch self {
+            case .rows:
+                return "rows"
+            case .columns:
+                return "columns"
+            }
+        }
+    }
+
+    private struct PendingTemplateGridExpansion: Identifiable {
+        let id = UUID()
+        let templateURL: URL
+        let originalTemplateData: Data
+        let originalConfigurationData: Data
+        let buttonCount: Int
+        let currentColumns: Int
+        let currentRows: Int
+        let rowCandidate: ScreenConfig.Grid?
+        let columnCandidate: ScreenConfig.Grid?
+
+        var currentCapacity: Int {
+            currentColumns * currentRows
+        }
+
+        var message: String {
+            "This template contains \(buttonCount) buttons, but its \(currentColumns)×\(currentRows) grid supports only \(currentCapacity).\n\nYou can increase the rows or columns to accommodate the additional buttons."
+        }
+    }
+
+    private struct TemplateGridExpansionAlertModifier: ViewModifier {
+        @Binding var pendingExpansion: PendingTemplateGridExpansion?
+        let saveExpansion: (PendingTemplateGridExpansion, TemplateGridExpansionDirection) -> Void
+
+        func body(content: Content) -> some View {
+            content.alert(
+                "Template Grid Too Small",
+                item: $pendingExpansion
+            ) { expansion in
+                Button("Increase Rows") {
+                    saveExpansion(expansion, .rows)
+                }
+                .disabled(expansion.rowCandidate == nil)
+
+                Button("Increase Columns") {
+                    saveExpansion(expansion, .columns)
+                }
+                .disabled(expansion.columnCandidate == nil)
+
+                Button("Cancel", role: .cancel) {
+                    pendingExpansion = nil
+                }
+            } message: { expansion in
+                Text(expansion.message)
+            }
+        }
+    }
+
     private enum TemplateDescriptionState {
         case description(String)
         case noDescription
@@ -571,6 +633,7 @@ struct SettingsScreen: View {
     @State private var templateEditingSession: TemplateEditingSession?
     @State private var templateEditingLoadError: String?
     @State private var templateEditingSaveError: String?
+    @State private var pendingTemplateGridExpansion: PendingTemplateGridExpansion?
     @State private var pendingTemplateApplication: PendingTemplateApplication?
     @State private var isTemplateApplicationAlertPresented = false
     @State private var isSaveAsTemplateAlertPresented = false
@@ -1149,6 +1212,15 @@ struct SettingsScreen: View {
         } message: {
             Text(documentSaveAlertMessage)
         }
+        .modifier(TemplateGridExpansionAlertModifier(
+            pendingExpansion: $pendingTemplateGridExpansion,
+            saveExpansion: { expansion, direction in
+                saveTemplateEditingSessionAfterGridExpansion(
+                    expansion,
+                    direction: direction
+                )
+            }
+        ))
         .modifier(DeleteAllDataConfirmationModifier(
             isPresented: $isDeleteAllDataConfirmationPresented,
             deleteAllData: deleteAllData
@@ -2240,6 +2312,19 @@ struct SettingsScreen: View {
     private func closeDedicatedTemplateEditor() {
         guard !isTemplateEditorSaveInProgress else { return }
         guard isDedicatedTemplateEditorPresented else { return }
+
+        if let expansion = pendingTemplateGridExpansionIfNeeded() {
+            guard expansion.rowCandidate != nil || expansion.columnCandidate != nil else {
+                let message = "This template contains \(expansion.buttonCount) buttons, but its \(expansion.currentColumns)×\(expansion.currentRows) grid cannot be expanded by rows or columns within the 50×50 grid limit."
+                templateEditingSaveError = message
+                presentDocumentSaveAlert(title: "Template Grid Cannot Expand", message: message)
+                return
+            }
+
+            pendingTemplateGridExpansion = expansion
+            print("🐞 \(ISO8601DateFormatter().string(from: Date())) TEMPLATE GRID EXPANSION REQUIRED template=\(expansion.templateURL.lastPathComponent) buttons=\(expansion.buttonCount) grid=\(expansion.currentColumns)x\(expansion.currentRows)")
+            return
+        }
 
         isTemplateEditorSaveInProgress = true
         defer { isTemplateEditorSaveInProgress = false }
@@ -4062,7 +4147,9 @@ struct SettingsScreen: View {
     }
 
     @discardableResult
-    private func saveTemplateEditingSession() -> Bool {
+    private func saveTemplateEditingSession(
+        proposedGrid: ScreenConfig.Grid? = nil
+    ) -> Bool {
         guard let session = templateEditingSession, session.isValid else {
             let message = "There is no valid template editing session to save."
             templateEditingSaveError = message
@@ -4098,7 +4185,8 @@ struct SettingsScreen: View {
                 templateContents: session.templateContentsDraft,
                 description: session.descriptionDraft,
                 maximumButtonCount: maxFunctionKeyCount,
-                effectiveButtonLineCount: effectiveTemplateButtonLineCount
+                effectiveButtonLineCount: effectiveTemplateButtonLineCount,
+                proposedGrid: proposedGrid
             )
 
             let savedTemplateData = try Data(contentsOf: normalizedTemplateURL)
@@ -4120,6 +4208,15 @@ struct SettingsScreen: View {
                 isSaved: true
             )
             selectedTemplateSelectionPath = normalizedTemplateURL.path
+            let savedDescription = savedConfiguration.description ?? ""
+            let trimmedSavedDescription = savedDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+            templateDescriptionState = trimmedSavedDescription.isEmpty
+                ? .noDescription
+                : .description(savedDescription)
+            templateViewerContents = savedTemplateContents
+            templateViewerDescription = savedDescription
+            templateViewerContentsScrollResetID = UUID()
+            templateViewerDescriptionScrollResetID = UUID()
             refreshTemplateFiles()
             print("🐞 \(ISO8601DateFormatter().string(from: Date())) TEMPLATE EDIT SAVE SUCCEEDED template=\(normalizedTemplateURL.lastPathComponent)")
             return true
@@ -4141,6 +4238,148 @@ struct SettingsScreen: View {
                 return !trimmedLine.isEmpty && !trimmedLine.hasPrefix("//")
             }
             .count
+    }
+
+    private func pendingTemplateGridExpansionIfNeeded() -> PendingTemplateGridExpansion? {
+        guard let session = templateEditingSession,
+              let configuration = try? JSONDecoder().decode(
+                TemplateConfiguration.self,
+                from: session.originalConfigurationData
+              ) else {
+            return nil
+        }
+
+        let columns = configuration.screenConfig.grid.columns
+        let rows = configuration.screenConfig.grid.rows
+        guard let capacity = templateGridCapacity(columns: columns, rows: rows) else {
+            return nil
+        }
+
+        let buttonCount = effectiveTemplateButtonLineCount(session.templateContentsDraft)
+        guard buttonCount > capacity else {
+            return nil
+        }
+
+        return PendingTemplateGridExpansion(
+            templateURL: session.templateURL,
+            originalTemplateData: session.originalTemplateData,
+            originalConfigurationData: session.originalConfigurationData,
+            buttonCount: buttonCount,
+            currentColumns: columns,
+            currentRows: rows,
+            rowCandidate: expandedTemplateGrid(
+                buttonCount: buttonCount,
+                columns: columns,
+                rows: rows,
+                direction: .rows
+            ),
+            columnCandidate: expandedTemplateGrid(
+                buttonCount: buttonCount,
+                columns: columns,
+                rows: rows,
+                direction: .columns
+            )
+        )
+    }
+
+    private func saveTemplateEditingSessionAfterGridExpansion(
+        _ expansion: PendingTemplateGridExpansion,
+        direction: TemplateGridExpansionDirection
+    ) {
+        guard !isTemplateEditorSaveInProgress,
+              let session = templateEditingSession,
+              session.templateURL.standardizedFileURL == expansion.templateURL.standardizedFileURL,
+              session.originalTemplateData == expansion.originalTemplateData,
+              session.originalConfigurationData == expansion.originalConfigurationData else {
+            pendingTemplateGridExpansion = nil
+            return
+        }
+
+        let candidateGrid: ScreenConfig.Grid?
+        switch direction {
+        case .rows:
+            candidateGrid = expansion.rowCandidate
+        case .columns:
+            candidateGrid = expansion.columnCandidate
+        }
+        guard let candidateGrid else {
+            pendingTemplateGridExpansion = nil
+            return
+        }
+
+        pendingTemplateGridExpansion = nil
+        isTemplateEditorSaveInProgress = true
+        defer { isTemplateEditorSaveInProgress = false }
+
+        print("🐞 \(ISO8601DateFormatter().string(from: Date())) TEMPLATE GRID EXPANSION SELECTED template=\(expansion.templateURL.lastPathComponent) direction=\(direction.diagnosticName) proposed=\(candidateGrid.columns)x\(candidateGrid.rows)")
+        guard saveTemplateEditingSession(proposedGrid: candidateGrid) else {
+            return
+        }
+
+        dismissDedicatedTemplateEditor()
+    }
+
+    private func expandedTemplateGrid(
+        buttonCount: Int,
+        columns: Int,
+        rows: Int,
+        direction: TemplateGridExpansionDirection
+    ) -> ScreenConfig.Grid? {
+        guard buttonCount > 0,
+              buttonCount <= maxFunctionKeyCount,
+              (1...maxGridDimension).contains(columns),
+              (1...maxGridDimension).contains(rows) else {
+            return nil
+        }
+
+        switch direction {
+        case .rows:
+            let requiredRows = maximumRequiredTemplateDimension(
+                buttonCount: buttonCount,
+                fixedDimension: columns,
+                currentDimension: rows
+            )
+            guard requiredRows <= maxGridDimension,
+                  templateGridCapacity(columns: columns, rows: requiredRows) != nil else {
+                return nil
+            }
+            return ScreenConfig.Grid(rows: requiredRows, columns: columns)
+        case .columns:
+            let requiredColumns = maximumRequiredTemplateDimension(
+                buttonCount: buttonCount,
+                fixedDimension: rows,
+                currentDimension: columns
+            )
+            guard requiredColumns <= maxGridDimension,
+                  templateGridCapacity(columns: requiredColumns, rows: rows) != nil else {
+                return nil
+            }
+            return ScreenConfig.Grid(rows: rows, columns: requiredColumns)
+        }
+    }
+
+    private func maximumRequiredTemplateDimension(
+        buttonCount: Int,
+        fixedDimension: Int,
+        currentDimension: Int
+    ) -> Int {
+        guard fixedDimension > 0 else { return Int.max }
+
+        let quotient = buttonCount / fixedDimension
+        let remainder = buttonCount % fixedDimension
+        let requiredDimension = quotient + (remainder == 0 ? 0 : 1)
+        return max(currentDimension, requiredDimension)
+    }
+
+    private func templateGridCapacity(columns: Int, rows: Int) -> Int? {
+        guard columns > 0, rows > 0 else { return nil }
+
+        let (capacity, overflow) = columns.multipliedReportingOverflow(by: rows)
+        guard !overflow,
+              capacity <= maxFunctionKeyCount else {
+            return nil
+        }
+        return capacity
     }
 
     private func deleteTemplate(_ templateURL: URL) {
@@ -5285,7 +5524,7 @@ struct SettingsScreen: View {
                 let values = try? url.resourceValues(forKeys: [.isRegularFileKey])
                 return values?.isRegularFile == true && url.pathExtension.lowercased() == legacyScreenDocumentFileExtension
             }
-            .sorted { $0.lastPathComponent.localizedCaseInsensitiveCompare($1.lastPathComponent) == .orderedAscending }
+            .sorted(by: naturalFileURLAscending)
     }
 
     private var availableMarkdownURLs: [URL] {
@@ -5294,7 +5533,7 @@ struct SettingsScreen: View {
                 let values = try? url.resourceValues(forKeys: [.isRegularFileKey])
                 return values?.isRegularFile == true && url.pathExtension.lowercased() == "md"
             }
-            .sorted { $0.lastPathComponent.localizedCaseInsensitiveCompare($1.lastPathComponent) == .orderedAscending }
+            .sorted(by: naturalFileURLAscending)
     }
 
     private var selectedDocumentDisplayName: String {
@@ -5345,7 +5584,7 @@ struct SettingsScreen: View {
                 let values = try? url.resourceValues(forKeys: [.isRegularFileKey])
                 return values?.isRegularFile == true && supportedExtensions.contains(url.pathExtension.lowercased())
             }
-            .sorted { $0.lastPathComponent.localizedCaseInsensitiveCompare($1.lastPathComponent) == .orderedAscending }
+            .sorted(by: naturalFileURLAscending)
     }
 
     private var availablePDFURLs: [URL] {
@@ -5354,7 +5593,7 @@ struct SettingsScreen: View {
                 let values = try? url.resourceValues(forKeys: [.isRegularFileKey])
                 return values?.isRegularFile == true && url.pathExtension.lowercased() == "pdf"
             }
-            .sorted { $0.lastPathComponent.localizedCaseInsensitiveCompare($1.lastPathComponent) == .orderedAscending }
+            .sorted(by: naturalFileURLAscending)
     }
 
     private func refreshSettingsFileCollections() {
@@ -5437,7 +5676,7 @@ struct SettingsScreen: View {
                     !isTemplateConfigurationURL(url) &&
                     (developerMode || !isInternalFile(url))
             }
-            .sorted { $0.lastPathComponent.localizedCaseInsensitiveCompare($1.lastPathComponent) == .orderedAscending }
+            .sorted(by: naturalFileURLAscending)
     }
 
     private func isInternalFile(_ url: URL) -> Bool {

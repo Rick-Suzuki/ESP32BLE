@@ -10,7 +10,7 @@ extension SettingsScreen {
                 let values = try? url.resourceValues(forKeys: [.isRegularFileKey])
                 return values?.isRegularFile == true && supportedExtensions.contains(url.pathExtension.lowercased())
             }
-            .sorted { $0.lastPathComponent.localizedCaseInsensitiveCompare($1.lastPathComponent) == .orderedAscending }
+            .sorted(by: naturalFileURLAscending)
     }
 
     var maximumSelectableImageIndex: Int {

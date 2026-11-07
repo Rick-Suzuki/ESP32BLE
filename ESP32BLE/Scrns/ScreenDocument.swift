@@ -29,8 +29,25 @@ func screenDocumentBaseKey(for fileName: String) -> String {
         .lowercased()
 }
 
+func naturalFileURLAscending(_ lhs: URL, _ rhs: URL) -> Bool {
+    let nameComparison = lhs.lastPathComponent.localizedStandardCompare(rhs.lastPathComponent)
+    if nameComparison != .orderedSame {
+        return nameComparison == .orderedAscending
+    }
+
+    let literalNameComparison = lhs.lastPathComponent.compare(
+        rhs.lastPathComponent,
+        options: .literal
+    )
+    if literalNameComparison != .orderedSame {
+        return literalNameComparison == .orderedAscending
+    }
+
+    return lhs.path.compare(rhs.path, options: .literal) == .orderedAscending
+}
+
 func preferredScreenDocumentURLs(from urls: [URL]) -> [URL] {
     urls
         .filter(isScreenDocumentURL)
-        .sorted { $0.lastPathComponent.localizedCaseInsensitiveCompare($1.lastPathComponent) == .orderedAscending }
+        .sorted(by: naturalFileURLAscending)
 }

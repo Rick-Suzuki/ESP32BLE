@@ -1,4 +1,8 @@
 
+V66.32
+settings: editing template improvements
+261107 Sat 1945
+
 V66.31
 settings: import files complete
 261107 Sat 1801
