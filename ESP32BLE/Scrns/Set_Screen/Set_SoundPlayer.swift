@@ -2,6 +2,14 @@ import SwiftUI
 import UIKit
 import Observation
 
+private enum SettingsSoundPlayerButtonStyle {
+    static let enabledToggleBackground = Color.cyan.opacity(0.76)
+    static let iPhoneToggleOffBackground = Color.gray.opacity(0.72)
+    static let iPadToggleOffBackground = Color.black.opacity(0.42)
+    static let iPadToggleOffForeground = Color.white.opacity(0.45)
+    static let transportBackground = Color.white.opacity(0.16)
+}
+
 @Observable
 @MainActor
 final class SettingsSoundPlaybackPresentation {
@@ -190,6 +198,7 @@ struct SettingsSoundPlayerView: View {
                         SettingsAutoStartButton(
                             isEnabled: isAutoStartEnabled,
                             size: metrics.modeButtonSize,
+                            offBackground: SettingsSoundPlayerButtonStyle.iPhoneToggleOffBackground,
                             action: { onSetAutoStart(!isAutoStartEnabled) }
                         )
 
@@ -265,7 +274,9 @@ struct SettingsSoundPlayerView: View {
                 .foregroundStyle(isEnabled ? Color.black : Color.white.opacity(0.85))
                 .frame(width: size, height: size)
                 .background(
-                    isEnabled ? Color.cyan : Color.gray.opacity(0.72),
+                    isEnabled
+                        ? SettingsSoundPlayerButtonStyle.enabledToggleBackground
+                        : SettingsSoundPlayerButtonStyle.iPhoneToggleOffBackground,
                     in: Circle()
                 )
         }
@@ -291,9 +302,7 @@ struct SettingsSoundPlayerView: View {
                 .foregroundStyle(isEnabled ? Color.white : Color.white.opacity(0.35))
                 .frame(width: size, height: size)
                 .background(
-                    isPrimary
-                        ? Color.cyan.opacity(isEnabled ? 0.76 : 0.25)
-                        : Color.white.opacity(0.16),
+                    SettingsSoundPlayerButtonStyle.transportBackground,
                     in: Circle()
                 )
         }
@@ -526,6 +535,8 @@ struct SettingsSoundPlayerView: View {
         SettingsAutoStartButton(
             isEnabled: isAutoStartEnabled,
             size: metrics.transportButtonSize,
+            offBackground: SettingsSoundPlayerButtonStyle.iPadToggleOffBackground,
+            offTextColor: SettingsSoundPlayerButtonStyle.iPadToggleOffForeground,
             action: { onSetAutoStart(!isAutoStartEnabled) }
         )
     }
@@ -589,7 +600,9 @@ struct SettingsSoundPlayerView: View {
                 .foregroundStyle(isEnabled ? Color.black : Color.white.opacity(0.85))
                 .frame(width: size, height: size)
                 .background(
-                    isEnabled ? Color.cyan : Color.black.opacity(0.42),
+                    isEnabled
+                        ? SettingsSoundPlayerButtonStyle.enabledToggleBackground
+                        : SettingsSoundPlayerButtonStyle.iPadToggleOffBackground,
                     in: Circle()
                 )
         }
@@ -613,7 +626,7 @@ struct SettingsSoundPlayerView: View {
                 .font(.system(size: size * 0.4, weight: .semibold))
                 .foregroundStyle(isEnabled ? Color.white : Color.white.opacity(0.35))
                 .frame(width: size, height: size)
-                .background(Color.white.opacity(0.16), in: Circle())
+                .background(SettingsSoundPlayerButtonStyle.transportBackground, in: Circle())
         }
         .buttonStyle(.plain)
         .disabled(!isEnabled)
@@ -778,7 +791,23 @@ struct SettingsSoundPlayerView: View {
 private struct SettingsAutoStartButton: View {
     let isEnabled: Bool
     let size: CGFloat
+    let offBackground: Color
+    let offTextColor: Color
     let action: () -> Void
+
+    init(
+        isEnabled: Bool,
+        size: CGFloat,
+        offBackground: Color,
+        offTextColor: Color = .black,
+        action: @escaping () -> Void
+    ) {
+        self.isEnabled = isEnabled
+        self.size = size
+        self.offBackground = offBackground
+        self.offTextColor = offTextColor
+        self.action = action
+    }
 
     var body: some View {
         Button(action: action) {
@@ -787,11 +816,13 @@ private struct SettingsAutoStartButton: View {
                 Text("Start")
             }
             .font(.system(size: size * 0.3, weight: .semibold))
-            .foregroundStyle(.black)
+            .foregroundStyle(isEnabled ? Color.black : offTextColor)
             .multilineTextAlignment(.center)
 			.frame(width: size*1.5, height: size)
             .background(
-                isEnabled ? Color.cyan : Color.gray.opacity(0.72),
+                isEnabled
+                    ? SettingsSoundPlayerButtonStyle.enabledToggleBackground
+                    : offBackground,
                 in: RoundedRectangle(cornerRadius: size * 0.18, style: .continuous)
             )
         }
