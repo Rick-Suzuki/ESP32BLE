@@ -525,6 +525,15 @@ struct DedicatedTemplateEditorView: View {
                             }
                     }
                 }
+                .overlay {
+                    if !isPad && showsCloseButton {
+                        DedicatedDocumentEditorIPhoneCloseButtonLayer(
+                            onSaveAndClose: onSaveAndClose
+                        )
+                        .frame(width: 0, height: 0)
+                        .allowsHitTesting(false)
+                    }
+                }
             }
 
             DedicatedDocumentEditorKeyboardObserver(

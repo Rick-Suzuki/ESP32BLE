@@ -1767,6 +1767,7 @@ struct SettingsScreen: View {
                     initialScrollResetID: templateViewerDescriptionScrollResetID,
                     wrapsText: true,
                     textInsets: UIEdgeInsets(top: 10, left: 10, bottom: 10, right: 10),
+                    showsEmptyPlaceholder: showsTemplateDescriptionPlaceholder,
                     onTap: {
                         presentDedicatedTemplateEditor(focusing: .description)
                     }
@@ -1837,6 +1838,7 @@ struct SettingsScreen: View {
                     textInsets: UIEdgeInsets(top: 10, left: 10, bottom: 10, right: 10),
                     allowsReadOnlySelection: true,
                     showsTitle: false,
+                    showsEmptyPlaceholder: showsTemplateDescriptionPlaceholder,
                     onTap: {
                         presentDedicatedTemplateEditor(focusing: .description)
                     }
@@ -1880,6 +1882,7 @@ struct SettingsScreen: View {
         textInsets: UIEdgeInsets,
         allowsReadOnlySelection: Bool = false,
         showsTitle: Bool = true,
+        showsEmptyPlaceholder: Bool = false,
         onTap: @escaping () -> Void
     ) -> some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -1904,6 +1907,17 @@ struct SettingsScreen: View {
                 textInsets: textInsets,
                 allowsReadOnlySelection: allowsReadOnlySelection
             )
+            .overlay {
+                if showsEmptyPlaceholder {
+                    Text("No description")
+                        .font(.system(size: templateViewerFontSizeBinding.wrappedValue))
+                        .foregroundStyle(.gray)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .multilineTextAlignment(.center)
+                        .allowsHitTesting(false)
+                        .accessibilityHidden(true)
+                }
+            }
         }
     }
 
@@ -1918,6 +1932,12 @@ struct SettingsScreen: View {
                 templateViewerFontSizeStorage = Double(min(max(newValue, 10), 72))
             }
         )
+    }
+
+    private var showsTemplateDescriptionPlaceholder: Bool {
+        templateViewerDescription
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .isEmpty
     }
 
     private var templateEditingTemplateContentsBinding: Binding<String> {
@@ -2092,8 +2112,7 @@ struct SettingsScreen: View {
     }
 
     private func presentDedicatedTemplateEditor(focusing target: TemplateEditorFocusTarget) {
-        guard isPad,
-              isIpadTemplatesListActive,
+        guard isTemplatesListActive,
               dedicatedDocumentEditorPresentationState == .viewing,
               let selectedTemplateURL,
               isValidDedicatedDocumentEditorAnimationFrame(dedicatedDocumentEditorPreviewFrame),
@@ -3884,7 +3903,7 @@ struct SettingsScreen: View {
                 templateDescriptionState = .noDescription
             }
             templateViewerContents = templateContents
-            templateViewerDescription = description ?? "No description"
+            templateViewerDescription = description ?? ""
             templateViewerContentsScrollResetID = UUID()
             templateViewerDescriptionScrollResetID = UUID()
             print("🐞 \(ISO8601DateFormatter().string(from: Date())) TEMPLATE VIEWER LOADED template=\(normalizedTemplateURL.lastPathComponent)")
@@ -3938,7 +3957,12 @@ struct SettingsScreen: View {
             }
             let configurationData = try Data(contentsOf: configurationURL)
             let configuration = try loadTemplateConfiguration(for: normalizedTemplateURL)
-            let description = configuration.description ?? ""
+            let storedDescription = configuration.description ?? ""
+            let description = storedDescription
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+                .isEmpty
+                ? ""
+                : storedDescription
 
             templateEditingSession = TemplateEditingSession(
                 templateURL: normalizedTemplateURL,

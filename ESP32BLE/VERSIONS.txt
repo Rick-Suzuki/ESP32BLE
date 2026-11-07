@@ -1,4 +1,8 @@
 
+V66.28
+settins: iPhone template viewer complete
+261107 Sat 1523
+
 V66.27
 settings: template viewer/controls OK
 261107 Sat 1512
