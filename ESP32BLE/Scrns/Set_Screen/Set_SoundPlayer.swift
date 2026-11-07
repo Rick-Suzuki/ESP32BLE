@@ -29,6 +29,7 @@ struct SettingsSoundPlayerView: View {
     let isAutoStartEnabled: Bool
     let isRepeatEnabled: Bool
     let isRandomEnabled: Bool
+    let isAutoRandomBackgroundEnabled: Bool
     let onSeek: (TimeInterval) -> Void
     let onPrevious: () -> Void
     let onTogglePlayback: () -> Void
@@ -36,6 +37,7 @@ struct SettingsSoundPlayerView: View {
     let onSetAutoStart: (Bool) -> Void
     let onToggleRepeat: () -> Void
     let onToggleRandom: () -> Void
+    let onToggleAutoRandomBackground: () -> Void
 
     @Environment(\.displayScale) private var displayScale
     @State private var sliderPosition: TimeInterval = 0
@@ -133,6 +135,7 @@ struct SettingsSoundPlayerView: View {
                     transportControls(spacing: 13)
 
                     HStack(spacing: 8) {
+                        compactAutoRandomBackgroundControl
                         disabledFeatureLabel(title: "Auto Start", systemName: "arrow.right.circle")
                         disabledFeatureLabel(title: "Random", systemName: "shuffle")
                     }
@@ -288,15 +291,18 @@ struct SettingsSoundPlayerView: View {
             print("🐞 \(ISO8601DateFormatter().string(from: Date())) SOUND IMAGE FINAL INSTALLED request=\(request.id) filename=\(request.url.lastPathComponent) generation=\(request.generation.uuidString)")
         }
     }
-
+	//
+	//----------------------------------------
+	// MARK: - BM:🟪 audio player iPadPlayerControls
+	//
     private var iPadPlayerControls: some View {
-        VStack(spacing: 8) {
-            Text(title)
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(.white)
-                .lineLimit(1)
-                .truncationMode(.tail)
-                .frame(maxWidth: .infinity, alignment: .center)
+        VStack(spacing: 4) {
+					Text(backgroundImageURL?.lastPathComponent ?? "No image")
+					.font(.system(size: 16, weight: .semibold))
+					.foregroundStyle(.white)
+					.lineLimit(1)
+					.truncationMode(.tail)
+					.frame(maxWidth: .infinity, alignment: .trailing)
 
             Slider(
                 value: $sliderPosition,
@@ -314,7 +320,10 @@ struct SettingsSoundPlayerView: View {
         .padding(.top, 12)
         .padding(.bottom, 14)
     }
-
+	//
+	//----------------------------------------
+	// MARK: - BM:🟪 audio player iPadControlRow
+	//
     private var iPadControlRow: some View {
         GeometryReader { geometry in
             let metrics = iPadControlMetrics(for: geometry.size.width)
@@ -324,6 +333,7 @@ struct SettingsSoundPlayerView: View {
                 iPadRepeatControl(metrics: metrics)
                 iPadTransportControls(metrics: metrics)
                 iPadRandomControl(metrics: metrics)
+                iPadAutoRandomBackgroundControl(metrics: metrics)
                 iPadTimeDisplay
             }
         }
@@ -383,6 +393,24 @@ struct SettingsSoundPlayerView: View {
             isEnabled: isRandomEnabled,
             size: metrics.transportButtonSize,
             action: onToggleRandom
+        )
+    }
+
+    private func iPadAutoRandomBackgroundControl(metrics: IPadControlMetrics) -> some View {
+        autoRandomBackgroundButton(size: metrics.transportButtonSize)
+    }
+
+    private var compactAutoRandomBackgroundControl: some View {
+        autoRandomBackgroundButton(size: controlSize)
+    }
+
+    private func autoRandomBackgroundButton(size: CGFloat) -> some View {
+        iPadModeButton(
+            systemName: "photo.artframe",
+            accessibilityLabel: "Automatic random background",
+            isEnabled: isAutoRandomBackgroundEnabled,
+            size: size,
+            action: onToggleAutoRandomBackground
         )
     }
 
@@ -634,31 +662,34 @@ private struct IPadControlRowLayout: Layout {
         subviews: Subviews,
         cache: inout ()
     ) {
-        guard subviews.count == 5 else { return }
+        guard subviews.count == 6 else { return }
 
         let autoStart = subviews[0]
         let repeatButton = subviews[1]
         let transport = subviews[2]
         let randomButton = subviews[3]
-        let time = subviews[4]
+        let photoButton = subviews[4]
+        let time = subviews[5]
         let verticalProposal = ProposedViewSize(width: nil, height: bounds.height)
         let autoStartSize = autoStart.sizeThatFits(verticalProposal)
         let repeatSize = repeatButton.sizeThatFits(verticalProposal)
         let transportSize = transport.sizeThatFits(verticalProposal)
         let randomSize = randomButton.sizeThatFits(verticalProposal)
+        let photoSize = photoButton.sizeThatFits(verticalProposal)
 
         let transportLeading = bounds.midX - (transportSize.width / 2)
         let nextTrailing = transportLeading + transportSize.width
+        let randomClusterLeadingGap = minimumGap + 12
         let availableTimeWidth = max(
             0,
-            bounds.maxX - nextTrailing - randomSize.width - (minimumGap * 2)
+            bounds.maxX - nextTrailing - randomSize.width - photoSize.width - (minimumGap * 2) - randomClusterLeadingGap
         )
         let intrinsicTimeSize = time.sizeThatFits(verticalProposal)
         let timeWidth = min(intrinsicTimeSize.width, availableTimeWidth)
-        let timeLeading = bounds.maxX - timeWidth
 
         let repeatCenter = (bounds.minX + autoStartSize.width + transportLeading) / 2
-        let randomCenter = (nextTrailing + timeLeading) / 2
+        let randomLeading = nextTrailing + randomClusterLeadingGap
+        let photoLeading = randomLeading + randomSize.width + minimumGap
 
         autoStart.place(
             at: CGPoint(x: bounds.minX, y: bounds.midY),
@@ -676,9 +707,14 @@ private struct IPadControlRowLayout: Layout {
             proposal: ProposedViewSize(width: transportSize.width, height: bounds.height)
         )
         randomButton.place(
-            at: CGPoint(x: randomCenter, y: bounds.midY),
+            at: CGPoint(x: randomLeading + (randomSize.width / 2), y: bounds.midY),
             anchor: .center,
             proposal: ProposedViewSize(width: randomSize.width, height: bounds.height)
+        )
+        photoButton.place(
+            at: CGPoint(x: photoLeading + (photoSize.width / 2), y: bounds.midY),
+            anchor: .center,
+            proposal: ProposedViewSize(width: photoSize.width, height: bounds.height)
         )
         time.place(
             at: CGPoint(x: bounds.maxX, y: bounds.midY),

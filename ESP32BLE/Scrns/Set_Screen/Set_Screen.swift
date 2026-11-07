@@ -463,6 +463,7 @@ struct SettingsScreen: View {
     @AppStorage("settingsSoundAutoStartEnabled") private var isSoundAutoStartEnabled = false
     @AppStorage("settingsSoundRepeatEnabled") private var isSoundRepeatEnabled = false
     @AppStorage("settingsSoundRandomEnabled") private var isSoundRandomEnabled = false
+    @AppStorage("settingsSoundAutoRandomBackground") private var isSoundAutoRandomBackgroundEnabled = false
     @AppStorage("selectedPDFName") var selectedPDFName = ""
     @AppStorage("selectedPDFPath") var selectedPDFPath = ""
     @AppStorage("documentGridDimensionsData") private var documentGridDimensionsData = ""
@@ -1675,13 +1676,15 @@ struct SettingsScreen: View {
             isAutoStartEnabled: isSoundAutoStartEnabled,
             isRepeatEnabled: isSoundRepeatEnabled,
             isRandomEnabled: isSoundRandomEnabled,
+            isAutoRandomBackgroundEnabled: isSoundAutoRandomBackgroundEnabled,
             onSeek: seekSoundPreview,
             onPrevious: selectPreviousSound,
             onTogglePlayback: toggleSoundPreviewPlayback,
             onNext: selectNextSound,
             onSetAutoStart: { isSoundAutoStartEnabled = $0 },
             onToggleRepeat: { isSoundRepeatEnabled.toggle() },
-            onToggleRandom: { isSoundRandomEnabled.toggle() }
+            onToggleRandom: { isSoundRandomEnabled.toggle() },
+            onToggleAutoRandomBackground: { isSoundAutoRandomBackgroundEnabled.toggle() }
         )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -1699,13 +1702,15 @@ struct SettingsScreen: View {
             isAutoStartEnabled: isSoundAutoStartEnabled,
             isRepeatEnabled: isSoundRepeatEnabled,
             isRandomEnabled: isSoundRandomEnabled,
+            isAutoRandomBackgroundEnabled: isSoundAutoRandomBackgroundEnabled,
             onSeek: seekSoundPreview,
             onPrevious: selectPreviousSound,
             onTogglePlayback: toggleSoundPreviewPlayback,
             onNext: selectNextSound,
             onSetAutoStart: { isSoundAutoStartEnabled = $0 },
             onToggleRepeat: { isSoundRepeatEnabled.toggle() },
-            onToggleRandom: { isSoundRandomEnabled.toggle() }
+            onToggleRandom: { isSoundRandomEnabled.toggle() },
+            onToggleAutoRandomBackground: { isSoundAutoRandomBackgroundEnabled.toggle() }
         )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -1745,6 +1750,18 @@ struct SettingsScreen: View {
         if settingsSoundBackgroundImageIndex != imageIndex {
             settingsSoundBackgroundImageIndex = imageIndex
         }
+    }
+
+    private func randomSoundBackgroundImageIndex(in imageURLs: [URL]) -> Int? {
+        guard !imageURLs.isEmpty else { return nil }
+        guard imageURLs.count > 1 else { return 0 }
+
+        guard let currentIndex = resolvedSoundBackgroundImageIndex(in: imageURLs) else {
+            return Int.random(in: 0..<imageURLs.count)
+        }
+
+        let randomIndex = Int.random(in: 0..<(imageURLs.count - 1))
+        return randomIndex >= currentIndex ? randomIndex + 1 : randomIndex
     }
 
     private var documentViewerTapAction: (() -> Void)? {
@@ -2806,20 +2823,10 @@ struct SettingsScreen: View {
                 if isSoundsListActive {
                     let actionStart = Date()
                     let imageURLs = availableImageURLs
-                    guard !imageURLs.isEmpty else { return }
-                    let currentIndex = resolvedSoundBackgroundImageIndex(in: imageURLs)
-                    let imageIndex: Int
-                    if imageURLs.count == 1 {
-                        imageIndex = 0
-                    } else if let currentIndex {
-                        let randomIndex = Int.random(in: 0..<(imageURLs.count - 1))
-                        imageIndex = randomIndex >= currentIndex ? randomIndex + 1 : randomIndex
-                    } else {
-                        imageIndex = Int.random(in: 0..<imageURLs.count)
-                    }
+                    guard let imageIndex = randomSoundBackgroundImageIndex(in: imageURLs) else { return }
                     selectSoundBackgroundImage(at: imageIndex, from: imageURLs)
                     let elapsedMilliseconds = Int(Date().timeIntervalSince(actionStart) * 1_000)
-                    let candidateCount = currentIndex == nil ? imageURLs.count : max(0, imageURLs.count - 1)
+                    let candidateCount = imageURLs.count > 1 ? imageURLs.count - 1 : imageURLs.count
                     print("🐞 \(ISO8601DateFormatter().string(from: Date())) SOUND IMAGE RANDOM SELECTED filename=\(imageURLs[imageIndex].lastPathComponent) candidates=\(candidateCount) elapsedMs=\(elapsedMilliseconds)")
                 } else if isImagesListActive {
                     let candidateURLs = availableImageURLs.filter { imageURL in
@@ -5259,16 +5266,20 @@ struct SettingsScreen: View {
     }
 
     private func selectPreviousSound() {
-        selectNavigatedSound(direction: -1)
+        guard selectNavigatedSound(direction: -1) else { return }
+        selectAutomaticRandomSoundBackgroundIfEnabled(trigger: "previous")
     }
 
     private func selectNextSound() {
-        selectNavigatedSound(direction: 1)
+        guard selectNavigatedSound(direction: 1) else { return }
+        selectAutomaticRandomSoundBackgroundIfEnabled(trigger: "next")
     }
 
-    private func selectNavigatedSound(direction: Int) {
-        guard let soundURL = navigationSoundURL(direction: direction) else { return }
+    @discardableResult
+    private func selectNavigatedSound(direction: Int) -> Bool {
+        guard let soundURL = navigationSoundURL(direction: direction) else { return false }
         selectSound(soundURL, shouldStartPlayback: isSoundAutoStartEnabled)
+        return true
     }
 
     private func navigationSoundURL(direction: Int) -> URL? {
@@ -5373,6 +5384,11 @@ struct SettingsScreen: View {
         soundPlaybackPresentation.position = soundPlaybackPresentation.duration
         hasSoundPreviewCompleted = true
 
+        selectAutomaticRandomSoundBackgroundIfEnabled(
+            trigger: "completion",
+            playbackID: playbackID
+        )
+
         if isSoundRepeatEnabled, isSoundPreviewPrepared {
             startPreparedSoundPreview()
             return
@@ -5384,6 +5400,23 @@ struct SettingsScreen: View {
         }
 
         selectSound(nextSoundURL, shouldStartPlayback: true)
+    }
+
+    private func selectAutomaticRandomSoundBackgroundIfEnabled(
+        trigger: String,
+        playbackID: UUID? = nil
+    ) {
+        guard isSoundAutoRandomBackgroundEnabled else { return }
+
+        let imageURLs = availableImageURLs
+        guard let imageIndex = randomSoundBackgroundImageIndex(in: imageURLs) else { return }
+
+        selectSoundBackgroundImage(at: imageIndex, from: imageURLs)
+        let timestamp = ISO8601DateFormatter().string(from: Date())
+        if let playbackID {
+            print("🐞 \(timestamp) SOUND AUTO PHOTO completion=\(playbackID.uuidString) imageIndex=\(imageIndex)")
+        }
+        print("🐞 \(timestamp) PHOTO RANDOM trigger=\(trigger) imageIndex=\(imageIndex)")
     }
 
     private enum RenameableDocumentKind {

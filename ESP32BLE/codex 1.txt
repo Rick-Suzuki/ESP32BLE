@@ -1,48 +1,256 @@
-Files modified:
-ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
+READ-ONLY PROBE COMPLETE
 
-New Sound image persistence:
-• Replaced Sound-specific path/name storage with:
-settingsSoundBackgroundImageIndex
-• It is an independent @AppStorage Int with default value 0.
-• Sound opacity remains independently stored in settingsSoundBackgroundOpacity.
+No files, settings, builds, deployments, tests, commits, or diagnostics were changed.
 
-Obsolete Sound path/name code removed:
-• Removed settingsSoundBackgroundImagePath.
-• Removed settingsSoundBackgroundImageName.
-• Removed path/name URL resolution and URL-based Sound selection persistence.
-• Existing Main Screen selectedBackgroundImagePath, selectedBackgroundImageName, and selectedBackgroundImageIndex were not modified.
+A. SOURCE MAP
 
-Index clamping:
-• selectedSoundBackgroundImageURL resolves the existing sorted availableImageURLs list.
-• Empty list returns nil, so the Sound player uses its existing black fallback.
-• Nonempty lists clamp the stored index to 0...(count - 1).
-• The index is normalized on Settings appearance and document-directory snapshot changes.
-• Empty lists normalize the saved Sound index to 0.
+Primary Settings/player source
 
-Navigation:
-• Back selects index 0.
-• Previous selects index - 1 and stops at zero.
-• Next selects index + 1 and stops at the final index.
-• Random uses one local image-list snapshot and index mapping to choose a different image whenever multiple images exist.
-• Each action uses the shared Sound index-selection helper and does not repeatedly enumerate the image directory during that action.
-• Existing feedback and press-and-hold behavior remain unchanged.
+• ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
+   • Shared sound playback state: lines 403–412.
+   • Persisted Sound settings: lines 459–466.
+   • iPad player construction: lines 1666–1690.
+   • iPhone player construction: lines 1692–1716.
+   • Sound background selection, clamping, opacity, and non-repeating random index: lines 1718–1765.
+   • iPhone player routing into the existing Settings panel: lines 2584–2609.
+   • Image-control category routing: lines 2797–2899.
+   • Audio preparation/playback/navigation/progress/teardown: lines 5137–5420.
+   • Natural completion: lines 5379–5403.
 
-Image-loader integration:
-• The player continues to receive the URL resolved from the clamped Sound index.
-• The existing ImageIO worker, one-active-decode policy, latest pending request, intermediate presentation, target-size checks, and final-image safeguards were not changed.
+• ESP32BLE/Scrns/Set_Screen/Set_SoundPlayer.swift
+   • Shared observable playback presentation: lines 5–11.
+   • Player inputs and callbacks: lines 13–40.
+   • iPhone versus iPad branch: lines 76–83.
+   • Current iPhone compact player: lines 102–149.
+   • Shared non-interactive Aspect Fill image background: lines 166–191.
+   • Image request/load pipeline: lines 193–293.
+   • iPad controls: lines 298–445.
+   • Shared transport controls: lines 469–534.
+   • Seek and time formatting: lines 560–585.
+   • Auto Start control style: lines 615–639.
 
-Opacity:
-• Selecting an image only changes the Sound index.
-• Sound opacity remains independent and persists unchanged.
-• At zero opacity, the selected index remains saved while the player appears black.
+• ESP32BLE/Scrns/Set_Screen/Btm_Area/Set_AvailableDevices.swift
+   • iPhone conditional routing: lines 83–94.
+   • Existing iPhone Sound player rectangle/container: lines 139–155.
+   • Its width measurement and bottom strip: lines 157–180.
+   • Existing iPhone bottom controls and their dimensions: lines 525–567.
 
-Validation:
-• Xcode diagnostics: no issues in Set_Screen.swift or Set_SoundPlayer.swift.
-• ESP32BLE active-scheme build: successful.
-• No install, launch, commit, or push performed.
+• ESP32BLE/Scrns/Set_Screen/Btm_Area/Set_BtmCtls.swift
+   • Passes iPhone Sound player content into SettingsAvailableDevicesPanel: lines 3–50.
 
-Remaining risks:
-• Adding, renaming, or deleting images can intentionally change which sorted-list image occupies the saved index.
-• Legacy Sound path/name UserDefaults values are no longer read; the new index starts at zero for existing installs.
-• Physical-device testing is still required before confirming behavior on iPad Air M2.
+• ESP32BLE/Scrns/Main_Screen/Speech Recognition/SR_Manager.swift
+   • AudioSessionOperationCoordinator: line 198.
+   • Serialized off-main-thread AVAudioPlayer preparation: lines 230–248.
+
+• ESP32BLE/Scrns/ContentView.swift
+   • iPad/iPhone detection: lines 19–22.
+   • Settings root container geometry and iPhone bottom-safe-area clipping: lines 225–347.
+
+B. CURRENT IPHONE IMPLEMENTATION
+
+The app already separates iPad and iPhone at the SwiftUI layout level:
+
+• iPad uses SettingsSoundPlayerView with usesCompactLayout: false.
+• iPhone uses the same view with usesCompactLayout: true.
+• The iPhone player is displayed only while Sounds is active, inside SettingsAvailableDevicesPanel.iPhoneSoundPlayerBody.
+
+The current compact layout is not the requested design. It contains:
+
+• Audio filename centered at the top.
+• Slider, then elapsed/total time on separate left/right positions.
+• Small transport buttons.
+• Photo Random button.
+• Disabled “Auto Start” and “Random” labels, rather than working controls.
+• No Repeat control.
+
+The current iPhone player is already inserted into the same dynamically measured rectangle used for the iPhone large IMAGE/PDF/editor preview. Its width is taken from iPhoneBottomControlsContentWidth; it is therefore the correct integration point to preserve the existing rectangle’s location and width.
+
+Recommended replacement scope:
+
+• Replace only compactPlayerBody in Set_SoundPlayer.swift with a purpose-built iPhone player body.
+• Retain iPadPlayerBody, iPadPlayerControls, iPadControlRowLayout, and all shared state/actions unchanged.
+• Rename the compact branch conceptually to iPhonePlayerBody during implementation, if desired, but preserve the existing API boundary unless a small clarity-only refactor is clearly safe.
+
+C. SHARED LOGIC TO REUSE DIRECTLY
+
+Audio state and player lifecycle already shared by both interfaces:
+
+• selectedSoundName / selectedSoundPath.
+• soundPreviewPlayer: AVAudioPlayer.
+• SettingsSoundPlaybackPresentation: position, duration, isPlaying.
+• soundPreparationTask, soundPreparationRequestID, soundPreparationURLPath.
+• soundPlaybackID and completedSoundPlaybackID.
+• soundPreviewDelegate and hasSoundPreviewCompleted.
+• seekSoundPreview, toggleSoundPreviewPlayback, selectPreviousSound, selectNextSound.
+• start/stop progress task, at 100 ms updates.
+• stopSoundPreviewPlayback teardown when leaving Sounds, Settings, deleting an active preview, or superseding preparation.
+
+Preparation is asynchronous and protected:
+
+• Existing preparation cancels the previous task.
+• The request identifier, task cancellation state, and selected URL are checked before installing a prepared player.
+• AVAudioPlayer construction and prepareToPlay occur off the main actor through AudioSessionOperationCoordinator.
+• Completion is accepted only when its playback identifier matches the active player.
+
+Existing navigation behavior:
+
+• Auto Start determines whether manually selected Previous/Next sound begins playback.
+• Random Track changes Previous/Next and automatic next-selection to select a different sound whenever possible.
+• Repeat takes precedence over Auto Start/automatic navigation on natural completion.
+• Natural completion triggers Photo Random once, then Repeat or Auto Start navigation.
+• Manual Previous and Next trigger Photo Random after successful sound navigation.
+• No second image change occurs for automatic navigation after natural completion because the automatic image selection is performed before the next sound is selected.
+
+Shared image state and behavior:
+
+• settingsSoundBackgroundImageIndex.
+• settingsSoundBackgroundOpacity.
+• settingsSoundAutoRandomBackground.
+• availableImageURLs.
+• selectedSoundBackgroundImageURL.
+• resolvedSoundBackgroundImageIndex and normalizeSoundBackgroundImageIndex.
+• randomSoundBackgroundImageIndex excludes the current image when more than one exists.
+• Image changes only write the Sound image index; they do not change opacity.
+
+The existing loader should be retained unchanged:
+
+• Off-main decode via settingsPreviewDownsampledUIImage.
+• Target-size downsampling.
+• One worker/decode pipeline.
+• Latest pending request wins.
+• Generation and target-size guards.
+• Previous image remains displayed while the next decode is in flight.
+• Intermediate decoded presentation when a valid newer request is pending.
+• Final image installation only for the current generation.
+• Existing 🐞 diagnostics.
+
+D. GEOMETRY
+
+Current iPhone Settings layout:
+
+• Settings root receives its size from ContentView’s GeometryReader.
+• iPhone content is selected by isPad, not device model.
+• Top toolbar is above iPhoneSettingsBody.
+• iPhoneSettingsBody has:
+   • left Settings region,
+   • a fixed-width device/settings column of 230 points,
+   • a middle editor/control area,
+   • a right document table clamped to 170–190 points,
+   • 8/12-point content padding.
+• The outer iPhone Settings body has a black fill and one-point white border.
+• The Sound player is inside the left device/settings column’s existing preview location.
+• The player width is measured from the existing bottom-control strip and applied directly to both the IMAGE preview and Sound player.
+• The available height is adaptive, using maxHeight: .infinity between connection controls and the existing bottom strip.
+
+Safe-area behavior:
+
+• ContentView uses the reported geometry height and adds the iPhone bottom safe-area inset to the clipped Settings container.
+• SettingsScreen itself does not introduce a separate iPhone-safe-area calculation.
+• The player should stay within its existing container and must not add ignoresSafeArea.
+
+Device-specific conclusion:
+
+• There are no iPhone 17 or iPhone XS Max model-specific Sound-player branches in current source.
+• One adaptive iPhone layout is the safest initial implementation.
+• The XS Max is the higher geometry risk because its landscape height is tighter; use proportional/flexible vertical spacers and a compact metric threshold based on actual player height, not device-model detection.
+• Do not add device-specific branches unless physical testing demonstrates a reproducible collision that an adaptive metric cannot solve.
+
+E. IPAD ISOLATION
+
+The safest isolation is already present:
+
+• Keep usesCompactLayout: false on the iPad call site.
+• Change only the usesCompactLayout branch in SettingsSoundPlayerView.
+• Keep all parent callbacks, Settings @AppStorage state, loader state, and audio methods shared.
+• Do not alter iPadPlayerBody, iPadPlayerControls, iPad layout metrics, or iPad call-site values.
+
+Stage 8B.22E.2 status:
+
+Present in source. Set_SoundPlayer.swift lines 300–305 display:
+
+backgroundImageURL?.lastPathComponent ?? “No image”
+
+It is right-aligned, one line, tail-truncated, and replaces the earlier audio title above the iPad slider. This probe did not establish physical-device test status.
+
+F. IMAGE-CONTROL CATEGORY ROUTING
+
+The outside IMAGE controls remain geometrically independent of the player and are correctly category-routed now.
+
+When Sounds is active:
+
+• Back resets the Sound background image to index 0.
+• Previous/Next change settingsSoundBackgroundImageIndex.
+• Random selects a different Sound background image when multiple images are available.
+• Opacity writes settingsSoundBackgroundOpacity.
+• None of these controls select audio tracks or modify the Main Screen background-image state.
+
+When Images is active, the same controls operate the regular preview/Main Screen image selection path instead.
+
+This routing is concentrated in Set_Screen.swift lines 2797–2899 and should not be moved or duplicated.
+
+G. RISKS
+
+• State duplication: Creating separate iPhone audio, image-index, opacity, or player lifecycle state would desynchronize iPhone/iPad behavior and risks stale AVAudioPlayer completion events.
+• Completion ordering: Do not move Photo Random into the view. It must remain in the parent’s existing navigation/completion methods to avoid duplicate changes.
+• Loader lifecycle: The iPhone view must retain the current playerBackground path so cancellation and generation guards continue to work on category/view transitions.
+• Geometry: A fixed vertical stack using iPad-like button sizes can overlap the existing connection controls or bottom strip on XS Max. Size from the player container’s GeometryReader.
+• Touch handling: Preserve playerBackground.allowsHitTesting(false); only overlay controls receive touches.
+• Visibility: Bright images can reduce white-control contrast. Reuse the existing button fills and white text; do not add a gradient or separate dark image overlay.
+• Button target size: Existing compact controls are 32 points, below the conventional 44-point target. The requested large iPhone transport buttons should improve this where space allows; other mode controls should be given the largest adaptive size that preserves no-overlap.
+• Audio-session behavior: Settings preparation uses AudioSessionOperationCoordinator, but configurePlaybackSession is currently called through the speech support path, not directly in the Settings Sound methods. This is existing architecture and should not be changed during a layout-only stage.
+• AnyView handoff: The existing iPhone panel takes AnyView content. Preserve this handoff for the first layout stage; restructuring it would exceed the requested layout scope.
+
+H. RECOMMENDED IMPLEMENTATION STAGES
+
+Stage 1 — iPhone layout shell only
+
+Replace the compact player layout with an iPhone-only arrangement inside the current preview rectangle:
+
+• Top row: working Auto Start, Random Track, Photo Random, right-aligned image filename.
+• Lower slider/time placement.
+• Bottom row: Previous, Play/Pause, Next, separate Repeat.
+• Reuse existing callbacks and state exclusively.
+• Preserve background, loader, one-point border, black base, opacity, Aspect Fill, and non-hit-testing image.
+
+Stage 2 — adaptive control metrics
+
+Use the player container’s width and height to derive button sizes, row spacing, horizontal filename allowance, and vertical compression. Start with one adaptive layout for both devices. Add no model branch.
+
+Stage 3 — physical-device interaction correction
+
+Test touch targets, filename truncation, disabled states, slider tracking, image-control routing, visual collisions, and bright-image legibility on both iPhones. Make only evidence-based geometry corrections.
+
+Stage 4 — regression and diagnostics retention
+
+Run the iPad regression suite without changing iPad source. Retain all 🐞 diagnostics until both iPhone layouts pass the complete Sound-player test cycle.
+
+I. PHYSICAL-DEVICE TEST PLAN
+
+iPhone 17, landscape:
+
+• Enter Sounds; confirm the player occupies the existing IMAGE preview rectangle exactly.
+• Verify surrounding Settings controls and outside IMAGE controls do not move.
+• Verify image is Aspect Fill, black-based, opacity-adjustable, one-point white-bordered, no gradient, and does not intercept touches.
+• Test filename including long names and extensions; confirm tail truncation and right alignment.
+• Test Auto Start off/on with Previous and Next.
+• Test Random Track off/on; confirm navigation chooses a different track when alternatives exist.
+• Test Photo Random off/on for manual Previous, manual Next, natural completion, and each Repeat completion.
+• Test Repeat priority over Auto Start and Random Track.
+• Test play, pause, seek, progress updates, elapsed/total formatting, boundaries, and unprepared/disabled states.
+• Rapidly change tracks/images to exercise stale audio/image request protection.
+• Leave Sounds, return to Settings, and return to Main; confirm player teardown and no continuing progress task/audio.
+
+iPhone XS Max, landscape:
+
+• Repeat all iPhone 17 tests.
+• Prioritize vertical fit: top row, slider, time, transports, Repeat, bottom strip, and connection controls.
+• Confirm no safe-area clipping, overlap, or inaccessible controls.
+• Confirm slider remains practical and filename does not collide with the top-left controls.
+
+iPad Air M2, iPad mini, iPad Pro regression:
+
+• Confirm the iPad view remains unchanged.
+• Confirm title above the slider is the Sound background image filename or “No image.”
+• Confirm player behavior, existing iPad geometry, outside IMAGE-control routing, audio lifecycle, Auto Start, Repeat, Random Track, and Photo Random behavior remain unchanged.
+
+Recommended first implementation stage: Stage 1 — replace only the current iPhone compact player UI inside SettingsSoundPlayerView while retaining all existing shared state, callbacks, image pipeline, and the existing Settings preview rectangle.

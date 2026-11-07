@@ -1,4 +1,8 @@
 
+V66.18
+settings: iPad audio player complete
+261107 Sat 0928
+
 V66.17
 sound player BG iamges working
 261106 Fri 2003
