@@ -10,9 +10,11 @@ struct SettingsBottomControlsSection: View {
     @Binding var isStatusBarVisible: Bool
     @Binding var opacitySliderValue: Double
     @Binding var documentEditorFontSize: CGFloat
+    @Binding var templateViewerFontSize: CGFloat
     let imageControlButtons: AnyView
     let isImageControlsActive: Bool
     let isDocumentEditorControlsActive: Bool
+    let isTemplateViewerControlsActive: Bool
     let onImageOpacityEditingChanged: (Bool) -> Void
     let isIPhoneImageEditorPresented: Bool
     let iPhoneEditorLeadingInset: CGFloat
@@ -34,9 +36,11 @@ struct SettingsBottomControlsSection: View {
             isStatusBarVisible: $isStatusBarVisible,
             opacitySliderValue: $opacitySliderValue,
             documentEditorFontSize: $documentEditorFontSize,
+            templateViewerFontSize: $templateViewerFontSize,
             imageControlButtons: imageControlButtons,
             isImageControlsActive: isImageControlsActive,
             isDocumentEditorControlsActive: isDocumentEditorControlsActive,
+            isTemplateViewerControlsActive: isTemplateViewerControlsActive,
             onImageOpacityEditingChanged: onImageOpacityEditingChanged,
             isIPhoneImageEditorPresented: isIPhoneImageEditorPresented,
             iPhoneEditorLeadingInset: iPhoneEditorLeadingInset,

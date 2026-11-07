@@ -419,6 +419,7 @@ struct SettingsScreen: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var documentEditorText = ""
     @State private var documentEditorFontSize: CGFloat = 18
+    @AppStorage("settingsTemplateTextZoom") private var templateViewerFontSizeStorage = 18.0
     @State private var isLoadingDocumentText = false
     @State private var isDocumentEditorFocused = false
     @State private var speechSynthesizer = AVSpeechSynthesizer()
@@ -1769,7 +1770,7 @@ struct SettingsScreen: View {
 
             PlainDocumentEditor(
                 text: text,
-                fontSize: $documentEditorFontSize,
+                fontSize: templateViewerFontSizeBinding,
                 isFocused: isFocused,
                 isReadOnly: true,
                 onReadOnlyTap: onTap,
@@ -1780,6 +1781,19 @@ struct SettingsScreen: View {
                 textInsets: textInsets
             )
         }
+    }
+
+    // MARK: - BM:🅱️ TEMPLATE VIEWER ZOOM
+
+    private var templateViewerFontSizeBinding: Binding<CGFloat> {
+        Binding(
+            get: {
+                min(max(CGFloat(templateViewerFontSizeStorage), 10), 72)
+            },
+            set: { newValue in
+                templateViewerFontSizeStorage = Double(min(max(newValue, 10), 72))
+            }
+        )
     }
 
     private var largeSoundPlayerSection: some View {
@@ -2711,9 +2725,11 @@ struct SettingsScreen: View {
             isStatusBarVisible: $isStatusBarVisible,
             opacitySliderValue: imageOpacitySliderBinding,
             documentEditorFontSize: $documentEditorFontSize,
+            templateViewerFontSize: templateViewerFontSizeBinding,
             imageControlButtons: AnyView(imageControlButtons),
             isImageControlsActive: isBackgroundImageControlsActive,
             isDocumentEditorControlsActive: isDocumentEditorListActive,
+            isTemplateViewerControlsActive: isIpadTemplatesListActive,
             onImageOpacityEditingChanged: handleImageOpacityEditingChanged,
             isIPhoneImageEditorPresented: isIPhoneContentPreviewPresented,
             iPhoneEditorLeadingInset: iPhoneEditorLeadingInset,
@@ -2907,12 +2923,15 @@ struct SettingsScreen: View {
         SettingsImageControlsSection(
             title: navigationControlsTitle,
             isControlsActive: isFileNavigationControlsActive,
-            canReset: isSoundsListActive ? canSelectFirstSoundBackgroundImage : !navigationFileURLs.isEmpty,
-            canRandom: isSoundsListActive ? !availableImageURLs.isEmpty : !navigationFileURLs.isEmpty,
-            canGoPrevious: isSoundsListActive ? canSelectPreviousSoundBackgroundImage : canNavigateToPreviousFile,
-            canGoNext: isSoundsListActive ? canSelectNextSoundBackgroundImage : canNavigateToNextFile,
+            canReset: isIpadTemplatesListActive ? canSelectFirstTemplate : (isSoundsListActive ? canSelectFirstSoundBackgroundImage : !navigationFileURLs.isEmpty),
+            canRandom: isIpadTemplatesListActive ? !templateURLs.isEmpty : (isSoundsListActive ? !availableImageURLs.isEmpty : !navigationFileURLs.isEmpty),
+            canGoPrevious: isIpadTemplatesListActive ? canSelectPreviousTemplate : (isSoundsListActive ? canSelectPreviousSoundBackgroundImage : canNavigateToPreviousFile),
+            canGoNext: isIpadTemplatesListActive ? canSelectNextTemplate : (isSoundsListActive ? canSelectNextSoundBackgroundImage : canNavigateToNextFile),
             onReset: {
-                if isSoundsListActive {
+                if isIpadTemplatesListActive {
+                    guard let firstTemplateURL = templateURLs.first else { return }
+                    selectTemplateForNavigation(firstTemplateURL)
+                } else if isSoundsListActive {
                     let imageURLs = availableImageURLs
                     guard !imageURLs.isEmpty else { return }
                     selectSoundBackgroundImage(at: 0, from: imageURLs)
@@ -2929,7 +2948,14 @@ struct SettingsScreen: View {
                 }
             },
             onRandom: {
-                if isSoundsListActive {
+                if isIpadTemplatesListActive {
+                    let selectedURL = selectedTemplateURL?.standardizedFileURL
+                    let candidateURLs = templateURLs.filter {
+                        $0.standardizedFileURL != selectedURL
+                    }
+                    guard let templateURL = candidateURLs.randomElement() ?? templateURLs.first else { return }
+                    selectTemplateForNavigation(templateURL)
+                } else if isSoundsListActive {
                     let actionStart = Date()
                     let imageURLs = availableImageURLs
                     guard let imageIndex = randomSoundBackgroundImageIndex(in: imageURLs) else { return }
@@ -2961,7 +2987,11 @@ struct SettingsScreen: View {
                 }
             },
             onPrevious: {
-                if isSoundsListActive {
+                if isIpadTemplatesListActive {
+                    guard let templatePosition,
+                          templatePosition > 1 else { return }
+                    selectTemplateForNavigation(templateURLs[templatePosition - 2])
+                } else if isSoundsListActive {
                     let imageURLs = availableImageURLs
                     guard let imageIndex = resolvedSoundBackgroundImageIndex(in: imageURLs),
                           imageIndex > 0 else { return }
@@ -2983,7 +3013,12 @@ struct SettingsScreen: View {
                 }
             },
             onNext: {
-                if isSoundsListActive {
+                if isIpadTemplatesListActive {
+                    guard let templatePosition else { return }
+                    let nextIndex = templatePosition
+                    guard templateURLs.indices.contains(nextIndex) else { return }
+                    selectTemplateForNavigation(templateURLs[nextIndex])
+                } else if isSoundsListActive {
                     let imageURLs = availableImageURLs
                     guard let imageIndex = resolvedSoundBackgroundImageIndex(in: imageURLs),
                           imageIndex < imageURLs.count - 1 else { return }
@@ -3053,29 +3088,37 @@ struct SettingsScreen: View {
         listMode == .templates
     }
 
+    private var isIpadTemplatesListActive: Bool {
+        isPad && isTemplatesListActive
+    }
+
     private var isDocumentEditorListActive: Bool {
         listMode == .files || listMode == .text || listMode == .markdown
     }
 
     private var navigationControlsTitle: String {
+        if isIpadTemplatesListActive {
+            return "Template"
+        }
+
         switch listMode {
         case .files:
-            "Screen"
+            return "Screen"
         case .text:
-            "Text"
+            return "Text"
         case .markdown:
-            "MD"
+            return "MD"
         case .pdfs:
-            "PDF"
+            return "PDF"
         case .sounds:
-            "Back"
+            return "Back"
         default:
-            "Image"
+            return "Image"
         }
     }
 
     private var isFileNavigationControlsActive: Bool {
-        isImagesListActive || isSoundsListActive || isPDFsListActive || isDocumentEditorListActive
+        isImagesListActive || isSoundsListActive || isPDFsListActive || isDocumentEditorListActive || isIpadTemplatesListActive
     }
 
     private var isBackgroundImageControlsActive: Bool {
@@ -3145,6 +3188,48 @@ struct SettingsScreen: View {
         }
         guard let navigationFilePosition else { return false }
         return navigationFilePosition > 1
+    }
+
+    private var templatePosition: Int? {
+        guard let selectedTemplateURL,
+              let index = templateURLs.firstIndex(where: {
+                  $0.standardizedFileURL == selectedTemplateURL.standardizedFileURL
+              }) else {
+            return nil
+        }
+
+        return index + 1
+    }
+
+    private var canSelectFirstTemplate: Bool {
+        guard !templateURLs.isEmpty else { return false }
+        guard let templatePosition else { return true }
+        return templatePosition > 1
+    }
+
+    private var canSelectPreviousTemplate: Bool {
+        guard let templatePosition else { return false }
+        return templatePosition > 1
+    }
+
+    private var canSelectNextTemplate: Bool {
+        guard let templatePosition else { return false }
+        return templatePosition < templateURLs.count
+    }
+
+    private func selectTemplateForNavigation(_ candidateTemplateURL: URL) {
+        guard isIpadTemplatesListActive else { return }
+
+        guard let selectedTemplateURL = templateURL(
+            matchingSelectionPath: candidateTemplateURL.standardizedFileURL.path,
+            in: templateURLs
+        ) else {
+            return
+        }
+
+        selectTemplateForDescription(selectedTemplateURL)
+        templateScrollPositionIDStorage = selectedTemplateURL.path
+        print("🐞 \(ISO8601DateFormatter().string(from: Date())) TEMPLATE NAVIGATION SELECTED template=\(selectedTemplateURL.lastPathComponent)")
     }
 
     private var canNavigateToNextFile: Bool {
@@ -4796,7 +4881,20 @@ struct SettingsScreen: View {
             return nil
         }
 
-        return templateURLs.first(where: { $0.path == selectedTemplateSelectionPath })
+        return templateURL(
+            matchingSelectionPath: selectedTemplateSelectionPath,
+            in: templateURLs
+        )
+    }
+
+    private func templateURL(
+        matchingSelectionPath selectionPath: String,
+        in templateURLs: [URL]
+    ) -> URL? {
+        let selectedURL = URL(fileURLWithPath: selectionPath).standardizedFileURL
+        return templateURLs.first { templateURL in
+            templateURL.standardizedFileURL == selectedURL
+        }
     }
 
     private var availableDocumentURLs: [URL] {
@@ -4908,9 +5006,10 @@ struct SettingsScreen: View {
             templateDescriptionState = nil
             return
         }
-        guard let selectedTemplateURL = refreshedTemplateURLs.first(where: {
-            $0.path == selectedTemplateSelectionPath
-        }) else {
+        guard let selectedTemplateURL = templateURL(
+            matchingSelectionPath: selectedTemplateSelectionPath,
+            in: refreshedTemplateURLs
+        ) else {
             clearTemplateSelection()
             return
         }

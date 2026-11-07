@@ -486,6 +486,9 @@ struct SettingsDocumentTableSection: View {
 
     private var selectionRestorationID: String {
         let rowPaths = activeRowPaths.joined(separator: "\u{1F}")
+        if listMode == .templates {
+            return "\(listMode)-\(rowPaths)-\(selectedTemplateURL?.path ?? "")"
+        }
         return "\(listMode)-\(rowPaths)"
     }
 

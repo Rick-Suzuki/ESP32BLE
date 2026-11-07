@@ -1,34 +1,111 @@
-STAGE 8B.24B.1 COMPLETE
+Stage 8B.24B.4 read-only probe complete. No files changed, build/run/deploy/Simulator/commit/push performed.
 
-Files modified:
+1. Yellow highlight
 
-• ESP32BLE/ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
-• ESP32BLE/ESP32BLE/Scrns/Set_Screen/Set_TxtEditor.swift
+Current source does not contain a remaining standardized-versus-raw identity mismatch in the yellow-row calculation.
 
-Changes made:
+Relevant current path:
 
-• Removed the iPad Templates viewer panel gap with HStack(spacing: 0).
-• Preserved the 64% template / 36% description split.
-• Replaced individual panel borders with one viewer outer border and one 1-point shared vertical divider, preventing a double-width center border.
-• Added configurable wrapsText and textInsets options to PlainDocumentEditor.
-   • Defaults preserve all existing no-wrap behavior and 8-point insets.
-   • Existing Screens, Text, Markdown, and dedicated editor call sites remain on the default behavior.
-• Added corresponding UIKit updates in NoWrapDocumentTextView:
-   • Wrapped mode tracks text-view width.
-   • Uses normal word wrapping.
-   • Disables horizontal bounce and horizontal indicator in wrapped mode.
-   • Retains normal vertical scrolling.
-   • Continues to preserve the existing no-wrap/horizontal-scroll path by default.
-• Enabled wrapping only for the iPad Templates Description pane.
-   • Uses 10-point internal insets on all sides.
-   • Preserves explicit line breaks.
-   • Uses independent vertical UIKit scrolling.
-• Kept the Template pane non-wrapping with its existing horizontal and vertical scrolling configuration.
+• Set_Screen.swift:4879-4897
+   • selectedTemplateURL resolves selectedTemplateSelectionPath through templateURL(matchingSelectionPath:in:).
+   • The resolver compares standardizedFileURL values.
+   • It returns the matching URL from templateURLs, not a separately created URL.
 
-Validation:
+• Set_Screen.swift:3509-3510
+   • The resolved selectedTemplateURL is passed directly into SettingsDocumentTableSection.
 
-• Set_Screen.swift: no issues.
-• Set_TxtEditor.swift: no new errors. The only reported diagnostics are two existing UIButton contentEdgeInsets deprecation warnings, unrelated to this change.
-• git diff --check: passed.
+• Set_Table.swift:993-1013
+   • A row is selected when:
+selectedTemplateURL?.standardizedFileURL == templateURL.standardizedFileURL
 
-No iPhone Templates UI, storage, selection, application, deletion, import/export, backup/restore, Sound player, Main Screen, build, deployment, Simulator use, commit, or push was performed.
+• The selected row’s Text is bold and yellow.
+
+Because the resolver returns an element of templateURLs, the selected row comparison must be true for that exact collection element. There is no competing template foreground-style modifier, green applied-template state, or duplicate SettingsDocumentTableSection/templateRow implementation in the current source.
+
+Conclusion: the current source guarantees yellow styling whenever the rendered table receives a non-nil selectedTemplateURL. The remaining observed highlight failure is therefore not explained by URL canonicalization in the present source.
+
+The two remaining source-level possibilities are:
+
+• The table is not being recomputed with its newly passed selectedTemplateURL at runtime.
+• The tested app did not contain the current Set_Screen.swift / Set_Table.swift source state.
+
+A narrowly scoped future diagnostic could log only the selected template filename/path at:
+• Set_Screen.swift selectedTemplateURL resolution.
+• Set_Table.swift templateRow isSelected calculation.
+
+That would distinguish a state-propagation issue from a deployed-source mismatch without logging template contents.
+
+2. Automatic table scroll
+
+The canonical identity is now consistent:
+
+• Set_Screen.swift:3223-3232
+   • Navigation resolves a collection URL.
+   • It stores selectedTemplateURL.path in templateScrollPositionIDStorage.
+
+• Set_Table.swift:160-161 and 1045
+   • Template rows use templateURL.path for ForEach and row identity.
+
+• Set_Table.swift:466-484
+   • Templates use templateScrollPositionID through scrollPosition(id:).
+
+Therefore the navigation-written scroll ID and row IDs now use the same raw collection path. This is not a remaining URL representation mismatch.
+
+The source-level scrolling issue is timing:
+
+• Set_Table.swift:180-183
+   • The only explicit ScrollViewReader restoration task runs from selectionRestorationID.
+
+• Set_Table.swift:487-490
+   • selectionRestorationID contains only listMode and active row paths.
+   • It does not contain selectedTemplateURL or selectedRowPath.
+
+• Set_Table.swift:555-566
+   • restoreSelectedRowVisibility(using:) can scroll the selected template row.
+   • But it does not rerun when Back, Previous, Next, Random, or table selection changes only the selected template.
+
+The existing scrollPosition binding is valid and SwiftUI supports writing an ID binding to request scrolling. However, the table does not have a deterministic explicit ScrollViewReader response to a Templates selection change after the rows already exist. The direct binding can be overwritten by List’s top-visible-row reporting or fail to provide the required timing guarantee during selection updates.
+
+3. Shared cause
+
+The two problems no longer share a URL identity cause.
+
+• Highlight: current canonical identity path is internally consistent; source does not explain the missing yellow rendering.
+• Scroll: canonical identity is also consistent, but the explicit restoration task does not observe selection changes.
+
+4. Smallest safe correction
+
+For scrolling only, keep templateScrollPositionIDStorage and the current scrollPosition binding unchanged.
+
+Make selectionRestorationID include the selected template row identity only when listMode is Templates. This causes the existing task at Set_Table.swift:180 to rerun and call the already-existing restoreSelectedRowVisibility(using:) after a Templates selection change.
+
+This is smaller and safer than adding a second selection state, selection index, or new scrolling mechanism. It preserves every other category’s existing restoration behavior.
+
+For highlight, do not add a second selection state or change table styling until a focused runtime diagnostic confirms whether the table receives a non-nil selectedTemplateURL. The existing comparison and yellow precedence are already correct.
+
+5. Existing behavior preservation
+
+The recommended scroll correction would preserve:
+
+• Table single-tap selection.
+• Double-tap application.
+• Existing yellow selected-row styling.
+• No new green state.
+• Existing templateScrollPositionIDStorage.
+• Current viewer synchronization.
+• iPhone isolation.
+• All non-Templates table modes.
+
+6. Physical-device testing after a correction
+
+Use at least enough templates to require vertical scrolling.
+
+1. Start with a selected middle template.
+2. Confirm its row is yellow after a table single tap.
+3. Use Next until the selected row is below the visible region.
+4. Confirm the table moves just enough to reveal the selected row.
+5. Use Previous until the selected row is above the visible region.
+6. Confirm the row becomes visible again.
+7. Use Back from an off-screen selection.
+8. Use Random repeatedly; verify the viewer, yellow row, and visible row always agree.
+9. Double-tap only as a separate application test; verify selection/scroll do not apply templates.

@@ -1,4 +1,9 @@
 
+V66.23
+ESP — STAGE 8B.24B.3
+IPAD TEMPLATES — navigation and presistent zoom
+261107 Sat 1331
+
 V66.22
 settings: ESP — STAGE 8B.24B.1 - iPad templates — read-only two-panel viewer
 261107 Sat 1242

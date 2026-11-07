@@ -10,9 +10,11 @@ struct SettingsAvailableDevicesPanel: View {
     @Binding var isStatusBarVisible: Bool
     @Binding var opacitySliderValue: Double
     @Binding var documentEditorFontSize: CGFloat
+    @Binding var templateViewerFontSize: CGFloat
     let imageControlButtons: AnyView
     let isImageControlsActive: Bool
     let isDocumentEditorControlsActive: Bool
+    let isTemplateViewerControlsActive: Bool
     let onImageOpacityEditingChanged: (Bool) -> Void
     let isIPhoneImageEditorPresented: Bool
     let iPhoneEditorLeadingInset: CGFloat
@@ -575,6 +577,9 @@ struct SettingsAvailableDevicesPanel: View {
         VStack(spacing: 8) {
             if isDocumentEditorControlsActive {
                 Slider(value: $documentEditorFontSize, in: 10...72, step: 1)
+                    .tint(.cyan)
+            } else if isTemplateViewerControlsActive {
+                Slider(value: $templateViewerFontSize, in: 10...72, step: 1)
                     .tint(.cyan)
             } else {
                 Slider(
