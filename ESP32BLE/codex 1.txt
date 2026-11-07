@@ -1,120 +1,68 @@
-Stage 8B.25A implemented. No build, deployment, Simulator, device test, commit, or push was performed.
+Stage 8B.25B complete.
 
 A. Files modified
 
 • ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
+• ESP32BLE/Scrns/Set_Screen/Set_ArchiveDocuments.swift
 
-The pre-existing unrelated modification to ESP32BLE/codex 1.txt was left untouched.
+B. Existing notification mechanism reused
 
-B. Import File(s) menu integration
+All completion feedback uses the existing showSettingsFeedback(...) overlay unchanged. Its appearance, placement, duration, and cancellation behavior were not modified.
 
-Added “Import File(s)” between the existing entries on both platforms:
+C. Import completion integration
 
-• Import Screen(s)
-• Import File(s)
-• Restore Full Backup
+Successful final import sessions now show:
 
-The iPad native menu and iPhone popover use the same shared action and import mode. No Settings geometry changed.
+• Import Screen(s): Import Complete
+• Import File(s): Import Complete
+• Restore Full Backup: Import Complete
 
-C. File type filters and classification
+Screen imports suppress success feedback when:
+• A file fails
+• A file is skipped
+• The user stops the import
+• The picker/import is cancelled
 
-Added shared SettingsImportMode.files.
+Import File(s) suppresses success feedback on preflight failure, overwrite cancellation, or partial copy failure.
 
-Supported types:
-• .screen
-• .txt
-• .md
-• .png, .jpg, .jpeg, .heic, .heif, .gif, .bmp, .tiff, .webp
-• .mp3, .wav, .m4a, .aiff, .aac, .caf
-• .pdf
+D. Export completion integration
 
-The picker allows multiple mixed file selections. Every returned URL is independently classified by the existing extension rules before any import begins.
+Successful exports now show:
 
-D. Folder, ZIP, and Template exclusion
+• Export 1 Screen: Export Complete
+• Create Full Backup: Export Complete
 
-The preflight rejects:
-• Directories and non-regular files
-• ZIP archives
-• Unsupported extensions
-• .template
-• .template.config.json
-• All .config.json sidecars
-• Archive.json
-• Invalid filenames
+Full-backup export still shows feedback only from successful .fileExporter completion. Its failure behavior is unchanged.
 
-No folders are traversed, no ZIP files are extracted, and no Template-pair import path was added.
+E. Export 1 Screen cancellation fix
 
-E. Batch preflight implementation
+SettingsSingleFileExportPicker now has separate callbacks:
 
-Before writing anything, Import File(s):
-• Verifies there is a selection.
-• Validates each filename and extension.
-• Confirms each item is an individually readable regular file through security-scoped coordinated access.
-• Detects duplicate selected filenames case-insensitively.
-• Detects existing destination-name conflicts.
-• Creates a shared pending import session only after validation succeeds.
+• onExported
+• onCancel
 
-Empty .txt and .md files remain allowed. No stricter binary-content validation was introduced beyond ESP’s existing format handling.
+Only a non-empty didPickDocumentsAt result triggers Export Complete. Picker cancellation only cleans up the temporary ZIP and dismisses the sheet.
 
-F. Conflict confirmation behavior
+F. Partial-success handling
 
-If conflicts are found, one alert is shown:
+Added minimal import-session result tracking:
 
-• Title: Existing Files
-• Message: Some files already exist and will be overwritten. Do you want to continue?
-• Actions: Cancel, Continue
+• skippedFileCount
+• wasCancelled
 
-Cancel discards the planned batch without modifying storage.
+This prevents Import Screen(s) from showing a generic completion after Skip or Stop. Existing detailed failure alerts and processing remain unchanged.
 
-Continue imports non-conflicting files and uses the existing atomic replacement path for conflicts. Existing Import Screen(s) and Restore Full Backup conflict interfaces were not changed.
+G. iPhone/iPad consistency
 
-G. Copy/replacement safety
+Both platforms continue using the shared Settings implementation and existing top-right feedback overlay. No menu ordering, geometry, or platform-specific notification path was added.
 
-The new mode reuses:
-• Security-scoped source access
-• NSFileCoordinator
-• Existing copied-file import helper
-• Existing staged atomic replacement helper
+H. Source validation results
 
-A failed copy reports an import failure and does not trigger completion feedback. Existing files are protected by the replacement staging path.
-
-H. Screen configuration handling
-
-Imported .screen files continue through the existing screen import/configuration path:
-• Existing valid screen configuration is retained where appropriate.
-• A default configuration is created when needed.
-• Standalone configuration sidecars remain excluded.
-• Existing Screen ZIP import behavior is unchanged.
-
-I. Settings refresh and selection preservation
-
-Successful imports call the existing markImportedContentChanged() refresh path.
-
-For Import File(s):
-• A valid existing selected screen is not replaced by the first imported screen.
-• Valid selected image, sound, and PDF remain selected.
-• Active sound playback is not stopped.
-• Text, Markdown, Template, and Settings category state are not reset.
-
-J. Error and cancellation handling
-
-• Picker cancellation: no files changed and no error shown.
-• Overwrite cancellation: pending batch discarded with no changes.
-• Invalid selection: existing Settings alert mechanism receives a descriptive error.
-• Duplicate batch filename: entire batch rejected before copying.
-• Partial publication failure: reports an import failure; no success notification is emitted.
-
-No completion-notification behavior was added or changed. Stage 8B.25B remains separate.
-
-K. Source validation results
-
-• Swift source parse completed successfully.
-• Xcode live diagnostics for Set_Screen.swift􀰓: 0 issues.
+• Xcode diagnostics: 0 issues in both modified files.
+• Swift source parse: passed.
 • git diff --check: passed.
-• Confirmed Import File(s) appears in both menus.
-• Confirmed .files is excluded from ZIP and standalone-config processing.
-• Confirmed existing Import Screen(s), Restore Full Backup, and export entry points remain unchanged.
+• No build, deployment, Simulator, device testing, commit, or push was performed.
 
-L. Remaining limitation/risk
+I. Remaining limitation
 
-The batch is fully validated before publication, and replacements are individually staged atomically. A later copy failure can still leave earlier non-conflicting files imported; it is reported as partial failure and never treated as a complete success. Full cross-file transactional rollback is not present in the existing importer architecture and was not introduced in this narrow stage.
+UIKit’s export picker reports destination selection through didPickDocumentsAt; it does not provide a separate later callback for iCloud synchronization or third-party delivery completion. Export Complete therefore means the document picker accepted the export destination, not that later cloud synchronization finished.

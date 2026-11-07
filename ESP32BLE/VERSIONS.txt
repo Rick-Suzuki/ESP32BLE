@@ -1,4 +1,8 @@
 
+V66.31
+settings: import files complete
+261107 Sat 1801
+
 V66.30
 ESP — STAGE 8B.25A - IMPORT FILE(S) — IMPLEMENTATION
 261107 Sat 1748
@@ -10,7 +14,7 @@ snd player colors improved
 
 
 V66.28
-settinsg: iPhone template viewer complete
+settings: iPhone template viewer complete
 261107 Sat 1523
 
 V66.27

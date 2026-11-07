@@ -215,10 +215,11 @@ struct SettingsArchiveFileDocument: FileDocument {
 
 struct SettingsSingleFileExportPicker: UIViewControllerRepresentable {
     let url: URL
-    let onFinish: () -> Void
+    let onExported: () -> Void
+    let onCancel: () -> Void
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(onFinish: onFinish)
+        Coordinator(onExported: onExported, onCancel: onCancel)
     }
 
     func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
@@ -231,18 +232,28 @@ struct SettingsSingleFileExportPicker: UIViewControllerRepresentable {
     }
 
     final class Coordinator: NSObject, UIDocumentPickerDelegate {
-        let onFinish: () -> Void
+        let onExported: () -> Void
+        let onCancel: () -> Void
 
-        init(onFinish: @escaping () -> Void) {
-            self.onFinish = onFinish
+        init(
+            onExported: @escaping () -> Void,
+            onCancel: @escaping () -> Void
+        ) {
+            self.onExported = onExported
+            self.onCancel = onCancel
         }
 
         func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
-            onFinish()
+            onCancel()
         }
 
         func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
-            onFinish()
+            guard !urls.isEmpty else {
+                onCancel()
+                return
+            }
+
+            onExported()
         }
     }
 }

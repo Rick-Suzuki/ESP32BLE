@@ -248,6 +248,8 @@ struct SettingsScreen: View {
         var importedFileCount = 0
         var replacedFileCount = 0
         var failedFileCount = 0
+        var skippedFileCount = 0
+        var wasCancelled = false
     }
 
     private struct ScreenPackageImport {
@@ -867,10 +869,18 @@ struct SettingsScreen: View {
             )
         ) {
             if let exportURL = singleFileExportURL {
-                SettingsSingleFileExportPicker(url: exportURL) {
-                    cleanupSingleFileExportTemporaryURLIfNeeded()
-                    singleFileExportURL = nil
-                }
+                SettingsSingleFileExportPicker(
+                    url: exportURL,
+                    onExported: {
+                        showSettingsFeedback("Export Complete")
+                        cleanupSingleFileExportTemporaryURLIfNeeded()
+                        singleFileExportURL = nil
+                    },
+                    onCancel: {
+                        cleanupSingleFileExportTemporaryURLIfNeeded()
+                        singleFileExportURL = nil
+                    }
+                )
                 .onAppear {
                 }
                 .onDisappear {
@@ -1222,7 +1232,7 @@ struct SettingsScreen: View {
             ) { result in
                 switch result {
                 case .success:
-                    showSettingsFeedback("Backup Complete")
+                    showSettingsFeedback("Export Complete")
                 case .failure(let error):
                     renameAlertMessage = error.localizedDescription
                 }
@@ -7599,13 +7609,14 @@ struct SettingsScreen: View {
     }
 
     private func resolvePendingImportConflictBySkipping() {
-        guard let session = pendingImportSession else {
+        guard var session = pendingImportSession else {
             pendingImportConflict = nil
             return
         }
 
         pendingImportConflict = nil
         pendingImportSession = nil
+        session.skippedFileCount += 1
         processPendingImportSession(session)
     }
 
@@ -7704,7 +7715,7 @@ struct SettingsScreen: View {
     }
 
     private func cancelPendingImportSession() {
-        guard let session = pendingImportSession else {
+        guard var session = pendingImportSession else {
             db("IMPORT_CONFLICT filename=\(pendingImportConflict?.fileName ?? "nil") action=stop continuing=false reason=missing_pending_session")
             pendingImportConflict = nil
             return
@@ -7712,6 +7723,7 @@ struct SettingsScreen: View {
 
         if session.importMode == .allFiles {
         }
+        session.wasCancelled = true
         pendingImportConflict = nil
         pendingImportSession = nil
         finishPendingImportSession(session)
@@ -7769,7 +7781,14 @@ struct SettingsScreen: View {
            session.skipFileNameKeys.isEmpty,
            session.skipTemplatePairKeys.isEmpty,
            renameAlertMessage == nil {
-            showSettingsFeedback("Restore Complete")
+            showSettingsFeedback("Import Complete")
+        }
+
+        if (session.importMode == .screen || session.importMode == .files),
+           session.failedFileCount == 0,
+           session.skippedFileCount == 0,
+           !session.wasCancelled {
+            showSettingsFeedback("Import Complete")
         }
     }
 
