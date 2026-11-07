@@ -25,6 +25,20 @@ enum SettingsFocusField: Hashable {
     case sendText
 }
 
+enum TemplateEditorFocusTarget {
+    case templateContents
+    case description
+
+    var diagnosticName: String {
+        switch self {
+        case .templateContents:
+            return "template"
+        case .description:
+            return "description"
+        }
+    }
+}
+
 struct PlainDocumentEditor: UIViewRepresentable {
     @Binding var text: String
     @Binding var fontSize: CGFloat
@@ -431,6 +445,181 @@ struct DedicatedDocumentEditorView: View {
         Button(action: onSaveAndClose) {
             Image(systemName: "xmark.circle.fill")
                 .font(.system(size: isPad ? 32 : 28, weight: .semibold))
+                .foregroundStyle(.cyan)
+                .frame(width: 44, height: 44)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Save and Close")
+    }
+}
+
+// MARK: - BM:🅱️ IPAD TEMPLATE DUAL-PANE EDITOR
+
+struct DedicatedTemplateEditorView: View {
+    @Binding var templateContents: String
+    @Binding var description: String
+    @Binding var fontSize: CGFloat
+    @Binding var isTemplateContentsFocused: Bool
+    @Binding var isDescriptionFocused: Bool
+    let initialFocusTarget: TemplateEditorFocusTarget
+    let contentWidthFraction: CGFloat
+    let focusRequestID: UUID?
+    let hidesTextDuringOpening: Bool
+    let showsCloseButton: Bool
+    let initialScrollResetID: UUID?
+    let onEditingBegan: () -> Void
+    let onKeyboardFrameReceived: (DedicatedDocumentEditorKeyboardLayout) -> Void
+    let onKeyboardLayoutReady: (DedicatedDocumentEditorKeyboardLayout) -> Void
+    let onSaveAndClose: () -> Void
+    @State private var dockedKeyboardHeight: CGFloat = 0
+    @State private var latestKeyboardLayout: DedicatedDocumentEditorKeyboardLayout?
+    @State private var editorViewportSize: CGSize = .zero
+    @State private var editorPresentationSize: CGSize = .zero
+    @State private var lastReportedKeyboardLayout: DedicatedDocumentEditorKeyboardLayout?
+
+    var body: some View {
+        ZStack {
+            Color.black
+                .ignoresSafeArea()
+
+            GeometryReader { proxy in
+                ZStack(alignment: .bottomTrailing) {
+                    templateEditorPanes
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .opacity(hidesTextDuringOpening ? 0 : 1)
+
+                    if isPad && showsCloseButton {
+                        templateEditorCloseButton
+                            .padding(
+                                .trailing,
+                                max(6, proxy.safeAreaInsets.trailing + 2)
+                            )
+                            .padding(
+                                .bottom,
+                                max(8, proxy.safeAreaInsets.bottom + 2)
+                            )
+                    }
+                }
+                .frame(
+                    width: proxy.size.width,
+                    height: max(0, proxy.size.height - dockedKeyboardHeight),
+                    alignment: .topLeading
+                )
+                .background {
+                    GeometryReader { viewportProxy in
+                        Color.clear
+                            .onAppear {
+                                updateEditorViewport(
+                                    viewportProxy.size,
+                                    presentationSize: proxy.size
+                                )
+                            }
+                            .onChange(of: viewportProxy.size) { _, newSize in
+                                updateEditorViewport(
+                                    newSize,
+                                    presentationSize: proxy.size
+                                )
+                            }
+                    }
+                }
+            }
+
+            DedicatedDocumentEditorKeyboardObserver(
+                dockedKeyboardHeight: $dockedKeyboardHeight,
+                onKeyboardFrameReceived: { layout in
+                    latestKeyboardLayout = layout
+                    onKeyboardFrameReceived(layout)
+                    reportKeyboardLayoutIfViewportIsReady()
+                }
+            )
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .allowsHitTesting(false)
+        }
+    }
+
+    private var templateEditorPanes: some View {
+        GeometryReader { proxy in
+            let templateWidth = max(
+                0,
+                proxy.size.width * min(max(contentWidthFraction, 0), 1)
+            )
+            let descriptionWidth = max(0, proxy.size.width - templateWidth)
+
+            HStack(spacing: 0) {
+                PlainDocumentEditor(
+                    text: $templateContents,
+                    fontSize: $fontSize,
+                    isFocused: $isTemplateContentsFocused,
+                    isReadOnly: false,
+                    onReadOnlyTap: nil,
+                    focusRequestID: initialFocusTarget == .templateContents
+                        ? focusRequestID
+                        : nil,
+                    initialScrollResetID: initialFocusTarget == .templateContents
+                        ? initialScrollResetID
+                        : nil,
+                    onEditingBegan: onEditingBegan,
+                    wrapsText: false,
+                    textInsets: UIEdgeInsets(top: 8, left: 8, bottom: 8, right: 8)
+                )
+                .frame(width: templateWidth)
+                .overlay(alignment: .trailing) {
+                    Rectangle()
+                        .fill(Color.white)
+                        .frame(width: 1)
+                }
+
+                PlainDocumentEditor(
+                    text: $description,
+                    fontSize: $fontSize,
+                    isFocused: $isDescriptionFocused,
+                    isReadOnly: false,
+                    onReadOnlyTap: nil,
+                    focusRequestID: initialFocusTarget == .description
+                        ? focusRequestID
+                        : nil,
+                    initialScrollResetID: initialFocusTarget == .description
+                        ? initialScrollResetID
+                        : nil,
+                    onEditingBegan: onEditingBegan,
+                    wrapsText: true,
+                    textInsets: UIEdgeInsets(top: 10, left: 10, bottom: 10, right: 10)
+                )
+                .frame(width: descriptionWidth)
+            }
+            .frame(width: proxy.size.width, height: proxy.size.height, alignment: .topLeading)
+        }
+    }
+
+    private func updateEditorViewport(_ size: CGSize, presentationSize: CGSize) {
+        guard size.width > 0, size.height >= 0 else { return }
+        editorViewportSize = size
+        editorPresentationSize = presentationSize
+        reportKeyboardLayoutIfViewportIsReady()
+    }
+
+    private func reportKeyboardLayoutIfViewportIsReady() {
+        guard let latestKeyboardLayout,
+              latestKeyboardLayout != lastReportedKeyboardLayout,
+              editorPresentationSize.width > 0,
+              editorPresentationSize.height >= 0 else {
+            return
+        }
+
+        let expectedHeight = max(
+            0,
+            editorPresentationSize.height - latestKeyboardLayout.dockedHeight
+        )
+        guard abs(editorViewportSize.height - expectedHeight) <= 1 else { return }
+
+        lastReportedKeyboardLayout = latestKeyboardLayout
+        onKeyboardLayoutReady(latestKeyboardLayout)
+    }
+
+    private var templateEditorCloseButton: some View {
+        Button(action: onSaveAndClose) {
+            Image(systemName: "xmark.circle.fill")
+                .font(.system(size: 32, weight: .semibold))
                 .foregroundStyle(.cyan)
                 .frame(width: 44, height: 44)
         }

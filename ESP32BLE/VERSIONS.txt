@@ -1,4 +1,9 @@
 
+V66.24
+Stage 8B.24C — iPad Dual-Pane Templates Editor
+261107 Sat 1352
+
+
 V66.23
 ESP — STAGE 8B.24B.3
 IPAD TEMPLATES — navigation and presistent zoom

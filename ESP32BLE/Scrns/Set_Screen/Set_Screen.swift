@@ -336,11 +336,6 @@ struct SettingsScreen: View {
         }
     }
 
-    private enum TemplateViewerTapTarget {
-        case contents
-        case description
-    }
-
     private enum DedicatedDocumentEditorPresentationState {
         case viewing
         case opening
@@ -501,6 +496,7 @@ struct SettingsScreen: View {
     @State private var isIPhoneDocumentEditorPresented = false
     @State private var isIPhoneSoundPlayerPresented = true
     @State private var isDedicatedDocumentEditorPresented = false
+    @State private var isDedicatedTemplateEditorPresented = false
     @State private var dedicatedDocumentEditorFocusRequestID: UUID?
     @State private var dedicatedDocumentEditorPresentationState: DedicatedDocumentEditorPresentationState = .viewing
     @State private var dedicatedDocumentEditorPreviewFrame: CGRect = .zero
@@ -535,9 +531,12 @@ struct SettingsScreen: View {
     @State private var templateViewerDescription = "Select a template to view its description."
     @State private var templateViewerContentsScrollResetID = UUID()
     @State private var templateViewerDescriptionScrollResetID = UUID()
-    @State private var templateViewerTapTarget: TemplateViewerTapTarget?
     @State private var isTemplateViewerContentsFocused = false
     @State private var isTemplateViewerDescriptionFocused = false
+    @State private var templateEditorFocusTarget: TemplateEditorFocusTarget?
+    @State private var isTemplateEditorContentsFocused = false
+    @State private var isTemplateEditorDescriptionFocused = false
+    @State private var isTemplateEditorSaveInProgress = false
     @State private var templateEditingSession: TemplateEditingSession?
     @State private var templateEditingLoadError: String?
     @State private var templateEditingSaveError: String?
@@ -560,6 +559,10 @@ struct SettingsScreen: View {
     // Minimum seconds between image opacity
     // preview updates while dragging.
     private let imageOpacityPreviewInterval: TimeInterval = 0.25
+
+    // MARK: - BM:🅱️ TEMPLATE EDITOR LAYOUT
+
+    private let templateEditorContentWidthFraction: CGFloat = 0.75
 
     var body: some View {
         configuredSettingsScreen
@@ -893,19 +896,42 @@ struct SettingsScreen: View {
 
             ZStack {
                 if isDedicatedDocumentEditorPresented {
-                    DedicatedDocumentEditorView(
-                        text: $documentEditorText,
-                        fontSize: $documentEditorFontSize,
-                        isFocused: $isDocumentEditorFocused,
-                        focusRequestID: dedicatedDocumentEditorFocusRequestID,
-                        hidesTextDuringOpening: hidesDedicatedDocumentEditorText,
-                        showsCloseButton: true,
-                        initialScrollResetID: dedicatedDocumentEditorInitialScrollResetID,
-                        onEditingBegan: dedicatedDocumentEditorDidBeginEditing,
-                        onKeyboardFrameReceived: dedicatedDocumentEditorReceivedKeyboardFrame,
-                        onKeyboardLayoutReady: dedicatedDocumentEditorKeyboardLayoutBecameReady,
-                        onSaveAndClose: dedicatedDocumentEditorSaveAndCloseAction
-                    )
+                    Group {
+                        if isDedicatedTemplateEditorPresented,
+                           let templateEditorFocusTarget {
+                            DedicatedTemplateEditorView(
+                                templateContents: templateEditingTemplateContentsBinding,
+                                description: templateEditingDescriptionBinding,
+                                fontSize: templateViewerFontSizeBinding,
+                                isTemplateContentsFocused: $isTemplateEditorContentsFocused,
+                                isDescriptionFocused: $isTemplateEditorDescriptionFocused,
+                                initialFocusTarget: templateEditorFocusTarget,
+                                contentWidthFraction: templateEditorContentWidthFraction,
+                                focusRequestID: dedicatedDocumentEditorFocusRequestID,
+                                hidesTextDuringOpening: hidesDedicatedDocumentEditorText,
+                                showsCloseButton: true,
+                                initialScrollResetID: dedicatedDocumentEditorInitialScrollResetID,
+                                onEditingBegan: dedicatedDocumentEditorDidBeginEditing,
+                                onKeyboardFrameReceived: dedicatedDocumentEditorReceivedKeyboardFrame,
+                                onKeyboardLayoutReady: dedicatedDocumentEditorKeyboardLayoutBecameReady,
+                                onSaveAndClose: dedicatedDocumentEditorSaveAndCloseAction
+                            )
+                        } else {
+                            DedicatedDocumentEditorView(
+                                text: $documentEditorText,
+                                fontSize: $documentEditorFontSize,
+                                isFocused: $isDocumentEditorFocused,
+                                focusRequestID: dedicatedDocumentEditorFocusRequestID,
+                                hidesTextDuringOpening: hidesDedicatedDocumentEditorText,
+                                showsCloseButton: true,
+                                initialScrollResetID: dedicatedDocumentEditorInitialScrollResetID,
+                                onEditingBegan: dedicatedDocumentEditorDidBeginEditing,
+                                onKeyboardFrameReceived: dedicatedDocumentEditorReceivedKeyboardFrame,
+                                onKeyboardLayoutReady: dedicatedDocumentEditorKeyboardLayoutBecameReady,
+                                onSaveAndClose: dedicatedDocumentEditorSaveAndCloseAction
+                            )
+                        }
+                    }
                     .opacity(dedicatedDocumentEditorOpacity)
                     .onAppear {
                         logEditorTextReveal("Editor presented")
@@ -997,7 +1023,13 @@ struct SettingsScreen: View {
     }
 
     private var dedicatedDocumentEditorSaveAndCloseAction: () -> Void {
-        return { closeDedicatedDocumentEditor() }
+        return {
+            if isDedicatedTemplateEditorPresented {
+                closeDedicatedTemplateEditor()
+            } else {
+                closeDedicatedDocumentEditor()
+            }
+        }
     }
 
     private var configuredSettingsScreen: some View {
@@ -1718,7 +1750,7 @@ struct SettingsScreen: View {
                     wrapsText: false,
                     textInsets: UIEdgeInsets(top: 8, left: 8, bottom: 8, right: 8),
                     onTap: {
-                        templateViewerTapTarget = .contents
+                        presentDedicatedTemplateEditor(focusing: .templateContents)
                     }
                 )
                 .frame(width: contentsWidth)
@@ -1731,7 +1763,7 @@ struct SettingsScreen: View {
                     wrapsText: true,
                     textInsets: UIEdgeInsets(top: 10, left: 10, bottom: 10, right: 10),
                     onTap: {
-                        templateViewerTapTarget = .description
+                        presentDedicatedTemplateEditor(focusing: .description)
                     }
                 )
                 .frame(width: descriptionWidth)
@@ -1747,6 +1779,18 @@ struct SettingsScreen: View {
                     .fill(Color.white)
                     .frame(width: 1)
                     .padding(.leading, contentsWidth)
+            }
+            .background {
+                GeometryReader { viewerProxy in
+                    Color.clear.preference(
+                        key: SettingsEditorPreviewFramePreferenceKey.self,
+                        value: viewerProxy.frame(
+                            in: .named(
+                                SettingsDocumentEditorAnimationGeometry.coordinateSpaceName
+                            )
+                        )
+                    )
+                }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -1792,6 +1836,24 @@ struct SettingsScreen: View {
             },
             set: { newValue in
                 templateViewerFontSizeStorage = Double(min(max(newValue, 10), 72))
+            }
+        )
+    }
+
+    private var templateEditingTemplateContentsBinding: Binding<String> {
+        Binding(
+            get: { templateEditingSession?.templateContentsDraft ?? "" },
+            set: { newValue in
+                templateEditingSession?.templateContentsDraft = newValue
+            }
+        )
+    }
+
+    private var templateEditingDescriptionBinding: Binding<String> {
+        Binding(
+            get: { templateEditingSession?.descriptionDraft ?? "" },
+            set: { newValue in
+                templateEditingSession?.descriptionDraft = newValue
             }
         )
     }
@@ -1947,6 +2009,103 @@ struct SettingsScreen: View {
         logEditorOpeningAnimation("Source rectangle captured source=\(sourceFrame)")
         logEditorOpeningAnimation("Destination calculated destination=\(destinationFrame)")
         beginDedicatedDocumentEditorOpeningFadeIn(openingID)
+    }
+
+    private func presentDedicatedTemplateEditor(focusing target: TemplateEditorFocusTarget) {
+        guard isPad,
+              isIpadTemplatesListActive,
+              dedicatedDocumentEditorPresentationState == .viewing,
+              let selectedTemplateURL,
+              isValidDedicatedDocumentEditorAnimationFrame(dedicatedDocumentEditorPreviewFrame),
+              isValidDedicatedDocumentEditorAnimationFrame(dedicatedDocumentEditorPresentationFrame),
+              prepareTemplateEditingSession(for: selectedTemplateURL) else {
+            return
+        }
+
+        let sourceFrame = dedicatedDocumentEditorPreviewFrame
+        let destinationFrame = openingAnimationDestinationFrame(
+            in: dedicatedDocumentEditorPresentationFrame
+        )
+        guard isValidDedicatedDocumentEditorAnimationFrame(destinationFrame) else {
+            return
+        }
+
+        dedicatedDocumentEditorKeyboardFocusTask?.cancel()
+        let openingID = UUID()
+
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) {
+            isDocumentEditorFocused = false
+            isTemplateEditorContentsFocused = false
+            isTemplateEditorDescriptionFocused = false
+            isTemplateEditorSaveInProgress = false
+            dedicatedDocumentEditorFocusRequestID = nil
+            templateEditorFocusTarget = target
+            isDedicatedTemplateEditorPresented = true
+            dedicatedDocumentEditorOpeningID = openingID
+            dedicatedDocumentEditorTransitionFrame = sourceFrame
+            dedicatedDocumentEditorDestinationFrame = destinationFrame
+            dedicatedDocumentEditorRectangleOpacity = 0
+            dedicatedDocumentEditorOpacity = 0
+            hidesDedicatedDocumentEditorText = true
+            dedicatedDocumentEditorInitialScrollResetID = nil
+            isDedicatedDocumentEditorOpeningAnimationComplete = false
+            isDedicatedDocumentEditorKeyboardLayoutReady = false
+            hasDedicatedDocumentEditorKeyboardFrame = false
+            hasDedicatedDocumentEditorTextInputFocus = false
+            isDedicatedDocumentEditorPresented = true
+            dedicatedDocumentEditorPresentationState = .opening
+        }
+        print("🐞 \(ISO8601DateFormatter().string(from: Date())) TEMPLATE EDITOR OPENING template=\(selectedTemplateURL.lastPathComponent) focus=\(target.diagnosticName)")
+        beginDedicatedDocumentEditorOpeningFadeIn(openingID)
+    }
+
+    private func closeDedicatedTemplateEditor() {
+        guard !isTemplateEditorSaveInProgress else { return }
+        guard isDedicatedTemplateEditorPresented else { return }
+
+        isTemplateEditorSaveInProgress = true
+        defer { isTemplateEditorSaveInProgress = false }
+
+        print("🐞 \(ISO8601DateFormatter().string(from: Date())) TEMPLATE EDITOR SAVE AND CLOSE REQUESTED")
+        guard saveTemplateEditingSession() else {
+            print("🐞 \(ISO8601DateFormatter().string(from: Date())) TEMPLATE EDITOR SAVE AND CLOSE FAILED")
+            return
+        }
+
+        print("🐞 \(ISO8601DateFormatter().string(from: Date())) TEMPLATE EDITOR SAVE AND CLOSE SUCCEEDED")
+        dismissDedicatedTemplateEditor()
+    }
+
+    private func dismissDedicatedTemplateEditor() {
+        dedicatedDocumentEditorKeyboardFocusTask?.cancel()
+        dedicatedDocumentEditorKeyboardFocusTask = nil
+        dedicatedDocumentEditorOpeningID = UUID()
+        isTemplateEditorContentsFocused = false
+        isTemplateEditorDescriptionFocused = false
+        UIApplication.shared.sendAction(
+            #selector(UIResponder.resignFirstResponder),
+            to: nil,
+            from: nil,
+            for: nil
+        )
+        dedicatedDocumentEditorFocusRequestID = nil
+        templateEditorFocusTarget = nil
+        isDedicatedTemplateEditorPresented = false
+        isDedicatedDocumentEditorPresented = false
+        dedicatedDocumentEditorPresentationState = .viewing
+        dedicatedDocumentEditorTransitionFrame = .zero
+        dedicatedDocumentEditorDestinationFrame = .zero
+        dedicatedDocumentEditorRectangleOpacity = 0
+        dedicatedDocumentEditorOpacity = 0
+        hidesDedicatedDocumentEditorText = true
+        dedicatedDocumentEditorInitialScrollResetID = nil
+        isDedicatedDocumentEditorOpeningAnimationComplete = false
+        isDedicatedDocumentEditorKeyboardLayoutReady = false
+        hasDedicatedDocumentEditorKeyboardFrame = false
+        hasDedicatedDocumentEditorTextInputFocus = false
+        print("🐞 \(ISO8601DateFormatter().string(from: Date())) TEMPLATE EDITOR DISMISSED")
     }
 
     private func closeDedicatedDocumentEditor() {
@@ -2430,7 +2589,11 @@ struct SettingsScreen: View {
         transaction.disablesAnimations = true
         withTransaction(transaction) {
             isDocumentEditorFocused = false
+            isTemplateEditorContentsFocused = false
+            isTemplateEditorDescriptionFocused = false
             dedicatedDocumentEditorFocusRequestID = nil
+            templateEditorFocusTarget = nil
+            isDedicatedTemplateEditorPresented = false
             dedicatedDocumentEditorTransitionFrame = .zero
             dedicatedDocumentEditorDestinationFrame = .zero
             dedicatedDocumentEditorRectangleOpacity = 0
@@ -2453,6 +2616,9 @@ struct SettingsScreen: View {
         }
 
         hasDedicatedDocumentEditorTextInputFocus = true
+        if isDedicatedTemplateEditorPresented {
+            print("🐞 \(ISO8601DateFormatter().string(from: Date())) TEMPLATE EDITOR INITIAL FOCUS ACTIVE")
+        }
         revealDedicatedDocumentEditorTextIfReady()
     }
 
@@ -2479,6 +2645,9 @@ struct SettingsScreen: View {
         }
 
         isDedicatedDocumentEditorKeyboardLayoutReady = true
+        if isDedicatedTemplateEditorPresented {
+            print("🐞 \(ISO8601DateFormatter().string(from: Date())) TEMPLATE EDITOR KEYBOARD READY")
+        }
         logEditorTextReveal(
             "Keyboard layout adjustment observed frame=\(layout.frameInWindow) dockedHeight=\(layout.dockedHeight)"
         )
@@ -3641,7 +3810,8 @@ struct SettingsScreen: View {
         templateViewerDescriptionScrollResetID = UUID()
     }
 
-    private func prepareTemplateEditingSession(for templateURL: URL) {
+    @discardableResult
+    private func prepareTemplateEditingSession(for templateURL: URL) -> Bool {
         templateEditingLoadError = nil
         templateEditingSaveError = nil
 
@@ -3652,14 +3822,14 @@ struct SettingsScreen: View {
             let message = "The selected template is no longer available."
             templateEditingLoadError = message
             presentDocumentSaveAlert(title: "Template Could Not Be Opened", message: message)
-            return
+            return false
         }
 
         guard FileManager.default.fileExists(atPath: normalizedTemplateURL.path) else {
             let message = TemplateUpdateError.templateNotFound(normalizedTemplateURL).localizedDescription
             templateEditingLoadError = message
             presentDocumentSaveAlert(title: "Template Could Not Be Opened", message: message)
-            return
+            return false
         }
 
         let configurationURL = templateConfigURL(forTemplateDocumentURL: normalizedTemplateURL)
@@ -3682,11 +3852,13 @@ struct SettingsScreen: View {
                 descriptionDraft: description
             )
             print("🐞 \(ISO8601DateFormatter().string(from: Date())) TEMPLATE EDIT SESSION INITIALIZED template=\(normalizedTemplateURL.lastPathComponent)")
+            return true
         } catch {
             let message = error.localizedDescription
             templateEditingLoadError = message
             print("🐞 \(ISO8601DateFormatter().string(from: Date())) TEMPLATE EDIT SESSION LOAD FAILED template=\(normalizedTemplateURL.lastPathComponent) error=\(message)")
             presentDocumentSaveAlert(title: "Template Could Not Be Opened", message: message)
+            return false
         }
     }
 
