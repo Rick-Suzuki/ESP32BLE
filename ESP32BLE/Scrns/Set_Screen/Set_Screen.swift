@@ -128,6 +128,7 @@ struct SettingsScreen: View {
 
     private enum SettingsImportMode {
         case screen
+        case files
         case allFiles
     }
 
@@ -181,6 +182,32 @@ struct SettingsScreen: View {
                 return "Invalid screen configuration in backup: \(fileName)."
             case .orphanedTemplateConfiguration(let fileName):
                 return "Template configuration has no matching template in backup: \(fileName)."
+            }
+        }
+    }
+
+    private enum OrdinaryFileImportValidationError: LocalizedError {
+        case emptySelection
+        case invalidFileName(String)
+        case unsupportedFile(String)
+        case nonRegularFile(String)
+        case duplicateFileName(String)
+        case unreadableFile(String)
+
+        var errorDescription: String? {
+            switch self {
+            case .emptySelection:
+                return "No files were selected."
+            case .invalidFileName(let fileName):
+                return "Invalid file name: \(fileName)."
+            case .unsupportedFile(let fileName):
+                return "Unsupported file: \(fileName)."
+            case .nonRegularFile(let fileName):
+                return "Only individual files can be imported: \(fileName)."
+            case .duplicateFileName(let fileName):
+                return "The selected files contain duplicate names: \(fileName)."
+            case .unreadableFile(let fileName):
+                return "Couldn't read \(fileName)."
             }
         }
     }
@@ -460,6 +487,7 @@ struct SettingsScreen: View {
     @State private var activeImportMode: SettingsImportMode?
     @State private var pendingImportSession: PendingImportSession?
     @State private var pendingImportConflict: PendingImportConflict?
+    @State private var pendingOrdinaryFileImportSession: PendingImportSession?
     @State private var pendingFullRestore: PendingFullRestore?
     @State private var importConflictApplyToAll = false
     @State private var importRefreshID = UUID()
@@ -1137,6 +1165,19 @@ struct SettingsScreen: View {
             Text(pendingImportConflict?.fileName ?? "")
         }
         .alert(
+            "Existing Files",
+            isPresented: ordinaryFileImportConflictDialogIsPresented
+        ) {
+            Button("Cancel", role: .cancel) {
+                cancelPendingOrdinaryFileImport()
+            }
+            Button("Continue") {
+                continuePendingOrdinaryFileImport()
+            }
+        } message: {
+            Text("Some files already exist and will be overwritten. Do you want to continue?")
+        }
+        .alert(
             "Restore Conflicts Found",
             isPresented: restoreConflictDialogIsPresented
         ) {
@@ -1327,6 +1368,9 @@ struct SettingsScreen: View {
             Button("Import Screen(s)") {
                 beginScreenImport()
             }
+            Button("Import File(s)") {
+                beginOrdinaryFileImport()
+            }
             Button("Restore Full Backup") {
                 beginFullBackupRestore()
             }
@@ -1363,6 +1407,10 @@ struct SettingsScreen: View {
             iphoneSettingsMenuActionRow(title: "Import Screen(s)") {
                 isIPhoneSettingsImportPopoverPresented = false
                 beginScreenImport()
+            }
+            iphoneSettingsMenuActionRow(title: "Import File(s)") {
+                isIPhoneSettingsImportPopoverPresented = false
+                beginOrdinaryFileImport()
             }
             iphoneSettingsMenuActionRow(title: "Restore Full Backup") {
                 isIPhoneSettingsImportPopoverPresented = false
@@ -1509,6 +1557,12 @@ struct SettingsScreen: View {
         importConflictApplyToAll = false
         activeImportMode = .screen
         pendingImportMode = .screen
+    }
+
+    private func beginOrdinaryFileImport() {
+        ButtonClickFeedback.playIfEnabled()
+        activeImportMode = .files
+        pendingImportMode = .files
     }
 
     private func beginFullBackupRestore() {
@@ -1673,6 +1727,17 @@ struct SettingsScreen: View {
         )
     }
 
+    private var ordinaryFileImportConflictDialogIsPresented: Binding<Bool> {
+        Binding(
+            get: { pendingOrdinaryFileImportSession != nil },
+            set: { isPresented in
+                if !isPresented {
+                    cancelPendingOrdinaryFileImport()
+                }
+            }
+        )
+    }
+
     private func beginRestoreAllFiles() {
         importConflictApplyToAll = false
         activeImportMode = .allFiles
@@ -1694,6 +1759,8 @@ struct SettingsScreen: View {
         switch pendingImportMode {
         case .screen:
             return [screenDocumentImportType, zipImportType]
+        case .files:
+            return ordinaryFileImportContentTypes
         case .allFiles:
             return [zipImportType]
         case nil:
@@ -6679,6 +6746,27 @@ struct SettingsScreen: View {
         UTType(filenameExtension: "json") ?? .json
     }
 
+    private var ordinaryFileImportContentTypes: [UTType] {
+        let extensions = [
+            legacyScreenDocumentFileExtension,
+            "md",
+            "png", "jpg", "jpeg", "heic", "heif", "gif", "bmp", "tiff", "webp",
+            "mp3", "wav", "m4a", "aiff", "aac", "caf",
+            "pdf"
+        ]
+
+        var contentTypes = [screenDocumentImportType]
+        for fileExtension in extensions {
+            guard let contentType = UTType(filenameExtension: fileExtension),
+                  !contentTypes.contains(where: { $0.identifier == contentType.identifier }) else {
+                continue
+            }
+            contentTypes.append(contentType)
+        }
+
+        return contentTypes
+    }
+
     private var supportedImportedImageExtensions: Set<String> {
         ["png", "jpg", "jpeg", "heic", "heif", "gif", "bmp", "tiff", "webp"]
     }
@@ -6719,6 +6807,18 @@ struct SettingsScreen: View {
                 selectedConfigURLsByName: selectedScreenConfigURLsByName(from: urls)
             )
             processPendingImportSession(session)
+        case .files:
+            do {
+                let preflight = try makeOrdinaryFileImportPreflight(from: urls, directoryURL: directoryURL)
+                guard preflight.hasDestinationConflicts else {
+                    processPendingImportSession(preflight.session)
+                    return
+                }
+
+                pendingOrdinaryFileImportSession = preflight.session
+            } catch {
+                renameAlertMessage = error.localizedDescription
+            }
         case .allFiles:
             guard let zipURL = urls.first, urls.count == 1, zipURL.pathExtension.lowercased() == "zip" else {
                 db("IMPORT_TRACE all_files_archive_validation=invalid reason=expected_single_zip")
@@ -6745,6 +6845,135 @@ struct SettingsScreen: View {
                     : "Couldn't import full backup: \(error.localizedDescription)"
             }
         }
+    }
+
+    private func makeOrdinaryFileImportPreflight(
+        from urls: [URL],
+        directoryURL: URL
+    ) throws -> (session: PendingImportSession, hasDestinationConflicts: Bool) {
+        guard !urls.isEmpty else {
+            throw OrdinaryFileImportValidationError.emptySelection
+        }
+
+        var selectedFileNameKeys = Set<String>()
+        var hasDestinationConflicts = false
+        let existingFileNameKeys = existingDocumentDirectoryFileNameKeys(in: directoryURL)
+
+        for sourceURL in urls {
+            let fileName = sourceURL.lastPathComponent
+            guard sanitizedArchiveFileName(fileName) == fileName else {
+                throw OrdinaryFileImportValidationError.invalidFileName(fileName)
+            }
+
+            guard ordinaryImportedContentKind(for: fileName) != nil else {
+                throw OrdinaryFileImportValidationError.unsupportedFile(fileName)
+            }
+
+            do {
+                try validateOrdinaryImportSource(sourceURL)
+            } catch let error as OrdinaryFileImportValidationError {
+                throw error
+            } catch {
+                throw OrdinaryFileImportValidationError.unreadableFile(fileName)
+            }
+
+            let fileNameKey = fileName.lowercased()
+            guard selectedFileNameKeys.insert(fileNameKey).inserted else {
+                throw OrdinaryFileImportValidationError.duplicateFileName(fileName)
+            }
+
+            if existingFileNameKeys.contains(fileNameKey) {
+                hasDestinationConflicts = true
+            }
+        }
+
+        let session = makePendingImportSession(
+            directoryURL: directoryURL,
+            importMode: .files,
+            remainingURLs: urls,
+            selectedConfigURLsByName: [:]
+        )
+        return (session, hasDestinationConflicts)
+    }
+
+    private func ordinaryImportedContentKind(for fileName: String) -> ImportedContentKind? {
+        let pathExtension = URL(fileURLWithPath: fileName).pathExtension.lowercased()
+
+        guard !isScreenConfigFileName(fileName),
+              pathExtension != "zip" else {
+            return nil
+        }
+
+        if isScreenDocumentFileExtension(pathExtension) {
+            return .document
+        }
+        if pathExtension == legacyScreenDocumentFileExtension {
+            return .text
+        }
+        if pathExtension == "md" {
+            return .markdown
+        }
+        if supportedImportedImageExtensions.contains(pathExtension) {
+            return .image
+        }
+        if supportedImportedSoundExtensions.contains(pathExtension) {
+            return .sound
+        }
+        if supportedImportedPDFExtensions.contains(pathExtension) {
+            return .pdf
+        }
+
+        return nil
+    }
+
+    private func validateOrdinaryImportSource(_ sourceURL: URL) throws {
+        let didAccessSecurityScopedResource = sourceURL.startAccessingSecurityScopedResource()
+        defer {
+            if didAccessSecurityScopedResource {
+                sourceURL.stopAccessingSecurityScopedResource()
+            }
+        }
+
+        let coordinator = NSFileCoordinator()
+        var validationError: Error?
+        var coordinatorError: NSError?
+
+        coordinator.coordinate(readingItemAt: sourceURL, options: [], error: &coordinatorError) { coordinatedURL in
+            do {
+                let resourceValues = try coordinatedURL.resourceValues(forKeys: [.isRegularFileKey])
+                guard resourceValues.isRegularFile == true else {
+                    throw OrdinaryFileImportValidationError.nonRegularFile(sourceURL.lastPathComponent)
+                }
+
+                let fileHandle = try FileHandle(forReadingFrom: coordinatedURL)
+                defer {
+                    try? fileHandle.close()
+                }
+                _ = try fileHandle.read(upToCount: 1)
+            } catch {
+                validationError = error
+            }
+        }
+
+        if let validationError {
+            throw validationError
+        }
+        if let coordinatorError {
+            throw coordinatorError
+        }
+    }
+
+    private func continuePendingOrdinaryFileImport() {
+        guard let session = pendingOrdinaryFileImportSession else {
+            return
+        }
+
+        pendingOrdinaryFileImportSession = nil
+        processPendingImportSession(session)
+    }
+
+    private func cancelPendingOrdinaryFileImport() {
+        pendingOrdinaryFileImportSession = nil
     }
 
     private func makeFullRestorePreflight(from zipURL: URL, directoryURL: URL) throws -> FullRestorePreflight {
@@ -6984,7 +7213,7 @@ struct SettingsScreen: View {
             }
 
             if pathExtension == legacyScreenDocumentFileExtension {
-                guard session.importMode == .allFiles else {
+                guard session.importMode == .allFiles || session.importMode == .files else {
                     continue
                 }
 
@@ -7018,7 +7247,7 @@ struct SettingsScreen: View {
             }
 
             if pathExtension == "md" {
-                guard session.importMode == .allFiles else {
+                guard session.importMode == .allFiles || session.importMode == .files else {
                     continue
                 }
 
@@ -7051,7 +7280,7 @@ struct SettingsScreen: View {
             }
 
             if supportedImportedImageExtensions.contains(pathExtension) {
-                guard session.importMode == .allFiles else {
+                guard session.importMode == .allFiles || session.importMode == .files else {
                     continue
                 }
 
@@ -7085,7 +7314,7 @@ struct SettingsScreen: View {
             }
 
             if supportedImportedSoundExtensions.contains(pathExtension) {
-                guard session.importMode == .allFiles else {
+                guard session.importMode == .allFiles || session.importMode == .files else {
                     continue
                 }
 
@@ -7119,7 +7348,7 @@ struct SettingsScreen: View {
             }
 
             if supportedImportedPDFExtensions.contains(pathExtension) {
-                guard session.importMode == .allFiles else {
+                guard session.importMode == .allFiles || session.importMode == .files else {
                     continue
                 }
 
@@ -7270,7 +7499,7 @@ struct SettingsScreen: View {
         contentKind: ImportedContentKind,
         session: inout PendingImportSession
     ) -> Bool {
-        if session.importMode == .allFiles {
+        if session.importMode == .allFiles || session.importMode == .files {
             importReplacingExistingFile(
                 sourceURL: sourceURL,
                 targetURL: targetURL,
@@ -7505,11 +7734,18 @@ struct SettingsScreen: View {
             renameAlertMessage = "Some files couldn't be restored: \(session.failedFileCount) failed."
         }
 
+        if session.importMode == .files,
+           session.failedFileCount > 0,
+           renameAlertMessage == nil {
+            renameAlertMessage = "Some files couldn't be imported: \(session.failedFileCount) failed."
+        }
+
         guard session.importedAnything else { return }
 
         markImportedContentChanged()
 
-        if let firstImportedDocumentURL = session.firstImportedDocumentURL {
+        if session.importMode != .files,
+           let firstImportedDocumentURL = session.firstImportedDocumentURL {
             loadFunctionKeys(firstImportedDocumentURL)
         }
 

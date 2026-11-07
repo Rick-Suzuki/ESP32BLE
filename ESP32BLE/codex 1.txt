@@ -1,128 +1,120 @@
-A. VIEWER ROOT CAUSE
+Stage 8B.25A implemented. No build, deployment, Simulator, device test, commit, or push was performed.
 
-The iPhone Plates viewer is still routed and instantiated correctly:
+A. Files modified
 
-• iPhoneLargeContentPreview selects iPhoneTemplateViewerSection when Templates is active: Set_Screen.swift:3133-3142.
-• isIPhoneContentPreviewPresented includes the Templates visibility flag: Set_Screen.swift:3145-3149.
-• Selecting a template sets isIPhoneTemplatePreviewPresented = true: Set_Screen.swift:3861-3871.
+• ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
 
-There is no source evidence that the viewer was removed or that its visibility flag is cleared while Templates remains active.
+The pre-existing unrelated modification to ESP32BLE/codex 1.txt was left untouched.
 
-The regression is layout-related. iPhoneImageEditorBody gives the viewer the width measured from iPhoneBottomControls: Set_AvailableDevices.swift:116-136. Stage E.2 added the full navigation group and slider to that same bottom controls row: Set_AvailableDevices.swift:160-171.
+B. Import File(s) menu integration
 
-That row is therefore both:
+Added “Import File(s)” between the existing entries on both platforms:
 
-• The width-measurement source for the viewer.
-• A new host for a large navigation-controls hierarchy.
+• Import Screen(s)
+• Import File(s)
+• Restore Full Backup
 
-The panel also shares the iPhone bottom Settings area with the always-present keyboard-settings column in combinedBottomPanelSection: Set_Screen.swift:3697-3729. The enlarged bottom row can force the preview-host column to be compressed, including to an unusable width. This is the source-level cause consistent with the missing viewer.
+The iPad native menu and iPhone popover use the same shared action and import mode. No Settings geometry changed.
 
-The viewer is not blocked by preview routing; it is being displaced/compressed by the added bottom-row controls.
+C. File type filters and classification
 
-B. DUPLICATE CONTROL ROOT CAUSE
+Added shared SettingsImportMode.files.
 
-The original, correct iPhone control group already exists in:
+Supported types:
+• .screen
+• .txt
+• .md
+• .png, .jpg, .jpeg, .heic, .heif, .gif, .bmp, .tiff, .webp
+• .mp3, .wav, .m4a, .aiff, .aac, .caf
+• .pdf
 
-• SettingsKeyboardTimingSection.iPhoneImageControls
-• Set_KB_Timing.swift:233-249
+The picker allows multiple mixed file selections. Every returned URL is independently classified by the existing extension rules before any import begins.
 
-It contains:
+D. Folder, ZIP, and Template exclusion
 
-• The navigation label.
-• imageControlButtons.
-• The slider.
+The preflight rejects:
+• Directories and non-regular files
+• ZIP archives
+• Unsupported extensions
+• .template
+• .template.config.json
+• All .config.json sidecars
+• Archive.json
+• Invalid filenames
 
-It is displayed for all iPhone Settings categories through SettingsKeyboardTimingSection.body: Set_KB_Timing.swift:46-52.
+No folders are traversed, no ZIP files are extracted, and no Template-pair import path was added.
 
-Stage E.2 added a second copy here:
+E. Batch preflight implementation
 
-• SettingsAvailableDevicesPanel.iPhoneBottomControls
-• Set_AvailableDevices.swift:167-170
+Before writing anything, Import File(s):
+• Verifies there is a selection.
+• Validates each filename and extension.
+• Confirms each item is an individually readable regular file through security-scoped coordinated access.
+• Detects duplicate selected filenames case-insensitively.
+• Detects existing destination-name conflicts.
+• Creates a shared pending import session only after validation succeeds.
 
-That second injection uses the same imageControlButtons and navigationSlider, producing the duplicate buttons and slider, and overlapping the ordinary bottom controls.
+Empty .txt and .md files remain allowed. No stricter binary-content validation was introduced beyond ESP’s existing format handling.
 
-The added group at Set_AvailableDevices.swift:167-170 must be removed. The existing middle control group should be the sole owner.
+F. Conflict confirmation behavior
 
-C. LABEL SOURCE
+If conflicts are found, one alert is shown:
 
-The visible “Template” label originates from:
+• Title: Existing Files
+• Message: Some files already exist and will be overwritten. Do you want to continue?
+• Actions: Cancel, Continue
 
-• SettingsScreen.navigationControlsTitle
-• Set_Screen.swift:3354-3370
+Cancel discards the planned batch without modifying storage.
 
-The Templates branch currently returns:
+Continue imports non-conflicting files and uses the existing atomic replacement path for conflicts. Existing Import Screen(s) and Restore Full Backup conflict interfaces were not changed.
 
-• "Template" at Set_Screen.swift:3355-3356.
+G. Copy/replacement safety
 
-For iPhone only, that branch should return "Plate" while preserving the established iPad "Template" label. No internal template identifiers, storage, URLs, or filenames need changes.
+The new mode reuses:
+• Security-scoped source access
+• NSFileCoordinator
+• Existing copied-file import helper
+• Existing staged atomic replacement helper
 
-Stage E.2 also added a second iPhone title inside SettingsImageControlsSection:
+A failed copy reports an import failure and does not trigger completion feedback. Existing files are protected by the replacement staging path.
 
-• Set_ImgCtlsSection.swift:29-36.
+H. Screen configuration handling
 
-That title belongs to the duplicate bottom group and should be removed together with its showsTitleOnIPhone plumbing.
+Imported .screen files continue through the existing screen import/configuration path:
+• Existing valid screen configuration is retained where appropriate.
+• A default configuration is created when needed.
+• Standalone configuration sidecars remain excluded.
+• Existing Screen ZIP import behavior is unchanged.
 
-D. SOURCE MAP
+I. Settings refresh and selection preservation
 
-Set_Screen.swift
+Successful imports call the existing markImportedContentChanged() refresh path.
 
-• 1810-1868: iPhone 50/50 Plates viewer remains present.
-• 2978-2981: Templates controls are enabled for iPhone.
-• 3133-3149: iPhone preview routing and visibility condition remain correct.
-• 3176-3280: shared Templates navigation actions.
-• 3354-3356: user-facing navigation title source.
-• 3861-3871: explicit template selection reopens the iPhone viewer.
+For Import File(s):
+• A valid existing selected screen is not replaced by the first imported screen.
+• Valid selected image, sound, and PDF remain selected.
+• Active sound playback is not stopped.
+• Text, Markdown, Template, and Settings category state are not reset.
 
-Set_AvailableDevices.swift
+J. Error and cancellation handling
 
-• 116-136: iPhone preview uses bottom-controls measured width.
-• 160-171: E.2 duplicate control insertion and layout-sizing regression.
-• 582-598: slider supports Templates zoom correctly once it is hosted only once.
+• Picker cancellation: no files changed and no error shown.
+• Overwrite cancellation: pending batch discarded with no changes.
+• Invalid selection: existing Settings alert mechanism receives a descriptive error.
+• Duplicate batch filename: entire batch rejected before copying.
+• Partial publication failure: reports an import failure; no success notification is emitted.
 
-Set_KB_Timing.swift
+No completion-notification behavior was added or changed. Stage 8B.25B remains separate.
 
-• 46-52: existing iPhone middle control area.
-• 233-249: original single control group.
-• 253-269: slider routing currently lacks a Templates font-size branch.
+K. Source validation results
 
-Set_ImgCtlsSection.swift
+• Swift source parse completed successfully.
+• Xcode live diagnostics for Set_Screen.swift􀰓: 0 issues.
+• git diff --check: passed.
+• Confirmed Import File(s) appears in both menus.
+• Confirmed .files is excluded from ZIP and standalone-config processing.
+• Confirmed existing Import Screen(s), Restore Full Backup, and export entry points remain unchanged.
 
-• 10: E.2-added showsTitleOnIPhone property.
-• 29-36: E.2-added duplicate title.
+L. Remaining limitation/risk
 
-E. MINIMAL SAFE CORRECTION
-
-1. Remove the E.2 if isTemplateViewerControlsActive block from iPhoneBottomControls.
-
-2. Remove the E.2 showsTitleOnIPhone property, initializer argument, and title rendering from SettingsImageControlsSection.
-
-3. Keep the existing SettingsKeyboardTimingSection.iPhoneImageControls as the only iPhone control host.
-
-4. Extend its slider routing narrowly so that, when Templates is active, it uses the existing templateViewerFontSize binding and 10...72 zoom range instead of image opacity. This requires passing the existing binding and active-state flag from Set_Screen.swift􀰓 into SettingsKeyboardTimingSection.
-
-5. Change only the iPhone Templates value of navigationControlsTitle from “Template” to “Plate”; retain “Template” on iPad.
-
-This restores one control group, keeps its established geometry, avoids the preview-width feedback loop, and reuses the shared selection/navigation/zoom infrastructure.
-
-F. REGRESSION RISKS
-
-• Changing navigationControlsTitle unconditionally would alter the committed iPad label. Use an isPad conditional.
-• Adding Templates zoom support to SettingsKeyboardTimingSection must preserve its current document-font and image-opacity branches.
-• Do not remove the shared Templates navigation gates introduced in E.2; those are required for iPhone navigation. Only change their control host.
-• Do not alter isIPhoneTemplatePreviewPresented, preview routing, or the 50/50 viewer.
-
-G. PHYSICAL-DEVICE TEST PLAN
-
-On iPhone 17 and iPhone XS Max, in landscape:
-
-1. Open Templates and select a row. Confirm the 50/50 Plates viewer appears.
-2. Confirm Template is top, Description is bottom, headings remain absent, and the divider remains singular.
-3. Confirm only one Plate-labeled control group appears in the existing middle control area.
-4. Confirm Back selects first; Previous/Next stop at boundaries; Random changes selection when possible.
-5. Confirm selection updates both plates, yellow row highlighting, and off-screen table restoration.
-6. Move the slider; confirm both plates zoom and retain their existing wrapping/scroll behavior.
-7. Switch categories and relaunch; confirm zoom persists.
-8. Press ESP32 and Mac; confirm plates hide without clearing selection. Select a template again and confirm plates reopen.
-9. On iPad Air M2, iPad mini, and iPad Pro, confirm the existing Template control label, viewer/editor geometry, navigation, and zoom are unchanged.
-
-No files were modified, no build or Simulator was run, and Git state was not changed.
+The batch is fully validated before publication, and replacements are individually staged atomically. A later copy failure can still leave earlier non-conflicting files imported; it is reported as partial failure and never treated as a complete success. Full cross-file transactional rollback is not present in the existing importer architecture and was not introduced in this narrow stage.
