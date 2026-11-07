@@ -9,11 +9,13 @@ struct SettingsKeyboardTimingSection: View {
     @Binding var speechRecognitionAutoOffMinutes: Int
     @Binding var opacitySliderValue: Double
     @Binding var documentEditorFontSize: CGFloat
+    @Binding var templateViewerFontSize: CGFloat
     let imageControlButtons: AnyView
     let navigationControlsTitle: String
     let isNavigationControlsActive: Bool
     let isImageControlsActive: Bool
     let isDocumentEditorControlsActive: Bool
+    let isTemplateViewerControlsActive: Bool
     let onImageOpacityEditingChanged: (Bool) -> Void
     let isMacMode: Bool
     let isTimingControlsEnabled: Bool
@@ -253,6 +255,9 @@ struct SettingsKeyboardTimingSection: View {
     private var navigationSlider: some View {
         if isDocumentEditorControlsActive {
             Slider(value: $documentEditorFontSize, in: 10...72, step: 1)
+                .tint(.cyan)
+        } else if isTemplateViewerControlsActive {
+            Slider(value: $templateViewerFontSize, in: 10...72, step: 1)
                 .tint(.cyan)
         } else {
             Slider(

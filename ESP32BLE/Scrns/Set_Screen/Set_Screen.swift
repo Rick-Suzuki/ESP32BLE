@@ -494,6 +494,7 @@ struct SettingsScreen: View {
     @State private var isIPhoneImagePreviewPresented = false
     @State private var isIPhonePDFPreviewPresented = false
     @State private var isIPhoneDocumentEditorPresented = false
+    @State private var isIPhoneTemplatePreviewPresented = false
     @State private var isIPhoneSoundPlayerPresented = true
     @State private var isDedicatedDocumentEditorPresented = false
     @State private var isDedicatedTemplateEditorPresented = false
@@ -627,6 +628,10 @@ struct SettingsScreen: View {
 
                 if !isDocumentEditorListActive {
                     isIPhoneDocumentEditorPresented = false
+                }
+
+                if !isTemplatesListActive {
+                    isIPhoneTemplatePreviewPresented = false
                 }
             }
             .onChange(of: documentDirectorySnapshot) {
@@ -1802,6 +1807,70 @@ struct SettingsScreen: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
+    private var iPhoneTemplateViewerSection: some View {
+        GeometryReader { proxy in
+            let templateHeight = max(0, proxy.size.height * 0.5)
+            let descriptionHeight = max(0, proxy.size.height - templateHeight)
+
+            VStack(spacing: 0) {
+                templateViewerPanel(
+                    title: "Template",
+                    text: $templateViewerContents,
+                    isFocused: $isTemplateViewerContentsFocused,
+                    initialScrollResetID: templateViewerContentsScrollResetID,
+                    wrapsText: false,
+                    textInsets: UIEdgeInsets(top: 8, left: 8, bottom: 8, right: 8),
+                    allowsReadOnlySelection: true,
+                    showsTitle: false,
+                    onTap: {
+                        presentDedicatedTemplateEditor(focusing: .templateContents)
+                    }
+                )
+                .frame(height: templateHeight)
+
+                templateViewerPanel(
+                    title: "Description",
+                    text: $templateViewerDescription,
+                    isFocused: $isTemplateViewerDescriptionFocused,
+                    initialScrollResetID: templateViewerDescriptionScrollResetID,
+                    wrapsText: true,
+                    textInsets: UIEdgeInsets(top: 10, left: 10, bottom: 10, right: 10),
+                    allowsReadOnlySelection: true,
+                    showsTitle: false,
+                    onTap: {
+                        presentDedicatedTemplateEditor(focusing: .description)
+                    }
+                )
+                .frame(height: descriptionHeight)
+            }
+            .frame(width: proxy.size.width, height: proxy.size.height, alignment: .topLeading)
+            .background(Color.black)
+            .overlay {
+                Rectangle()
+                    .stroke(Color.white, lineWidth: 1)
+            }
+            .overlay(alignment: .top) {
+                Rectangle()
+                    .fill(Color.white)
+                    .frame(height: 1)
+                    .padding(.top, templateHeight)
+            }
+            .background {
+                GeometryReader { viewerProxy in
+                    Color.clear.preference(
+                        key: SettingsEditorPreviewFramePreferenceKey.self,
+                        value: viewerProxy.frame(
+                            in: .named(
+                                SettingsDocumentEditorAnimationGeometry.coordinateSpaceName
+                            )
+                        )
+                    )
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
     private func templateViewerPanel(
         title: String,
         text: Binding<String>,
@@ -1809,14 +1878,18 @@ struct SettingsScreen: View {
         initialScrollResetID: UUID,
         wrapsText: Bool,
         textInsets: UIEdgeInsets,
+        allowsReadOnlySelection: Bool = false,
+        showsTitle: Bool = true,
         onTap: @escaping () -> Void
     ) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text(title)
-                .font(.headline)
-                .foregroundStyle(.white)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
+            if showsTitle {
+                Text(title)
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+            }
 
             PlainDocumentEditor(
                 text: text,
@@ -1828,7 +1901,8 @@ struct SettingsScreen: View {
                 initialScrollResetID: initialScrollResetID,
                 onEditingBegan: nil,
                 wrapsText: wrapsText,
-                textInsets: textInsets
+                textInsets: textInsets,
+                allowsReadOnlySelection: allowsReadOnlySelection
             )
         }
     }
@@ -2904,7 +2978,7 @@ struct SettingsScreen: View {
             imageControlButtons: AnyView(imageControlButtons),
             isImageControlsActive: isBackgroundImageControlsActive,
             isDocumentEditorControlsActive: isDocumentEditorListActive,
-            isTemplateViewerControlsActive: isIpadTemplatesListActive,
+            isTemplateViewerControlsActive: isTemplatesListActive,
             onImageOpacityEditingChanged: handleImageOpacityEditingChanged,
             isIPhoneImageEditorPresented: isIPhoneContentPreviewPresented,
             iPhoneEditorLeadingInset: iPhoneEditorLeadingInset,
@@ -3057,7 +3131,9 @@ struct SettingsScreen: View {
 
     @ViewBuilder
     private var iPhoneLargeContentPreview: some View {
-        if isPDFsListActive {
+        if isTemplatesListActive {
+            iPhoneTemplateViewerSection
+        } else if isPDFsListActive {
             iPhoneLargePDFPreview
         } else if isImagesListActive {
             iPhoneLargeImagePreview
@@ -3069,7 +3145,8 @@ struct SettingsScreen: View {
     private var isIPhoneContentPreviewPresented: Bool {
         (isImagesListActive && isIPhoneImagePreviewPresented) ||
             (isPDFsListActive && isIPhonePDFPreviewPresented) ||
-            (isDocumentEditorListActive && isIPhoneDocumentEditorPresented)
+            (isDocumentEditorListActive && isIPhoneDocumentEditorPresented) ||
+            (isTemplatesListActive && isIPhoneTemplatePreviewPresented)
     }
 
     private func hideIPhonePreview() {
@@ -3083,6 +3160,8 @@ struct SettingsScreen: View {
             isIPhoneImagePreviewPresented = false
         } else if isDocumentEditorListActive {
             isIPhoneDocumentEditorPresented = false
+        } else if isTemplatesListActive {
+            isIPhoneTemplatePreviewPresented = false
         }
     }
 
@@ -3098,12 +3177,12 @@ struct SettingsScreen: View {
         SettingsImageControlsSection(
             title: navigationControlsTitle,
             isControlsActive: isFileNavigationControlsActive,
-            canReset: isIpadTemplatesListActive ? canSelectFirstTemplate : (isSoundsListActive ? canSelectFirstSoundBackgroundImage : !navigationFileURLs.isEmpty),
-            canRandom: isIpadTemplatesListActive ? !templateURLs.isEmpty : (isSoundsListActive ? !availableImageURLs.isEmpty : !navigationFileURLs.isEmpty),
-            canGoPrevious: isIpadTemplatesListActive ? canSelectPreviousTemplate : (isSoundsListActive ? canSelectPreviousSoundBackgroundImage : canNavigateToPreviousFile),
-            canGoNext: isIpadTemplatesListActive ? canSelectNextTemplate : (isSoundsListActive ? canSelectNextSoundBackgroundImage : canNavigateToNextFile),
+            canReset: isTemplatesListActive ? canSelectFirstTemplate : (isSoundsListActive ? canSelectFirstSoundBackgroundImage : !navigationFileURLs.isEmpty),
+            canRandom: isTemplatesListActive ? !templateURLs.isEmpty : (isSoundsListActive ? !availableImageURLs.isEmpty : !navigationFileURLs.isEmpty),
+            canGoPrevious: isTemplatesListActive ? canSelectPreviousTemplate : (isSoundsListActive ? canSelectPreviousSoundBackgroundImage : canNavigateToPreviousFile),
+            canGoNext: isTemplatesListActive ? canSelectNextTemplate : (isSoundsListActive ? canSelectNextSoundBackgroundImage : canNavigateToNextFile),
             onReset: {
-                if isIpadTemplatesListActive {
+                if isTemplatesListActive {
                     guard let firstTemplateURL = templateURLs.first else { return }
                     selectTemplateForNavigation(firstTemplateURL)
                 } else if isSoundsListActive {
@@ -3123,7 +3202,7 @@ struct SettingsScreen: View {
                 }
             },
             onRandom: {
-                if isIpadTemplatesListActive {
+                if isTemplatesListActive {
                     let selectedURL = selectedTemplateURL?.standardizedFileURL
                     let candidateURLs = templateURLs.filter {
                         $0.standardizedFileURL != selectedURL
@@ -3162,7 +3241,7 @@ struct SettingsScreen: View {
                 }
             },
             onPrevious: {
-                if isIpadTemplatesListActive {
+                if isTemplatesListActive {
                     guard let templatePosition,
                           templatePosition > 1 else { return }
                     selectTemplateForNavigation(templateURLs[templatePosition - 2])
@@ -3188,7 +3267,7 @@ struct SettingsScreen: View {
                 }
             },
             onNext: {
-                if isIpadTemplatesListActive {
+                if isTemplatesListActive {
                     guard let templatePosition else { return }
                     let nextIndex = templatePosition
                     guard templateURLs.indices.contains(nextIndex) else { return }
@@ -3272,8 +3351,8 @@ struct SettingsScreen: View {
     }
 
     private var navigationControlsTitle: String {
-        if isIpadTemplatesListActive {
-            return "Template"
+        if isTemplatesListActive {
+            return isPad ? "Template" : "Plate"
         }
 
         switch listMode {
@@ -3293,7 +3372,7 @@ struct SettingsScreen: View {
     }
 
     private var isFileNavigationControlsActive: Bool {
-        isImagesListActive || isSoundsListActive || isPDFsListActive || isDocumentEditorListActive || isIpadTemplatesListActive
+        isImagesListActive || isSoundsListActive || isPDFsListActive || isDocumentEditorListActive || isTemplatesListActive
     }
 
     private var isBackgroundImageControlsActive: Bool {
@@ -3393,7 +3472,7 @@ struct SettingsScreen: View {
     }
 
     private func selectTemplateForNavigation(_ candidateTemplateURL: URL) {
-        guard isIpadTemplatesListActive else { return }
+        guard isTemplatesListActive else { return }
 
         guard let selectedTemplateURL = templateURL(
             matchingSelectionPath: candidateTemplateURL.standardizedFileURL.path,
@@ -3688,7 +3767,9 @@ struct SettingsScreen: View {
             selectedPDFURL: selectedPDFURL,
             templateURLs: templateURLs,
             selectedTemplateURL: selectedTemplateURL,
-            templateDescription: templateDescriptionState?.displayText,
+            templateDescription: !isPad && isIPhoneTemplatePreviewPresented
+                ? nil
+                : templateDescriptionState?.displayText,
             allFileURLs: availableAllFileURLs,
             fileScrollPositionID: fileScrollPositionID,
             textScrollPositionID: textScrollPositionID,
@@ -3728,7 +3809,7 @@ struct SettingsScreen: View {
             selectPDF: selectPDF,
             deletePDF: deletePDF,
             deleteAllFile: deleteAllFile,
-            selectTemplate: selectTemplateForDescription,
+            selectTemplate: { selectTemplateForDescription($0) },
             applyTemplate: prepareTemplateApplication,
             deleteTemplate: deleteTemplate,
             showsOuterBorder: isPad
@@ -3779,9 +3860,15 @@ struct SettingsScreen: View {
         return lines.joined(separator: "\n\n")
     }
 
-    private func selectTemplateForDescription(_ templateURL: URL) {
+    private func selectTemplateForDescription(
+        _ templateURL: URL,
+        presentsIPhonePreview: Bool = true
+    ) {
         let normalizedTemplateURL = templateURL.standardizedFileURL
         selectedTemplateSelectionPath = normalizedTemplateURL.path
+        if !isPad, presentsIPhonePreview {
+            isIPhoneTemplatePreviewPresented = true
+        }
 
         do {
             let templateData = try Data(contentsOf: normalizedTemplateURL)
@@ -4092,11 +4179,13 @@ struct SettingsScreen: View {
             speechRecognitionAutoOffMinutes: $speechRecognitionAutoOffMinutes,
             opacitySliderValue: imageOpacitySliderBinding,
             documentEditorFontSize: $documentEditorFontSize,
+            templateViewerFontSize: templateViewerFontSizeBinding,
             imageControlButtons: AnyView(imageControlButtons),
             navigationControlsTitle: navigationControlsTitle,
             isNavigationControlsActive: isFileNavigationControlsActive,
             isImageControlsActive: isBackgroundImageControlsActive,
             isDocumentEditorControlsActive: isDocumentEditorListActive,
+            isTemplateViewerControlsActive: !isPad && isTemplatesListActive,
             onImageOpacityEditingChanged: handleImageOpacityEditingChanged,
             isMacMode: isMacKeyboardTestMode,
             isTimingControlsEnabled: isCustomKeyboardTimingEnabled,
@@ -5197,7 +5286,7 @@ struct SettingsScreen: View {
             return
         }
 
-        selectTemplateForDescription(selectedTemplateURL)
+        selectTemplateForDescription(selectedTemplateURL, presentsIPhonePreview: false)
     }
 
     private func validateRememberedTableSelections() {

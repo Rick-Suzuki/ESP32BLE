@@ -1,4 +1,9 @@
 
+V66.27
+settings: template viewer/controls OK
+261107 Sat 1512
+
+
 V66.26
 ESP settings - Borders improved
 261107 Sat 1434

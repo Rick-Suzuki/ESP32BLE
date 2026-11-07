@@ -50,6 +50,7 @@ struct PlainDocumentEditor: UIViewRepresentable {
     let onEditingBegan: (() -> Void)?
     let wrapsText: Bool
     let textInsets: UIEdgeInsets
+    let allowsReadOnlySelection: Bool
 
     init(
         text: Binding<String>,
@@ -61,7 +62,8 @@ struct PlainDocumentEditor: UIViewRepresentable {
         initialScrollResetID: UUID?,
         onEditingBegan: (() -> Void)?,
         wrapsText: Bool = false,
-        textInsets: UIEdgeInsets = UIEdgeInsets(top: 8, left: 8, bottom: 8, right: 8)
+        textInsets: UIEdgeInsets = UIEdgeInsets(top: 8, left: 8, bottom: 8, right: 8),
+        allowsReadOnlySelection: Bool = false
     ) {
         _text = text
         _fontSize = fontSize
@@ -73,6 +75,7 @@ struct PlainDocumentEditor: UIViewRepresentable {
         self.onEditingBegan = onEditingBegan
         self.wrapsText = wrapsText
         self.textInsets = textInsets
+        self.allowsReadOnlySelection = allowsReadOnlySelection
     }
 
     func makeCoordinator() -> Coordinator {
@@ -92,7 +95,7 @@ struct PlainDocumentEditor: UIViewRepresentable {
         textView.smartDashesType = .no
         textView.smartInsertDeleteType = .no
         textView.isEditable = !isReadOnly
-        textView.isSelectable = !isReadOnly
+        textView.isSelectable = !isReadOnly || allowsReadOnlySelection
         textView.isScrollEnabled = true
         textView.wrapsText = wrapsText
         textView.alwaysBounceHorizontal = !wrapsText
@@ -132,7 +135,7 @@ struct PlainDocumentEditor: UIViewRepresentable {
             textView.resignFirstResponder()
         }
         textView.isEditable = !isReadOnly
-        textView.isSelectable = !isReadOnly
+        textView.isSelectable = !isReadOnly || allowsReadOnlySelection
         let didChangeWrapping = textView.wrapsText != wrapsText
         textView.wrapsText = wrapsText
         textView.alwaysBounceHorizontal = !wrapsText
