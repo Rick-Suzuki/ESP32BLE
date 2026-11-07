@@ -900,6 +900,289 @@ struct TemplateRestoreResult {
     let configurationURL: URL
 }
 
+// MARK: - BM:🅱️ TEMPLATE EDITING
+
+struct TemplateUpdateResult {
+    let templateURL: URL
+    let configurationURL: URL
+    let templateContents: String
+    let configuration: TemplateConfiguration
+}
+
+enum TemplateUpdateError: LocalizedError {
+    case invalidTemplateURL(URL)
+    case templateNotFound(URL)
+    case templateIsNotRegularFile(URL)
+    case configurationNotFound(URL)
+    case configurationIsNotRegularFile(URL)
+    case unreadableTemplate(URL, Error)
+    case invalidTemplateUTF8(URL)
+    case unreadableConfiguration(URL, Error)
+    case invalidConfiguration(URL, Error)
+    case staleTemplate(URL)
+    case staleConfiguration(URL)
+    case invalidButtonCount(Int, maximum: Int)
+    case invalidGrid(rows: Int, columns: Int, buttonCount: Int, maximum: Int)
+    case unableToEncode(Error)
+    case preparedFilesInvalid(URL)
+    case backupPreparationFailed(URL, Error)
+    case publicationFailedAndRolledBack(Error)
+    case rollbackFailed(publicationError: Error, rollbackError: Error)
+
+    var errorDescription: String? {
+        switch self {
+        case .invalidTemplateURL(let url):
+            return "\(url.lastPathComponent) is not a template document."
+        case .templateNotFound(let url):
+            return "The template document \(url.lastPathComponent) does not exist."
+        case .templateIsNotRegularFile(let url):
+            return "The template document \(url.lastPathComponent) is not a regular file."
+        case .configurationNotFound(let url):
+            return "The template configuration \(url.lastPathComponent) does not exist."
+        case .configurationIsNotRegularFile(let url):
+            return "The template configuration \(url.lastPathComponent) is not a regular file."
+        case .unreadableTemplate(let url, let error):
+            return "The template document \(url.lastPathComponent) could not be read: \(error.localizedDescription)"
+        case .invalidTemplateUTF8(let url):
+            return "The template document \(url.lastPathComponent) is not valid UTF-8."
+        case .unreadableConfiguration(let url, let error):
+            return "The template configuration \(url.lastPathComponent) could not be read: \(error.localizedDescription)"
+        case .invalidConfiguration(let url, let error):
+            return "The template configuration \(url.lastPathComponent) is invalid: \(error.localizedDescription)"
+        case .staleTemplate(let url):
+            return "The template document \(url.lastPathComponent) changed while it was being edited."
+        case .staleConfiguration(let url):
+            return "The template configuration \(url.lastPathComponent) changed while it was being edited."
+        case .invalidButtonCount(let count, let maximum):
+            return "The template contains \(count) button lines, but the supported maximum is \(maximum)."
+        case .invalidGrid(let rows, let columns, let buttonCount, let maximum):
+            return "The template grid \(rows)x\(columns) is not compatible with \(buttonCount) button lines and the supported maximum of \(maximum)."
+        case .unableToEncode(let error):
+            return "The updated template configuration could not be encoded: \(error.localizedDescription)"
+        case .preparedFilesInvalid(let url):
+            return "The updated template files could not be verified in \(url.lastPathComponent)."
+        case .backupPreparationFailed(let url, let error):
+            return "The original template files could not be backed up in \(url.lastPathComponent): \(error.localizedDescription)"
+        case .publicationFailedAndRolledBack(let error):
+            return "The template could not be updated. Its previous files were restored: \(error.localizedDescription)"
+        case .rollbackFailed(let publicationError, let rollbackError):
+            return "Critical template update error. Publication failed (\(publicationError.localizedDescription)) and the previous pair could not be fully restored (\(rollbackError.localizedDescription))."
+        }
+    }
+}
+
+func updateTemplateDocument(
+    at templateURL: URL,
+    expectedTemplateData: Data,
+    expectedConfigurationData: Data,
+    templateContents: String,
+    description: String,
+    maximumButtonCount: Int,
+    effectiveButtonLineCount: (String) -> Int,
+    fileManager: FileManager = .default
+) throws -> TemplateUpdateResult {
+    guard isTemplateDocumentURL(templateURL) else {
+        throw TemplateUpdateError.invalidTemplateURL(templateURL)
+    }
+
+    let normalizedTemplateURL = templateURL.standardizedFileURL
+    let configurationURL = templateConfigURL(forTemplateDocumentURL: normalizedTemplateURL)
+        .standardizedFileURL
+    guard fileManager.fileExists(atPath: normalizedTemplateURL.path) else {
+        throw TemplateUpdateError.templateNotFound(normalizedTemplateURL)
+    }
+    guard (try? normalizedTemplateURL.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey]).isRegularFile) == true,
+          (try? normalizedTemplateURL.resourceValues(forKeys: [.isSymbolicLinkKey]).isSymbolicLink) != true else {
+        throw TemplateUpdateError.templateIsNotRegularFile(normalizedTemplateURL)
+    }
+    guard fileManager.fileExists(atPath: configurationURL.path) else {
+        throw TemplateUpdateError.configurationNotFound(configurationURL)
+    }
+    guard (try? configurationURL.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey]).isRegularFile) == true,
+          (try? configurationURL.resourceValues(forKeys: [.isSymbolicLinkKey]).isSymbolicLink) != true else {
+        throw TemplateUpdateError.configurationIsNotRegularFile(configurationURL)
+    }
+
+    let currentTemplateData: Data
+    let currentConfigurationData: Data
+    do {
+        currentTemplateData = try Data(contentsOf: normalizedTemplateURL)
+    } catch {
+        throw TemplateUpdateError.unreadableTemplate(normalizedTemplateURL, error)
+    }
+    do {
+        currentConfigurationData = try Data(contentsOf: configurationURL)
+    } catch {
+        throw TemplateUpdateError.unreadableConfiguration(configurationURL, error)
+    }
+    guard currentTemplateData == expectedTemplateData else {
+        throw TemplateUpdateError.staleTemplate(normalizedTemplateURL)
+    }
+    guard currentConfigurationData == expectedConfigurationData else {
+        throw TemplateUpdateError.staleConfiguration(configurationURL)
+    }
+    guard String(data: currentTemplateData, encoding: .utf8) != nil else {
+        throw TemplateUpdateError.invalidTemplateUTF8(normalizedTemplateURL)
+    }
+
+    let currentConfiguration: TemplateConfiguration
+    do {
+        currentConfiguration = try JSONDecoder().decode(TemplateConfiguration.self, from: currentConfigurationData)
+    } catch {
+        throw TemplateUpdateError.invalidConfiguration(configurationURL, error)
+    }
+
+    let buttonCount = effectiveButtonLineCount(templateContents)
+    guard maximumButtonCount > 0,
+          buttonCount >= 0,
+          buttonCount <= maximumButtonCount else {
+        throw TemplateUpdateError.invalidButtonCount(buttonCount, maximum: maximumButtonCount)
+    }
+    let grid = currentConfiguration.screenConfig.grid
+    let (gridCapacity, gridOverflow) = grid.rows.multipliedReportingOverflow(by: grid.columns)
+    guard grid.rows > 0,
+          grid.columns > 0,
+          !gridOverflow,
+          gridCapacity >= max(buttonCount, 1),
+          gridCapacity <= maximumButtonCount else {
+        throw TemplateUpdateError.invalidGrid(
+            rows: grid.rows,
+            columns: grid.columns,
+            buttonCount: buttonCount,
+            maximum: maximumButtonCount
+        )
+    }
+
+    let normalizedDescription = description.trimmingCharacters(in: .whitespacesAndNewlines)
+    let updatedConfiguration = TemplateConfiguration(
+        screenConfig: currentConfiguration.screenConfig,
+        description: normalizedDescription.isEmpty ? nil : description
+    )
+    let replacementTemplateData = Data(templateContents.utf8)
+    let replacementConfigurationData: Data
+    do {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        replacementConfigurationData = try encoder.encode(updatedConfiguration)
+    } catch {
+        throw TemplateUpdateError.unableToEncode(error)
+    }
+    guard String(data: replacementTemplateData, encoding: .utf8) == templateContents,
+          (try? JSONDecoder().decode(TemplateConfiguration.self, from: replacementConfigurationData)) == updatedConfiguration else {
+        throw TemplateUpdateError.preparedFilesInvalid(normalizedTemplateURL.deletingLastPathComponent())
+    }
+
+    let operationID = UUID().uuidString
+    let directoryURL = normalizedTemplateURL.deletingLastPathComponent()
+    let preparedTemplateURL = directoryURL.appendingPathComponent(".template-update-\(operationID).template.tmp")
+    let preparedConfigurationURL = directoryURL.appendingPathComponent(".template-update-\(operationID).config.tmp")
+    defer {
+        try? fileManager.removeItem(at: preparedTemplateURL)
+        try? fileManager.removeItem(at: preparedConfigurationURL)
+    }
+
+    do {
+        try replacementTemplateData.write(to: preparedTemplateURL, options: [.atomic])
+        try replacementConfigurationData.write(to: preparedConfigurationURL, options: [.atomic])
+        guard try Data(contentsOf: preparedTemplateURL) == replacementTemplateData,
+              try Data(contentsOf: preparedConfigurationURL) == replacementConfigurationData,
+              String(data: try Data(contentsOf: preparedTemplateURL), encoding: .utf8) == templateContents,
+              try JSONDecoder().decode(TemplateConfiguration.self, from: Data(contentsOf: preparedConfigurationURL)) == updatedConfiguration else {
+            throw TemplateUpdateError.preparedFilesInvalid(directoryURL)
+        }
+    } catch let error as TemplateUpdateError {
+        throw error
+    } catch {
+        throw TemplateUpdateError.preparedFilesInvalid(directoryURL)
+    }
+
+    guard try templateRestoreDestinationMatchesSnapshot(
+        at: normalizedTemplateURL,
+        snapshot: expectedTemplateData,
+        fileManager: fileManager
+    ) else {
+        throw TemplateUpdateError.staleTemplate(normalizedTemplateURL)
+    }
+    guard try templateRestoreDestinationMatchesSnapshot(
+        at: configurationURL,
+        snapshot: expectedConfigurationData,
+        fileManager: fileManager
+    ) else {
+        throw TemplateUpdateError.staleConfiguration(configurationURL)
+    }
+
+    let backupDirectoryURL = directoryURL
+        .appendingPathComponent(".template-update-backup-\(operationID)", isDirectory: true)
+    let backedUpTemplateURL = backupDirectoryURL
+        .appendingPathComponent(normalizedTemplateURL.lastPathComponent)
+    let backedUpConfigurationURL = backupDirectoryURL
+        .appendingPathComponent(configurationURL.lastPathComponent)
+    do {
+        try fileManager.createDirectory(
+            at: backupDirectoryURL,
+            withIntermediateDirectories: false
+        )
+        try fileManager.copyItem(at: normalizedTemplateURL, to: backedUpTemplateURL)
+        try fileManager.copyItem(at: configurationURL, to: backedUpConfigurationURL)
+        guard try Data(contentsOf: backedUpTemplateURL) == expectedTemplateData,
+              try Data(contentsOf: backedUpConfigurationURL) == expectedConfigurationData else {
+            throw CocoaError(.fileReadCorruptFile)
+        }
+    } catch {
+        try? fileManager.removeItem(at: backupDirectoryURL)
+        throw TemplateUpdateError.backupPreparationFailed(backupDirectoryURL, error)
+    }
+    defer {
+        try? fileManager.removeItem(at: backupDirectoryURL)
+    }
+
+    do {
+        try replacePreparedTemplateFile(
+            at: preparedConfigurationURL,
+            destinationURL: configurationURL,
+            fileManager: fileManager
+        )
+        try replacePreparedTemplateFile(
+            at: preparedTemplateURL,
+            destinationURL: normalizedTemplateURL,
+            fileManager: fileManager
+        )
+        guard try Data(contentsOf: normalizedTemplateURL) == replacementTemplateData,
+              try Data(contentsOf: configurationURL) == replacementConfigurationData else {
+            throw TemplateUpdateError.preparedFilesInvalid(directoryURL)
+        }
+    } catch {
+        let publicationError = error
+        print("🐞 \(ISO8601DateFormatter().string(from: Date())) TEMPLATE UPDATE ROLLBACK ATTEMPT template=\(normalizedTemplateURL.lastPathComponent)")
+        do {
+            let backupTemplateData = try Data(contentsOf: backedUpTemplateURL)
+            let backupConfigurationData = try Data(contentsOf: backedUpConfigurationURL)
+            try restoreTemplatePairSnapshot(
+                templateURL: normalizedTemplateURL,
+                templateData: backupTemplateData,
+                configurationURL: configurationURL,
+                configurationData: backupConfigurationData,
+                fileManager: fileManager
+            )
+        } catch {
+            print("🐞 \(ISO8601DateFormatter().string(from: Date())) TEMPLATE UPDATE ROLLBACK FAILED template=\(normalizedTemplateURL.lastPathComponent)")
+            throw TemplateUpdateError.rollbackFailed(
+                publicationError: publicationError,
+                rollbackError: error
+            )
+        }
+        print("🐞 \(ISO8601DateFormatter().string(from: Date())) TEMPLATE UPDATE ROLLBACK SUCCEEDED template=\(normalizedTemplateURL.lastPathComponent)")
+        throw TemplateUpdateError.publicationFailedAndRolledBack(publicationError)
+    }
+
+    return TemplateUpdateResult(
+        templateURL: normalizedTemplateURL,
+        configurationURL: configurationURL,
+        templateContents: templateContents,
+        configuration: updatedConfiguration
+    )
+}
+
 enum TemplateRestoreError: LocalizedError {
     case invalidTemplateFileName(String)
     case invalidDestinationDirectory(URL)

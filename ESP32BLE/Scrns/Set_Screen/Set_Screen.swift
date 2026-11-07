@@ -302,6 +302,23 @@ struct SettingsScreen: View {
         let targetName: String
     }
 
+    // MARK: - BM:🅱️ TEMPLATE EDITING SESSION
+
+    private struct TemplateEditingSession {
+        let templateURL: URL
+        let originalTemplateData: Data
+        let originalConfigurationData: Data
+        let originalTemplateContents: String
+        let originalDescription: String
+        var templateContentsDraft: String
+        var descriptionDraft: String
+        var isSaved = false
+
+        var isValid: Bool {
+            !templateURL.path.isEmpty
+        }
+    }
+
     private enum TemplateDescriptionState {
         case description(String)
         case noDescription
@@ -508,6 +525,9 @@ struct SettingsScreen: View {
     @State private var lastImageOpacityPreviewUpdate = Date.distantPast
     @State private var templateURLs: [URL] = []
     @State private var templateDescriptionState: TemplateDescriptionState?
+    @State private var templateEditingSession: TemplateEditingSession?
+    @State private var templateEditingLoadError: String?
+    @State private var templateEditingSaveError: String?
     @State private var pendingTemplateApplication: PendingTemplateApplication?
     @State private var isTemplateApplicationAlertPresented = false
     @State private var isSaveAsTemplateAlertPresented = false
@@ -3415,6 +3435,137 @@ struct SettingsScreen: View {
     private func clearTemplateSelection() {
         selectedTemplateSelectionPath = nil
         templateDescriptionState = nil
+    }
+
+    private func prepareTemplateEditingSession(for templateURL: URL) {
+        templateEditingLoadError = nil
+        templateEditingSaveError = nil
+
+        let normalizedTemplateURL = templateURL.standardizedFileURL
+        guard templateURLs.contains(where: {
+            $0.standardizedFileURL == normalizedTemplateURL
+        }) else {
+            let message = "The selected template is no longer available."
+            templateEditingLoadError = message
+            presentDocumentSaveAlert(title: "Template Could Not Be Opened", message: message)
+            return
+        }
+
+        guard FileManager.default.fileExists(atPath: normalizedTemplateURL.path) else {
+            let message = TemplateUpdateError.templateNotFound(normalizedTemplateURL).localizedDescription
+            templateEditingLoadError = message
+            presentDocumentSaveAlert(title: "Template Could Not Be Opened", message: message)
+            return
+        }
+
+        let configurationURL = templateConfigURL(forTemplateDocumentURL: normalizedTemplateURL)
+        do {
+            let templateData = try Data(contentsOf: normalizedTemplateURL)
+            guard let templateContents = String(data: templateData, encoding: .utf8) else {
+                throw TemplateUpdateError.invalidTemplateUTF8(normalizedTemplateURL)
+            }
+            let configurationData = try Data(contentsOf: configurationURL)
+            let configuration = try loadTemplateConfiguration(for: normalizedTemplateURL)
+            let description = configuration.description ?? ""
+
+            templateEditingSession = TemplateEditingSession(
+                templateURL: normalizedTemplateURL,
+                originalTemplateData: templateData,
+                originalConfigurationData: configurationData,
+                originalTemplateContents: templateContents,
+                originalDescription: description,
+                templateContentsDraft: templateContents,
+                descriptionDraft: description
+            )
+            print("🐞 \(ISO8601DateFormatter().string(from: Date())) TEMPLATE EDIT SESSION INITIALIZED template=\(normalizedTemplateURL.lastPathComponent)")
+        } catch {
+            let message = error.localizedDescription
+            templateEditingLoadError = message
+            print("🐞 \(ISO8601DateFormatter().string(from: Date())) TEMPLATE EDIT SESSION LOAD FAILED template=\(normalizedTemplateURL.lastPathComponent) error=\(message)")
+            presentDocumentSaveAlert(title: "Template Could Not Be Opened", message: message)
+        }
+    }
+
+    @discardableResult
+    private func saveTemplateEditingSession() -> Bool {
+        guard let session = templateEditingSession, session.isValid else {
+            let message = "There is no valid template editing session to save."
+            templateEditingSaveError = message
+            presentDocumentSaveAlert(title: "Template Could Not Be Saved", message: message)
+            return false
+        }
+
+        let normalizedTemplateURL = session.templateURL.standardizedFileURL
+        guard selectedTemplateURL?.standardizedFileURL == normalizedTemplateURL else {
+            let message = "The selected template changed while this template was being edited."
+            templateEditingSaveError = message
+            print("🐞 \(ISO8601DateFormatter().string(from: Date())) TEMPLATE EDIT SAVE REJECTED selectionMismatch template=\(normalizedTemplateURL.lastPathComponent)")
+            presentDocumentSaveAlert(title: "Template Could Not Be Saved", message: message)
+            return false
+        }
+        guard templateURLs.contains(where: {
+            $0.standardizedFileURL == normalizedTemplateURL
+        }) else {
+            let message = "The template being edited is no longer available."
+            templateEditingSaveError = message
+            print("🐞 \(ISO8601DateFormatter().string(from: Date())) TEMPLATE EDIT SAVE REJECTED unavailable template=\(normalizedTemplateURL.lastPathComponent)")
+            presentDocumentSaveAlert(title: "Template Could Not Be Saved", message: message)
+            return false
+        }
+
+        templateEditingSaveError = nil
+        print("🐞 \(ISO8601DateFormatter().string(from: Date())) TEMPLATE EDIT SAVE BEGIN template=\(normalizedTemplateURL.lastPathComponent)")
+        do {
+            _ = try updateTemplateDocument(
+                at: normalizedTemplateURL,
+                expectedTemplateData: session.originalTemplateData,
+                expectedConfigurationData: session.originalConfigurationData,
+                templateContents: session.templateContentsDraft,
+                description: session.descriptionDraft,
+                maximumButtonCount: maxFunctionKeyCount,
+                effectiveButtonLineCount: effectiveTemplateButtonLineCount
+            )
+
+            let savedTemplateData = try Data(contentsOf: normalizedTemplateURL)
+            guard let savedTemplateContents = String(data: savedTemplateData, encoding: .utf8) else {
+                throw TemplateUpdateError.invalidTemplateUTF8(normalizedTemplateURL)
+            }
+            let configurationURL = templateConfigURL(forTemplateDocumentURL: normalizedTemplateURL)
+            let savedConfigurationData = try Data(contentsOf: configurationURL)
+            let savedConfiguration = try loadTemplateConfiguration(for: normalizedTemplateURL)
+
+            templateEditingSession = TemplateEditingSession(
+                templateURL: normalizedTemplateURL,
+                originalTemplateData: savedTemplateData,
+                originalConfigurationData: savedConfigurationData,
+                originalTemplateContents: savedTemplateContents,
+                originalDescription: savedConfiguration.description ?? "",
+                templateContentsDraft: savedTemplateContents,
+                descriptionDraft: savedConfiguration.description ?? "",
+                isSaved: true
+            )
+            selectedTemplateSelectionPath = normalizedTemplateURL.path
+            refreshTemplateFiles()
+            print("🐞 \(ISO8601DateFormatter().string(from: Date())) TEMPLATE EDIT SAVE SUCCEEDED template=\(normalizedTemplateURL.lastPathComponent)")
+            return true
+        } catch {
+            let message = error.localizedDescription
+            templateEditingSaveError = message
+            print("🐞 \(ISO8601DateFormatter().string(from: Date())) TEMPLATE EDIT SAVE FAILED template=\(normalizedTemplateURL.lastPathComponent) error=\(message)")
+            presentDocumentSaveAlert(title: "Template Could Not Be Saved", message: message)
+            return false
+        }
+    }
+
+    private func effectiveTemplateButtonLineCount(_ contents: String) -> Int {
+        contents
+            .components(separatedBy: CharacterSet.newlines.union(.init(charactersIn: "\t")))
+            .filter { line in
+                let normalizedLine = line.replacingOccurrences(of: "\r", with: "")
+                let trimmedLine = normalizedLine.trimmingCharacters(in: .whitespacesAndNewlines)
+                return !trimmedLine.isEmpty && !trimmedLine.hasPrefix("//")
+            }
+            .count
     }
 
     private func deleteTemplate(_ templateURL: URL) {

@@ -1,249 +1,131 @@
-STAGE 8B.23C — READ-ONLY PROBE COMPLETE
+STAGE 8B.24A COMPLETE
 
-No files were modified. No build, Simulator, deployment, device test, commit, or diagnostic cleanup was performed.
+Files modified:
 
-A. SOURCE MAP
+• ESP32BLE/ESP32BLE/Scrns/TemplateDocument.swift
+• ESP32BLE/ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
 
-Primary state and routing
+No UI, layout, iPhone-specific behavior, Sound player code, existing editor implementation, template format, navigation, import/export, backup/restore, create/apply/delete paths, project settings, or data were changed.
 
-• ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
-   • Settings categories: lines 26–44.
-   • iPhone preview state:
-      • isIPhoneImagePreviewPresented: line 476.
-      • isIPhonePDFPreviewPresented: line 477.
-      • isIPhoneDocumentEditorPresented: line 478.
-   • Visibility reset on selected-document change: lines 551–559.
-   • Category-change resets: lines 571–590.
-   • iPhone preview handoff into bottom-controls panel: lines 2584–2609.
-   • Combined iPhone preview visibility decision: lines 2748–2763.
-   • Current generic preview X button: lines 2765–2787.
-   • Image/PDF/document preview selection: lines 3117–3185.
-   • Image restoration: lines 3187–3208.
-   • Screens/Text/Markdown editor presentation: lines 3817–3868.
-   • Sound selection and PDF presentation: lines 5137–5145.
-   • Sound preparation and lifecycle begin at line 5152.
+1. New editing-session state
 
-• ESP32BLE/Scrns/Set_Screen/Btm_Area/Set_BtmCtls.swift
-   • Passes the iPhone preview content and X button into SettingsAvailableDevicesPanel: lines 17–46.
+Added private Templates-only TemplateEditingSession state in Set_Screen.swift􀰓.
 
-• ESP32BLE/Scrns/Set_Screen/Btm_Area/Set_AvailableDevices.swift
-   • Chooses iPhone IMAGE/editor, Sound, or standard body: lines 83–94.
-   • IMAGE/PDF/editor header and X placement: lines 114–136.
-   • Sound-player body: lines 139–157.
-   • ESP32/Mac buttons: lines 333–347.
-   • Existing connection-mode action: lines 349–356.
+It keeps separate from the existing Screens/Text/Markdown editor:
 
-• ESP32BLE/Scrns/Set_Screen/Table_Img/Set_Table.swift
-   • Image selection: lines 844–856.
-   • Sound selection: lines 858–903.
-   • PDF selection begins at line 905.
+• Original template URL.
+• Original template and configuration file data snapshots.
+• Original template contents and description.
+• Independent template-contents and description drafts.
+• Saved status and session validity.
+• Separate template load/save error state.
 
-• ESP32BLE/Scrns/Set_Screen/Set_SoundPlayer.swift
-   • Player appearance and disappearance lifecycle: lines 76–100.
-   • On disappearance, image decoding work is cancelled; audio is not stopped here.
+It does not use documentEditorText, loadedDocumentURL, or saveCurrentDocumentText().
 
-B. CURRENT X BUTTON BEHAVIOUR
+2. Session loading
 
-There is one generic iPhone preview X button, not separate X buttons per category.
+Added prepareTemplateEditingSession(for:).
 
-It is supplied by SettingsScreen.iPhoneImagePreviewCloseButton and displayed only in iPhoneImageEditorBody. It hides:
+It:
 
-• PDF preview by setting isIPhonePDFPreviewPresented to false.
-• IMAGE preview by setting isIPhoneImagePreviewPresented to false.
-• Screens, Text, and Markdown editor preview by setting isIPhoneDocumentEditorPresented to false.
+• Confirms the URL belongs to the current Templates collection.
+• Confirms the template exists.
+• Reads UTF-8 template contents.
+• Reads and validates the companion configuration.
+• Preserves ScreenConfig.
+• Initializes independent drafts only after complete successful loading.
+• Presents the existing Settings alert on failure.
+• Does not create a partial or empty fallback session.
 
-It does not clear:
+3. Paired-file update
 
-• previewImageURL.
-• selected PDF.
-• selected screen/text/markdown file.
-• persisted file selections.
-• document editor contents.
+Added updateTemplateDocument(...) in TemplateDocument.swift􀰓.
 
-The Sound player currently has no X button. It is displayed whenever Sounds is the active category.
+It preserves the existing two-file format:
 
-The dedicated full editor’s xmark.circle.fill in Set_TxtEditor.swift is unrelated: it performs Save and Close and must not be included in this change.
+• Name.template
+• Name.template.config.json
 
-C. ESP32/MAC BUTTON BEHAVIOUR
+The helper:
 
-Both buttons call outputModeButton(_:) in SettingsAvailableDevicesPanel.
+• Verifies both files are regular files.
+• Verifies original file snapshots match the editing session.
+• Validates original template UTF-8 and configuration JSON.
+• Preserves the existing ScreenConfig.
+• Normalizes whitespace-only descriptions to nil.
+• Preserves nonempty description text, including Unicode and line breaks.
+• Encodes and decodes replacement JSON before publication.
+• Creates staged replacement files in the template directory.
+• Verifies staged UTF-8 and JSON data.
+• Creates and verifies recoverable on-disk backups before publishing either replacement.
+• Publishes config and template replacements as a coordinated pair.
+• Verifies both final files after publication.
+• Removes temporary staging/backups only after the operation completes.
 
-Current action:
+4. Validation and rollback
 
-• Plays existing click feedback.
-• Calls selectOutputMode(_:) .
-• Selecting ESP32 or Mac selects that output mode.
-• Pressing the already-selected mode sets output mode to none.
+Before publication, the helper validates:
 
-Neither action currently changes preview visibility.
+• Template identity and existence.
+• Companion config existence.
+• UTF-8 template encoding.
+• Existing JSON configuration.
+• Button count against maxFunctionKeyCount.
+• Existing grid capacity against the edited template.
+• Replacement JSON encoding/decoding.
+• Staged file contents.
 
-Safe implementation direction:
+If either publication step fails, it restores both files from verified backups. A rollback failure is surfaced explicitly as a critical error.
 
-• Add an iPhone-preview-hide callback from SettingsScreen through SettingsBottomControlsSection to SettingsAvailableDevicesPanel.
-• In outputModeButton(:) call the hide callback on every ESP32/Mac press, before or after selectOutputMode(:) .
-• Do not place hiding inside selectOutputMode(_:) itself, because that method serves the existing connection-state semantics and is not iPhone-preview-specific.
-• The callback must execute even when the tapped mode is already selected, because the request explicitly treats either button press as a preview-hide action.
+5. Stale-session safeguards
 
-D. PREVIEW CATEGORIES
+saveTemplateEditingSession() rejects saving when:
 
-Screens, Text, Markdown
+• No valid editing session exists.
+• The selected template changed.
+• The edited template is no longer in the Templates collection.
+• Template contents changed externally since loading.
+• Companion configuration changed externally since loading.
 
-• Share isIPhoneDocumentEditorPresented.
-• Selecting a file loads it into the shared editor, then presents it on iPhone.
-• Hiding does not unload or save/discard editor state by itself.
+The drafts remain in memory after a failed load/save attempt for correction or retry; there is no automatic redirect to another selected template.
 
-Images
+6. Post-save refresh
 
-• Uses isIPhoneImagePreviewPresented.
-• Selecting/navigating an image presents the preview.
-• previewImageURL remains selected when hidden.
-• The applied Main Screen background restoration path is separate and should remain untouched.
+After both files are saved and reloaded successfully:
 
-PDFs
+• The session snapshots are replaced with the verified saved files.
+• The session is marked saved.
+• The selected path remains the edited template.
+• refreshTemplateFiles() reloads the Templates collection and description state.
 
-• Uses isIPhonePDFPreviewPresented.
-• Selecting a PDF persists that selection and presents the preview.
-• Hiding does not clear the selected PDF.
+No editor presentation or dismissal is triggered; that remains for Stage 8B.24B.
 
-Sounds
+7. Error handling
 
-• Has no independent iPhone visibility state today.
-• isIPhoneSoundPlayerPresented is currently wired directly to isSoundsListActive at Set_Screen.swift line 2603.
-• Therefore, it cannot currently be hidden while Sounds remains selected.
-• A new non-persisted iPhone Sound visibility flag is required if the requested ESP32/Mac hide behavior must apply to Sound.
+Failures use the existing presentDocumentSaveAlert style. The new update error type covers missing files, invalid UTF-8/JSON, stale source data, invalid template/grid content, staging, backup, publication, and rollback failure.
 
-Templates
+8. Diagnostics added
 
-• No left-side iPhone preview panel is presented.
-• Template selection only updates templateDescriptionState for the table-related description presentation.
-• No preview X applies.
+Added timestamped 🐞 diagnostics for:
 
-All Files
+• Editing-session initialization.
+• Session loading failure.
+• Save begin.
+• Selection/unavailable save rejection.
+• Save failure/success.
+• Rollback attempt, success, and failure.
 
-• Developer-oriented list mode; no dedicated iPhone preview visibility state or X applies.
+No template or description contents are logged.
 
-E. PREVIEW VISIBILITY LIFECYCLE
+9. Validation performed
 
-Preview appearance:
+Source diagnostics completed successfully:
 
-• Image selection sets isIPhoneImagePreviewPresented true.
-• PDF selection sets isIPhonePDFPreviewPresented true.
-• Screen/Text/Markdown selection sets isIPhoneDocumentEditorPresented true.
-• Sounds are visible merely by entering/remaining in Sounds.
+• TemplateDocument.swift: no issues.
+• Set_Screen.swift: no issues.
 
-Category changes:
+No build, deployment, Simulator test, physical-device test, commit, or push was performed.
 
-• Leaving PDFs clears the PDF visibility flag.
-• Leaving Screens/Text/Markdown clears the shared editor visibility flag.
-• Leaving Images is also handled elsewhere through isImagesListActive checks.
-• Leaving Sounds stops sound preview playback through selectSettingsListMode(_:), lines 1421–1429.
+10. Unresolved risk before Stage 8B.24B
 
-Settings return/reload:
-
-• Settings onAppear starts image-preview restoration.
-• Selected-document changes clear preview image/PDF visibility then begin image restoration.
-• Image restoration can re-establish the preview image based on the applied background; it should not be changed in this work.
-
-Visibility state is @State, not @AppStorage. It is not independently persisted.
-
-F. SOUND PLAYER IMPLICATIONS
-
-Hiding Sound requires special care.
-
-If an added Sound visibility flag merely removes SettingsSoundPlayerView from the hierarchy:
-
-• Its onDisappear cancels its background-image loading task and pending image request.
-• Its AVAudioPlayer, progress task, selected sound, playback presentation, and completion handling remain owned by SettingsScreen.
-• Audio can therefore continue while the Sound UI is hidden.
-• Reopening recreates the view, restores its slider from shared playbackPresentation, and requests the current background image again.
-
-This is the safest default for the requested hide-only behavior because it does not introduce audio teardown.
-
-Do not call stopSoundPreviewPlayback() merely because ESP32 or Mac hides the panel. Existing source stops playback when leaving Sounds or leaving Settings, not when dismissing a preview panel.
-
-Important reopening risk:
-
-• Do not make low-level selectSound(_:) unconditionally re-present the Sound UI. That method is also used by Previous/Next and automatic track advancement; doing so could reopen a user-hidden Sound panel unexpectedly.
-• Re-present Sound only on explicit table selection and, if desired, when entering Sounds to preserve today’s category-entry behavior.
-
-G. IPAD ISOLATION
-
-The safest isolation boundary is SettingsAvailableDevicesPanel’s existing:
-
-if isPad { iPadBody } else { iPhoneBody }
-
-Recommended changes should be limited to:
-
-• The iPhone-only header that currently hosts iPhoneImageEditorCloseButton.
-• The iPhone-only ESP32/Mac outputModeButton action path through a new callback.
-• iPhone-only visibility state and Sound presentation gate in SettingsScreen.
-
-Do not change:
-
-• iPadBody.
-• iPad controls.
-• iPad Sound-player routing.
-• iPad player lifecycle.
-• iPad geometry.
-• dedicated editor close controls.
-
-H. GEOMETRY
-
-Removing the X from iPhoneImageEditorBody will not alter the preview rectangle if the top header remains as an HStack containing the ESP32/Mac button group and a Spacer.
-
-The current preview rectangle is allocated by the existing flexible frame between:
-
-• The top iPhone header.
-• The bottom Settings controls.
-
-The right table, outer Settings geometry, and safe-area handling are outside this X control. No device-specific branch is indicated for iPhone 17 versus XS Max.
-
-For Sound, the player already uses its own Sound header and the same flexible preview space. Its geometry should not be changed to implement visibility.
-
-I. RECOMMENDED IMPLEMENTATION
-
-Stage 1: shared iPhone hide action
-
-• Add one SettingsScreen method that hides only the currently active iPhone preview:
-   • Image flag false.
-   • PDF flag false.
-   • Document-editor flag false.
-   • Sound visibility flag false.
-• Do not clear selected URLs, previewImageURL, document editor data, Sound state, or playback state.
-• Thread this method as a closure only through the existing bottom-control/panel handoff.
-
-Stage 2: ESP32/Mac integration and X removal
-
-• Invoke the new closure on every ESP32/Mac button tap.
-• Remove the generic iPhone preview X injection and its displayed view.
-• Keep ESP32/Mac selection/toggle behavior unchanged.
-• Keep the preview header’s remaining layout stable.
-
-Stage 3: Sound presentation gate
-
-• Add a non-persisted iPhone Sound visibility flag.
-• Gate isIPhoneSoundPlayerPresented with both Sounds category and this flag.
-• Restore the flag only through deliberate user-visible events:
-   • entering Sounds, if preserving current automatic presentation;
-   • direct Sound table selection.
-• Do not restore it from automatic playback navigation or completion.
-
-J. TEST PLAN
-
-iPhone 17 and iPhone XS Max, landscape:
-
-• Images: select image, tap ESP32, confirm preview hides without changing image selection or Main Screen background; select another image and confirm it reopens.
-• PDFs: select PDF, tap Mac, confirm preview hides and selected PDF remains selected; select PDF again and confirm reopen.
-• Screens, Text, Markdown: open item, alter text without changing selection, tap ESP32/Mac, confirm preview hides without clearing editor state; select/open an item again and confirm expected presentation.
-• Sounds: start playing, tap ESP32/Mac, confirm Sound UI hides, selected Sound remains selected, audio/progress behavior matches the chosen expected policy, and no duplicate preparation or image decode occurs unexpectedly.
-• Sounds: while hidden, test natural completion, Repeat, Auto Start, Random Track, and manual category exit/re-entry.
-• Confirm ESP32/Mac retain their original select/toggle-to-none behavior.
-• Confirm pressing an already-selected ESP32 or Mac still hides the preview.
-• Confirm no X remains on IMAGE, PDF, Screens, Text, or Markdown preview headers.
-• Confirm no overlap, preview rectangle shift, or safe-area clipping.
-
-iPad regressions:
-
-• Confirm iPad preview visibility and all existing close controls remain unchanged.
-• Confirm iPad ESP32/Mac buttons do not hide any preview.
-• Confirm iPad Sound player and playback lifecycle remain unchanged.
+The storage foundation is ready. Stage 8B.24B must connect the currently private session preparation/save methods to the new iPad read-only viewer and dual-pane editor without reusing the shared single-document editor state.
