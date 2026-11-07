@@ -1770,9 +1770,15 @@ struct SettingsScreen: View {
             }
             .frame(width: proxy.size.width, height: proxy.size.height, alignment: .topLeading)
             .background(Color.black)
-            .overlay {
+            .overlay(alignment: .top) {
                 Rectangle()
-                    .stroke(Color.white, lineWidth: 1)
+                    .fill(Color.white)
+                    .frame(height: 1)
+            }
+            .overlay(alignment: .leading) {
+                Rectangle()
+                    .fill(Color.white)
+                    .frame(width: 1)
             }
             .overlay(alignment: .leading) {
                 Rectangle()

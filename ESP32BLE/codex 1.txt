@@ -1,111 +1,285 @@
-Stage 8B.24B.4 read-only probe complete. No files changed, build/run/deploy/Simulator/commit/push performed.
+STAGE 8B.24C.4 — BORDER BRIGHTNESS INVESTIGATION
 
-1. Yellow highlight
+Read-only probe completed. No files or settings changed. No build, deployment, Simulator, commit, or push was performed.
 
-Current source does not contain a remaining standardized-versus-raw identity mismatch in the yellow-row calculation.
+A. CURRENT BORDER SOURCE MAP
 
-Relevant current path:
+1. Viewer top edge — GROUP 1
 
-• Set_Screen.swift:4879-4897
-   • selectedTemplateURL resolves selectedTemplateSelectionPath through templateURL(matchingSelectionPath:in:).
-   • The resolver compares standardizedFileURL values.
-   • It returns the matching URL from templateURLs, not a separately created URL.
+Owner:
+Set_Screen.swift:1773–1777, iPadTemplateViewerSection.
 
-• Set_Screen.swift:3509-3510
-   • The resolved selectedTemplateURL is passed directly into SettingsDocumentTableSection.
+Drawing:
+Rectangle().fill(Color.white).frame(height: 1), aligned to .top.
 
-• Set_Table.swift:993-1013
-   • A row is selected when:
-selectedTemplateURL?.standardizedFileURL == templateURL.standardizedFileURL
+Color/opacity:
+Opaque white.
 
-• The selected row’s Text is bold and yellow.
+Nominal width:
+1 point.
 
-Because the resolver returns an element of templateURLs, the selected row comparison must be true for that exact collection element. There is no competing template foreground-style modifier, green applied-template state, or duplicate SettingsDocumentTableSection/templateRow implementation in the current source.
+Clipping:
+No local clipShape or clipped modifier follows this viewer overlay.
 
-Conclusion: the current source guarantees yellow styling whenever the rendered table receives a non-nil selectedTemplateURL. The remaining observed highlight failure is therefore not explained by URL canonicalization in the present source.
+2. Viewer left edge
 
-The two remaining source-level possibilities are:
+Owner:
+Set_Screen.swift:1778–1782.
 
-• The table is not being recomputed with its newly passed selectedTemplateURL at runtime.
-• The tested app did not contain the current Set_Screen.swift / Set_Table.swift source state.
+Drawing:
+Rectangle().fill(Color.white).frame(width: 1), aligned to .leading.
 
-A narrowly scoped future diagnostic could log only the selected template filename/path at:
-• Set_Screen.swift selectedTemplateURL resolution.
-• Set_Table.swift templateRow isSelected calculation.
+Color/opacity:
+Opaque white.
 
-That would distinguish a state-propagation issue from a deployed-source mismatch without logging template contents.
+Nominal width:
+1 point.
 
-2. Automatic table scroll
+Clipping:
+No local clipping.
 
-The canonical identity is now consistent:
+3. Template/Description divider — GROUP 1
 
-• Set_Screen.swift:3223-3232
-   • Navigation resolves a collection URL.
-   • It stores selectedTemplateURL.path in templateScrollPositionIDStorage.
+Owner:
+Set_Screen.swift:1783–1788.
 
-• Set_Table.swift:160-161 and 1045
-   • Template rows use templateURL.path for ForEach and row identity.
+Drawing:
+Rectangle().fill(Color.white).frame(width: 1), positioned with leading padding equal to contentsWidth.
 
-• Set_Table.swift:466-484
-   • Templates use templateScrollPositionID through scrollPosition(id:).
+Color/opacity:
+Opaque white.
 
-Therefore the navigation-written scroll ID and row IDs now use the same raw collection path. This is not a remaining URL representation mismatch.
+Nominal width:
+1 point.
 
-The source-level scrolling issue is timing:
+Geometry:
+contentsWidth = available viewer width × 0.64.
 
-• Set_Table.swift:180-183
-   • The only explicit ScrollViewReader restoration task runs from selectionRestorationID.
+Clipping:
+No local clipping.
 
-• Set_Table.swift:487-490
-   • selectionRestorationID contains only listMode and active row paths.
-   • It does not contain selectedTemplateURL or selectedRowPath.
+4. Viewer/table boundary
 
-• Set_Table.swift:555-566
-   • restoreSelectedRowVisibility(using:) can scroll the selected template row.
-   • But it does not rerun when Back, Previous, Next, Random, or table selection changes only the selected template.
+Owner:
+Set_Table.swift:259–271, SettingsFileTable.
 
-The existing scrollPosition binding is valid and SwiftUI supports writing an ID binding to request scrolling. However, the table does not have a deterministic explicit ScrollViewReader response to a Templates selection change after the rows already exist. The direct binding can be overwritten by List’s top-visible-row reporting or fail to provide the required timing guarantee during selection updates.
+Drawing:
+Rectangle().stroke(Color.white, lineWidth: 1).
 
-3. Shared cause
+Color/opacity:
+Opaque white.
 
-The two problems no longer share a URL identity cause.
+Nominal width:
+1 point.
 
-• Highlight: current canonical identity path is internally consistent; source does not explain the missing yellow rendering.
-• Scroll: canonical identity is also consistent, but the explicit restoration task does not observe selection changes.
+Clipping:
+The stroke is followed by:
+.clipShape(.rect(cornerRadius: 0))
+at Set_Table.swift:271.
 
-4. Smallest safe correction
+Current ownership:
+The Templates viewer no longer draws its trailing edge. The table is the sole owner.
 
-For scrolling only, keep templateScrollPositionIDStorage and the current scrollPosition binding unchanged.
+5. Viewer/lower Settings-panel boundary — GROUP 2
 
-Make selectionRestorationID include the selected template row identity only when listMode is Templates. This causes the existing task at Set_Table.swift:180 to rerun and call the already-existing restoreSelectedRowVisibility(using:) after a Templates selection change.
+Owner:
+Set_Screen.swift:3653–3657, combinedBottomPanelSection.
 
-This is smaller and safer than adding a second selection state, selection index, or new scrolling mechanism. It preserves every other category’s existing restoration behavior.
+Drawing:
+Rectangle().stroke(Color.white, lineWidth: 1).
 
-For highlight, do not add a second selection state or change table styling until a focused runtime diagnostic confirms whether the table receives a non-nil selectedTemplateURL. The existing comparison and yellow precedence are already correct.
+Color/opacity:
+Opaque white.
 
-5. Existing behavior preservation
+Nominal width:
+1 point.
 
-The recommended scroll correction would preserve:
+Clipping:
+The stroke is followed by:
+.clipShape(.rect(cornerRadius: 0))
+at Set_Screen.swift:3657.
 
-• Table single-tap selection.
-• Double-tap application.
-• Existing yellow selected-row styling.
-• No new green state.
-• Existing templateScrollPositionIDStorage.
-• Current viewer synchronization.
-• iPhone isolation.
-• All non-Templates table modes.
+Current ownership:
+The Templates viewer no longer draws its bottom edge. The lower Settings panel is the sole owner.
 
-6. Physical-device testing after a correction
+6. Lower Settings outer edges, including its bottom edge — GROUP 2
 
-Use at least enough templates to require vertical scrolling.
+Owner:
+combinedBottomPanelSection, Set_Screen.swift:3653–3657.
 
-1. Start with a selected middle template.
-2. Confirm its row is yellow after a table single tap.
-3. Use Next until the selected row is below the visible region.
-4. Confirm the table moves just enough to reveal the selected row.
-5. Use Previous until the selected row is above the visible region.
-6. Confirm the row becomes visible again.
-7. Use Back from an off-screen selection.
-8. Use Random repeatedly; verify the viewer, yellow row, and visible row always agree.
-9. Double-tap only as a separate application test; verify selection/scroll do not apply templates.
+Drawing:
+One complete centered white 1-point Rectangle stroke.
+
+Clipping:
+Its following clipShape applies to the complete stroke, including top and bottom.
+
+7. Main Settings bottom boundary — GROUP 2
+
+There is no separate white outer border drawn by SettingsScreen itself.
+
+The visible bottom edge of iPad Settings is the bottom edge of combinedBottomPanelSection at Set_Screen.swift:3653–3657.
+
+ContentView adds a second containment clip:
+• ContentView.swift:329–336 frames Settings to containerHeight.
+• ContentView.swift:335–336 clips that container.
+• On iPad, containerClipHeight equals containerHeight at ContentView.swift:228–231.
+
+This ancestor clip does not add a border, but it can also constrain anything extending outside the Settings frame.
+
+B. BRIGHT VERSUS DARK COMPARISON
+
+Confirmed by source:
+
+Bright viewer-owned lines:
+• Use opaque filled rectangles.
+• Are rendered entirely within their assigned 1-point frame.
+• Are not followed by a local clipping modifier.
+
+Dark lower-panel lines:
+• Use centered shape strokes.
+• Are followed by clipShape after the overlay.
+• The top and bottom portions of the centered stroke lie at the view boundary and are subject to clipping.
+
+This is a confirmed construction difference: fill versus centered stroke followed by clipping.
+
+The Templates table uses the same centered-stroke-plus-clip construction as the lower Settings panel:
+• Set_Table.swift:260–271.
+
+Therefore, source alone predicts that the table outer edges and lower-panel outer edges should share similar rendering characteristics.
+
+Not confirmed by source:
+
+• A separate additional bright line at the current viewer/table boundary.
+• Any opacity difference between the viewer, table, or lower-panel white borders.
+• Any current duplicate line at viewer/table or viewer/lower-panel boundaries.
+
+The current source has only one owner at each shared boundary.
+
+Ruled out by source:
+
+• Different declared white opacity: all relevant borders use Color.white without opacity reduction.
+• Different declared nominal width: all relevant borders are 1 point.
+• A remaining Templates viewer right-edge or bottom-edge border: neither exists after Stage 8B.24C.2.
+• A Templates table description section adding a second border on iPad: that section is limited to iPhone at Set_Table.swift:382–391.
+
+C. CLIPPING ANALYSIS
+
+Supported by source:
+
+A centered 1-point stroke traces the Rectangle outline. The inner-stroke API, strokeBorder, differs specifically by insetting before stroking. The current table and lower panel use stroke, not strokeBorder.
+
+The lower panel applies .clipShape after its stroke overlay:
+• Set_Screen.swift:3653–3657.
+
+The table applies .clipShape after its stroke overlay:
+• Set_Table.swift:260–271.
+
+Thus, the outer half of a centered stroke can be excluded at the component boundary. This is a source-supported explanation for a line that appears thinner or darker than the viewer’s full in-bounds fill.
+
+The viewer top, left, and center divider use fills rather than strokes and have no corresponding local clip. They are not subject to the same construction.
+
+The ContentView clip at ContentView.swift:335–336 is additionally relevant to the visible bottom-most Settings line, because the lower Settings panel can coincide with the Settings container boundary.
+
+D. PIXEL ALIGNMENT ANALYSIS
+
+Confirmed fractional-coordinate risks:
+
+• Template/Description divider:
+contentsWidth = proxy.size.width × 0.64
+at Set_Screen.swift:1741 and 1787.
+
+• Table boundary:
+Table width uses width ratios of 0.184 or 0.16, with clamping, at Set_Screen.swift:1708–1713.
+The table’s leading edge can therefore be fractional.
+
+• Viewer/lower-panel boundary:
+The available vertical space is allocated through nested GeometryReader and zero-spacing VStack layout at Set_Screen.swift:648–700. The exact boundary is not statically known.
+
+Unavailable runtime evidence:
+
+• Actual resolved viewer width and height on each physical iPad.
+• Actual display scale at runtime.
+• Actual physical-pixel coordinates of the divider, table edge, lower-panel top, and Settings bottom.
+• Compositor antialiasing coverage at those physical coordinates.
+
+The source does not query displayScale, so no exact pixel alignment is currently available.
+
+A non-production verification method would be to inspect the physical-device view hierarchy/frame values and display scale in Xcode’s debugger or LLDB. That can establish whether each relevant coordinate multiplied by the display scale is integral, without adding production overlays or diagnostics.
+
+E. BORDER OWNERSHIP
+
+Current single ownership is correct:
+
+• Viewer top: iPadTemplateViewerSection filled top line.
+• Viewer left: iPadTemplateViewerSection filled leading line.
+• Template/Description divider: iPadTemplateViewerSection filled divider.
+• Viewer/table boundary: SettingsFileTable leading segment of its outer stroke.
+• Viewer/lower-panel boundary: combinedBottomPanelSection top segment of its outer stroke.
+• Lower Settings outer edges: combinedBottomPanelSection outer stroke.
+• Settings bottom: combinedBottomPanelSection bottom stroke; no independent SettingsScreen outer border.
+
+No duplicate viewer borders remain.
+
+No source evidence shows missing geometry or a gap between these adjacent components. The HStack and VStack use spacing: 0 at Set_Screen.swift:654–678.
+
+F. ROOT CAUSE
+
+Confirmed cause:
+
+The interface mixes two materially different line-construction paths:
+
+1. Viewer-owned boundaries:
+Opaque 1-point filled rectangles inside their view bounds.
+
+2. Table and lower-panel boundaries:
+Centered 1-point Rectangle strokes followed by clipping.
+
+This difference alone is sufficient to produce different apparent brightness or thickness, especially at outer edges.
+
+Likely contributing cause:
+
+Fractional point positions can cause antialiasing variation:
+• The 64% divider is explicitly fractional on many widths.
+• The table edge can be fractional due to ratio-based width calculation.
+• The vertical allocation boundary is runtime-dependent.
+
+Unverified cause:
+
+The exact extent to which each physical iPad’s renderer makes a specific line brighter or darker cannot be proven from static source alone. The reported bright table boundary is not explained by a second line in the current source; it requires physical-device frame/pixel inspection to correlate the screenshot marking with the active line.
+
+G. RECOMMENDED CORRECTION
+
+Do not make another Templates-only cosmetic adjustment.
+
+The evidence-supported future correction, if physical measurement confirms the appearance remains unacceptable, is a separate shared iPad Settings border-standardization stage:
+
+• Change the table outer border and lower-panel outer border from centered stroke plus clipping to a fully in-bounds 1-point inner border, such as strokeBorder.
+• Preserve one owner per shared boundary.
+• Leave the Templates viewer’s existing in-bounds filled lines unchanged.
+• Verify all iPad Settings categories because SettingsFileTable and combinedBottomPanelSection are shared.
+
+Before that shared change, perform a narrow physical-device measurement to capture:
+• display scale;
+• viewer frame;
+• contentsWidth;
+• table frame;
+• lower-panel frame;
+• Settings container frame.
+
+This avoids another speculative correction.
+
+H. REMAINING UNCERTAINTY
+
+The annotated screenshot itself is not available as inspectable image data in this source probe, so the marked physical lines cannot be mapped to pixel coordinates directly.
+
+The source establishes the differing rendering paths and clipping order. It does not establish each device’s exact rasterization result at a fractional coordinate.
+
+I. REGRESSION RISKS
+
+A Templates-only change cannot make the table and lower-panel strokes identical without either adding a duplicate line or changing their shared implementations.
+
+Changing SettingsFileTable would affect iPad table borders for Screens, Text, Markdown, Images, Sounds, PDFs, and Templates.
+
+Changing combinedBottomPanelSection would affect the lower Settings panel in all iPad categories.
+
+No iPhone impact is required if a future shared correction is explicitly guarded for iPad, but that must be verified in a dedicated implementation stage.
