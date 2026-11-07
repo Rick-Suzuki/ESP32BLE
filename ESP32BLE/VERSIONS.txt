@@ -1,4 +1,8 @@
 
+V66.20
+settings: iphone player complete
+261107 Sat 1148
+
 V66.19
 Settings: iPhone audio player, nearly there
 261107 Sat 1056

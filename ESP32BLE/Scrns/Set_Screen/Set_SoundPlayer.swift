@@ -106,42 +106,48 @@ struct SettingsSoundPlayerView: View {
             ZStack {
                 playerBackground
 
-                VStack(spacing: metrics.rowSpacing) {
-                    HStack(spacing: metrics.topControlSpacing) {
-                        SettingsAutoStartButton(
-                            isEnabled: isAutoStartEnabled,
-                            size: metrics.modeButtonSize,
-                            action: { onSetAutoStart(!isAutoStartEnabled) }
-                        )
+                HStack(spacing: metrics.topControlSpacing) {
+                    iPhoneModeButton(
+                        systemName: "shuffle",
+                        accessibilityLabel: "Random playback",
+                        isEnabled: isRandomEnabled,
+                        size: metrics.modeButtonSize,
+                        action: onToggleRandom
+                    )
 
-                        iPhoneModeButton(
-                            systemName: "shuffle",
-                            accessibilityLabel: "Random playback",
-                            isEnabled: isRandomEnabled,
-                            size: metrics.modeButtonSize,
-                            action: onToggleRandom
-                        )
+                    iPhoneModeButton(
+                        systemName: "photo.artframe",
+                        accessibilityLabel: "Automatic random background",
+                        isEnabled: isAutoRandomBackgroundEnabled,
+                        size: metrics.modeButtonSize,
+                        action: onToggleAutoRandomBackground
+                    )
+                }
+                .padding(.leading, metrics.horizontalInset)
+                .padding(.top, metrics.topInset)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
 
-                        iPhoneModeButton(
-                            systemName: "photo.artframe",
-                            accessibilityLabel: "Automatic random background",
-                            isEnabled: isAutoRandomBackgroundEnabled,
-                            size: metrics.modeButtonSize,
-                            action: onToggleAutoRandomBackground
-                        )
+                Text(backgroundImageURL?.lastPathComponent ?? "No image")
+                    .font(.system(size: metrics.filenameFontSize, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.65)
+                    .truncationMode(.tail)
+                    .padding(.leading, metrics.filenameLeadingInset)
+                    .padding(.trailing, metrics.horizontalInset)
+                    .padding(.top, metrics.topInset)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
 
-                        Text(backgroundImageURL?.lastPathComponent ?? "No image")
-                            .font(.system(size: metrics.filenameFontSize, weight: .semibold))
-                            .foregroundStyle(.white)
+                VStack(spacing: metrics.sliderToControlsSpacing) {
+                    VStack(alignment: .trailing, spacing: metrics.timeToSliderSpacing) {
+                        Text("\(formattedIPhoneTimeWithHundredths(sliderPosition)) of \(formattedIPhoneTimeWithHundredths(safeDuration))")
+                            .font(.system(size: metrics.timeFontSize, design: .monospaced))
+                            .foregroundStyle(.white.opacity(0.9))
                             .lineLimit(1)
-                            .minimumScaleFactor(0.65)
-                            .truncationMode(.tail)
+                            .minimumScaleFactor(0.7)
                             .frame(maxWidth: .infinity, alignment: .trailing)
-                    }
+                            .offset(y: metrics.timeToSliderOffset)
 
-                    Spacer(minLength: 0)
-
-                    HStack(spacing: metrics.timeSpacing) {
                         Slider(
                             value: $sliderPosition,
                             in: 0...max(safeDuration, 1),
@@ -151,13 +157,6 @@ struct SettingsSoundPlayerView: View {
                         .disabled(!canControlPlayback)
                         .accessibilityLabel("Playback position")
                         .accessibilityValue("\(formattedTime(sliderPosition)) of \(formattedTime(safeDuration))")
-
-                        Text("\(formattedTime(sliderPosition)) / \(formattedTime(safeDuration))")
-                            .font(.system(size: metrics.timeFontSize, design: .monospaced))
-                            .foregroundStyle(.white.opacity(0.9))
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.7)
-                            .frame(width: metrics.timeWidth, alignment: .trailing)
                     }
 
                     HStack(spacing: metrics.transportSpacing) {
@@ -188,6 +187,12 @@ struct SettingsSoundPlayerView: View {
 
                         Spacer(minLength: 0)
 
+                        SettingsAutoStartButton(
+                            isEnabled: isAutoStartEnabled,
+                            size: metrics.modeButtonSize,
+                            action: { onSetAutoStart(!isAutoStartEnabled) }
+                        )
+
                         iPhoneModeButton(
                             systemName: "repeat",
                             accessibilityLabel: "Repeat playback",
@@ -197,8 +202,9 @@ struct SettingsSoundPlayerView: View {
                         )
                     }
                 }
-                .padding(metrics.padding)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                .padding(.horizontal, metrics.horizontalInset)
+                .padding(.bottom, metrics.bottomInset)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
             }
             .frame(width: geometry.size.width, height: geometry.size.height)
         }
@@ -211,13 +217,16 @@ struct SettingsSoundPlayerView: View {
     }
 
     private struct IPhonePlayerMetrics {
-        let padding: CGFloat
-        let rowSpacing: CGFloat
+        let horizontalInset: CGFloat
+        let topInset: CGFloat
+        let bottomInset: CGFloat
         let topControlSpacing: CGFloat
         let modeButtonSize: CGFloat
         let transportSpacing: CGFloat
-        let timeSpacing: CGFloat
-        let timeWidth: CGFloat
+        let timeToSliderSpacing: CGFloat
+        let timeToSliderOffset: CGFloat
+        let sliderToControlsSpacing: CGFloat
+        let filenameLeadingInset: CGFloat
         let filenameFontSize: CGFloat
         let timeFontSize: CGFloat
     }
@@ -228,13 +237,16 @@ struct SettingsSoundPlayerView: View {
         let modeButtonSize = min(max(min(safeWidth * 0.13, safeHeight * 0.22), 28), 40)
 
         return IPhonePlayerMetrics(
-            padding: min(max(safeHeight * 0.06, 6), 12),
-            rowSpacing: min(max(safeHeight * 0.05, 5), 10),
+            horizontalInset: min(max(safeWidth * 0.025, 6), 12),
+            topInset: min(max(safeHeight * 0.04, 4), 8),
+            bottomInset: min(max(safeHeight * 0.04, 4), 8),
             topControlSpacing: min(max(safeWidth * 0.025, 4), 8),
             modeButtonSize: modeButtonSize,
             transportSpacing: min(max(safeWidth * 0.035, 7), 14),
-            timeSpacing: min(max(safeWidth * 0.02, 5), 10),
-            timeWidth: min(max(safeWidth * 0.31, 66), 92),
+            timeToSliderSpacing: min(max(safeHeight * 0.005, 0), 2),
+            timeToSliderOffset: min(max(safeHeight * 0.06, 8), 12),
+            sliderToControlsSpacing: min(max(safeHeight * 0.03, 3), 6),
+            filenameLeadingInset: min(max(safeWidth * 0.025, 6), 12) + (modeButtonSize * 2) + min(max(safeWidth * 0.025, 4), 8) + min(max(safeWidth * 0.04, 8), 16),
             filenameFontSize: min(max(safeHeight * 0.075, 11), 15),
             timeFontSize: min(max(safeHeight * 0.065, 10), 13)
         )
@@ -719,6 +731,15 @@ struct SettingsSoundPlayerView: View {
     }
 
     private func formattedTimeWithHundredths(_ time: TimeInterval) -> String {
+        guard time.isFinite, time > 0 else { return "00:00.00" }
+        let totalHundredths = Int((time * 100).rounded(.down))
+        let minutes = totalHundredths / 6_000
+        let seconds = (totalHundredths / 100) % 60
+        let hundredths = totalHundredths % 100
+        return String(format: "%02d:%02d.%02d", minutes, seconds, hundredths)
+    }
+
+    private func formattedIPhoneTimeWithHundredths(_ time: TimeInterval) -> String {
         guard time.isFinite, time > 0 else { return "00:00.00" }
         let totalHundredths = Int((time * 100).rounded(.down))
         let minutes = totalHundredths / 6_000
