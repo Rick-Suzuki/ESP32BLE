@@ -3651,8 +3651,13 @@ struct SettingsScreen: View {
         .padding()
         .background(Color.black)
         .overlay {
-            Rectangle()
-                .stroke(Color.white, lineWidth: 1)
+            if isPad {
+                Rectangle()
+                    .strokeBorder(Color.white, lineWidth: 1)
+            } else {
+                Rectangle()
+                    .stroke(Color.white, lineWidth: 1)
+            }
         }
         .clipShape(.rect(cornerRadius: 0))
     }

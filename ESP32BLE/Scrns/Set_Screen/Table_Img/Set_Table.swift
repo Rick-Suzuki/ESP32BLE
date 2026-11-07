@@ -259,8 +259,13 @@ struct SettingsDocumentTableSection: View {
         .background(Color.black)
         .overlay {
             if showsOuterBorder {
-                Rectangle()
-                    .stroke(Color.white, lineWidth: 1)
+                if isPad {
+                    Rectangle()
+                        .strokeBorder(Color.white, lineWidth: 1)
+                } else {
+                    Rectangle()
+                        .stroke(Color.white, lineWidth: 1)
+                }
             } else {
                 Rectangle()
                     .fill(Color.white)
