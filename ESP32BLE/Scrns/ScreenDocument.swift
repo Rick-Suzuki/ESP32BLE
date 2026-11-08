@@ -30,6 +30,42 @@ func screenDocumentBaseKey(for fileName: String) -> String {
 }
 
 func naturalFileURLAscending(_ lhs: URL, _ rhs: URL) -> Bool {
+    let lhsBaseName = lhs.deletingPathExtension().lastPathComponent
+    let rhsBaseName = rhs.deletingPathExtension().lastPathComponent
+    let comparisonOptions: String.CompareOptions = [.caseInsensitive, .numeric]
+
+    let baseNameComparison = lhsBaseName.compare(
+        rhsBaseName,
+        options: comparisonOptions,
+        range: nil,
+        locale: .current
+    )
+    if baseNameComparison != .orderedSame {
+        return baseNameComparison == .orderedAscending
+    }
+
+    let fullNameComparison = lhs.lastPathComponent.compare(
+        rhs.lastPathComponent,
+        options: comparisonOptions,
+        range: nil,
+        locale: .current
+    )
+    if fullNameComparison != .orderedSame {
+        return fullNameComparison == .orderedAscending
+    }
+
+    let literalNameComparison = lhs.lastPathComponent.compare(
+        rhs.lastPathComponent,
+        options: .literal
+    )
+    if literalNameComparison != .orderedSame {
+        return literalNameComparison == .orderedAscending
+    }
+
+    return lhs.path.compare(rhs.path, options: .literal) == .orderedAscending
+}
+
+func legacyNaturalFileURLAscending(_ lhs: URL, _ rhs: URL) -> Bool {
     let nameComparison = lhs.lastPathComponent.localizedStandardCompare(rhs.lastPathComponent)
     if nameComparison != .orderedSame {
         return nameComparison == .orderedAscending

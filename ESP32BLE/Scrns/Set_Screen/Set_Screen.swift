@@ -567,6 +567,7 @@ struct SettingsScreen: View {
     @AppStorage("selectedBackgroundImageName") var selectedImageName = ""
     @AppStorage("selectedBackgroundImagePath") var selectedImagePath = ""
     @AppStorage("settingsSoundBackgroundImageIndex") private var settingsSoundBackgroundImageIndex = 0
+    @AppStorage("settingsSoundBackgroundImagePrefixSortMigrationV1") private var hasMigratedSoundBackgroundImagePrefixSort = false
     @AppStorage("settingsSoundBackgroundOpacity") private var settingsSoundBackgroundOpacity = 1.0
     @AppStorage("selectedSoundName") var selectedSoundName = ""
     @AppStorage("selectedSoundPath") var selectedSoundPath = ""
@@ -2186,6 +2187,10 @@ struct SettingsScreen: View {
 
     private func normalizeSoundBackgroundImageIndex() {
         let imageURLs = availableImageURLs
+        migrateSoundBackgroundImageIndexForPrefixSortIfNeeded(
+            currentImageURLs: imageURLs
+        )
+
         guard let imageIndex = resolvedSoundBackgroundImageIndex(in: imageURLs) else {
             settingsSoundBackgroundImageIndex = 0
             return
@@ -2194,6 +2199,37 @@ struct SettingsScreen: View {
         if settingsSoundBackgroundImageIndex != imageIndex {
             settingsSoundBackgroundImageIndex = imageIndex
         }
+    }
+
+    private func migrateSoundBackgroundImageIndexForPrefixSortIfNeeded(
+        currentImageURLs: [URL]
+    ) {
+        guard !hasMigratedSoundBackgroundImagePrefixSort else { return }
+        defer { hasMigratedSoundBackgroundImagePrefixSort = true }
+
+        let legacyImageURLs = documentDirectorySnapshot
+            .filter { url in
+                let values = try? url.resourceValues(forKeys: [.isRegularFileKey])
+                return values?.isRegularFile == true && supportedImportedImageExtensions.contains(url.pathExtension.lowercased())
+            }
+            .sorted(by: legacyNaturalFileURLAscending)
+
+        guard legacyImageURLs.indices.contains(settingsSoundBackgroundImageIndex) else {
+            return
+        }
+
+        let legacySelectedURL = legacyImageURLs[settingsSoundBackgroundImageIndex]
+        guard let currentImageIndex = currentImageURLs.firstIndex(where: {
+                  $0.standardizedFileURL == legacySelectedURL.standardizedFileURL
+              }) else {
+            return
+        }
+
+        guard settingsSoundBackgroundImageIndex != currentImageIndex else { return }
+
+        let legacyImageIndex = settingsSoundBackgroundImageIndex
+        settingsSoundBackgroundImageIndex = currentImageIndex
+        print("🐞 \(ISO8601DateFormatter().string(from: Date())) SOUND BACKGROUND IMAGE PREFIX SORT MIGRATED oldIndex=\(legacyImageIndex) newIndex=\(currentImageIndex)")
     }
 
     private func randomSoundBackgroundImageIndex(in imageURLs: [URL]) -> Int? {

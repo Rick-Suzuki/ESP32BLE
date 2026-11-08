@@ -1,4 +1,8 @@
 
+v66.34
+settings: tables: names wrong order
+261108 Sun 0933
+
 V66.33
 settings: EOD: export as template improved
 261107 Sat 2008

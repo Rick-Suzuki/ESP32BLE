@@ -1,358 +1,181 @@
-STAGE 8B.26A — READ-ONLY INVESTIGATION REPORT
-
-No files were modified. No build, deployment, Simulator, Template write, or Git operation was performed.
-
 A. SOURCE MAP
 
-ESP32BLE/Scrns/Set_Screen/Set_Screen.swift
+Relevant shared comparator:
+• ESP32BLE/Scrns/ScreenDocument.swift:32–46
+naturalFileURLAscending(_: _:)
+• ESP32BLE/Scrns/ScreenDocument.swift:49–52
+preferredScreenDocumentURLs(from:)
 
-• Lines 336–348: TemplateEditingSession.
-• Lines 457–465: existing generic document-save alert state.
-• Lines 1147–1205: existing .alert and multi-action confirmation presentation patterns.
-• Lines 2240–2254: Template Save/Close lifecycle.
-• Lines 2257–2284: Template editor dismissal, keyboard resignation, and animation cleanup.
-• Lines 4008–4055: Template edit-session creation.
-• Lines 4065–4132: saveTemplateEditingSession().
-• Lines 4135–4144: effective Template button-line counting.
+Current comparator:
+• Compares URL.lastPathComponent, including extension, with localizedStandardCompare.
+• If equal, uses literal full-filename comparison.
+• Final deterministic fallback is literal full path comparison.
 
-ESP32BLE/Scrns/TemplateDocument.swift
+Sorted collections:
+• Screens: preferredScreenDocumentURLs in ContentView.swift:545–550 and Set_Screen.swift:5510–5519.
+• Templates: TemplateDocument.swift:14–17.
+• Images: Set_ImgSelectionSupport.swift:5–13.
+• Text: Set_Screen.swift:5521–5527.
+• Markdown: Set_Screen.swift:5530–5536.
+• Sounds: Set_Screen.swift:5579–5587.
+• PDFs: Set_Screen.swift:5590–5596.
+• All Files: Set_Screen.swift:5670–5679.
 
-• Lines 57–80: TemplateConfiguration, containing ScreenConfig and description.
-• Lines 294–400: Template creation copies the source Screen configuration.
-• Lines 646–880: applyTemplateDocument(...); validates and writes Template contents plus its ScreenConfig to the target Screen.
-• Lines 910–970: TemplateUpdateError.
-• Lines 972–1181: updateTemplateDocument(...); staged paired-file transaction, validation, backup, replacement, verification, and rollback.
+Table display:
+• Screens display base names without .screen: Set_Table.swift:628.
+• Text, Markdown, Images, Sounds, PDFs, and Templates display full lastPathComponent: Set_Table.swift:704, 752, 799, 878, 925, 1018.
 
-ESP32BLE/Scrns/ScreenConfig.swift
+B. ROOT CAUSE
 
-• Lines 3–83: full ScreenConfig schema.
-• Lines 4–11: ScreenConfig.Grid stores rows then columns.
-• Lines 19–24: other persisted properties: schema version, font size, background image name/opacity, and button background opacity.
+The current shared comparator sorts full filenames, not the base names shown for Screens.
 
-ESP32BLE/Scrns/ContentView.swift
+For example, it compares:
 
-• Lines 10–13: global limits: maxGridDimension = 50, maxFunctionKeyCount = 2500.
-• Lines 795–813: copies a Screen configuration’s columns and rows into legacy display state.
-• Lines 815–828: shared Screen button-line parsing semantics.
-• Lines 1203–1225: preserves an existing ScreenConfig and changes only .grid.
-• Lines 1377–1413: Main Screen grid-resize behavior.
+• midi.screen
+• midi chords.screen
 
-ESP32BLE/Scrns/Main_Screen/Main_GridSection.swift
+The shared .screen suffix becomes significant when the shorter base name reaches its extension. Foundation therefore compares the space in midi chords.screen before the period in midi.screen, placing the longer name first.
 
-• Line 15: UI dimension convention: GridDimensions = (columns: Int, rows: Int).
-• Lines 143–152: width is divided by columns; height is divided by rows.
+This is why the displayed Screen name midi appears after the other MIDI screens. It is not a table-specific issue.
 
-ESP32BLE/Scrns/Main_Screen/Main_DocumentActions.swift
+C. COMPARATOR ANALYSIS
 
-• Lines 154–181: existing row/column increase actions enforce maxGridDimension.
-• Lines 208–228: existing grid application checks capacity against maxFunctionKeyCount.
+A read-only Foundation experiment on the current environment produced:
 
-B. DIMENSION CONVENTION
+• Full names with localizedStandardCompare:
+midi 7 octaves white.screen
+midi 7 octaves.screen
+midi C-major.screen
+midi chords.screen
+midi scale.screen
+midi.screen
 
-The user-facing/Main Screen convention is columns × rows.
+• Base names with localizedStandardCompare:
+midi
+midi 7 octaves
+midi 7 octaves white
+midi C-major
+midi chords
+midi scale
 
-A 3×4 grid means:
+Natural numeric behavior is working:
+• 1, 2, 11, 12
+• image2, image10
 
-• 3 columns across.
-• 4 rows down.
-• 12 positions.
+localizedCaseInsensitiveCompare is case-insensitive but does not preserve natural numeric ordering:
+• It orders 1, 11, 12, 2.
 
-This is confirmed by:
+localizedStandardCompare preserves numeric ordering, but does not treat case-only variants as equal in this environment:
+• midi sorts before Midi.
+• localizedCaseInsensitiveCompare considers them equal.
 
-• GridDimensions being declared as (columns, rows).
-• Main Screen width calculation using columns.
-• Main Screen height calculation using rows.
-• Existing grid-control APIs accepting columns before rows.
+D. DISPLAY NAME VS FULL FILENAME
 
-Important inconsistency: ScreenConfig.Grid stores and initializes fields as rows, columns, and current Template validation errors interpolate rows x columns. The new warning must not reuse that ordering for display. It should explicitly format:
+Extensions are the direct cause for Screens because the table displays deletingPathExtension().lastPathComponent, while sorting uses lastPathComponent.
 
-\(grid.columns)×\(grid.rows)
+The same prefix anomaly can occur in any category whose files share an extension, including Text, Markdown, PDFs, Templates, Images, and Sounds. For most of those categories the extension is visible in the table, but the semantic filename prefix remains the base name.
 
-Thus, for three columns and four rows, display 3×4, regardless of storage property order.
+E. CATEGORY COVERAGE
 
-C. TEMPLATE EDITING SESSION
+All requested categories use naturalFileURLAscending directly or indirectly:
 
-TemplateEditingSession currently stores:
+• Screens: affected.
+• Templates: affected.
+• Images: affected.
+• Markdown: affected.
+• PDFs: affected.
+• Sounds: affected.
+• Text: affected.
 
-• Template URL.
-• Original Template bytes.
-• Original configuration bytes.
-• Original Template text.
-• Original description.
-• Mutable Template text draft.
-• Mutable description draft.
-• Saved-state flag.
+There are no category-specific filename comparators in these Settings collections.
 
-It does not store a decoded ScreenConfig or a proposed grid.
+F. NAVIGATION CONSISTENCY
 
-Safest approach:
+Table and ordered navigation are currently consistent:
 
-• Keep the persisted configuration unchanged while the warning is presented.
-• Add transient, non-persisted pending-expansion state, for example a pending choice containing:
-   • effective button count,
-   • original columns and rows,
-   • valid row-expansion candidate, if any,
-   • valid column-expansion candidate, if any.
-• Do not mutate TemplateEditingSession merely to display the warning.
-• On a chosen action, pass the selected candidate grid directly into the existing paired-file save transaction.
+• Screens table receives documentFiles; ContentView.swift:545 uses preferredScreenDocumentURLs.
+• Screens navigation independently uses availableDocumentURLs; Set_Screen.swift:5510 also uses preferredScreenDocumentURLs.
+• Images, Text, Markdown, PDFs, Sounds, and Templates use the same corresponding sorted arrays for their tables and ordered navigation.
+• Back/First, Previous, and Next index into those arrays at Set_Screen.swift:3361–3475.
+• Sound Previous/Next use availableSoundURLs at Set_Screen.swift:6225–6276.
+• Random intentionally does not follow sequential order.
 
-The original byte snapshots already provide stale-session protection. If the Template or config changes while the warning is open, the existing save helper should reject it as stale.
+G. MINIMAL CORRECTION
 
-D. SAVE ARCHITECTURE
+One focused change in naturalFileURLAscending is sufficient.
 
-updateTemplateDocument(...) is the correct single save path to extend.
+Recommended comparison sequence:
 
-It currently:
+1. Compare deletingPathExtension().lastPathComponent first.
+2. Use Foundation’s locale-aware numeric comparison with .caseInsensitive and .numeric options.
+3. If base names compare equal, compare full lastPathComponent using the same primary options. This retains a meaningful order for distinct extensions.
+4. Use literal full filename, then literal path, only as deterministic tie-breakers.
 
-1. Confirms valid regular Template/configuration files.
-2. Reads both current files.
-3. Verifies both match the edit session’s original snapshots.
-4. Decodes the current TemplateConfiguration.
-5. Counts effective button lines.
-6. Validates current grid capacity.
-7. Encodes staged Template and config replacements.
-8. Verifies staged files.
-9. Backs up both originals.
-10. Replaces both files.
-11. Verifies the result.
-12. Restores both originals if publication fails.
+This preserves:
+• Natural numeric ordering.
+• Exact-prefix-first ordering.
+• Case-insensitive primary behavior.
+• Unicode/Japanese handling through Foundation and the current locale.
+• Determinism through literal fallback.
 
-Recommended focused extension:
+The correction should remain exclusively in the existing shared comparator. No table, navigation, or storage redesign is needed.
 
-• Add an optional proposed grid argument to updateTemplateDocument(...).
-• Decode the existing configuration as today.
-• Copy its ScreenConfig.
-• Replace only its grid with the user-selected candidate.
-• Validate the candidate grid using the existing strict checks.
-• Build the updated TemplateConfiguration from that copied ScreenConfig and existing description logic.
-• Keep all staging, backup, replacement, verification, and rollback unchanged.
+H. SELECTION AND UI RISKS
 
-This writes edited Template contents, description, and resized configuration as one paired transaction. No separate configuration write is appropriate.
+Most selection state is identity-based and should remain intact when only ordering changes:
 
-E. GRID EXPANSION CALCULATIONS
+• Screens: standardized path selection and path-based scroll restoration.
+• Text/Markdown: selected path.
+• Templates: selected path.
+• Images: selected path/name is primary.
+• Sounds and PDFs: persisted path is primary.
+• Table rows: ForEach identity is URL path.
 
-For a current grid of:
+Specific risk:
+• Sound background image selection is primarily index-based through settingsSoundBackgroundImageIndex (Set_Screen.swift:2162–2191). A changed image order can map an existing index to a different background image. A focused implementation should preserve the currently resolved image URL and remap its index after sorting changes take effect, without altering opacity.
 
-• columns = C
-• rows = R
-• effective button count = B
+Secondary effect:
+• Backup export entry order follows these sorted arrays. Archive content remains identical, but ZIP entry order may change.
+• Import and restore do not rename or move files; refreshed tables simply adopt the corrected order.
 
-Current capacity is:
+I. TEST CASES
 
-C × R
+Natural numeric:
+• 1.png, 2.png, 11.png, 12.png
+• image2.png, image10.png
+• screen3.screen, screen20.screen
 
-Increase Rows:
+Prefix:
+• midi.screen, midi chords.screen
+• midi 7 octaves.screen, midi 7 octaves white.screen
+• test.txt, test2.txt
+• image.jpg, image 1.jpg
 
-requiredRows = ceil(B / C)
+Case and extension:
+• MIDI.screen, midi.screen
+• midi.mp3, midi.wav
+• archive.tar.gz, archive.tar 2.gz
 
-Candidate grid:
+Unicode:
+• Japanese names with numeric suffixes, for example:
+音1.screen, 音2.screen, 音10.screen
+• Mixed Japanese and Latin names.
+• Filenames containing spaces and multiple periods.
 
-C columns × requiredRows rows
+For each category, verify:
+• Table order.
+• Back/First order.
+• Previous/Next order.
+• Existing selected row/highlight remains on the same file.
+• Image and Sound background selections remain on the same file, not merely the same index.
 
-Example:
+J. IMPLEMENTATION PLAN
 
-• Current: 3×4
-• Buttons: 13
-• Required rows: ceil(13 / 3) = 5
-• Result: 3×5, capacity 15.
+One focused implementation stage is appropriate:
 
-Increase Columns:
+1. Update only naturalFileURLAscending in ScreenDocument.swift to compare base names first with locale-aware case-insensitive numeric options and deterministic fallbacks.
+2. Preserve the currently selected Sound background image by URL while normalizing its index after the changed sort order is observed.
+3. Source-validate shared collection, table, navigation, and selection paths.
+4. Physically test iPhone 17, iPhone XS Max, iPad Air M2, iPad mini, and iPad Pro.
 
-requiredColumns = ceil(B / R)
-
-Candidate grid:
-
-requiredColumns columns × R rows
-
-Example:
-
-• Current: 3×4
-• Buttons: 13
-• Required columns: ceil(13 / 4) = 4
-• Result: 4×4, capacity 16.
-
-The implementation should use integer ceiling division and retain the original unchanged dimension. It must never reduce either dimension.
-
-F. LIMIT HANDLING
-
-Use existing global limits:
-
-• Maximum dimension: 50.
-• Maximum capacity: 2500.
-
-A row candidate is valid only when:
-
-• requiredRows <= 50
-• currentColumns × requiredRows <= 2500
-
-A column candidate is valid only when:
-
-• requiredColumns <= 50
-• requiredColumns × currentRows <= 2500
-
-Important current-source finding: Template create, edit, and application validation currently enforce positive dimensions and capacity no greater than 2500, but do not independently enforce that each dimension is no greater than 50. Main Screen controls do enforce the per-dimension limit.
-
-The new expansion calculation should enforce both limits even if the existing Template was created externally with an unusual valid-by-capacity dimension.
-
-If one direction is invalid:
-
-• Keep that action visibly unavailable/disabled, or omit it and clearly state why in the message.
-• Keep the valid direction available.
-
-If neither direction is valid:
-
-• Do not offer a save that violates limits.
-• Show an existing-style error alert, for example:
-“The template has 2100 buttons. Neither rows nor columns can be increased independently within the 50×50 grid limit.”
-• Keep both drafts open and unchanged.
-
-Example where neither single-direction action is possible:
-
-• Existing grid: 40×40.
-• Buttons: 2100.
-• Required rows with 40 columns: 53, invalid.
-• Required columns with 40 rows: 53, invalid.
-• A combined 50×50 expansion could fit, but it is outside the requested explicit one-direction choices.
-
-G. CONFIGURATION PRESERVATION
-
-ScreenConfig currently contains only global screen settings:
-
-• schemaVersion
-• fontSize
-• grid
-• backgroundImageName
-• backgroundOpacity
-• buttonsBackgroundOpacity
-
-There are no per-button configuration arrays or positional metadata in ScreenConfig.
-
-Therefore, the safe operation is:
-
-• Copy the decoded existing ScreenConfig.
-• Change only grid.rows or grid.columns.
-• Preserve all other known configuration values and Template description.
-
-Button definitions reside in the Template text. Increasing rows keeps the existing row-major slot positions stable. Increasing columns reflows later button indices into different visual row positions; this is expected and is precisely why the user must choose the direction.
-
-Risk to note: the current Codable schema does not preserve unknown future JSON keys when it re-encodes a configuration. This is pre-existing behavior. For the current known schema, copying and mutating only .grid preserves all supported fields.
-
-H. UI WARNING
-
-Recommended presentation: an existing SwiftUI .alert, attached at the same Settings presentation level as the current document-save and import alerts.
-
-Use a typed pending-expansion item/state rather than loose text state. This makes the displayed values stable while the alert is visible.
-
-Suggested alert:
-
-Title:
-Template Grid Too Small
-
-Message:
-This template contains 13 buttons, but its 3×4 grid supports only 12.
-
-You can increase the rows or columns to accommodate the additional buttons.
-
-Actions:
-
-• Increase Rows
-• Increase Columns
-• Cancel, with .cancel role
-
-Use the exact calculated values and columns × rows display convention.
-
-Why .alert is preferable:
-
-• The project already uses it for multi-action confirmation.
-• It is shared by iPhone and iPad.
-• It blocks accidental editor interaction while the decision is pending.
-• It avoids new custom geometry, popovers, overlays, or platform-specific UI.
-• System alerts accommodate the active software keyboard without changing editor layout.
-
-Apple’s SwiftUI alert behavior may reorder actions by role. The two expansion actions should have no destructive role; Cancel should use the cancel role.
-
-I. CANCEL AND FAILURE HANDLING
-
-Cancel:
-
-• Clear only the pending expansion state.
-• Keep TemplateEditingSession, Template draft, description draft, focus state, and editor presentation unchanged.
-• Do not invoke updateTemplateDocument(...).
-• Do not dismiss the editor.
-• Do not write either paired file.
-
-Expansion action:
-
-1. Capture the proposed candidate grid.
-2. Run the existing paired save with that candidate.
-3. On success, refresh the selected Template and call the existing dismissal path once.
-4. On failure, retain the editor and both drafts, then show the existing save error.
-
-The current closeDedicatedTemplateEditor() already only dismisses after a successful saveTemplateEditingSession(). The expansion action can reuse this success-only dismissal behavior.
-
-Keyboard handling:
-
-• Do not resign focus before showing the warning; that would be an unnecessary draft/UI change.
-• The system alert handles presentation above the keyboard.
-• On Cancel, the editor remains present. Physical testing should confirm the desired text field remains usable; no focus-reset logic is required unless device testing identifies an issue.
-• On success, the existing dismissal path already resigns first responder and clears editor-focus state.
-
-J. TEMPLATE APPLICATION
-
-The Template application path already reads the Template’s paired TemplateConfiguration, validates its grid against button count, and writes the entire screenConfig to the target Screen.
-
-After a successful expanded-grid save:
-
-• The Template’s new grid is persisted in .template.config.json.
-• Application validates against the new grid.
-• Application writes the new dimensions and all other preserved ScreenConfig values to the target Screen.
-• No Template application change is required.
-
-K. RECOMMENDED IMPLEMENTATION PLAN
-
-One focused implementation stage is appropriate.
-
-Stage 8B.26B — Explicit Template Grid Expansion
-
-• Add pending grid-expansion state and a shared candidate-calculation helper in Set_Screen.swift􀰓.
-• Detect a capacity-only mismatch before the ordinary Template save attempt.
-• Present the existing-style alert with calculated values.
-• Extend updateTemplateDocument(...) to accept and transactionally save an optional proposed grid.
-• Validate candidate dimensions against both 50-per-axis and 2500-total limits.
-• Reuse existing save-success dismissal, refresh, stale protection, backup, verification, rollback, diagnostics, and error presentation.
-• Do not change Template creation, application, Main Screen grid controls, editor geometry, animations, or counting semantics.
-
-L. PHYSICAL-DEVICE TEST PLAN
-
-Run on iPhone 17, iPhone XS Max, iPad Air M2, iPad mini, and iPad Pro.
-
-Core behavior:
-
-• Edit a 3×4 Template to 13 effective button lines.
-• Confirm warning displays 13 buttons, 3×4, and capacity 12.
-• Choose Increase Rows; confirm saved grid is 3×5 and the Template editor closes only after success.
-• Reopen and apply the Template; confirm the target Screen uses 3 columns and 5 rows.
-• Repeat with Increase Columns; confirm saved grid is 4×4 and application uses 4 columns and 4 rows.
-• Confirm a Template that fits does not show the warning.
-• Confirm blank, whitespace-only, and comment lines do not trigger expansion.
-
-Draft preservation:
-
-• Trigger warning, select Cancel, and verify Template and Description drafts remain visible and editable.
-• Trigger warning, alter the selected Template externally if feasible, then choose expansion; confirm stale-save failure preserves drafts and leaves files unchanged.
-• Force or simulate an ordinary save failure only through existing safe test conditions; confirm no partial Template/configuration pair is published.
-
-Limits:
-
-• Verify 50×49 with 2500 effective lines offers the valid row expansion to 50.
-• Verify a case where only one direction remains valid.
-• Verify a case where neither single-direction option is valid; confirm no invalid expansion is offered.
-
-Regression:
-
-• Verify Template creation and ordinary Template editing.
-• Verify Template application to an existing Screen.
-• Verify Template selection/highlighting and editor open/close animation.
-• Verify iPhone landscape keyboard visibility, warning readability, Cancel return to editing, and Save/Close accessibility.
-• Verify iPad editor geometry, keyboard behavior, and close control remain unchanged.
-• Verify backup/restore and import/export still retain Template/configuration pairs.
+No source files, project settings, files, or Git state were modified during this probe.
