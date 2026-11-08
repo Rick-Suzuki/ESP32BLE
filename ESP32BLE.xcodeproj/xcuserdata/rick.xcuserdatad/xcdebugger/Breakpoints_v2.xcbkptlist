@@ -48,8 +48,8 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "6594"
             endingLineNumber = "6594"
-            landmarkName = "timeDescription"
-            landmarkType = "24">
+            landmarkName = "SoftEditorAccessoryConfiguration"
+            landmarkType = "13">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -96,8 +96,8 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "6597"
             endingLineNumber = "6597"
-            landmarkName = "SoftEditorAccessoryConfiguration"
-            landmarkType = "13">
+            landmarkName = "timeDescription"
+            landmarkType = "24">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -112,7 +112,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "6598"
             endingLineNumber = "6598"
-            landmarkName = "cityDescription"
+            landmarkName = "timeDescription"
             landmarkType = "24">
          </BreakpointContent>
       </BreakpointProxy>
@@ -128,7 +128,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "6599"
             endingLineNumber = "6599"
-            landmarkName = "cityDescription"
+            landmarkName = "timeDescription"
             landmarkType = "24">
          </BreakpointContent>
       </BreakpointProxy>
@@ -160,8 +160,8 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "5331"
             endingLineNumber = "5331"
-            landmarkName = "MainScreen"
-            landmarkType = "14">
+            landmarkName = "canDeleteSmartEditorBackward"
+            landmarkType = "24">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -176,8 +176,8 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "5335"
             endingLineNumber = "5335"
-            landmarkName = "smartPlaceholderButtonForegroundColor(for:)"
-            landmarkType = "7">
+            landmarkName = "canDeleteSmartEditorBackward"
+            landmarkType = "24">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -272,8 +272,8 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "5336"
             endingLineNumber = "5336"
-            landmarkName = "smartPlaceholderButtonForegroundColor(for:)"
-            landmarkType = "7">
+            landmarkName = "MainScreen"
+            landmarkType = "14">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -288,7 +288,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "5354"
             endingLineNumber = "5354"
-            landmarkName = "smartModifierButton(systemName:accessibilityLabel:prefix:)"
+            landmarkName = "smartPlaceholderButtonForegroundColor(for:)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -304,7 +304,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "5355"
             endingLineNumber = "5355"
-            landmarkName = "smartModifierButton(systemName:accessibilityLabel:prefix:)"
+            landmarkName = "smartPlaceholderButtonForegroundColor(for:)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -320,8 +320,8 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "5356"
             endingLineNumber = "5356"
-            landmarkName = "smartModifierButton(systemName:accessibilityLabel:prefix:)"
-            landmarkType = "7">
+            landmarkName = "MainScreen"
+            landmarkType = "14">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -384,7 +384,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "5392"
             endingLineNumber = "5392"
-            landmarkName = "smartEscapeCodeToggleButton"
+            landmarkName = "smartCommandColonButton"
             landmarkType = "24">
          </BreakpointContent>
       </BreakpointProxy>
@@ -400,7 +400,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "5393"
             endingLineNumber = "5393"
-            landmarkName = "smartEscapeCodeToggleButton"
+            landmarkName = "smartCommandColonButton"
             landmarkType = "24">
          </BreakpointContent>
       </BreakpointProxy>
@@ -416,7 +416,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "5394"
             endingLineNumber = "5394"
-            landmarkName = "smartEscapeCodeToggleButton"
+            landmarkName = "smartCommandColonButton"
             landmarkType = "24">
          </BreakpointContent>
       </BreakpointProxy>
@@ -432,8 +432,8 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "5395"
             endingLineNumber = "5395"
-            landmarkName = "smartEscapeCodeToggleButton"
-            landmarkType = "24">
+            landmarkName = "MainScreen"
+            landmarkType = "14">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy

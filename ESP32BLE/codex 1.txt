@@ -1,181 +1,191 @@
-A. SOURCE MAP
+STAGE 8B.31B — READ-ONLY INVESTIGATION REPORT
 
-Relevant shared comparator:
-• ESP32BLE/Scrns/ScreenDocument.swift:32–46
-naturalFileURLAscending(_: _:)
-• ESP32BLE/Scrns/ScreenDocument.swift:49–52
-preferredScreenDocumentURLs(from:)
+No source files, project settings, Git state, builds, or devices were changed.
 
-Current comparator:
-• Compares URL.lastPathComponent, including extension, with localizedStandardCompare.
-• If equal, uses literal full-filename comparison.
-• Final deterministic fallback is literal full path comparison.
+A. ACTUAL 7-ROW AND 8-ROW GEOMETRY
 
-Sorted collections:
-• Screens: preferredScreenDocumentURLs in ContentView.swift:545–550 and Set_Screen.swift:5510–5519.
-• Templates: TemplateDocument.swift:14–17.
-• Images: Set_ImgSelectionSupport.swift:5–13.
-• Text: Set_Screen.swift:5521–5527.
-• Markdown: Set_Screen.swift:5530–5536.
-• Sounds: Set_Screen.swift:5579–5587.
-• PDFs: Set_Screen.swift:5590–5596.
-• All Files: Set_Screen.swift:5670–5679.
+Source map:
 
-Table display:
-• Screens display base names without .screen: Set_Table.swift:628.
-• Text, Markdown, Images, Sounds, PDFs, and Templates display full lastPathComponent: Set_Table.swift:704, 752, 799, 878, 925, 1018.
+Main_GridSection.swift
+• Grid cell calculation: lines 143–152
+• Per-button resolved frame: lines 168–212
+• Span sizing: lines 338–346
+• Cell origin: lines 348–363
+• MIDI routing: lines 411–500
+• MIDINoteButton active border: lines 564–633
+• CC one-shot pressed border: lines 945–963
+• Parent cell clipping: lines 965–976
 
-B. ROOT CAUSE
+Main_Screen.swift
+• Grid spacing and corner-radius formulas: approximately lines 6272–6284
+• iPad grid uses the normal spacing/radius values; iPhone scales both down.
 
-The current shared comparator sorts full filenames, not the base names shown for Screens.
+For C columns, R rows, GeometryReader height H, and iPad reserved bottom inset of zero:
 
-For example, it compares:
+spacing(R) = 10 - 6 × ((C × R) - 1) / 143
 
-• midi.screen
-• midi chords.screen
+cornerRadius(R) = 20 - 15 × ((C × R) - 1) / 143
 
-The shared .screen suffix becomes significant when the shorter base name reaches its extension. Foundation therefore compares the space in midi chords.screen before the period in midi.screen, placing the longer name first.
+availableGridHeight(R) = H + 30 - ((R - 1) × spacing(R))
 
-This is why the displayed Screen name midi appears after the other MIDI screens. It is not a table-specific issue.
+oneRowButtonHeight(R) = availableGridHeight(R) / R
 
-C. COMPARATOR ANALYSIS
+For the two configurations:
 
-A read-only Foundation experiment on the current environment produced:
+7 rows:
+• spacing7 = 10 - 6 × ((7C) - 1) / 143
+• radius7 = 20 - 15 × ((7C) - 1) / 143
+• height7 = (H + 30 - 6 × spacing7) / 7
 
-• Full names with localizedStandardCompare:
-midi 7 octaves white.screen
-midi 7 octaves.screen
-midi C-major.screen
-midi chords.screen
-midi scale.screen
-midi.screen
+8 rows:
+• spacing8 = 10 - 6 × ((8C) - 1) / 143
+• radius8 = 20 - 15 × ((8C) - 1) / 143
+• height8 = (H + 30 - 7 × spacing8) / 8
 
-• Base names with localizedStandardCompare:
-midi
-midi 7 octaves
-midi 7 octaves white
-midi C-major
-midi chords
-midi scale
+A multi-row button has:
 
-Natural numeric behavior is working:
-• 1, 2, 11, 12
-• image2, image10
+height(span) = oneRowButtonHeight × span + spacing × (span - 1)
 
-localizedCaseInsensitiveCompare is case-insensitive but does not preserve natural numeric ordering:
-• It orders 1, 11, 12, 2.
+Its vertical origin is:
 
-localizedStandardCompare preserves numeric ordering, but does not treat case-only variants as equal in this environment:
-• midi sorts before Midi.
-• localizedCaseInsensitiveCompare considers them equal.
+row × (oneRowButtonHeight + spacing)
 
-D. DISPLAY NAME VS FULL FILENAME
+There is no pixel rounding in these calculations. Both the dimensions and origins may therefore be fractional points; the physical-pixel result also depends on the iPad’s display scale.
 
-Extensions are the direct cause for Screens because the table displays deletingPathExtension().lastPathComponent, while sorting uses lastPathComponent.
+The exact numeric H, C, display scale, and tested button span are runtime values, so the source alone cannot truthfully provide final point/pixel measurements for the physical device.
 
-The same prefix anomaly can occur in any category whose files share an extension, including Text, Markdown, PDFs, Templates, Images, and Sounds. For most of those categories the extension is visible in the table, but the semantic filename prefix remains the base name.
+B. EFFECTIVE CORNER RADIUS
 
-E. CATEGORY COVERAGE
+All relevant layers receive the same configured source radius:
 
-All requested categories use naturalFileURLAscending directly or indirectly:
+• Normal gray background: mainGridButtonCornerRadius
+• Normal gray border: mainGridButtonCornerRadius
+• Active green MIDI Note border: mainGridButtonCornerRadius
+• Active green MIDI CC one-shot border: mainGridButtonCornerRadius
+• Parent clipping shape: mainGridButtonCornerRadius
 
-• Screens: affected.
-• Templates: affected.
-• Images: affected.
-• Markdown: affected.
-• PDFs: affected.
-• Sounds: affected.
-• Text: affected.
+The configured radius decreases only slightly when moving from seven to eight rows because it is based on total button count, not actual button height. The cell height decreases much more substantially.
 
-There are no category-specific filename comparators in these Settings collections.
+Therefore the corner-radius-to-height ratio rises at eight rows.
 
-F. NAVIGATION CONSISTENCY
+SwiftUI’s documented strokeBorder behavior is an inner stroke: it insets the shape by half its line width before applying the stroke. Thus:
 
-Table and ordered navigation are currently consistent:
+• Gray border: 2 pt strokeBorder, centerline inset by 1 pt.
+• Green border: 3 pt strokeBorder, centerline inset by 1.5 pt.
 
-• Screens table receives documentFiles; ContentView.swift:545 uses preferredScreenDocumentURLs.
-• Screens navigation independently uses availableDocumentURLs; Set_Screen.swift:5510 also uses preferredScreenDocumentURLs.
-• Images, Text, Markdown, PDFs, Sounds, and Templates use the same corresponding sorted arrays for their tables and ordered navigation.
-• Back/First, Previous, and Next index into those arrays at Set_Screen.swift:3361–3475.
-• Sound Previous/Next use availableSoundURLs at Set_Screen.swift:6225–6276.
-• Random intentionally does not follow sequential order.
+The green border’s effective drawing region is therefore smaller than the gray border’s. This becomes more significant as button height decreases.
 
-G. MINIMAL CORRECTION
+The public API documentation does not specify the internal clamping/path-normalization behavior of RoundedRectangle when a requested continuous corner radius is large relative to a shallow, fractional frame. That final rendering behavior needs device measurement to confirm.
 
-One focused change in naturalFileURLAscending is sufficient.
+C. FULL BORDER AND CLIPPING HIERARCHY
 
-Recommended comparison sequence:
+For a MIDI Note button:
 
-1. Compare deletingPathExtension().lastPathComponent first.
-2. Use Foundation’s locale-aware numeric comparison with .caseInsensitive and .numeric options.
-3. If base names compare equal, compare full lastPathComponent using the same primary options. This retains a meaningful order for distinct extensions.
-4. Use literal full filename, then literal path, only as deterministic tie-breakers.
+1. MainScreenGridSection calculates a fractional cell frame.
+2. gridButtonView creates MIDINoteButton with that frame and the shared corner radius.
+3. MIDINoteButton’s label is MainScreenButtonLabelView.
+4. MainScreenButtonLabelView draws:
+   • RoundedRectangle background
+   • Optional image
+   • 2 pt normal gray strokeBorder
+   • Button content
+5. MIDINoteButton draws the 3 pt green strokeBorder after the label when activeToken is non-nil.
+6. MIDITouchView is placed last, but is a transparent UIKit touch-capture view.
+7. MainScreenGridSection applies the fixed frame.
+8. MainGridButtonBoundsClip clips the entire result with RoundedRectangle using the same configured corner radius.
+9. The optional selected-action white border is applied after clipping, but only for an action-menu-selected cell.
 
-This preserves:
-• Natural numeric ordering.
-• Exact-prefix-first ordering.
-• Case-insensitive primary behavior.
-• Unicode/Japanese handling through Foundation and the current locale.
-• Determinism through literal fallback.
+For a MIDI CC one-shot button:
 
-The correction should remain exclusively in the existing shared comparator. No table, navigation, or storage redesign is needed.
+1. The same label and normal gray shell are used.
+2. MainGridMIDIMomentaryButtonStyle overlays the 3 pt green strokeBorder only while configuration.isPressed.
+3. The same outer grid-cell frame and parent clip are applied.
 
-H. SELECTION AND UI RISKS
+The green active border is above the gray normal border. There is no subsequent gray border layer that can cover the green top and bottom edges. If gray remains visible there, the active path is not painting those pixels or is being removed by shape/rasterization/clipping behavior; it is not simply behind the gray border.
 
-Most selection state is identity-based and should remain intact when only ordering changes:
+D. MOST LIKELY ROOT CAUSE
 
-• Screens: standardized path selection and path-based scroll restoration.
-• Text/Markdown: selected path.
-• Templates: selected path.
-• Images: selected path/name is primary.
-• Sounds and PDFs: persisted path is primary.
-• Table rows: ForEach identity is URL path.
+The source has no state, row-count conditional, MIDI event path, or overlay-order branch that changes specifically at seven versus eight rows.
 
-Specific risk:
-• Sound background image selection is primarily index-based through settingsSoundBackgroundImageIndex (Set_Screen.swift:2162–2191). A changed image order can map an existing index to a different background image. A focused implementation should preserve the currently resolved image URL and remap its index after sorting changes take effect, without altering opacity.
+The source-supported cause is height-sensitive rendering geometry:
 
-Secondary effect:
-• Backup export entry order follows these sorted arrays. Archive content remains identical, but ZIP entry order may change.
-• Import and restore do not rename or move files; refreshed tables simply adopt the corrected order.
+• Eight rows produces a materially shorter cell frame.
+• The configured radius does not scale from actual cell height.
+• The active green border is a 3 pt inner stroke, leaving less effective vertical drawing space than the 2 pt gray border.
+• The grid uses fractional point heights and positions without display-scale alignment.
+• The entire result is clipped by a separate outer RoundedRectangle.
 
-I. TEST CASES
+This makes the active 3 pt continuous rounded border the most likely geometry-sensitive layer. The seven/eight threshold is consistent with SwiftUI/Core Graphics path normalization or rasterization once the shorter frame reaches a particular radius-to-height and fractional-pixel combination.
 
-Natural numeric:
-• 1.png, 2.png, 11.png, 12.png
-• image2.png, image10.png
-• screen3.screen, screen20.screen
+There is no evidence that MIDI Note-On, Note-Off, toggle tokens, or touch handling cause the missing top/bottom edges. Both active-border paths use the same full RoundedRectangle strokeBorder.
 
-Prefix:
-• midi.screen, midi chords.screen
-• midi 7 octaves.screen, midi 7 octaves white.screen
-• test.txt, test2.txt
-• image.jpg, image 1.jpg
+E. STAGE 8B.31A ASSESSMENT
 
-Case and extension:
-• MIDI.screen, midi.screen
-• midi.mp3, midi.wav
-• archive.tar.gz, archive.tar 2.gz
+Recommendation: revert the Stage 8B.31A normal-border change in a future, explicitly authorized implementation stage.
 
-Unicode:
-• Japanese names with numeric suffixes, for example:
-音1.screen, 音2.screen, 音10.screen
-• Mixed Japanese and Latin names.
-• Filenames containing spaces and multiple periods.
+Reason:
+• Physical testing found no meaningful improvement.
+• The actual issue is in the active green border’s short-cell rendering path, not the normal gray border’s placement.
+• Stage 8B.31A changed the normal border geometry for all populated iPad buttons, including ordinary buttons.
+• Although the change is internally reasonable, it is unrelated to the demonstrated failure and adds an unnecessary visual difference to the baseline.
 
-For each category, verify:
-• Table order.
-• Back/First order.
-• Previous/Next order.
-• Existing selected row/highlight remains on the same file.
-• Image and Sound background selections remain on the same file, not merely the same index.
+Nothing was reverted during this read-only stage.
 
-J. IMPLEMENTATION PLAN
+F. RECOMMENDED MINIMAL CORRECTION
 
-One focused implementation stage is appropriate:
+First perform one narrow device diagnostic before changing rendering.
 
-1. Update only naturalFileURLAscending in ScreenDocument.swift to compare base names first with locale-aware case-insensitive numeric options and deterministic fallbacks.
-2. Preserve the currently selected Sound background image by URL while normalizing its index after the changed sort order is observed.
-3. Source-validate shared collection, table, navigation, and selection paths.
-4. Physically test iPhone 17, iPhone XS Max, iPad Air M2, iPad mini, and iPad Pro.
+If that confirms the expected radius-to-height threshold, make one shared active-green-border helper used by both:
 
-No source files, project settings, files, or Git state were modified during this probe.
+• MIDINoteButton
+• MainGridMIDIMomentaryButtonStyle
+
+The helper should derive its active rounded-rectangle radius from the actual rendered size and clamp it only when needed for shallow cells. The normal gray border, parent clipping, button frame, spacing, touch target, and MIDI state logic should remain unchanged.
+
+The helper should preserve the configured corner radius for normal and tall buttons. Only a short cell whose available height cannot safely accommodate the active 3 pt inset stroke should receive a reduced active-border radius.
+
+This is narrower and safer than changing grid dimensions, changing normal borders, changing clipping, or adding model-specific rules.
+
+G. REMAINING UNCERTAINTY
+
+Static source inspection cannot determine:
+
+• The physical device’s actual GeometryReader height.
+• The number of columns and the target button’s row span.
+• The display scale.
+• The resulting fractional physical-pixel values.
+• RoundedRectangle’s internal effective-radius normalization for the particular frame.
+• Whether the observed top/bottom pixels are lost during active-border path construction or final rasterization.
+
+Recommended temporary diagnostic experiment, not added:
+
+Emit one timestamped line only when grid geometry changes, containing:
+• rows, columns, span
+• GeometryReader height
+• spacing
+• resolved button width and height
+• configured corner radius
+• display scale
+• dimensions in physical pixels
+• active 3 pt inner-stroke available height
+
+Use the required format:
+
+print("🐞 [timestamp] ...")
+
+Compare the same button on the same iPad with seven and eight rows. This isolates geometry without adding MIDI-event logging or altering behavior.
+
+H. PHYSICAL-DEVICE TEST PLAN
+
+1. On the same iPad used for the report, configure the same MIDI Note button at seven and eight rows.
+2. Record the diagnostic geometry values for the exact button, including column count and span.
+3. Verify momentary MIDI Note, Note-Off, toggle, and CC one-shot paths separately.
+4. Test one-row, two-row, and three-row buttons near the short-height threshold.
+5. Confirm inactive gray borders remain unchanged.
+6. Confirm active green borders render on all four sides at seven and eight rows after the future focused correction.
+7. Repeat on:
+   • iPad Air 13-inch M2
+   • iPad mini 5th generation
+   • iPad Pro 12.9-inch
+8. Confirm iPhone 17 and iPhone XS Max remain visually and functionally unchanged.
+9. Verify no changes to MIDI messages, press/release behavior, slide gestures, grid spacing, clipping, or hit testing.

@@ -181,12 +181,7 @@ struct MainScreenButtonLabelView: View {
                     .allowsHitTesting(false)
             }
 
-            if usesInsetBorder {
-                normalButtonBorder
-            } else {
-                normalButtonBorder
-                    .padding(borderWidth / 2)
-            }
+            normalButtonBorder
         }
     }
 
@@ -201,15 +196,9 @@ struct MainScreenButtonLabelView: View {
         }
     }
 
-    @ViewBuilder
     private var normalButtonBorder: some View {
-        if usesInsetBorder {
-            RoundedRectangle(cornerRadius: cornerRadius)
-                .strokeBorder(borderColor, lineWidth: borderWidth)
-        } else {
-            RoundedRectangle(cornerRadius: cornerRadius)
-                .stroke(borderColor, lineWidth: borderWidth)
-        }
+        RoundedRectangle(cornerRadius: cornerRadius)
+            .strokeBorder(borderColor, lineWidth: borderWidth)
     }
 
     private var isHiddenMainGridEntry: Bool {

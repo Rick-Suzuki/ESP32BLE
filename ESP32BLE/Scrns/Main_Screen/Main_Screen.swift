@@ -1294,7 +1294,8 @@ Tapping a row inserts the key code at the cursor.
 						gridBackgroundOpacity: $mainGridBackgroundOpacity,
 						isEditingDocumentName: $isEditingDocumentName,
 						documentNameDraft: $documentNameDraft,
-						selectedDocumentDisplayName: selectedDocumentDisplayName,
+                        selectedDocumentName: selectedDocumentName,
+                        selectedDocumentDisplayName: selectedDocumentDisplayName,
 						isHomeDocumentSelected: isHomeDocumentSelected,
 						isDocumentNameFieldFocused: $isDocumentNameFieldFocused,
 						openKeyboardScreen: openKeyboardScreen,
@@ -6292,7 +6293,7 @@ Tapping a row inserts the key code at the cursor.
     }
 
     private func showFilenameToastIfNeeded() {
-        guard !isPad, !selectedDocumentName.isEmpty else { return }
+        guard !selectedDocumentName.isEmpty else { return }
 
         filenameToastDismissTask?.cancel()
         filenameToastText = selectedDocumentName
@@ -6441,12 +6442,11 @@ Tapping a row inserts the key code at the cursor.
 
     @ViewBuilder
     private func filenameToastOverlay(availableWidth: CGFloat) -> some View {
-        if !isPad, let filenameToastText {
+        if let filenameToastText {
             Text(filenameToastText)
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
-                .lineLimit(2)
                 .minimumScaleFactor(0.8)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 8)

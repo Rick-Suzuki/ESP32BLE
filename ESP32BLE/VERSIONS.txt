@@ -1,4 +1,9 @@
 
+V66.36
+during midi green border investigation
+261108 Sun 1633
+
+
 V66.35
 settings: tables: names wrong order
 261108 Sun 0933

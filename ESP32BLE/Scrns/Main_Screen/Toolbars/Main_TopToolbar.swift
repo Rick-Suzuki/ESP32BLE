@@ -54,6 +54,7 @@ struct MainScreenToolbarContent: View {
     @Binding var gridBackgroundOpacity: Double
     @Binding var isEditingDocumentName: Bool
     @Binding var documentNameDraft: String
+    let selectedDocumentName: String
     let selectedDocumentDisplayName: String
     let isHomeDocumentSelected: Bool
     let isDocumentNameFieldFocused: FocusState<Bool>.Binding
@@ -133,12 +134,20 @@ struct MainScreenToolbarContent: View {
 			// document name
 			//
             if isPad {
-                Text(selectedDocumentDisplayName)
-                    .font(.headline)
-                    .foregroundStyle(toolbarPrincipalForegroundColor)
-                    .frame(maxWidth: 150)
-                    .lineLimit(1) // <--- Restricts text to 1 line
-                    .truncationMode(.tail) // Truncates with "..." if text exceeds width
+                Button {
+                    ButtonClickFeedback.playIfEnabled()
+                    showCurrentFilename()
+                } label: {
+                    Text(selectedDocumentDisplayName)
+                        .font(.headline)
+                        .foregroundStyle(toolbarPrincipalForegroundColor)
+                        .frame(maxWidth: 150)
+                        .lineLimit(1) // <--- Restricts text to 1 line
+                        .truncationMode(.tail) // Truncates with "..." if text exceeds width
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Current screen, \(selectedDocumentName)")
+                .accessibilityHint("Shows the full filename.")
             } else {
                 Button("file") {
                     ButtonClickFeedback.playIfEnabled()
