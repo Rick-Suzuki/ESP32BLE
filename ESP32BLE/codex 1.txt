@@ -1,191 +1,241 @@
-STAGE 8B.31B — READ-ONLY INVESTIGATION REPORT
+STAGE 8B.32 — READ-ONLY INVESTIGATION REPORT
 
-No source files, project settings, Git state, builds, or devices were changed.
+No source files, project settings, Git state, diagnostics, builds, devices, or Simulator were changed.
 
-A. ACTUAL 7-ROW AND 8-ROW GEOMETRY
+A. SOURCE MAP
 
-Source map:
+Main grid and state:
+• Main_GridSection.swift
+   • MainScreenGridSection: lines 202–401
+   • Grid construction and sizing: lines 247–376
+   • Stable positional ForEach identity: line 268
+   • Shape/span calculation: lines 500–554
+   • Grid visual-height pass: lines 583–614
+   • Button-type routing: lines 630–783
+   • MIDI button visual and touch hierarchy: lines 798–925
+   • UIKit MIDI touch capture: lines 1025–1194
+   • One-shot MIDI button style: lines 1196–1217
+   • Temporary border diagnostics: lines 17–115 and 459–493
 
-Main_GridSection.swift
-• Grid cell calculation: lines 143–152
-• Per-button resolved frame: lines 168–212
-• Span sizing: lines 338–346
-• Cell origin: lines 348–363
-• MIDI routing: lines 411–500
-• MIDINoteButton active border: lines 564–633
-• CC one-shot pressed border: lines 945–963
-• Parent cell clipping: lines 965–976
+• Main_Screen.swift
+   • MIDI activation registry ownership: line 158
+   • Grid state ownership: lines 911–912
+   • Main Screen onChange/task chain: lines 1125–1224
+   • MIDI context, transmission, activation, release, reset: lines 1525–1713
+   • MainScreenGridSection injection: lines 1727–1799
+   • Screen-load/grid restore path: lines 6286–6365
 
-Main_Screen.swift
-• Grid spacing and corner-radius formulas: approximately lines 6272–6284
-• iPad grid uses the normal spacing/radius values; iPhone scales both down.
+• Main_ButtonBehavior.swift
+   • MainMIDITouchContext: lines 19–52
+   • MainMIDIActivationRegistry: lines 77–194
+   • Shared button-label construction: lines 2542–2616
 
-For C columns, R rows, GeometryReader height H, and iPad reserved bottom inset of zero:
+• Main_ButtonLabelView.swift
+   • Shared label shell and image task: lines 108–168
+   • Shared visual shell/border: lines 170–202
+   • Step-up counter String onChange: lines 1091–1163
+   • Timer String onChange: lines 1653–1714
 
-spacing(R) = 10 - 6 × ((C × R) - 1) / 143
+Grid resizing and persistence:
+• Main_DocumentActions.swift
+   • Restore state: lines 123–139
+   • Row/column actions: lines 144–182
+   • applyGridDimensions: lines 208–229
 
-cornerRadius(R) = 20 - 15 × ((C × R) - 1) / 143
+• ContentView.swift
+   • Limits: lines 11–13; maximum is 50 × 50 / 2,500 positions
+   • Function-key state: lines 193–196
+   • Applying parsed slot lines: lines 838–856
+   • Persisting slot lines: lines 879–935
+   • Grid-config persistence: lines 1178–1226
+   • Resize/remap algorithm: lines 1378–1469
 
-availableGridHeight(R) = H + 30 - ((R - 1) × spacing(R))
+Most likely String onChange warning source:
+• Soft_Editor_Overlay.swift
+   • Linked String observers: lines 296–310
+   • Bidirectional synchronization writes: lines 880–906
 
-oneRowButtonHeight(R) = availableGridHeight(R) / R
+B. GRID CONSTRUCTION
 
-For the two configurations:
+The grid is eager, not lazy.
 
-7 rows:
-• spacing7 = 10 - 6 × ((7C) - 1) / 143
-• radius7 = 20 - 15 × ((7C) - 1) / 143
-• height7 = (H + 30 - 6 × spacing7) / 7
+MainScreenGridSection creates:
 
-8 rows:
-• spacing8 = 10 - 6 × ((8C) - 1) / 143
-• radius8 = 20 - 15 × ((8C) - 1) / 143
-• height8 = (H + 30 - 7 × spacing8) / 8
+• Array(functionKeys.prefix(visibleBoxCount).enumerated()) at line 257.
+• A ZStack child for every visible position through ForEach at line 268.
+• An EmptyView for continuation tokens, but each position still enters the ForEach.
+• A full button hierarchy for non-continuation positions, including labels, backgrounds, borders, gestures, and for MIDI buttons, a UIKit touch-capture view.
 
-A multi-row button has:
+For a 20 × 37 configuration, 740 position records are enumerated. Empty ordinary positions use a relatively small label branch, but they are still SwiftUI nodes. Populated MIDI positions are materially more expensive because they include MIDINoteButton, MIDITouchView, and, on iPad, temporary geometry probes.
 
-height(span) = oneRowButtonHeight × span + spacing × (span - 1)
+Identity is id: .offset. This is stable for a fixed grid slot, which is appropriate while a grid remains unchanged. During a resize, occupied entries can be remapped to different offsets by ContentView, so SwiftUI correctly treats changed slots as changed content.
 
-Its vertical origin is:
+Grid calculations are repeated for each MainScreenGridSection body evaluation:
 
-row × (oneRowButtonHeight + spacing)
+• Cell width and height.
+• Button origin and resolved span size.
+• buttonShape for each visible non-continuation position.
+• renderedButtonGridVisualHeight performs another pass and calls buttonShape again.
 
-There is no pixel rounding in these calculations. Both the dimensions and origins may therefore be fractional points; the physical-pixel result also depends on the iPad’s display scale.
+These operations are linear in visible positions. buttonShape has a small fixed candidate set, so this is not an N-squared algorithm, but its cost grows directly with grid size.
 
-The exact numeric H, C, display scale, and tested button span are runtime values, so the source alone cannot truthfully provide final point/pixel measurements for the physical device.
+C. SINGLE MIDI BUTTON UPDATE PATH
 
-B. EFFECTIVE CORNER RADIUS
+Momentary MIDI Note path:
 
-All relevant layers receive the same configured source radius:
+1. MIDITouchCaptureView receives touchesBegan.
+2. It calls beginMIDIActivation through MIDITouchView.
+3. MainScreen.beginMIDIActivation validates the document, slot, command text, session, and output availability.
+4. MainMIDIActivationRegistry.begin sends the MIDI Note On first; only an accepted send creates and stores a UUID token.
+5. Adding the token changes the registry’s private activations dictionary.
+6. The pressed button reads activeToken(for: context), receives a non-nil token, and displays the green border.
+7. On touch end/cancellation/exit, MIDITouchCaptureView calls endMIDIActivation.
+8. MainMIDIActivationRegistry.release removes that token and sends the required Note Off or CC release command.
+9. The active border disappears when activeToken becomes nil.
 
-• Normal gray background: mainGridButtonCornerRadius
-• Normal gray border: mainGridButtonCornerRadius
-• Active green MIDI Note border: mainGridButtonCornerRadius
-• Active green MIDI CC one-shot border: mainGridButtonCornerRadius
-• Parent clipping shape: mainGridButtonCornerRadius
+Toggle and CC behavior retain their existing specialized paths. Note-Off uses local isNoteOffPressed state for transient visual feedback and reconciles matching active notes.
 
-The configured radius decreases only slightly when moving from seven to eight rows because it is based on total button count, not actual button height. The cell height decreases much more substantially.
+D. INVALIDATION SCOPE
 
-Therefore the corner-radius-to-height ratio rises at eight rows.
+The activation registry is @Observable, but activeToken(for:) reads the single activations dictionary.
 
-SwiftUI’s documented strokeBorder behavior is an inner stroke: it insets the shape by half its line width before applying the stroke. Thus:
+Every MIDI button’s active-token query is made while MainScreenGridSection constructs its body. Therefore, a mutation of activations can invalidate the grid section’s observed dependency, potentially causing its body to re-evaluate and recreate all visible grid descriptions, including unrelated buttons.
 
-• Gray border: 2 pt strokeBorder, centerline inset by 1 pt.
-• Green border: 3 pt strokeBorder, centerline inset by 1.5 pt.
+This is source-supported potential broad invalidation. It does not prove that every button is laid out, rasterized, or physically redrawn after every press:
 
-The green border’s effective drawing region is therefore smaller than the gray border’s. This becomes more significant as button height decreases.
+• Body re-evaluation: potentially broad.
+• Layout: SwiftUI may reuse unchanged layout results; source inspection cannot quantify it.
+• Rendering: SwiftUI can retain unchanged rendered output; it is not correct to claim all 740 buttons are redrawn.
+• MIDI transmission: remains limited to the pressed button’s validated command and required release.
 
-The public API documentation does not specify the internal clamping/path-normalization behavior of RoundedRectangle when a requested continuous corner radius is large relative to a shallow, fractional frame. That final rendering behavior needs device measurement to confirm.
+The active-token lookup also linearly searches active activations. Normally that collection is small, so this is not the practical primary cost; the broad observed dictionary dependency is more significant.
 
-C. FULL BORDER AND CLIPPING HIERARCHY
+E. ONCHANGE WARNING
 
-For a MIDI Note button:
+The exact warning source cannot be proven from the warning text alone. SwiftUI reports only the observed type, String, not the view or property name.
 
-1. MainScreenGridSection calculates a fractional cell frame.
-2. gridButtonView creates MIDINoteButton with that frame and the shared corner radius.
-3. MIDINoteButton’s label is MainScreenButtonLabelView.
-4. MainScreenButtonLabelView draws:
-   • RoundedRectangle background
-   • Optional image
-   • 2 pt normal gray strokeBorder
-   • Button content
-5. MIDINoteButton draws the 3 pt green strokeBorder after the label when activeToken is non-nil.
-6. MIDITouchView is placed last, but is a transparent UIKit touch-capture view.
-7. MainScreenGridSection applies the fixed frame.
-8. MainGridButtonBoundsClip clips the entire result with RoundedRectangle using the same configured corner radius.
-9. The optional selected-action white border is applied after clipping, but only for an action-menu-selected cell.
+The strongest source-supported candidate is the Soft Editor’s bidirectional synchronization:
 
-For a MIDI CC one-shot button:
+• editingSlotText onChange can call syncDraftsFromCombinedText.
+• That method changes actionDraft and rightDraft.
+• Their onChange handlers call syncCombinedTextFromDrafts.
+• That method can change editingSlotText again.
 
-1. The same label and normal gray shell are used.
-2. MainGridMIDIMomentaryButtonStyle overlays the 3 pt green strokeBorder only while configuration.isPressed.
-3. The same outer grid-cell frame and parent clip are applied.
+There are equality checks and an asynchronous reset of isSyncingDraftsFromCombinedText, but this remains a cyclic String-observer graph. It is the only inspected Main Screen String onChange path that writes one of the other observed Strings and can write back to the original observed String.
 
-The green active border is above the gray normal border. There is no subsequent gray border layer that can cover the green top and bottom edges. If gray remains visible there, the active path is not painting those pixels or is being removed by shape/rasterization/clipping behavior; it is not simply behind the gray border.
+The Main Screen’s selectedDocumentName, selectedDocumentDisplayName, and renameAlertMessage handlers mutate other state but do not write their observed String back. The counter and timer configurationText handlers write local numeric/string display state, not configurationText.
 
-D. MOST LIKELY ROOT CAUSE
+Conclusion:
+• If the warning occurs while the Soft Editor is presented, this loop is the most likely source.
+• If Test D reproduces it with no slot editor open, source inspection alone is insufficient to identify the exact handler. The next diagnostic stage should add one temporary timestamped print at the entrance of only the four Soft Editor sync observers, including a frame counter and current values. No grid-wide logging is needed.
 
-The source has no state, row-count conditional, MIDI event path, or overlay-order branch that changes specifically at seven versus eight rows.
+F. DIAGNOSTIC OVERHEAD
 
-The source-supported cause is height-sensitive rendering geometry:
+MIDI-BORDER-GEOMETRY:
+• Runs from per-button task IDs at Main_GridSection.swift lines 334–371.
+• The task is keyed by frame, dimensions, and refresh token.
+• It maintains a @State Set for deduplication.
+• It can run for each MIDI position after relevant grid/layout changes, but does not run per MIDI Note On/Off unless another invalidation changes the task identity.
 
-• Eight rows produces a materially shorter cell frame.
-• The configured radius does not scale from actual cell height.
-• The active green border is a 3 pt inner stroke, leaving less effective vertical drawing space than the 2 pt gray border.
-• The grid uses fractional point heights and positions without display-scale alignment.
-• The entire result is clipped by a separate outer RoundedRectangle.
+MIDI-BORDER-BOUNDS:
+• Adds GeometryReader backgrounds and CGRect onChange handlers for MIDI layers.
+• MIDI Note paths can contain probes for outer cell, normal label, green overlay, and touch capture.
+• It mutates only ordinary reference-type reporter collections, not SwiftUI @State, during frame reporting.
+• Its observed type is CGRect, not String.
 
-This makes the active 3 pt continuous rounded border the most likely geometry-sensitive layer. The seven/eight threshold is consistent with SwiftUI/Core Graphics path normalization or rasterization once the shorter frame reaches a particular radius-to-height and fractional-pixel combination.
+Therefore, the diagnostics do not directly explain:
+“onChange(of: String) action tried to update multiple times per frame.”
 
-There is no evidence that MIDI Note-On, Note-Off, toggle tokens, or touch handling cause the missing top/bottom edges. Both active-border paths use the same full RoundedRectangle strokeBorder.
+They do add real layout-observation overhead on iPad MIDI buttons. At large grids with many populated MIDI buttons, they can increase main-thread layout work and console activity. They should remain untouched as requested until the planned cleanup.
 
-E. STAGE 8B.31A ASSESSMENT
+G. GRID RESIZING
 
-Recommendation: revert the Stage 8B.31A normal-border change in a future, explicitly authorized implementation stage.
+Each row/column action calls applyGridDimensions.
 
-Reason:
-• Physical testing found no meaningful improvement.
-• The actual issue is in the active green border’s short-cell rendering path, not the normal gray border’s placement.
-• Stage 8B.31A changed the normal border geometry for all populated iPad buttons, including ordinary buttons.
-• Although the change is internally reasonable, it is unrelated to the demonstrated failure and adds an unnecessary visual difference to the baseline.
+The resize sequence is:
 
-Nothing was reverted during this read-only stage.
+1. Validate proposed dimensions and maximum position count.
+2. ContentView.resizeSelectedDocumentGrid remaps occupied slot lines into the new grid.
+3. persistSlotLines synchronously serializes and writes the screen document.
+4. applySlotLines reparses lines and replaces the entire functionKeys array.
+5. MainScreen updates visibleGridDimensions and visibleBoxCount.
+6. Grid configuration is persisted separately through saveGridDimensions.
+7. SwiftUI reconstructs the visible grid for the new dimensions.
+8. MainScreen observes functionKeys.map(.rawLine), resets MIDI activations, and observes definedFunctionKeyCount to ensure capacity.
 
-F. RECOMMENDED MINIMAL CORRECTION
+A rapid row/column sequence can therefore perform repeated whole-grid remaps, synchronous file writes, parse/replacement of functionKeys, state updates, and view reconstruction. This is a much more plausible reason for warning volume and interaction pressure than pressing one MIDI button.
 
-First perform one narrow device diagnostic before changing rendering.
+H. GESTURE TIMEOUTS
 
-If that confirms the expected radius-to-height threshold, make one shared active-green-border helper used by both:
+There is no source evidence that the reported system gesture-gate timeout is caused by a MIDI protocol error or the String onChange warning.
 
-• MIDINoteButton
-• MainGridMIDIMomentaryButtonStyle
+Relevant source conditions:
 
-The helper should derive its active rounded-rectangle radius from the actual rendered size and clamp it only when needed for shallow cells. The normal gray border, parent clipping, button frame, spacing, touch target, and MIDI state logic should remain unchanged.
+• MIDI uses UIKit touch capture, not the ordinary SwiftUI Button gesture path.
+• Slider movement scans registered MIDI touch views to locate a target; this is linear in active MIDI capture views during a slide.
+• Resizing performs synchronous remapping, parsing, persistence, and eager grid reconstruction on the main actor.
+• Large populated MIDI grids can contain many UIKit touch views and temporary measurement views.
 
-The helper should preserve the configured corner radius for normal and tall buttons. Only a short cell whose available height cannot safely accommodate the active 3 pt inset stroke should receive a reduced active-border radius.
+These facts make main-thread pressure during rapid resizing plausible. They do not establish a direct cause for Apple’s system gesture timeout messages.
 
-This is narrower and safer than changing grid dimensions, changing normal borders, changing clipping, or adding model-specific rules.
+I. PERFORMANCE RISKS
 
-G. REMAINING UNCERTAINTY
+Highest practical importance:
 
-Static source inspection cannot determine:
+1. Eager construction of every visible position.
+   • Cost grows with grid position count.
+   • 740 positions are all enumerated and participate in the ZStack.
 
-• The physical device’s actual GeometryReader height.
-• The number of columns and the target button’s row span.
-• The display scale.
-• The resulting fractional physical-pixel values.
-• RoundedRectangle’s internal effective-radius normalization for the particular frame.
-• Whether the observed top/bottom pixels are lost during active-border path construction or final rasterization.
+2. Whole-grid activation dependency.
+   • A one-button MIDI press can invalidate the MainScreenGridSection because every active-token lookup observes the same dictionary.
 
-Recommended temporary diagnostic experiment, not added:
+3. Resizing writes and replaces whole grid data synchronously.
+   • Each dimension change remaps slots, persists a document, reparses entries, and reconstructs the grid.
 
-Emit one timestamped line only when grid geometry changes, containing:
-• rows, columns, span
-• GeometryReader height
-• spacing
-• resolved button width and height
-• configured corner radius
-• display scale
-• dimensions in physical pixels
-• active 3 pt inner-stroke available height
+4. Temporary MIDI geometry probes.
+   • iPad-only, but multiply GeometryReader and CGRect observation work for each populated MIDI button.
 
-Use the required format:
+5. Per-button image tasks.
+   • MainScreenButtonLabelView has a task keyed by image request, including button size. A resize can restart image work for image-backed buttons.
 
-print("🐞 [timestamp] ...")
+The same code paths serve 4 × 4, 6 × 8, 10 × 10, and 20 × 37. The difference is the number of materialized positions and populated-content hierarchies; no benchmark timing can be inferred from source.
 
-Compare the same button on the same iPad with seven and eight rows. This isolates geometry without adding MIDI-event logging or altering behavior.
+J. MINIMAL CORRECTIONS
 
-H. PHYSICAL-DEVICE TEST PLAN
+No change is justified from source inspection alone for the MIDI activation registry. A per-button observation redesign could reduce broad invalidation, but it carries meaningful risk to simultaneous touches, toggles, holds, slides, cancellation, and note ownership. It should be considered only after a focused measurement confirms press latency or excessive re-evaluation.
 
-1. On the same iPad used for the report, configure the same MIDI Note button at seven and eight rows.
-2. Record the diagnostic geometry values for the exact button, including column count and span.
-3. Verify momentary MIDI Note, Note-Off, toggle, and CC one-shot paths separately.
-4. Test one-row, two-row, and three-row buttons near the short-height threshold.
-5. Confirm inactive gray borders remain unchanged.
-6. Confirm active green borders render on all four sides at seven and eight rows after the future focused correction.
-7. Repeat on:
-   • iPad Air 13-inch M2
-   • iPad mini 5th generation
-   • iPad Pro 12.9-inch
-8. Confirm iPhone 17 and iPhone XS Max remain visually and functionally unchanged.
-9. Verify no changes to MIDI messages, press/release behavior, slide gestures, grid spacing, clipping, or hit testing.
+One narrow correction is justified if the warning is reproduced with the Soft Editor visible:
+
+• Make the editor synchronization one-directional per user event, or consolidate actionDraft/rightDraft/combined text into one source of truth.
+• The correction should avoid any onChange handler writing another String that then writes back to the original String in the same update cycle.
+• Preserve current normalization, hidden-state metadata, and editor behavior.
+
+Do not debounce grid persistence or replace the eager absolute-position grid with LazyVGrid without separate design validation; either could alter current grid geometry, persistence timing, slot remapping, or spanning buttons.
+
+K. FOLLOW-UP PLAN
+
+Recommended next stage: focused diagnostic, not optimization.
+
+1. On iPad mini, perform:
+   • Test A: 4 × 4, repeatedly press the same MIDI button.
+   • Test B: 6 × 8, same button.
+   • Test C: 20 × 37, same button.
+   • Test D: rapidly resize without pressing MIDI buttons.
+
+2. Repeat Test D twice:
+   • Main Screen with no slot editor presented.
+   • Main Screen with the Soft Editor presented.
+
+3. Record:
+   • Presence/count of the String onChange warning.
+   • Whether gesture timeout messages occur.
+   • Whether MIDI press behavior changes by grid size.
+
+4. Only if the warning occurs with the Soft Editor:
+   • Add a minimal temporary timestamped diagnostic to the four editor synchronization handlers.
+   • Do not add logs to every grid cell.
+   • Use the result to make one narrow synchronization correction in a later stage.
+
+5. Only if MIDI presses show measurable degradation independent of resizing:
+   • Add a bounded body/update counter around MainScreenGridSection and the pressed MIDI button path.
+   • Confirm invalidation scope before considering a registry redesign.

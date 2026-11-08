@@ -1,4 +1,8 @@
 
+V66.37
+green border fixed, max grid set to 20x20
+261108 Sun 1747
+
 V66.36
 during midi green border investigation
 261108 Sun 1633

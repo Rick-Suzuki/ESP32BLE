@@ -1,526 +1,519 @@
-Looking up debug dylib relative path
-Found debug dylib relative path string `ESP32BLE.debug.dylib`
-Looking up debug dylib entry point name
-No debug dylib entry point name defined.
-Looking up debug dylib install name
-Found debug dylib install name string `@rpath/ESP32BLE.debug.dylib`
-Looking for Previews JIT link entry point.
-No Previews JIT entry point found.
-Gave PreviewsInjection a chance to run and it returned, continuing with debug dylib.
-Looking for main entry point.
-Opening debug dylib with '@rpath/ESP32BLE.debug.dylib'
-Debug dylib handle: 0x748655a0
-No entry point found. Checking for alias.
-Calling provided entry point.
-Update the Info.plist: Support for all orientations will soon be required.
-[BLE-CONNECT-PROBE] 🐞 t=0.000s scan stop requested reason=stop() activePeripheralUUID=nil discoveredDeviceCount=0
-API MISUSE: <CBCentralManager: 0x1034a4200> can only accept this command while in the powered on state
-[BLE-CONNECT-PROBE] 🐞 t=0.000s scanning stopped
-[BLE-CONNECT-PROBE] 🐞 t=0.000s state isConnected previous=false new=false activePeripheralUUID=nil attempt=0
-[BLE-CONNECT-PROBE] 🐞 t=0.679s scan stop requested reason=stop() activePeripheralUUID=nil discoveredDeviceCount=0
-API MISUSE: <CBCentralManager: 0x1034a4200> can only accept this command while in the powered on state
-[BLE-CONNECT-PROBE] 🐞 t=0.679s scanning stopped
-[BLE-CONNECT-PROBE] 🐞 t=0.679s state isConnected previous=false new=false activePeripheralUUID=nil attempt=0
-Hang detected: 0.55s (overlaps extended launch)
-Hang detected: 0.48s (overlaps extended launch)
-[BLE-CONNECT-PROBE] 🐞 t=7.538s scan stop requested reason=stop() activePeripheralUUID=nil discoveredDeviceCount=0
-[BLE-CONNECT-PROBE] 🐞 t=7.538s scanning stopped
-[BLE-CONNECT-PROBE] 🐞 t=7.538s state isConnected previous=false new=false activePeripheralUUID=nil attempt=0
-<0x103535e00> Gesture: System gesture gate timed out.
-[ESP-MAC-TX] payload="AUTH:RESPONSE:1:esp-13bfcaa07427f22334ceac2e1d3880e0:fc69a54e187090a3c69050a6872d9b5dc35c949c542882f7d927b5162454ce41\n" bytes=118 values=[65,85,84,72,58,82,69,83,80,79,78,83,69,58,49,58,101,115,112,45,49,51,98,102,99,97,97,48,55,52,50,55,102,50,50,51,51,52,99,101,97,99,50,101,49,100,51,56,56,48,101,48,58,102,99,54,57,97,53,52,101,49,56,55,48,57,48,97,51,99,54,57,48,53,48,97,54,56,55,50,100,57,98,53,100,99,51,53,99,57,52,57,99,53,52,50,56,56,50,102,55,100,57,50,55,98,53,49,54,50,52,53,52,99,101,52,49,10]
-[ESP-AUTH] authentication response sent
-[ESP-AUTH] authenticated with Mac Helper
-🐞 2026-11-08T07:25:13Z MIDI-BORDER-GEOMETRY
-🐞 kind=touch rows=6 columns=6 slot=5 row=0 column=5 columnSpan=1 rowSpan=1
-🐞 gridHeightPt=628.0 spacingPt=8.531468531468532 cellWidthPt=162.8904428904429 cellHeightPt=102.55710955710957 buttonWidthPt=162.8904428904429 buttonHeightPt=102.55710955710957 cornerRadiusPt=16.328671328671327
-🐞 displayScale=2.0 buttonWidthPx=325.7808857808858 buttonHeightPx=205.11421911421914 activeBorderWidthPt=3.0 normalBorderWidthPt=2.0 activeBorderInteriorHeightPt=99.55710955710957
-🐞 2026-11-08T07:25:13Z MIDI-BORDER-GEOMETRY
-🐞 kind=touch rows=9 columns=4 slot=5 row=1 column=1 columnSpan=1 rowSpan=1
-🐞 gridHeightPt=628.0 spacingPt=8.531468531468532 cellWidthPt=248.6013986013986 cellHeightPt=65.52758352758353 buttonWidthPt=248.6013986013986 buttonHeightPt=65.52758352758353 cornerRadiusPt=16.328671328671327
-🐞 displayScale=2.0 buttonWidthPx=497.2027972027972 buttonHeightPx=131.05516705516706 activeBorderWidthPt=3.0 normalBorderWidthPt=2.0 activeBorderInteriorHeightPt=62.52758352758353
-<0x103535e00> Gesture: System gesture gate timed out.
-🐞 2026-11-08T07:25:15Z SETTINGS TOOLBAR MAIN TAP mode=files
-🐞 2026-11-08T07:25:15Z SETTINGS TOOLBAR MAIN ACTION INVOKED
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 2026-11-08T07:25:19Z MIDI-BORDER-GEOMETRY
-🐞 kind=touch rows=10 columns=4 slot=5 row=1 column=1 columnSpan=1 rowSpan=1
-🐞 gridHeightPt=628.0 spacingPt=8.363636363636363 cellWidthPt=248.72727272727272 cellHeightPt=58.27272727272727 buttonWidthPt=248.72727272727272 buttonHeightPt=58.27272727272727 cornerRadiusPt=15.90909090909091
-🐞 displayScale=2.0 buttonWidthPx=497.45454545454544 buttonHeightPx=116.54545454545455 activeBorderWidthPt=3.0 normalBorderWidthPt=2.0 activeBorderInteriorHeightPt=55.27272727272727
-🐞 2026-11-08T07:25:21Z MIDI-BORDER-GEOMETRY
-🐞 kind=touch rows=8 columns=4 slot=5 row=1 column=1 columnSpan=1 rowSpan=1
-🐞 gridHeightPt=628.0 spacingPt=8.6993006993007 cellWidthPt=248.47552447552448 cellHeightPt=74.6381118881119 buttonWidthPt=248.47552447552448 buttonHeightPt=74.6381118881119 cornerRadiusPt=16.748251748251747
-🐞 displayScale=2.0 buttonWidthPx=496.95104895104896 buttonHeightPx=149.2762237762238 activeBorderWidthPt=3.0 normalBorderWidthPt=2.0 activeBorderInteriorHeightPt=71.6381118881119
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 2026-11-08T07:25:23Z MIDI-BORDER-GEOMETRY
-🐞 kind=touch rows=7 columns=4 slot=5 row=1 column=1 columnSpan=1 rowSpan=1
-🐞 gridHeightPt=628.0 spacingPt=8.867132867132867 cellWidthPt=248.34965034965035 cellHeightPt=86.3996003996004 buttonWidthPt=248.34965034965035 buttonHeightPt=86.3996003996004 cornerRadiusPt=17.167832167832167
-🐞 displayScale=2.0 buttonWidthPx=496.6993006993007 buttonHeightPx=172.7992007992008 activeBorderWidthPt=3.0 normalBorderWidthPt=2.0 activeBorderInteriorHeightPt=83.3996003996004
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 2026-11-08T07:25:36Z MIDI-BORDER-GEOMETRY
-🐞 kind=touch rows=6 columns=4 slot=5 row=1 column=1 columnSpan=1 rowSpan=1
-🐞 gridHeightPt=628.0 spacingPt=9.034965034965035 cellWidthPt=248.2237762237762 cellHeightPt=102.13752913752914 buttonWidthPt=248.2237762237762 buttonHeightPt=102.13752913752914 cornerRadiusPt=17.587412587412587
-🐞 displayScale=2.0 buttonWidthPx=496.4475524475524 buttonHeightPx=204.27505827505829 activeBorderWidthPt=3.0 normalBorderWidthPt=2.0 activeBorderInteriorHeightPt=99.13752913752914
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
+🐞 2026-11-08T08:16:35Z MIDI-BORDER-GEOMETRY
+🐞 kind=touch rows=41 columns=20 slot=20 row=1 column=0 columnSpan=1 rowSpan=1
+🐞 gridHeightPt=628.0 spacingPt=4.0 cellWidthPt=47.2 cellHeightPt=12.146341463414634 buttonWidthPt=47.2 buttonHeightPt=12.146341463414634 cornerRadiusPt=5.0
+🐞 displayScale=2.0 buttonWidthPx=94.4 buttonHeightPx=24.29268292682927 activeBorderWidthPt=3.0 normalBorderWidthPt=2.0 activeBorderInteriorHeightPt=9.146341463414634
+🐞 2026-11-08T08:16:35Z MIDI-BORDER-GEOMETRY
+🐞 kind=touch rows=29 columns=29 slot=20 row=0 column=20 columnSpan=1 rowSpan=1
+🐞 gridHeightPt=628.0 spacingPt=4.0 cellWidthPt=31.310344827586206 cellHeightPt=18.82758620689655 buttonWidthPt=31.310344827586206 buttonHeightPt=18.82758620689655 cornerRadiusPt=5.0
+🐞 displayScale=2.0 buttonWidthPx=62.62068965517241 buttonHeightPx=37.6551724137931 activeBorderWidthPt=3.0 normalBorderWidthPt=2.0 activeBorderInteriorHeightPt=15.827586206896552
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+🐞 2026-11-08T08:16:36Z MIDI-BORDER-GEOMETRY
+🐞 kind=touch rows=27 columns=29 slot=20 row=0 column=20 columnSpan=1 rowSpan=1
+🐞 gridHeightPt=628.0 spacingPt=4.0 cellWidthPt=31.310344827586206 cellHeightPt=20.51851851851852 buttonWidthPt=31.310344827586206 buttonHeightPt=20.51851851851852 cornerRadiusPt=5.0
+🐞 displayScale=2.0 buttonWidthPx=62.62068965517241 buttonHeightPx=41.03703703703704 activeBorderWidthPt=3.0 normalBorderWidthPt=2.0 activeBorderInteriorHeightPt=17.51851851851852
+🐞 2026-11-08T08:16:37Z MIDI-BORDER-GEOMETRY
+🐞 kind=touch rows=28 columns=28 slot=20 row=0 column=20 columnSpan=1 rowSpan=1
+🐞 gridHeightPt=628.0 spacingPt=4.0 cellWidthPt=32.57142857142857 cellHeightPt=19.642857142857142 buttonWidthPt=32.57142857142857 buttonHeightPt=19.642857142857142 cornerRadiusPt=5.0
+🐞 displayScale=2.0 buttonWidthPx=65.14285714285714 buttonHeightPx=39.285714285714285 activeBorderWidthPt=3.0 normalBorderWidthPt=2.0 activeBorderInteriorHeightPt=16.642857142857142
+🐞 2026-11-08T08:16:38Z MIDI-BORDER-GEOMETRY
+🐞 kind=touch rows=24 columns=28 slot=20 row=0 column=20 columnSpan=1 rowSpan=1
+🐞 gridHeightPt=628.0 spacingPt=4.0 cellWidthPt=32.57142857142857 cellHeightPt=23.583333333333332 buttonWidthPt=32.57142857142857 buttonHeightPt=23.583333333333332 cornerRadiusPt=5.0
+🐞 displayScale=2.0 buttonWidthPx=65.14285714285714 buttonHeightPx=47.166666666666664 activeBorderWidthPt=3.0 normalBorderWidthPt=2.0 activeBorderInteriorHeightPt=20.583333333333332
+🐞 2026-11-08T08:16:38Z MIDI-BORDER-GEOMETRY
+🐞 kind=touch rows=26 columns=26 slot=20 row=0 column=20 columnSpan=1 rowSpan=1
+🐞 gridHeightPt=628.0 spacingPt=4.0 cellWidthPt=35.38461538461539 cellHeightPt=21.46153846153846 buttonWidthPt=35.38461538461539 buttonHeightPt=21.46153846153846 cornerRadiusPt=5.0
+🐞 displayScale=2.0 buttonWidthPx=70.76923076923077 buttonHeightPx=42.92307692307692 activeBorderWidthPt=3.0 normalBorderWidthPt=2.0 activeBorderInteriorHeightPt=18.46153846153846
+🐞 2026-11-08T08:16:39Z MIDI-BORDER-GEOMETRY
+🐞 kind=touch rows=20 columns=26 slot=20 row=0 column=20 columnSpan=1 rowSpan=1
+🐞 gridHeightPt=628.0 spacingPt=4.0 cellWidthPt=35.38461538461539 cellHeightPt=29.1 buttonWidthPt=35.38461538461539 buttonHeightPt=29.1 cornerRadiusPt=5.0
+🐞 displayScale=2.0 buttonWidthPx=70.76923076923077 buttonHeightPx=58.2 activeBorderWidthPt=3.0 normalBorderWidthPt=2.0 activeBorderInteriorHeightPt=26.1
+🐞 2026-11-08T08:16:40Z MIDI-BORDER-GEOMETRY
+🐞 kind=touch rows=23 columns=23 slot=20 row=0 column=20 columnSpan=1 rowSpan=1
+🐞 gridHeightPt=628.0 spacingPt=4.0 cellWidthPt=40.52173913043478 cellHeightPt=24.782608695652176 buttonWidthPt=40.52173913043478 buttonHeightPt=24.782608695652176 cornerRadiusPt=5.0
+🐞 displayScale=2.0 buttonWidthPx=81.04347826086956 buttonHeightPx=49.56521739130435 activeBorderWidthPt=3.0 normalBorderWidthPt=2.0 activeBorderInteriorHeightPt=21.782608695652176
+🐞 2026-11-08T08:16:41Z MIDI-BORDER-GEOMETRY
+🐞 kind=touch rows=19 columns=23 slot=20 row=0 column=20 columnSpan=1 rowSpan=1
+🐞 gridHeightPt=628.0 spacingPt=4.0 cellWidthPt=40.52173913043478 cellHeightPt=30.842105263157894 buttonWidthPt=40.52173913043478 buttonHeightPt=30.842105263157894 cornerRadiusPt=5.0
+🐞 displayScale=2.0 buttonWidthPx=81.04347826086956 buttonHeightPx=61.68421052631579 activeBorderWidthPt=3.0 normalBorderWidthPt=2.0 activeBorderInteriorHeightPt=27.842105263157894
+🐞 2026-11-08T08:16:41Z MIDI-BORDER-GEOMETRY
+🐞 kind=touch rows=21 columns=21 slot=20 row=0 column=20 columnSpan=1 rowSpan=1
+🐞 gridHeightPt=628.0 spacingPt=4.0 cellWidthPt=44.76190476190476 cellHeightPt=27.523809523809526 buttonWidthPt=44.76190476190476 buttonHeightPt=27.523809523809526 cornerRadiusPt=5.0
+🐞 displayScale=2.0 buttonWidthPx=89.52380952380952 buttonHeightPx=55.04761904761905 activeBorderWidthPt=3.0 normalBorderWidthPt=2.0 activeBorderInteriorHeightPt=24.523809523809526
+🐞 2026-11-08T08:16:41Z MIDI-BORDER-GEOMETRY
+🐞 kind=touch rows=20 columns=21 slot=20 row=0 column=20 columnSpan=1 rowSpan=1
+🐞 gridHeightPt=628.0 spacingPt=4.0 cellWidthPt=44.76190476190476 cellHeightPt=29.1 buttonWidthPt=44.76190476190476 buttonHeightPt=29.1 cornerRadiusPt=5.0
+🐞 displayScale=2.0 buttonWidthPx=89.52380952380952 buttonHeightPx=58.2 activeBorderWidthPt=3.0 normalBorderWidthPt=2.0 activeBorderInteriorHeightPt=26.1
+🐞 2026-11-08T08:16:41Z MIDI-BORDER-GEOMETRY
+🐞 kind=touch rows=19 columns=21 slot=20 row=0 column=20 columnSpan=1 rowSpan=1
+🐞 gridHeightPt=628.0 spacingPt=4.0 cellWidthPt=44.76190476190476 cellHeightPt=30.842105263157894 buttonWidthPt=44.76190476190476 buttonHeightPt=30.842105263157894 cornerRadiusPt=5.0
+🐞 displayScale=2.0 buttonWidthPx=89.52380952380952 buttonHeightPx=61.68421052631579 activeBorderWidthPt=3.0 normalBorderWidthPt=2.0 activeBorderInteriorHeightPt=27.842105263157894
+🐞 2026-11-08T08:16:42Z MIDI-BORDER-GEOMETRY
+🐞 kind=touch rows=18 columns=21 slot=20 row=0 column=20 columnSpan=1 rowSpan=1
+🐞 gridHeightPt=628.0 spacingPt=4.0 cellWidthPt=44.76190476190476 cellHeightPt=32.77777777777778 buttonWidthPt=44.76190476190476 buttonHeightPt=32.77777777777778 cornerRadiusPt=5.0
+🐞 displayScale=2.0 buttonWidthPx=89.52380952380952 buttonHeightPx=65.55555555555556 activeBorderWidthPt=3.0 normalBorderWidthPt=2.0 activeBorderInteriorHeightPt=29.77777777777778
+🐞 2026-11-08T08:16:42Z MIDI-BORDER-GEOMETRY
+🐞 kind=touch rows=17 columns=21 slot=20 row=0 column=20 columnSpan=1 rowSpan=1
+🐞 gridHeightPt=628.0 spacingPt=4.0 cellWidthPt=44.76190476190476 cellHeightPt=34.94117647058823 buttonWidthPt=44.76190476190476 buttonHeightPt=34.94117647058823 cornerRadiusPt=5.0
+🐞 displayScale=2.0 buttonWidthPx=89.52380952380952 buttonHeightPx=69.88235294117646 activeBorderWidthPt=3.0 normalBorderWidthPt=2.0 activeBorderInteriorHeightPt=31.941176470588232
+🐞 2026-11-08T08:16:42Z MIDI-BORDER-GEOMETRY
+🐞 kind=touch rows=16 columns=21 slot=20 row=0 column=20 columnSpan=1 rowSpan=1
+🐞 gridHeightPt=628.0 spacingPt=4.0 cellWidthPt=44.76190476190476 cellHeightPt=37.375 buttonWidthPt=44.76190476190476 buttonHeightPt=37.375 cornerRadiusPt=5.0
+🐞 displayScale=2.0 buttonWidthPx=89.52380952380952 buttonHeightPx=74.75 activeBorderWidthPt=3.0 normalBorderWidthPt=2.0 activeBorderInteriorHeightPt=34.375
+🐞 2026-11-08T08:16:43Z MIDI-BORDER-GEOMETRY
+🐞 kind=touch rows=15 columns=21 slot=20 row=0 column=20 columnSpan=1 rowSpan=1
+🐞 gridHeightPt=628.0 spacingPt=4.0 cellWidthPt=44.76190476190476 cellHeightPt=40.13333333333333 buttonWidthPt=44.76190476190476 buttonHeightPt=40.13333333333333 cornerRadiusPt=5.0
+🐞 displayScale=2.0 buttonWidthPx=89.52380952380952 buttonHeightPx=80.26666666666667 activeBorderWidthPt=3.0 normalBorderWidthPt=2.0 activeBorderInteriorHeightPt=37.13333333333333
+🐞 2026-11-08T08:16:43Z MIDI-BORDER-GEOMETRY
+🐞 kind=touch rows=18 columns=18 slot=20 row=1 column=2 columnSpan=1 rowSpan=1
+🐞 gridHeightPt=628.0 spacingPt=4.0 cellWidthPt=52.888888888888886 cellHeightPt=32.77777777777778 buttonWidthPt=52.888888888888886 buttonHeightPt=32.77777777777778 cornerRadiusPt=5.0
+🐞 displayScale=2.0 buttonWidthPx=105.77777777777777 buttonHeightPx=65.55555555555556 activeBorderWidthPt=3.0 normalBorderWidthPt=2.0 activeBorderInteriorHeightPt=29.77777777777778
+🐞 2026-11-08T08:16:43Z MIDI-BORDER-GEOMETRY
+🐞 kind=touch rows=17 columns=18 slot=20 row=1 column=2 columnSpan=1 rowSpan=1
+🐞 gridHeightPt=628.0 spacingPt=4.0 cellWidthPt=52.888888888888886 cellHeightPt=34.94117647058823 buttonWidthPt=52.888888888888886 buttonHeightPt=34.94117647058823 cornerRadiusPt=5.0
+🐞 displayScale=2.0 buttonWidthPx=105.77777777777777 buttonHeightPx=69.88235294117646 activeBorderWidthPt=3.0 normalBorderWidthPt=2.0 activeBorderInteriorHeightPt=31.941176470588232
+🐞 2026-11-08T08:16:45Z MIDI-BORDER-GEOMETRY
+🐞 kind=touch rows=19 columns=18 slot=20 row=1 column=2 columnSpan=1 rowSpan=1
+🐞 gridHeightPt=628.0 spacingPt=4.0 cellWidthPt=52.888888888888886 cellHeightPt=30.842105263157894 buttonWidthPt=52.888888888888886 buttonHeightPt=30.842105263157894 cornerRadiusPt=5.0
+🐞 displayScale=2.0 buttonWidthPx=105.77777777777777 buttonHeightPx=61.68421052631579 activeBorderWidthPt=3.0 normalBorderWidthPt=2.0 activeBorderInteriorHeightPt=27.842105263157894
+🐞 2026-11-08T08:16:45Z MIDI-BORDER-GEOMETRY
+🐞 kind=touch rows=20 columns=18 slot=20 row=1 column=2 columnSpan=1 rowSpan=1
+🐞 gridHeightPt=628.0 spacingPt=4.0 cellWidthPt=52.888888888888886 cellHeightPt=29.1 buttonWidthPt=52.888888888888886 buttonHeightPt=29.1 cornerRadiusPt=5.0
+🐞 displayScale=2.0 buttonWidthPx=105.77777777777777 buttonHeightPx=58.2 activeBorderWidthPt=3.0 normalBorderWidthPt=2.0 activeBorderInteriorHeightPt=26.1
+🐞 2026-11-08T08:16:45Z MIDI-BORDER-GEOMETRY
+🐞 kind=touch rows=21 columns=18 slot=20 row=1 column=2 columnSpan=1 rowSpan=1
+🐞 gridHeightPt=628.0 spacingPt=4.0 cellWidthPt=52.888888888888886 cellHeightPt=27.523809523809526 buttonWidthPt=52.888888888888886 buttonHeightPt=27.523809523809526 cornerRadiusPt=5.0
+🐞 displayScale=2.0 buttonWidthPx=105.77777777777777 buttonHeightPx=55.04761904761905 activeBorderWidthPt=3.0 normalBorderWidthPt=2.0 activeBorderInteriorHeightPt=24.523809523809526
+🐞 2026-11-08T08:16:46Z MIDI-BORDER-GEOMETRY
+🐞 kind=touch rows=22 columns=18 slot=20 row=1 column=2 columnSpan=1 rowSpan=1
+🐞 gridHeightPt=628.0 spacingPt=4.0 cellWidthPt=52.888888888888886 cellHeightPt=26.09090909090909 buttonWidthPt=52.888888888888886 buttonHeightPt=26.09090909090909 cornerRadiusPt=5.0
+🐞 displayScale=2.0 buttonWidthPx=105.77777777777777 buttonHeightPx=52.18181818181818 activeBorderWidthPt=3.0 normalBorderWidthPt=2.0 activeBorderInteriorHeightPt=23.09090909090909
+🐞 2026-11-08T08:16:46Z MIDI-BORDER-GEOMETRY
+🐞 kind=touch rows=23 columns=18 slot=20 row=1 column=2 columnSpan=1 rowSpan=1
+🐞 gridHeightPt=628.0 spacingPt=4.0 cellWidthPt=52.888888888888886 cellHeightPt=24.782608695652176 buttonWidthPt=52.888888888888886 buttonHeightPt=24.782608695652176 cornerRadiusPt=5.0
+🐞 displayScale=2.0 buttonWidthPx=105.77777777777777 buttonHeightPx=49.56521739130435 activeBorderWidthPt=3.0 normalBorderWidthPt=2.0 activeBorderInteriorHeightPt=21.782608695652176
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+🐞 2026-11-08T08:16:46Z MIDI-BORDER-GEOMETRY
+🐞 kind=touch rows=25 columns=18 slot=20 row=1 column=2 columnSpan=1 rowSpan=1
+🐞 gridHeightPt=628.0 spacingPt=4.0 cellWidthPt=52.888888888888886 cellHeightPt=22.48 buttonWidthPt=52.888888888888886 buttonHeightPt=22.48 cornerRadiusPt=5.0
+🐞 displayScale=2.0 buttonWidthPx=105.77777777777777 buttonHeightPx=44.96 activeBorderWidthPt=3.0 normalBorderWidthPt=2.0 activeBorderInteriorHeightPt=19.48
+🐞 2026-11-08T08:16:47Z MIDI-BORDER-GEOMETRY
+🐞 kind=touch rows=26 columns=18 slot=20 row=1 column=2 columnSpan=1 rowSpan=1
+🐞 gridHeightPt=628.0 spacingPt=4.0 cellWidthPt=52.888888888888886 cellHeightPt=21.46153846153846 buttonWidthPt=52.888888888888886 buttonHeightPt=21.46153846153846 cornerRadiusPt=5.0
+🐞 displayScale=2.0 buttonWidthPx=105.77777777777777 buttonHeightPx=42.92307692307692 activeBorderWidthPt=3.0 normalBorderWidthPt=2.0 activeBorderInteriorHeightPt=18.46153846153846
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+onChange(of: String) action tried to update multiple times per frame.
+🐞 2026-11-08T08:16:47Z MIDI-BORDER-GEOMETRY
+🐞 kind=touch rows=29 columns=18 slot=20 row=1 column=2 columnSpan=1 rowSpan=1
+🐞 gridHeightPt=628.0 spacingPt=4.0 cellWidthPt=52.888888888888886 cellHeightPt=18.82758620689655 buttonWidthPt=52.888888888888886 buttonHeightPt=18.82758620689655 cornerRadiusPt=5.0
+🐞 displayScale=2.0 buttonWidthPx=105.77777777777777 buttonHeightPx=37.6551724137931 activeBorderWidthPt=3.0 normalBorderWidthPt=2.0 activeBorderInteriorHeightPt=15.827586206896552
+<0x103501e00> Gesture: System gesture gate timed out.
+<0x103501f40> Touch: System gesture gate timed out.
 🐞 [ESP-BUTTON] Via="tap" | SF="lightbulb.max.fill" | Text="AIs"
 🐞 [ESP-COMMAND] AI.s
 🐞 AI.s → file
-🐞 [ESP-BUTTON] Via="tap" | SF="cloud" | Text="copy"
-🐞 [ESP-COMMAND] ⌘a:⌘c:spk copied
-🐞 cm → external
-🐞 a → external
-🐞 cm → external
-🐞 c → external
-🐞 spk copied → external
-[ESP-OUTPUT] #1 "cm"
-[ESP-OUTPUT] #2 "a"
-[ESP-OUTPUT] #3 "cm"
-[ESP-OUTPUT] #4 "c"
-[ESP-MAC-TX] payload="CMD+A\n" bytes=6 values=[67,77,68,43,65,10]
-[ESP-MAC-TX] payload="CMD+C\n" bytes=6 values=[67,77,68,43,67,10]
-Potential Structural Swift Concurrency Issue: unsafeForcedSync called from Swift Concurrent context.
-          IPCAUClient.cpp:139   IPCAUClient: can't connect to server (-66748)
-         AVAudioBuffer.mm:281   mBuffers[0].mDataByteSize (0) should be non-zero
-🐞 [ESP-BUTTON] Via="tap" | SF="cloud" | Text="save"
-🐞 [ESP-COMMAND] ⌘a:⌘v:⌘s:spk saved
-🐞 cm → external
-🐞 a → external
-🐞 cm → external
-🐞 v → external
-🐞 cm → external
-🐞 s → external
-🐞 spk saved → external
-[ESP-OUTPUT] #5 "cm"
-[ESP-OUTPUT] #6 "a"
-[ESP-OUTPUT] #7 "cm"
-[ESP-OUTPUT] #8 "v"
-[ESP-OUTPUT] #9 "cm"
-[ESP-OUTPUT] #10 "s"
-[ESP-MAC-TX] payload="CMD+A\n" bytes=6 values=[67,77,68,43,65,10]
-[ESP-MAC-TX] payload="CMD+V\n" bytes=6 values=[67,77,68,43,86,10]
-[ESP-MAC-TX] payload="CMD+S\n" bytes=6 values=[67,77,68,43,83,10]
-Potential Structural Swift Concurrency Issue: unsafeForcedSync called from Swift Concurrent context.
-         AVAudioBuffer.mm:281   mBuffers[0].mDataByteSize (0) should be non-zero
-🐞 [ESP-BUTTON] Via="tap" | SF="cloud" | Text="copy"
-🐞 [ESP-COMMAND] ⌘a:⌘c:spk copied
-🐞 cm → external
-🐞 a → external
-🐞 cm → external
-🐞 c → external
-🐞 spk copied → external
-[ESP-OUTPUT] #11 "cm"
-[ESP-OUTPUT] #12 "a"
-[ESP-OUTPUT] #13 "cm"
-[ESP-OUTPUT] #14 "c"
-[ESP-MAC-TX] payload="CMD+A\n" bytes=6 values=[67,77,68,43,65,10]
-[ESP-MAC-TX] payload="CMD+C\n" bytes=6 values=[67,77,68,43,67,10]
-Potential Structural Swift Concurrency Issue: unsafeForcedSync called from Swift Concurrent context.
-         AVAudioBuffer.mm:281   mBuffers[0].mDataByteSize (0) should be non-zero
-🐞 [ESP-BUTTON] Via="tap" | SF="cloud" | Text="save"
-🐞 [ESP-COMMAND] ⌘a:⌘v:⌘s:spk saved
-🐞 cm → external
-🐞 a → external
-🐞 cm → external
-🐞 v → external
-🐞 cm → external
-🐞 s → external
-🐞 spk saved → external
-[ESP-OUTPUT] #15 "cm"
-[ESP-OUTPUT] #16 "a"
-[ESP-OUTPUT] #17 "cm"
-[ESP-OUTPUT] #18 "v"
-[ESP-OUTPUT] #19 "cm"
-[ESP-OUTPUT] #20 "s"
-[ESP-MAC-TX] payload="CMD+A\n" bytes=6 values=[67,77,68,43,65,10]
-[ESP-MAC-TX] payload="CMD+V\n" bytes=6 values=[67,77,68,43,86,10]
-[ESP-MAC-TX] payload="CMD+S\n" bytes=6 values=[67,77,68,43,83,10]
-Potential Structural Swift Concurrency Issue: unsafeForcedSync called from Swift Concurrent context.
-         AVAudioBuffer.mm:281   mBuffers[0].mDataByteSize (0) should be non-zero
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 2026-11-08T07:26:34Z MIDI-BORDER-GEOMETRY
-🐞 kind=touch rows=11 columns=4 slot=5 row=1 column=1 columnSpan=1 rowSpan=1
-🐞 gridHeightPt=628.0 spacingPt=8.195804195804197 cellWidthPt=248.85314685314685 cellHeightPt=52.36745073108709 buttonWidthPt=248.85314685314685 buttonHeightPt=52.36745073108709 cornerRadiusPt=15.48951048951049
-🐞 displayScale=2.0 buttonWidthPx=497.7062937062937 buttonHeightPx=104.73490146217418 activeBorderWidthPt=3.0 normalBorderWidthPt=2.0 activeBorderInteriorHeightPt=49.36745073108709
-🐞 2026-11-08T07:26:35Z MIDI-BORDER-GEOMETRY
-🐞 kind=touch rows=12 columns=4 slot=5 row=1 column=1 columnSpan=1 rowSpan=1
-🐞 gridHeightPt=628.0 spacingPt=8.027972027972028 cellWidthPt=248.979020979021 cellHeightPt=47.47435897435898 buttonWidthPt=248.979020979021 buttonHeightPt=47.47435897435898 cornerRadiusPt=15.06993006993007
-🐞 displayScale=2.0 buttonWidthPx=497.958041958042 buttonHeightPx=94.94871794871796 activeBorderWidthPt=3.0 normalBorderWidthPt=2.0 activeBorderInteriorHeightPt=44.47435897435898
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 2026-11-08T07:26:47Z MIDI-BORDER-GEOMETRY
-🐞 kind=touch rows=7 columns=5 slot=6 row=1 column=1 columnSpan=1 rowSpan=1
-🐞 gridHeightPt=628.0 spacingPt=8.573426573426573 cellWidthPt=197.14125874125875 cellHeightPt=86.65134865134864 buttonWidthPt=197.14125874125875 buttonHeightPt=86.65134865134864 cornerRadiusPt=16.433566433566433
-🐞 displayScale=2.0 buttonWidthPx=394.2825174825175 buttonHeightPx=173.30269730269728 activeBorderWidthPt=3.0 normalBorderWidthPt=2.0 activeBorderInteriorHeightPt=83.65134865134864
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 2026-11-08T07:26:50Z MIDI-BORDER-GEOMETRY
-🐞 kind=touch rows=7 columns=6 slot=7 row=1 column=1 columnSpan=1 rowSpan=1
-🐞 gridHeightPt=628.0 spacingPt=8.27972027972028 cellWidthPt=163.1002331002331 cellHeightPt=86.9030969030969 buttonWidthPt=163.1002331002331 buttonHeightPt=86.9030969030969 cornerRadiusPt=15.6993006993007
-🐞 displayScale=2.0 buttonWidthPx=326.2004662004662 buttonHeightPx=173.8061938061938 activeBorderWidthPt=3.0 normalBorderWidthPt=2.0 activeBorderInteriorHeightPt=83.9030969030969
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 2026-11-08T07:26:53Z MIDI-BORDER-GEOMETRY
-🐞 kind=touch rows=7 columns=3 slot=4 row=1 column=1 columnSpan=1 rowSpan=1
-🐞 gridHeightPt=628.0 spacingPt=9.16083916083916 cellWidthPt=333.8927738927739 cellHeightPt=86.14785214785215 buttonWidthPt=333.8927738927739 buttonHeightPt=86.14785214785215 cornerRadiusPt=17.902097902097903
-🐞 displayScale=2.0 buttonWidthPx=667.7855477855478 buttonHeightPx=172.2957042957043 activeBorderWidthPt=3.0 normalBorderWidthPt=2.0 activeBorderInteriorHeightPt=83.14785214785215
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 2026-11-08T07:26:55Z MIDI-BORDER-GEOMETRY
-🐞 kind=touch rows=7 columns=2 slot=3 row=1 column=1 columnSpan=1 rowSpan=1
-🐞 gridHeightPt=628.0 spacingPt=9.454545454545455 cellWidthPt=505.27272727272725 cellHeightPt=85.8961038961039 buttonWidthPt=505.27272727272725 buttonHeightPt=85.8961038961039 cornerRadiusPt=18.636363636363637
-🐞 displayScale=2.0 buttonWidthPx=1010.5454545454545 buttonHeightPx=171.7922077922078 activeBorderWidthPt=3.0 normalBorderWidthPt=2.0 activeBorderInteriorHeightPt=82.8961038961039
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 2026-11-08T07:26:59Z MIDI-BORDER-GEOMETRY
-🐞 kind=touch rows=8 columns=6 slot=7 row=1 column=1 columnSpan=1 rowSpan=1
-🐞 gridHeightPt=628.0 spacingPt=8.027972027972028 cellWidthPt=163.3100233100233 cellHeightPt=75.22552447552448 buttonWidthPt=163.3100233100233 buttonHeightPt=75.22552447552448 cornerRadiusPt=15.06993006993007
-🐞 displayScale=2.0 buttonWidthPx=326.6200466200466 buttonHeightPx=150.45104895104896 activeBorderWidthPt=3.0 normalBorderWidthPt=2.0 activeBorderInteriorHeightPt=72.22552447552448
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 2026-11-08T07:27:02Z MIDI-BORDER-GEOMETRY
-🐞 kind=touch rows=8 columns=5 slot=6 row=1 column=1 columnSpan=1 rowSpan=1
-🐞 gridHeightPt=628.0 spacingPt=8.363636363636363 cellWidthPt=197.3090909090909 cellHeightPt=74.93181818181819 buttonWidthPt=197.3090909090909 buttonHeightPt=74.93181818181819 cornerRadiusPt=15.90909090909091
-🐞 displayScale=2.0 buttonWidthPx=394.6181818181818 buttonHeightPx=149.86363636363637 activeBorderWidthPt=3.0 normalBorderWidthPt=2.0 activeBorderInteriorHeightPt=71.93181818181819
-[ESP-MAC-TX] payload="KEY:F12\n" bytes=8 values=[75,69,89,58,70,49,50,10]
-[ESP-MAC-TX] payload="KEY:F12\n" bytes=8 values=[75,69,89,58,70,49,50,10]
-🐞 2026-11-08T07:27:03Z MIDI-BORDER-GEOMETRY
-🐞 kind=touch rows=8 columns=7 slot=8 row=1 column=1 columnSpan=1 rowSpan=1
-🐞 gridHeightPt=628.0 spacingPt=7.692307692307692 cellWidthPt=139.12087912087912 cellHeightPt=75.51923076923077 buttonWidthPt=139.12087912087912 buttonHeightPt=75.51923076923077 cornerRadiusPt=14.23076923076923
-🐞 displayScale=2.0 buttonWidthPx=278.24175824175825 buttonHeightPx=151.03846153846155 activeBorderWidthPt=3.0 normalBorderWidthPt=2.0 activeBorderInteriorHeightPt=72.51923076923077
-🐞 2026-11-08T07:27:03Z MIDI-BORDER-GEOMETRY
-🐞 kind=touch rows=8 columns=8 slot=9 row=1 column=1 columnSpan=1 rowSpan=1
-🐞 gridHeightPt=628.0 spacingPt=7.356643356643357 cellWidthPt=121.06293706293707 cellHeightPt=75.81293706293707 buttonWidthPt=121.06293706293707 buttonHeightPt=75.81293706293707 cornerRadiusPt=13.391608391608392
-🐞 displayScale=2.0 buttonWidthPx=242.12587412587413 buttonHeightPx=151.62587412587413 activeBorderWidthPt=3.0 normalBorderWidthPt=2.0 activeBorderInteriorHeightPt=72.81293706293707
-🐞 2026-11-08T07:27:04Z MIDI-BORDER-GEOMETRY
-🐞 kind=touch rows=8 columns=9 slot=10 row=1 column=1 columnSpan=1 rowSpan=1
-🐞 gridHeightPt=628.0 spacingPt=7.020979020979021 cellWidthPt=107.09246309246309 cellHeightPt=76.10664335664336 buttonWidthPt=107.09246309246309 buttonHeightPt=76.10664335664336 cornerRadiusPt=12.552447552447553
-🐞 displayScale=2.0 buttonWidthPx=214.18492618492618 buttonHeightPx=152.21328671328672 activeBorderWidthPt=3.0 normalBorderWidthPt=2.0 activeBorderInteriorHeightPt=73.10664335664336
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-<0x103535e00> Gesture: System gesture gate timed out.
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-<0x103535e00> Gesture: System gesture gate timed out.
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-<0x103535e00> Gesture: System gesture gate timed out.
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 [ESP-BUTTON] Via="tap" | SF="" | Text=""
-🐞 [ESP-COMMAND] .midi 115
-[ESP-MAC-TX] payload="MIDI:NOTE_ON:115:127:1\n" bytes=23 values=[77,73,68,73,58,78,79,84,69,95,79,78,58,49,49,53,58,49,50,55,58,49,10]
-[ESP-MAC-TX] payload="MIDI:NOTE_OFF:115:1\n" bytes=20 values=[77,73,68,73,58,78,79,84,69,95,79,70,70,58,49,49,53,58,49,10]
-🐞 [ESP-BUTTON] Via="tap" | SF="lightbulb.max.fill" | Text="AIs"
-🐞 [ESP-COMMAND] AI.s
-🐞 AI.s → file
-🐞 [ESP-BUTTON] Via="tap" | SF="cloud" | Text="copy"
-🐞 [ESP-COMMAND] ⌘a:⌘c:spk copied
-🐞 cm → external
-🐞 a → external
-🐞 cm → external
-🐞 c → external
-🐞 spk copied → external
-[ESP-OUTPUT] #21 "cm"
-[ESP-OUTPUT] #22 "a"
-[ESP-OUTPUT] #23 "cm"
-[ESP-OUTPUT] #24 "c"
-[ESP-MAC-TX] payload="CMD+A\n" bytes=6 values=[67,77,68,43,65,10]
-[ESP-MAC-TX] payload="CMD+C\n" bytes=6 values=[67,77,68,43,67,10]
+🐞 [ESP-BUTTON] Via="tap" | SF="" | Text="toggle\nYT"
+🐞 [ESP-COMMAND] ⌃⌥F14
+🐞 ct → external
+🐞 op → external
+🐞 F14 → external
+[ESP-OUTPUT] #1 "ct"
+[ESP-OUTPUT] #2 "op"
+[ESP-OUTPUT] #3 "f14"
+[ESP-MAC-TX] payload="CTRL+OPT+F14\n" bytes=13 values=[67,84,82,76,43,79,80,84,43,70,49,52,10]
+🐞 [ESP-BUTTON] Via="tap" | SF="" | Text="toggle\nYT"
+🐞 [ESP-COMMAND] ⌃⌥F14
+🐞 ct → external
+🐞 op → external
+🐞 F14 → external
+[ESP-OUTPUT] #4 "ct"
+[ESP-OUTPUT] #5 "op"
+[ESP-OUTPUT] #6 "f14"
+[ESP-MAC-TX] payload="CTRL+OPT+F14\n" bytes=13 values=[67,84,82,76,43,79,80,84,43,70,49,52,10]

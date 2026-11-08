@@ -97,7 +97,6 @@ func functionKeyGridDimensions(for itemCount: Int) -> GridDimensions {
 
 struct MainScreenGridSection<ButtonLabel: View>: View {
     @Environment(\.scenePhase) private var scenePhase
-    @Environment(\.displayScale) private var displayScale
     let availableWidth: CGFloat
     let reservedBottomInset: CGFloat
     let functionKeys: [FunctionKeyEntry]
@@ -140,7 +139,6 @@ struct MainScreenGridSection<ButtonLabel: View>: View {
     let onDeleteSlot: (FunctionKeyEntry, Int) -> Void
     @State private var longPressedEditIndex: Int?
     @State private var slideCoordinator = MIDISlideCoordinator()
-    @State private var reportedMIDIButtonGeometrySignatures = Set<String>()
 
     var body: some View {
         GeometryReader { geometry in
@@ -185,19 +183,18 @@ struct MainScreenGridSection<ButtonLabel: View>: View {
                             spacing: mainGridButtonSpacing,
                             gridDimensions: gridDimensions
                         )
-                        let midiDiagnosticKind = midiButtonDiagnosticKind(entry, index)
-
+                        let buttonFrame = CGRect(
+                            x: origin.x,
+                            y: origin.y,
+                            width: resolvedButtonWidth,
+                            height: resolvedButtonHeight
+                        )
                         gridButtonView(
                             entry: entry,
                             index: index,
                             buttonHeight: resolvedButtonHeight,
                             buttonSize: CGSize(width: resolvedButtonWidth, height: resolvedButtonHeight),
-                            buttonFrame: CGRect(
-                                x: origin.x,
-                                y: origin.y,
-                                width: resolvedButtonWidth,
-                                height: resolvedButtonHeight
-                            ),
+                            buttonFrame: buttonFrame,
                             gridDimensions: gridDimensions
                         )
                         .frame(width: resolvedButtonWidth, height: resolvedButtonHeight)
@@ -234,23 +231,6 @@ struct MainScreenGridSection<ButtonLabel: View>: View {
                                 ),
                                 gridDimensions
                             )
-                            if let midiDiagnosticKind {
-                                logMIDIButtonGeometryIfNeeded(
-                                    kind: midiDiagnosticKind,
-                                    index: index,
-                                    shape: shape,
-                                    gridDimensions: gridDimensions,
-                                    gridHeight: geometry.size.height,
-                                    cellWidth: buttonWidth,
-                                    cellHeight: buttonHeight,
-                                    buttonFrame: CGRect(
-                                        x: origin.x,
-                                        y: origin.y,
-                                        width: resolvedButtonWidth,
-                                        height: resolvedButtonHeight
-                                    )
-                                )
-                            }
                         }
                     }
                 }
@@ -292,54 +272,6 @@ struct MainScreenGridSection<ButtonLabel: View>: View {
 
     private func isButtonContinuationEntry(_ entry: FunctionKeyEntry) -> Bool {
         isWideButtonContinuationEntry(entry) || isBlockButtonContinuationEntry(entry)
-    }
-
-    private func midiButtonDiagnosticKind(_ entry: FunctionKeyEntry, _ index: Int) -> String? {
-        guard !isGridEditModeEnabled else {
-            return nil
-        }
-
-        if midiContext(entry, index) != nil {
-            return "touch"
-        }
-
-        return midiControlChangeOneShot(entry) ? "ccOneShot" : nil
-    }
-
-    // MARK: - BM:🅱️ Physical iPad geometry probe for the short MIDI active-border investigation.
-    private func logMIDIButtonGeometryIfNeeded(
-        kind: String,
-        index: Int,
-        shape: ButtonGridShape,
-        gridDimensions: GridDimensions,
-        gridHeight: CGFloat,
-        cellWidth: CGFloat,
-        cellHeight: CGFloat,
-        buttonFrame: CGRect
-    ) {
-        guard UIDevice.current.userInterfaceIdiom == .pad else {
-            return
-        }
-
-        let columns = max(gridDimensions.columns, 1)
-        let row = index / columns
-        let column = index % columns
-        let activeBorderWidth: CGFloat = 3
-        let normalBorderWidth: CGFloat = 2
-        let activeBorderInteriorHeight = max(0, buttonFrame.height - activeBorderWidth)
-        let gridSignature = "\(kind)|\(gridDimensions.rows)|\(gridDimensions.columns)|\(index)|\(shape.width)|\(shape.height)"
-        let sizeSignature = "\(gridHeight)|\(mainGridButtonSpacing)|\(cellWidth)|\(cellHeight)|\(buttonFrame.width)|\(buttonFrame.height)|\(mainGridButtonCornerRadius)|\(displayScale)"
-        let signature = "\(gridSignature)|\(sizeSignature)"
-
-        guard reportedMIDIButtonGeometrySignatures.insert(signature).inserted else {
-            return
-        }
-
-        let timestamp = ISO8601DateFormatter().string(from: Date())
-        print("🐞 \(timestamp) MIDI-BORDER-GEOMETRY")
-        print("🐞 kind=\(kind) rows=\(gridDimensions.rows) columns=\(gridDimensions.columns) slot=\(index) row=\(row) column=\(column) columnSpan=\(shape.width) rowSpan=\(shape.height)")
-        print("🐞 gridHeightPt=\(gridHeight) spacingPt=\(mainGridButtonSpacing) cellWidthPt=\(cellWidth) cellHeightPt=\(cellHeight) buttonWidthPt=\(buttonFrame.width) buttonHeightPt=\(buttonFrame.height) cornerRadiusPt=\(mainGridButtonCornerRadius)")
-        print("🐞 displayScale=\(displayScale) buttonWidthPx=\(buttonFrame.width * displayScale) buttonHeightPx=\(buttonFrame.height * displayScale) activeBorderWidthPt=\(activeBorderWidth) normalBorderWidthPt=\(normalBorderWidth) activeBorderInteriorHeightPt=\(activeBorderInteriorHeight)")
     }
 
     private struct ButtonGridShape {
@@ -582,11 +514,12 @@ struct MainScreenGridSection<ButtonLabel: View>: View {
         isEnabled: Bool
     ) -> some View {
         if isEnabled {
-            content.buttonStyle(
-                MainGridMIDIMomentaryButtonStyle(
-                    cornerRadius: mainGridButtonCornerRadius
+            content
+                .buttonStyle(
+                    MainGridMIDIMomentaryButtonStyle(
+                        cornerRadius: mainGridButtonCornerRadius
+                    )
                 )
-            )
         } else {
             content.buttonStyle(.plain)
         }

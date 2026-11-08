@@ -24,7 +24,7 @@ struct ESP32BLEApp: App {
 @Observable
 final class DebugVersionStore {
 	var value = """
-V66.36
+V66.37
 """
 }
 

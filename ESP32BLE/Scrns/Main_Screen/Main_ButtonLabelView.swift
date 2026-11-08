@@ -135,7 +135,7 @@ struct MainScreenButtonLabelView: View {
                         .padding(.horizontal, horizontalPadding)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .frame(width: buttonSize.width, height: buttonSize.height)
             }
         }
         .task(id: imageRequest) {

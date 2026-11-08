@@ -8,7 +8,7 @@ import Combine
 import Security
 
 // MARK: - BM:🔳 SET GRID SIZE
-let maxGridDimension = 50
+let maxGridDimension = 20
 
 let maxFunctionKeyCount = maxGridDimension * maxGridDimension
 private let defaultNamedFunctionKeyCount = 20
