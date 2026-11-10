@@ -36,6 +36,7 @@ struct MainGridEditClipboardPayload: Codable {
 enum MainGridPopupPasteOutcome {
     case success(MainGridPopupPasteResult)
     case nothingToPaste
+    case pasteSmallAvailable(MainGridEditClipboardPayload)
     case notEnoughSpace
     case spaceOccupied
 }
@@ -117,6 +118,11 @@ private enum MainGridPasteDestinationResult {
     case available
     case outOfBounds
     case occupied
+}
+
+private enum MainGridPopupPasteDestinationPolicy: Equatable {
+    case allowsReplacement
+    case requiresBlankCell
 }
 
 extension MainScreen {
@@ -494,23 +500,96 @@ extension MainScreen {
             return .nothingToPaste
         }
 
-        let targetIndex = editableAnchorIndex(containing: index) ?? index
+        return updatedSlotLinesForPopupPaste(
+            at: index,
+            gridDimensions: gridDimensions,
+            slotLines: slotLines,
+            payload: payload,
+            proposedShape: nil,
+            requiresBlankDestination: false,
+            offersPasteSmall: true
+        )
+    }
+
+    func updatedSlotLinesForPopupPaste(
+        at index: Int,
+        gridDimensions: GridDimensions,
+        slotLines: [String],
+        payload: MainGridEditClipboardPayload,
+        proposedShape: MainGridPopupButtonShape?,
+        requiresBlankDestination: Bool
+    ) -> MainGridPopupPasteOutcome {
+        updatedSlotLinesForPopupPaste(
+            at: index,
+            gridDimensions: gridDimensions,
+            slotLines: slotLines,
+            payload: payload,
+            proposedShape: proposedShape,
+            requiresBlankDestination: requiresBlankDestination,
+            offersPasteSmall: false
+        )
+    }
+
+    func isValidMainGridEditClipboardPayload(_ payload: MainGridEditClipboardPayload) -> Bool {
+        isValidClipboardPayload(payload) &&
+            !payload.rawLine.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private func updatedSlotLinesForPopupPaste(
+        at index: Int,
+        gridDimensions: GridDimensions,
+        slotLines: [String],
+        payload: MainGridEditClipboardPayload,
+        proposedShape: MainGridPopupButtonShape?,
+        requiresBlankDestination: Bool,
+        offersPasteSmall: Bool
+    ) -> MainGridPopupPasteOutcome {
+        guard isValidMainGridEditClipboardPayload(payload) else {
+            return .nothingToPaste
+        }
+
+        let targetIndex: Int
+        let destinationPolicy: MainGridPopupPasteDestinationPolicy = requiresBlankDestination
+            ? .requiresBlankCell
+            : .allowsReplacement
+        switch destinationPolicy {
+        case .allowsReplacement:
+            targetIndex = editableAnchorIndex(containing: index) ?? index
+        case .requiresBlankCell:
+            targetIndex = index
+        }
+
         guard targetIndex >= 0,
               targetIndex < visibleBoxCount,
               functionKeys.indices.contains(targetIndex) else {
             return .notEnoughSpace
         }
 
-        let pastedShape = shape(for: payload)
+        let pastedShape: ButtonGridShape
+        if let proposedShape,
+           isSupportedShape(width: proposedShape.width, height: proposedShape.height) {
+            pastedShape = ButtonGridShape(width: proposedShape.width, height: proposedShape.height)
+        } else {
+            pastedShape = shape(for: payload)
+        }
+
         guard shapeFits(pastedShape, startingAt: targetIndex, gridDimensions: gridDimensions) else {
-            return .notEnoughSpace
+            return pasteFailureOutcome(for: payload, at: index, offersPasteSmall: offersPasteSmall)
         }
 
         let destinationEntry = functionKeys[targetIndex]
         let destinationShape: ButtonGridShape
         let destinationFootprint: [Int]
 
-        if destinationEntry.isBlankPlaceholder || isEmptyButtonEntry(destinationEntry) {
+        if destinationPolicy == .requiresBlankCell {
+            guard !isButtonContinuationEntry(destinationEntry),
+                  destinationEntry.isBlankPlaceholder || isEmptyButtonEntry(destinationEntry) else {
+                return .notEnoughSpace
+            }
+
+            destinationShape = ButtonGridShape(width: 1, height: 1)
+            destinationFootprint = [targetIndex]
+        } else if destinationEntry.isBlankPlaceholder || isEmptyButtonEntry(destinationEntry) {
             destinationShape = ButtonGridShape(width: 1, height: 1)
             destinationFootprint = [targetIndex]
         } else {
@@ -525,7 +604,7 @@ extension MainScreen {
         let pastedFootprint = indexes(startingAt: targetIndex, shape: pastedShape, gridDimensions: gridDimensions)
         let maximumIndex = max(destinationFootprint.max() ?? targetIndex, pastedFootprint.max() ?? targetIndex)
         guard maximumIndex < visibleBoxCount else {
-            return .notEnoughSpace
+            return pasteFailureOutcome(for: payload, at: index, offersPasteSmall: offersPasteSmall)
         }
 
         let availableReplacementIndexes = Set(destinationFootprint)
@@ -533,7 +612,7 @@ extension MainScreen {
             guard slotIndex >= 0,
                   slotIndex < visibleBoxCount,
                   functionKeys.indices.contains(slotIndex) else {
-                return .notEnoughSpace
+                return pasteFailureOutcome(for: payload, at: index, offersPasteSmall: offersPasteSmall)
             }
 
             if availableReplacementIndexes.contains(slotIndex) {
@@ -542,7 +621,7 @@ extension MainScreen {
 
             let entry = functionKeys[slotIndex]
             guard entry.isBlankPlaceholder || isEmptyButtonEntry(entry) else {
-                return .notEnoughSpace
+                return pasteFailureOutcome(for: payload, at: index, offersPasteSmall: offersPasteSmall)
             }
         }
 
@@ -566,6 +645,29 @@ extension MainScreen {
         )
 
         return .success(result)
+    }
+
+    private func pasteFailureOutcome(
+        for payload: MainGridEditClipboardPayload,
+        at index: Int,
+        offersPasteSmall: Bool
+    ) -> MainGridPopupPasteOutcome {
+        guard offersPasteSmall,
+              isValidMainGridEditClipboardPayload(payload),
+              shape(for: payload).width * shape(for: payload).height > 1,
+              index >= 0,
+              index < visibleBoxCount,
+              functionKeys.indices.contains(index) else {
+            return .notEnoughSpace
+        }
+
+        let destinationEntry = functionKeys[index]
+        guard !isButtonContinuationEntry(destinationEntry),
+              destinationEntry.isBlankPlaceholder || isEmptyButtonEntry(destinationEntry) else {
+            return .notEnoughSpace
+        }
+
+        return .pasteSmallAvailable(payload)
     }
 
     func updatedSlotLinesForPopupDuplicate(

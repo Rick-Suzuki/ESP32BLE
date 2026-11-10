@@ -1,241 +1,295 @@
-STAGE 8B.32 — READ-ONLY INVESTIGATION REPORT
+STAGE 8B.35 — READ-ONLY INVESTIGATION REPORT
 
-No source files, project settings, Git state, diagnostics, builds, devices, or Simulator were changed.
+No source, project settings, screen files, Git state, builds, deployments, or diagnostics were changed.
 
 A. SOURCE MAP
 
-Main grid and state:
-• Main_GridSection.swift
-   • MainScreenGridSection: lines 202–401
-   • Grid construction and sizing: lines 247–376
-   • Stable positional ForEach identity: line 268
-   • Shape/span calculation: lines 500–554
-   • Grid visual-height pass: lines 583–614
-   • Button-type routing: lines 630–783
-   • MIDI button visual and touch hierarchy: lines 798–925
-   • UIKit MIDI touch capture: lines 1025–1194
-   • One-shot MIDI button style: lines 1196–1217
-   • Temporary border diagnostics: lines 17–115 and 459–493
+Main copy/paste workflow:
+
+• ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
+   • Lines 1833-1889: shared iPhone/iPad Edit-mode popup action menu; Copy and Paste button callbacks.
+   • Lines 2196-2204: Paste button enablement.
+   • Lines 2255-2273: copyMainGridActionMenuSelection().
+   • Lines 2305-2340: pasteMainGridActionMenuSelection().
+   • Lines 2589-2635: popup undo/redo snapshot storage.
+   • Lines 2679-2693: transient Edit-mode operation message.
+   • Lines 2900-2922: geometry/selection target calculation after Paste.
+   • Lines 939-971: state for Edit mode, popup target, and undo history.
+   • Lines 1238-1248: the only existing interactive alert in this view is Delete All.
+
+• ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_DocumentActions.swift
+   • Lines 8-34: MainGridEditClipboardPayload Codable model.
+   • Lines 36-50: MainGridPopupPasteOutcome and MainGridPopupPasteResult.
+   • Lines 447-453: copySlotForPopupIfPossible().
+   • Lines 487-569: updatedSlotLinesForPopupPaste(), the primary placement/serialization operation.
+   • Lines 370-397: editableAnchorIndex(containing:), including continuation-to-anchor resolution.
+   • Lines 1178-1192: continuation-token recognition.
+   • Lines 1194-1247: clipboard encoding/decoding and validation.
+   • Lines 1266-1431: shape mapping, bounds checking, occupied-cell indexing, continuation creation.
+   • Lines 1577-1608: older/general destination validation helper.
+
+• ESP32BLE/ESP32BLE/Scrns/ContentView.swift
+   • Lines 250-324: passes document mutation and persistence closures into MainScreen.
+   • Lines 878-945: persistSlotLines(), atomic document save, reload state, and external-change conflict handling.
+   • Lines 2645-2660: single-slot persistence helper.
+   • Lines 2662-2728: on-disk line parsing into FunctionKeyEntry.
+   • Lines 68-83: FunctionKeyEntry’s parsed display model.
+
+B. CURRENT COPY BEHAVIOUR
+
+Copy is invoked by the Edit-mode popup’s Copy action:
+
+• MainScreen.copyMainGridActionMenuSelection() calls copySlotForPopupIfPossible().
+• The source resolves to its anchor, even if a continuation cell originated the action.
+• encodedGridEditClipboardText() serializes JSON, Base64 encoded, into mainGridEditClipboardText.
+
+Clipboard payload V2 contains:
+
+• version
+• rawLine: the anchor’s entire stored screen-file line
+• span: legacy shape code
+• width
+• height
+
+The serialized text begins with:
+ESP32BLE_GRID_CLIPBOARD_V2:
+
+Copy does not store separate button-property fields. The rawLine is the complete copyable button payload.
+
+Actual raw-line content includes:
+
+• Action/command text, including MIDI command text and widget commands when encoded in the left side.
+• Display text, SF Symbol name, emoji, and color where encoded in the right side.
+• Hidden state via @@hidden.
+• Other Smart Editor content preserved in the raw string.
+
+FunctionKeyEntry parses that raw line into:
+
+• rawLine
+• sendTexts
+• alternateDisplayText
+• buttonColorCode
+• isBlankPlaceholder
+• isHiddenInNormalMode
+
+Per-button font size and background image are not represented as separate clipboard fields in this implementation. The visible box font is document-level state; background-image selection is likewise not copied as a button property. The raw line is preserved verbatim, so any supported embedded appearance/action metadata remains intact.
+
+C. CURRENT PASTE FLOW
 
-• Main_Screen.swift
-   • MIDI activation registry ownership: line 158
-   • Grid state ownership: lines 911–912
-   • Main Screen onChange/task chain: lines 1125–1224
-   • MIDI context, transmission, activation, release, reset: lines 1525–1713
-   • MainScreenGridSection injection: lines 1727–1799
-   • Screen-load/grid restore path: lines 6286–6365
+1. The shared Edit popup calls pasteMainGridActionMenuSelection() at Main_Screen.swift:2305.
+2. It validates Edit mode and the selected popup target.
+3. It snapshots all current slot lines.
+4. It calls updatedSlotLinesForPopupPaste() at Main_DocumentActions.swift:487.
+5. The helper:
+   • Decodes and validates the clipboard.
+   • Resolves the target anchor.
+   • Determines the copied shape from width/height.
+   • Checks grid bounds.
+   • Builds the copied button footprint.
+   • Checks whether every footprint cell is permitted.
+   • Writes rawLine at the anchor and continuation tokens in remaining footprint cells.
+6. MainScreen restores the returned lines through restoreFunctionKeySlotLines().
+7. ContentView.persistSlotLines() writes the selected screen document atomically, applies refreshed parsed entries, and protects against externally changed/deleted files.
+8. MainScreen refreshes the popup frame, records an undo snapshot, and displays “Button pasted.”
+
+Important: normal Paste can replace the selected destination button. It explicitly clears the selected destination footprint before writing the copied footprint at Main_DocumentActions.swift:549-557. That is existing behavior and should remain unchanged.
+
+D. SPAN REPRESENTATION
+
+A spanning button has:
+
+• Anchor cell: the complete rawLine.
+• Same-row continuation cells: @@wide.
+• Any lower-row continuation cells: @@block, including cells below the anchor’s column.
 
-• Main_ButtonBehavior.swift
-   • MainMIDITouchContext: lines 19–52
-   • MainMIDIActivationRegistry: lines 77–194
-   • Shared button-label construction: lines 2542–2616
+Supported shapes are:
 
-• Main_ButtonLabelView.swift
-   • Shared label shell and image task: lines 108–168
-   • Shared visual shell/border: lines 170–202
-   • Step-up counter String onChange: lines 1091–1163
-   • Timer String onChange: lines 1653–1714
+• 1x1
+• 2x1
+• 3x1
+• 1x2
+• 2x2
+• 3x2
+• 1x3
+• 3x3
 
-Grid resizing and persistence:
-• Main_DocumentActions.swift
-   • Restore state: lines 123–139
-   • Row/column actions: lines 144–182
-   • applyGridDimensions: lines 208–229
+Shape detection checks the largest supported shapes first and requires the expected continuation tokens.
 
-• ContentView.swift
-   • Limits: lines 11–13; maximum is 50 × 50 / 2,500 positions
-   • Function-key state: lines 193–196
-   • Applying parsed slot lines: lines 838–856
-   • Persisting slot lines: lines 879–935
-   • Grid-config persistence: lines 1178–1226
-   • Resize/remap algorithm: lines 1378–1469
+A 1x1 Paste Small must:
 
-Most likely String onChange warning source:
-• Soft_Editor_Overlay.swift
-   • Linked String observers: lines 296–310
-   • Bidirectional synchronization writes: lines 880–906
+• Preserve the copied payload rawLine unchanged.
+• Use a proposed shape of width 1, height 1.
+• Write rawLine only at the destination index.
+• Write no continuation assignments.
+• Never modify clipboard payload width, height, or span.
+• Require the destination’s currently stored line to be blank/empty, not @@wide or @@block.
 
-B. GRID CONSTRUCTION
+No stale continuation token is possible if Paste Small uses the existing continuationAssignments() helper with a 1x1 shape: that helper returns no assignments. The target must still be validated as one free cell immediately before persistence.
 
-The grid is eager, not lazy.
+E. REJECTION REASONS
 
-MainScreenGridSection creates:
+Current paste exposes only these public outcomes:
 
-• Array(functionKeys.prefix(visibleBoxCount).enumerated()) at line 257.
-• A ZStack child for every visible position through ForEach at line 268.
-• An EmptyView for continuation tokens, but each position still enters the ForEach.
-• A full button hierarchy for non-continuation positions, including labels, backgrounds, borders, gestures, and for MIDI buttons, a UIKit touch-capture view.
+• success
+• nothingToPaste
+• notEnoughSpace
+• spaceOccupied
 
-For a 20 × 37 configuration, 740 position records are enumerated. Empty ordinary positions use a relatively small label branch, but they are still SwiftUI nodes. Populated MIDI positions are materially more expensive because they include MIDINoteButton, MIDITouchView, and, on iPad, temporary geometry probes.
+However, spaceOccupied is currently not returned by updatedSlotLinesForPopupPaste(). Its collision failures return notEnoughSpace. Therefore, the current UI displays “not enough space” for multiple distinct causes.
 
-Identity is id: .offset. This is stable for a fixed grid slot, which is appropriate while a grid remains unchanged. During a resize, occupied entries can be remapped to different offsets by ContentView, so SwiftUI correctly treats changed slots as changed content.
+Current causes folded into notEnoughSpace:
 
-Grid calculations are repeated for each MainScreenGridSection body evaluation:
+• Copied shape exceeds row/column grid boundaries: lines 504-507.
+• Target index is invalid/outside visible data: lines 497-502.
+• Target resolves to a continuation entry: lines 517-519.
+• Required footprint exceeds visible slot count: lines 525-528.
+• A footprint index is invalid: lines 532-537.
+• A non-destination footprint cell contains a button or continuation: lines 543-546.
 
-• Cell width and height.
-• Button origin and resolved span size.
-• buttonShape for each visible non-continuation position.
-• renderedButtonGridVisualHeight performs another pass and calls buttonShape again.
+NothingToPaste covers empty or malformed clipboard payloads.
 
-These operations are linear in visible positions. buttonShape has a small fixed candidate set, so this is not an N-squared algorithm, but its cost grows directly with grid size.
+Edit-mode-off is rejected before paste is called, at Main_Screen.swift:2305-2310.
 
-C. SINGLE MIDI BUTTON UPDATE PATH
+Paste Small should be eligible only when all of these are true:
 
-Momentary MIDI Note path:
+• Clipboard decodes and validates.
+• Edit mode remains enabled.
+• The exact selected destination is still a direct, single free cell.
+• The destination is not a continuation cell and does not resolve to an existing button anchor.
+• Normal Paste failed because the copied multi-cell footprint is out of bounds or intersects cells outside that one free destination cell.
 
-1. MIDITouchCaptureView receives touchesBegan.
-2. It calls beginMIDIActivation through MIDITouchView.
-3. MainScreen.beginMIDIActivation validates the document, slot, command text, session, and output availability.
-4. MainMIDIActivationRegistry.begin sends the MIDI Note On first; only an accepted send creates and stores a UUID token.
-5. Adding the token changes the registry’s private activations dictionary.
-6. The pressed button reads activeToken(for: context), receives a non-nil token, and displays the green border.
-7. On touch end/cancellation/exit, MIDITouchCaptureView calls endMIDIActivation.
-8. MainMIDIActivationRegistry.release removes that token and sends the required Note Off or CC release command.
-9. The active border disappears when activeToken becomes nil.
+Paste Small should not be offered for:
 
-Toggle and CC behavior retain their existing specialized paths. Note-Off uses local isNoteOffPressed state for transient visual feedback and reconciles matching active notes.
+• Empty or malformed clipboard.
+• Edit mode ended.
+• Invalid target.
+• Occupied destination.
+• Continuation-cell destination.
+• Persistence failure/conflict.
+• A copied 1x1 button, because normal Paste already fits wherever a valid free cell exists.
 
-D. INVALIDATION SCOPE
+F. ALERT INTEGRATION
 
-The activation registry is @Observable, but activeToken(for:) reads the single activations dictionary.
+There is no existing interactive “Not Enough Space” alert for Paste.
 
-Every MIDI button’s active-token query is made while MainScreenGridSection constructs its body. Therefore, a mutation of activations can invalidate the grid section’s observed dependency, potentially causing its body to re-evaluate and recreate all visible grid descriptions, including unrelated buttons.
+The current rejection is a two-second inline operation message:
 
-This is source-supported potential broad invalidation. It does not prove that every button is laid out, rasterized, or physically redrawn after every press:
+• Main_Screen.swift:2335-2338 calls showMainGridActionMenuMessage(“not enough space”).
+• The message is state-driven and auto-dismissed at lines 2679-2693.
 
-• Body re-evaluation: potentially broad.
-• Layout: SwiftUI may reuse unchanged layout results; source inspection cannot quantify it.
-• Rendering: SwiftUI can retain unchanged rendered output; it is not correct to claim all 740 buttons are redrawn.
-• MIDI transmission: remains limited to the pressed button’s validated command and required release.
+The only SwiftUI alert currently attached to MainScreen is the Delete All confirmation at lines 1238-1248. The renameAlertMessage state is also used for informational popups, not a Paste confirmation.
 
-The active-token lookup also linearly searches active activations. Normally that collection is small, so this is not the practical primary cost; the broad observed dictionary dependency is more significant.
+Smallest reliable addition:
 
-E. ONCHANGE WARNING
+• Add a pending Paste Small value that captures:
+   • selectedDocumentName
+   • destination index
+   • destination grid dimensions
+   • copied MainGridEditClipboardPayload snapshot
+   • optionally the current slot-lines snapshot
+• On an eligible normal-paste failure, set this pending value and present:
+   • Title: Not Enough Space
+   • Message: The copied button is too large for this location. Paste it as a single button instead?
+   • Cancel
+   • Paste Small
+• On Paste Small, revalidate against current state, then use the same placement/persistence path.
 
-The exact warning source cannot be proven from the warning text alone. SwiftUI reports only the observed type, String, not the view or property name.
+To avoid competing alerts, use one explicit MainScreen confirmation-state enum for Delete All and Paste Small, rather than adding unrelated independently active alert booleans. The current transient operation message can remain for noneligible errors.
 
-The strongest source-supported candidate is the Soft Editor’s bidirectional synchronization:
+G. DATA PRESERVATION
 
-• editingSlotText onChange can call syncDraftsFromCombinedText.
-• That method changes actionDraft and rightDraft.
-• Their onChange handlers call syncCombinedTextFromDrafts.
-• That method can change editingSlotText again.
+The safe transformation is shape-only, applied to a copied value:
 
-There are equality checks and an asynchronous reset of isSyncingDraftsFromCombinedText, but this remains a cyclic String-observer graph. It is the only inspected Main Screen String onChange path that writes one of the other observed Strings and can write back to the original observed String.
+• Use the captured payload.rawLine unchanged.
+• Override only the proposed placement shape to 1x1.
+• Do not reserialize or mutate mainGridEditClipboardText.
+• Do not touch the source button or source continuation cells.
 
-The Main Screen’s selectedDocumentName, selectedDocumentDisplayName, and renameAlertMessage handlers mutate other state but do not write their observed String back. The counter and timer configurationText handlers write local numeric/string display state, not configurationText.
+This preserves commands, MIDI text, widget commands, display text, symbols/emoji, color data, hidden state, and any other raw-line metadata.
 
-Conclusion:
-• If the warning occurs while the Soft Editor is presented, this loop is the most likely source.
-• If Test D reproduces it with no slot editor open, source inspection alone is insufficient to identify the exact handler. The next diagnostic stage should add one temporary timestamped print at the entrance of only the four Soft Editor sync observers, including a frame counter and current values. No grid-wide logging is needed.
+H. STALE OPERATION SAFETY
 
-F. DIAGNOSTIC OVERHEAD
+A pending confirmation must not trust current selection or current clipboard when the user presses Paste Small.
 
-MIDI-BORDER-GEOMETRY:
-• Runs from per-button task IDs at Main_GridSection.swift lines 334–371.
-• The task is keyed by frame, dimensions, and refresh token.
-• It maintains a @State Set for deduplication.
-• It can run for each MIDI position after relevant grid/layout changes, but does not run per MIDI Note On/Off unless another invalidation changes the task identity.
+Minimum reliable commit checks:
 
-MIDI-BORDER-BOUNDS:
-• Adds GeometryReader backgrounds and CGRect onChange handlers for MIDI layers.
-• MIDI Note paths can contain probes for outer cell, normal label, green overlay, and touch capture.
-• It mutates only ordinary reference-type reporter collections, not SwiftUI @State, during frame reporting.
-• Its observed type is CGRect, not String.
+• isGridEditModeEnabled is still true.
+• selectedDocumentName equals the pending document name.
+• Current grid dimensions equal the pending dimensions.
+• The pending index remains in functionKeys and visibleBoxCount.
+• The pending index itself is still blank/empty.
+• It is not @@wide or @@block.
+• The captured clipboard payload is still valid.
+• Generate the new slot lines from a freshly read current snapshot.
+• Persist only through restoreFunctionKeySlotLines().
 
-Therefore, the diagnostics do not directly explain:
-“onChange(of: String) action tried to update multiple times per frame.”
+Capturing the payload snapshot is essential: if the clipboard changes while the confirmation is on screen, Paste Small must use the snapshot the user was asked to confirm, or cancel. Capturing the document name and grid dimensions prevents a screen switch from redirecting the operation.
 
-They do add real layout-observation overhead on iPad MIDI buttons. At large grids with many populated MIDI buttons, they can increase main-thread layout work and console activity. They should remain untouched as requested until the planned cleanup.
+A full screen-version token is not presently exposed. The fresh destination-cell validation plus ContentView’s existing disk-conflict detection is sufficient for this single-view synchronous operation.
 
-G. GRID RESIZING
+I. SHARED DEVICE COVERAGE
 
-Each row/column action calls applyGridDimensions.
+iPhone and iPad share the same implementation:
 
-The resize sequence is:
+• One MainScreen.
+• One MainGridEditActionMenu.
+• One copy/paste handler and placement helper.
+• Device-specific code is limited to popup geometry/positioning.
 
-1. Validate proposed dimensions and maximum position count.
-2. ContentView.resizeSelectedDocumentGrid remaps occupied slot lines into the new grid.
-3. persistSlotLines synchronously serializes and writes the screen document.
-4. applySlotLines reparses lines and replaces the entire functionKeys array.
-5. MainScreen updates visibleGridDimensions and visibleBoxCount.
-6. Grid configuration is persisted separately through saveGridDimensions.
-7. SwiftUI reconstructs the visible grid for the new dimensions.
-8. MainScreen observes functionKeys.map(.rawLine), resets MIDI activations, and observes definedFunctionKeyCount to ensure capacity.
+Paste Small therefore needs no device-specific business logic. A standard SwiftUI confirmation alert will receive native iPhone/iPad presentation.
 
-A rapid row/column sequence can therefore perform repeated whole-grid remaps, synchronous file writes, parse/replacement of functionKeys, state updates, and view reconstruction. This is a much more plausible reason for warning volume and interaction pressure than pressing one MIDI button.
+J. REGRESSION RISKS
 
-H. GESTURE TIMEOUTS
+Highest risks:
 
-There is no source evidence that the reported system gesture-gate timeout is caused by a MIDI protocol error or the String onChange warning.
+• Accidentally changing normal Paste replacement semantics.
+• Allowing Paste Small on an occupied/continuation target.
+• Leaving stale @@wide or @@block tokens by manually editing slot lines.
+• Mutating the clipboard rather than using a shape override.
+• Creating a second undo entry or missing the undo snapshot.
+• Saving after a document switch or clipboard change.
+• Bypassing persistSlotLines(), which would skip immediate refresh and external-file conflict protection.
+• Reusing Move/Cut helpers; this would broaden behavior unnecessarily.
 
-Relevant source conditions:
+Move, Cut, import/export, MIDI parsing, image-backed appearance, and widget behavior need not change if the implementation stays in the popup Paste path and preserves rawLine.
 
-• MIDI uses UIKit touch capture, not the ordinary SwiftUI Button gesture path.
-• Slider movement scans registered MIDI touch views to locate a target; this is linear in active MIDI capture views during a slide.
-• Resizing performs synchronous remapping, parsing, persistence, and eager grid reconstruction on the main actor.
-• Large populated MIDI grids can contain many UIKit touch views and temporary measurement views.
+K. RECOMMENDED IMPLEMENTATION PLAN
 
-These facts make main-thread pressure during rapid resizing plausible. They do not establish a direct cause for Apple’s system gesture timeout messages.
+One focused stage is sufficient.
 
-I. PERFORMANCE RISKS
+1. Refactor updatedSlotLinesForPopupPaste() internally to accept:
+   • an explicit payload snapshot
+   • a proposed shape override
+   • a destination policy: existing normal replacement behavior versus Paste Small’s blank-cell-only behavior.
 
-Highest practical importance:
+2. Keep normal Paste calling the helper exactly as today.
 
-1. Eager construction of every visible position.
-   • Cost grows with grid position count.
-   • 740 positions are all enumerated and participate in the ZStack.
+3. Return a distinct eligible-for-small-paste outcome only when:
+   • copied shape is larger than 1x1,
+   • source payload is valid,
+   • destination is exactly one free direct cell,
+   • normal-size failure is bounds/collision beyond that cell.
 
-2. Whole-grid activation dependency.
-   • A one-button MIDI press can invalidate the MainScreenGridSection because every active-token lookup observes the same dictionary.
+4. Add pending confirmation state in MainScreen, with document, index, grid dimensions, and payload snapshot.
 
-3. Resizing writes and replaces whole grid data synchronously.
-   • Each dimension change remaps slots, persists a document, reparses entries, and reconstructs the grid.
+5. On confirmation, revalidate and run the shared helper with 1x1 plus blank-only policy; then use the existing persistence, selection refresh, undo, and success message logic.
 
-4. Temporary MIDI geometry probes.
-   • iPad-only, but multiply GeometryReader and CGRect observation work for each populated MIDI button.
+L. PHYSICAL-DEVICE TEST PLAN
 
-5. Per-button image tasks.
-   • MainScreenButtonLabelView has a task keyed by image request, including button size. A resize can restart image work for image-backed buttons.
+On each requested physical device in landscape:
 
-The same code paths serve 4 × 4, 6 × 8, 10 × 10, and 20 × 37. The difference is the number of materialized positions and populated-content hierarchies; no benchmark timing can be inferred from source.
-
-J. MINIMAL CORRECTIONS
-
-No change is justified from source inspection alone for the MIDI activation registry. A per-button observation redesign could reduce broad invalidation, but it carries meaningful risk to simultaneous touches, toggles, holds, slides, cancellation, and note ownership. It should be considered only after a focused measurement confirms press latency or excessive re-evaluation.
-
-One narrow correction is justified if the warning is reproduced with the Soft Editor visible:
-
-• Make the editor synchronization one-directional per user event, or consolidate actionDraft/rightDraft/combined text into one source of truth.
-• The correction should avoid any onChange handler writing another String that then writes back to the original String in the same update cycle.
-• Preserve current normalization, hidden-state metadata, and editor behavior.
-
-Do not debounce grid persistence or replace the eager absolute-position grid with LazyVGrid without separate design validation; either could alter current grid geometry, persistence timing, slot remapping, or spanning buttons.
-
-K. FOLLOW-UP PLAN
-
-Recommended next stage: focused diagnostic, not optimization.
-
-1. On iPad mini, perform:
-   • Test A: 4 × 4, repeatedly press the same MIDI button.
-   • Test B: 6 × 8, same button.
-   • Test C: 20 × 37, same button.
-   • Test D: rapidly resize without pressing MIDI buttons.
-
-2. Repeat Test D twice:
-   • Main Screen with no slot editor presented.
-   • Main Screen with the Soft Editor presented.
-
-3. Record:
-   • Presence/count of the String onChange warning.
-   • Whether gesture timeout messages occur.
-   • Whether MIDI press behavior changes by grid size.
-
-4. Only if the warning occurs with the Soft Editor:
-   • Add a minimal temporary timestamped diagnostic to the four editor synchronization handlers.
-   • Do not add logs to every grid cell.
-   • Use the result to make one narrow synchronization correction in a later stage.
-
-5. Only if MIDI presses show measurable degradation independent of resizing:
-   • Add a bounded body/update counter around MainScreenGridSection and the pressed MIDI button path.
-   • Confirm invalidation scope before considering a registry redesign.
+• Copy/paste a 1x1 button: normal Paste succeeds; no Paste Small prompt.
+• Copy 1x2 “Toggle YT” into a location that fits: normal 1x2 Paste succeeds unchanged.
+• Copy 1x2 into a free last-row cell: prompt appears; Paste Small creates one cell.
+• Repeat with 2x1, 2x2, 3x2, 1x3, and 3x3 sources.
+• Confirm original source button and its continuation cells are unchanged.
+• Confirm copied commands, MIDI data, widget behavior, label, SF Symbol/emoji, color, and hidden state remain intact.
+• Confirm Paste Small produces no continuation cells.
+• Cancel: no document, selection, clipboard, or undo change.
+• Try occupied destination: no Paste Small prompt and no overwrite.
+• Try a continuation-cell destination: no Paste Small prompt and no overwrite.
+• Change screens while prompt is visible: Paste Small must cancel safely.
+• Copy another button while prompt is visible: confirmed Paste Small must use the captured original payload or cancel by policy.
+• Change destination contents while prompt is visible: confirmation must reject without overwrite.
+• Verify successful Paste Small remains in Edit mode, selects/refreshes the new destination using existing behavior, records one undo entry, and leaves clipboard available for another Paste.
+• Verify Undo/Redo, Cut, Move, document reload, and screen export/import remain unchanged.

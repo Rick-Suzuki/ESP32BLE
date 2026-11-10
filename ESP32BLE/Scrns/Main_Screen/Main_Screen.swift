@@ -75,6 +75,12 @@ private struct MainGridActionMenuTarget {
     let gridDimensions: GridDimensions
 }
 
+private struct PendingMainGridPasteSmall {
+    let documentName: String
+    let target: MainGridActionMenuTarget
+    let payload: MainGridEditClipboardPayload
+}
+
 private struct PopupUndoEntry {
     let documentName: String
     let slotLines: [String]
@@ -1050,6 +1056,7 @@ Tapping a row inserts the key code at the cursor.
     @State private var mainGridOperationMessageText: String?
     @State private var mainGridOperationMessageDismissTask: Task<Void, Never>?
     @State private var isDeleteAllButtonsConfirmationPresented = false
+    @State private var pendingMainGridPasteSmall: PendingMainGridPasteSmall?
     private let iPhoneOrdinaryPreviewFontMultiplier: CGFloat = 1.5
     private let iPadSFSymbolPreviewGroupYOffset: CGFloat = 5
     private let iPadSFPreviewSizeMultiplier: CGFloat = 1.10
@@ -1245,6 +1252,19 @@ Tapping a row inserts the key code at the cursor.
                 }
             } message: {
                 Text("This will delete every button on the current screen. You can restore them using Undo.")
+            }
+            .alert(
+                "Not Enough Space",
+                isPresented: pasteSmallConfirmationPresented
+            ) {
+                Button("Cancel", role: .cancel) {
+                    pendingMainGridPasteSmall = nil
+                }
+                Button("Paste Small") {
+                    pastePendingMainGridPasteSmall()
+                }
+            } message: {
+                Text("The copied button is too large for this location. Paste it as a single button instead?")
             }
     }
 
@@ -2317,26 +2337,95 @@ Tapping a row inserts the key code at the cursor.
             slotLines: beforeSnapshot
         ) {
         case let .success(pasteResult):
-            guard pasteResult.slotLines != beforeSnapshot else {
-                return
-            }
-
-            guard restoreFunctionKeySlotLines(pasteResult.slotLines) else {
-                return
-            }
-
-            resetDirectionalDeleteState()
-            mainGridActionMenuTarget = mainGridActionMenuTargetForPaste(from: target, result: pasteResult)
-            beginPendingActionMenuFrameRefresh(to: pasteResult.targetIndex, requiresButton: true)
-            recordPopupUndoSnapshot(beforeSnapshot)
-            showMainGridActionMenuMessage("Button pasted")
+            completeMainGridPaste(pasteResult, from: target, beforeSnapshot: beforeSnapshot)
         case .nothingToPaste:
             showMainGridActionMenuMessage("Nothing to paste")
+        case let .pasteSmallAvailable(payload):
+            guard !isDeleteAllButtonsConfirmationPresented else {
+                showMainGridActionMenuMessage("not enough space")
+                return
+            }
+
+            pendingMainGridPasteSmall = PendingMainGridPasteSmall(
+                documentName: selectedDocumentName,
+                target: target,
+                payload: payload
+            )
         case .notEnoughSpace:
             showMainGridActionMenuMessage("not enough space")
         case .spaceOccupied:
             showMainGridActionMenuMessage("not enough space")
         }
+    }
+
+    private var pasteSmallConfirmationPresented: Binding<Bool> {
+        Binding(
+            get: { pendingMainGridPasteSmall != nil },
+            set: { isPresented in
+                if !isPresented {
+                    pendingMainGridPasteSmall = nil
+                }
+            }
+        )
+    }
+
+    private func pastePendingMainGridPasteSmall() {
+        guard let pendingPaste = pendingMainGridPasteSmall else {
+            return
+        }
+
+        defer {
+            pendingMainGridPasteSmall = nil
+        }
+
+        let target = pendingPaste.target
+        guard isGridEditModeEnabled,
+              selectedDocumentName == pendingPaste.documentName,
+              visibleGridDimensions.columns == target.gridDimensions.columns,
+              visibleGridDimensions.rows == target.gridDimensions.rows,
+              target.index >= 0,
+              target.index < visibleBoxCount,
+              functionKeys.indices.contains(target.index),
+              !isMainGridContinuationEntry(at: target.index),
+              functionKeys[target.index].isBlankPlaceholder || isEmptyButtonEntry(functionKeys[target.index]),
+              isValidMainGridEditClipboardPayload(pendingPaste.payload) else {
+            showMainGridActionMenuMessage("not enough space")
+            return
+        }
+
+        let beforeSnapshot = currentFunctionKeySlotLines()
+        switch updatedSlotLinesForPopupPaste(
+            at: target.index,
+            gridDimensions: target.gridDimensions,
+            slotLines: beforeSnapshot,
+            payload: pendingPaste.payload,
+            proposedShape: MainGridPopupButtonShape(width: 1, height: 1),
+            requiresBlankDestination: true
+        ) {
+        case let .success(pasteResult):
+            completeMainGridPaste(pasteResult, from: target, beforeSnapshot: beforeSnapshot)
+        case .nothingToPaste:
+            showMainGridActionMenuMessage("Nothing to paste")
+        case .pasteSmallAvailable, .notEnoughSpace, .spaceOccupied:
+            showMainGridActionMenuMessage("not enough space")
+        }
+    }
+
+    private func completeMainGridPaste(
+        _ pasteResult: MainGridPopupPasteResult,
+        from target: MainGridActionMenuTarget,
+        beforeSnapshot: [String]
+    ) {
+        guard pasteResult.slotLines != beforeSnapshot,
+              restoreFunctionKeySlotLines(pasteResult.slotLines) else {
+            return
+        }
+
+        resetDirectionalDeleteState()
+        mainGridActionMenuTarget = mainGridActionMenuTargetForPaste(from: target, result: pasteResult)
+        beginPendingActionMenuFrameRefresh(to: pasteResult.targetIndex, requiresButton: true)
+        recordPopupUndoSnapshot(beforeSnapshot)
+        showMainGridActionMenuMessage("Button pasted")
     }
 
     private func duplicateMainGridActionMenuSelection() {

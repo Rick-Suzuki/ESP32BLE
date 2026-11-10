@@ -1,4 +1,8 @@
 
+V66.38
+main, edit, copy big btn, paste in small area fix
+261110 Tue 1059
+
 V66.37
 green border fixed, max grid set to 20x20
 261108 Sun 1747
