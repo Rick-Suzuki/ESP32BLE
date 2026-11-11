@@ -1,295 +1,272 @@
-STAGE 8B.35 — READ-ONLY INVESTIGATION REPORT
+STAGE 8B.36 READ-ONLY INVESTIGATION REPORT
 
-No source, project settings, screen files, Git state, builds, deployments, or diagnostics were changed.
+No source, project settings, screen files, or Git state were modified. No build, deployment, Simulator, or physical-device run was performed.
 
 A. SOURCE MAP
 
-Main copy/paste workflow:
-
-• ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_Screen.swift
-   • Lines 1833-1889: shared iPhone/iPad Edit-mode popup action menu; Copy and Paste button callbacks.
-   • Lines 2196-2204: Paste button enablement.
-   • Lines 2255-2273: copyMainGridActionMenuSelection().
-   • Lines 2305-2340: pasteMainGridActionMenuSelection().
-   • Lines 2589-2635: popup undo/redo snapshot storage.
-   • Lines 2679-2693: transient Edit-mode operation message.
-   • Lines 2900-2922: geometry/selection target calculation after Paste.
-   • Lines 939-971: state for Edit mode, popup target, and undo history.
-   • Lines 1238-1248: the only existing interactive alert in this view is Delete All.
-
-• ESP32BLE/ESP32BLE/Scrns/Main_Screen/Main_DocumentActions.swift
-   • Lines 8-34: MainGridEditClipboardPayload Codable model.
-   • Lines 36-50: MainGridPopupPasteOutcome and MainGridPopupPasteResult.
-   • Lines 447-453: copySlotForPopupIfPossible().
-   • Lines 487-569: updatedSlotLinesForPopupPaste(), the primary placement/serialization operation.
-   • Lines 370-397: editableAnchorIndex(containing:), including continuation-to-anchor resolution.
-   • Lines 1178-1192: continuation-token recognition.
-   • Lines 1194-1247: clipboard encoding/decoding and validation.
-   • Lines 1266-1431: shape mapping, bounds checking, occupied-cell indexing, continuation creation.
-   • Lines 1577-1608: older/general destination validation helper.
-
-• ESP32BLE/ESP32BLE/Scrns/ContentView.swift
-   • Lines 250-324: passes document mutation and persistence closures into MainScreen.
-   • Lines 878-945: persistSlotLines(), atomic document save, reload state, and external-change conflict handling.
-   • Lines 2645-2660: single-slot persistence helper.
-   • Lines 2662-2728: on-disk line parsing into FunctionKeyEntry.
-   • Lines 68-83: FunctionKeyEntry’s parsed display model.
-
-B. CURRENT COPY BEHAVIOUR
-
-Copy is invoked by the Edit-mode popup’s Copy action:
-
-• MainScreen.copyMainGridActionMenuSelection() calls copySlotForPopupIfPossible().
-• The source resolves to its anchor, even if a continuation cell originated the action.
-• encodedGridEditClipboardText() serializes JSON, Base64 encoded, into mainGridEditClipboardText.
-
-Clipboard payload V2 contains:
-
-• version
-• rawLine: the anchor’s entire stored screen-file line
-• span: legacy shape code
-• width
-• height
-
-The serialized text begins with:
-ESP32BLE_GRID_CLIPBOARD_V2:
-
-Copy does not store separate button-property fields. The rawLine is the complete copyable button payload.
-
-Actual raw-line content includes:
-
-• Action/command text, including MIDI command text and widget commands when encoded in the left side.
-• Display text, SF Symbol name, emoji, and color where encoded in the right side.
-• Hidden state via @@hidden.
-• Other Smart Editor content preserved in the raw string.
-
-FunctionKeyEntry parses that raw line into:
-
-• rawLine
-• sendTexts
-• alternateDisplayText
-• buttonColorCode
-• isBlankPlaceholder
-• isHiddenInNormalMode
-
-Per-button font size and background image are not represented as separate clipboard fields in this implementation. The visible box font is document-level state; background-image selection is likewise not copied as a button property. The raw line is preserved verbatim, so any supported embedded appearance/action metadata remains intact.
-
-C. CURRENT PASTE FLOW
+Primary implementation:
 
-1. The shared Edit popup calls pasteMainGridActionMenuSelection() at Main_Screen.swift:2305.
-2. It validates Edit mode and the selected popup target.
-3. It snapshots all current slot lines.
-4. It calls updatedSlotLinesForPopupPaste() at Main_DocumentActions.swift:487.
-5. The helper:
-   • Decodes and validates the clipboard.
-   • Resolves the target anchor.
-   • Determines the copied shape from width/height.
-   • Checks grid bounds.
-   • Builds the copied button footprint.
-   • Checks whether every footprint cell is permitted.
-   • Writes rawLine at the anchor and continuation tokens in remaining footprint cells.
-6. MainScreen restores the returned lines through restoreFunctionKeySlotLines().
-7. ContentView.persistSlotLines() writes the selected screen document atomically, applies refreshed parsed entries, and protects against externally changed/deleted files.
-8. MainScreen refreshes the popup frame, records an undo snapshot, and displays “Button pasted.”
-
-Important: normal Paste can replace the selected destination button. It explicitly clears the selected destination footprint before writing the copied footprint at Main_DocumentActions.swift:549-557. That is existing behavior and should remain unchanged.
-
-D. SPAN REPRESENTATION
-
-A spanning button has:
-
-• Anchor cell: the complete rawLine.
-• Same-row continuation cells: @@wide.
-• Any lower-row continuation cells: @@block, including cells below the anchor’s column.
+Main_Screen.swift
 
-Supported shapes are:
+• Lines 364-384: Special Keys data, smartEscapeCodeRows.
+• Lines 389 onward: Widgets data, smartCommandRows.
+• Line 982: lower help state, smartCommandDescription.
+• Line 1036: mode state, isSmartEscapeCodeTableVisible.
+• Lines 3817-3845: command text field.
+• Lines 3851-3979: shared command panel and both tables.
+• Lines 3926-3941: separate F1...F20 function-key table.
+• Lines 3943-3969: switched Special Keys / Widgets table.
+• Lines 4017-4032: command-draft binding and synchronization to editingSlotText.
+• Lines 4250-4301: upper script editor and lower help presentation.
+• Lines 5485-5506: Widgets/Special Keys toggle button.
+• Lines 5508-5533: shared row factory, smartCommandTableButton.
+• Lines 5700-5730: separate accessory-bar routes; these can reveal the Widgets table but do not implement its rows.
+• Lines 5850-5853: existing command insertion helper, insertSmartActionTextAtSelection.
 
-• 1x1
-• 2x1
-• 3x1
-• 1x2
-• 2x2
-• 3x2
-• 1x3
-• 3x3
+Supporting files:
 
-Shape detection checks the largest supported shapes first and requires the expected continuation tokens.
+Main_SmartScriptEditingModel.swift
 
-A 1x1 Paste Small must:
+• Lines 15-21: script, selection, Undo/Redo state.
+• Lines 33-43: edited-text transaction behavior.
+• Lines 62-76: selection handling.
+• Lines 78-91: replaceSelection(with:), including one Undo snapshot and post-insertion caret placement.
 
-• Preserve the copied payload rawLine unchanged.
-• Use a proposed shape of width 1, height 1.
-• Write rawLine only at the destination index.
-• Write no continuation assignments.
-• Never modify clipboard payload width, height, or span.
-• Require the destination’s currently stored line to be blank/empty, not @@wide or @@block.
+Main_DocumentActions.swift
 
-No stale continuation token is possible if Paste Small uses the existing continuationAssignments() helper with a 1x1 shape: that helper returns no assignments. The target must still be validated as one free cell immediately before persistence.
+• Lines 261-273: opens a slot in Soft Editor and resets the script model.
+• Lines 289-301: commits current slot editing.
+• Lines 305-320: save/cancel behavior.
+• Lines 326-364: adjacent-slot navigation commits the current edit before changing slots.
 
-E. REJECTION REASONS
+ContentView.swift is not on the Special Keys/Widgets interaction path.
 
-Current paste exposes only these public outcomes:
+B. CURRENT SPECIAL KEYS FLOW
 
-• success
-• nothingToPaste
-• notEnoughSpace
-• spaceOccupied
+Special Keys are internally called the “escape code” table.
 
-However, spaceOccupied is currently not returned by updatedSlotLinesForPopupPaste(). Its collision failures return notEnoughSpace. Therefore, the current UI displays “not enough space” for multiple distinct causes.
+smartEscapeCodeRows contains a tuple per row:
 
-Current causes folded into notEnoughSpace:
+• English display label
+• command token
+• help/description
 
-• Copied shape exceeds row/column grid boundaries: lines 504-507.
-• Target index is invalid/outside visible data: lines 497-502.
-• Target resolves to a continuation entry: lines 517-519.
-• Required footprint exceeds visible slot count: lines 525-528.
-• A footprint index is invalid: lines 532-537.
-• A non-destination footprint cell contains a button or continuation: lines 543-546.
+Examples include .ESC, .RET, .BS, .SP, .TAB, colon, arrow keys, control shortcuts, and command shortcuts.
 
-NothingToPaste covers empty or malformed clipboard payloads.
+At Main_Screen.swift:3946-3951, each row currently does this in one Button action:
 
-Edit-mode-off is rejected before paste is called, at Main_Screen.swift:2305-2310.
+1. Calls insertSmartActionTextAtSelection(escapeCodeRow.command).
+2. Assigns smartCommandDescription = escapeCodeRow.description.
 
-Paste Small should be eligible only when all of these are true:
+The rows are plain SwiftUI Buttons created by smartCommandTableButton at lines 5508-5533. There is no onTapGesture, List/Table selection binding, UIKit recognizer, or persistent selected-row state.
 
-• Clipboard decodes and validates.
-• Edit mode remains enabled.
-• The exact selected destination is still a direct, single free cell.
-• The destination is not a continuation cell and does not resolve to an existing button anchor.
-• Normal Paste failed because the copied multi-cell footprint is out of bounds or intersects cells outside that one free destination cell.
+Important current-source finding: the implementation does not retain a selected Special Keys row and does not render a selected-row highlight. The apparent selection is only ordinary Button press feedback.
 
-Paste Small should not be offered for:
+C. CURRENT WIDGETS FLOW
 
-• Empty or malformed clipboard.
-• Edit mode ended.
-• Invalid target.
-• Occupied destination.
-• Continuation-cell destination.
-• Persistence failure/conflict.
-• A copied 1x1 button, because normal Paste already fits wherever a valid free cell exists.
+Widgets use the same table and row factory.
 
-F. ALERT INTEGRATION
+At Main_Screen.swift:3954-3959, each row currently does this in one Button action:
 
-There is no existing interactive “Not Enough Space” alert for Paste.
+1. Calls insertSmartActionTextAtSelection(commandRow.shortcut).
+2. Assigns smartCommandDescription = commandRow.description.
 
-The current rejection is a two-second inline operation message:
+Widget data is in smartCommandRows beginning at line 389. It includes clock, date, year, month, day of month, day of week, hour, minutes, and additional widget commands.
 
-• Main_Screen.swift:2335-2338 calls showMainGridActionMenuMessage(“not enough space”).
-• The message is state-driven and auto-dismissed at lines 2679-2693.
+There is no widget-specific insertion transformation. The stored shortcut is passed directly to the insertion helper. Some widget shortcuts intentionally include a trailing space, for example .clock  and .date ; this is preserved by the existing path.
 
-The only SwiftUI alert currently attached to MainScreen is the Delete All confirmation at lines 1238-1248. The renameAlertMessage state is also used for informational popups, not a Paste confirmation.
+D. FUNCTION KEYS AND SHARED IMPLEMENTATION
 
-Smallest reliable addition:
+F1 through F20 are a third table at Main_Screen.swift:3926-3941. It uses the same smartCommandTableButton factory, but its closure only inserts F<number>.
 
-• Add a pending Paste Small value that captures:
-   • selectedDocumentName
-   • destination index
-   • destination grid dimensions
-   • copied MainGridEditClipboardPayload snapshot
-   • optionally the current slot-lines snapshot
-• On an eligible normal-paste failure, set this pending value and present:
-   • Title: Not Enough Space
-   • Message: The copied button is too large for this location. Paste it as a single button instead?
-   • Cancel
-   • Paste Small
-• On Paste Small, revalidate against current state, then use the same placement/persistence path.
+Unlike Special Keys and Widgets, the Function Key rows currently have no per-row description assignment. Therefore, the requested “single tap shows help” behavior needs a small new help mapping or generated text for F1...F20 if Function Keys are included in Special Keys testing.
 
-To avoid competing alerts, use one explicit MainScreen confirmation-state enum for Delete All and Paste Small, rather than adding unrelated independently active alert booleans. The current transient operation message can remain for noneligible errors.
+smartCommandTableButton is currently used only by:
 
-G. DATA PRESERVATION
+• F1...F20
+• Special Keys
+• Widgets
 
-The safe transformation is shape-only, applied to a copied value:
+It is not used by MIDI, Files, Time accessory menus, or other Soft Editor modes. MIDI, Files, and Time have separate views and insertion paths at Main_Screen.swift:5700-5818 and 8197 onward. A focused change to these three uses will not alter those other modes.
 
-• Use the captured payload.rawLine unchanged.
-• Override only the proposed placement shape to 1x1.
-• Do not reserialize or mutate mainGridEditClipboardText.
-• Do not touch the source button or source continuation cells.
+E. MODE SWITCHING AND HELP
 
-This preserves commands, MIDI text, widget commands, display text, symbols/emoji, color data, hidden state, and any other raw-line metadata.
+The Widgets/Special Keys switch is the Boolean isSmartEscapeCodeTableVisible.
 
-H. STALE OPERATION SAFETY
+• false: Widgets.
+• true: Special Keys.
 
-A pending confirmation must not trust current selection or current clipboard when the user presses Paste Small.
+The toggle at lines 5485-5506 changes the Boolean and replaces the help text with the table-level description. It does not change editor drafts, editor selection, or a selected-row state because none exists.
 
-Minimum reliable commit checks:
+The lower help area is a ScrollView rendering:
 
-• isGridEditModeEnabled is still true.
-• selectedDocumentName equals the pending document name.
-• Current grid dimensions equal the pending dimensions.
-• The pending index remains in functionKeys and visibleBoxCount.
-• The pending index itself is still blank/empty.
-• It is not @@wide or @@block.
-• The captured clipboard payload is still valid.
-• Generate the new slot lines from a freshly read current snapshot.
-• Persist only through restoreFunctionKeySlotLines().
+Text(.init(smartCommandDescription))
 
-Capturing the payload snapshot is essential: if the clipboard changes while the confirmation is on screen, Paste Small must use the snapshot the user was asked to confirm, or cancel. Capturing the document name and grid dimensions prevents a screen switch from redirecting the operation.
+at lines 4281-4288.
 
-A full screen-version token is not presently exposed. The fresh destination-cell validation plus ContentView’s existing disk-conflict detection is sufficient for this single-view synchronous operation.
+Help is direct state, not derived from a selected row. It persists until another action assigns new help text.
 
-I. SHARED DEVICE COVERAGE
+The current table help strings at lines 1020-1032 state that tapping inserts. Those strings will need wording changes in a future implementation stage.
 
-iPhone and iPad share the same implementation:
+F. CURRENT INSERTION, CARET, DRAFT, AND UNDO FLOW
 
-• One MainScreen.
-• One MainGridEditActionMenu.
-• One copy/paste handler and placement helper.
-• Device-specific code is limited to popup geometry/positioning.
+insertSmartActionTextAtSelection at lines 5850-5853:
 
-Paste Small therefore needs no device-specific business logic. A standard SwiftUI confirmation alert will receive native iPhone/iPad presentation.
+1. Converts the stored command representation to editor representation.
+2. Calls smartScriptEditingModel.replaceSelection(with:).
+3. Assigns the resulting script to smartActionTextBinding.
 
-J. REGRESSION RISKS
+replaceSelection(with:) at Main_SmartScriptEditingModel.swift:78-91:
 
-Highest risks:
+• Replaces the stored UTF-16 selection range.
+• Pushes one Undo state when text changes.
+• Moves the selection/caret to immediately after inserted text.
+• Does not create a text change if the selected text already exactly equals the insertion.
 
-• Accidentally changing normal Paste replacement semantics.
-• Allowing Paste Small on an occupied/continuation target.
-• Leaving stale @@wide or @@block tokens by manually editing slot lines.
-• Mutating the clipboard rather than using a shape override.
-• Creating a second undo entry or missing the undo snapshot.
-• Saving after a document switch or clipboard change.
-• Bypassing persistSlotLines(), which would skip immediate refresh and external-file conflict protection.
-• Reusing Move/Cut helpers; this would broaden behavior unnecessarily.
+The binding at Main_Screen.swift:4017-4032:
 
-Move, Cut, import/export, MIDI parsing, image-backed appearance, and widget behavior need not change if the implementation stays in the popup Paste path and preserves rawLine.
+• Canonicalizes script text.
+• Preserves the button display/right-side text and hidden metadata.
+• Updates editingSlotText.
+• Marks the Soft Editor session modified when the text changes.
 
-K. RECOMMENDED IMPLEMENTATION PLAN
+This is draft editing, not an immediate screen-file write. Persisting occurs through the existing save/commit path in Main_DocumentActions.swift.
+
+A correctly implemented single tap must not call either replaceSelection(with:) or smartActionTextBinding. It will therefore preserve text, selection, caret, draft state, Undo/Redo stacks, and document state.
+
+G. SAFEST GESTURE DESIGN
+
+Do not attach independent single-tap and double-tap insertion handlers. A simultaneous gesture can allow both recognizers to succeed and risks duplicate work.
+
+Also do not leave the existing Button action as insertion while adding a double-tap gesture: the Button would insert on the first tap.
+
+Smallest practical design:
+
+1. Split current row behavior into two helpers:
+   • Select/preview: update selected-row state and smartCommandDescription.
+   • Insert/apply: call existing insertSmartActionTextAtSelection.
+
+2. Keep the existing text-bearing SwiftUI Button for accessibility and visual structure.
+
+3. Change the Button’s primary action to Select/Preview only.
+
+4. Add a high-priority double-tap recognizer to that same Button for Select/Preview plus Insert/Apply exactly once.
+
+The high-priority recognizer is appropriate because Apple documents that it takes precedence over the view’s existing gestures. The normal Button action can safely run during the first tap because it only selects and shows help; it performs no insertion.
+
+This avoids arbitrary timers. The platform’s normal double-tap recognition interval is inherently required before a single tap can be conclusively distinguished from a double tap.
+
+An alternative is:
+
+TapGesture(count: 2).exclusively(before: TapGesture(count: 1))
+
+This guarantees only one gesture succeeds, but requires replacing the standard Button with a custom tappable row and adds more accessibility work. The retained-Button approach is narrower and safer for this source.
+
+Physical-device testing must confirm that the high-priority double recognizer fires once, that scrolling remains smooth, and that the Button action does not receive an insertion path.
+
+H. REQUIRED NEW STATE FOR TRUE ROW SELECTION
+
+The current source has no selected-row state. To meet the requested selection and highlight behavior, a focused stage needs one small @State value identifying the selected row.
+
+It should distinguish all three sources, for example:
+
+• Function key number
+• Special Key English identifier
+• Widget English identifier
+
+The state should be used only for visual/VoiceOver selected indication and help. It must not change the command draft.
+
+Because ForEach identity currently uses english, the same stable values can identify Special Key and Widget rows, provided mode/type is also retained.
+
+I. ACCESSIBILITY
+
+ACCESSIBILITY VERDICT FOR THE REQUESTED DOUBLE-TAP CHANGE: FAIL if implemented as a touch-only custom double-tap interaction without an accessible insertion action.
+
+Current source status:
+
+• PASS: Current table rows are text-bearing SwiftUI Buttons at lines 5508-5533. Their visible text provides an accessible label and Button trait.
+• PASS: Special Keys and Widgets add each row description as an accessibility hint at lines 3951 and 3959.
+• PASS: The table-mode icon button has an explicit accessible label at line 5505.
+
+Risk:
+
+VoiceOver’s normal double tap activates a control once; it is not equivalent to two direct physical taps recognized by TapGesture(count: 2). A touch-only double-tap insert implementation could leave VoiceOver users able to preview but unable to insert.
+
+Required accessible alternative in the implementation stage:
+
+• Keep rows as Buttons.
+• Make default activation select/preview.
+• Add .accessibilityAction(named: "Insert command") that calls the exact same Insert/Apply helper as the direct double tap.
+• Add an accessibility hint explaining that activation previews and the Actions rotor contains “Insert command.”
+• If selected-row styling is added, expose its selected state with .accessibilityAddTraits(.isSelected).
+
+This keeps command insertion available to VoiceOver, Switch Control, Voice Control, and Full Keyboard Access without requiring inaccessible multi-tap timing.
+
+J. IPHONE AND IPAD COVERAGE
+
+The same smartCommandPanel builds the function-key and command tables for both device classes at lines 3851-3979.
+
+iPad supplies a distinct keypad layout through IPadSmartCommandKeypad, but the tables below it remain shared. iPhone paths also inject the same smartCommandPanel at lines 3632 and 3740.
+
+No device-specific table implementation is needed.
+
+K. REGRESSION RISKS
+
+Primary risks:
+
+• Duplicate insertion if a single-tap insertion closure remains active.
+• A double tap may insert twice if separate tap recognizers are simultaneous rather than exclusive/preemptive.
+• A generic change to smartCommandTableButton would affect F1...F20 as well as the two requested tables.
+• Function Keys need a new help value; they presently do not set one.
+• A new selected-row state can become stale across table-mode switches unless selection is cleared or mode-qualified.
+• Changing insertSmartActionTextAtSelection would risk caret placement, command formatting, metadata preservation, and Undo/Redo. It should remain unchanged.
+• Replacing standard Buttons with raw gestures would regress VoiceOver semantics unless explicit labels, Button trait, default action, and custom insertion action are supplied.
+• Gesture changes must preserve vertical ScrollView drag behavior.
+• Updating table-level help text is necessary to avoid a misleading “tap inserts” instruction.
+
+L. RECOMMENDED FOCUSED IMPLEMENTATION STAGE
 
 One focused stage is sufficient.
 
-1. Refactor updatedSlotLinesForPopupPaste() internally to accept:
-   • an explicit payload snapshot
-   • a proposed shape override
-   • a destination policy: existing normal replacement behavior versus Paste Small’s blank-cell-only behavior.
+Scope:
 
-2. Keep normal Paste calling the helper exactly as today.
+1. Add a mode-qualified selected-row identifier.
+2. Add a small Select/Preview helper.
+3. Retain insertSmartActionTextAtSelection unchanged as the sole command insertion path.
+4. Refactor smartCommandTableButton only enough to accept:
+   • row identifier
+   • row description
+   • insertion text
+   • whether the row is selected
+5. Change Special Keys, Widgets, and F1...F20 to use Select/Preview on primary activation and Select/Preview plus Insert/Apply on direct double tap.
+6. Add Function Key help text.
+7. Update table-level instructions.
+8. Add the VoiceOver “Insert command” accessibility action.
+9. Do not alter accessory menus, MIDI, Files, Time, editor geometry, document persistence, or command formats.
 
-3. Return a distinct eligible-for-small-paste outcome only when:
-   • copied shape is larger than 1x1,
-   • source payload is valid,
-   • destination is exactly one free direct cell,
-   • normal-size failure is bounds/collision beyond that cell.
+M. PHYSICAL-DEVICE TEST PLAN
 
-4. Add pending confirmation state in MainScreen, with document, index, grid dimensions, and payload snapshot.
+Special Keys:
 
-5. On confirmation, revalidate and run the shared helper with 1x1 plus blank-only policy; then use the existing persistence, selection refresh, undo, and success message logic.
+• Single tap Escape: help changes; command text, selection, caret, draft-modified state, and Undo remain unchanged.
+• Double tap Escape: help changes; .ESC inserts once at the current replacement range; Undo removes it once; Redo restores it once.
+• Repeat with Return, Backspace, Tab, colon, arrows, and a command shortcut.
+• Test F1 and F20: verify help and exactly-one insertion.
 
-L. PHYSICAL-DEVICE TEST PLAN
+Widgets:
 
-On each requested physical device in landscape:
+• Single tap Clock and Date: help changes; no command is inserted.
+• Double tap Clock and Date: exact stored widget syntax inserts once, including intended trailing space.
+• Repeat with Year, Month, Day of Month, Day of Week, and a non-time widget.
+• Verify an existing selected text range is replaced exactly as normal insertion currently does.
 
-• Copy/paste a 1x1 button: normal Paste succeeds; no Paste Small prompt.
-• Copy 1x2 “Toggle YT” into a location that fits: normal 1x2 Paste succeeds unchanged.
-• Copy 1x2 into a free last-row cell: prompt appears; Paste Small creates one cell.
-• Repeat with 2x1, 2x2, 3x2, 1x3, and 3x3 sources.
-• Confirm original source button and its continuation cells are unchanged.
-• Confirm copied commands, MIDI data, widget behavior, label, SF Symbol/emoji, color, and hidden state remain intact.
-• Confirm Paste Small produces no continuation cells.
-• Cancel: no document, selection, clipboard, or undo change.
-• Try occupied destination: no Paste Small prompt and no overwrite.
-• Try a continuation-cell destination: no Paste Small prompt and no overwrite.
-• Change screens while prompt is visible: Paste Small must cancel safely.
-• Copy another button while prompt is visible: confirmed Paste Small must use the captured original payload or cancel by policy.
-• Change destination contents while prompt is visible: confirmation must reject without overwrite.
-• Verify successful Paste Small remains in Edit mode, selects/refreshes the new destination using existing behavior, records one undo entry, and leaves clipboard available for another Paste.
-• Verify Undo/Redo, Cut, Move, document reload, and screen export/import remain unchanged.
+Common:
+
+• Rapid single taps on different rows: only final help/selection changes.
+• Rapid double taps: each recognized double tap inserts once only.
+• Switch Widgets/Special Keys after selection: verify the documented selection-reset or mode-qualified behavior.
+• Scroll both tables before tapping.
+• Test editor with empty text, cursor in middle, selected text, multiline content, modifiers, hidden button metadata, and display text.
+• Verify Save, Cancel, slot navigation, Undo, and Redo retain existing behavior.
+• Test landscape on iPhone 17, iPhone XS Max, iPad Air 13-inch M2, iPad mini 5, and iPad Pro 12.9-inch.
+• With VoiceOver enabled: navigate rows, hear labels and help, preview with primary activation, and insert through the “Insert command” accessibility action.

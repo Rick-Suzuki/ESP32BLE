@@ -1022,18 +1022,26 @@ This only sends keys to the ESP32 via bluetooth.
 
 Widgets are small commands: for example, displaying a clock, tap counters, stopwatches, etc.
 
-Tapping a row inserts the command at the cursor.
+Tap a row once for help. Double-tap a row to insert the command at the cursor.
 """
 	
 	private let smartHelpCommandSwitchSpecialKeys = """
 **special-key table**
 
-Tapping a row inserts the key code at the cursor.
+Tap a row once for help. Double-tap a row to insert the key code at the cursor.
 """
 	//
 	//----------------------------------------
 	//
+	// MARK: - BM:🅱️ Soft Editor command-table selection distinguishes each shared table row.
+	private enum SmartCommandTableRowID: Hashable {
+		case functionKey(Int)
+		case specialKey(String)
+		case widget(String)
+	}
+
 	@State private var isSmartEscapeCodeTableVisible = false
+	@State private var selectedSmartCommandTableRow: SmartCommandTableRowID?
     @State private var smartScriptEditingModel = SmartScriptEditingModel()
     @State private var smartPasteTarget = SmartEditorPasteTarget()
     @State private var softEditorAccessorySessionID = UUID()
@@ -3927,9 +3935,13 @@ Tapping a row inserts the key code at the cursor.
                 ScrollView(.vertical) {
                     LazyVStack(spacing: 0) {
                         ForEach(1...20, id: \.self) { functionKeyNumber in
-                            smartCommandTableButton("F\(functionKeyNumber)", foreground: .yellow) {
-                                insertSmartActionTextAtSelection("F\(functionKeyNumber)")
-                            }
+                            smartCommandTableButton(
+                                rowID: .functionKey(functionKeyNumber),
+                                "F\(functionKeyNumber)",
+                                helpDescription: smartFunctionKeyDescription(functionKeyNumber),
+                                command: "F\(functionKeyNumber)",
+                                foreground: .yellow
+                            )
                         }
                     }
                 }
@@ -3944,19 +3956,23 @@ Tapping a row inserts the key code at the cursor.
                     LazyVStack(spacing: 0) {
                         if isSmartEscapeCodeTableVisible {
                             ForEach(smartEscapeCodeRows, id: \.english) { escapeCodeRow in
-                                smartCommandTableButton(escapeCodeRow.english, foreground: .green) {
-                                    insertSmartActionTextAtSelection(escapeCodeRow.command)
-                                    smartCommandDescription = escapeCodeRow.description
-                                }
-                                .accessibilityHint(escapeCodeRow.description)
+                                smartCommandTableButton(
+                                    rowID: .specialKey(escapeCodeRow.english),
+                                    escapeCodeRow.english,
+                                    helpDescription: escapeCodeRow.description,
+                                    command: escapeCodeRow.command,
+                                    foreground: .green
+                                )
                             }
                         } else {
                             ForEach(smartCommandRows, id: \.english) { commandRow in
-                                smartCommandTableButton(commandRow.english, foreground: .cyan) {
-                                    insertSmartActionTextAtSelection(commandRow.shortcut)
-                                    smartCommandDescription = commandRow.description
-                                }
-                                .accessibilityHint(commandRow.description)
+                                smartCommandTableButton(
+                                    rowID: .widget(commandRow.english),
+                                    commandRow.english,
+                                    helpDescription: commandRow.description,
+                                    command: commandRow.shortcut,
+                                    foreground: .cyan
+                                )
                             }
                         }
                     }
@@ -5486,6 +5502,7 @@ Tapping a row inserts the key code at the cursor.
         Button {
             ButtonClickFeedback.playIfEnabled()
             isSmartEscapeCodeTableVisible.toggle()
+			selectedSmartCommandTableRow = nil
             // Help text location: command panel widgets/special-keys switch.
             smartCommandDescription = isSmartEscapeCodeTableVisible
                 ? smartHelpCommandSwitchSpecialKeys
@@ -5506,13 +5523,16 @@ Tapping a row inserts the key code at the cursor.
     }
 
     private func smartCommandTableButton(
-        _ title: String,
-        foreground: Color = .white,
-        action: @escaping () -> Void
+			rowID: SmartCommandTableRowID,
+			_ title: String,
+			helpDescription: String,
+			command: String,
+			foreground: Color = .white
     ) -> some View {
-        Button {
-            ButtonClickFeedback.playIfEnabled()
-            action()
+			let isSelected = selectedSmartCommandTableRow == rowID
+
+		return Button {
+			previewSmartCommandTableRow(rowID, helpDescription: helpDescription)
         } label: {
             Text(title)
                 .font(.system(size: 18, weight: .semibold))
@@ -5522,15 +5542,56 @@ Tapping a row inserts the key code at the cursor.
                 .padding(.horizontal, 6)
                 .frame(maxWidth: .infinity)
                 .frame(height: smartCommandTableRowHeight)
-                .background(Color.black)
+				.background(isSelected ? Color.white.opacity(0.16) : Color.black)
                 .overlay {
                     Rectangle()
                         .stroke(Color.white.opacity(0.55), lineWidth: 1)
                 }
         }
         .buttonStyle(.plain)
+		.highPriorityGesture(
+			TapGesture(count: 2)
+				.onEnded {
+					previewAndInsertSmartCommandTableRow(
+						rowID,
+						helpDescription: helpDescription,
+						command: command
+					)
+				}
+		)
+		.accessibilityHint("Activate to preview. Use the Insert command action to insert at the cursor.")
+		.accessibilityAddTraits(isSelected ? .isSelected : [])
+		.accessibilityAction(named: "Insert command") {
+			previewAndInsertSmartCommandTableRow(
+				rowID,
+				helpDescription: helpDescription,
+				command: command
+			)
+		}
         .editorGeometryProbe(.commandTableRow, isEnabled: debugEditorGeometry)
     }
+
+	private func smartFunctionKeyDescription(_ functionKeyNumber: Int) -> String {
+		"Selects function key F\(functionKeyNumber). Double-tap to insert F\(functionKeyNumber) at the cursor."
+	}
+
+	private func previewSmartCommandTableRow(
+		_ rowID: SmartCommandTableRowID,
+		helpDescription: String
+	) {
+		ButtonClickFeedback.playIfEnabled()
+		selectedSmartCommandTableRow = rowID
+		smartCommandDescription = helpDescription
+	}
+
+	private func previewAndInsertSmartCommandTableRow(
+		_ rowID: SmartCommandTableRowID,
+		helpDescription: String,
+		command: String
+	) {
+		previewSmartCommandTableRow(rowID, helpDescription: helpDescription)
+		insertSmartActionTextAtSelection(command)
+	}
 
 
     // MARK: - BM:🅱️ Resolve overlay anchors without adding columns or changing editor proposals.
@@ -5719,6 +5780,7 @@ Tapping a row inserts the key code at the cursor.
     }
 
     private func revealSoftEditorAccessoryTable(_ table: SoftEditorAccessoryTable) {
+		selectedSmartCommandTableRow = nil
         switch table {
         case .timeDateCommands:
             isSmartEscapeCodeTableVisible = false

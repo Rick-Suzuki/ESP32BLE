@@ -1,7 +1,12 @@
 
+V66.39
+SOFT EDITOR — SINGLE-TAP HELP / DOUBLE-TAP INSERT
+261111 Wed 1423
+
 V66.38
-main, edit, copy big btn, paste in small area fix
+main, screen edit, copy big btn, paste in small area
 261110 Tue 1059
+
 
 V66.37
 green border fixed, max grid set to 20x20
