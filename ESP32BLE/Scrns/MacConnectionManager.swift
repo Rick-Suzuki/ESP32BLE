@@ -168,6 +168,14 @@ private extension Data {
     }
 }
 
+struct DiscoveredMacHelper: Identifiable {
+    let id: String
+    let displayName: String
+    let detail: String
+    let endpoint: NWEndpoint
+}
+
+// MARK: - BM:🅱️
 @MainActor
 final class MacConnectionManager: ObservableObject {
     enum ConnectionStatus: String {
@@ -177,8 +185,13 @@ final class MacConnectionManager: ObservableObject {
     }
 
     static let serviceType = "_esp-network-test._tcp"
+    private static let preferredHelperDefaultsKey = "ESP.PreferredMacHelperBonjourIdentity"
 
     @Published private(set) var status: ConnectionStatus = .searching
+    @Published private(set) var discoveredHelpers: [DiscoveredMacHelper] = []
+    @Published private(set) var selectedHelperID: String?
+    @Published private(set) var helperSelectionStatusText = "Searching for Mac Helpers"
+    @Published private(set) var requiresPairingForSelectedHelper = false
     @Published private(set) var isAuthenticated = false {
         willSet {
             if isAuthenticated && !newValue {
@@ -206,21 +219,64 @@ final class MacConnectionManager: ObservableObject {
     private var challengeHelperID: String?
     private var challengeNonceHex: String?
     private var isPairingRequested = false
+    private var automaticSelectionTask: Task<Void, Never>?
 
     var canSend: Bool {
         status == .connected && isAuthenticated
+    }
+
+    var connectionStatusText: String {
+        if canSend {
+            return "Mac: Connected"
+        }
+        if requiresPairingForSelectedHelper {
+            return "Mac: Pairing Required"
+        }
+        if selectedHelperID != nil && (status == .connecting || status == .connected) {
+            return "Mac: Connecting..."
+        }
+        return "Mac: Searching..."
     }
 
     var isPaired: Bool {
         securityStore.pairedHelperID() != nil && securityStore.pairedSecret() != nil
     }
 
+    var isPairingInProgress: Bool {
+        isPairingRequested
+    }
+
+    var shouldShowHelperSelection: Bool {
+        discoveredHelpers.count > 1 ||
+            (selectedHelperID != nil && selectedHelper == nil)
+    }
+
+    var selectedHelper: DiscoveredMacHelper? {
+        guard let selectedHelperID else { return nil }
+        return discoveredHelpers.first { $0.id == selectedHelperID }
+    }
+
+    // MARK: - BM:🅱️
+    private func diagnostic(_ message: String) {
+        print("🐞 \(Date().formatted(date: .numeric, time: .standard)) \(message)")
+    }
+
+    private func diagnosticIdentity(_ identity: String?) -> String {
+        identity ?? "<none>"
+    }
+
     func start() {
         isDeliberatelyStopped = false
         guard browser == nil, connection == nil else { return }
 
+        selectedHelperID = UserDefaults.standard.string(forKey: Self.preferredHelperDefaultsKey)
+        diagnostic("Bonjour browser starting serviceType=\(Self.serviceType) preferredIdentity=\(diagnosticIdentity(selectedHelperID)) selectedIdentity=\(diagnosticIdentity(selectedHelperID))")
         status = .searching
         pairingStatusText = isPaired ? "Paired" : "Not Paired"
+        requiresPairingForSelectedHelper = false
+        helperSelectionStatusText = selectedHelperID == nil
+            ? "Searching for Mac Helpers"
+            : "Looking for the selected Mac Helper"
 
         let parameters = NWParameters.tcp
         parameters.includePeerToPeer = true
@@ -231,8 +287,10 @@ final class MacConnectionManager: ObservableObject {
         browser.stateUpdateHandler = { [weak self] state in
             guard let self else { return }
 
-            if case .failed = state {
-                Task { @MainActor in
+            Task { @MainActor in
+                self.logBrowserState(state)
+
+                if case .failed = state {
                     guard !self.isDeliberatelyStopped else { return }
                     self.restartSearch()
                 }
@@ -240,18 +298,205 @@ final class MacConnectionManager: ObservableObject {
         }
 
         browser.browseResultsChangedHandler = { [weak self] results, _ in
-            guard let endpoint = results.first?.endpoint else { return }
             guard let self else { return }
 
             Task { @MainActor in
-                self.connect(to: endpoint)
+                self.updateDiscoveredHelpers(from: results)
             }
         }
 
         browser.start(queue: queue)
     }
 
+    func selectHelper(id: String, isAutomaticSelection: Bool = false) {
+        guard let helper = discoveredHelpers.first(where: { $0.id == id }) else { return }
+
+        automaticSelectionTask?.cancel()
+        automaticSelectionTask = nil
+        let previousID = selectedHelperID
+        if previousID != helper.id {
+            isPairingRequested = false
+        }
+        selectedHelperID = helper.id
+        UserDefaults.standard.set(helper.id, forKey: Self.preferredHelperDefaultsKey)
+        helperSelectionStatusText = "Selected \(helper.displayName)"
+        requiresPairingForSelectedHelper = false
+        pairingStatusText = isPaired ? "Paired" : "Not Paired"
+        diagnostic("helper selection mode=\(isAutomaticSelection ? "automatic" : "explicit") preferredIdentity=\(diagnosticIdentity(UserDefaults.standard.string(forKey: Self.preferredHelperDefaultsKey))) selectedIdentity=\(diagnosticIdentity(selectedHelperID)) endpoint=\(String(describing: helper.endpoint))")
+
+        guard previousID != helper.id || connection == nil else { return }
+
+        if connection != nil {
+            diagnostic("cancelling active TCP connection before switching to selected helper identity=\(diagnosticIdentity(helper.id))")
+        }
+        connection?.cancel()
+        connection = nil
+        receiveBuffer.removeAll()
+        isAuthenticated = false
+        challengeHelperID = nil
+        challengeNonceHex = nil
+        connect(to: helper)
+    }
+
+    private func updateDiscoveredHelpers(from results: Set<NWBrowser.Result>) {
+        diagnostic("Bonjour results update rawResultCount=\(results.count)")
+        let previousIDs = Set(discoveredHelpers.map(\.id))
+        let mappedHelpers = results.map { result -> DiscoveredMacHelper in
+            let helper = Self.makeDiscoveredHelper(from: result)
+            logBonjourResult(result, helper: helper)
+            return helper
+        }
+
+        var helpersByIdentity: [String: DiscoveredMacHelper] = [:]
+        for helper in mappedHelpers {
+            if let existingHelper = helpersByIdentity[helper.id] {
+                diagnostic("WARNING Bonjour identity collision identity=\(diagnosticIdentity(helper.id)) existingEndpoint=\(String(describing: existingHelper.endpoint)) replacementEndpoint=\(String(describing: helper.endpoint))")
+            }
+            helpersByIdentity[helper.id] = helper
+        }
+
+        let helpers = helpersByIdentity
+            .values
+            .sorted { lhs, rhs in
+                lhs.displayName.localizedCaseInsensitiveCompare(rhs.displayName) == .orderedAscending
+            }
+
+        diagnostic("Bonjour helper mapping rawResultCount=\(results.count) mappedHelperCount=\(mappedHelpers.count) deduplicatedHelperCount=\(helpers.count)")
+        let helperIDs = Set(helpers.map(\.id))
+        for helper in helpers where !previousIDs.contains(helper.id) {
+            diagnostic("discovered Mac Helper name=\(helper.displayName) identity=\(diagnosticIdentity(helper.id))")
+        }
+        for helper in discoveredHelpers where !helperIDs.contains(helper.id) {
+            diagnostic("removed Mac Helper name=\(helper.displayName) identity=\(diagnosticIdentity(helper.id))")
+        }
+
+        discoveredHelpers = helpers
+        logHelperSelectionUIState()
+        connectToSelectedHelperIfPossible()
+    }
+
+    private func connectToSelectedHelperIfPossible() {
+        if selectedHelperID != nil, selectedHelper == nil {
+            helperSelectionStatusText = "Selected Mac Helper unavailable. Select another available Mac."
+            return
+        }
+
+        guard connection == nil else { return }
+
+        if let selectedHelper {
+            helperSelectionStatusText = "Selected \(selectedHelper.displayName)"
+            connect(to: selectedHelper)
+            return
+        }
+
+        guard discoveredHelpers.count == 1 else {
+            automaticSelectionTask?.cancel()
+            automaticSelectionTask = nil
+            helperSelectionStatusText = discoveredHelpers.isEmpty
+                ? "No Mac Helpers found yet"
+                : "Select a Mac Helper"
+            return
+        }
+
+        scheduleAutomaticSelectionAfterDiscoverySettles()
+    }
+
+    // MARK: - BM:🅱️
+    private func scheduleAutomaticSelectionAfterDiscoverySettles() {
+        guard automaticSelectionTask == nil else { return }
+
+        diagnostic("automatic selection settling period started")
+        automaticSelectionTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 1_000_000_000)
+            guard !Task.isCancelled, let self else { return }
+
+            self.automaticSelectionTask = nil
+            guard self.selectedHelperID == nil,
+                  self.connection == nil,
+                  self.discoveredHelpers.count == 1,
+                  let helper = self.discoveredHelpers.first else {
+                self.diagnostic("automatic selection skipped because discovery changed")
+                return
+            }
+
+            self.diagnostic("automatic selection triggered after discovery settling identity=\(self.diagnosticIdentity(helper.id))")
+            self.selectHelper(id: helper.id, isAutomaticSelection: true)
+        }
+    }
+
+    private func logBrowserState(_ state: NWBrowser.State) {
+        switch state {
+        case .setup:
+            diagnostic("Bonjour browser state=starting")
+        case .ready:
+            diagnostic("Bonjour browser state=ready")
+        case .failed(let error):
+            diagnostic("Bonjour browser state=failed error=\(error)")
+        case .cancelled:
+            diagnostic("Bonjour browser state=cancelled")
+        case .waiting(let error):
+            diagnostic("Bonjour browser state=waiting error=\(error)")
+        @unknown default:
+            diagnostic("Bonjour browser state=unknown value=\(String(describing: state))")
+        }
+    }
+
+    private func logBonjourResult(_ result: NWBrowser.Result, helper: DiscoveredMacHelper) {
+        let resultInterfaceNames = result.interfaces.map(\.name).sorted()
+        let resultInterfaces = resultInterfaceNames.isEmpty ? "<none>" : resultInterfaceNames.joined(separator: ",")
+        let endpointDescription = String(describing: result.endpoint)
+
+        switch result.endpoint {
+        case let .service(name, type, domain, interface):
+            diagnostic("Bonjour result serviceName=\(name) serviceType=\(type) domain=\(domain) endpoint=\(endpointDescription) endpointInterface=\(interface?.name ?? "<none>") resultInterfaces=\(resultInterfaces) identity=\(diagnosticIdentity(helper.id))")
+        default:
+            diagnostic("Bonjour result nonServiceEndpoint endpoint=\(endpointDescription) resultInterfaces=\(resultInterfaces) identity=\(diagnosticIdentity(helper.id))")
+        }
+    }
+
+    private func logHelperSelectionUIState() {
+        let reason: String
+        if discoveredHelpers.count > 1 {
+            reason = "multiple discovered helpers"
+        } else if selectedHelperID != nil && selectedHelper == nil {
+            reason = "selected helper unavailable"
+        } else if discoveredHelpers.isEmpty {
+            reason = "no discovered helpers"
+        } else {
+            reason = "one discovered helper with selected helper available"
+        }
+
+        diagnostic("helper selection UI discoveredHelperCount=\(discoveredHelpers.count) shouldShowHelperSelection=\(shouldShowHelperSelection) reason=\(reason) preferredIdentity=\(diagnosticIdentity(UserDefaults.standard.string(forKey: Self.preferredHelperDefaultsKey))) selectedIdentity=\(diagnosticIdentity(selectedHelperID))")
+    }
+
+    private static func makeDiscoveredHelper(from result: NWBrowser.Result) -> DiscoveredMacHelper {
+        let interfaceNames = result.interfaces.map(\.name).sorted()
+        let endpointDescription = String(describing: result.endpoint)
+
+        guard case let .service(name, type, domain, interface) = result.endpoint else {
+            return DiscoveredMacHelper(
+                id: endpointDescription,
+                displayName: "Mac Helper",
+                detail: endpointDescription,
+                endpoint: result.endpoint
+            )
+        }
+
+        let identity = [name, type, domain, interface?.name ?? "", interfaceNames.joined(separator: ",")]
+            .joined(separator: "\u{1F}")
+        let detail = interfaceNames.isEmpty ? endpointDescription : interfaceNames.joined(separator: ", ")
+
+        return DiscoveredMacHelper(
+            id: identity,
+            displayName: name.isEmpty ? "Mac Helper" : name,
+            detail: detail,
+            endpoint: result.endpoint
+        )
+    }
+
     func stop() {
+        automaticSelectionTask?.cancel()
+        automaticSelectionTask = nil
         invalidateMIDISession(canTransmit: true)
         isDeliberatelyStopped = true
         browser?.cancel()
@@ -266,8 +511,15 @@ final class MacConnectionManager: ObservableObject {
     }
 
     func requestPairing() {
+        guard selectedHelper != nil else {
+            diagnostic("pairing request ignored because no Mac Helper is selected")
+            return
+        }
+
         invalidateMIDISession(canTransmit: true)
         isPairingRequested = true
+        diagnostic("pairing started for selected helper identity=\(diagnosticIdentity(selectedHelperID))")
+        requiresPairingForSelectedHelper = false
         isAuthenticated = false
         pairingStatusText = "Pairing..."
         sendPairingRequestIfPossible()
@@ -278,8 +530,9 @@ final class MacConnectionManager: ObservableObject {
         securityStore.deletePairing()
         isPairingRequested = false
         isAuthenticated = false
-        pairingStatusText = "Not Paired"
-        print("[ESP-AUTH] forgot paired Mac Helper")
+        requiresPairingForSelectedHelper = selectedHelper != nil
+        pairingStatusText = requiresPairingForSelectedHelper ? "Pairing Required" : "Not Paired"
+        diagnostic("forgot pairing credentials selectedIdentity=\(diagnosticIdentity(selectedHelperID)) pairingRequired=\(requiresPairingForSelectedHelper)")
     }
 
     func sendKeyboardTokens(_ tokens: [String]) -> Bool {
@@ -345,18 +598,17 @@ final class MacConnectionManager: ObservableObject {
         return true
     }
 
-    private func connect(to endpoint: NWEndpoint) {
+    private func connect(to helper: DiscoveredMacHelper) {
         guard connection == nil else { return }
 
-        browser?.cancel()
-        browser = nil
         status = .connecting
+        diagnostic("TCP connection attempt helperName=\(helper.displayName) selectedIdentity=\(diagnosticIdentity(selectedHelperID)) endpoint=\(String(describing: helper.endpoint))")
 
         let parameters = NWParameters.tcp
         parameters.includePeerToPeer = true
 
         invalidateMIDISession(canTransmit: false)
-        let connection = NWConnection(to: endpoint, using: parameters)
+        let connection = NWConnection(to: helper.endpoint, using: parameters)
         self.connection = connection
 
         connection.stateUpdateHandler = { [weak self, weak connection] state in
@@ -373,21 +625,36 @@ final class MacConnectionManager: ObservableObject {
 
     private func handleConnectionState(_ state: NWConnection.State) {
         switch state {
+        case .setup:
+            diagnostic("TCP connection state=setup")
+        case .preparing:
+            diagnostic("TCP connection state=preparing")
+        case .waiting(let error):
+            diagnostic("TCP connection state=waiting error=\(error)")
         case .ready:
+            diagnostic("TCP connection state=ready")
             status = .connected
             isAuthenticated = false
             receive(on: connection)
             sendPairingRequestIfPossible()
-        case .failed, .cancelled:
+        case .failed(let error):
+            diagnostic("TCP connection state=failed error=\(error)")
             if !isDeliberatelyStopped {
                 restartSearch()
             }
-        default:
-            break
+        case .cancelled:
+            diagnostic("TCP connection state=cancelled")
+            if !isDeliberatelyStopped {
+                restartSearch()
+            }
+        @unknown default:
+            diagnostic("TCP connection state=unknown value=\(String(describing: state))")
         }
     }
 
     private func restartSearch() {
+        automaticSelectionTask?.cancel()
+        automaticSelectionTask = nil
         invalidateMIDISession(canTransmit: false)
         connection?.cancel()
         connection = nil
@@ -450,13 +717,14 @@ final class MacConnectionManager: ObservableObject {
         if message == "AUTH:OK:\(ESPMacSecurityV1.protocolVersion)" {
             isAuthenticated = true
             pairingStatusText = isPaired ? "Paired" : pairingStatusText
-            print("[ESP-AUTH] authenticated with Mac Helper")
+            requiresPairingForSelectedHelper = false
+            print("🐞 \(Date().formatted(date: .numeric, time: .standard)) Mac Helper authentication succeeded")
             return
         }
 
         if message == "AUTH:FAILED:\(ESPMacSecurityV1.protocolVersion)" {
             isAuthenticated = false
-            print("[ESP-AUTH] authentication failed")
+            print("🐞 \(Date().formatted(date: .numeric, time: .standard)) Mac Helper authentication failed")
             return
         }
 
@@ -467,8 +735,9 @@ final class MacConnectionManager: ObservableObject {
 
         if message == "PAIR:FAILED:\(ESPMacSecurityV1.protocolVersion)" {
             isPairingRequested = false
-            pairingStatusText = isPaired ? "Paired" : "Pairing Rejected"
-            print("[ESP-AUTH] pairing rejected")
+            requiresPairingForSelectedHelper = true
+            pairingStatusText = "Pairing Rejected"
+            diagnostic("pairing failed for selected helper identity=\(diagnosticIdentity(selectedHelperID))")
             return
         }
     }
@@ -490,8 +759,16 @@ final class MacConnectionManager: ObservableObject {
             return
         }
 
+        let savedHelperMatchesChallenge = securityStore.pairedHelperID() == helperID && securityStore.pairedSecret() != nil
+        diagnostic("authentication challenge received savedHelperMatchesChallenge=\(savedHelperMatchesChallenge) selectedIdentity=\(diagnosticIdentity(selectedHelperID))")
         challengeHelperID = helperID
         challengeNonceHex = nonceHex
+        requiresPairingForSelectedHelper = !savedHelperMatchesChallenge
+
+        if requiresPairingForSelectedHelper && !isPairingRequested {
+            pairingStatusText = "Pairing Required for Selected Mac"
+            print("🐞 \(Date().formatted(date: .numeric, time: .standard)) pairing required for selected Mac Helper")
+        }
 
         if isPairingRequested {
             sendPairingRequestIfPossible()
@@ -535,8 +812,9 @@ final class MacConnectionManager: ObservableObject {
 
         securityStore.storePairing(helperID: helperID, secret: secret)
         isPairingRequested = false
+        requiresPairingForSelectedHelper = false
         pairingStatusText = "Paired"
-        print("[ESP-AUTH] paired with Mac Helper")
+        print("🐞 \(Date().formatted(date: .numeric, time: .standard)) paired with selected Mac Helper")
 
         if challengeHelperID == helperID, let challengeNonceHex {
             authenticateIfPaired(helperID: helperID, nonceHex: challengeNonceHex)

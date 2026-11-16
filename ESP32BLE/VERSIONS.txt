@@ -1,4 +1,8 @@
 
+V66.40
+helper improvements for multi-macs
+261116 Mon 1224
+
 V66.39
 SOFT EDITOR — SINGLE-TAP HELP / DOUBLE-TAP INSERT
 261111 Wed 1423

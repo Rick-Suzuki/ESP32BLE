@@ -1,5 +1,85 @@
 import SwiftUI
 
+// MARK: - BM:🅱️
+private struct MacHelperSelectionControls: View {
+    @ObservedObject var macConnection: MacConnectionManager
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Select a Mac")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.white)
+
+            if macConnection.discoveredHelpers.isEmpty {
+                Text("Searching for Mac helpers...")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            } else {
+                ForEach(macConnection.discoveredHelpers) { helper in
+                    MacHelperSelectionRow(
+                        helper: helper,
+                        isSelected: macConnection.selectedHelperID == helper.id,
+                        showsDetail: duplicateDisplayNames.contains(helper.displayName)
+                    ) {
+                        ButtonClickFeedback.playIfEnabled()
+                        macConnection.selectHelper(id: helper.id)
+                    }
+                }
+            }
+
+            if macConnection.selectedHelperID != nil, macConnection.selectedHelper == nil {
+                Text("Selected Mac unavailable. Select another available Mac.")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    private var duplicateDisplayNames: Set<String> {
+        Dictionary(grouping: macConnection.discoveredHelpers, by: \.displayName)
+            .compactMap { $0.value.count > 1 ? $0.key : nil }
+            .reduce(into: Set<String>()) { $0.insert($1) }
+    }
+}
+
+private struct MacHelperSelectionRow: View {
+    let helper: DiscoveredMacHelper
+    let isSelected: Bool
+    let showsDetail: Bool
+    let select: () -> Void
+
+    var body: some View {
+        Button(action: select) {
+            HStack(spacing: 8) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(helper.displayName)
+                        .font(.caption.weight(.semibold))
+
+                    if showsDetail {
+                        Text(helper.detail)
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                Spacer(minLength: 0)
+
+                if isSelected {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                }
+            }
+            .foregroundStyle(.white)
+            .padding(.horizontal, 10)
+            .frame(minHeight: 30, alignment: .leading)
+            .background(Color.gray.opacity(0.45))
+            .clipShape(.rect(cornerRadius: 10))
+        }
+        .buttonStyle(.plain)
+    }
+}
+
 struct SettingsAvailableDevicesPanel: View {
     @ObservedObject var ble: BLEKeyboardManager
     @ObservedObject var macConnection: MacConnectionManager
@@ -242,6 +322,7 @@ struct SettingsAvailableDevicesPanel: View {
                 .foregroundStyle(outputMode == .none ? Color.secondary : Color.white)
 
             if outputMode == .mac {
+                MacHelperSelectionControls(macConnection: macConnection)
                 macPairingControls
                 midiDefaultChannelControl
             }
@@ -262,73 +343,58 @@ struct SettingsAvailableDevicesPanel: View {
 
     private var macPairingControls: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(macPairingStatusText)
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(macPairingStatusColor)
-                .fixedSize(horizontal: false, vertical: true)
-                .multilineTextAlignment(.leading)
+            if macConnection.selectedHelper != nil, macConnection.requiresPairingForSelectedHelper {
+                Text("Pairing Required")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.white)
 
-            Button(macConnection.isPaired ? "Forget Mac Helper" : "Pair with Mac Helper") {
-                ButtonClickFeedback.playIfEnabled()
-                if macConnection.isPaired {
-                    macConnection.forgetPairedMacHelper()
-                } else {
-                    macConnection.requestPairing()
-                }
-            }
-            .buttonStyle(.plain)
-            .font(.caption.weight(.semibold))
-            .foregroundStyle(.white)
-            .lineLimit(1)
-            .minimumScaleFactor(0.7)
-            .padding(.horizontal, 10)
-            .frame(height: settingsActionButtonHeight - 14)
-            .background(macConnection.isPaired ? Color.red.opacity(0.55) : Color.cyan.opacity(0.55))
-            .background {
-                if isPad {
-                    Color.clear
-                } else {
-                    GeometryReader { geometry in
-                        Color.clear
-                            .preference(key: MacPairingButtonWidthPreferenceKey.self, value: geometry.size.width)
+                if !macConnection.isPairingInProgress {
+                    Button("Pair with Selected Mac") {
+                        ButtonClickFeedback.playIfEnabled()
+                        macConnection.requestPairing()
                     }
+                    .buttonStyle(.plain)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                    .padding(.horizontal, 10)
+                    .frame(height: settingsActionButtonHeight - 14)
+                    .background(Color.cyan.opacity(0.55))
+                    .clipShape(.rect(cornerRadius: auxiliaryButtonCornerRadius))
                 }
             }
-            .clipShape(.rect(cornerRadius: auxiliaryButtonCornerRadius))
-            .onPreferenceChange(MacPairingButtonWidthPreferenceKey.self) { width in
-                guard !isPad, width > 0 else { return }
-                macPairingButtonWidth = width
+
+            if macConnection.isPairingInProgress {
+                Text("Pairing...")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.secondary)
             }
 
             if macConnection.pairingStatusText == "Pairing Rejected" {
-                Text("Pairing rejected. Allow Pairing in ESP Mac Helper.")
+                Text("Pairing rejected. Allow Pairing in the selected Mac's ESPMacHelper menu.")
                     .font(.caption)
-                    .foregroundStyle(Color.white)
-                    .frame(width: isPad ? nil : macPairingButtonWidth, alignment: .leading)
+                    .foregroundStyle(.white)
                     .fixedSize(horizontal: false, vertical: true)
                     .multilineTextAlignment(.leading)
             }
+
+            if macConnection.isPaired, macConnection.selectedHelperID != nil {
+                Button("Forget Mac Helper") {
+                    ButtonClickFeedback.playIfEnabled()
+                    macConnection.forgetPairedMacHelper()
+                }
+                .buttonStyle(.plain)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.white)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+                .padding(.horizontal, 10)
+                .frame(height: settingsActionButtonHeight - 14)
+                .background(Color.red.opacity(0.55))
+                .clipShape(.rect(cornerRadius: auxiliaryButtonCornerRadius))
+            }
         }
-    }
-
-    private var macPairingStatusText: String {
-        if macConnection.pairingStatusText == "Paired",
-           macConnection.isPaired,
-           !macConnection.isAuthenticated {
-            return "Pairing saved"
-        }
-
-        return macConnection.pairingStatusText
-    }
-
-    private var macPairingStatusColor: Color {
-        if macPairingStatusText == "Paired",
-           macConnection.isPaired,
-           macConnection.isAuthenticated {
-            return .green
-        }
-
-        return .secondary
     }
 
     private func outputModeButton(_ mode: OutputMode) -> some View {
@@ -382,7 +448,7 @@ struct SettingsAvailableDevicesPanel: View {
         case .esp32:
             return ble.isConnected ? "ESP32: Connected" : "ESP32: Searching..."
         case .mac:
-            return macConnection.canSend ? "Mac: Connected" : "Mac: Searching..."
+            return macConnection.connectionStatusText
         }
     }
 

@@ -1,272 +1,247 @@
-STAGE 8B.36 READ-ONLY INVESTIGATION REPORT
+Read-only probe complete. No files, settings, pairing data, UserDefaults, Keychain, helper apps, or network settings were changed.
 
-No source, project settings, screen files, or Git state were modified. No build, deployment, Simulator, or physical-device run was performed.
+1. Actual discovery behavior
 
-A. SOURCE MAP
+Verified facts:
 
-Primary implementation:
+• Mac-mode activation calls macConnection.start() from ContentView.swift:415-426.
+• start() creates an NWBrowser for _esp-network-test._tcp at MacConnectionManager.swift:241-278.
+• The browser’s browseResultsChangedHandler passes every new result set to updateDiscoveredHelpers at lines 270-275.
+• The browser is intentionally kept alive after a TCP connection starts. connect(to:) at lines 470-493 does not cancel it.
+• The browser is cancelled only by stop() at lines 374-385, restartSearch() at lines 511-523, or browser failure at lines 259-266.
+• Every browse-result update replaces the published discoveredHelpers list at lines 301-322. Therefore, a later second service should update the SwiftUI list.
 
-Main_Screen.swift
+Important behavior:
 
-• Lines 364-384: Special Keys data, smartEscapeCodeRows.
-• Lines 389 onward: Widgets data, smartCommandRows.
-• Line 982: lower help state, smartCommandDescription.
-• Line 1036: mode state, isSmartEscapeCodeTableVisible.
-• Lines 3817-3845: command text field.
-• Lines 3851-3979: shared command panel and both tables.
-• Lines 3926-3941: separate F1...F20 function-key table.
-• Lines 3943-3969: switched Special Keys / Widgets table.
-• Lines 4017-4032: command-draft binding and synchronization to editingSlotText.
-• Lines 4250-4301: upper script editor and lower help presentation.
-• Lines 5485-5506: Widgets/Special Keys toggle button.
-• Lines 5508-5533: shared row factory, smartCommandTableButton.
-• Lines 5700-5730: separate accessory-bar routes; these can reveal the Widgets table but do not implement its rows.
-• Lines 5850-5853: existing command insertion helper, insertSmartActionTextAtSelection.
+• If no preferred helper is saved and the first browse update contains exactly one helper, lines 339-346 immediately call selectHelper(id:).
+• selectHelper persists that helper as the preferred Bonjour identity at lines 281-298.
+• It immediately starts TCP connection to that helper.
+• This automatic choice does not wait for a subsequent Bonjour update that might contain the second Mac.
 
-Supporting files:
+Conclusion:
 
-Main_SmartScriptEditingModel.swift
+Early automatic selection does occur. It is based on “the current result set contains one helper,” not “Bonjour discovery has completed.” Bonjour browsing is continuous and has no final result event.
 
-• Lines 15-21: script, selection, Undo/Redo state.
-• Lines 33-43: edited-text transaction behavior.
-• Lines 62-76: selection handling.
-• Lines 78-91: replaceSelection(with:), including one Undo snapshot and post-insertion caret placement.
+2. Discovered-helper identity handling
 
-Main_DocumentActions.swift
+Verified facts:
 
-• Lines 261-273: opens a slot in Soft Editor and resets the script model.
-• Lines 289-301: commits current slot editing.
-• Lines 305-320: save/cancel behavior.
-• Lines 326-364: adjacent-slot navigation commits the current edit before changing slots.
+The discovered helper identity is created in MacConnectionManager.swift:349-372.
 
-ContentView.swift is not on the Special Keys/Widgets interaction path.
+It contains:
 
-B. CURRENT SPECIAL KEYS FLOW
+• Bonjour service name
+• Bonjour service type
+• Bonjour service domain
+• Endpoint interface name
+• Result-interface names
 
-Special Keys are internally called the “escape code” table.
+The exact key is built at lines 362-363.
 
-smartEscapeCodeRows contains a tuple per row:
+The display name is only the Bonjour service name at lines 366-370.
 
-• English display label
-• command token
-• help/description
+The code records the endpoint itself for connection, but the endpoint’s resolved address or host is not included in the saved identity or visible UI detail.
 
-Examples include .ESC, .RET, .BS, .SP, .TAB, colon, arrow keys, control shortcuts, and command shortcuts.
+3. Whether duplicate services are merged
 
-At Main_Screen.swift:3946-3951, each row currently does this in one Button action:
+Verified facts:
 
-1. Calls insertSmartActionTextAtSelection(escapeCodeRow.command).
-2. Assigns smartCommandDescription = escapeCodeRow.description.
+• The raw Set<NWBrowser.Result> is mapped to helper models at lines 301-304.
+• The helper models are then reduced into Dictionary<String, DiscoveredMacHelper> at lines 305-307.
+• Any helpers with the same constructed identity overwrite one another.
+• Therefore only one item remains for duplicate keys.
 
-The rows are plain SwiftUI Buttons created by smartCommandTableButton at lines 5508-5533. There is no onTapGesture, List/Table selection binding, UIKit recognizer, or persistent selected-row state.
+This means two helpers will be merged if Network reports the same:
 
-Important current-source finding: the implementation does not retain a selected Special Keys row and does not render a selected-row highlight. The apparent selection is only ordinary Button press feedback.
+• service name
+• type
+• domain
+• endpoint interface name
+• discovered interface-name list
 
-C. CURRENT WIDGETS FLOW
+This is a real risk if both helpers advertise the same Bonjour instance name and Network does not expose a distinct interface value for them.
 
-Widgets use the same table and row factory.
+Apple’s Network documentation confirms that NWBrowser delivers a set of results and that each result includes an endpoint and interfaces. It also documents an advertised service’s optional automatic-renaming behavior during a service-name conflict. The ESP project does not inspect the helper’s advertisement configuration, so this probe cannot establish whether ESPMacHelper enables or disables automatic rename.
 
-At Main_Screen.swift:3954-3959, each row currently does this in one Button action:
+Hypothesis:
 
-1. Calls insertSmartActionTextAtSelection(commandRow.shortcut).
-2. Assigns smartCommandDescription = commandRow.description.
+The two archived helpers may both advertise “ESP Mac Helper.” If Bonjour automatically renames one, ESP should receive distinct service names and show two rows. If the helpers publish indistinguishable service registrations, or Network presents them as one result, this implementation merges them into one row.
 
-Widget data is in smartCommandRows beginning at line 389. It includes clock, date, year, month, day of month, day of week, hour, minutes, and additional widget commands.
+4. Whether early automatic selection occurs
 
-There is no widget-specific insertion transformation. The stored shortcut is passed directly to the insertion helper. Some widget shortcuts intentionally include a trailing space, for example .clock  and .date ; this is preserved by the existing path.
+Verified fact:
 
-D. FUNCTION KEYS AND SHARED IMPLEMENTATION
+Yes.
 
-F1 through F20 are a third table at Main_Screen.swift:3926-3941. It uses the same smartCommandTableButton factory, but its closure only inserts F<number>.
+When the first browse update has one helper and there is no stored preferred identity:
 
-Unlike Special Keys and Widgets, the Function Key rows currently have no per-row description assignment. Therefore, the requested “single tap shows help” behavior needs a small new help mapping or generated text for F1...F20 if Function Keys are included in Special Keys testing.
+• updateDiscoveredHelpers() calls connectToSelectedHelperIfPossible() at line 322.
+• lines 339-346 select and persist the sole currently discovered helper.
+• selectHelper() begins TCP connection at line 298.
 
-smartCommandTableButton is currently used only by:
+This means an M1 result arriving before the M4 result causes M1 to become the saved preferred helper before M4 is considered.
 
-• F1...F20
-• Special Keys
-• Widgets
+After that, later discovery of M4 should still be retained and shown if it produces a distinct identity. The connection itself does not block the browser or suppress list updates.
 
-It is not used by MIDI, Files, Time accessory menus, or other Soft Editor modes. MIDI, Files, and Time have separate views and insertion paths at Main_Screen.swift:5700-5818 and 8197 onward. A focused change to these three uses will not alter those other modes.
+5. Exact chooser visibility conditions
 
-E. MODE SWITCHING AND HELP
+Verified facts:
 
-The Widgets/Special Keys switch is the Boolean isSmartEscapeCodeTableVisible.
+The chooser is rendered in Set_AvailableDevices.swift:4-34.
 
-• false: Widgets.
-• true: Special Keys.
+It is included only while output mode is Mac at lines 314-318.
 
-The toggle at lines 5485-5506 changes the Boolean and replaces the help text with the table-level description. It does not change editor drafts, editor selection, or a selected-row state because none exists.
+Its entire body is hidden unless:
 
-The lower help area is a ScrollView rendering:
+• discoveredHelpers.count > 1, or
+• selectedHelperID is non-nil and the selected helper is absent.
 
-Text(.init(smartCommandDescription))
+Those conditions are defined in MacConnectionManager.swift:231-234.
 
-at lines 4281-4288.
+Therefore:
 
-Help is direct state, not derived from a selected row. It persists until another action assigns new help text.
+• One discovered helper: chooser hidden.
+• Two distinct helper identities: chooser visible.
+• Saved helper unavailable: chooser visible, even if another single helper is found.
+• One visible helper while the selected helper is present: chooser hidden.
+• Connecting, connected, and unauthenticated states do not independently hide the chooser.
 
-The current table help strings at lines 1020-1032 state that tapping inserts. Those strings will need wording changes in a future implementation stage.
+SwiftUI observation is correctly wired:
 
-F. CURRENT INSERTION, CARET, DRAFT, AND UNDO FLOW
+• MacConnectionManager is an ObservableObject.
+• discoveredHelpers, selectedHelperID, and helperSelectionStatusText are @Published at lines 190-194.
+• MacHelperSelectionControls observes that object at Set_AvailableDevices.swift:4-25.
+• The view uses ForEach over discoveredHelpers at lines 15-24.
 
-insertSmartActionTextAtSelection at lines 5850-5853:
+The selected helper is marked with a checkmark when selectedHelperID equals its identity at lines 16-19 and 58-61.
 
-1. Converts the stored command representation to editor representation.
-2. Calls smartScriptEditingModel.replaceSelection(with:).
-3. Assigns the resulting script to smartActionTextBinding.
+6. Explanation of “iPad: Searching” versus “M1: Connecting”
 
-replaceSelection(with:) at Main_SmartScriptEditingModel.swift:78-91:
+Verified facts:
 
-• Replaces the stored UTF-16 selection range.
-• Pushes one Undo state when text changes.
-• Moves the selection/caret to immediately after inserted text.
-• Does not create a text change if the selected text already exactly equals the insertion.
+The iPad text is not a direct presentation of connection status.
 
-The binding at Main_Screen.swift:4017-4032:
+Set_AvailableDevices.swift:465-473 displays:
 
-• Canonicalizes script text.
-• Preserves the button display/right-side text and hidden metadata.
-• Updates editingSlotText.
-• Marks the Soft Editor session modified when the text changes.
+• “Mac: Connected” only when macConnection.canSend is true.
+• Otherwise “Mac: Searching...”.
 
-This is draft editing, not an immediate screen-file write. Persisting occurs through the existing save/commit path in Main_DocumentActions.swift.
+canSend requires both:
 
-A correctly implemented single tap must not call either replaceSelection(with:) or smartActionTextBinding. It will therefore preserve text, selection, caret, draft state, Undo/Redo stacks, and document state.
+• status == .connected
+• isAuthenticated == true
 
-G. SAFEST GESTURE DESIGN
+This is defined at MacConnectionManager.swift:223-225.
 
-Do not attach independent single-tap and double-tap insertion handlers. A simultaneous gesture can allow both recognizers to succeed and risks duplicate work.
+Therefore the iPad can show “Mac: Searching...” while:
 
-Also do not leave the existing Button action as insertion while adding a double-tap gesture: the Button would insert on the first tap.
+• a TCP connection is being attempted,
+• TCP is ready but authentication has not completed,
+• pairing is required,
+• authentication failed,
+• the helper has accepted a socket but ESP has not yet become authenticated.
 
-Smallest practical design:
+The M1 helper showing “Connecting” is consistent with ESP having automatically selected M1 and opened a TCP connection. It does not prove that ESP has authenticated successfully.
 
-1. Split current row behavior into two helpers:
-   • Select/preview: update selected-row state and smartCommandDescription.
-   • Insert/apply: call existing insertSmartActionTextAtSelection.
+Authentication mismatch is likely relevant to the “Searching” text, but does not by itself explain why M4 is absent from the chooser.
 
-2. Keep the existing text-bearing SwiftUI Button for accessibility and visual structure.
+7. Forget Mac Helper behavior
 
-3. Change the Button’s primary action to Select/Preview only.
+Verified fact:
 
-4. Add a high-priority double-tap recognizer to that same Button for Select/Preview plus Insert/Apply exactly once.
+forgetPairedMacHelper() removes only Keychain pairing material at MacConnectionManager.swift:397-405.
 
-The high-priority recognizer is appropriate because Apple documents that it takes precedence over the view’s existing gestures. The normal Button action can safely run during the first tap because it only selects and shows help; it performs no insertion.
+It does not remove:
 
-This avoids arbitrary timers. The platform’s normal double-tap recognition interval is inherently required before a single tap can be conclusively distinguished from a double tap.
+• selectedHelperID in memory
+• ESP.PreferredMacHelperBonjourIdentity from UserDefaults
 
-An alternative is:
+On the next Mac-mode start, start() reloads that saved Bonjour preference at line 245.
 
-TapGesture(count: 2).exclusively(before: TapGesture(count: 1))
+Therefore, pressing Forget Mac Helper does not cause ESP to choose another Mac. It can still reconnect automatically to the M1 Bonjour service, but without its old pairing credentials. This directly explains why Forget does not change the observed target.
 
-This guarantees only one gesture succeeds, but requires replacing the standard Button with a custom tappable row and adds more accessibility work. The retained-Button approach is narrower and safer for this source.
+8. Existing diagnostic coverage
 
-Physical-device testing must confirm that the high-priority double recognizer fires once, that scrolling remains smooth, and that the Button action does not receive an insertion path.
+Existing useful 🐞 diagnostics:
 
-H. REQUIRED NEW STATE FOR TRUE ROW SELECTION
+• “discovered Mac Helper: <name>” — MacConnectionManager.swift:314-316
+• “removed Mac Helper: <name>” — lines 317-319
+• selected helper name — line 288
+• TCP connection target name — line 474
+• pairing required — line 621
+• authentication succeeded — line 575
+• authentication failed — line 581
+• pairing accepted — line 668
 
-The current source has no selected-row state. To meet the requested selection and highlight behavior, a focused stage needs one small @State value identifying the selected row.
+Insufficient diagnostics:
 
-It should distinguish all three sources, for example:
+• No browser ready/failed state logging.
+• No raw NWBrowser result count.
+• No post-dedup helper count.
+• No Bonjour name/type/domain identity.
+• No endpoint description.
+• No interface list.
+• No selected Bonjour identity.
+• No log that two raw results were merged into one dictionary entry.
+• No chooser-visible/hidden state log.
+• No connection state transition logging for preparing, ready, failed, or cancelled.
+• Existing discovery and TCP logs use only displayName, which cannot distinguish M1 from M4 when both advertise the same name.
 
-• Function key number
-• Special Key English identifier
-• Widget English identifier
+Narrow follow-up diagnostic requirements:
 
-The state should be used only for visual/VoiceOver selected indication and help. It must not change the command draft.
+• Log browser state and failure reason.
+• Log raw browse-result count on each update.
+• Log each result’s service name, type, domain, endpoint description, endpoint interface, and result interfaces.
+• Log mapped helper count and deduplicated helper count.
+• Log identity collisions before dictionary replacement.
+• Log selected identity and whether chooser visibility is true.
+• Log NWConnection state transitions without logging authentication payloads, pairing secrets, tokens, or keys.
 
-Because ForEach identity currently uses english, the same stable values can identify Special Key and Widget rows, provided mode/type is also retained.
+9. Most likely root cause
 
-I. ACCESSIBILITY
+Most likely combined cause:
 
-ACCESSIBILITY VERDICT FOR THE REQUESTED DOUBLE-TAP CHANGE: FAIL if implemented as a touch-only custom double-tap interaction without an accessible insertion action.
+1. M1 is discovered first.
+2. ESP immediately auto-selects and persists M1 because the first browse update temporarily contains one result.
+3. Pressing Forget removes pairing credentials but leaves the M1 Bonjour preference intact.
+4. Re-entering Mac mode therefore targets M1 again.
+5. M4 does not appear because either:
+   • it is not reaching NWBrowser as a distinct result, or
+   • both results are being merged by the identity dictionary.
 
-Current source status:
+The physical result is especially consistent with the saved M1 Bonjour selection remaining after Forget.
 
-• PASS: Current table rows are text-bearing SwiftUI Buttons at lines 5508-5533. Their visible text provides an accessible label and Button trait.
-• PASS: Special Keys and Widgets add each row description as an accessibility hint at lines 3951 and 3959.
-• PASS: The table-mode icon button has an explicit accessible label at line 5505.
+The current diagnostics cannot distinguish the final two alternatives. Device logs are needed before changing behavior.
 
-Risk:
+10. Recommended narrowly scoped correction
 
-VoiceOver’s normal double tap activates a control once; it is not equivalent to two direct physical taps recognized by TapGesture(count: 2). A touch-only double-tap insert implementation could leave VoiceOver users able to preview but unable to insert.
+Recommended behavior:
 
-Required accessible alternative in the implementation stage:
+• Keep automatic reconnection only for a previously remembered Bonjour selection.
+• Do not persist the first temporarily sole discovery result as the user’s new preferred Mac.
+• Provide an explicit “Choose Mac” control while in Mac mode, including when the currently saved Mac is connected.
+• Keep the chooser open/dynamic while Bonjour updates arrive.
+• Include the connected helper in that chooser.
+• Selecting another helper must cancel the old connection before opening the new one; current selectHelper() already does this at lines 292-298.
+• Preserve the existing one-pairing Keychain model.
+• Keep current explicit pairing behavior for a newly selected helper.
+• Decide whether “Forget Mac Helper” should remain pairing-only or whether a separate user-authorized “Forget Selected Mac” action should remove the Bonjour preference. Do not make pairing removal silently alter selection.
 
-• Keep rows as Buttons.
-• Make default activation select/preview.
-• Add .accessibilityAction(named: "Insert command") that calls the exact same Insert/Apply helper as the direct double tap.
-• Add an accessibility hint explaining that activation previews and the Actions rotor contains “Insert command.”
-• If selected-row styling is added, expose its selected state with .accessibilityAddTraits(.isSelected).
+Minimum implementation work after diagnostics confirm the actual result set:
 
-This keeps command insertion available to VoiceOver, Switch Control, Voice Control, and Full Keyboard Access without requiring inaccessible multi-tap timing.
+• Change lines 339-346 so an unpreferred sole first discovery does not immediately become the persisted selection.
+• Add an explicit chooser-entry state/control.
+• Improve helper identity handling and collision visibility only if device logs prove two raw Bonjour results are being collapsed.
+• Keep use of service name/type/domain as a discovery preference only; continue treating the authenticated helper ID as the authoritative pairing identity.
 
-J. IPHONE AND IPAD COVERAGE
+Required physical-device tests after a narrow correction:
 
-The same smartCommandPanel builds the function-key and command tables for both device classes at lines 3851-3979.
-
-iPad supplies a distinct keypad layout through IPadSmartCommandKeypad, but the tables below it remain shared. iPhone paths also inject the same smartCommandPanel at lines 3632 and 3740.
-
-No device-specific table implementation is needed.
-
-K. REGRESSION RISKS
-
-Primary risks:
-
-• Duplicate insertion if a single-tap insertion closure remains active.
-• A double tap may insert twice if separate tap recognizers are simultaneous rather than exclusive/preemptive.
-• A generic change to smartCommandTableButton would affect F1...F20 as well as the two requested tables.
-• Function Keys need a new help value; they presently do not set one.
-• A new selected-row state can become stale across table-mode switches unless selection is cleared or mode-qualified.
-• Changing insertSmartActionTextAtSelection would risk caret placement, command formatting, metadata preservation, and Undo/Redo. It should remain unchanged.
-• Replacing standard Buttons with raw gestures would regress VoiceOver semantics unless explicit labels, Button trait, default action, and custom insertion action are supplied.
-• Gesture changes must preserve vertical ScrollView drag behavior.
-• Updating table-level help text is necessary to avoid a misleading “tap inserts” instruction.
-
-L. RECOMMENDED FOCUSED IMPLEMENTATION STAGE
-
-One focused stage is sufficient.
-
-Scope:
-
-1. Add a mode-qualified selected-row identifier.
-2. Add a small Select/Preview helper.
-3. Retain insertSmartActionTextAtSelection unchanged as the sole command insertion path.
-4. Refactor smartCommandTableButton only enough to accept:
-   • row identifier
-   • row description
-   • insertion text
-   • whether the row is selected
-5. Change Special Keys, Widgets, and F1...F20 to use Select/Preview on primary activation and Select/Preview plus Insert/Apply on direct double tap.
-6. Add Function Key help text.
-7. Update table-level instructions.
-8. Add the VoiceOver “Insert command” accessibility action.
-9. Do not alter accessory menus, MIDI, Files, Time, editor geometry, document persistence, or command formats.
-
-M. PHYSICAL-DEVICE TEST PLAN
-
-Special Keys:
-
-• Single tap Escape: help changes; command text, selection, caret, draft-modified state, and Undo remain unchanged.
-• Double tap Escape: help changes; .ESC inserts once at the current replacement range; Undo removes it once; Redo restores it once.
-• Repeat with Return, Backspace, Tab, colon, arrows, and a command shortcut.
-• Test F1 and F20: verify help and exactly-one insertion.
-
-Widgets:
-
-• Single tap Clock and Date: help changes; no command is inserted.
-• Double tap Clock and Date: exact stored widget syntax inserts once, including intended trailing space.
-• Repeat with Year, Month, Day of Month, Day of Week, and a non-time widget.
-• Verify an existing selected text range is replaced exactly as normal insertion currently does.
-
-Common:
-
-• Rapid single taps on different rows: only final help/selection changes.
-• Rapid double taps: each recognized double tap inserts once only.
-• Switch Widgets/Special Keys after selection: verify the documented selection-reset or mode-qualified behavior.
-• Scroll both tables before tapping.
-• Test editor with empty text, cursor in middle, selected text, multiline content, modifiers, hidden button metadata, and display text.
-• Verify Save, Cancel, slot navigation, Undo, and Redo retain existing behavior.
-• Test landscape on iPhone 17, iPhone XS Max, iPad Air 13-inch M2, iPad mini 5, and iPad Pro 12.9-inch.
-• With VoiceOver enabled: navigate rows, hear labels and help, preview with primary activation, and insert through the “Insert command” accessibility action.
+1. No saved preferred Mac, both helpers running: chooser lists M1 and M4.
+2. No saved preferred Mac, one helper running: intended single-helper behavior is explicit and predictable.
+3. Saved M1 preference, both helpers running: normal reconnect selects M1.
+4. Open chooser while connected to M1: both M1 and M4 appear, with M1 marked selected.
+5. Select M4: M1 socket disconnects before M4 connection starts.
+6. M4 has different pairing identity: pairing-required status appears without erasing M1 credentials.
+7. Explicitly pair M4: one saved pairing is replaced only after approval.
+8. Forget pairing: confirm the documented selection behavior remains unchanged unless a separate explicit selection-forget action is used.
+9. Same advertised helper names: confirm raw-result, mapped-result, and deduplicated-result logs identify whether Bonjour or ESP identity handling is collapsing the helpers.
