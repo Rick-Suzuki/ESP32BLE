@@ -1,4 +1,8 @@
 
+V66.41
+Better version info added
+261116 Mon 1255
+
 V66.40
 helper improvements for multi-macs
 261116 Mon 1224

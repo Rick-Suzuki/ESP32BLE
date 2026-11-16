@@ -23,9 +23,13 @@ struct ESP32BLEApp: App {
 @MainActor
 @Observable
 final class DebugVersionStore {
-	var value = """
-V66.39
-"""
+    var value = {
+        guard let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String,
+              !version.isEmpty else {
+            return "V0"
+        }
+        return "V\(version)"
+    }()
 }
 
 @MainActor

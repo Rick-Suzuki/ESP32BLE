@@ -93,7 +93,7 @@
 		1D590E532F61206100E430E0 /* console m2.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "console m2.txt"; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.plist; };
 		1D77C6DC3087545A004396AF /* MIDICommandParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MIDICommandParser.swift; sourceTree = "<group>"; };
 		1D77C6DE308840BA004396AF /* MIDIControlChangeParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MIDIControlChangeParser.swift; sourceTree = "<group>"; };
-		1D9A31E5309D5ADE00A061FA /* Set_SoundPlayer.swift */ = {isa = PBXFileReference; path = Set_SoundPlayer.swift; sourceTree = "<group>"; };
+		1D9A31E5309D5ADE00A061FA /* Set_SoundPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Set_SoundPlayer.swift; sourceTree = "<group>"; };
 		1D9A8748302D3885005B5E36 /* codex 2.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "codex 2.txt"; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.plist; };
 		1D9E1CC82FC92DC600DB3621 /* KB_GridView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KB_GridView.swift; sourceTree = "<group>"; };
 		1D9E1CC92FC92DC600DB3621 /* KB_InputField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KB_InputField.swift; sourceTree = "<group>"; };
@@ -656,7 +656,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 0;
 				DEVELOPMENT_TEAM = JH6L6AXE42;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -679,7 +679,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 66.41;
 				PRODUCT_BUNDLE_IDENTIFIER = com.mindtn.ESP32BLE;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -698,7 +698,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 0;
 				DEVELOPMENT_TEAM = JH6L6AXE42;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -721,7 +721,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 66.41;
 				PRODUCT_BUNDLE_IDENTIFIER = com.mindtn.ESP32BLE;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
