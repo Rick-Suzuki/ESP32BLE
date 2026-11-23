@@ -3,43 +3,127 @@ import SwiftUI
 // MARK: - BM:🅱️
 private struct MacHelperSelectionControls: View {
     @ObservedObject var macConnection: MacConnectionManager
+    @State private var isExpanded = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Select a Mac")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.white)
-
-            if macConnection.discoveredHelpers.isEmpty {
-                Text("Searching for Mac helpers...")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
+        Group {
+            if isCollapsed, let selectedHelper = macConnection.selectedHelper {
+                MacHelperCollapsedSelectionRow(helper: selectedHelper) {
+                    isExpanded = true
+                }
             } else {
-                ForEach(macConnection.discoveredHelpers) { helper in
-                    MacHelperSelectionRow(
-                        helper: helper,
-                        isSelected: macConnection.selectedHelperID == helper.id,
-                        showsDetail: duplicateDisplayNames.contains(helper.displayName)
-                    ) {
-                        ButtonClickFeedback.playIfEnabled()
-                        macConnection.selectHelper(id: helper.id)
-                    }
+                MacHelperExpandedSelectionList(
+                    helpers: macConnection.discoveredHelpers,
+                    selectedHelperID: macConnection.selectedHelperID,
+                    duplicateDisplayNames: duplicateDisplayNames,
+                    select: select
+                )
+
+                if macConnection.selectedHelperID != nil, macConnection.selectedHelper == nil {
+                    Text("Selected Mac unavailable. Select another available Mac.")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
-
-            if macConnection.selectedHelperID != nil, macConnection.selectedHelper == nil {
-                Text("Selected Mac unavailable. Select another available Mac.")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
+        }
+        .onChange(of: macConnection.isAuthenticated) {
+            if macConnection.isAuthenticated {
+                isExpanded = false
             }
         }
+    }
+
+    private var isCollapsed: Bool {
+        macConnection.isAuthenticated &&
+            !isExpanded &&
+            macConnection.selectedHelper != nil
     }
 
     private var duplicateDisplayNames: Set<String> {
         Dictionary(grouping: macConnection.discoveredHelpers, by: \.displayName)
             .compactMap { $0.value.count > 1 ? $0.key : nil }
             .reduce(into: Set<String>()) { $0.insert($1) }
+    }
+
+    private func select(_ helper: DiscoveredMacHelper) {
+        if macConnection.isAuthenticated, macConnection.selectedHelperID == helper.id {
+            isExpanded = false
+            return
+        }
+
+        ButtonClickFeedback.playIfEnabled()
+        macConnection.selectHelper(id: helper.id)
+    }
+}
+
+private struct MacHelperCollapsedSelectionRow: View {
+    let helper: DiscoveredMacHelper
+    let expand: () -> Void
+
+    var body: some View {
+        Button(action: expand) {
+            HStack(spacing: 8) {
+                Text(helper.displayName)
+                    .font(.caption.weight(.semibold))
+
+                Spacer(minLength: 0)
+
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundStyle(.green)
+
+                Image(systemName: "chevron.down")
+                    .font(.caption.weight(.semibold))
+            }
+            .foregroundStyle(.white)
+            .padding(.horizontal, 10)
+            .frame(minHeight: 30, alignment: .leading)
+            .background(Color.gray.opacity(0.45))
+            .clipShape(.rect(cornerRadius: 10))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Connected Mac, \(helper.displayName)")
+        .accessibilityValue("Collapsed")
+        .accessibilityHint("Double tap to show available Macs")
+    }
+}
+
+private struct MacHelperExpandedSelectionList: View {
+    let helpers: [DiscoveredMacHelper]
+    let selectedHelperID: String?
+    let duplicateDisplayNames: Set<String>
+    let select: (DiscoveredMacHelper) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: isPad ? 6 : 0) {
+            if isPad {
+                Text("Select a Mac")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.white)
+            }
+
+            if helpers.isEmpty {
+                Text("Searching for Mac helpers...")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            } else {
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 6) {
+                        ForEach(helpers) { helper in
+                            MacHelperSelectionRow(
+                                helper: helper,
+                                isSelected: selectedHelperID == helper.id,
+                                showsDetail: duplicateDisplayNames.contains(helper.displayName)
+                            ) {
+                                select(helper)
+                            }
+                        }
+                    }
+                }
+                .frame(maxHeight: isPad ? 144 : 164)
+                .accessibilityValue("Expanded")
+            }
+        }
     }
 }
 

@@ -1,4 +1,12 @@
 
+V66.43
+Can add modifiers to right soft editor. delete text hit area smaller.
+261123 Mon 1928
+
+V66.42
+"Connect to a Mac" deleted from iPhone
+261123 Mon 1735
+
 V66.41
 Better version info added
 261116 Mon 1255

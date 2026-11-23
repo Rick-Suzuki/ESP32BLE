@@ -4813,10 +4813,9 @@ Tap a row once for help. Double-tap a row to insert the key code at the cursor.
             Text("x")
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundStyle(.white.opacity(0.8))
-                .frame(width: 46, height: 46, alignment: .topLeading)
-                .padding(.top, 7)
-                .padding(.leading, 10)
+                .frame(width: 26, height: 26, alignment: .topLeading)
                 .contentShape(Rectangle())
+                .offset(x: 10, y: 7)
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Clear button symbol and text")
@@ -5462,7 +5461,12 @@ Tap a row once for help. Double-tap a row to insert the key code at the cursor.
     private func smartModifierButton(systemName: String, accessibilityLabel: String, prefix: String) -> some View {
         Button {
             ButtonClickFeedback.playIfEnabled()
-            toggleSmartModifierPrefix(prefix)
+            switch smartPasteTarget.editor {
+            case .command:
+                toggleSmartModifierPrefix(prefix)
+            case .button:
+                toggleSmartButtonModifierPrefix(prefix)
+            }
         } label: {
             Image(systemName: systemName)
                 .font(.system(size: 24, weight: .semibold))
@@ -6025,6 +6029,59 @@ Tap a row once for help. Double-tap a row to insert the key code at the cursor.
 
         smartActionTextBinding.wrappedValue = actionText
         smartScriptEditingModel.setSelectionRange(NSRange(location: replacementLocation + rebuiltGroup.utf16.count, length: 0))
+    }
+
+    private func toggleSmartButtonModifierPrefix(_ prefix: String) {
+        guard editingSlotIndex != nil,
+              let textView = smartPasteTarget.textView,
+              textView.window != nil else {
+            return
+        }
+
+        var buttonText = smartButtonEditablePreviewTextBinding.wrappedValue
+        guard textView.text == buttonText else {
+            return
+        }
+
+        let orderedPrefixes = ["⌃", "⌥", "⇧", "⌘"]
+        let safeCursorLocation = min(max(textView.selectedRange.location, 0), buttonText.utf16.count)
+        let cursorRange = NSRange(location: safeCursorLocation, length: 0)
+        let cursorIndex = Range(cursorRange, in: buttonText)?.lowerBound ?? buttonText.endIndex
+
+        func isModifier(_ character: Character) -> Bool {
+            orderedPrefixes.contains(String(character))
+        }
+
+        var groupStart = cursorIndex
+        while groupStart > buttonText.startIndex {
+            let previousIndex = buttonText.index(before: groupStart)
+            guard isModifier(buttonText[previousIndex]) else { break }
+            groupStart = previousIndex
+        }
+
+        var groupEnd = cursorIndex
+        while groupEnd < buttonText.endIndex, isModifier(buttonText[groupEnd]) {
+            groupEnd = buttonText.index(after: groupEnd)
+        }
+
+        var enabledPrefixes = Set(buttonText[groupStart..<groupEnd].map { String($0) })
+        if enabledPrefixes.contains(prefix) {
+            enabledPrefixes.remove(prefix)
+        } else {
+            enabledPrefixes.insert(prefix)
+        }
+
+        let rebuiltGroup = orderedPrefixes
+            .filter { enabledPrefixes.contains($0) }
+            .joined()
+        let replacementLocation = NSRange(groupStart..<groupStart, in: buttonText).location
+        buttonText.replaceSubrange(groupStart..<groupEnd, with: rebuiltGroup)
+
+        smartButtonEditablePreviewTextBinding.wrappedValue = buttonText
+        smartButtonPreviewSelectionRange = NSRange(
+            location: replacementLocation + rebuiltGroup.utf16.count,
+            length: 0
+        )
     }
 
     private func displayActionTextReplacingModifierCodes(_ actionText: String) -> String {

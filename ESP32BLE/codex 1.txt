@@ -1,247 +1,134 @@
-Read-only probe complete. No files, settings, pairing data, UserDefaults, Keychain, helper apps, or network settings were changed.
+READ-ONLY CODE PROBE COMPLETE
 
-1. Actual discovery behavior
+No files, settings, assets, or Git history were changed.
 
-Verified facts:
+A. Small clear-text X location
 
-• Mac-mode activation calls macConnection.start() from ContentView.swift:415-426.
-• start() creates an NWBrowser for _esp-network-test._tcp at MacConnectionManager.swift:241-278.
-• The browser’s browseResultsChangedHandler passes every new result set to updateDiscoveredHelpers at lines 270-275.
-• The browser is intentionally kept alive after a TCP connection starts. connect(to:) at lines 470-493 does not cancel it.
-• The browser is cancelled only by stop() at lines 374-385, restartSearch() at lines 511-523, or browser failure at lines 259-266.
-• Every browse-result update replaces the published discoveredHelpers list at lines 301-322. Therefore, a later second service should update the SwiftUI list.
+Verified source:
+• Main_Screen/Main_Screen.swift
+• smartButtonPreview, lines 4683–4805
+• smartButtonPreviewClearButton, lines 4808–4823
 
-Important behavior:
+Implementation:
+• SwiftUI Button
+• Overlaid on the preview with:
+   • .overlay(alignment: .topLeading)
 
-• If no preferred helper is saved and the first browse update contains exactly one helper, lines 339-346 immediately call selectHelper(id:).
-• selectHelper persists that helper as the preferred Bonjour identity at lines 281-298.
-• It immediately starts TCP connection to that helper.
-• This automatic choice does not wait for a subsequent Bonjour update that might contain the second Mac.
+Action:
+• Calls ButtonClickFeedback.playIfEnabled()
+• Sets smartButtonTextBinding.wrappedValue = ""
 
-Conclusion:
+This is not the large red SF Symbol-grid X. The SF Symbol-grid removal button is smartSFSymbolDeleteCell around lines 6248–6267 and was not investigated as the target control.
 
-Early automatic selection does occur. It is based on “the current result set contains one helper,” not “Bonjour discovery has completed.” Bonjour browsing is continuous and has no final result event.
+B. Current visible and hit-test size
 
-2. Discovered-helper identity handling
+Verified source dimensions:
+• Visible glyph: Text("x"), 16-point semibold font.
+• Glyph placement:
+   • It is inside a 46 x 46-point frame, aligned top-leading.
+   • Then padded 7 points from the top and 10 points from the leading edge.
 
-Verified facts:
+Effective SwiftUI button-label size:
+• Base frame: 46 x 46 points.
+• Padding is outside that frame.
+• Resulting label/content-shape region: 56 x 53 points.
 
-The discovered helper identity is created in MacConnectionManager.swift:349-372.
+The .contentShape(Rectangle()) is applied after the frame and padding, so it covers the full 56 x 53-point rectangle, not just the visible 16-point x glyph.
 
-It contains:
+The visible x is near approximately:
+• x = 10 points from preview leading edge
+• y = 7 points from preview top edge
 
-• Bonjour service name
-• Bonjour service type
-• Bonjour service domain
-• Endpoint interface name
-• Result-interface names
+Its interactive area extends approximately:
+• x = 0 through 56 points
+• y = 0 through 53 points
 
-The exact key is built at lines 362-363.
+This is substantially larger than the visible glyph.
 
-The display name is only the Bonjour service name at lines 366-370.
+C. Why taps near text can clear it
 
-The code records the endpoint itself for connection, but the endpoint’s resolved address or host is not included in the saved identity or visible UI detail.
+Verified:
+• The clear button is a top-leading overlay placed after the preview text view in the view hierarchy.
+• The overlay is above SmartPreviewTextView for hit testing.
+• Its 56 x 53-point rectangular contentShape intercepts touches before they reach the underlying UITextView.
 
-3. Whether duplicate services are merged
+Likely consequence:
+• A touch near the upper-left part of a label, including the upper area of the first character, can land inside the clear button’s rectangular hit region.
+• The issue is more likely when text is positioned near the preview’s top-left area or when a smaller preview makes this fixed 56 x 53-point region occupy a larger fraction of the preview.
 
-Verified facts:
+There is no source indication that the preview background or parent container itself clears text. The overlay button is the direct interception path.
 
-• The raw Set<NWBrowser.Result> is mapped to helper models at lines 301-304.
-• The helper models are then reduced into Dictionary<String, DiscoveredMacHelper> at lines 305-307.
-• Any helpers with the same constructed identity overwrite one another.
-• Therefore only one item remains for duplicate keys.
+D. iPhone and iPad implementation
 
-This means two helpers will be merged if Network reports the same:
+Verified:
+• Both iPhone and iPad call the same smartButtonPreview function.
+• Both therefore use the same smartButtonPreviewClearButton.
+• The clear hit area is fixed at 56 x 53 points on both devices.
 
-• service name
-• type
-• domain
-• endpoint interface name
-• discovered interface-name list
+Layout differs:
+• iPad preview height is currently 110 points.
+• iPhone preview dimensions are dynamically derived from the right-panel width and preview enclosure height.
+• The fixed clear area is therefore proportionally more intrusive on smaller iPhone previews.
 
-This is a real risk if both helpers advertise the same Bonjour instance name and Network does not expose a distinct interface value for them.
+E. Smallest safe hit-area reduction
 
-Apple’s Network documentation confirms that NWBrowser delivers a set of results and that each result includes an endpoint and interfaces. It also documents an advertised service’s optional automatic-renaming behavior during a service-name conflict. The ESP project does not inspect the helper’s advertisement configuration, so this probe cannot establish whether ESPMacHelper enables or disables automatic rename.
+Recommended smallest change:
+• Keep the overlay alignment, visible x glyph, font, color, and action unchanged.
+• Reduce only the clear button’s local label frame and its contentShape to a compact fixed rectangle around the existing glyph.
 
-Hypothesis:
+A local frame/content-shape adjustment is sufficient. No global button behavior, preview geometry, text view, or layout change is needed.
 
-The two archived helpers may both advertise “ESP Mac Helper.” If Bonjour automatically renames one, ESP should receive distinct service names and show two rows. If the helpers publish indistinguishable service registrations, or Network presents them as one result, this implementation merges them into one row.
+The current code makes the x visually inset through padding while retaining a 56 x 53-point hit rectangle. The safest implementation would preserve the glyph’s current apparent position while replacing the oversized label/content-shape geometry with a compact explicit hit region.
 
-4. Whether early automatic selection occurs
+Exact compact target size should be device-tested. A region around 24–28 points square is likely enough to encompass the existing glyph while avoiding nearby text interception, but this is a product/usability decision and has not been implemented.
 
-Verified fact:
+F. SmartPreviewTextView interaction
 
-Yes.
+Verified:
+• SmartPreviewTextView is a UIKit UITextView wrapper.
+• It normally receives taps to become first responder and uses UITextView’s standard cursor placement.
+• Its textViewDidChangeSelection records the cursor in smartButtonPreviewSelectionRange.
+• The clear button overlays this text view, so touches inside the clear button’s content shape do not reach UITextView and cannot position its cursor.
 
-When the first browse update has one helper and there is no stored preferred identity:
+There is no indication of focus restoration causing the accidental clear. The direct cause is the overlay button’s hit-testing region.
 
-• updateDiscoveredHelpers() calls connectToSelectedHelperIfPossible() at line 322.
-• lines 339-346 select and persist the sole currently discovered helper.
-• selectHelper() begins TCP connection at line 298.
+G. Clear action scope and risks
 
-This means an M1 result arriving before the M4 result causes M1 to become the saved preferred helper before M4 is considered.
-
-After that, later discovery of M4 should still be retained and shown if it produces a distinct identity. The connection itself does not block the browser or suppress list updates.
-
-5. Exact chooser visibility conditions
-
-Verified facts:
-
-The chooser is rendered in Set_AvailableDevices.swift:4-34.
-
-It is included only while output mode is Mac at lines 314-318.
-
-Its entire body is hidden unless:
-
-• discoveredHelpers.count > 1, or
-• selectedHelperID is non-nil and the selected helper is absent.
-
-Those conditions are defined in MacConnectionManager.swift:231-234.
-
-Therefore:
-
-• One discovered helper: chooser hidden.
-• Two distinct helper identities: chooser visible.
-• Saved helper unavailable: chooser visible, even if another single helper is found.
-• One visible helper while the selected helper is present: chooser hidden.
-• Connecting, connected, and unauthenticated states do not independently hide the chooser.
-
-SwiftUI observation is correctly wired:
-
-• MacConnectionManager is an ObservableObject.
-• discoveredHelpers, selectedHelperID, and helperSelectionStatusText are @Published at lines 190-194.
-• MacHelperSelectionControls observes that object at Set_AvailableDevices.swift:4-25.
-• The view uses ForEach over discoveredHelpers at lines 15-24.
-
-The selected helper is marked with a checkmark when selectedHelperID equals its identity at lines 16-19 and 58-61.
-
-6. Explanation of “iPad: Searching” versus “M1: Connecting”
-
-Verified facts:
-
-The iPad text is not a direct presentation of connection status.
-
-Set_AvailableDevices.swift:465-473 displays:
-
-• “Mac: Connected” only when macConnection.canSend is true.
-• Otherwise “Mac: Searching...”.
-
-canSend requires both:
-
-• status == .connected
-• isAuthenticated == true
-
-This is defined at MacConnectionManager.swift:223-225.
-
-Therefore the iPad can show “Mac: Searching...” while:
-
-• a TCP connection is being attempted,
-• TCP is ready but authentication has not completed,
-• pairing is required,
-• authentication failed,
-• the helper has accepted a socket but ESP has not yet become authenticated.
-
-The M1 helper showing “Connecting” is consistent with ESP having automatically selected M1 and opened a TCP connection. It does not prove that ESP has authenticated successfully.
-
-Authentication mismatch is likely relevant to the “Searching” text, but does not by itself explain why M4 is absent from the chooser.
-
-7. Forget Mac Helper behavior
-
-Verified fact:
-
-forgetPairedMacHelper() removes only Keychain pairing material at MacConnectionManager.swift:397-405.
-
-It does not remove:
-
-• selectedHelperID in memory
-• ESP.PreferredMacHelperBonjourIdentity from UserDefaults
-
-On the next Mac-mode start, start() reloads that saved Bonjour preference at line 245.
-
-Therefore, pressing Forget Mac Helper does not cause ESP to choose another Mac. It can still reconnect automatically to the M1 Bonjour service, but without its old pairing credentials. This directly explains why Forget does not change the observed target.
-
-8. Existing diagnostic coverage
-
-Existing useful 🐞 diagnostics:
-
-• “discovered Mac Helper: <name>” — MacConnectionManager.swift:314-316
-• “removed Mac Helper: <name>” — lines 317-319
-• selected helper name — line 288
-• TCP connection target name — line 474
-• pairing required — line 621
-• authentication succeeded — line 575
-• authentication failed — line 581
-• pairing accepted — line 668
-
-Insufficient diagnostics:
-
-• No browser ready/failed state logging.
-• No raw NWBrowser result count.
-• No post-dedup helper count.
-• No Bonjour name/type/domain identity.
-• No endpoint description.
-• No interface list.
-• No selected Bonjour identity.
-• No log that two raw results were merged into one dictionary entry.
-• No chooser-visible/hidden state log.
-• No connection state transition logging for preparing, ready, failed, or cancelled.
-• Existing discovery and TCP logs use only displayName, which cannot distinguish M1 from M4 when both advertise the same name.
-
-Narrow follow-up diagnostic requirements:
-
-• Log browser state and failure reason.
-• Log raw browse-result count on each update.
-• Log each result’s service name, type, domain, endpoint description, endpoint interface, and result interfaces.
-• Log mapped helper count and deduplicated helper count.
-• Log identity collisions before dictionary replacement.
-• Log selected identity and whether chooser visibility is true.
-• Log NWConnection state transitions without logging authentication payloads, pairing secrets, tokens, or keys.
-
-9. Most likely root cause
-
-Most likely combined cause:
-
-1. M1 is discovered first.
-2. ESP immediately auto-selects and persists M1 because the first browse update temporarily contains one result.
-3. Pressing Forget removes pairing credentials but leaves the M1 Bonjour preference intact.
-4. Re-entering Mac mode therefore targets M1 again.
-5. M4 does not appear because either:
-   • it is not reaching NWBrowser as a distinct result, or
-   • both results are being merged by the identity dictionary.
-
-The physical result is especially consistent with the saved M1 Bonjour selection remaining after Forget.
-
-The current diagnostics cannot distinguish the final two alternatives. Device logs are needed before changing behavior.
-
-10. Recommended narrowly scoped correction
-
-Recommended behavior:
-
-• Keep automatic reconnection only for a previously remembered Bonjour selection.
-• Do not persist the first temporarily sole discovery result as the user’s new preferred Mac.
-• Provide an explicit “Choose Mac” control while in Mac mode, including when the currently saved Mac is connected.
-• Keep the chooser open/dynamic while Bonjour updates arrive.
-• Include the connected helper in that chooser.
-• Selecting another helper must cancel the old connection before opening the new one; current selectHelper() already does this at lines 292-298.
-• Preserve the existing one-pairing Keychain model.
-• Keep current explicit pairing behavior for a newly selected helper.
-• Decide whether “Forget Mac Helper” should remain pairing-only or whether a separate user-authorized “Forget Selected Mac” action should remove the Bonjour preference. Do not make pairing removal silently alter selection.
-
-Minimum implementation work after diagnostics confirm the actual result set:
-
-• Change lines 339-346 so an unpreferred sole first discovery does not immediately become the persisted selection.
-• Add an explicit chooser-entry state/control.
-• Improve helper identity handling and collision visibility only if device logs prove two raw Bonjour results are being collapsed.
-• Keep use of service name/type/domain as a discovery preference only; continue treating the authenticated helper ID as the authoritative pairing identity.
-
-Required physical-device tests after a narrow correction:
-
-1. No saved preferred Mac, both helpers running: chooser lists M1 and M4.
-2. No saved preferred Mac, one helper running: intended single-helper behavior is explicit and predictable.
-3. Saved M1 preference, both helpers running: normal reconnect selects M1.
-4. Open chooser while connected to M1: both M1 and M4 appear, with M1 marked selected.
-5. Select M4: M1 socket disconnects before M4 connection starts.
-6. M4 has different pairing identity: pairing-required status appears without erasing M1 credentials.
-7. Explicitly pair M4: one saved pairing is replaced only after approval.
-8. Forget pairing: confirm the documented selection behavior remains unchanged unless a separate explicit selection-forget action is used.
-9. Same advertised helper names: confirm raw-result, mapped-result, and deduplicated-result logs identify whether Bonjour or ESP identity handling is collapsing the helpers.
+Verified action behavior:
+• Clears the right button text through smartButtonTextBinding.
+• Does not alter the left command text.
+• Does not directly alter smartButtonPreviewSelectionRange.
+• Does not directly alter hidden-button metadata.
+
+Color behavior:
+• smartButtonTextBinding preserves an existing color prefix by storing colorPrefix: when text is cleared.
+• Therefore, it clears the label while retaining color metadata.
+
+SF Symbol behavior:
+• If no color wrapper applies, clearing smartButtonTextBinding clears the stored SF Symbol representation and subtitle.
+• This matches the control’s accessibility label: “Clear button symbol and text.”
+
+Potential regression checks for a future local hit-area change:
+• iPhone and iPad intentional clear taps.
+• Ordinary and multiline labels.
+• Cursor placement at the first character and near the upper-left text area.
+• SF Symbol subtitle mode.
+• Color-formatted labels.
+• Preview scaling and dynamic font fitting.
+• Save, close, and reopen.
+• Existing keyboard focus behavior after a non-clear text tap.
+
+H. Diagnostics and runtime measurement
+
+Existing diagnostics:
+• debugEditorGeometry
+• Geometry probes for:
+   • preview area
+   • preview footprint
+   • actual preview button
+
+Limitation:
+• There is no existing dedicated geometry probe for smartButtonPreviewClearButton.
+• The current probes can show the preview’s frame but not the button’s exact hit frame.
+
+Static source establishes a 56 x 53-point intended label/content-shape region. Exact runtime bounds relative to the screen should be confirmed with Xcode’s View Debugger or a temporary dedicated clear-button frame probe in a future implementation/verification pass. No diagnostic code was added.
