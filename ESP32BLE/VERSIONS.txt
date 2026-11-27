@@ -1,4 +1,8 @@
 
+V66.44
+before Speech recog mods
+261127 Fri 1135
+
 V66.43
 Can add modifiers to right soft editor. delete text hit area smaller.
 261123 Mon 1928

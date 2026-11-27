@@ -1,134 +1,543 @@
-READ-ONLY CODE PROBE COMPLETE
+READ-ONLY DIAGNOSTIC REPORT
 
-No files, settings, assets, or Git history were changed.
+No files, settings, assets, documentation, or Git history were modified.
 
-A. Small clear-text X location
+The current source explains the first two failures exactly.
 
-Verified source:
-• Main_Screen/Main_Screen.swift
-• smartButtonPreview, lines 4683–4805
-• smartButtonPreviewClearButton, lines 4808–4823
+Primary cause:
 
-Implementation:
-• SwiftUI Button
-• Overlaid on the preview with:
-   • .overlay(alignment: .topLeading)
+speechMatchResult(for:) only computes space-stripped candidates when the recognized phrase already contains an ASCII space.
 
-Action:
-• Calls ButtonClickFeedback.playIfEnabled()
-• Sets smartButtonTextBinding.wrappedValue = ""
+For “screenshot” and “chatgpt”, the recognized phrase contains no space, so the space-stripped comparison branch is skipped entirely.
 
-This is not the large red SF Symbol-grid X. The SF Symbol-grid removal button is smartSFSymbolDeleteCell around lines 6248–6267 and was not investigated as the target control.
+A secondary issue affects the third example:
 
-B. Current visible and hit-test size
+“Paste\n& save” normalizes to “paste save”, while “paste and save” normalizes to “paste and save”. The current tokenizer discards “&”; it does not convert it to “and”.
 
-Verified source dimensions:
-• Visible glyph: Text("x"), 16-point semibold font.
-• Glyph placement:
-   • It is inside a 46 x 46-point frame, aligned top-leading.
-   • Then padded 7 points from the top and 10 points from the leading edge.
+A. RELEVANT FILES AND FUNCTIONS
 
-Effective SwiftUI button-label size:
-• Base frame: 46 x 46 points.
-• Padding is outside that frame.
-• Resulting label/content-shape region: 56 x 53 points.
+SR_Manager.swift
 
-The .contentShape(Rectangle()) is applied after the frame and padding, so it covers the full 56 x 53-point rectangle, not just the visible 16-point x glyph.
+• handleRecognitionCallback(result:error:sessionID:)
+• commitTranscriptIfNeeded()
+• normalizedTranscript(from:)
+• normalizedSpeechRecognitionText(_:)
+• speechRecognitionTokens(from:)
 
-The visible x is near approximately:
-• x = 10 points from preview leading edge
-• y = 7 points from preview top edge
+SR_Support.swift
 
-Its interactive area extends approximately:
-• x = 0 through 56 points
-• y = 0 through 53 points
+• applyRecognizedSpeech(_:)
+• normalizedSpeechMatchText(_:)
+• speechMatchDisplayText(from:)
+• canonicalSpeechText(from:)
+• speechMatchResult(for:)
+• speechText(_:containsWholeTokenPhrase:)
 
-This is substantially larger than the visible glyph.
+Main_ButtonBehavior.swift
 
-C. Why taps near text can clear it
+• displayText(from:)
+• speechSynthesisText(from:)
+• resolvedAlternateDisplayText(for:)
+• spokenTitle(for:)
 
-Verified:
-• The clear button is a top-leading overlay placed after the preview text view in the view hierarchy.
-• The overlay is above SmartPreviewTextView for hit testing.
-• Its 56 x 53-point rectangular contentShape intercepts touches before they reach the underlying UITextView.
+ContentView.swift
 
-Likely consequence:
-• A touch near the upper-left part of a label, including the upper area of the first character, can land inside the clear button’s rectangular hit region.
-• The issue is more likely when text is positioned near the preview’s top-left area or when a smaller preview makes this fixed 56 x 53-point region occupy a larger fraction of the preview.
+• FunctionKeyEntry
+• functionKeyEntry(from:)
+• normalizedFunctionKeys(from:)
+• applySlotLines(_:)
+• persistSlotLines(_:)
+• escapedSlotLineForPersistence(_:)
 
-There is no source indication that the preview background or parent container itself clears text. The overlay button is the direct interception path.
+B. ACTUAL RECOGNITION-SIDE TRANSFORMATION
 
-D. iPhone and iPad implementation
+Verified source flow:
 
-Verified:
-• Both iPhone and iPad call the same smartButtonPreview function.
-• Both therefore use the same smartButtonPreviewClearButton.
-• The clear hit area is fixed at 56 x 53 points on both devices.
+Apple provides:
 
-Layout differs:
-• iPad preview height is currently 110 points.
-• iPhone preview dimensions are dynamically derived from the right-panel width and preview enclosure height.
-• The fixed clear area is therefore proportionally more intrusive on smaller iPhone previews.
+result.bestTranscription.formattedString
 
-E. Smallest safe hit-area reduction
+SR_Manager.swift then calls:
 
-Recommended smallest change:
-• Keep the overlay alignment, visible x glyph, font, color, and action unchanged.
-• Reduce only the clear button’s local label frame and its contentShape to a compact fixed rectangle around the existing glyph.
+normalizedTranscript(from:)
 
-A local frame/content-shape adjustment is sufficient. No global button behavior, preview geometry, text view, or layout change is needed.
+That calls:
 
-The current code makes the x visually inset through padding while retaining a 56 x 53-point hit rectangle. The safest implementation would preserve the glyph’s current apparent position while replacing the oversized label/content-shape geometry with a compact explicit hit region.
+normalizedSpeechRecognitionText(_:)
 
-Exact compact target size should be device-tested. A region around 24–28 points square is likely enough to encompass the existing glyph while avoiding nearby text interception, but this is a product/usability decision and has not been implemented.
+This performs:
 
-F. SmartPreviewTextView interaction
+• lowercase conversion;
+• tokenization into letters and numbers;
+• punctuation removal;
+• spoken-number conversion;
+• sign conversion;
+• joining tokens with ASCII spaces.
 
-Verified:
-• SmartPreviewTextView is a UIKit UITextView wrapper.
-• It normally receives taps to become first responder and uses UITextView’s standard cursor placement.
-• Its textViewDidChangeSelection records the cursor in smartButtonPreviewSelectionRange.
-• The clear button overlays this text view, so touches inside the clear button’s content shape do not reach UITextView and cannot position its cursor.
+The committed text is:
 
-There is no indication of focus restoration causing the accidental clear. The direct cause is the overlay button’s hit-testing region.
+SpeechRecognitionEvent(text: latestTranscript)
 
-G. Clear action scope and risks
+That exact normalized text is passed to:
 
-Verified action behavior:
-• Clears the right button text through smartButtonTextBinding.
-• Does not alter the left command text.
-• Does not directly alter smartButtonPreviewSelectionRange.
-• Does not directly alter hidden-button metadata.
+applyRecognizedSpeech(_:)
 
-Color behavior:
-• smartButtonTextBinding preserves an existing color prefix by storing colorPrefix: when text is cleared.
-• Therefore, it clears the label while retaining color metadata.
+Then directly to:
 
-SF Symbol behavior:
-• If no color wrapper applies, clearing smartButtonTextBinding clears the stored SF Symbol representation and subtitle.
-• This matches the control’s accessibility label: “Clear button symbol and text.”
+speechMatchResult(for:)
 
-Potential regression checks for a future local hit-area change:
-• iPhone and iPad intentional clear taps.
-• Ordinary and multiline labels.
-• Cursor placement at the first character and near the upper-left text area.
-• SF Symbol subtitle mode.
-• Color-formatted labels.
-• Preview scaling and dynamic font fitting.
-• Save, close, and reopen.
-• Existing keyboard focus behavior after a non-clear text tap.
+Examples:
 
-H. Diagnostics and runtime measurement
+“screenshot” remains:
 
-Existing diagnostics:
-• debugEditorGeometry
-• Geometry probes for:
-   • preview area
-   • preview footprint
-   • actual preview button
+screenshot
 
-Limitation:
-• There is no existing dedicated geometry probe for smartButtonPreviewClearButton.
-• The current probes can show the preview’s frame but not the button’s exact hit frame.
+“chatgpt” remains:
 
-Static source establishes a 56 x 53-point intended label/content-shape region. Exact runtime bounds relative to the screen should be confirmed with Xcode’s View Debugger or a temporary dedicated clear-button frame probe in a future implementation/verification pass. No diagnostic code was added.
+chatgpt
+
+“paste and save” remains:
+
+paste and save
+
+No spoken-number or sign conversion changes these examples.
+
+The original Apple transcription is not available from source inspection alone. The source assumes that Apple supplied the expected text and then normalizes it.
+
+C. ACTUAL BUTTON-LABEL TRANSFORMATION
+
+FunctionKeyEntry stores:
+
+• rawLine
+• sendTexts
+• alternateDisplayText
+• buttonColorCode
+• isBlankPlaceholder
+• isHiddenInNormalMode
+
+For a stored line containing “::”, the right-hand side becomes alternateDisplayText.
+
+Example conceptual storage:
+
+command::screen\nshot
+
+The candidate path is:
+
+alternateDisplayText
+-> speechMatchDisplayText(from:)
+-> displayText(from:)
+-> speechSynthesisText(from:)
+-> canonicalSpeechText(from:)
+-> normalizedSpeechRecognitionText(_:)
+
+For:
+
+screen\nshot
+
+the intermediate values are:
+
+1. Stored representation:
+
+screen\nshot
+
+This is literal backslash plus “n”.
+
+2. displayText(from:):
+
+screen
+shot
+
+The escaped “\n” becomes an actual newline.
+
+3. speechMatchDisplayText(from:):
+
+screen
+shot
+
+No colon metadata changes this example.
+
+4. speechSynthesisText(from:):
+
+screen shot
+
+The regular expression collapses whitespace, including the newline, to one ASCII space.
+
+5. canonicalSpeechText(from:):
+
+screen shot
+
+6. Space-stripped candidate value:
+
+screenshot
+
+For:
+
+Chat\nGPT
+
+the values become:
+
+• Stored: Chat\nGPT
+• Display: Chat + actual newline + GPT
+• Speech text: Chat GPT
+• Canonical text: chat gpt
+• Space-stripped text: chatgpt
+
+For:
+
+Paste\n& save
+
+the values become:
+
+• Stored: Paste\n& save
+• Display: Paste + actual newline + “& save”
+• Speech text: Paste & save
+• Canonical text: paste save
+• Space-stripped text: pastesave
+
+The ampersand is discarded by speechRecognitionTokens(from:). It is not converted to “and”.
+
+D. SPACE-STRIPPED COMPARISON IMPLEMENTATION
+
+Current code first calculates:
+
+recognizedTextWithoutSpaces =
+recognizedText.replacingOccurrences(of: " ", with: "")
+
+Then it conditionally creates space-stripped candidates:
+
+if recognizedTextWithoutSpaces != recognizedText {
+spaceStrippedMatches = ...
+
+}
+
+Inside that branch, the candidate is compared using:
+
+normalizedSpeechMatchText(alternateDisplayText)
+.replacingOccurrences(of: " ", with: "")
+
+== recognizedTextWithoutSpaces
+
+
+This condition is the exact failure.
+
+For “screenshot”:
+
+• recognizedText: screenshot
+• recognizedTextWithoutSpaces: screenshot
+• values are equal
+• condition is false
+• spaceStrippedMatches remains empty
+
+Therefore:
+
+“screen shot” is never compared with “screenshot”.
+
+For “chatgpt”:
+
+• recognizedText: chatgpt
+• recognizedTextWithoutSpaces: chatgpt
+• values are equal
+• condition is false
+• space-stripped comparison is skipped
+
+Therefore:
+
+“chat gpt” is never compared with “chatgpt”.
+
+The previous probe’s conclusion was incomplete. The space-removal operation exists, but its execution is incorrectly gated on the recognized phrase already containing a space.
+
+Unicode whitespace:
+
+• Candidate labels are collapsed by speechSynthesisText(from:) before matching.
+• Recognition-side normalized text is rebuilt using ASCII spaces.
+• Therefore, ordinary candidate newlines and Unicode whitespace should normally become ASCII spaces before comparison.
+• The explicit replacement in speechMatchResult(for:) removes only ASCII spaces, but upstream normalization usually means that is sufficient.
+• If applyRecognizedSpeech(_:) were called with unnormalized text from another source, Unicode whitespace could behave differently. The current speech event path does not do that.
+
+E. MATCHING ELIGIBILITY
+
+The matcher begins with:
+
+functionKeys.enumerated().filter {
+$0.element.alternateDisplayText != nil
+
+}
+
+Therefore:
+
+• Buttons with alternateDisplayText are eligible.
+• Buttons with only primary text are excluded.
+• A visible primary label does not automatically make a button speech-matchable.
+• spokenTitle(for:) can fall back to primary text, but speechMatchResult(for:) does not.
+
+For a button stored only as:
+
+screen\nshot
+
+with no “::” separator:
+
+• sendTexts becomes [screen\nshot]
+• alternateDisplayText is nil
+• the matcher excludes the button
+
+For a button stored conceptually as:
+
+someAction::screen\nshot
+
+• alternateDisplayText is screen\nshot
+• the button is eligible
+• the space-stripping gate becomes the reason for the first two failures
+
+Color prefixes:
+
+• A color prefix is removed by resolvedAlternateDisplayText(for:) and parsed by the existing right-side parser.
+• It should not affect the three examples if the label is stored normally.
+
+Hidden metadata:
+
+• Hidden-button metadata is removed from right-side text during parsing.
+• isHiddenInNormalMode is stored separately.
+• speechMatchResult(for:) does not explicitly exclude hidden buttons once alternateDisplayText is non-nil.
+
+SF Symbol buttons:
+
+• Their right-side text may be interpreted as SF Symbol data or subtitle data.
+• They remain subject to the alternateDisplayText eligibility filter.
+• They are not relevant to the three text examples unless the affected labels are stored as SF Symbol configurations.
+
+F. EXACT REASON FOR EACH FAILURE
+
+Example A
+
+Button label: screen\nshot
+Recognized speech: screenshot
+
+Verified reason:
+
+• Candidate becomes “screen shot”.
+• Recognized text is “screenshot”.
+• Exact comparison fails.
+• recognizedText contains no space.
+• The space-stripped branch is skipped.
+• Homophone matching does not join or remove spaces.
+• Partial matching does not match because “screenshot” is one token and “screen shot” is two tokens.
+
+Result: no candidate match.
+
+Example B
+
+Button label: Chat\nGPT
+Recognized speech: chatgpt
+
+Verified reason:
+
+• Candidate becomes “chat gpt”.
+• Recognized text is “chatgpt”.
+• Exact comparison fails.
+• recognizedText contains no space.
+• The space-stripped branch is skipped.
+• Homophone matching sees different token counts.
+• Partial matching does not match one token against two.
+
+Result: no candidate match.
+
+Example C
+
+Button label: Paste\n& save
+Recognized speech: paste and save
+
+Verified reason:
+
+• Candidate becomes “paste save”.
+• Recognized text becomes “paste and save”.
+• Candidate space-stripped value: “pastesave”.
+• Recognized space-stripped value: “pasteandsave”.
+• They are not equal.
+• “&” is discarded, not converted to “and”.
+
+Result: no candidate match.
+
+Possible independent failure:
+
+If any affected button is stored without alternateDisplayText, it is excluded before any comparison occurs.
+
+G. RESULTS OF NON-INVASIVE CHECKS
+
+A temporary in-memory RunCodeSnippet evaluation was attempted against the current Xcode source context.
+
+It timed out after 120 seconds and produced no execution results.
+
+No project files were changed.
+
+The following values are established directly from the source implementation:
+
+A. screen\nshot / screenshot
+
+• Candidate canonical: screen shot
+• Recognized canonical: screenshot
+• Candidate stripped: screenshot
+• Recognized stripped: screenshot
+• Comparison: would be equal if executed
+• Actual matcher path: skipped because recognizedText has no spaces
+
+B. Chat\nGPT / chatgpt
+
+• Candidate canonical: chat gpt
+• Recognized canonical: chatgpt
+• Candidate stripped: chatgpt
+• Recognized stripped: chatgpt
+• Comparison: would be equal if executed
+• Actual matcher path: skipped because recognizedText has no spaces
+
+C. Paste\n& save / paste and save
+
+• Candidate canonical: paste save
+• Recognized canonical: paste and save
+• Candidate stripped: pastesave
+• Recognized stripped: pasteandsave
+• Comparison: not equal
+
+D. screen shot / screenshot
+
+• Candidate canonical: screen shot
+• Recognized canonical: screenshot
+• Stripped values would be equal
+• Actual space-stripped branch skipped
+
+E. Chat GPT / chatgpt
+
+• Candidate canonical: chat gpt
+• Recognized canonical: chatgpt
+• Stripped values would be equal
+• Actual space-stripped branch skipped
+
+F. screenshot / screenshot
+
+• Candidate canonical: screenshot
+• Recognized canonical: screenshot
+• Exact match should succeed if the button is eligible
+
+G. chatgpt / chatgpt
+
+• Candidate canonical: chatgpt
+• Recognized canonical: chatgpt
+• Exact match should succeed if the button is eligible
+
+H. MATCHING PRIORITY
+
+Built-in commands are checked before button matching:
+
+• go back
+• go home
+• speech off
+• stop listening
+• open <document>
+
+For normal button matching:
+
+1. Exact matches are collected.
+2. Space-stripped matches are conditionally collected.
+3. For English, homophone matches are collected.
+4. Exact, space-stripped, and homophone candidates are merged.
+5. If the merged set is empty, whole-token partial matching is attempted.
+6. One candidate activates.
+7. Multiple candidates produce the existing ambiguity result.
+8. No candidates produce unmatchedSpeechText.
+
+There is no separate priority between exact and space-stripped candidates after collection. They are merged.
+
+For these failures:
+
+• No built-in command intercepts the phrases.
+• The first two produce no candidate because the space-stripped branch is bypassed.
+• The third produces no candidate because the normalized strings differ.
+• Ambiguity is not the cause unless additional matching candidates exist at runtime.
+
+I. PREVIOUS PROBE ASSESSMENT
+
+The previous probe was incomplete, not wholly incorrect.
+
+Correct conclusion:
+
+• The source contains a space-stripped comparison operation.
+• Multiline labels are converted into space-separated candidate text.
+• The intended stripped values for “screen shot” and “screenshot” are equal.
+
+Missing conclusion:
+
+• The space-stripped comparison is executed only when the recognized phrase already contains an ASCII space.
+• Compact recognized phrases such as “screenshot” and “chatgpt” bypass that branch.
+• Therefore the equality is never evaluated in the real matcher for these cases.
+
+The third example has a separate “&” versus “and” mismatch.
+
+J. SMALLEST RECOMMENDED FIX OR DIAGNOSTICS
+
+The smallest future code fix for the first two failures would be to remove the condition that requires recognizedTextWithoutSpaces to differ from recognizedText.
+
+The candidate space-stripped comparison can safely be evaluated even when the recognized phrase has no spaces. In that case, removing spaces from the recognized phrase simply returns the same string.
+
+That change should remain inside the existing matching system and preserve:
+
+• current candidate eligibility;
+• current ambiguity detection;
+• current homophone behavior;
+• current partial matching fallback.
+
+The third example requires a separate explicit normalization decision:
+
+• convert “&” to “and” before tokenization; or
+• treat “&” and “and” as equivalent only in a comparison-specific form.
+
+No implementation was performed.
+
+If runtime confirmation is still required, the smallest temporary diagnostic should run only when a committed recognition event reaches speechMatchResult(for:), not on interim callbacks.
+
+It should report with print statements beginning with 🐞:
+
+• recognizedText;
+• recognizedTextWithoutSpaces;
+• candidate index;
+• original alternateDisplayText;
+• candidate canonical text;
+• candidate stripped text;
+• eligibility;
+• whether the space-stripped branch was entered;
+• match tier;
+• candidate count.
+
+The source defect is already sufficient to explain the first two physical-device failures. Runtime diagnostics are mainly needed to confirm whether the affected buttons also have alternateDisplayText and are therefore eligible.
+
+K. REGRESSION RISKS
+
+Any future correction should preserve:
+
+• ambiguity when multiple buttons normalize to the same value;
+• current homophone behavior;
+• current partial whole-token behavior;
+• current built-in command handling;
+• current hidden-button behavior unless explicitly changed;
+• current screen-only candidate scope;
+• speech blocking during editing;
+• BLE, Mac, ESP32, MIDI, keyboard, sound, and wait-chain activation paths.
+
+Potential new collisions include:
+
+• “run app” versus “runapp”;
+• duplicate multiline labels;
+• labels whose punctuation disappears;
+• labels normalized to the same text after future “&” handling.
+
+FINAL CONCLUSION
+
+The first two failures are explained by a confirmed source-level bug:
+
+The space-stripped comparison is skipped whenever the recognized phrase contains no spaces.
+
+The third failure is explained by confirmed normalization behavior:
+
+The ampersand is discarded, producing “paste save”, while the recognized phrase remains “paste and save”.
+
+There is also a separate eligibility condition:
+
+Buttons without alternateDisplayText are excluded before matching, even if their visible primary text appears to be a valid label.
