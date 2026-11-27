@@ -1,4 +1,8 @@
 
+V66.46
+soft editor, L&R buttons
+261127 Fri 1408
+
 V66.45
 Speech recog improvments complete
 261127 Fri 1350

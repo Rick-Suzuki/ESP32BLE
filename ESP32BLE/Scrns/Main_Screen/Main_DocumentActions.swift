@@ -333,36 +333,33 @@ extension MainScreen {
         let currentAnchorIndex = editableAnchorIndex(containing: editingSlotIndex) ?? editingSlotIndex
         commitSlotEditing()
 
-        let maximumIndex = min(visibleBoxCount, functionKeys.count)
+        let gridCellCount = max(visibleGridDimensions.columns, 1) * max(visibleGridDimensions.rows, 1)
+        let maximumIndex = min(min(visibleBoxCount, functionKeys.count), gridCellCount)
         guard maximumIndex > 0 else {
             return
         }
 
-        let candidateStartIndex: Int
-        if step > 0 {
-            let currentShape = buttonShape(startingAt: currentAnchorIndex, gridDimensions: visibleGridDimensions)
-            candidateStartIndex = currentAnchorIndex + max(currentShape.width, 1)
-        } else {
-            candidateStartIndex = currentAnchorIndex - 1
+        let eligibleAnchors = (0..<maximumIndex).filter { index in
+            !isButtonContinuationEntry(functionKeys[index])
         }
-
-        var candidateIndex = wrappedEditableIndex(candidateStartIndex, maximumIndex: maximumIndex)
-        for _ in 0..<maximumIndex {
-            let editableIndex = editableAnchorIndex(containing: candidateIndex) ?? candidateIndex
-            guard functionKeys.indices.contains(editableIndex) else {
-                candidateIndex = wrappedEditableIndex(candidateIndex + step, maximumIndex: maximumIndex)
-                continue
-            }
-
-            let candidateEntry = functionKeys[editableIndex]
-
-            activeDragIndex = nil
-            editingSlotText = editableText(for: candidateEntry)
-            resetSmartScriptEditingModel()
-            self.editingSlotIndex = editableIndex
-            isSlotEditorFocused = true
+        guard !eligibleAnchors.isEmpty,
+              let currentAnchorPosition = eligibleAnchors.firstIndex(of: currentAnchorIndex) else {
             return
         }
+
+        let selectedAnchorPosition = wrappedEditableIndex(
+            currentAnchorPosition + step,
+            maximumIndex: eligibleAnchors.count
+        )
+        let selectedAnchorIndex = eligibleAnchors[selectedAnchorPosition]
+
+        let candidateEntry = functionKeys[selectedAnchorIndex]
+
+        activeDragIndex = nil
+        editingSlotText = editableText(for: candidateEntry)
+        resetSmartScriptEditingModel()
+        self.editingSlotIndex = selectedAnchorIndex
+        isSlotEditorFocused = true
     }
 
     private func wrappedEditableIndex(_ index: Int, maximumIndex: Int) -> Int {

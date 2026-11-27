@@ -683,7 +683,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 66.45;
+				MARKETING_VERSION = 66.46;
 				PRODUCT_BUNDLE_IDENTIFIER = com.mindtn.ESP32BLE;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -725,7 +725,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 66.45;
+				MARKETING_VERSION = 66.46;
 				PRODUCT_BUNDLE_IDENTIFIER = com.mindtn.ESP32BLE;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;

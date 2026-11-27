@@ -1,289 +1,438 @@
 READ-ONLY REPORT
 
-No files, application data, UserDefaults, Documents contents, or Git history were modified.
+No source files, project settings, application data, screen documents, UserDefaults, or Git history were modified.
 
 A. Relevant source files and functions
 
-Verified:
+Main_DocumentActions.swift
 
-• SR_Substitutions.swift
-   • SpeechSubstitutionRule
-   • SpeechSubstitutions.fileName
-   • SpeechSubstitutions.defaultContents
-   • SpeechSubstitutions.load(normalize:)
-   • Substitution-file parser
+• beginSlotEditing(at:)
+• selectPreviousEditableSlot()
+• selectNextEditableSlot()
+• selectAdjacentEditableSlot(step:)
+• wrappedEditableIndex(_:maximumIndex:)
+• editableAnchorIndex(containing:)
+• commitSlotEditing()
+• slotSpan(startingAt:gridDimensions:)
+• buttonShape(startingAt:gridDimensions:)
+• isButtonContinuationEntry(_:)
 
-• SR_Support.swift
-   • handleSpeechRecognitionToggle()
-   • SpeechSubstitutions.load(normalize:) call when speech is enabled
+Main_Screen.swift
 
-• Main_Screen.swift
-   • isSpkRecEnabled state
-   • speechSubstitutionRules state
-   • .onAppear lifecycle
-   • .onChange(of: isSpkRecEnabled)
+• editingSlotIndex state
+• Soft-editor construction
+• iPhone editor arrow callbacks
+• iPad/SF editor arrow callbacks
+• smartIPhoneSlotPositionLabel
+• smartSlotPositionLabel
 
-• SR_Manager.swift
-   • SpeechRecognitionManager.setListeningEnabled(_:)
-   • Recognition-session restart logic
+Soft_Editor_Overlay.swift
 
-• ContentView.swift
-   • Existing application startup .task
-   • documentsDirectoryURL()
-   • refreshDocumentFiles()
-   • MainScreen construction
+• slotPositionLabel
+• Previous and Next arrow controls
+• Editor save, close, and focus behavior
 
-B. Current Documents path construction
+Main_GridSection.swift
 
-SR_Substitutions.swift obtains the directory using:
+• GridDimensions
+• functionKeyGridDimensions(for:)
+• Grid rendering and row-major coordinate calculations
+• Button shape and continuation rendering
 
-FileManager.default.urls(
-for: .documentDirectory,
+ContentView.swift
 
-in: .userDomainMask
+• FunctionKeyEntry
+• normalizedFunctionKeys(from:)
+• functionKeyEntry(from:)
+• loadFunctionKeys(from:)
+• resizeSelectedDocumentGrid(from:to:)
+• resizedSlotLines(from:oldGrid:newGrid:)
 
-).first
+Main_ButtonBehavior.swift
 
-It then appends:
+• editableText(for:)
+• isEmptyButtonEntry(_:)
+• Hidden-button and display metadata handling
 
-SpeechSubstitutions.txt
+B. Current Previous/Next implementation
 
-The same URL construction is used for:
+The editor arrows call:
 
-• Existence checks
-• File creation
-• File reading
+• selectPreviousEditableSlot()
+• selectNextEditableSlot()
 
-There is no cached file URL.
+Both delegate to:
 
-The absolute sandbox path naturally differs between simulator, iPhone, and iPad, but the source uses the correct platform-provided Documents directory in all cases. No path mismatch was found.
+selectAdjacentEditableSlot(step:)
 
-C. Current default contents and generation
+The current flow is:
 
-The current Swift default string is:
+1. Read editingSlotIndex.
+2. Convert continuation cells to an anchor using editableAnchorIndex(containing:).
+3. Commit the current editor text.
+4. Set:
 
-// Speech Recognition Substitutions
-up<TAB>app
-get her<TAB>github
-middy<TAB>midi
-you tube<TAB>youtube
+maximumIndex = min(visibleBoxCount, functionKeys.count)
 
-The source uses Swift "\t" escapes, which produce actual tab characters at runtime.
+5. For Next:
+   • Determine the current button shape.
+   • Advance by currentShape.width.
 
-The file is generated from the Swift string in SR_Substitutions.swift. It is not copied from an Xcode bundle resource.
+6. For Previous:
+   • Subtract one slot index.
 
-The file is written as UTF-8 using:
+7. Wrap the candidate using wrappedEditableIndex.
+8. Convert continuation cells back to their anchor.
+9. Load the candidate text and update editingSlotIndex.
 
-write(to:atomically:encoding:)
+The relevant implementation is Main_DocumentActions.swift around lines 326-399.
 
-with atomic writing enabled.
+C. Confirmed reason for the reported first-row wrap
 
-The multiline Swift literal uses LF-style line separation. Exact filesystem line endings would require runtime inspection, but no CRLF conversion is present in the source.
+The source does not contain a hard-coded “first row only” limit.
 
-The requested layout is not currently present.
+For a genuine 5-column by 4-row grid with:
 
-D. Current file-creation lifecycle
+• visibleBoxCount = 20
+• functionKeys.count >= 20
+• row-major indexing
 
-SpeechSubstitutions.load(normalize:) performs this sequence:
+the current Next calculation should advance:
 
-1. Obtain the Documents directory.
-2. Append SpeechSubstitutions.txt.
-3. Check file existence.
-4. If missing, write defaultContents atomically.
-5. Read the file as UTF-8.
-6. Parse valid substitution rules.
+0, 1, 2, 3, 4, 5, 6, ... 19
 
-However, this function is not called during application startup.
+The grid model and position labels also use row-major calculations:
 
-The only current call is from handleSpeechRecognitionToggle() when speech recognition is switched ON.
+column = index % columns
+row = index / columns
 
-There is:
+The only explicit wrap boundary is:
 
-• No startup call from MainScreen.onAppear.
-• No startup call from ContentView.task.
-• No app-launch call from ESP32BLEApp.swift.
-• No cached initialization flag.
-• No cached file URL.
+min(visibleBoxCount, functionKeys.count)
 
-The parent Documents directory is not explicitly created. Normally the application Documents directory already exists. If the directory URL is unavailable or the write fails, the function returns an empty rule list.
+Therefore, the first-row behavior can occur if the runtime maximumIndex is 5. That would happen if either:
 
-E. Current speech ON/OFF and reload lifecycle
+• visibleBoxCount is 5, or
+• functionKeys.count is 5.
 
-When speech is switched ON:
+Current source normally creates a 100-entry functionKeys array through normalizedFunctionKeys(from:), and restoreVisibleGridState() sets visibleBoxCount to at least columns × rows. Consequently, the reported behavior is not fully explained by the current source under the expected 5 x 4 state.
 
-• Editing-state blocking is checked first.
-• If not blocked, SpeechSubstitutions.load(normalize:) is called.
-• The file is checked and created if missing.
-• Rules are loaded into speechSubstitutionRules.
-• Speech recognition is enabled.
+Verified conclusion:
 
-When speech is switched OFF:
+• The current navigation algorithm is index-based.
+• The source has no explicit row transition bug.
+• The runtime state of visibleBoxCount, functionKeys.count, and visibleGridDimensions must be confirmed to establish why the device is wrapping after five positions.
 
-• The automatic-off task is cancelled.
-• Recognition is disabled.
-• The substitution file is not accessed.
+A minimal future diagnostic would print those three values when an arrow is pressed.
 
-Switching speech OFF and then ON causes a fresh file check and reload.
+D. Grid indexing and coordinate mapping
 
-Automatic recognition-session restarts inside SR_Manager.swift do not call handleSpeechRecognitionToggle(). They restart recognition only and reuse the currently cached rules.
+GridDimensions is defined as:
 
-Therefore, editing the file while the app is running requires speech OFF followed by speech ON to reload it.
+(columns: Int, rows: Int)
 
-F. Confirmed reason the file is not recreated
+The grid uses row-major indexing:
 
-Confirmed source behavior:
+index = row * columns + column
 
-The file is not recreated on application startup because no startup path calls SpeechSubstitutions.load(normalize:).
+For a 5 x 4 grid:
 
-MainScreen initializes:
+• Row 1: indices 0...4
+• Row 2: indices 5...9
+• Row 3: indices 10...14
+• Row 4: indices 15...19
 
-isSpkRecEnabled = false
+The display labels use the same mapping:
 
-and does not load the substitution file in its startup lifecycle.
+column = index % columns + 1
+row = index / columns + 1
 
-Therefore, if the user deletes the file while speech is disabled and then restarts ESP, the file remains absent until speech recognition is explicitly switched ON.
+Main_GridSection.swift renders:
 
-This explains the reported behavior if speech was not toggled ON after restarting ESP.
+functionKeys.prefix(visibleBoxCount)
 
-No stale URL or once-per-process creation flag was found.
+and positions each entry using the same row-major coordinate system.
 
-If the file was deleted and speech was explicitly switched ON after restart, the source indicates that recreation should be attempted. Failure in that situation cannot be confirmed from static source alone. Possible runtime causes would include:
+Grid sizes are persisted per screen and loaded through loadGridDimensions(::).
 
-• The toggle handler was not reached.
-• The file was deleted from a different location.
-• Documents-directory access failed.
-• File writing failed.
-• The file was created but was not visible through the method used to inspect Documents.
+Known preferred dimensions include:
 
-The current implementation silently hides all such errors.
+• 1 item: 1 x 1
+• 10 items: 5 x 2
+• 20 items: 5 x 4
+• 25 items: 5 x 5
+• 49 items: 7 x 7
+• 100 items: 10 x 10
 
-G. Smallest safe correction
+E. Representation of oversized buttons
 
-Recommended design:
+FunctionKeyEntry stores:
 
-1. Add a small idempotent file-existence helper in SR_Substitutions.swift.
-2. Have it use the same Documents URL and filename as load(normalize:).
-3. Create the default file only when it does not exist.
-4. Call that helper from an existing application-startup lifecycle hook.
-5. Keep the existing load(normalize:) call when speech is switched ON so rules are still freshly reloaded.
-6. Replace only defaultContents with the requested layout.
+• rawLine
+• sendTexts
+• alternateDisplayText
+• buttonColorCode
+• isBlankPlaceholder
+• isHiddenInNormalMode
 
-The safest localized startup locations are:
+Oversized buttons are represented by one anchor entry followed by continuation entries.
 
-• MainScreen.onAppear, if MainScreen is guaranteed to exist at startup.
-• The existing ContentView startup .task, which is already used for application initialization.
+Continuation markers are represented in rawLine using:
 
-A dedicated ensure-file-exists helper is preferable to loading and parsing rules at startup because startup only needs to guarantee file existence. Speech activation can continue to perform the actual rule loading.
+• wideButtonContinuationToken
+• blockButtonContinuationToken
 
-H. Recommended default file text
+isButtonContinuationEntry(_:) recognizes both kinds.
 
-The requested content should be:
+The supported shapes include:
 
-// Speech Recognition Substitutions
-// put your recognized word on the left
-// and your substitute word on the right
-// separated by tabs
-//
-// recognized word<TAB>substitute word
+• 1 x 1
+• 2 x 1
+• 3 x 1
+• 1 x 2
+• 2 x 2
+• 3 x 2
+• 1 x 3
+• 3 x 3
 
-up<TAB>app
-get her<TAB>github
-middy<TAB>midi
-you tube<TAB>youtube
+buttonShape(startingAt:gridDimensions:) identifies a shape by checking:
 
-Each <TAB> above must be an actual tab character.
+• Grid boundaries
+• Expected continuation tokens
+• The anchor index
 
-There are six consecutive comment lines before the blank line, including the column-header comment. The file should contain a blank line before the substitution entries.
+The continuation cells are not independently rendered as buttons. Main_GridSection.swift skips them with EmptyView.
 
-In the Swift source, tabs should be represented as \t, for example:
+F. Current continuation-cell behavior
 
-"up\tapp"
+Current source already treats continuation cells as belonging to an anchor.
 
-The displayed file must contain actual tab characters, not the literal characters backslash and t.
+editableAnchorIndex(containing:) scans possible anchors and returns the anchor whose footprint contains the supplied index.
 
-Existing user-created files must never be replaced or reformatted.
+beginSlotEditing(at:) uses that conversion before loading editor text.
 
-I. Parser compatibility
+commitSlotEditing() also resolves the editing index to an anchor before saving.
 
-The current parser already accepts the proposed layout.
+Therefore:
 
-Verified behavior:
+• Selecting a continuation cell redirects to the anchor.
+• Continuation cells are not independently editable.
+• A multi-cell button should be visited once.
 
-• Blank lines are ignored.
-• Comment lines are ignored after surrounding whitespace is trimmed.
-• Comment lines with leading tabs are ignored.
-• Leading tabs are removed.
-• Trailing tabs are removed.
-• Multiple separator tabs are treated as one separator.
-• Spaces inside phrases such as get her and you tube are preserved.
-• Surrounding whitespace around each field is trimmed.
-• Lines without a separator are rejected.
-• Lines with more than two nonempty tab-separated fields are rejected.
-• Empty source or replacement fields are rejected.
-• Duplicate normalized source phrases are ignored after the first valid occurrence.
-• Parsing operates in memory and does not rewrite the source file.
+However, selectAdjacentEditableSlot(step:) does not maintain a precomputed list of anchors. It advances through raw indices and resolves continuation cells as it encounters them.
 
-No parser change is necessary for the proposed default layout.
+This creates risks for irregular shapes:
 
-J. Error handling and diagnostics
+• A Next operation can land on a vertical continuation cell and resolve back to the current anchor.
+• A multi-row button may be visited more than once.
+• Previous and Next are not exact inverses for all shapes.
+• The current shape-width skip is only reliable for some horizontal layouts.
 
-Current failures are silent.
+G. Current blank-cell handling
 
-The following conditions return an empty rule list without diagnostic output:
+Blank entries are represented by empty raw lines or underscore placeholder lines.
 
-• Documents directory unavailable.
-• Default-file creation failure.
-• File read failure.
-• UTF-8 decoding failure.
+They are converted into FunctionKeyEntry values with:
 
-No current diagnostics report:
+• empty sendTexts
+• empty display metadata
+• isBlankPlaceholder set appropriately
 
-• The resolved file path.
-• Whether the file existed.
-• Whether creation was attempted.
-• Creation errors.
-• Read errors.
-• Number of loaded rules.
+isEmptyButtonEntry(_:) identifies empty editable entries.
 
-Recommended future diagnostics, if needed, would be minimal print statements beginning with 🐞, such as:
+The current navigation code does not exclude blank cells. If a blank index lies within the navigation range, it can be selected and opened in the editor with empty text.
 
-• File path and existence status.
-• Creation failure and error description.
-• Read/decode failure and error description.
-• Number of valid rules loaded.
+This is consistent with the proposed behavior of allowing arrows to reach blank cells so users can create buttons in those locations.
 
-No diagnostics should print file contents or be emitted for every recognition callback.
+The current grid editing system also allows blank cells to be used for creation, copy/paste, and placement operations.
 
-K. Minimal implementation plan
+H. Current hidden-button handling
 
-1. In SR_Substitutions.swift, centralize the existing Documents URL and filename construction.
-2. Add an idempotent ensure-file-exists operation.
-3. Invoke it from the existing app-startup lifecycle.
-4. Update defaultContents to the requested comments, header, blank line, and tab-separated entries.
-5. Leave the existing parser unchanged.
-6. Preserve the speech-toggle load so OFF/ON still reloads edited rules.
-7. Build and verify the lifecycle and parser behavior.
+Hidden buttons are stored through the isHiddenInNormalMode field, derived from button metadata.
 
-No changes are required to speech matching, substitution ordering, reserved OPEN handling, or screen-document logic.
+Hidden buttons remain represented in functionKeys and are still editable.
 
-L. Manual device tests after implementation
+The navigation code does not filter out hidden buttons. Therefore hidden buttons remain accessible through Previous and Next.
 
-Recommended tests:
+This behavior should be preserved.
 
-1. Delete SpeechSubstitutions.txt while speech is OFF.
-2. Cold-launch ESP.
-3. Confirm the file is recreated.
-4. Confirm the recreated file contains the requested comments and blank line.
-5. Confirm column separators are actual tabs.
-6. Confirm an existing edited file is never overwritten.
-7. Delete the file while ESP is running.
-8. Switch speech OFF, then ON.
-9. Confirm the file is recreated and rules reload.
-10. Edit a rule externally, then toggle speech OFF and ON.
-11. Confirm the edited rule is used.
-12. Verify malformed and duplicate entries remain safely handled.
-13. Confirm the file does not appear in screen navigation.
-14. Confirm existing .s and .screen document behavior is unchanged.
-15. Verify existing speech matching, substitutions, ambiguity handling, and reserved OPEN behavior.
+I. Recommended navigation order
 
-No physical-device testing was performed during this read-only probe.
+For regular grids:
+
+• Use row-major order.
+• Sort by anchor row, then anchor column.
+• With row-major storage, this is equivalent to ascending anchor index.
+
+For a 5 x 4 grid:
+
+0, 1, 2, 3, 4,
+5, 6, 7, 8, 9,
+10, 11, 12, 13, 14,
+15, 16, 17, 18, 19
+
+Wrap from 19 to 0 and from 0 to 19.
+
+For irregular grids:
+
+1. Consider indices from 0..<visibleBoxCount.
+2. Exclude entries identified as continuation cells.
+3. Include blank editable cells.
+4. Include hidden buttons because they are currently editable.
+5. Use each remaining index as an anchor.
+6. Navigate through that unique anchor list.
+7. Wrap at both ends.
+
+This visits each actual button once and avoids continuation-cell duplicates.
+
+J. Existing editor save and commit behavior
+
+When Previous or Next is pressed:
+
+1. commitSlotEditing() runs first.
+2. The current editor text is normalized and written through updateFunctionKeySlot(::).
+3. For oversized buttons, the existing span is preserved.
+4. The next editor text is loaded.
+5. Smart editor state is reset.
+6. editingSlotIndex changes.
+7. Editor focus is restored.
+
+The editor remains open.
+
+The current text is therefore committed before navigation. It is not simply discarded.
+
+cancelSlotEditing():
+
+• Clears editingSlotIndex.
+• Clears editor text.
+• Resets modification state.
+• Resets smart-script state.
+• Removes editor focus.
+
+The close controls use the existing save/cancel path.
+
+K. iPhone and iPad differences
+
+The iPhone and iPad soft-editor layouts use different visual control containers, but both call the same functions:
+
+• selectPreviousEditableSlot()
+• selectNextEditableSlot()
+
+The shared navigation implementation is in Main_DocumentActions.swift.
+
+The two position labels also use identical row-major conversion.
+
+No device-specific navigation algorithm was found.
+
+Orientation changes affect layout geometry, not slot indexing.
+
+L. Smallest safe implementation approach
+
+The safest future change is localized to Main_DocumentActions.swift.
+
+Keep unchanged:
+
+• beginSlotEditing(at:)
+• commitSlotEditing()
+• saveSlotEditing()
+• cancelSlotEditing()
+• editableAnchorIndex(containing:)
+• Existing blank-cell behavior
+• Existing hidden-button behavior
+• Existing continuation-token model
+
+Change only selectAdjacentEditableSlot(step:) so it:
+
+1. Builds a unique ordered list of eligible anchor indices.
+2. Includes ordinary buttons, hidden buttons, and blank editable cells.
+3. Excludes continuation entries.
+4. Locates the current anchor in that list.
+5. Moves one position forward or backward.
+6. Wraps using the list count.
+7. Reuses the existing commit and editor-state update logic.
+
+This is safer than changing grid storage, FunctionKeyEntry, document formats, or the visual grid.
+
+M. Regression risks
+
+Potential risks include:
+
+• Skipping blank cells needed for button creation.
+• Accidentally excluding hidden buttons.
+• Selecting continuation cells.
+• Visiting an oversized button more than once.
+• Losing current edits before navigation.
+• Breaking span preservation.
+• Changing the editor’s current focus behavior.
+• Changing iPhone and iPad control behavior.
+• Affecting copy/paste or resize actions that use anchor resolution.
+• Incorrect behavior after grid resizing.
+• Incorrect behavior when saved grid dimensions and slot-line counts differ.
+• Regressions in import/export or backup data if storage is changed.
+
+No storage or document-format change is recommended.
+
+N. Recommended diagnostics
+
+No diagnostics were added.
+
+If runtime confirmation is needed, the smallest temporary diagnostic should report only:
+
+• editingSlotIndex
+• visibleGridDimensions.columns
+• visibleGridDimensions.rows
+• visibleBoxCount
+• functionKeys.count
+• current anchor index
+• candidate anchor index
+
+Any future output should use standard print statements beginning with:
+
+🐞
+
+Diagnostics should be emitted only when Previous or Next is pressed, not during every grid render.
+
+O. Recommended device tests
+
+Regular grids:
+
+• 1 x 1
+• 1 x 5
+• 5 x 1
+• 5 x 4
+• 5 x 7
+• 20 x 20, subject to the application’s maximum grid size
+
+Verify:
+
+• Next visits every cell.
+• Previous reverses the same order.
+• Both directions wrap.
+• Blank cells remain reachable.
+• Hidden buttons remain reachable.
+
+Irregular grids:
+
+• Horizontal multi-column button.
+• Vertical multi-row button.
+• 2 x 2 button.
+• 3 x 2 button.
+• 3 x 3 button.
+• Mixed oversized and single-cell buttons.
+• Continuation cells are never visited separately.
+
+Editor lifecycle:
+
+• Edit text, press Next, confirm text is committed.
+• Edit text, press Previous, confirm text is committed.
+• Navigate to a blank cell and create a button.
+• Navigate to a hidden button and edit it.
+• Resize a button, then navigate.
+• Copy/paste an oversized button, then navigate.
+• Confirm iPhone and iPad behavior.
+• Confirm speech remains disabled during editing.
+• Confirm undo/redo and screen switching remain unaffected.
+
+Final conclusion:
+
+The current source confirms row-major storage and existing anchor/continuation recognition. It does not, by itself, confirm a hard first-row-only navigation rule for a correctly populated 5 x 4 state. The likely boundary is the runtime value used by maximumIndex, but that requires runtime diagnostics to distinguish visibleBoxCount or functionKeys count from an unrelated state issue. The existing algorithm should nevertheless be replaced with a unique ordered anchor sequence because its current index-stepping logic is not safe for all multi-row button shapes.
