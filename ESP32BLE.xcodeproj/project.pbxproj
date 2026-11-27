@@ -63,6 +63,7 @@
 		1D9E1D1F2FC92DD900DB3621 /* BLE_KB_Manager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D9E1D1B2FC92DD900DB3621 /* BLE_KB_Manager.swift */; };
 		1DDFB8112F87C64500776ED6 /* debug.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DDFB8102F87C64000776ED6 /* debug.swift */; };
 		1DF165EA3086EACE003DFD80 /* TemplateDocument.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DF165E93086EACE003DFD80 /* TemplateDocument.swift */; };
+		3DC3EBDF30B939F0006B139D /* SR_Substitutions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3DC3EBDE30B939F0006B139D /* SR_Substitutions.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -135,6 +136,7 @@
 		1DDFB8102F87C64000776ED6 /* debug.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = debug.swift; sourceTree = "<group>"; };
 		1DF165E93086EACE003DFD80 /* TemplateDocument.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TemplateDocument.swift; sourceTree = "<group>"; };
 		1DF5EE0330933A62003E5ACF /* codex 1.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "codex 1.txt"; sourceTree = "<group>"; };
+		3DC3EBDE30B939F0006B139D /* SR_Substitutions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SR_Substitutions.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -287,6 +289,7 @@
 				1D9E1CDA2FC92DC600DB3621 /* SR_Manager.swift */,
 				1D9E1CDB2FC92DC600DB3621 /* SR_Support.swift */,
 				1D0CCE49308F1B80006622D6 /* SR_Homophones.swift */,
+				3DC3EBDE30B939F0006B139D /* SR_Substitutions.swift */,
 			);
 			path = "Speech Recognition";
 			sourceTree = "<group>";
@@ -514,6 +517,7 @@
 				1D9E1D1E2FC92DD900DB3621 /* BLE_Devices.swift in Sources */,
 				1D9E1D1F2FC92DD900DB3621 /* BLE_KB_Manager.swift in Sources */,
 				1D9E1D102FC92DC600DB3621 /* Main_TopToolbar.swift in Sources */,
+				3DC3EBDF30B939F0006B139D /* SR_Substitutions.swift in Sources */,
 				1D9E1D112FC92DC600DB3621 /* KB_InputField.swift in Sources */,
 				1D9E1D122FC92DC600DB3621 /* Set_KB_Timing.swift in Sources */,
 				1D9E1D132FC92DC600DB3621 /* Set_AvailableDevices.swift in Sources */,
@@ -679,7 +683,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 66.43;
+				MARKETING_VERSION = 66.45;
 				PRODUCT_BUNDLE_IDENTIFIER = com.mindtn.ESP32BLE;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -721,7 +725,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 66.43;
+				MARKETING_VERSION = 66.45;
 				PRODUCT_BUNDLE_IDENTIFIER = com.mindtn.ESP32BLE;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;

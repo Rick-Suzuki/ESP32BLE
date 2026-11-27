@@ -9,7 +9,28 @@ extension MainScreen {
 
         scheduleSpeechRecognitionAutoOff()
 
-        if recognizedText == canonicalSpeechText(from: "go back") {
+        let initialResolution = resolveSpeechCommand(for: recognizedText)
+        var resolutionForExecution = initialResolution
+
+        if case .open(let targetDocumentName, .noMatch) = initialResolution {
+            if let substitutedText = substitutedSpeechText(for: recognizedText) {
+                let substitutedResolution = resolveSpeechCommand(for: substitutedText)
+                if case .button(.noMatch) = substitutedResolution {
+                    presentSpeechOpenFailure(for: targetDocumentName)
+                    return
+                }
+                resolutionForExecution = substitutedResolution
+            } else {
+                presentSpeechOpenFailure(for: targetDocumentName)
+                return
+            }
+        } else if case .button(.noMatch) = initialResolution,
+                  let substitutedText = substitutedSpeechText(for: recognizedText) {
+            resolutionForExecution = resolveSpeechCommand(for: substitutedText)
+        }
+
+        switch resolutionForExecution {
+        case .goBack:
             unmatchedSpeechText = nil
 
             guard canGoBackToPreviousDocument else {
@@ -17,10 +38,7 @@ extension MainScreen {
             }
 
             goBackToPreviousDocument()
-            return
-        }
-
-        if recognizedText == canonicalSpeechText(from: "go home") {
+        case .goHome:
             unmatchedSpeechText = nil
 
             guard selectDocumentNamedFromGrid("home.screen") else {
@@ -28,44 +46,34 @@ extension MainScreen {
                 renameAlertMessage = "Couldn't find home.screen."
                 return
             }
-
-            return
-        }
-
-        if recognizedText == canonicalSpeechText(from: "speech off") ||
-            recognizedText == canonicalSpeechText(from: "stop listening") {
+        case .speechOff:
             unmatchedSpeechText = nil
             isSpkRecEnabled = false
-            return
-        }
-
-        if let targetDocumentName = targetDocumentNameForSpeechOpenCommand(recognizedText) {
+        case .open(let targetDocumentName, let openButtonMatchResult):
             unmatchedSpeechText = nil
 
-            guard selectDocumentNamedFromGrid(targetDocumentName) else {
-                alertTitle = "File Not Found"
-                renameAlertMessage = "Couldn't find \(targetDocumentName.lowercased())."
-                return
+            switch openButtonMatchResult {
+            case .unique(let entry):
+                executeRecognizedSpeechButton(entry)
+            case .ambiguous:
+                renameAlertMessage = "Voice command matches\nmultiple buttons"
+            case .noMatch:
+                presentSpeechOpenFailure(for: targetDocumentName)
             }
-
-            return
+        case .button(let buttonSpeechMatchResult):
+            switch buttonSpeechMatchResult {
+            case .unique(let entry):
+                executeRecognizedSpeechButton(entry)
+            case .ambiguous:
+                unmatchedSpeechText = nil
+                renameAlertMessage = "Voice command matches\nmultiple buttons"
+            case .noMatch:
+                unmatchedSpeechText = recognizedText
+            }
         }
+    }
 
-        let speechMatchResult = speechMatchResult(for: recognizedText)
-        let matchingEntry: FunctionKeyEntry
-
-        switch speechMatchResult {
-        case .unique(let entry):
-            matchingEntry = entry
-        case .ambiguous:
-            unmatchedSpeechText = nil
-            renameAlertMessage = "Voice command matches\nmultiple buttons"
-            return
-        case .noMatch:
-            unmatchedSpeechText = recognizedText
-            return
-        }
-
+    private func executeRecognizedSpeechButton(_ matchingEntry: FunctionKeyEntry) {
         unmatchedSpeechText = nil
         #if DEBUG
         printMainGridButtonActivation(matchingEntry, via: "speech")
@@ -155,8 +163,86 @@ extension MainScreen {
         _ = sendBluetoothIfNeeded()
     }
 
+    private func resolveSpeechCommand(for recognizedText: String) -> SpeechCommandResolution {
+        if recognizedText == canonicalSpeechText(from: "go back") {
+            return .goBack
+        }
+
+        if recognizedText == canonicalSpeechText(from: "go home") {
+            return .goHome
+        }
+
+        if recognizedText == canonicalSpeechText(from: "speech off") ||
+            recognizedText == canonicalSpeechText(from: "stop listening") {
+            return .speechOff
+        }
+
+        if let targetDocumentName = targetDocumentNameForSpeechOpenCommand(recognizedText) {
+            return .open(
+                targetDocumentName: targetDocumentName,
+                buttonMatchResult: speechMatchResult(for: recognizedText)
+            )
+        }
+
+        return .button(speechMatchResult(for: recognizedText))
+    }
+
+    private func substitutedSpeechText(for recognizedText: String) -> String? {
+        SpeechSubstitutions.replacing(
+            in: recognizedText,
+            rules: speechSubstitutionRules,
+            normalize: canonicalSpeechText(from:)
+        )
+    }
+
+    private func presentSpeechOpenFailure(for targetDocumentName: String) {
+        switch selectScreenDocumentNamedForSpeechOpen(targetDocumentName) {
+        case .selected:
+            return
+        case .ambiguous:
+            alertTitle = "Ambiguous Screen Name"
+            renameAlertMessage = "More than one screen matches \(targetDocumentName.lowercased())."
+        case .notFound:
+            alertTitle = "File Not Found"
+            renameAlertMessage = "Couldn't find \(targetDocumentName.lowercased())."
+        }
+    }
+
     func normalizedSpeechMatchText(_ text: String) -> String {
-        canonicalSpeechText(from: speechSynthesisText(from: speechMatchDisplayText(from: text)))
+        let displayText = speechMatchDisplayText(from: text)
+        let comparisonText = speechMatchTextWithAmpersandEquivalence(displayText)
+        return canonicalSpeechText(from: speechSynthesisText(from: comparisonText))
+    }
+
+    private func speechMatchTextWithAmpersandEquivalence(_ text: String) -> String {
+        let characters = Array(text)
+        var result = String()
+        result.reserveCapacity(text.count)
+
+        for index in characters.indices {
+            let character = characters[index]
+            guard character == "&" else {
+                result.append(character)
+                continue
+            }
+
+            let previousCharacter = index > characters.startIndex ? characters[index - 1] : nil
+            let nextIndex = characters.index(after: index)
+            let nextCharacter = nextIndex < characters.endIndex ? characters[nextIndex] : nil
+            let isAdjacentToWordCharacter =
+                previousCharacter?.isLetter == true ||
+                previousCharacter?.isNumber == true ||
+                nextCharacter?.isLetter == true ||
+                nextCharacter?.isNumber == true
+
+            if isAdjacentToWordCharacter {
+                result.append(character)
+            } else {
+                result.append(contentsOf: " and ")
+            }
+        }
+
+        return result
     }
 
     func canonicalSpeechText(from text: String) -> String {
@@ -188,6 +274,14 @@ extension MainScreen {
         case unique(FunctionKeyEntry)
         case ambiguous
         case noMatch
+    }
+
+    private enum SpeechCommandResolution {
+        case goBack
+        case goHome
+        case speechOff
+        case open(targetDocumentName: String, buttonMatchResult: SpeechMatchResult)
+        case button(SpeechMatchResult)
     }
 
     private func speechMatchResult(for recognizedText: String) -> SpeechMatchResult {
@@ -232,16 +326,13 @@ extension MainScreen {
             return normalizedSpeechMatchText(alternateDisplayText) == recognizedText
         }
 
-        var spaceStrippedMatches: [(offset: Int, element: FunctionKeyEntry)] = []
-        if recognizedTextWithoutSpaces != recognizedText {
-            spaceStrippedMatches = matchingEntries { entry in
-                guard let alternateDisplayText = entry.alternateDisplayText else {
-                    return false
-                }
-
-                return normalizedSpeechMatchText(alternateDisplayText)
-                    .replacingOccurrences(of: " ", with: "") == recognizedTextWithoutSpaces
+        let spaceStrippedMatches: [(offset: Int, element: FunctionKeyEntry)] = matchingEntries { entry in
+            guard let alternateDisplayText = entry.alternateDisplayText else {
+                return false
             }
+
+            return normalizedSpeechMatchText(alternateDisplayText)
+                .replacingOccurrences(of: " ", with: "") == recognizedTextWithoutSpaces
         }
 
         guard speechRecognition.recognitionLocale.language.languageCode?.identifier.lowercased() == "en" else {
@@ -283,7 +374,32 @@ extension MainScreen {
             for: candidatesByOffset.map { (offset: $0.key, element: $0.value) }
         )
         if case .noMatch = existingMatchResult {
-            return partialMatchResult()
+            let normalizedRecognizedText = canonicalSpeechText(from: recognizedText)
+            let finalSMatches = matchingEntries { entry in
+                guard let alternateDisplayText = entry.alternateDisplayText else {
+                    return false
+                }
+
+                let normalizedCandidateText = normalizedSpeechMatchText(alternateDisplayText)
+                guard !normalizedCandidateText.isEmpty,
+                      !normalizedRecognizedText.isEmpty,
+                      normalizedCandidateText != "s",
+                      normalizedRecognizedText != "s" else {
+                    return false
+                }
+
+                if normalizedCandidateText.hasSuffix("s") {
+                    return String(normalizedCandidateText.dropLast()) == normalizedRecognizedText
+                }
+
+                return normalizedCandidateText + "s" == normalizedRecognizedText
+            }
+
+            let finalSMatchResult = matchResult(for: finalSMatches)
+            if case .noMatch = finalSMatchResult {
+                return partialMatchResult()
+            }
+            return finalSMatchResult
         }
         return existingMatchResult
 
@@ -320,6 +436,7 @@ extension MainScreen {
             }
 
             unmatchedSpeechText = nil
+            speechSubstitutionRules = SpeechSubstitutions.load(normalize: canonicalSpeechText(from:))
             speechRecognition.setListeningEnabled(true)
             scheduleSpeechRecognitionAutoOff()
             return

@@ -1,543 +1,289 @@
-READ-ONLY DIAGNOSTIC REPORT
+READ-ONLY REPORT
 
-No files, settings, assets, documentation, or Git history were modified.
+No files, application data, UserDefaults, Documents contents, or Git history were modified.
 
-The current source explains the first two failures exactly.
+A. Relevant source files and functions
 
-Primary cause:
+Verified:
 
-speechMatchResult(for:) only computes space-stripped candidates when the recognized phrase already contains an ASCII space.
+• SR_Substitutions.swift
+   • SpeechSubstitutionRule
+   • SpeechSubstitutions.fileName
+   • SpeechSubstitutions.defaultContents
+   • SpeechSubstitutions.load(normalize:)
+   • Substitution-file parser
 
-For “screenshot” and “chatgpt”, the recognized phrase contains no space, so the space-stripped comparison branch is skipped entirely.
+• SR_Support.swift
+   • handleSpeechRecognitionToggle()
+   • SpeechSubstitutions.load(normalize:) call when speech is enabled
 
-A secondary issue affects the third example:
+• Main_Screen.swift
+   • isSpkRecEnabled state
+   • speechSubstitutionRules state
+   • .onAppear lifecycle
+   • .onChange(of: isSpkRecEnabled)
 
-“Paste\n& save” normalizes to “paste save”, while “paste and save” normalizes to “paste and save”. The current tokenizer discards “&”; it does not convert it to “and”.
+• SR_Manager.swift
+   • SpeechRecognitionManager.setListeningEnabled(_:)
+   • Recognition-session restart logic
 
-A. RELEVANT FILES AND FUNCTIONS
+• ContentView.swift
+   • Existing application startup .task
+   • documentsDirectoryURL()
+   • refreshDocumentFiles()
+   • MainScreen construction
 
-SR_Manager.swift
+B. Current Documents path construction
 
-• handleRecognitionCallback(result:error:sessionID:)
-• commitTranscriptIfNeeded()
-• normalizedTranscript(from:)
-• normalizedSpeechRecognitionText(_:)
-• speechRecognitionTokens(from:)
+SR_Substitutions.swift obtains the directory using:
 
-SR_Support.swift
+FileManager.default.urls(
+for: .documentDirectory,
 
-• applyRecognizedSpeech(_:)
-• normalizedSpeechMatchText(_:)
-• speechMatchDisplayText(from:)
-• canonicalSpeechText(from:)
-• speechMatchResult(for:)
-• speechText(_:containsWholeTokenPhrase:)
+in: .userDomainMask
 
-Main_ButtonBehavior.swift
+).first
 
-• displayText(from:)
-• speechSynthesisText(from:)
-• resolvedAlternateDisplayText(for:)
-• spokenTitle(for:)
+It then appends:
 
-ContentView.swift
+SpeechSubstitutions.txt
 
-• FunctionKeyEntry
-• functionKeyEntry(from:)
-• normalizedFunctionKeys(from:)
-• applySlotLines(_:)
-• persistSlotLines(_:)
-• escapedSlotLineForPersistence(_:)
+The same URL construction is used for:
 
-B. ACTUAL RECOGNITION-SIDE TRANSFORMATION
+• Existence checks
+• File creation
+• File reading
 
-Verified source flow:
+There is no cached file URL.
 
-Apple provides:
+The absolute sandbox path naturally differs between simulator, iPhone, and iPad, but the source uses the correct platform-provided Documents directory in all cases. No path mismatch was found.
 
-result.bestTranscription.formattedString
+C. Current default contents and generation
 
-SR_Manager.swift then calls:
+The current Swift default string is:
 
-normalizedTranscript(from:)
+// Speech Recognition Substitutions
+up<TAB>app
+get her<TAB>github
+middy<TAB>midi
+you tube<TAB>youtube
 
-That calls:
+The source uses Swift "\t" escapes, which produce actual tab characters at runtime.
 
-normalizedSpeechRecognitionText(_:)
+The file is generated from the Swift string in SR_Substitutions.swift. It is not copied from an Xcode bundle resource.
 
-This performs:
+The file is written as UTF-8 using:
 
-• lowercase conversion;
-• tokenization into letters and numbers;
-• punctuation removal;
-• spoken-number conversion;
-• sign conversion;
-• joining tokens with ASCII spaces.
+write(to:atomically:encoding:)
 
-The committed text is:
+with atomic writing enabled.
 
-SpeechRecognitionEvent(text: latestTranscript)
+The multiline Swift literal uses LF-style line separation. Exact filesystem line endings would require runtime inspection, but no CRLF conversion is present in the source.
 
-That exact normalized text is passed to:
+The requested layout is not currently present.
 
-applyRecognizedSpeech(_:)
+D. Current file-creation lifecycle
 
-Then directly to:
+SpeechSubstitutions.load(normalize:) performs this sequence:
 
-speechMatchResult(for:)
+1. Obtain the Documents directory.
+2. Append SpeechSubstitutions.txt.
+3. Check file existence.
+4. If missing, write defaultContents atomically.
+5. Read the file as UTF-8.
+6. Parse valid substitution rules.
 
-Examples:
+However, this function is not called during application startup.
 
-“screenshot” remains:
+The only current call is from handleSpeechRecognitionToggle() when speech recognition is switched ON.
 
-screenshot
+There is:
 
-“chatgpt” remains:
+• No startup call from MainScreen.onAppear.
+• No startup call from ContentView.task.
+• No app-launch call from ESP32BLEApp.swift.
+• No cached initialization flag.
+• No cached file URL.
 
-chatgpt
+The parent Documents directory is not explicitly created. Normally the application Documents directory already exists. If the directory URL is unavailable or the write fails, the function returns an empty rule list.
 
-“paste and save” remains:
+E. Current speech ON/OFF and reload lifecycle
 
-paste and save
+When speech is switched ON:
 
-No spoken-number or sign conversion changes these examples.
+• Editing-state blocking is checked first.
+• If not blocked, SpeechSubstitutions.load(normalize:) is called.
+• The file is checked and created if missing.
+• Rules are loaded into speechSubstitutionRules.
+• Speech recognition is enabled.
 
-The original Apple transcription is not available from source inspection alone. The source assumes that Apple supplied the expected text and then normalizes it.
+When speech is switched OFF:
 
-C. ACTUAL BUTTON-LABEL TRANSFORMATION
+• The automatic-off task is cancelled.
+• Recognition is disabled.
+• The substitution file is not accessed.
 
-FunctionKeyEntry stores:
+Switching speech OFF and then ON causes a fresh file check and reload.
 
-• rawLine
-• sendTexts
-• alternateDisplayText
-• buttonColorCode
-• isBlankPlaceholder
-• isHiddenInNormalMode
+Automatic recognition-session restarts inside SR_Manager.swift do not call handleSpeechRecognitionToggle(). They restart recognition only and reuse the currently cached rules.
 
-For a stored line containing “::”, the right-hand side becomes alternateDisplayText.
+Therefore, editing the file while the app is running requires speech OFF followed by speech ON to reload it.
 
-Example conceptual storage:
+F. Confirmed reason the file is not recreated
 
-command::screen\nshot
+Confirmed source behavior:
 
-The candidate path is:
+The file is not recreated on application startup because no startup path calls SpeechSubstitutions.load(normalize:).
 
-alternateDisplayText
--> speechMatchDisplayText(from:)
--> displayText(from:)
--> speechSynthesisText(from:)
--> canonicalSpeechText(from:)
--> normalizedSpeechRecognitionText(_:)
+MainScreen initializes:
 
-For:
+isSpkRecEnabled = false
 
-screen\nshot
+and does not load the substitution file in its startup lifecycle.
 
-the intermediate values are:
+Therefore, if the user deletes the file while speech is disabled and then restarts ESP, the file remains absent until speech recognition is explicitly switched ON.
 
-1. Stored representation:
+This explains the reported behavior if speech was not toggled ON after restarting ESP.
 
-screen\nshot
+No stale URL or once-per-process creation flag was found.
 
-This is literal backslash plus “n”.
+If the file was deleted and speech was explicitly switched ON after restart, the source indicates that recreation should be attempted. Failure in that situation cannot be confirmed from static source alone. Possible runtime causes would include:
 
-2. displayText(from:):
+• The toggle handler was not reached.
+• The file was deleted from a different location.
+• Documents-directory access failed.
+• File writing failed.
+• The file was created but was not visible through the method used to inspect Documents.
 
-screen
-shot
+The current implementation silently hides all such errors.
 
-The escaped “\n” becomes an actual newline.
+G. Smallest safe correction
 
-3. speechMatchDisplayText(from:):
+Recommended design:
 
-screen
-shot
+1. Add a small idempotent file-existence helper in SR_Substitutions.swift.
+2. Have it use the same Documents URL and filename as load(normalize:).
+3. Create the default file only when it does not exist.
+4. Call that helper from an existing application-startup lifecycle hook.
+5. Keep the existing load(normalize:) call when speech is switched ON so rules are still freshly reloaded.
+6. Replace only defaultContents with the requested layout.
 
-No colon metadata changes this example.
+The safest localized startup locations are:
 
-4. speechSynthesisText(from:):
+• MainScreen.onAppear, if MainScreen is guaranteed to exist at startup.
+• The existing ContentView startup .task, which is already used for application initialization.
 
-screen shot
+A dedicated ensure-file-exists helper is preferable to loading and parsing rules at startup because startup only needs to guarantee file existence. Speech activation can continue to perform the actual rule loading.
 
-The regular expression collapses whitespace, including the newline, to one ASCII space.
+H. Recommended default file text
 
-5. canonicalSpeechText(from:):
+The requested content should be:
 
-screen shot
+// Speech Recognition Substitutions
+// put your recognized word on the left
+// and your substitute word on the right
+// separated by tabs
+//
+// recognized word<TAB>substitute word
 
-6. Space-stripped candidate value:
+up<TAB>app
+get her<TAB>github
+middy<TAB>midi
+you tube<TAB>youtube
 
-screenshot
+Each <TAB> above must be an actual tab character.
 
-For:
+There are six consecutive comment lines before the blank line, including the column-header comment. The file should contain a blank line before the substitution entries.
 
-Chat\nGPT
+In the Swift source, tabs should be represented as \t, for example:
 
-the values become:
+"up\tapp"
 
-• Stored: Chat\nGPT
-• Display: Chat + actual newline + GPT
-• Speech text: Chat GPT
-• Canonical text: chat gpt
-• Space-stripped text: chatgpt
+The displayed file must contain actual tab characters, not the literal characters backslash and t.
 
-For:
+Existing user-created files must never be replaced or reformatted.
 
-Paste\n& save
+I. Parser compatibility
 
-the values become:
+The current parser already accepts the proposed layout.
 
-• Stored: Paste\n& save
-• Display: Paste + actual newline + “& save”
-• Speech text: Paste & save
-• Canonical text: paste save
-• Space-stripped text: pastesave
+Verified behavior:
 
-The ampersand is discarded by speechRecognitionTokens(from:). It is not converted to “and”.
+• Blank lines are ignored.
+• Comment lines are ignored after surrounding whitespace is trimmed.
+• Comment lines with leading tabs are ignored.
+• Leading tabs are removed.
+• Trailing tabs are removed.
+• Multiple separator tabs are treated as one separator.
+• Spaces inside phrases such as get her and you tube are preserved.
+• Surrounding whitespace around each field is trimmed.
+• Lines without a separator are rejected.
+• Lines with more than two nonempty tab-separated fields are rejected.
+• Empty source or replacement fields are rejected.
+• Duplicate normalized source phrases are ignored after the first valid occurrence.
+• Parsing operates in memory and does not rewrite the source file.
 
-D. SPACE-STRIPPED COMPARISON IMPLEMENTATION
+No parser change is necessary for the proposed default layout.
 
-Current code first calculates:
+J. Error handling and diagnostics
 
-recognizedTextWithoutSpaces =
-recognizedText.replacingOccurrences(of: " ", with: "")
+Current failures are silent.
 
-Then it conditionally creates space-stripped candidates:
+The following conditions return an empty rule list without diagnostic output:
 
-if recognizedTextWithoutSpaces != recognizedText {
-spaceStrippedMatches = ...
+• Documents directory unavailable.
+• Default-file creation failure.
+• File read failure.
+• UTF-8 decoding failure.
 
-}
+No current diagnostics report:
 
-Inside that branch, the candidate is compared using:
+• The resolved file path.
+• Whether the file existed.
+• Whether creation was attempted.
+• Creation errors.
+• Read errors.
+• Number of loaded rules.
 
-normalizedSpeechMatchText(alternateDisplayText)
-.replacingOccurrences(of: " ", with: "")
+Recommended future diagnostics, if needed, would be minimal print statements beginning with 🐞, such as:
 
-== recognizedTextWithoutSpaces
+• File path and existence status.
+• Creation failure and error description.
+• Read/decode failure and error description.
+• Number of valid rules loaded.
 
+No diagnostics should print file contents or be emitted for every recognition callback.
 
-This condition is the exact failure.
+K. Minimal implementation plan
 
-For “screenshot”:
+1. In SR_Substitutions.swift, centralize the existing Documents URL and filename construction.
+2. Add an idempotent ensure-file-exists operation.
+3. Invoke it from the existing app-startup lifecycle.
+4. Update defaultContents to the requested comments, header, blank line, and tab-separated entries.
+5. Leave the existing parser unchanged.
+6. Preserve the speech-toggle load so OFF/ON still reloads edited rules.
+7. Build and verify the lifecycle and parser behavior.
 
-• recognizedText: screenshot
-• recognizedTextWithoutSpaces: screenshot
-• values are equal
-• condition is false
-• spaceStrippedMatches remains empty
+No changes are required to speech matching, substitution ordering, reserved OPEN handling, or screen-document logic.
 
-Therefore:
+L. Manual device tests after implementation
 
-“screen shot” is never compared with “screenshot”.
+Recommended tests:
 
-For “chatgpt”:
+1. Delete SpeechSubstitutions.txt while speech is OFF.
+2. Cold-launch ESP.
+3. Confirm the file is recreated.
+4. Confirm the recreated file contains the requested comments and blank line.
+5. Confirm column separators are actual tabs.
+6. Confirm an existing edited file is never overwritten.
+7. Delete the file while ESP is running.
+8. Switch speech OFF, then ON.
+9. Confirm the file is recreated and rules reload.
+10. Edit a rule externally, then toggle speech OFF and ON.
+11. Confirm the edited rule is used.
+12. Verify malformed and duplicate entries remain safely handled.
+13. Confirm the file does not appear in screen navigation.
+14. Confirm existing .s and .screen document behavior is unchanged.
+15. Verify existing speech matching, substitutions, ambiguity handling, and reserved OPEN behavior.
 
-• recognizedText: chatgpt
-• recognizedTextWithoutSpaces: chatgpt
-• values are equal
-• condition is false
-• space-stripped comparison is skipped
-
-Therefore:
-
-“chat gpt” is never compared with “chatgpt”.
-
-The previous probe’s conclusion was incomplete. The space-removal operation exists, but its execution is incorrectly gated on the recognized phrase already containing a space.
-
-Unicode whitespace:
-
-• Candidate labels are collapsed by speechSynthesisText(from:) before matching.
-• Recognition-side normalized text is rebuilt using ASCII spaces.
-• Therefore, ordinary candidate newlines and Unicode whitespace should normally become ASCII spaces before comparison.
-• The explicit replacement in speechMatchResult(for:) removes only ASCII spaces, but upstream normalization usually means that is sufficient.
-• If applyRecognizedSpeech(_:) were called with unnormalized text from another source, Unicode whitespace could behave differently. The current speech event path does not do that.
-
-E. MATCHING ELIGIBILITY
-
-The matcher begins with:
-
-functionKeys.enumerated().filter {
-$0.element.alternateDisplayText != nil
-
-}
-
-Therefore:
-
-• Buttons with alternateDisplayText are eligible.
-• Buttons with only primary text are excluded.
-• A visible primary label does not automatically make a button speech-matchable.
-• spokenTitle(for:) can fall back to primary text, but speechMatchResult(for:) does not.
-
-For a button stored only as:
-
-screen\nshot
-
-with no “::” separator:
-
-• sendTexts becomes [screen\nshot]
-• alternateDisplayText is nil
-• the matcher excludes the button
-
-For a button stored conceptually as:
-
-someAction::screen\nshot
-
-• alternateDisplayText is screen\nshot
-• the button is eligible
-• the space-stripping gate becomes the reason for the first two failures
-
-Color prefixes:
-
-• A color prefix is removed by resolvedAlternateDisplayText(for:) and parsed by the existing right-side parser.
-• It should not affect the three examples if the label is stored normally.
-
-Hidden metadata:
-
-• Hidden-button metadata is removed from right-side text during parsing.
-• isHiddenInNormalMode is stored separately.
-• speechMatchResult(for:) does not explicitly exclude hidden buttons once alternateDisplayText is non-nil.
-
-SF Symbol buttons:
-
-• Their right-side text may be interpreted as SF Symbol data or subtitle data.
-• They remain subject to the alternateDisplayText eligibility filter.
-• They are not relevant to the three text examples unless the affected labels are stored as SF Symbol configurations.
-
-F. EXACT REASON FOR EACH FAILURE
-
-Example A
-
-Button label: screen\nshot
-Recognized speech: screenshot
-
-Verified reason:
-
-• Candidate becomes “screen shot”.
-• Recognized text is “screenshot”.
-• Exact comparison fails.
-• recognizedText contains no space.
-• The space-stripped branch is skipped.
-• Homophone matching does not join or remove spaces.
-• Partial matching does not match because “screenshot” is one token and “screen shot” is two tokens.
-
-Result: no candidate match.
-
-Example B
-
-Button label: Chat\nGPT
-Recognized speech: chatgpt
-
-Verified reason:
-
-• Candidate becomes “chat gpt”.
-• Recognized text is “chatgpt”.
-• Exact comparison fails.
-• recognizedText contains no space.
-• The space-stripped branch is skipped.
-• Homophone matching sees different token counts.
-• Partial matching does not match one token against two.
-
-Result: no candidate match.
-
-Example C
-
-Button label: Paste\n& save
-Recognized speech: paste and save
-
-Verified reason:
-
-• Candidate becomes “paste save”.
-• Recognized text becomes “paste and save”.
-• Candidate space-stripped value: “pastesave”.
-• Recognized space-stripped value: “pasteandsave”.
-• They are not equal.
-• “&” is discarded, not converted to “and”.
-
-Result: no candidate match.
-
-Possible independent failure:
-
-If any affected button is stored without alternateDisplayText, it is excluded before any comparison occurs.
-
-G. RESULTS OF NON-INVASIVE CHECKS
-
-A temporary in-memory RunCodeSnippet evaluation was attempted against the current Xcode source context.
-
-It timed out after 120 seconds and produced no execution results.
-
-No project files were changed.
-
-The following values are established directly from the source implementation:
-
-A. screen\nshot / screenshot
-
-• Candidate canonical: screen shot
-• Recognized canonical: screenshot
-• Candidate stripped: screenshot
-• Recognized stripped: screenshot
-• Comparison: would be equal if executed
-• Actual matcher path: skipped because recognizedText has no spaces
-
-B. Chat\nGPT / chatgpt
-
-• Candidate canonical: chat gpt
-• Recognized canonical: chatgpt
-• Candidate stripped: chatgpt
-• Recognized stripped: chatgpt
-• Comparison: would be equal if executed
-• Actual matcher path: skipped because recognizedText has no spaces
-
-C. Paste\n& save / paste and save
-
-• Candidate canonical: paste save
-• Recognized canonical: paste and save
-• Candidate stripped: pastesave
-• Recognized stripped: pasteandsave
-• Comparison: not equal
-
-D. screen shot / screenshot
-
-• Candidate canonical: screen shot
-• Recognized canonical: screenshot
-• Stripped values would be equal
-• Actual space-stripped branch skipped
-
-E. Chat GPT / chatgpt
-
-• Candidate canonical: chat gpt
-• Recognized canonical: chatgpt
-• Stripped values would be equal
-• Actual space-stripped branch skipped
-
-F. screenshot / screenshot
-
-• Candidate canonical: screenshot
-• Recognized canonical: screenshot
-• Exact match should succeed if the button is eligible
-
-G. chatgpt / chatgpt
-
-• Candidate canonical: chatgpt
-• Recognized canonical: chatgpt
-• Exact match should succeed if the button is eligible
-
-H. MATCHING PRIORITY
-
-Built-in commands are checked before button matching:
-
-• go back
-• go home
-• speech off
-• stop listening
-• open <document>
-
-For normal button matching:
-
-1. Exact matches are collected.
-2. Space-stripped matches are conditionally collected.
-3. For English, homophone matches are collected.
-4. Exact, space-stripped, and homophone candidates are merged.
-5. If the merged set is empty, whole-token partial matching is attempted.
-6. One candidate activates.
-7. Multiple candidates produce the existing ambiguity result.
-8. No candidates produce unmatchedSpeechText.
-
-There is no separate priority between exact and space-stripped candidates after collection. They are merged.
-
-For these failures:
-
-• No built-in command intercepts the phrases.
-• The first two produce no candidate because the space-stripped branch is bypassed.
-• The third produces no candidate because the normalized strings differ.
-• Ambiguity is not the cause unless additional matching candidates exist at runtime.
-
-I. PREVIOUS PROBE ASSESSMENT
-
-The previous probe was incomplete, not wholly incorrect.
-
-Correct conclusion:
-
-• The source contains a space-stripped comparison operation.
-• Multiline labels are converted into space-separated candidate text.
-• The intended stripped values for “screen shot” and “screenshot” are equal.
-
-Missing conclusion:
-
-• The space-stripped comparison is executed only when the recognized phrase already contains an ASCII space.
-• Compact recognized phrases such as “screenshot” and “chatgpt” bypass that branch.
-• Therefore the equality is never evaluated in the real matcher for these cases.
-
-The third example has a separate “&” versus “and” mismatch.
-
-J. SMALLEST RECOMMENDED FIX OR DIAGNOSTICS
-
-The smallest future code fix for the first two failures would be to remove the condition that requires recognizedTextWithoutSpaces to differ from recognizedText.
-
-The candidate space-stripped comparison can safely be evaluated even when the recognized phrase has no spaces. In that case, removing spaces from the recognized phrase simply returns the same string.
-
-That change should remain inside the existing matching system and preserve:
-
-• current candidate eligibility;
-• current ambiguity detection;
-• current homophone behavior;
-• current partial matching fallback.
-
-The third example requires a separate explicit normalization decision:
-
-• convert “&” to “and” before tokenization; or
-• treat “&” and “and” as equivalent only in a comparison-specific form.
-
-No implementation was performed.
-
-If runtime confirmation is still required, the smallest temporary diagnostic should run only when a committed recognition event reaches speechMatchResult(for:), not on interim callbacks.
-
-It should report with print statements beginning with 🐞:
-
-• recognizedText;
-• recognizedTextWithoutSpaces;
-• candidate index;
-• original alternateDisplayText;
-• candidate canonical text;
-• candidate stripped text;
-• eligibility;
-• whether the space-stripped branch was entered;
-• match tier;
-• candidate count.
-
-The source defect is already sufficient to explain the first two physical-device failures. Runtime diagnostics are mainly needed to confirm whether the affected buttons also have alternateDisplayText and are therefore eligible.
-
-K. REGRESSION RISKS
-
-Any future correction should preserve:
-
-• ambiguity when multiple buttons normalize to the same value;
-• current homophone behavior;
-• current partial whole-token behavior;
-• current built-in command handling;
-• current hidden-button behavior unless explicitly changed;
-• current screen-only candidate scope;
-• speech blocking during editing;
-• BLE, Mac, ESP32, MIDI, keyboard, sound, and wait-chain activation paths.
-
-Potential new collisions include:
-
-• “run app” versus “runapp”;
-• duplicate multiline labels;
-• labels whose punctuation disappears;
-• labels normalized to the same text after future “&” handling.
-
-FINAL CONCLUSION
-
-The first two failures are explained by a confirmed source-level bug:
-
-The space-stripped comparison is skipped whenever the recognized phrase contains no spaces.
-
-The third failure is explained by confirmed normalization behavior:
-
-The ampersand is discarded, producing “paste save”, while the recognized phrase remains “paste and save”.
-
-There is also a separate eligibility condition:
-
-Buttons without alternateDisplayText are excluded before matching, even if their visible primary text appears to be a valid label.
+No physical-device testing was performed during this read-only probe.

@@ -24,6 +24,12 @@ var isPad: Bool {
 private let maxDocumentNavigationHistoryCount = 50
 private let defaultStartupScreenBaseName = "sample"
 
+enum SpeechOpenDocumentSelectionResult {
+    case selected
+    case ambiguous
+    case notFound
+}
+
 private enum AppRuntimeFlags {
     static var orientationState = false
 }
@@ -290,6 +296,7 @@ struct ContentView: View {
                         adjacentPreviousDocumentDisplayName: adjacentPreviousDocumentDisplayName,
                         adjacentNextDocumentDisplayName: adjacentNextDocumentDisplayName,
                         selectDocumentNamedFromGrid: selectDocumentNamedFromGrid,
+                        selectScreenDocumentNamedForSpeechOpen: selectScreenDocumentNamedForSpeechOpen,
                         resizeVisibleBoxCount: resizeSelectedDocumentGrid,
                         moveFunctionKeySlot: { sourceIndex, targetIndex, span, gridDimensions in
                             moveSelectedDocumentSlot(
@@ -356,6 +363,7 @@ struct ContentView: View {
         }
         .task {
             applyStartupOutputModeIfNeeded()
+            SpeechSubstitutions.ensureFileExists()
             refreshBackgroundImageFiles()
             ensureDefaultFunctionKeysFile()
             updateLoadedBackgroundImageForVisibleScreen()
@@ -2895,6 +2903,63 @@ struct ContentView: View {
 
         selectDocument(fileURL, recordHistory: true)
         return true
+    }
+
+    @discardableResult
+    func selectScreenDocumentNamedForSpeechOpen(_ rawName: String) -> SpeechOpenDocumentSelectionResult {
+        let trimmedName = rawName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedName.isEmpty else {
+            return .notFound
+        }
+
+        let inputURL = URL(fileURLWithPath: trimmedName)
+        let requestedExtension = inputURL.pathExtension.lowercased()
+        let explicitExtension: String?
+
+        switch requestedExtension {
+        case "s", screenDocumentFileExtension:
+            explicitExtension = requestedExtension
+        case "", legacyScreenDocumentFileExtension, "text":
+            explicitExtension = nil
+            if !requestedExtension.isEmpty {
+                return .notFound
+            }
+        default:
+            return .notFound
+        }
+
+        let requestedBaseName = explicitExtension == nil
+            ? trimmedName
+            : inputURL.deletingPathExtension().lastPathComponent
+        let requestedBaseKey = requestedBaseName.lowercased()
+        let matchingURLs = documentDirectorySnapshot.filter { url in
+            guard let isRegularFile = try? url.resourceValues(
+                forKeys: [URLResourceKey.isRegularFileKey]
+            ).isRegularFile, isRegularFile else {
+                return false
+            }
+
+            let fileExtension = url.pathExtension.lowercased()
+            guard fileExtension == "s" || fileExtension == screenDocumentFileExtension else {
+                return false
+            }
+
+            if let explicitExtension, fileExtension != explicitExtension {
+                return false
+            }
+
+            return url.deletingPathExtension().lastPathComponent.lowercased() == requestedBaseKey
+        }
+
+        switch matchingURLs.count {
+        case 0:
+            return .notFound
+        case 1:
+            selectDocument(matchingURLs[0], recordHistory: true)
+            return .selected
+        default:
+            return .ambiguous
+        }
     }
 
     private func displayName(for fileName: String) -> String {

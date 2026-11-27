@@ -918,6 +918,7 @@ This command requires an ESP32 connection. Not all pins will work, it will depen
     @State var visibleGridDimensions: GridDimensions = functionKeyGridDimensions(for: 20)
     @State var mainGridButtonMode: MainGridButtonMode = .active
     @State var isSpkRecEnabled = false
+    @State var speechSubstitutionRules: [SpeechSubstitutionRule] = []
     @State var unmatchedSpeechText: String?
     @State var speechRecognitionAutoOffTask: Task<Void, Never>?
     @StateObject var speechRecognition = SpeechRecognitionManager()
@@ -1107,6 +1108,7 @@ Tap a row once for help. Double-tap a row to insert the key code at the cursor.
     let adjacentPreviousDocumentDisplayName: String?
     let adjacentNextDocumentDisplayName: String?
     let selectDocumentNamedFromGrid: (String) -> Bool
+    let selectScreenDocumentNamedForSpeechOpen: (String) -> SpeechOpenDocumentSelectionResult
     let resizeVisibleBoxCount: (GridDimensions, GridDimensions) -> Bool
     let moveFunctionKeySlot: (Int, Int, Int, GridDimensions) -> Int?
     let duplicateFunctionKeySlot: (Int, Int) -> Bool

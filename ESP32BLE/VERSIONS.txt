@@ -1,4 +1,8 @@
 
+V66.45
+Speech recog improvments complete
+261127 Fri 1350
+
 V66.44
 before Speech recog mods
 261127 Fri 1135
